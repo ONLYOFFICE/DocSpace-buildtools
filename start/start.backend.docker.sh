@@ -34,7 +34,7 @@ SERVICE_DOCEDITOR=$doceditor \
 SERVICE_LOGIN=$login \
 SERVICE_CLIENT=$client \
 ROOT_DIR=$dir \
-DATA_DIR="$dir/Data" \
+DATA_DIR="$dir/data" \
 ENV_EXTENSION="dev" \
 DOCUMENT_SERVER_IMAGE_NAME=onlyoffice/documentserver-de:latest \
 docker-compose -f docspace.profiles.yml -f docspace.overcome.yml --profile backend-local start

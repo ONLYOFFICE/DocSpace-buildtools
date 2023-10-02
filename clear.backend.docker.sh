@@ -19,7 +19,7 @@ then
     BUILD_PATH="/var/www" \
     SRC_PATH="${RootDir}/publish/services" \
     ROOT_DIR=$RootDir \
-    DATA_DIR="${RootDir}/Data" \
+    DATA_DIR="${RootDir}/data" \
     docker-compose -f "${DockerDir}/docspace.profiles.yml" -f "${DockerDir}/docspace.overcome.yml" --profile migration-runner --profile backend-local down --volumes
 
     echo "Remove docker contatiners 'mysql'"

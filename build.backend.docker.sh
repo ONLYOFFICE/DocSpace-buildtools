@@ -57,7 +57,7 @@ else
 fi
 
 echo "Clear publish folder"
-rm -rf $dir/publish
+rm -rf $dir/publish/services
 
 echo "Build backend services (to "publish/" folder)"
 bash $dir/build/install/common/build-services.sh -pb backend-publish -pc Debug -de "$dockerDir/docker-entrypoint.py"
@@ -107,6 +107,6 @@ SERVICE_CLIENT=$client \
 ROOT_DIR=$dir \
 BUILD_PATH="/var/www" \
 SRC_PATH="$dir/publish/services" \
-DATA_DIR="$dir/Data" \
+DATA_DIR="$dir/data" \
 APP_URL_PORTAL=$portal_url \
 docker-compose -f $dockerDir/docspace.profiles.yml -f $dockerDir/docspace.overcome.yml --profile migration-runner --profile backend-local up -d
