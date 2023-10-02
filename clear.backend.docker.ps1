@@ -16,7 +16,7 @@ if ($Containers -or $Images) {
   $Env:BUILD_PATH="/var/www"
   $Env:SRC_PATH="$RootDir\publish\services"
   $Env:ROOT_DIR=$RootDir
-  $Env:DATA_DIR="$RootDir\Data"
+  $Env:DATA_DIR="$RootDir\data"
 
   docker compose -f "$DockerDir\docspace.profiles.yml" -f "$DockerDir\docspace.overcome.yml" --profile "migration-runner" --profile "backend-local" down --volumes
 

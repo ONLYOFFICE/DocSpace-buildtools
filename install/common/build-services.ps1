@@ -18,10 +18,10 @@ if(Test-Path -Path "$BUILD_PATH\services" ){
 }
 
 Write-Host "== Build ASC.Web.slnf ==" -ForegroundColor Green
-dotnet build "$SRC_PATH\ASC.Web.slnf"
+dotnet build "$SRC_PATH\server\ASC.Web.slnf"
 
 Write-Host "== Build ASC.Migrations.sln ==" -ForegroundColor Green
-dotnet build "$SRC_PATH\ASC.Migrations.sln" -o "$BUILD_PATH\services\ASC.Migration.Runner\service\"
+dotnet build "$SRC_PATH\server\ASC.Migrations.sln" -o "$BUILD_PATH\services\ASC.Migration.Runner\service\"
 
 Write-Host "== Add docker-migration-entrypoint.sh to ASC.Migration.Runner ==" -ForegroundColor Green
 $FilePath = "$BUILD_PATH\services\ASC.Migration.Runner\service\docker-migration-entrypoint.sh"
@@ -30,7 +30,7 @@ Get-Content "$SRC_PATH\build\install\docker\docker-migration-entrypoint.sh" -raw
 foreach ($SERVICE in $BACKEND_NODEJS_SERVICES)
 {
   Write-Host "== Build $SERVICE project ==" -ForegroundColor Green
-  yarn install --cwd "$SRC_PATH\common\$SERVICE" --frozen-lockfile
+  yarn install --cwd "$SRC_PATH\server\common\$SERVICE" --frozen-lockfile
 
   $DST = "$BUILD_PATH\services\$SERVICE\service\"
 
@@ -39,13 +39,13 @@ foreach ($SERVICE in $BACKEND_NODEJS_SERVICES)
   }
 
   Write-Host "== Copy service data to `publish\services\${SERVICE}\service`  ==" -ForegroundColor Green
-  Copy-Item -Path "$SRC_PATH\common\$SERVICE\*" -Destination $DST -Recurse
+  Copy-Item -Path "$SRC_PATH\server\common\$SERVICE\*" -Destination $DST -Recurse
   Write-Host "== Add docker-entrypoint.py to $SERVICE ==" -ForegroundColor Green
   Copy-Item $DOCKER_ENTRYPOINT -Destination $DST
 }
 
 Write-Host "== Publish ASC.Web.slnf ==" -ForegroundColor Green
-dotnet publish "$SRC_PATH\ASC.Web.slnf" -p "PublishProfile=FolderProfile"
+dotnet publish "$SRC_PATH\server\ASC.Web.slnf" -p "PublishProfile=FolderProfile"
 
 Set-Location -Path $PSScriptRoot
 

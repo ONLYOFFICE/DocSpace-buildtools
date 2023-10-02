@@ -58,7 +58,8 @@ x-service: &x-service-base
     RABBIT_PASSWORD: ${RABBIT_PASSWORD}
     ROUTER_HOST: ${ROUTER_HOST}
   volumes:
-    - ${ROOT_DIR}/Data:/app/onlyoffice/data
+    - ${ROOT_DIR}/data:/app/onlyoffice/data
+    - ${ROOT_DIR}/logs:/var/log/onlyoffice
     - files_data:/var/www/products/ASC.Files/server/
     - people_data:/var/www/products/ASC.People/server/
 

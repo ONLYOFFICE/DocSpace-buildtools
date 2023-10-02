@@ -84,7 +84,7 @@ $Env:SERVICE_CLIENT=$Client
 $Env:ROOT_DIR=$RootDir
 $Env:BUILD_PATH="/var/www"
 $Env:SRC_PATH="$RootDir\publish\services"
-$Env:DATA_DIR="$RootDir\Data"
+$Env:DATA_DIR="$RootDir\data"
 $Env:APP_URL_PORTAL=$PortalUrl
 docker compose -f "$DockerDir\docspace.profiles.yml" -f "$DockerDir\docspace.overcome.yml" --profile migration-runner --profile backend-local up -d
 
