@@ -7,7 +7,7 @@ if ($PSversionMajor -lt 7 -or $PSversionMinor -lt 2) {
 }
 
 $RootDir = Split-Path -Parent $PSScriptRoot
-$DockerDir = "$RootDir\build\install\docker"
+$DockerDir = "$RootDir\buildtools\install\docker"
 $LocalIp = (Get-CimInstance -ClassName Win32_NetworkAdapterConfiguration | Where-Object { $_.DHCPEnabled -ne $null -and $_.DefaultIPGateway -ne $null }).IPAddress | Select-Object -First 1
 
 $Doceditor = ($LocalIp + ":5013")

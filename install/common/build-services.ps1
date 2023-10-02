@@ -10,7 +10,7 @@ $FRONTEND_BUILD_ARGS="build"
 $FRONTEND_DEPLOY_ARGS="deploy"
 $DEBUG_INFO_CHECK=""
 $MIGRATION_CHECK="true"
-$DOCKER_ENTRYPOINT="$SRC_PATH\build\install\docker\docker-entrypoint.py"
+$DOCKER_ENTRYPOINT="$SRC_PATH\buildtools\install\docker\docker-entrypoint.py"
 
 if(Test-Path -Path "$BUILD_PATH\services" ){
   Write-Host "== Clean up services ==" -ForegroundColor Green

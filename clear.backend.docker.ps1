@@ -1,7 +1,7 @@
 $Containers = docker ps -aqf "name=^onlyoffice"
 $Images = docker images onlyoffice/4testing-docspace* -q
 $RootDir = Split-Path -Parent $PSScriptRoot
-$DockerDir = ($RootDir + "\build\install\docker")
+$DockerDir = ($RootDir + "\buildtools\install\docker")
 
 Write-Host "Clean up containers, volumes or networks" -ForegroundColor Green
 

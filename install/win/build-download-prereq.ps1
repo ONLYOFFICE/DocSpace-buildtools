@@ -50,7 +50,7 @@ switch ( $env:DOCUMENT_SERVER_VERSION_CE )
 
 $psql_version = '14.0'
 
-$path_prereq = "${pwd}\build\install\win\"
+$path_prereq = "${pwd}\buildtools\install\win\"
 
 $prerequisites = @(
   @{  
@@ -96,7 +96,7 @@ $nuget_packages = @(
   }
 )
 
-$path_enterprise_prereq = "${pwd}\build\install\win\redist\"
+$path_enterprise_prereq = "${pwd}\buildtools\install\win\redist\"
 
 $enterprise_prerequisites = @(
   @{
