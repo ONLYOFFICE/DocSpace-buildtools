@@ -16,7 +16,7 @@ if defined SecondArg (
 	set PathToAppFolder=%FirstArg%\publish
 )
 
-xcopy "%PathToRepository%\build\deploy\public" "%PathToAppFolder%\public" /s /y /b /i
-xcopy "%PathToRepository%\build\deploy\client" "%PathToAppFolder%\client" /s /y /b /i
+xcopy "%PathToRepository%\buildtools\deploy\public" "%PathToAppFolder%\public" /s /y /b /i
+xcopy "%PathToRepository%\buildtools\deploy\client" "%PathToAppFolder%\client" /s /y /b /i
 xcopy "%PathToRepository%\config\nginx" "%PathToAppFolder%\nginx\conf" /s /y /b /i
 xcopy "%PathToRepository%\config\*" "%PathToAppFolder%\config" /y /b /i

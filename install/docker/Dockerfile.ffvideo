@@ -140,7 +140,7 @@ RUN \
         cd ${DIR} && \
         curl -sL https://github.com/videolan/x265/archive/refs/tags/${X265_VERSION}.tar.gz | \
         tar -zx && \
-        cd x265-${X265_VERSION}/build/linux && \
+        cd x265-${X265_VERSION}/buildtools/linux && \
         sed -i "/-DEXTRA_LIB/ s/$/ -DCMAKE_INSTALL_PREFIX=\${PREFIX}/" multilib.sh && \
         sed -i "/^cmake/ s/$/ -DENABLE_CLI=OFF/" multilib.sh && \
         ./multilib.sh && \
@@ -237,7 +237,7 @@ RUN \
         curl -sLO http://downloads.xvid.org/downloads/xvidcore-${XVID_VERSION}.tar.gz && \
         echo ${XVID_SHA256SUM} | sha256sum --check && \
         tar -zx -f xvidcore-${XVID_VERSION}.tar.gz && \
-        cd xvidcore/build/generic && \
+        cd xvidcore/buildtools/generic && \
         ./configure --prefix="${PREFIX}" --bindir="${PREFIX}/bin" && \
         make && \
         make install && \

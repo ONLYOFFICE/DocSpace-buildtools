@@ -7,7 +7,7 @@ dir=$(builtin cd $rd/../../; pwd)
 
 echo "Root directory:" $dir
 
-cd $dir/build/install/docker/
+cd $dir/buildtools/install/docker/
 
 docker_dir="$( pwd )"
 

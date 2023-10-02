@@ -58,13 +58,13 @@ RUN mkdir -p /app/onlyoffice/ && \
     find config/ -maxdepth 1 -name "*.json" | grep -v test | grep -v dev | xargs tar -cvf config.tar && \
     tar -C "/app/onlyoffice/" -xvf config.tar && \
     cp config/*.config /app/onlyoffice/config/ && \
-    mkdir -p ${SRC_PATH}/build/deploy/client && \
-    mkdir -p ${SRC_PATH}/build/deploy/public && \
+    mkdir -p ${SRC_PATH}/buildtools/deploy/client && \
+    mkdir -p ${SRC_PATH}/buildtools/deploy/public && \
     mkdir -p /etc/nginx/conf.d && cp -f config/nginx/onlyoffice*.conf /etc/nginx/conf.d/ && \
     mkdir -p /etc/nginx/includes/ && cp -f config/nginx/includes/onlyoffice*.conf /etc/nginx/includes/ && \
     sed -i "s/\"number\".*,/\"number\": \"${PRODUCT_VERSION}.${BUILD_NUMBER}\",/g" /app/onlyoffice/config/appsettings.json && \
     sed -e 's/#//' -i /etc/nginx/conf.d/onlyoffice.conf && \
-    cd ${SRC_PATH}/build/install/common/ && \
+    cd ${SRC_PATH}/buildtools/install/common/ && \
     bash build-services.sh \
     -sp "${SRC_PATH}" \
     -bp "${BUILD_PATH}" \
@@ -156,11 +156,11 @@ RUN apt-get -y update && \
 # copy static services files and config values 
 COPY --from=base /etc/nginx/conf.d /etc/nginx/conf.d
 COPY --from=base /etc/nginx/includes /etc/nginx/includes
-COPY --from=base ${SRC_PATH}/build/deploy/client ${BUILD_PATH}/client
-COPY --from=base ${SRC_PATH}/build/deploy/public ${BUILD_PATH}/public
-COPY --from=base ${SRC_PATH}/build/install/docker/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
-COPY --from=base ${SRC_PATH}/build/install/docker/config/nginx/templates/nginx.conf.template /etc/nginx/nginx.conf.template
-COPY --from=base ${SRC_PATH}/build/install/docker/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
+COPY --from=base ${SRC_PATH}/buildtools/deploy/client ${BUILD_PATH}/client
+COPY --from=base ${SRC_PATH}/buildtools/deploy/public ${BUILD_PATH}/public
+COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
+COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/nginx.conf.template /etc/nginx/nginx.conf.template
+COPY --from=base ${SRC_PATH}/buildtools/install/docker/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
 
 # add defualt user and group for no-root run
 RUN chown nginx:nginx /etc/nginx/* -R && \
@@ -187,8 +187,8 @@ RUN chown nginx:nginx /etc/nginx/* -R && \
 FROM noderun as doceditor
 WORKDIR ${BUILD_PATH}/services/ASC.Editors/editor
 
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/install/docker/docker-entrypoint.py .
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/deploy/editor/ .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/deploy/editor/ .
 
 CMD ["server.js", "ASC.Editors"]
 
@@ -196,8 +196,8 @@ CMD ["server.js", "ASC.Editors"]
 FROM noderun as login
 WORKDIR ${BUILD_PATH}/services/ASC.Login/login
 
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/install/docker/docker-entrypoint.py .
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/deploy/login/ .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/deploy/login/ .
 
 CMD ["server.js", "ASC.Login"]
 
@@ -205,7 +205,7 @@ CMD ["server.js", "ASC.Login"]
 FROM dotnetrun AS backup_background
 WORKDIR ${BUILD_PATH}/services/ASC.Data.Backup.BackgroundTasks/service/
 
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/install/docker/docker-entrypoint.py .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Data.Backup.BackgroundTasks/service/  .
 
 CMD ["ASC.Data.Backup.BackgroundTasks.dll", "ASC.Data.Backup.BackgroundTasks", "core:eventBus:subscriptionClientName=asc_event_bus_backup_queue"]
@@ -214,7 +214,7 @@ CMD ["ASC.Data.Backup.BackgroundTasks.dll", "ASC.Data.Backup.BackgroundTasks", "
 FROM dotnetrun AS api_system
 WORKDIR ${BUILD_PATH}/services/ASC.ApiSystem/service/
 
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/install/docker/docker-entrypoint.py .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.ApiSystem/service/  .
 
 CMD ["ASC.ApiSystem.dll", "ASC.ApiSystem"]
@@ -223,7 +223,7 @@ CMD ["ASC.ApiSystem.dll", "ASC.ApiSystem"]
 FROM dotnetrun AS clear-events
 WORKDIR ${BUILD_PATH}/services/ASC.ClearEvents/service/
 
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/install/docker/docker-entrypoint.py .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.ClearEvents/service/  .
 
 CMD ["ASC.ClearEvents.dll", "ASC.ClearEvents"]
@@ -232,7 +232,7 @@ CMD ["ASC.ClearEvents.dll", "ASC.ClearEvents"]
 FROM dotnetrun AS backup
 WORKDIR ${BUILD_PATH}/services/ASC.Data.Backup/service/
 
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/install/docker/docker-entrypoint.py .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Data.Backup/service/ .
 
 CMD ["ASC.Data.Backup.dll", "ASC.Data.Backup"]
@@ -241,7 +241,7 @@ CMD ["ASC.Data.Backup.dll", "ASC.Data.Backup"]
 FROM dotnetrun AS files
 WORKDIR ${BUILD_PATH}/products/ASC.Files/server/
 
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/install/docker/docker-entrypoint.py .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Files/service/ .
 COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/ASC.Files/Server/DocStore .
 
@@ -252,7 +252,7 @@ FROM dotnetrun AS files_services
 ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
 WORKDIR ${BUILD_PATH}/products/ASC.Files/service/
 
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/install/docker/docker-entrypoint.py .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Files.Service/service/ .
 COPY --from=linuxserver/ffmpeg:latest --chown=onlyoffice:onlyoffice /usr/local/bin/ /usr/local/bin/
 
@@ -262,7 +262,7 @@ CMD ["ASC.Files.Service.dll", "ASC.Files.Service", "core:eventBus:subscriptionCl
 FROM dotnetrun AS notify
 WORKDIR ${BUILD_PATH}/services/ASC.Notify/service/
 
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/install/docker/docker-entrypoint.py .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Notify/service/ .
 
 CMD ["ASC.Notify.dll", "ASC.Notify", "core:eventBus:subscriptionClientName=asc_event_bus_notify_queue"]
@@ -271,7 +271,7 @@ CMD ["ASC.Notify.dll", "ASC.Notify", "core:eventBus:subscriptionClientName=asc_e
 FROM dotnetrun AS people_server
 WORKDIR ${BUILD_PATH}/products/ASC.People/server/
 
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/install/docker/docker-entrypoint.py .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.People/service/ .
 
 CMD ["ASC.People.dll", "ASC.People"]
@@ -280,7 +280,7 @@ CMD ["ASC.People.dll", "ASC.People"]
 FROM noderun AS socket
 WORKDIR ${BUILD_PATH}/services/ASC.Socket.IO/service/
 
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/install/docker/docker-entrypoint.py .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Socket.IO/service/ .
 
 CMD  ["server.js", "ASC.Socket.IO"]
@@ -289,7 +289,7 @@ CMD  ["server.js", "ASC.Socket.IO"]
 FROM noderun AS ssoauth
 WORKDIR ${BUILD_PATH}/services/ASC.SsoAuth/service/
 
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/install/docker/docker-entrypoint.py .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
 COPY --from=base --chown=onlyoffice:onlyoffice  ${BUILD_PATH}/services/ASC.SsoAuth/service/ .
 
 CMD ["app.js", "ASC.SsoAuth"]
@@ -298,7 +298,7 @@ CMD ["app.js", "ASC.SsoAuth"]
 FROM dotnetrun AS studio_notify
 WORKDIR ${BUILD_PATH}/services/ASC.Studio.Notify/service/
 
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/install/docker/docker-entrypoint.py .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Studio.Notify/service/ .
 
 CMD ["ASC.Studio.Notify.dll", "ASC.Studio.Notify"]
@@ -307,7 +307,7 @@ CMD ["ASC.Studio.Notify.dll", "ASC.Studio.Notify"]
 FROM dotnetrun AS api
 WORKDIR ${BUILD_PATH}/studio/ASC.Web.Api/
 
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/install/docker/docker-entrypoint.py .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Web.Api/service/ .
 
 CMD ["ASC.Web.Api.dll", "ASC.Web.Api"]
@@ -316,7 +316,7 @@ CMD ["ASC.Web.Api.dll", "ASC.Web.Api"]
 FROM dotnetrun AS studio
 WORKDIR ${BUILD_PATH}/studio/ASC.Web.Studio/
 
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/install/docker/docker-entrypoint.py .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Web.Studio/service/ .
 
 CMD ["ASC.Web.Studio.dll", "ASC.Web.Studio"]
@@ -325,7 +325,7 @@ CMD ["ASC.Web.Studio.dll", "ASC.Web.Studio"]
 FROM dotnetrun AS healthchecks
 WORKDIR ${BUILD_PATH}/services/ASC.Web.HealthChecks.UI/service
 
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/install/docker/docker-healthchecks-entrypoint.sh .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-healthchecks-entrypoint.sh .
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Web.HealthChecks.UI/service/ .
 
 ENTRYPOINT ["./docker-healthchecks-entrypoint.sh"]
@@ -338,7 +338,7 @@ ARG SRC_PATH
 ENV BUILD_PATH=${BUILD_PATH}
 ENV SRC_PATH=${SRC_PATH}
 WORKDIR ${BUILD_PATH}/services/ASC.Migration.Runner/
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/install/docker/docker-migration-entrypoint.sh .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-migration-entrypoint.sh .
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Migration.Runner/service/ .
 
 ENTRYPOINT ["./docker-migration-entrypoint.sh"]
@@ -355,7 +355,7 @@ RUN mkdir -p /app/ASC.Files/server && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -u 104 onlyoffice --home /var/www/onlyoffice --system -G onlyoffice
 
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/install/docker/bin-share-docker-entrypoint.sh /app/docker-entrypoint.sh
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/bin-share-docker-entrypoint.sh /app/docker-entrypoint.sh
 COPY --from=base /var/www/services/ASC.Files/service/ /app/ASC.Files/server/
 COPY --from=base /var/www/services/ASC.People/service/ /app/ASC.People/server/
 ENTRYPOINT ["./app/docker-entrypoint.sh"]
@@ -369,5 +369,5 @@ ENV SRC_PATH=${SRC_PATH}
 
 RUN mkdir /app
 
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/install/docker/wait-bin-share-docker-entrypoint.sh /app/docker-entrypoint.sh
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/wait-bin-share-docker-entrypoint.sh /app/docker-entrypoint.sh
 ENTRYPOINT ["./app/docker-entrypoint.sh"]

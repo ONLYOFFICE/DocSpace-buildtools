@@ -52,7 +52,7 @@ RUN cd ${SRC_PATH} && \
     mkdir -p /etc/nginx/includes/ && cp -f config/nginx/includes/onlyoffice*.conf /etc/nginx/includes/ && \
     sed -i "s/\"number\".*,/\"number\": \"${PRODUCT_VERSION}.${BUILD_NUMBER}\",/g" /app/onlyoffice/config/appsettings.json && \
     sed -e 's/#//' -i /etc/nginx/conf.d/onlyoffice.conf && \
-    cd ${SRC_PATH}/build/install/common/ && \
+    cd ${SRC_PATH}/buildtools/install/common/ && \
     bash build-frontend.sh -sp "${SRC_PATH}" -ba "${BUILD_ARGS}" -da "${DEPLOY_ARGS}" -di "${DEBUG_INFO}" && \
     bash build-backend.sh -sp "${SRC_PATH}"  && \
     bash publish-backend.sh -pc "${PUBLISH_CNF}" -sp "${SRC_PATH}" -bp "${BUILD_PATH}"  && \
@@ -144,8 +144,8 @@ RUN apt-get -y update && \
 # copy static services files and config values 
 COPY --from=base /etc/nginx/conf.d /etc/nginx/conf.d
 COPY --from=base /etc/nginx/includes /etc/nginx/includes
-COPY --from=base ${SRC_PATH}/build/deploy/client ${BUILD_PATH}/client
-COPY --from=base ${SRC_PATH}/build/deploy/public ${BUILD_PATH}/public
+COPY --from=base ${SRC_PATH}/buildtools/deploy/client ${BUILD_PATH}/client
+COPY --from=base ${SRC_PATH}/buildtools/deploy/public ${BUILD_PATH}/public
 COPY /config/nginx/docker-entrypoint.sh /docker-entrypoint.sh
 COPY /config/nginx/docker-entrypoint.d /docker-entrypoint.d
 COPY /config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
@@ -178,7 +178,7 @@ FROM noderun as doceditor
 WORKDIR ${BUILD_PATH}/products/ASC.Editors/editor
 
 COPY --chown=onlyoffice:onlyoffice docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/deploy/editor/ .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/deploy/editor/ .
 
 CMD ["server.js", "ASC.Editors"]
 
@@ -187,7 +187,7 @@ FROM noderun as login
 WORKDIR ${BUILD_PATH}/products/ASC.Login/login
 
 COPY --chown=onlyoffice:onlyoffice docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/deploy/login/ .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/deploy/login/ .
 
 CMD ["server.js", "ASC.Login"]
 

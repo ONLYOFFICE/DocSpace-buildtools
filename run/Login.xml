@@ -3,7 +3,7 @@
   <name>ONLYOFFICE Login SSR</name>
   <startmode>manual</startmode>
   <executable>node</executable>
-  <arguments>../../build/deploy/login/server.js</arguments>
+  <arguments>../../buildtools/deploy/login/server.js</arguments>
   <log mode="none"/>
   <delayedAutoStart>true</delayedAutoStart>
   <onfailure action="none" />
