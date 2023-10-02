@@ -123,10 +123,10 @@ function build_dotnetcore_backend {
   if [[ ${BUILD_DOTNET_CORE_ARGS} == "false" ]]
   then
     echo "== Build ASC.Web.slnf =="
-    dotnet build ASC.Web.slnf
+    dotnet build server/ASC.Web.slnf
   else
     echo "== Build ASC.Web.slnf ${BUILD_DOTNET_CORE_ARGS} =="
-    dotnet build ASC.Web.slnf ${BUILD_DOTNET_CORE_ARGS}
+    dotnet build server/ASC.Web.slnf ${BUILD_DOTNET_CORE_ARGS}
   fi
   
   if [[ $# -gt 0 ]]
@@ -135,7 +135,7 @@ function build_dotnetcore_backend {
     if [[ ${migration_check} == "true" ]]
     then
       echo "== Build ASC.Migrations.sln =="
-      dotnet build ASC.Migrations.sln -o ${BUILD_PATH}/services/ASC.Migration.Runner/service/
+      dotnet build server/ASC.Migrations.sln -o ${BUILD_PATH}/services/ASC.Migration.Runner/service/
     fi
     if [[ ${DOCKER_ENTRYPOINT} != "false" ]]
     then
@@ -154,9 +154,9 @@ function backend-dotnet-publish {
 
   if [[ ${PUBLISH_BACKEND_ARGS} == "false" ]]
   then
-    dotnet publish $SRC_PATH/ASC.Web.slnf -p "PublishProfile=FolderProfile"
+    dotnet publish $SRC_PATH/server/ASC.Web.slnf -p "PublishProfile=FolderProfile"
   else
-    dotnet publish $SRC_PATH/ASC.Web.slnf ${PUBLISH_BACKEND_ARGS} -p "PublishProfile=FolderProfile"
+    dotnet publish $SRC_PATH/server/ASC.Web.slnf ${PUBLISH_BACKEND_ARGS} -p "PublishProfile=FolderProfile"
   fi
 
   if [[ ${DOCKER_ENTRYPOINT} != "false" ]]
@@ -176,9 +176,9 @@ function backend-nodejs-publish {
   get_services_name "${BACKEND_NODEJS_SERVICES}"
   for i in ${!ARRAY_NAME_SERVICES[@]}; do
     echo "== Build ${ARRAY_NAME_SERVICES[$i]} project =="
-    yarn install --cwd ${SRC_PATH}/common/${ARRAY_NAME_SERVICES[$i]} --frozen-lockfile && \
+    yarn install --cwd ${SRC_PATH}/server/common/${ARRAY_NAME_SERVICES[$i]} && \
     mkdir -p ${BUILD_PATH}/services/${ARRAY_NAME_SERVICES[$i]}/service/ && \
-    cp -rfv ${SRC_PATH}/common/${ARRAY_NAME_SERVICES[$i]}/* ${BUILD_PATH}/services/${ARRAY_NAME_SERVICES[$i]}/service/
+    cp -rfv ${SRC_PATH}/server/common/${ARRAY_NAME_SERVICES[$i]}/* ${BUILD_PATH}/services/${ARRAY_NAME_SERVICES[$i]}/service/
     if [[ ${DOCKER_ENTRYPOINT} != "false" ]]
     then
        echo "== ADD ${DOCKER_ENTRYPOINT} to ${ARRAY_NAME_SERVICES[$i]} =="

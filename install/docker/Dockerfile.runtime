@@ -9,7 +9,7 @@ ARG BUILD_PATH
 
 WORKDIR ${SRC_PATH}
 
-COPY  /config ./config
+COPY  build/config ./config
 
 RUN find config/ -maxdepth 1 -name "*.json" | grep -v test | grep -v dev | xargs tar -cvf config.tar && \
     tar -C "/app/onlyoffice/" -xvf config.tar && \
