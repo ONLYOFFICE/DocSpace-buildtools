@@ -3,7 +3,7 @@
   <name>ONLYOFFICE WebDav Server</name>
   <startmode>manual</startmode>
   <executable>node</executable>
-  <arguments>../../common/ASC.WebDav/server/webDavServer.js</arguments>
+  <arguments>../../server/common/ASC.WebDav/server/webDavServer.js</arguments>
   <log mode="none"/>
   <delayedAutoStart>true</delayedAutoStart>
   <onfailure action="restart" delay="5 sec" />
