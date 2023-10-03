@@ -178,17 +178,14 @@ function backend-nodejs-publish {
     echo "== Build ${ARRAY_NAME_SERVICES[$i]} project =="
     yarn install --cwd ${SRC_PATH}/server/common/${ARRAY_NAME_SERVICES[$i]} && \
     mkdir -p ${BUILD_PATH}/services/${ARRAY_NAME_SERVICES[$i]}/service/ && \
-<<<<<<< HEAD:build/install/common/build-services.sh
-    cp -rfv ${SRC_PATH}/common/${ARRAY_NAME_SERVICES[$i]}/* ${BUILD_PATH}/services/${ARRAY_NAME_SERVICES[$i]}/service/
+    cp -rfv ${SRC_PATH}/server/common/${ARRAY_NAME_SERVICES[$i]}/* ${BUILD_PATH}/services/${ARRAY_NAME_SERVICES[$i]}/service/
 
     if [[ ${ARRAY_NAME_SERVICES[$i]} == "ASC.TelegramReports" ]]
     then
       # build before run
       yarn --cwd ${BUILD_PATH}/services/ASC.TelegramReports/service/ build
     fi
-=======
-    cp -rfv ${SRC_PATH}/server/common/${ARRAY_NAME_SERVICES[$i]}/* ${BUILD_PATH}/services/${ARRAY_NAME_SERVICES[$i]}/service/
->>>>>>> master:install/common/build-services.sh
+
     if [[ ${DOCKER_ENTRYPOINT} != "false" ]]
     then
        echo "== ADD ${DOCKER_ENTRYPOINT} to ${ARRAY_NAME_SERVICES[$i]} =="

@@ -126,7 +126,6 @@ SRC_PATH="$dir/publish/services" \
 DATA_DIR="$dir/data" \
 APP_URL_PORTAL=$portal_url \
 docker-compose -f $dockerDir/docspace.profiles.yml -f $dockerDir/docspace.overcome.yml --profile migration-runner --profile backend-local up -d
-<<<<<<< HEAD:build/build.backend.docker.sh
 
 echo ""
 echo "APP_URL_PORTAL: $portal_url"
@@ -135,5 +134,3 @@ echo "SERVICE_DOCEDITOR: $doceditor"
 echo "SERVICE_LOGIN: $login"
 echo "SERVICE_CLIENT: $client"
 echo "INSTALLATION_TYPE=$INSTALLATION_TYPE"
-=======
->>>>>>> master:build.backend.docker.sh
