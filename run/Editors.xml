@@ -3,7 +3,7 @@
   <name>ONLYOFFICE Editors SSR</name>
   <startmode>manual</startmode>
   <executable>node</executable>
-  <arguments>../../buildtools/deploy/editor/server.js</arguments>
+  <arguments>../../publish/web/editor/server.js</arguments>
   <log mode="none"/>
   <delayedAutoStart>true</delayedAutoStart>
   <onfailure action="none" />
