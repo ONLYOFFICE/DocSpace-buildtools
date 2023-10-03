@@ -43,11 +43,12 @@ RUN echo ${GIT_BRANCH}  && \
     git clone --recurse-submodules -b ${GIT_BRANCH} https://github.com/ONLYOFFICE/DocSpace.git ${SRC_PATH}
 
 RUN cd ${SRC_PATH} && \
-    # mkdir -p /app/onlyoffice/config/ && cp -rf config/* /app/onlyoffice/config/ && \
-    mkdir -p /app/onlyoffice/ && \
-    find buildtools/config/ -maxdepth 1 -name "*.json" | grep -v test | grep -v dev | xargs tar -cvf config.tar && \
-    tar -C "/app/onlyoffice/" -xvf config.tar && \
-    cp config/*.config /app/onlyoffice/config/ && \
+    mkdir -p /app/onlyoffice/config/ && cd buildtools/config && \
+    ls | grep -v test | grep -v dev | grep -v nginx| xargs cp -t /app/onlyoffice/config/ && \
+    # mkdir -p /app/onlyoffice/ && \
+    #find buildtools/config/ -maxdepth 1 -name "*.json" | grep -v test | grep -v dev | xargs tar -cvf config.tar && \
+    # tar -C "/app/onlyoffice/" -xvf config.tar && \
+    cp buildtools/config/*.config /app/onlyoffice/config/ && \
     mkdir -p /etc/nginx/conf.d && cp -f buildtools/config/nginx/onlyoffice*.conf /etc/nginx/conf.d/ && \
     mkdir -p /etc/nginx/includes/ && cp -f buildtools/config/nginx/includes/onlyoffice*.conf /etc/nginx/includes/ && \
     sed -i "s/\"number\".*,/\"number\": \"${PRODUCT_VERSION}.${BUILD_NUMBER}\",/g" /app/onlyoffice/config/appsettings.json && \
