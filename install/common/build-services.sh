@@ -90,7 +90,7 @@ while [ "$1" != "" ]; do
             echo "    Parameters:"
             echo -e " -sp, --srcpath \t path to project root directory"
             echo -e " -bp, --buildpath \t path where generated output is placed (by default={SRC_PATH}/publish)"
-            echo -e " -st, --status \t build status Ex. all/frontend-build/backend-publish/backend-dotnet-publish/backend-nodejs-publish/backend-build"
+            echo -e " -st, --status \t build status Ex. all/frontend-buildtools/backend-publish/backend-dotnet-publish/backend-nodejs-publish/backend-build"
             echo -e " -sc, --self-contained \t publish the .NET runtime with your application (by default=false)"
             echo -e " -pc, --publish-configuration \t dotnet publish configuration Ex. Release/Debug"
             echo -e " -yb, --frontend-build-args \t arguments for yarn building"
@@ -139,8 +139,8 @@ function build_dotnetcore_backend {
     fi
     if [[ ${DOCKER_ENTRYPOINT} != "false" ]]
     then
-       echo "== ADD ${SRC_PATH}/build/install/docker/docker-migration-entrypoint.sh to ASC.Migration.Runner =="
-       cp ${SRC_PATH}/build/install/docker/docker-migration-entrypoint.sh ${BUILD_PATH}/services/ASC.Migration.Runner/service/
+       echo "== ADD ${SRC_PATH}/buildtools/install/docker/docker-migration-entrypoint.sh to ASC.Migration.Runner =="
+       cp ${SRC_PATH}/buildtools/install/docker/docker-migration-entrypoint.sh ${BUILD_PATH}/services/ASC.Migration.Runner/service/
     fi
   fi
 }
@@ -210,9 +210,9 @@ function build_nodejs_frontend {
   if [[ ${DOCKER_ENTRYPOINT} != "false" ]]
   then
     echo "== ADD ${DOCKER_ENTRYPOINT} to ASC.Login =="
-    cp ${DOCKER_ENTRYPOINT} ${SRC_PATH}/build/deploy/login/
+    cp ${DOCKER_ENTRYPOINT} ${SRC_PATH}/buildtools/deploy/login/
     echo "== ADD ${DOCKER_ENTRYPOINT} toASC.Editors =="
-    cp ${DOCKER_ENTRYPOINT} ${SRC_PATH}/build/deploy/editor/
+    cp ${DOCKER_ENTRYPOINT} ${SRC_PATH}/buildtools/deploy/editor/
   fi
 }
 
@@ -244,7 +244,7 @@ function run {
         build_dotnetcore_backend "${MIGRATION_CHECK}"
 		;;
     * )
-			echo "Unknown - \"$1\", Ex. all/frontend-build/backend-publish/backend-dotnet-publish/backend-nodejs-publish/backend-build" 1>&2
+			echo "Unknown - \"$1\", Ex. all/frontend-buildtools/backend-publish/backend-dotnet-publish/backend-nodejs-publish/backend-build" 1>&2
 			exit 1
 		;;
     esac

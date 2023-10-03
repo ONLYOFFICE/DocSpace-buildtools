@@ -1,1 +1,1 @@
-../../../build/deploy/login/*           var/www/{{product}}/products/ASC.Login/login
+../../../buildtools/deploy/login/*           var/www/{{product}}/products/ASC.Login/login

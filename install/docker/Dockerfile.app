@@ -151,6 +151,7 @@ COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/up
 COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/nginx.conf.template /etc/nginx/nginx.conf.template
 COPY --from=base ${SRC_PATH}/buildtools/install/docker/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
 
+
 # changes for upstream configure
 RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5012/$service_backup/' /etc/nginx/conf.d/onlyoffice.conf && \
@@ -177,7 +178,7 @@ FROM noderun as doceditor
 WORKDIR ${BUILD_PATH}/products/ASC.Editors/editor
 
 COPY --chown=onlyoffice:onlyoffice docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/deploy/editor/ .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/deploy/editor/ .
 
 CMD ["server.js", "ASC.Editors"]
 
@@ -186,7 +187,7 @@ FROM noderun as login
 WORKDIR ${BUILD_PATH}/products/ASC.Login/login
 
 COPY --chown=onlyoffice:onlyoffice docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/build/deploy/login/ .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/deploy/login/ .
 
 CMD ["server.js", "ASC.Login"]
 

@@ -1,7 +1,7 @@
 # Getting Started
 
 * Download App run:	git clone git clone https://github.com/ONLYOFFICE/AppServer.git
-* cd ./AppServer/build/install/docker/
+* cd ./AppServer/buildtools/install/docker/
 
 # Installation
 

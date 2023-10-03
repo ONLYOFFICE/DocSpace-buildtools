@@ -25,7 +25,7 @@ dotnet build "$SRC_PATH\server\ASC.Migrations.sln" -o "$BUILD_PATH\services\ASC.
 
 Write-Host "== Add docker-migration-entrypoint.sh to ASC.Migration.Runner ==" -ForegroundColor Green
 $FilePath = "$BUILD_PATH\services\ASC.Migration.Runner\service\docker-migration-entrypoint.sh"
-Get-Content "$SRC_PATH\build\install\docker\docker-migration-entrypoint.sh" -raw | % {$_ -replace "`r", ""} | Set-Content -NoNewline $FilePath
+Get-Content "$SRC_PATH\buildtools\install\docker\docker-migration-entrypoint.sh" -raw | % {$_ -replace "`r", ""} | Set-Content -NoNewline $FilePath
 
 foreach ($SERVICE in $BACKEND_NODEJS_SERVICES)
 {

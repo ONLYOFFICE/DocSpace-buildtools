@@ -3,7 +3,7 @@
 Containers=$(docker ps -a | egrep "onlyoffice" | awk 'NR>0 {print $1}')
 RunDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 RootDir=$(builtin cd $RunDir/../; pwd)
-DockerDir="${RootDir}/build/install/docker"
+DockerDir="${RootDir}/buildtools/install/docker"
 
 echo "Clean up containers, volumes or networks"
 

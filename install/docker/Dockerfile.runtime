@@ -9,7 +9,7 @@ ARG BUILD_PATH
 
 WORKDIR ${SRC_PATH}
 
-COPY  build/config ./config
+COPY  buildtools/config ./config
 
 RUN find config/ -maxdepth 1 -name "*.json" | grep -v test | grep -v dev | xargs tar -cvf config.tar && \
     tar -C "/app/onlyoffice/" -xvf config.tar && \
@@ -93,12 +93,12 @@ RUN apt-get -y update && \
 # copy static services files and config values 
 COPY --from=base /etc/nginx/conf.d /etc/nginx/conf.d
 
-COPY /build/install/docker/config/nginx/docker-entrypoint.sh /docker-entrypoint.sh
-COPY /build/install/docker/config/nginx/docker-entrypoint.d /docker-entrypoint.d
+COPY /buildtools/install/docker/config/nginx/docker-entrypoint.sh /docker-entrypoint.sh
+COPY /buildtools/install/docker/config/nginx/docker-entrypoint.d /docker-entrypoint.d
 
-COPY /build/install/docker/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
-COPY /build/install/docker/config/nginx/templates/nginx.conf.template /etc/nginx/nginx.conf.template
-COPY /build/install/docker/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
+COPY /buildtools/install/docker/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
+COPY /buildtools/install/docker/config/nginx/templates/nginx.conf.template /etc/nginx/nginx.conf.template
+COPY /buildtools/install/docker/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
 
 RUN dos2unix /docker-entrypoint.d/* && \
     dos2unix /docker-entrypoint.sh && \

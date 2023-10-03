@@ -22,8 +22,8 @@ services:
       - ${SRC_PATH}/ASC.Data.Backup.BackgroundTasks/service:${BUILD_PATH}/services/ASC.Data.Backup.BackgroundTasks/
       - ${SRC_PATH}/ASC.Files/service/:${BUILD_PATH}/products/ASC.Files/server/
       - ${SRC_PATH}/ASC.People/service/:${BUILD_PATH}/products/ASC.People/server/
-      - ${ROOT_DIR}/build/config/appsettings.${ENV_EXTENSION}.json:/app/onlyoffice/config/appsettings.${ENV_EXTENSION}.json
-      - ${ROOT_DIR}/build/config/apisystem.${ENV_EXTENSION}.json:/app/onlyoffice/config/apisystem.${ENV_EXTENSION}.json
+      - ${ROOT_DIR}/buildtools/config/appsettings.${ENV_EXTENSION}.json:/app/onlyoffice/config/appsettings.${ENV_EXTENSION}.json
+      - ${ROOT_DIR}/buildtools/config/apisystem.${ENV_EXTENSION}.json:/app/onlyoffice/config/apisystem.${ENV_EXTENSION}.json
     depends_on:
       onlyoffice-migration-runner:
         condition: service_completed_successfully
@@ -37,8 +37,8 @@ services:
       - ${SRC_PATH}/ASC.Data.Backup/service:${BUILD_PATH}/services/ASC.Data.Backup/service/
       - ${SRC_PATH}/ASC.Files/service/:${BUILD_PATH}/products/ASC.Files/server/
       - ${SRC_PATH}/ASC.People/service/:${BUILD_PATH}/products/ASC.People/server/
-      - ${ROOT_DIR}/build/config/appsettings.${ENV_EXTENSION}.json:/app/onlyoffice/config/appsettings.${ENV_EXTENSION}.json
-      - ${ROOT_DIR}/build/config/apisystem.${ENV_EXTENSION}.json:/app/onlyoffice/config/apisystem.${ENV_EXTENSION}.json
+      - ${ROOT_DIR}/buildtools/config/appsettings.${ENV_EXTENSION}.json:/app/onlyoffice/config/appsettings.${ENV_EXTENSION}.json
+      - ${ROOT_DIR}/buildtools/config/apisystem.${ENV_EXTENSION}.json:/app/onlyoffice/config/apisystem.${ENV_EXTENSION}.json
     depends_on:
       onlyoffice-migration-runner:
         condition: service_completed_successfully
@@ -51,8 +51,8 @@ services:
     volumes:
       - ${SRC_PATH}/ASC.Files/service:${BUILD_PATH}/products/ASC.Files/server/
       - ${SRC_PATH}/ASC.People/service/:${BUILD_PATH}/products/ASC.People/server/
-      - ${ROOT_DIR}/build/config/appsettings.${ENV_EXTENSION}.json:/app/onlyoffice/config/appsettings.${ENV_EXTENSION}.json
-      - ${ROOT_DIR}/build/config/apisystem.${ENV_EXTENSION}.json:/app/onlyoffice/config/apisystem.${ENV_EXTENSION}.json
+      - ${ROOT_DIR}/buildtools/config/appsettings.${ENV_EXTENSION}.json:/app/onlyoffice/config/appsettings.${ENV_EXTENSION}.json
+      - ${ROOT_DIR}/buildtools/config/apisystem.${ENV_EXTENSION}.json:/app/onlyoffice/config/apisystem.${ENV_EXTENSION}.json
     depends_on:
       onlyoffice-migration-runner:
         condition: service_completed_successfully
@@ -71,8 +71,8 @@ services:
       - ${SRC_PATH}/ASC.Files.Service/service:${BUILD_PATH}/products/ASC.Files/service/
       - ${SRC_PATH}/ASC.Files/service/:${BUILD_PATH}/products/ASC.Files/server/
       - ${SRC_PATH}/ASC.People/service/:${BUILD_PATH}/products/ASC.People/server/
-      - ${ROOT_DIR}/build/config/appsettings.${ENV_EXTENSION}.json:/app/onlyoffice/config/appsettings.${ENV_EXTENSION}.json
-      - ${ROOT_DIR}/build/config/apisystem.${ENV_EXTENSION}.json:/app/onlyoffice/config/apisystem.${ENV_EXTENSION}.json
+      - ${ROOT_DIR}/buildtools/config/appsettings.${ENV_EXTENSION}.json:/app/onlyoffice/config/appsettings.${ENV_EXTENSION}.json
+      - ${ROOT_DIR}/buildtools/config/apisystem.${ENV_EXTENSION}.json:/app/onlyoffice/config/apisystem.${ENV_EXTENSION}.json
     depends_on:
       onlyoffice-migration-runner:
         condition: service_completed_successfully
@@ -85,8 +85,8 @@ services:
     volumes:
       - ${SRC_PATH}/ASC.People/service:${BUILD_PATH}/products/ASC.People/server/
       - ${SRC_PATH}/ASC.Files/service/:${BUILD_PATH}/products/ASC.Files/server/
-      - ${ROOT_DIR}/build/config/appsettings.${ENV_EXTENSION}.json:/app/onlyoffice/config/appsettings.${ENV_EXTENSION}.json
-      - ${ROOT_DIR}/build/config/apisystem.${ENV_EXTENSION}.json:/app/onlyoffice/config/apisystem.${ENV_EXTENSION}.json
+      - ${ROOT_DIR}/buildtools/config/appsettings.${ENV_EXTENSION}.json:/app/onlyoffice/config/appsettings.${ENV_EXTENSION}.json
+      - ${ROOT_DIR}/buildtools/config/apisystem.${ENV_EXTENSION}.json:/app/onlyoffice/config/apisystem.${ENV_EXTENSION}.json
     depends_on:
       onlyoffice-migration-runner:
         condition: service_completed_successfully
@@ -111,8 +111,8 @@ services:
       - ${SRC_PATH}/ASC.Studio.Notify/service:${BUILD_PATH}/services/ASC.Studio.Notify/service/
       - ${SRC_PATH}/ASC.Files/service/:${BUILD_PATH}/products/ASC.Files/server/
       - ${SRC_PATH}/ASC.People/service/:${BUILD_PATH}/products/ASC.People/server/
-      - ${ROOT_DIR}/build/config/appsettings.${ENV_EXTENSION}.json:/app/onlyoffice/config/appsettings.${ENV_EXTENSION}.json
-      - ${ROOT_DIR}/build/config/apisystem.${ENV_EXTENSION}.json:/app/onlyoffice/config/apisystem.${ENV_EXTENSION}.json
+      - ${ROOT_DIR}/buildtools/config/appsettings.${ENV_EXTENSION}.json:/app/onlyoffice/config/appsettings.${ENV_EXTENSION}.json
+      - ${ROOT_DIR}/buildtools/config/apisystem.${ENV_EXTENSION}.json:/app/onlyoffice/config/apisystem.${ENV_EXTENSION}.json
     depends_on:
       onlyoffice-migration-runner:
         condition: service_completed_successfully
@@ -126,8 +126,8 @@ services:
       - ${SRC_PATH}/ASC.Web.Api/service:${BUILD_PATH}/studio/ASC.Web.Api/
       - ${SRC_PATH}/ASC.Files/service/:${BUILD_PATH}/products/ASC.Files/server/
       - ${SRC_PATH}/ASC.People/service/:${BUILD_PATH}/products/ASC.People/server/
-      - ${ROOT_DIR}/build/config/appsettings.${ENV_EXTENSION}.json:/app/onlyoffice/config/appsettings.${ENV_EXTENSION}.json
-      - ${ROOT_DIR}/build/config/apisystem.${ENV_EXTENSION}.json:/app/onlyoffice/config/apisystem.${ENV_EXTENSION}.json
+      - ${ROOT_DIR}/buildtools/config/appsettings.${ENV_EXTENSION}.json:/app/onlyoffice/config/appsettings.${ENV_EXTENSION}.json
+      - ${ROOT_DIR}/buildtools/config/apisystem.${ENV_EXTENSION}.json:/app/onlyoffice/config/apisystem.${ENV_EXTENSION}.json
     depends_on:
       onlyoffice-migration-runner:
         condition: service_completed_successfully
@@ -141,8 +141,8 @@ services:
       - ${SRC_PATH}/ASC.Web.Studio/service:${BUILD_PATH}/studio/ASC.Web.Studio/
       - ${SRC_PATH}/ASC.Files/service/:${BUILD_PATH}/products/ASC.Files/server/
       - ${SRC_PATH}/ASC.People/service/:${BUILD_PATH}/products/ASC.People/server/
-      - ${ROOT_DIR}/build/config/appsettings.${ENV_EXTENSION}.json:/app/onlyoffice/config/appsettings.${ENV_EXTENSION}.json
-      - ${ROOT_DIR}/build/config/apisystem.${ENV_EXTENSION}.json:/app/onlyoffice/config/apisystem.${ENV_EXTENSION}.json
+      - ${ROOT_DIR}/buildtools/config/appsettings.${ENV_EXTENSION}.json:/app/onlyoffice/config/appsettings.${ENV_EXTENSION}.json
+      - ${ROOT_DIR}/buildtools/config/apisystem.${ENV_EXTENSION}.json:/app/onlyoffice/config/apisystem.${ENV_EXTENSION}.json
     depends_on:
       onlyoffice-migration-runner:
         condition: service_completed_successfully

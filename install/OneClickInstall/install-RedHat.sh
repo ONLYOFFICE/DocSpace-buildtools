@@ -134,7 +134,7 @@ END
 if [ -z $GIT_BRANCH ]; then
 	DOWNLOAD_URL_PREFIX="https://download.onlyoffice.com/${product}/install-RedHat"
 else
-	DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${product}/${GIT_BRANCH}/build/install/OneClickInstall/install-RedHat"
+	DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${product}/${GIT_BRANCH}/buildtools/install/OneClickInstall/install-RedHat"
 fi
 
 if [ "$LOCAL_SCRIPTS" = "true" ]; then

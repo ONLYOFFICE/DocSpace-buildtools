@@ -1172,7 +1172,7 @@ download_files () {
 		if ! command_exists svn; then
 			install_service svn subversion
 		fi
-		svn export --force https://github.com/${PACKAGE_SYSNAME}/${PRODUCT}/branches/${GIT_BRANCH}/build/install/docker/ ${BASE_DIR} >/dev/null
+		svn export --force https://github.com/${PACKAGE_SYSNAME}/${PRODUCT}/branches/${GIT_BRANCH}/buildtools/install/docker/ ${BASE_DIR} >/dev/null
 	fi
 	
 	echo "OK"
