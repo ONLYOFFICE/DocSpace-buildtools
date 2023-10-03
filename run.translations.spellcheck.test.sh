@@ -14,4 +14,4 @@ done
 
 echo "Root directory:" $dir
 
-dotnet test $dir/common/Tests/Frontend.Translations.Tests/Frontend.Translations.Tests.csproj --filter Name~SpellCheckTest -l:html --results-directory "$dir/TestsResults" --environment "BASE_DIR=$dir" --environment "SAVE=$save"
+dotnet test $dir/client/common/Tests/Frontend.Translations.Tests/Frontend.Translations.Tests.csproj --filter Name~SpellCheckTest -l:html --results-directory "$dir/TestsResults" --environment "BASE_DIR=$dir" --environment "SAVE=$save"
