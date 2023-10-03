@@ -45,17 +45,17 @@ RUN echo ${GIT_BRANCH}  && \
 RUN cd ${SRC_PATH} && \
     # mkdir -p /app/onlyoffice/config/ && cp -rf config/* /app/onlyoffice/config/ && \
     mkdir -p /app/onlyoffice/ && \
-    find config/ -maxdepth 1 -name "*.json" | grep -v test | grep -v dev | xargs tar -cvf config.tar && \
+    find buildtools/config/ -maxdepth 1 -name "*.json" | grep -v test | grep -v dev | xargs tar -cvf config.tar && \
     tar -C "/app/onlyoffice/" -xvf config.tar && \
     cp config/*.config /app/onlyoffice/config/ && \
-    mkdir -p /etc/nginx/conf.d && cp -f config/nginx/onlyoffice*.conf /etc/nginx/conf.d/ && \
-    mkdir -p /etc/nginx/includes/ && cp -f config/nginx/includes/onlyoffice*.conf /etc/nginx/includes/ && \
+    mkdir -p /etc/nginx/conf.d && cp -f buildtools/config/nginx/onlyoffice*.conf /etc/nginx/conf.d/ && \
+    mkdir -p /etc/nginx/includes/ && cp -f buildtools/config/nginx/includes/onlyoffice*.conf /etc/nginx/includes/ && \
     sed -i "s/\"number\".*,/\"number\": \"${PRODUCT_VERSION}.${BUILD_NUMBER}\",/g" /app/onlyoffice/config/appsettings.json && \
     sed -e 's/#//' -i /etc/nginx/conf.d/onlyoffice.conf && \
     cd ${SRC_PATH}/build/install/common/ && \
-    bash build-frontend.sh -sp "${SRC_PATH}" -ba "${BUILD_ARGS}" -da "${DEPLOY_ARGS}" -di "${DEBUG_INFO}" && \
-    bash build-backend.sh -sp "${SRC_PATH}"  && \
-    bash publish-backend.sh -pc "${PUBLISH_CNF}" -sp "${SRC_PATH}" -bp "${BUILD_PATH}"  && \
+    bash build-frontend.sh -sp "${SRC_PATH}/client" -ba "${BUILD_ARGS}" -da "${DEPLOY_ARGS}" -di "${DEBUG_INFO}" && \
+    bash build-backend.sh -sp "${SRC_PATH}/server"  && \
+    bash publish-backend.sh -pc "${PUBLISH_CNF}" -sp "${SRC_PATH}/server" -bp "${BUILD_PATH}"  && \
     cp -rf ${SRC_PATH}/products/ASC.Files/Server/DocStore ${BUILD_PATH}/products/ASC.Files/server/ && \
     rm -rf ${SRC_PATH}/common/* && \
     rm -rf ${SRC_PATH}/web/ASC.Web.Core/* && \
@@ -144,13 +144,12 @@ RUN apt-get -y update && \
 # copy static services files and config values 
 COPY --from=base /etc/nginx/conf.d /etc/nginx/conf.d
 COPY --from=base /etc/nginx/includes /etc/nginx/includes
-COPY --from=base ${SRC_PATH}/build/deploy/client ${BUILD_PATH}/client
-COPY --from=base ${SRC_PATH}/build/deploy/public ${BUILD_PATH}/public
-COPY /config/nginx/docker-entrypoint.sh /docker-entrypoint.sh
-COPY /config/nginx/docker-entrypoint.d /docker-entrypoint.d
-COPY /config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
-COPY /config/nginx/templates/nginx.conf.template /etc/nginx/nginx.conf.template
-COPY prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
+COPY --from=base ${SRC_PATH}/buildtools/deploy/client ${BUILD_PATH}/client
+COPY --from=base ${SRC_PATH}/buildtools/deploy/public ${BUILD_PATH}/public
+COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/docker-entrypoint.d /docker-entrypoint.d
+COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
+COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/nginx.conf.template /etc/nginx/nginx.conf.template
+COPY --from=base ${SRC_PATH}/buildtools/install/docker/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
 
 # changes for upstream configure
 RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.conf && \
