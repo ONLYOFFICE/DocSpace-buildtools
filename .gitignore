@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 **/obj/
 **/bin/
 *.suo
@@ -54,3 +55,6 @@ licenses.csv
 publish/
 
 .idea
+=======
+.DS_Store
+>>>>>>> master
