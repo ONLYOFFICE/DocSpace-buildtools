@@ -68,7 +68,7 @@ exists=$(docker images | egrep "onlyoffice/4testing-docspace-dotnet-runtime" | e
 
 if [ "${exists}" = "" ] || [ "$force" = true ]; then
     echo "Build dotnet base image from source (apply new dotnet config)"
-    docker build -t onlyoffice/4testing-docspace-dotnet-runtime:$dotnet_version  -f ./buildtools/install/docker/Dockerfile.runtime --target dotnetrun .
+    docker build -t onlyoffice/4testing-docspace-dotnet-runtime:$dotnet_version  -f $dockerDir/Dockerfile.runtime --target dotnetrun .
 else 
     echo "SKIP build dotnet base image (already exists)"
 fi
@@ -79,7 +79,7 @@ exists=$(docker images | egrep "onlyoffice/4testing-docspace-nodejs-runtime" | e
 
 if [ "${exists}" = "" ] || [ "$force" = true ]; then
     echo "Build nodejs base image from source"
-    docker build -t onlyoffice/4testing-docspace-nodejs-runtime:$node_version  -f ./buildtools/install/docker/Dockerfile.runtime --target noderun .
+    docker build -t onlyoffice/4testing-docspace-nodejs-runtime:$node_version  -f $dockerDir/Dockerfile.runtime --target noderun .
 else 
     echo "SKIP build nodejs base image (already exists)"
 fi
@@ -90,7 +90,7 @@ exists=$(docker images | egrep "onlyoffice/4testing-docspace-proxy-runtime" | eg
 
 if [ "${exists}" = "" ] || [ "$force" = true ]; then
     echo "Build proxy base image from source (apply new nginx config)"
-    docker build -t onlyoffice/4testing-docspace-proxy-runtime:$proxy_version  -f ./buildtools/install/docker/Dockerfile.runtime --target router .
+    docker build -t onlyoffice/4testing-docspace-proxy-runtime:$proxy_version  -f $dockerDir/Dockerfile.runtime --target router .
 else 
     echo "SKIP build proxy base image (already exists)"
 fi
