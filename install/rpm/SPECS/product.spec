@@ -1,9 +1,10 @@
 %define         _binaries_in_noarch_packages_terminate_build   0
 %define         _build_id_links none
+%define         __os_install_post /usr/lib/rpm/brp-compress %{nil}
 
 %global         product docspace
+%global         product_name DocSpace
 %global         buildpath %{_var}/www/%{product}
-%global         sourcename DocSpace-%GIT_BRANCH
 
 Name:           %{product}
 Summary:        Business productivity tools
@@ -19,10 +20,12 @@ Vendor:         Ascensio System SIA
 Packager:       %{packager}
 License:        AGPLv3
 
-Source0:        https://github.com/ONLYOFFICE/%{product}/archive/%GIT_BRANCH.tar.gz#/%{sourcename}.tar.gz
-Source1:        https://github.com/ONLYOFFICE/document-templates/archive/main/community-server.tar.gz#/document-templates-main-community-server.tar.gz
-Source2:        https://github.com/ONLYOFFICE/dictionaries/archive/master.tar.gz#/dictionaries-master.tar.gz
-Source3:        %{product}.rpmlintrc
+Source0:        https://github.com/ONLYOFFICE/%{product}-buildtools/archive/%{BRANCH_BUILDTOOLS}.tar.gz#/%{product_name}-buildtools-%{BRANCH_BUILDTOOLS}.tar.gz
+Source1:        https://github.com/ONLYOFFICE/%{product}-client/archive/%{BRANCH_CLIENT}.tar.gz#/%{product_name}-client-%{BRANCH_CLIENT}.tar.gz
+Source2:        https://github.com/ONLYOFFICE/%{product}-server/archive/%{BRANCH_SERVER}.tar.gz#/%{product_name}-server-%{BRANCH_SERVER}.tar.gz
+Source3:        https://github.com/ONLYOFFICE/document-templates/archive/main/community-server.tar.gz#/document-templates-main-community-server.tar.gz
+Source4:        https://github.com/ONLYOFFICE/dictionaries/archive/master.tar.gz#/dictionaries-master.tar.gz
+Source5:        %{product}.rpmlintrc
 
 BuildRequires:  nodejs >= 18.0
 BuildRequires:  yarn
@@ -58,11 +61,15 @@ predefined permissions.
 %include package.spec
 
 %prep
+rm -rf %{_rpmdir}/%{_arch}/%{name}-* %{_builddir}/*
 
-rm -rf %{_rpmdir}/%{_arch}/%{name}-*
-%setup -b1 -b2 -n %{sourcename} -q
-mv -f %{_builddir}/document-templates-main-community-server/*  %{_builddir}/%{sourcename}/products/ASC.Files/Server/DocStore/
-mv -f %{_builddir}/dictionaries-master/*  %{_builddir}/%{sourcename}/common/Tests/Frontend.Translations.Tests/dictionaries/
+echo "%{SOURCE0} %{SOURCE1} %{SOURCE2} %{SOURCE3} %{SOURCE4}" | xargs -n 1 -P 5 tar -xzf
+cp %{SOURCE5} .
+
+mv -f %{product_name}-buildtools-%{BRANCH_BUILDTOOLS} buildtools
+mv -f %{product_name}-client-%{BRANCH_CLIENT} client
+mv -f %{product_name}-server-%{BRANCH_SERVER} server
+mv -f %{_builddir}/dictionaries-master/*  %{_builddir}/client/common/Tests/Frontend.Translations.Tests/dictionaries/
 
 %include build.spec
 
