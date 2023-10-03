@@ -1,5 +1,7 @@
 @echo off
 
+for %%i in ("%~dp0..") do set "parentFolder=%%~fi"
+
 cd /D "%~dp0"
 call runasadmin.bat "%~dpnx0"
 
@@ -40,7 +42,7 @@ powershell -Command "(gc publish\nginx\onlyoffice.conf) -replace '#', '' | Out-F
 xcopy buildtools\config\nginx\sites-enabled\* publish\nginx\sites-enabled\ /E /R /Y
 
 REM fix paths
-powershell -Command "(gc publish\nginx\sites-enabled\onlyoffice-client.conf) -replace 'ROOTPATH', '%~dp0deploy\client' -replace '\\', '/' | Out-File -encoding ASCII publish\nginx\sites-enabled\onlyoffice-client.conf"
+powershell -Command "(gc publish\nginx\sites-enabled\onlyoffice-client.conf) -replace 'ROOTPATH', '%parentFolder%\publish\web\client' -replace '\\', '/' | Out-File -encoding ASCII publish\nginx\sites-enabled\onlyoffice-client.conf"
 
 REM restart nginx
 echo service nginx stop
