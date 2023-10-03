@@ -43,26 +43,29 @@ RUN echo ${GIT_BRANCH}  && \
     git clone --recurse-submodules -b ${GIT_BRANCH} https://github.com/ONLYOFFICE/DocSpace.git ${SRC_PATH}
 
 RUN cd ${SRC_PATH} && \
-    # mkdir -p /app/onlyoffice/config/ && cp -rf config/* /app/onlyoffice/config/ && \
-    mkdir -p /app/onlyoffice/ && \
-    find buildtools/config/ -maxdepth 1 -name "*.json" | grep -v test | grep -v dev | xargs tar -cvf config.tar && \
-    tar -C "/app/onlyoffice/" -xvf config.tar && \
-    cp config/*.config /app/onlyoffice/config/ && \
+    mkdir -p /app/onlyoffice/config/ && \
+    cd buildtools/config && \
+    ls | grep -v test | grep -v dev | grep -v nginx | xargs cp -t /app/onlyoffice/config/ && \
+    cd ${SRC_PATH} && \
+    # mkdir -p /app/onlyoffice/ && \
+    #find buildtools/config/ -maxdepth 1 -name "*.json" | grep -v test | grep -v dev | xargs tar -cvf config.tar && \
+    # tar -C "/app/onlyoffice/" -xvf config.tar && \
+    cp buildtools/config/*.config /app/onlyoffice/config/ && \
     mkdir -p /etc/nginx/conf.d && cp -f buildtools/config/nginx/onlyoffice*.conf /etc/nginx/conf.d/ && \
     mkdir -p /etc/nginx/includes/ && cp -f buildtools/config/nginx/includes/onlyoffice*.conf /etc/nginx/includes/ && \
     sed -i "s/\"number\".*,/\"number\": \"${PRODUCT_VERSION}.${BUILD_NUMBER}\",/g" /app/onlyoffice/config/appsettings.json && \
     sed -e 's/#//' -i /etc/nginx/conf.d/onlyoffice.conf && \
-    cd ${SRC_PATH}/build/install/common/ && \
+    cd ${SRC_PATH}/buildtools/install/common/ && \
     bash build-frontend.sh -sp "${SRC_PATH}/client" -ba "${BUILD_ARGS}" -da "${DEPLOY_ARGS}" -di "${DEBUG_INFO}" && \
     bash build-backend.sh -sp "${SRC_PATH}/server"  && \
     bash publish-backend.sh -pc "${PUBLISH_CNF}" -sp "${SRC_PATH}/server" -bp "${BUILD_PATH}"  && \
-    cp -rf ${SRC_PATH}/products/ASC.Files/Server/DocStore ${BUILD_PATH}/products/ASC.Files/server/ && \
-    rm -rf ${SRC_PATH}/common/* && \
-    rm -rf ${SRC_PATH}/web/ASC.Web.Core/* && \
-    rm -rf ${SRC_PATH}/web/ASC.Web.Studio/* && \
-    rm -rf ${SRC_PATH}/products/ASC.Files/Server/* && \
-    rm -rf ${SRC_PATH}/products/ASC.Files/Service/* && \
-    rm -rf ${SRC_PATH}/products/ASC.People/Server/* 
+    cp -rf ${SRC_PATH}/server/products/ASC.Files/Server/DocStore ${BUILD_PATH}/products/ASC.Files/server/ && \
+    rm -rf ${SRC_PATH}/server/common/* && \
+    rm -rf ${SRC_PATH}/server/web/ASC.Web.Core/* && \
+    rm -rf ${SRC_PATH}/server/web/ASC.Web.Studio/* && \
+    rm -rf ${SRC_PATH}/server/products/ASC.Files/Server/* && \
+    rm -rf ${SRC_PATH}/server/products/ASC.Files/Service/* && \
+    rm -rf ${SRC_PATH}/server/products/ASC.People/Server/* 
   
 COPY config/mysql/conf.d/mysql.cnf /etc/mysql/conf.d/mysql.cnf
 
@@ -144,8 +147,8 @@ RUN apt-get -y update && \
 # copy static services files and config values 
 COPY --from=base /etc/nginx/conf.d /etc/nginx/conf.d
 COPY --from=base /etc/nginx/includes /etc/nginx/includes
-COPY --from=base ${SRC_PATH}/buildtools/deploy/client ${BUILD_PATH}/client
-COPY --from=base ${SRC_PATH}/buildtools/deploy/public ${BUILD_PATH}/public
+COPY --from=base ${SRC_PATH}/publish/web/client ${BUILD_PATH}/client
+COPY --from=base ${SRC_PATH}/publish/web/public ${BUILD_PATH}/public
 COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/docker-entrypoint.d /docker-entrypoint.d
 COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
 COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/nginx.conf.template /etc/nginx/nginx.conf.template
@@ -178,7 +181,7 @@ FROM noderun as doceditor
 WORKDIR ${BUILD_PATH}/products/ASC.Editors/editor
 
 COPY --chown=onlyoffice:onlyoffice docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/deploy/editor/ .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/editor/ .
 
 CMD ["server.js", "ASC.Editors"]
 
@@ -187,7 +190,7 @@ FROM noderun as login
 WORKDIR ${BUILD_PATH}/products/ASC.Login/login
 
 COPY --chown=onlyoffice:onlyoffice docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/deploy/login/ .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/login/ .
 
 CMD ["server.js", "ASC.Login"]
 
@@ -328,7 +331,7 @@ ENV BUILD_PATH=${BUILD_PATH}
 ENV SRC_PATH=${SRC_PATH}
 WORKDIR ${BUILD_PATH}/services/ASC.Migration.Runner/
 COPY  ./docker-migration-entrypoint.sh ./docker-migration-entrypoint.sh
-COPY --from=base ${SRC_PATH}/ASC.Migration.Runner/service/ .
+COPY --from=base ${SRC_PATH}/server/ASC.Migration.Runner/service/ .
 
 ENTRYPOINT ["./docker-migration-entrypoint.sh"]
 
