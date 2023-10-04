@@ -1,6 +1,6 @@
 REM echo ######## Set variables ########
 set "publisher="Ascensio System SIA""
-set "nuget="%cd%\thirdparty\SimpleRestServices\src\.nuget\NuGet.exe""
+set "nuget="%cd%\server\thirdparty\SimpleRestServices\src\.nuget\NuGet.exe""
 set "environment=production"
 
 REM echo ######## Extracting and preparing files to build ########
