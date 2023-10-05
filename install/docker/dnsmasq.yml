@@ -14,6 +14,6 @@ services:
       - HTTP_USER=foo
       - HTTP_PASS=bar
     volumes:
-      - ${ROOT_DIR}/config/dnsmasq.conf:/etc/dnsmasq.conf
+      - ${ROOT_DIR}/buildtools/config/dnsmasq.conf:/etc/dnsmasq.conf
     cap_add:
       - NET_ADMIN
