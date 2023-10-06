@@ -353,3 +353,4 @@ RUN mkdir /app
 
 COPY wait-bin-share-docker-entrypoint.sh /app/docker-entrypoint.sh
 ENTRYPOINT ["./app/docker-entrypoint.sh"]
+
