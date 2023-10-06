@@ -96,7 +96,7 @@ RUN mkdir -p /var/log/onlyoffice && \
 
 COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
         
-#USER onlyoffice
+USER onlyoffice
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
 
@@ -125,6 +125,7 @@ RUN mkdir -p /var/log/onlyoffice && \
 
 COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
 
+USER onlyoffice
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
 
@@ -142,19 +143,23 @@ RUN apt-get -y update && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     rm -rf /var/lib/apt/lists/* && \
-    rm -rf /usr/share/nginx/html/* 
+    rm -rf /usr/share/nginx/html/* && \
+    chown -R onlyoffice:onlyoffice /etc/nginx/ && \
+    chown -R onlyoffice:onlyoffice /var/ && \
+    chown -R onlyoffice:onlyoffice /usr/ && \
+    chown -R onlyoffice:onlyoffice /run/
 
 # copy static services files and config values 
-COPY --from=base /etc/nginx/conf.d /etc/nginx/conf.d
-COPY --from=base /etc/nginx/includes /etc/nginx/includes
-COPY --from=base ${SRC_PATH}/publish/web/client ${BUILD_PATH}/client
-COPY --from=base ${SRC_PATH}/publish/web/public ${BUILD_PATH}/public
-COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/docker-entrypoint.d /docker-entrypoint.d
-COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
-COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/nginx.conf.template /etc/nginx/nginx.conf.template
-COPY --from=base ${SRC_PATH}/buildtools/install/docker/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
+COPY --from=base --chown=onlyoffice:onlyoffice /etc/nginx/conf.d /etc/nginx/conf.d
+COPY --from=base --chown=onlyoffice:onlyoffice /etc/nginx/includes /etc/nginx/includes
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/client ${BUILD_PATH}/client
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/public ${BUILD_PATH}/public
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/docker-entrypoint.d /docker-entrypoint.d
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/nginx.conf.template /etc/nginx/nginx.conf.template
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
 
-
+USER onlyoffice
 # changes for upstream configure
 RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5012/$service_backup/' /etc/nginx/conf.d/onlyoffice.conf && \
@@ -329,6 +334,11 @@ ARG BUILD_PATH
 ARG SRC_PATH 
 ENV BUILD_PATH=${BUILD_PATH}
 ENV SRC_PATH=${SRC_PATH}
+RUN mkdir -p /var/log/onlyoffice && \
+    mkdir -p /app/onlyoffice/data && \
+    addgroup --system --gid 107 onlyoffice && \
+    adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice
+USER onlyoffice
 WORKDIR ${BUILD_PATH}/services/ASC.Migration.Runner/
 COPY  ./docker-migration-entrypoint.sh ./docker-migration-entrypoint.sh
 COPY --from=base ${SRC_PATH}/server/ASC.Migration.Runner/service/ .
@@ -353,4 +363,3 @@ RUN mkdir /app
 
 COPY wait-bin-share-docker-entrypoint.sh /app/docker-entrypoint.sh
 ENTRYPOINT ["./app/docker-entrypoint.sh"]
-
