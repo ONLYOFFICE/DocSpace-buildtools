@@ -41,7 +41,7 @@ xcopy "%PathToRepository%\common\ASC.SsoAuth" "%PathToAppFolder%\services\ASC.Ss
 
 rem backend services (Nodejs) in directory 'products'
 mkdir "%PathToAppFolder%\products\ASC.Login\login"
-xcopy "%PathToRepository%\buildtools\deploy\login" "%PathToAppFolder%\products\ASC.Login\login" /s /y /b /i
+xcopy "%PathToRepository%\publish\web\login" "%PathToAppFolder%\products\ASC.Login\login" /s /y /b /i
 
 mkdir "%PathToAppFolder%\products\ASC.Files\editor"
-xcopy "%PathToRepository%\buildtools\deploy\editor" "%PathToAppFolder%\products\ASC.Files\editor" /s /y /b /i
+xcopy "%PathToRepository%\publish\web\editor" "%PathToAppFolder%\products\ASC.Files\editor" /s /y /b /i
