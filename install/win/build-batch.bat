@@ -69,6 +69,9 @@ del /q buildtools\install\win\Files\config\sed*
 del /f /q buildtools\install\win\Files\nginx\conf\onlyoffice-login.conf
 del /f /q buildtools\install\win\Files\nginx\conf\onlyoffice-story.conf
 
+::configure nuget.config
+copy "server\NuGet.config" . /y
+%sed% -i "s/\.nuget\\packages/server\\.nuget\\packages/g" NuGet.config
 
 REM echo ######## Build Utils ########
 %nuget% install %cd%\buildtools\install\win\CustomActions\C#\Utils\packages.config -OutputDirectory %cd%\buildtools\install\win\CustomActions\C#\Utils\packages
