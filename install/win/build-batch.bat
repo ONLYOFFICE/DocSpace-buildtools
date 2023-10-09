@@ -60,7 +60,6 @@ del /f /q buildtools\install\win\Files\config\*.dev.json
 
 REM echo ######## Remove AWSTarget from nlog.config ########
 %sed% -i "/<target type=\"AWSTarget\" name=\"aws\"/,/<\/target>/d; /<target type=\"AWSTarget\" name=\"aws_sql\"/,/<\/target>/d" buildtools\install\win\Files\config\nlog.config
-del /q buildtools\install\win\Files\config\sed*
 
 ::edit environment
 %sed% -i "s/\(\W\)PRODUCT.ENVIRONMENT.SUB\(\W\)/\1%environment%\2/g" buildtools\install\win\DocSpace.aip
@@ -82,6 +81,7 @@ rmdir buildtools\install\win\CustomActions\C#\Utils\obj /s /q
 
 REM echo ######## Delete temp files ########
 del /f /q buildtools\install\win\*.back.*
+del /f /q sed*
 
 REM echo ######## Build MySQL Server Installer ########
 iscc /Qp /S"byparam="signtool" sign /a /n "%publisher%" /t http://timestamp.digicert.com $f" "buildtools\install\win\MySQL Server Installer Runner.iss"
