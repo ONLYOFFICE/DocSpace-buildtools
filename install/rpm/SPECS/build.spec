@@ -22,7 +22,7 @@ json -I -f config/appsettings.json -e "this.core.notify.postman=\"services\"" -e
 json -I -f config/apisystem.json -e "this.core.notify.postman=\"services\""
 json -I -f %{_builddir}/publish/web/public/scripts/config.json -e "this.wrongPortalNameUrl=\"\""
 
-sed 's_\(minlevel=\)".*"_\1"Warn"_g' -i config/nlog.config
+sed 's_\(minlevel=\)"[^"]*"_\1"Warn"_g' -i config/nlog.config
 sed 's/teamlab.info/onlyoffice.com/g' -i config/autofac.consumers.json
 
 sed 's_etc/nginx_etc/openresty_g' -i config/nginx/*.conf
