@@ -55,6 +55,7 @@ x-service:
       DEBUG_INFO: ${DEBUG_INFO}
     volumes:
     #- /app/onlyoffice/CommunityServer/data:/app/onlyoffice/data
+    - /app/onlyoffice/logs/docspace:/var/log/onlyoffice
     - app_data:/app/onlyoffice/data
     - files_data:/var/www/products/ASC.Files/server/
     - people_data:/var/www/products/ASC.People/server/

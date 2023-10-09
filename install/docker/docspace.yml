@@ -54,6 +54,7 @@ x-service: &x-service-base
     DEBUG_INFO: ${DEBUG_INFO}
   volumes:
     #- /app/onlyoffice/CommunityServer/data:/app/onlyoffice/data
+    - /app/onlyoffice/logs/docspace:/var/log/onlyoffice
     - app_data:/app/onlyoffice/data
     - files_data:/var/www/products/ASC.Files/server/
     - people_data:/var/www/products/ASC.People/server/
@@ -225,7 +226,7 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - SERVICE_PORT=${SERVICE_PORT}
     volumes:
-      - router_log:/var/log/nginx
+      - /app/onlyoffice/logs/router:/var/log/nginx
 
 networks:
   default:
@@ -233,7 +234,6 @@ networks:
     external: true
 
 volumes:
-  router_log:
   app_data:
   files_data:
   people_data:

@@ -199,6 +199,7 @@ writeJsonFile(filePath, jsonData)
 filePath = "/app/onlyoffice/config/appsettings.services.json"
 jsonData = openJsonFile(filePath)
 updateJsonData(jsonData,"$.logLevel", LOG_LEVEL)
+updateJsonData(jsonData,"$.logPath", LOG_DIR)
 writeJsonFile(filePath, jsonData)
 
 if OAUTH_REDIRECT_URL:
