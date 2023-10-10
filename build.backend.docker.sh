@@ -16,7 +16,7 @@ echo "LOCAL IP: $local_ip"
 doceditor=${local_ip}:5013
 login=${local_ip}:5011
 client=${local_ip}:5001
-portal_url="http://$local_ip:8092"
+portal_url="http://$local_ip"
 
 echo "SERVICE_DOCEDITOR: $doceditor"
 echo "SERVICE_LOGIN: $login"
@@ -56,12 +56,27 @@ else
     exit 1
 fi
 
+if [ "$1" = "--dns" ]; then
+    echo "Run local dns server"
+    ROOT_DIR=$dir \
+    docker compose -f $dockerDir/dnsmasq.yml up -d
+fi
+
 echo "Clear publish folder"
 rm -rf $dir/publish/services
 
 echo "Build backend services (to "publish/" folder)"
 bash $dir/buildtools/install/common/build-services.sh -pb backend-publish -pc Debug -de "$dockerDir/docker-entrypoint.py"
 
+DOCUMENT_SERVER_IMAGE_NAME=onlyoffice/documentserver-de:latest
+INSTALLATION_TYPE=ENTERPRISE
+
+if [ "$1" = "--community" ]; then
+    DOCUMENT_SERVER_IMAGE_NAME=onlyoffice/documentserver:latest
+    INSTALLATION_TYPE=COMMUNITY
+fi
+
+echo "Run migration and services INSTALLATION_TYPE=$INSTALLATION_TYPE"
 dotnet_version=dev
 
 exists=$(docker images | egrep "onlyoffice/4testing-docspace-dotnet-runtime" | egrep "$dotnet_version" | awk 'NR>0 {print $1 ":" $2}') 
@@ -97,10 +112,11 @@ fi
 
 echo "Run migration and services"
 ENV_EXTENSION="dev" \
+INSTALLATION_TYPE=$INSTALLATION_TYPE \
 Baseimage_Dotnet_Run="onlyoffice/4testing-docspace-dotnet-runtime:$dotnet_version" \
 Baseimage_Nodejs_Run="onlyoffice/4testing-docspace-nodejs-runtime:$node_version" \
 Baseimage_Proxy_Run="onlyoffice/4testing-docspace-proxy-runtime:$proxy_version" \
-DOCUMENT_SERVER_IMAGE_NAME=onlyoffice/documentserver-de:latest \
+DOCUMENT_SERVER_IMAGE_NAME=$DOCUMENT_SERVER_IMAGE_NAME \
 SERVICE_DOCEDITOR=$doceditor \
 SERVICE_LOGIN=$login \
 SERVICE_CLIENT=$client \
@@ -110,3 +126,11 @@ SRC_PATH="$dir/publish/services" \
 DATA_DIR="$dir/data" \
 APP_URL_PORTAL=$portal_url \
 docker-compose -f $dockerDir/docspace.profiles.yml -f $dockerDir/docspace.overcome.yml --profile migration-runner --profile backend-local up -d
+
+echo ""
+echo "APP_URL_PORTAL: $portal_url"
+echo "LOCAL IP: $local_ip"
+echo "SERVICE_DOCEDITOR: $doceditor"
+echo "SERVICE_LOGIN: $login"
+echo "SERVICE_CLIENT: $client"
+echo "INSTALLATION_TYPE=$INSTALLATION_TYPE"

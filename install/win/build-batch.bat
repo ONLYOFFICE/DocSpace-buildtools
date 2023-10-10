@@ -1,6 +1,6 @@
 REM echo ######## Set variables ########
 set "publisher="Ascensio System SIA""
-set "nuget="%cd%\thirdparty\SimpleRestServices\src\.nuget\NuGet.exe""
+set "nuget="%cd%\server\thirdparty\SimpleRestServices\src\.nuget\NuGet.exe""
 set "environment=production"
 
 REM echo ######## Extracting and preparing files to build ########
@@ -56,10 +56,10 @@ del /f /q buildtools\install\win\Files\config\*.dev.json
 
 ::redirectUrl value replacement
 %sed% "s/teamlab.info/onlyoffice.com/g" -i buildtools\install\win\Files\config/autofac.consumers.json
+%sed% "s_\(\"wrongPortalNameUrl\":\).*,_\1 \"\",_g" -i buildtools\install\win\Files\public\scripts\config.json
 
 REM echo ######## Remove AWSTarget from nlog.config ########
 %sed% -i "/<target type=\"AWSTarget\" name=\"aws\"/,/<\/target>/d; /<target type=\"AWSTarget\" name=\"aws_sql\"/,/<\/target>/d" buildtools\install\win\Files\config\nlog.config
-del /q buildtools\install\win\Files\config\sed*
 
 ::edit environment
 %sed% -i "s/\(\W\)PRODUCT.ENVIRONMENT.SUB\(\W\)/\1%environment%\2/g" buildtools\install\win\DocSpace.aip
@@ -68,6 +68,9 @@ del /q buildtools\install\win\Files\config\sed*
 del /f /q buildtools\install\win\Files\nginx\conf\onlyoffice-login.conf
 del /f /q buildtools\install\win\Files\nginx\conf\onlyoffice-story.conf
 
+::configure nuget.config
+copy "server\NuGet.config" . /y
+%sed% -i "s/\.nuget\\packages/server\\.nuget\\packages/g" NuGet.config
 
 REM echo ######## Build Utils ########
 %nuget% install %cd%\buildtools\install\win\CustomActions\C#\Utils\packages.config -OutputDirectory %cd%\buildtools\install\win\CustomActions\C#\Utils\packages
@@ -78,6 +81,7 @@ rmdir buildtools\install\win\CustomActions\C#\Utils\obj /s /q
 
 REM echo ######## Delete temp files ########
 del /f /q buildtools\install\win\*.back.*
+del /f /q sed*
 
 REM echo ######## Build MySQL Server Installer ########
 iscc /Qp /S"byparam="signtool" sign /a /n "%publisher%" /t http://timestamp.digicert.com $f" "buildtools\install\win\MySQL Server Installer Runner.iss"

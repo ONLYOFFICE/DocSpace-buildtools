@@ -13,7 +13,7 @@ $LocalIp = (Get-CimInstance -ClassName Win32_NetworkAdapterConfiguration | Where
 $Doceditor = ($LocalIp + ":5013")
 $Login = ($LocalIp + ":5011")
 $Client = ($LocalIp + ":5001")
-$PortalUrl = ("http://" + $LocalIp + ":8092")
+$PortalUrl = ("http://" + $LocalIp)
 $ProxyVersion="v1.0.0"
 
 # Stop all backend services"
@@ -38,8 +38,22 @@ if (-not $ExistsNetwork) {
 Write-Host "Run MySQL" -ForegroundColor Green
 docker compose -f "$DockerDir\db.yml" up -d
 
+if ($args[0] -eq "--dns" ) {
+  Write-Host "Run local dns server" -ForegroundColor Green
+  $Env:ROOT_DIR=$RootDir
+  docker compose -f "$DockerDir\dnsmasq.yml" up -d
+}
+
 Write-Host "Build backend services (to `publish/` folder)" -ForegroundColor Green
 & "$PSScriptRoot\install\common\build-services.ps1"
+
+$Env:DOCUMENT_SERVER_IMAGE_NAME = "onlyoffice/documentserver-de:latest"
+$Env:INSTALLATION_TYPE = "ENTERPRISE"
+
+if ($args[0] -eq "--community" ) {
+  $Env:DOCUMENT_SERVER_IMAGE_NAME = "onlyoffice/documentserver:latest"
+  $Env:INSTALLATION_TYPE = "COMMUNITY"
+}
 
 Set-Location -Path $RootDir
 
@@ -77,7 +91,6 @@ $Env:ENV_EXTENSION="dev"
 $Env:Baseimage_Dotnet_Run="onlyoffice/4testing-docspace-dotnet-runtime:$DotnetVersion"
 $Env:Baseimage_Nodejs_Run="onlyoffice/4testing-docspace-nodejs-runtime:$NodeVersion"
 $Env:Baseimage_Proxy_Run="onlyoffice/4testing-docspace-proxy-runtime:$ProxyVersion"
-$Env:DOCUMENT_SERVER_IMAGE_NAME="onlyoffice/documentserver-de:latest"
 $Env:SERVICE_DOCEDITOR=$Doceditor
 $Env:SERVICE_LOGIN=$Login
 $Env:SERVICE_CLIENT=$Client
@@ -87,5 +100,13 @@ $Env:SRC_PATH="$RootDir\publish\services"
 $Env:DATA_DIR="$RootDir\data"
 $Env:APP_URL_PORTAL=$PortalUrl
 docker compose -f "$DockerDir\docspace.profiles.yml" -f "$DockerDir\docspace.overcome.yml" --profile migration-runner --profile backend-local up -d
+
+Write-Host "== Build params ==" -ForegroundColor Green
+Write-Host "APP_URL_PORTAL: $PortalUrl" -ForegroundColor Blue
+Write-Host "LOCAL IP: $LocalIp" -ForegroundColor Blue
+Write-Host "SERVICE_DOCEDITOR: $Env:SERVICE_DOCEDITOR" -ForegroundColor Blue
+Write-Host "SERVICE_LOGIN: $Env:SERVICE_LOGIN" -ForegroundColor Blue
+Write-Host "SERVICE_CLIENT: $Env:SERVICE_CLIENT" -ForegroundColor Blue
+Write-Host "INSTALLATION_TYPE: $Env:INSTALLATION_TYPE" -ForegroundColor Blue
 
 Set-Location -Path $PSScriptRoot
