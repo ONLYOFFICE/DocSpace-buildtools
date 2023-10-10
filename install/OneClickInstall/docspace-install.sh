@@ -142,7 +142,7 @@ fi
 if [ -z $GIT_BRANCH ]; then
 	DOWNLOAD_URL_PREFIX="https://download.onlyoffice.com/${product}"
 else
-	DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${product}/${GIT_BRANCH}/buildtools/install/OneClickInstall"
+	DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
 fi
 
 if [ "$DOCKER" == "true" ]; then
