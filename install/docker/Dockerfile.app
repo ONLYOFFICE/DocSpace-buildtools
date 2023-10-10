@@ -39,17 +39,15 @@ RUN apt-get -y update && \
     rm -rf /var/lib/apt/lists/*
 
 ADD https://api.github.com/repos/ONLYOFFICE/DocSpace/git/refs/heads/${GIT_BRANCH} version.json
-RUN echo ${GIT_BRANCH}  && \
-    git clone --recurse-submodules -b ${GIT_BRANCH} https://github.com/ONLYOFFICE/DocSpace.git ${SRC_PATH}
+RUN git clone -b ${GIT_BRANCH} https://github.com/ONLYOFFICE/DocSpace-buildtools.git ${SRC_PATH}/buildtools && \
+    git clone --recurse-submodules -b ${GIT_BRANCH} https://github.com/ONLYOFFICE/DocSpace-Server.git ${SRC_PATH}/server && \
+    git clone -b ${GIT_BRANCH} https://github.com/ONLYOFFICE/DocSpace-Client.git ${SRC_PATH}/client
 
 RUN cd ${SRC_PATH} && \
     mkdir -p /app/onlyoffice/config/ && \
     cd buildtools/config && \
     ls | grep -v test | grep -v dev | grep -v nginx | xargs cp -t /app/onlyoffice/config/ && \
     cd ${SRC_PATH} && \
-    # mkdir -p /app/onlyoffice/ && \
-    #find buildtools/config/ -maxdepth 1 -name "*.json" | grep -v test | grep -v dev | xargs tar -cvf config.tar && \
-    # tar -C "/app/onlyoffice/" -xvf config.tar && \
     cp buildtools/config/*.config /app/onlyoffice/config/ && \
     mkdir -p /etc/nginx/conf.d && cp -f buildtools/config/nginx/onlyoffice*.conf /etc/nginx/conf.d/ && \
     mkdir -p /etc/nginx/includes/ && cp -f buildtools/config/nginx/includes/onlyoffice*.conf /etc/nginx/includes/ && \
