@@ -8,7 +8,7 @@ Help()
    # Display Help
    echo "Build and run backend and working environment. (Use 'yarn start' to run client -> https://github.com/ONLYOFFICE/DocSpace-client)"
    echo
-   echo "Syntax: available params [-h|f|i|c|d|]"
+   echo "Syntax: available params [-h|f|s|c|d|]"
    echo "options:"
    echo "h     Print this Help."
    echo "f     Force rebuild base images."
