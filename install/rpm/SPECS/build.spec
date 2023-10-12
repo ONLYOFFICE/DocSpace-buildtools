@@ -27,7 +27,7 @@ sed 's/teamlab.info/onlyoffice.com/g' -i config/autofac.consumers.json
 
 sed 's_etc/nginx_etc/openresty_g' -i config/nginx/*.conf
 sed -e 's/$router_host/127.0.0.1/g' -e 's/the_host/host/g' -e 's/the_scheme/scheme/g' -e 's_includes_/etc/openresty/includes_g' -i install/docker/config/nginx/onlyoffice-proxy*.conf
-sed -e '/.pid/d' -e '/temp_path/d' -e 's_etc/nginx_etc/openresty_g' -i install/docker/config/nginx/templates/nginx.conf.template
+sed -e '/.pid/d' -e '/temp_path/d' -e 's_etc/nginx_etc/openresty_g' -e 's/\.log/-openresty.log/g' -i install/docker/config/nginx/templates/nginx.conf.template
 sed -i "s_\(.*root\).*;_\1 \"/var/www/%{product}\";_g" -i install/docker/config/nginx/letsencrypt.conf
 
 find %{_builddir}/server/publish/ \
