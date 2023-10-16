@@ -101,14 +101,11 @@ IF "%SignBuild%"=="true" (
 %AdvancedInstaller% /edit buildtools\install\win\DocSpace.aip /SetDigitalCertificateFile -file %onlyoffice_codesign_path% -password "%onlyoffice_codesign_password%"
 )
 
-%AdvancedInstaller% /rebuild buildtools\install\win\DocSpace.aip
+:: Build DocSpace Community
+%AdvancedInstaller% /rebuild buildtools\install\win\DocSpace.aip -buildslist DOCSPACE_COMMUNITY
 
-REM echo ######## Build DocSpace Enterprise package ########
-%AdvancedInstaller% /edit buildtools\install\win\DocSpace.Enterprise.aip /SetVersion %BUILD_VERSION%.%BUILD_NUMBER%
+:: Build DocSpace Enterprise
+copy "buildtools\install\win\Resources\License_Enterprise.rtf" "buildtools\install\win\Resources\License.rtf" /y
+copy "buildtools\install\win\Resources\License_Enterprise_Redist.rtf" "buildtools\install\win\Resources\License_Redist.rtf" /y
 
-IF "%SignBuild%"=="true" (
-%AdvancedInstaller% /edit buildtools\install\win\DocSpace.Enterprise.aip /SetSig
-%AdvancedInstaller% /edit buildtools\install\win\DocSpace.Enterprise.aip /SetDigitalCertificateFile -file %onlyoffice_codesign_path% -password "%onlyoffice_codesign_password%"
-)
-
-%AdvancedInstaller% /rebuild buildtools\install\win\DocSpace.Enterprise.aip
+%AdvancedInstaller% /rebuild buildtools\install\win\DocSpace.aip -buildslist DOCSPACE_ENTERPRISE
