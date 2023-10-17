@@ -47,7 +47,7 @@ jobs:
         run: |
           cd .${DOCKER_PATH}
           GITHUB_REF_NAME=${{ steps.release-branch-finder.outputs.release-branch }}
-          DOCKER_TAG=2.0.0.${{github.run_number}}
+          DOCKER_TAG=develop.${{github.run_number}}
           export DOCKER_TAG
 
           docker buildx bake -f build.yml \
