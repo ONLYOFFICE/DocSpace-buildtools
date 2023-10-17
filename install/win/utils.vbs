@@ -147,7 +147,7 @@ Function SetMACHINEKEY
     If objMatches.Count > 0 Then
         Session.Property("MACHINE_KEY") = objMatches(0).Submatches(0)
     Else
-        Session.Property("MACHINE_KEY") = RandomString(12)
+        Session.Property("MACHINE_KEY") = RandomString(16)
     End If
 
 End Function
