@@ -246,7 +246,9 @@ WORKDIR ${BUILD_PATH}/products/ASC.Files/service/
 
 COPY --chown=onlyoffice:onlyoffice docker-entrypoint.py ./docker-entrypoint.py
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Files.Service/service/ .
-COPY --from=onlyoffice/ffvideo:6.0 --chown=onlyoffice:onlyoffice /usr/local /usr/local/
+COPY --from=mwader/static-ffmpeg:6.0-1 --chown=onlyoffice:onlyoffice /ffmpeg /usr/local/
+COPY --from=mwader/static-ffmpeg:6.0-1 --chown=onlyoffice:onlyoffice /ffprobe /usr/local/
+
 
 CMD ["ASC.Files.Service.dll", "ASC.Files.Service", "core:eventBus:subscriptionClientName=asc_event_bus_files_service_queue"]
 
