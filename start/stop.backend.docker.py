@@ -1,24 +1,17 @@
 #!/usr/bin/python3
 
 import subprocess
+import time
 
-# Execute command to find and filter containers
-containers = subprocess.check_output(['docker', 'ps', '-a', '-f', 'label=com.docker.compose.project=docker', '--format={{.ID}}'], text=True).rstrip().split('\n')
+start = time.time()
+container_ids = subprocess.check_output("docker ps -q -f label=com.docker.compose.project=docker", encoding='utf-8')
+containers = container_ids.strip().split()
 
-print(containers)
-
-#containers = [line.split(' ')[0] for line in output.split('\n') if line and not any(keyword in line for keyword in ["mysql", "rabbitmq", "redis", "elasticsearch", "documentserver"])]
-
-if not containers:
+if containers:
+    print("Stop all backend services (containers)")
+    subprocess.run(['docker', 'stop'] + containers, check=True)
+else:
     print("No containers to stop")
-    exit()
 
-print("Stop all backend services (containers)")
-for c in containers:
-    if not c:
-        continue
-    
-    subprocess.run(['docker', 'stop', c])
-
-#print("Stop all backend services (containers)")
-#subprocess.run(['docker', 'stop', containers])
+end = time.time()
+print("\nElapsed time", end - start)
