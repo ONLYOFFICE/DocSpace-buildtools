@@ -1,10 +1,10 @@
 #!/usr/bin/python3
 
 import os
+import socket
 import subprocess
 import sys, getopt
 import shutil
-import netifaces as ni
 
 def help():
     # Display Help
@@ -24,7 +24,7 @@ dir = os.path.abspath(os.path.join(rd, ".."))
 dockerDir = os.path.join(dir, "buildtools", "install", "docker")
 # local_ip = subprocess.check_output(["ipconfig", "getifaddr", "en0"], text=True)
 
-local_ip = ni.ifaddresses('en0')[ni.AF_INET][0]['addr']
+local_ip = socket.gethostbyname_ex(socket.gethostname())[-1][-1]
 
 doceditor = local_ip + ":5013"
 login = f"{local_ip}:5011"
