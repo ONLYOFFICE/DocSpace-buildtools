@@ -23,11 +23,9 @@ def help():
 rd = os.path.dirname(os.path.abspath(__file__))
 dir = os.path.abspath(os.path.join(rd, ".."))
 dockerDir = os.path.join(dir, "buildtools", "install", "docker")
-# local_ip = subprocess.check_output(["ipconfig", "getifaddr", "en0"], text=True)
-
 local_ip = socket.gethostbyname_ex(socket.gethostname())[-1][-1]
 
-doceditor = local_ip + ":5013"
+doceditor = f"{local_ip}:5013"
 login = f"{local_ip}:5011"
 client = f"{local_ip}:5001"
 portal_url = f"http://{local_ip}"
@@ -87,7 +85,7 @@ print("DS image:", document_server_image_name)
 print()
 
 # Stop all backend services
-subprocess.call([os.path.join(dir, "buildtools", "start", "stop.backend.docker.py")])
+subprocess.run([os.path.join(dir, "buildtools", "start", "stop.backend.docker.py")])
 
 print("Run MySQL")
 
@@ -99,15 +97,15 @@ existsnetwork = subprocess.check_output(["docker", "network", "ls"]).decode("utf
 existsnetwork = [line.split()[1] for line in existsnetwork]
 
 if "onlyoffice" not in existsnetwork:
-    subprocess.call(["docker", "network", "create", "--driver", "bridge", "onlyoffice"])
+    subprocess.run(["docker", "network", "create", "--driver", "bridge", "onlyoffice"])
 
 if arch_name == "x86_64":
     print("CPU Type: x86_64 -> run db.yml")
-    subprocess.call(["docker", "compose", "-f", os.path.join(dockerDir, "db.yml"), "up", "-d"])
+    subprocess.run(["docker", "compose", "-f", os.path.join(dockerDir, "db.yml"), "up", "-d"])
 elif arch_name == "arm64":
     print("CPU Type: arm64 -> run db.yml with arm64v8 image")
     os.environ["MYSQL_IMAGE"] = "arm64v8/mysql:8.0.32-oracle"
-    subprocess.call(["docker", "compose", "-f", os.path.join(dockerDir, "db.yml"), "up", "-d"])
+    subprocess.run(["docker", "compose", "-f", os.path.join(dockerDir, "db.yml"), "up", "-d"])
 else:
     print("Error: Unknown CPU Type:", arch_name)
     sys.exit(1)
@@ -115,13 +113,13 @@ else:
 if dns == True:
     print("Run local dns server")
     os.environ["ROOT_DIR"] = dir
-    subprocess.call(["docker", "compose", "-f", os.path.join(dockerDir, "dnsmasq.yml"), "up", "-d"])
+    subprocess.run(["docker", "compose", "-f", os.path.join(dockerDir, "dnsmasq.yml"), "up", "-d"])
 
 print("Clear publish folder")
 shutil.rmtree(os.path.join(dir, "publish/services"), True)
 
 print("Build backend services (to 'publish/' folder)")
-subprocess.call([os.path.join(dir, "buildtools", "install", "common", "build-services.py")])
+subprocess.run([os.path.join(dir, "buildtools", "install", "common", "build-services.py")])
 
 def check_image(image_name):
     return subprocess.check_output(f'docker images --format "{{.Repository}}:{{.Tag}}"', shell=True, text=True).__contains__(image_name)
@@ -134,7 +132,7 @@ exists = check_image(dotnet_image)
 
 if not exists or force == True:
     print("Build dotnet base image from source (apply new dotnet config)")
-    subprocess.call(["docker", "build", "-t", dotnet_image, "-f", os.path.join(dockerDir, "Dockerfile.runtime"), "--target", "dotnetrun", "."])
+    subprocess.run(["docker", "build", "-t", dotnet_image, "-f", os.path.join(dockerDir, "Dockerfile.runtime"), "--target", "dotnetrun", "."])
 else:
     print(f"SKIP build {dotnet_image} (already exists)")
 
@@ -146,7 +144,7 @@ exists = check_image(node_image)
 
 if not exists or force == True:
     print("Build nodejs base image from source")
-    subprocess.call(["docker", "build", "-t", node_image, "-f", os.path.join(dockerDir, "Dockerfile.runtime"), "--target", "noderun", "."])
+    subprocess.run(["docker", "build", "-t", node_image, "-f", os.path.join(dockerDir, "Dockerfile.runtime"), "--target", "noderun", "."])
 else:
     print(f"SKIP build {node_image} (already exists)")
 
@@ -158,7 +156,7 @@ exists = check_image(proxy_image)
 
 if not exists or force == True:
     print("Build proxy base image from source (apply new nginx config)")
-    subprocess.call(["docker", "build", "-t", proxy_image, "-f", os.path.join(dockerDir, "Dockerfile.runtime"), "--target", "router", "."])
+    subprocess.run(["docker", "build", "-t", proxy_image, "-f", os.path.join(dockerDir, "Dockerfile.runtime"), "--target", "router", "."])
 else:
     print(f"SKIP build {proxy_image} (already exists)")
 
@@ -179,7 +177,7 @@ os.environ["SRC_PATH"] = os.path.join(dir, "publish/services")
 os.environ["DATA_DIR"] = os.path.join(dir, "data")
 os.environ["APP_URL_PORTAL"] = portal_url
 os.environ["MIGRATION_TYPE"] = migration_type
-subprocess.call(["docker-compose", "-f", os.path.join(dockerDir, "docspace.profiles.yml"), "-f", os.path.join(dockerDir, "docspace.overcome.yml"), "--profile", "migration-runner", "--profile", "backend-local", "up", "-d"])
+subprocess.run(["docker-compose", "-f", os.path.join(dockerDir, "docspace.profiles.yml"), "-f", os.path.join(dockerDir, "docspace.overcome.yml"), "--profile", "migration-runner", "--profile", "backend-local", "up", "-d"])
 
 print()
 print("Run script directory:", dir)
