@@ -5,6 +5,7 @@ import socket
 import subprocess
 import sys, getopt
 import shutil
+import platform
 
 def help():
     # Display Help
@@ -90,7 +91,9 @@ subprocess.call([os.path.join(dir, "buildtools", "start", "stop.backend.docker.p
 
 print("Run MySQL")
 
-arch_name = os.uname().machine
+arch_name = platform.uname().machine
+
+print(f"PLATFORM {arch_name}")
 
 existsnetwork = subprocess.check_output(["docker", "network", "ls"]).decode("utf-8").splitlines()
 existsnetwork = [line.split()[1] for line in existsnetwork]
