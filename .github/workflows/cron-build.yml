@@ -10,22 +10,46 @@ env:
   DOCKERFILE: "Dockerfile.app"
 
 jobs:
+
+  select-branches:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: List Branches
+        id: list-branches
+        run: |
+          all_branches=$(git branch -a --format="%(refname:short)"|sed -e "s/^origin\///")
+          matching_branches=""
+
+          for branch in $all_branches; do
+            if [[ $branch =~ ^release/v[0-9]+ || $branch =~ ^hotfix/v[0-9]+ || $branch == "develop" ]]; then
+              matching_branches="${matching_branches},\"${branch}\""
+            fi
+          done
+        
+          matching_branches=${matching_branches#,}
+          echo "json_output=[${matching_branches}]" >> $GITHUB_OUTPUT
+    outputs:
+      selected-branches: ${{ steps.list-branches.outputs.json_output }}
+
+
   build:
+    needs: select-branches
     runs-on: ubuntu-latest
     strategy:
       matrix:
         platform: [linux/amd64]
+        branch: ${{ fromJson(needs.select-branches.outputs.selected-branches) }}
     steps:
-      - name: Find Latest Release Branch
-        id: release-branch-finder
-        uses: jsryudev/release-branch-finder@v0.1.0
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          release-branch-prefix: 'develop'
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          ref: ${{ steps.release-branch-finder.outputs.release-branch }}
+          ref: ${{ matrix.branch }}
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
@@ -46,12 +70,15 @@ jobs:
       - name: Build 4testing
         run: |
           cd .${DOCKER_PATH}
-          GITHUB_REF_NAME=${{ steps.release-branch-finder.outputs.release-branch }}
-          DOCKER_TAG=develop.${{github.run_number}}
+          if [ "${{ matrix.branch }}" = "develop" ]; then
+            DOCKER_TAG="develop.${{ github.run_number }}"
+          else
+            DOCKER_TAG=$(echo "${{ matrix.branch }}" | sed '/^release\b\|^hotfix\b\|^feature\b/s/release.*\/\|hotfix.*\/\|feature.*\///; s/-git-action$//; s/^v//').${{github.run_number}}
+          fi
           export DOCKER_TAG
 
           docker buildx bake -f build.yml \
-          --set *.args.GIT_BRANCH=$GITHUB_REF_NAME \
+          --set *.args.GIT_BRANCH=${{ matrix.branch }} \
           --set *.platform=linux/amd64 \
           --push
         shell: bash
