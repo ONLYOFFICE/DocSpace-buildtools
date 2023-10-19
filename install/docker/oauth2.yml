@@ -3,7 +3,7 @@ version: "3.8"
 services:
   onlyoffice-oauth-authorization:
     build:
-      context: ../../../common/ASC.OAuth
+      context: ../../../server/common/ASC.OAuth
       dockerfile: ${OAUTH_AUTHORIZATION_DOCKERFILE}
     container_name: ${OAUTH_AUTHORIZATION_CONTAINER_NAME}
     restart: always
@@ -22,7 +22,7 @@ services:
       DOCSPACE_ADDRESS: ${DOCSPACE_ADDRESS}
   onlyoffice-oauth-api:
     build:
-      context: ../../../common/ASC.OAuth
+      context: ../../../server/common/ASC.OAuth
       dockerfile: ${OAUTH_API_DOCKERFILE}
     container_name: ${OAUTH_API_CONTAINER_NAME}
     ports:
