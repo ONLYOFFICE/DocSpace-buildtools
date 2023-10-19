@@ -86,7 +86,7 @@ print("DS image:", document_server_image_name)
 print()
 
 # Stop all backend services
-subprocess.call([os.path.join(dir, "buildtools", "start", "stop.backend.docker.sh")])
+subprocess.call([os.path.join(dir, "buildtools", "start", "stop.backend.docker.py")])
 
 print("Run MySQL")
 
