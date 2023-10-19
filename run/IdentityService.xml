@@ -1,0 +1,10 @@
+<service>
+  <id>OnlyofficeIdentityService</id>
+  <name>ONLYOFFICE IdentityService</name>
+  <startmode>manual</startmode>
+  <executable>java</executable>
+  <arguments>-jar ../../server/common/ASC.OAuth/authorization/target/authorization-0.0.1.jar</arguments>
+  <log mode="none"/>
+  <delayedAutoStart>true</delayedAutoStart>
+  <onfailure action="restart" delay="5 sec" />
+</service>
