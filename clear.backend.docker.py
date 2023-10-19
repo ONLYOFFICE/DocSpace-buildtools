@@ -15,20 +15,16 @@ if containers or images:
 
     print("Remove all backend containers")
 
-    env_vars = {
-        "DOCUMENT_SERVER_IMAGE_NAME": "onlyoffice/documentserver-de:latest",
-        "Baseimage_Dotnet_Run": "onlyoffice/4testing-docspace-dotnet-runtime:dev",
-        "Baseimage_Nodejs_Run": "onlyoffice/4testing-docspace-nodejs-runtime:dev",
-        "Baseimage_Proxy_Run": "onlyoffice/4testing-docspace-proxy-runtime:dev",
-        "SERVICE_CLIENT": "localhost:5001",
-        "BUILD_PATH": "/var/www",
-        "SRC_PATH": os.path.join(root_dir, "publish", "services"),
-        "ROOT_DIR": root_dir,
-        "DATA_DIR": os.path.join(root_dir, "data")
-    }
-
-    compose_command = f"docker compose -f {os.path.join(docker_dir, "docspace.profiles.yml")} -f {os.path.join(docker_dir, "docspace.overcome.yml")} --profile \"migration-runner\" --profile \"backend-local\" down --volumes"
-    subprocess.run(compose_command, shell=True, env=env_vars)
+    os.environ["Baseimage_Dotnet_Run"] = "onlyoffice/4testing-docspace-dotnet-runtime:dev"
+    os.environ["Baseimage_Nodejs_Run"] = "onlyoffice/4testing-docspace-nodejs-runtime:dev"
+    os.environ["Baseimage_Proxy_Run"] = "onlyoffice/4testing-docspace-proxy-runtime:dev"
+    os.environ["DOCUMENT_SERVER_IMAGE_NAME"] = "onlyoffice/documentserver-de:latest"
+    os.environ["SERVICE_CLIENT"] = "localhost:5001"
+    os.environ["ROOT_DIR"] = root_dir
+    os.environ["BUILD_PATH"] = "/var/www"
+    os.environ["SRC_PATH"] = os.path.join(root_dir, "publish/services")
+    os.environ["DATA_DIR"] = os.path.join(root_dir, "data")
+    subprocess.run(["docker-compose", "-f", os.path.join(docker_dir, "docspace.profiles.yml"), "-f", os.path.join(docker_dir, "docspace.overcome.yml"), "--profile", "migration-runner", "--profile", "backend-local", "down", "--volumes"])
 
     print("Remove docker contatiners 'mysql'")
     db_command = f"docker compose -f {os.path.join(docker_dir, 'db.yml')} down --volumes"
