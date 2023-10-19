@@ -4,7 +4,7 @@ import subprocess
 import time
 
 start = time.time()
-container_ids = subprocess.check_output("docker ps -aq -f label=com.docker.compose.project=docker", encoding='utf-8')
+container_ids = subprocess.check_output(["docker", "ps", "-aq", "-f", "label=com.docker.compose.project=docker"], encoding='utf-8')
 containers = container_ids.strip().split()
 
 if containers:
