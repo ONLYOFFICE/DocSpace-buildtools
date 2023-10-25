@@ -19,7 +19,6 @@ services:
       RABBIT_PORT: ${RABBIT_PORT}
       RABBIT_USER_NAME: ${RABBIT_USER_NAME}
       RABBIT_PASSWORD: ${RABBIT_PASSWORD}
-      DOCSPACE_ADDRESS: http://192.168.0.15
   onlyoffice-oauth-api:
     build:
       context: ../../../server/common/ASC.OAuth
@@ -38,7 +37,6 @@ services:
       RABBIT_PORT: ${RABBIT_PORT}
       RABBIT_USER_NAME: ${RABBIT_USER_NAME}
       RABBIT_PASSWORD: ${RABBIT_PASSWORD}
-      DOCSPACE_ADDRESS: http://192.168.0.15/
 networks:
   default:
     name: ${NETWORK_NAME}
