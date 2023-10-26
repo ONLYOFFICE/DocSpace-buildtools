@@ -1,7 +1,8 @@
-name: 4testing multiarch-build
+name: 4testing multiarch-cron-build
 
 on:
-  workflow_dispatch:
+  schedule:
+    - cron: '0 20 * * *'
 
 jobs:
 
