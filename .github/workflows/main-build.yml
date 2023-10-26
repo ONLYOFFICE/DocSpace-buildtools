@@ -5,6 +5,7 @@ on:
   repository_dispatch:
     types:
       - cron-trigger-action
+      - config-trigger-action
 
 env:
   DOCKER_PATH: "/install/docker"
