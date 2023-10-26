@@ -16,7 +16,7 @@ jobs:
       - name: List Branches
         id: list-branches
         run: |
-          all_branches=$( git ls-remote -hq | sed -n 's/^[0-9a-f]\{40\}\s\+refs\/heads\//''/p')
+          all_branches=$(git ls-remote -hq | sed -n 's/^[0-9a-f]\{40\}\s\+refs\/heads\//''/p')
           matching_branches=""
           for branch in $all_branches; do
             if [[ $branch =~ ^release/v[0-9]+ || $branch =~ ^hotfix/v[0-9]+ || $branch == "develop" ]]; then
