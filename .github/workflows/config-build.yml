@@ -20,8 +20,6 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Dispatch Action
-        env:
-          REPO_NAME: DocSpace-buildtools
         run: |
           echo "${GITHUB_REF_NAME}"
 

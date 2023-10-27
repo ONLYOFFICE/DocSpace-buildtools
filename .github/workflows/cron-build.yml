@@ -28,8 +28,6 @@ jobs:
           echo "json_output=[${matching_branches}]" >> $GITHUB_OUTPUT
 
       - name: Dispatch Action
-        env:
-          REPO_NAME: DocSpace-buildtools
         run: |
           echo "${{ steps.list-branches.outputs.json_output }}"
 
