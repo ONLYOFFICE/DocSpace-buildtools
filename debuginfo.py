@@ -32,7 +32,7 @@ def fetchCommits(url, type):
     
     repo = Repo(path)
 
-    info = f"|<a href='{url}' target='_blank'>{type.upper()}</a>|<a href='{url}/tree/{repo.active_branch.name}' target='_blank'>{repo.active_branch.name}</a> |<a href='{url}/commit/{repo.head.commit}' target='_blank'>{repo.head.commit}</a>|{os.linesep}"
+    info = f"| [DocSpace-{type}]({url})  | [{repo.active_branch.name}]({url}/tree/{repo.active_branch.name})  | [{repo.head.commit}]({url}/commit/{repo.head.commit}) |{os.linesep}"
 
     commits_str = repo.git.log(f"--pretty=format: {format}", "--no-merges", f"--since={LIMIT_DAYS}.days")
     #print(commits_str)
@@ -57,14 +57,14 @@ def fetchCommits(url, type):
         if name not in data[date]:
             data[date][name] = []
 
-        data[date][name].append(f"- [{type}]: {text} <a href='{url}/{hash}' target='_blank'>`{hash[0:7]}`</a>")
+        data[date][name].append(f"- [{type}]: {text} [`{hash[0:7]}`]({url}/commit/{hash})")
     
     return info
 
 result = f"## Changelog{os.linesep}"
 
 result += f"| Repo | Branch | Last Commit |{os.linesep}"
-result += f"| :--- | :---   | :---        |{os.linesep}"
+result += f"| :- | :- | :- |{os.linesep}"
 
 result += fetchCommits(REPO_CLIENT_URL, CLIENT)
 result += fetchCommits(REPO_SERVER_URL, SERVER)
