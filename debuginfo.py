@@ -57,7 +57,7 @@ def fetchCommits(url, type):
         if name not in data[date]:
             data[date][name] = []
 
-        data[date][name].append(f"- [{type}]: {text} <a href='{url}/{hash}' target='_blank'>{hash[0:7]}</a>")
+        data[date][name].append(f"- [{type}]: {text} <a href='{url}/{hash}' target='_blank'>`{hash[0:7]}`</a>")
     
     return info
 
