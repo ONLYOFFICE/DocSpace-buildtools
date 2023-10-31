@@ -1,3 +1,25 @@
+param(
+  [switch] $h = $false,
+  [switch] $f = $false,
+  [switch] $s = $true,
+  [switch] $c = $false,
+  [switch] $d = $false
+)
+
+if ($h) {
+  Write-Host "Build and run backend and working environment. (Use 'yarn start' to run client -> https://github.com/ONLYOFFICE/DocSpace-client)"
+  Write-Host
+  Write-Host "Syntax: available params [-h|f|s|c|d|]"
+  Write-Host "Options:"
+  Write-Host "h     Print this Help."
+  Write-Host "f     Force rebuild base images."
+  Write-Host "s     Run as SAAS otherwise as STANDALONE."
+  Write-Host "c     Run as COMMUNITY otherwise ENTERPRISE."
+  Write-Host "d     Run dnsmasq."
+  Write-Host
+  exit
+}
+
 $PSversionMajor = $PSVersionTable.PSVersion | sort-object major | ForEach-Object { $_.major }
 $PSversionMinor = $PSVersionTable.PSVersion | sort-object minor | ForEach-Object { $_.minor }
 
@@ -21,24 +43,16 @@ $ProxyVersion="v1.0.0"
 
 $Env:COMPOSE_IGNORE_ORPHANS = "True"
 
-$Force = $False
-
-if ($args[0] -eq "--force") {
-    $Force = $True
-}
-
-Write-Host "FORCE BUILD BASE IMAGES: $Force" -ForegroundColor Blue
-
 $ExistsNetwork= docker network ls --format '{{.Name}}' | findstr "onlyoffice" 
 
 if (-not $ExistsNetwork) {
-    docker network create --driver bridge onlyoffice
+  docker network create --driver bridge onlyoffice
 }
 
 Write-Host "Run MySQL" -ForegroundColor Green
 docker compose -f "$DockerDir\db.yml" up -d
 
-if ($args[0] -eq "--dns" ) {
+if ($d) {
   Write-Host "Run local dns server" -ForegroundColor Green
   $Env:ROOT_DIR=$RootDir
   docker compose -f "$DockerDir\dnsmasq.yml" up -d
@@ -49,10 +63,15 @@ Write-Host "Build backend services (to `publish/` folder)" -ForegroundColor Gree
 
 $Env:DOCUMENT_SERVER_IMAGE_NAME = "onlyoffice/documentserver-de:latest"
 $Env:INSTALLATION_TYPE = "ENTERPRISE"
+$Env:MIGRATION_TYPE = "STANDALONE"
 
-if ($args[0] -eq "--community" ) {
+if ($c) {
   $Env:DOCUMENT_SERVER_IMAGE_NAME = "onlyoffice/documentserver:latest"
   $Env:INSTALLATION_TYPE = "COMMUNITY"
+}
+
+if (-not $s) {
+  $Env:MIGRATION_TYPE = "SAAS"
 }
 
 Set-Location -Path $RootDir
@@ -65,25 +84,25 @@ $ExistsDotnet= docker images --format "{{.Repository}}:{{.Tag}}" | findstr "only
 $ExistsNode= docker images --format "{{.Repository}}:{{.Tag}}" | findstr "onlyoffice/4testing-docspace-nodejs-runtime:$NodeVersion"
 $ExistsProxy= docker images --format "{{.Repository}}:{{.Tag}}" | findstr "onlyoffice/4testing-docspace-proxy-runtime:$ProxyVersion"
 
-if (!$ExistsDotnet -or $Force) {
-    Write-Host "Build dotnet base image from source (apply new dotnet config)" -ForegroundColor Green
-    docker build -t "onlyoffice/4testing-docspace-dotnet-runtime:$DotnetVersion"  -f "$DockerDir\Dockerfile.runtime" --target dotnetrun .
-} else {
-    Write-Host "SKIP build dotnet base image (already exists)" -ForegroundColor Blue
+if (!$ExistsDotnet -or $f) {
+  Write-Host "Build dotnet base image from source (apply new dotnet config)" -ForegroundColor Green
+  docker build -t "onlyoffice/4testing-docspace-dotnet-runtime:$DotnetVersion"  -f "$DockerDir\Dockerfile.runtime" --target dotnetrun .
+} else { 
+  Write-Host "SKIP build dotnet base image (already exists)" -ForegroundColor Blue
 }
 
-if (!$ExistsNode -or $Force) {
-    Write-Host "Build node base image from source" -ForegroundColor Green
-    docker build -t "onlyoffice/4testing-docspace-nodejs-runtime:$NodeVersion"  -f "$DockerDir\Dockerfile.runtime" --target noderun .
-} else {
-    Write-Host "SKIP build node base image (already exists)" -ForegroundColor Blue
+if (!$ExistsNode -or $f) {
+  Write-Host "Build node base image from source" -ForegroundColor Green
+  docker build -t "onlyoffice/4testing-docspace-nodejs-runtime:$NodeVersion"  -f "$DockerDir\Dockerfile.runtime" --target noderun .
+} else { 
+  Write-Host "SKIP build node base image (already exists)" -ForegroundColor Blue
 }
 
-if (!$ExistsProxy -or $Force) {
-    Write-Host "Build proxy base image from source (apply new nginx config)" -ForegroundColor Green
-    docker build -t "onlyoffice/4testing-docspace-proxy-runtime:$ProxyVersion"  -f "$DockerDir\Dockerfile.runtime" --target router .
-} else {
-    Write-Host "SKIP build proxy base image (already exists)" -ForegroundColor Blue
+if (!$ExistsProxy -or $f) {
+  Write-Host "Build proxy base image from source (apply new nginx config)" -ForegroundColor Green
+  docker build -t "onlyoffice/4testing-docspace-proxy-runtime:$ProxyVersion"  -f "$DockerDir\Dockerfile.runtime" --target router .
+} else { 
+  Write-Host "SKIP build proxy base image (already exists)" -ForegroundColor Blue
 }
 
 Write-Host "Run migration and services" -ForegroundColor Green
@@ -112,5 +131,7 @@ Write-Host "SERVICE_DOCEDITOR: $Env:SERVICE_DOCEDITOR" -ForegroundColor Blue
 Write-Host "SERVICE_LOGIN: $Env:SERVICE_LOGIN" -ForegroundColor Blue
 Write-Host "SERVICE_CLIENT: $Env:SERVICE_CLIENT" -ForegroundColor Blue
 Write-Host "INSTALLATION_TYPE: $Env:INSTALLATION_TYPE" -ForegroundColor Blue
+Write-Host "MIGRATION TYPE: $Env:MIGRATION_TYPE" -ForegroundColor Blue
+Write-Host "DS IMAGE: $Env:DOCUMENT_SERVER_IMAGE_NAME" -ForegroundColor Blue
 
 Set-Location -Path $PSScriptRoot

@@ -39,17 +39,15 @@ RUN apt-get -y update && \
     rm -rf /var/lib/apt/lists/*
 
 ADD https://api.github.com/repos/ONLYOFFICE/DocSpace/git/refs/heads/${GIT_BRANCH} version.json
-RUN echo ${GIT_BRANCH}  && \
-    git clone --recurse-submodules -b ${GIT_BRANCH} https://github.com/ONLYOFFICE/DocSpace.git ${SRC_PATH}
+RUN git clone -b ${GIT_BRANCH} https://github.com/ONLYOFFICE/DocSpace-buildtools.git ${SRC_PATH}/buildtools && \
+    git clone --recurse-submodules -b ${GIT_BRANCH} https://github.com/ONLYOFFICE/DocSpace-Server.git ${SRC_PATH}/server && \
+    git clone -b ${GIT_BRANCH} https://github.com/ONLYOFFICE/DocSpace-Client.git ${SRC_PATH}/client
 
 RUN cd ${SRC_PATH} && \
     mkdir -p /app/onlyoffice/config/ && \
     cd buildtools/config && \
     ls | grep -v test | grep -v dev | grep -v nginx | xargs cp -t /app/onlyoffice/config/ && \
     cd ${SRC_PATH} && \
-    # mkdir -p /app/onlyoffice/ && \
-    #find buildtools/config/ -maxdepth 1 -name "*.json" | grep -v test | grep -v dev | xargs tar -cvf config.tar && \
-    # tar -C "/app/onlyoffice/" -xvf config.tar && \
     cp buildtools/config/*.config /app/onlyoffice/config/ && \
     mkdir -p /etc/nginx/conf.d && cp -f buildtools/config/nginx/onlyoffice*.conf /etc/nginx/conf.d/ && \
     mkdir -p /etc/nginx/includes/ && cp -f buildtools/config/nginx/includes/onlyoffice*.conf /etc/nginx/includes/ && \
@@ -153,6 +151,7 @@ COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/docker-entry
 COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
 COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/nginx.conf.template /etc/nginx/nginx.conf.template
 COPY --from=base ${SRC_PATH}/buildtools/install/docker/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
+COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/docker-entrypoint.sh /docker-entrypoint.sh
 
 
 # changes for upstream configure
@@ -172,7 +171,8 @@ RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.
     sed -i 's/$public_root/\/var\/www\/public\//' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/http:\/\/172.*/$document_server;/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i '/client_body_temp_path/ i \ \ \ \ $MAP_HASH_BUCKET_SIZE' /etc/nginx/nginx.conf.template && \
-    sed -i 's/\(worker_connections\).*;/\1 $COUNT_WORKER_CONNECTIONS;/' /etc/nginx/nginx.conf.template 
+    sed -i 's/\(worker_connections\).*;/\1 $COUNT_WORKER_CONNECTIONS;/' /etc/nginx/nginx.conf.template && \
+    sed -i -e '/^user/s/^/#/' -e 's#/tmp/nginx.pid#nginx.pid#' -e 's#/etc/nginx/mime.types#mime.types#' /etc/nginx/nginx.conf.template 
 
 ENTRYPOINT  [ "/docker-entrypoint.sh" ]
 
