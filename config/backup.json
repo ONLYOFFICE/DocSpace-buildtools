@@ -15,8 +15,6 @@
 			"Cleaner":
 			{
 				"Period":"00:15:00"
-			},
-			"ChunkSize": 524288000,
-			"MaxLocalSize": 1048576000
+			}
 		}
 }
