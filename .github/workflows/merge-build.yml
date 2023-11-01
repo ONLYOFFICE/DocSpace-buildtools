@@ -1,0 +1,62 @@
+name: 4testing multiarch-build
+on:
+  workflow_dispatch:
+  pull_request:
+    types:
+      - closed
+
+env:
+  DOCKER_PATH: "/install/docker"
+  REPO: "onlyoffice"
+  DOCKER_IMAGE_PREFIX: "4testing-docspace"
+  DOCKERFILE: "Dockerfile.app"
+  FILE: "build.yml"
+  PRODUCT_NAME: "4testing-docspace-api" 
+  REGISTRY_URL: "https://hub.docker.com/v2/repositories"  
+
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [linux/amd64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+        
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/local/lib/android /opt/ghc
+          sudo docker image prune --all --force
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          
+      - name: Build 4testing
+        if:  ${{startsWith(github.head_ref, 'hotfix/v') || startsWith(github.head_ref, 'release/v')}}
+        run: |
+          cd .${DOCKER_PATH}
+          DOCKER_TAG=$(curl -s -H -X ${REGISTRY_URL}/${REPO}/${PRODUCT_NAME}/tags/?page_size=100 | jq -r '.results|.[]|.name' | grep -E '^[0-9]+(\.[0-9]+){3}$' | head -n1)
+
+          DOCKER_IMAGES=$(grep -oP '(?<=image: ")[^"]+' $FILE | sed -e "s/\${REPO}/$REPO/g ;  s/\${DOCKER_IMAGE_PREFIX}/$DOCKER_IMAGE_PREFIX/g ; s/\${DOCKER_TAG}/$DOCKER_TAG/g" |  tr '\n' ' ' )
+          IFS=" " read -a IMAGES <<< "$DOCKER_IMAGES"
+          
+          for IMAGE in ${IMAGES[@]}; do
+              NEW_IMAGE=$(echo $IMAGE | sed -Ee "s/4testing-//; s/\.[0-9]+$//")
+              NEW_IMAGE_LATEST=$(echo $IMAGE | sed -Ee "s/4testing-//; s/$DOCKER_TAG/latest/")
+              docker pull "$IMAGE"
+              docker tag "$IMAGE" "$NEW_IMAGE"
+              docker tag "$IMAGE" "$NEW_IMAGE_LATEST"
+              docker push "$NEW_IMAGE"
+              docker push "$NEW_IMAGE_LATEST"
+          done
+        shell: bash
