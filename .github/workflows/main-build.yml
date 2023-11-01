@@ -6,6 +6,8 @@ on:
     types:
       - cron-trigger-action
       - config-trigger-action
+      - client-trigger-action
+      - server-trigger-action
 
 env:
   DOCKER_PATH: "/install/docker"
