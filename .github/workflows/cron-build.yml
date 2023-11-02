@@ -43,6 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.build.outputs.tag }}
+      branch: ${{ steps.build.outputs.branch }}
     strategy:
       matrix:
         platform: [linux/amd64]
@@ -77,9 +78,12 @@ jobs:
             DOCKER_TAG="develop.${{ github.run_number }}"
           else
             DOCKER_TAG=$(echo "${{ matrix.branch }}" | sed '/^release\b\|^hotfix\b\|^feature\b/s/release.*\/\|hotfix.*\/\|feature.*\///; s/-git-action$//; s/^v//').${{github.run_number}}
-            
+          fi
+
+          if [[ ${{ matrix.branch }} =~ release ]]; then
             # Move build tag to output for use it with zap scanning for non-develop branches
             echo "tag=${DOCKER_TAG}" >> "$GITHUB_OUTPUT"
+            echo "branch=${{ matrix.branch }}" >> "$GITHUB_OUTPUT"
           fi
           export DOCKER_TAG
 
@@ -95,6 +99,7 @@ jobs:
       issues: write
     needs: [build]
     if: ${{ false }}
+    # if: ${{ startsWith(needs.build.outputs.branch, 'release/') }}
     name: Scan DocSpace with zap
     steps:
       - name: Checkout
@@ -114,9 +119,9 @@ jobs:
            #sed -i "s/%{ip}%/${LOCAL_IP}/g" ./DocSpace_context.context
            #cat ./DocSpace_context.context
 
-           # Run DocSpace with tag from previous build
+           # Run 4testing DocSpace with tag from previous build
            cd ./install/OneClickInstall
-           sudo printf "Y" | sudo bash ./docspace-install.sh docker -skiphc true --makeswap false --localscripts true
+           sudo printf "Y" | sudo bash ./docspace-install.sh docker -skiphc true --makeswap false --localscripts true -dsv ${DOCKER_TAG} -s ${STATUS}
            sleep 300
 
            # Get Wizzard token and pwd hash for complete wizzard
