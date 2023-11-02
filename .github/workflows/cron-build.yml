@@ -140,7 +140,8 @@ jobs:
            # Set new admin-user pwd
            curl -v --request PUT -H "Accept: application/json" \
                                  -H "Content-Type: application/json" \
-                                 -H "Authorization: ${COOKIE}" --data '{"Password":"'"${USER_PWD}"'"}' \
+                                 -H "Authorization: ${COOKIE}" \
+                                 --data '{"Password":"'"${USER_PWD}"'"}' \
                                  "http://${LOCAL_IP}/api/2.0/people/${USER_ID}/password"
 
            # Get new admin-user auth-token and authenticate the user
