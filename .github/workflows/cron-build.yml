@@ -91,6 +91,8 @@ jobs:
 
   zap:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
     needs: [build]
     if: ${{ false }}
     name: Scan DocSpace with zap
