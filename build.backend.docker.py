@@ -85,7 +85,7 @@ print("DS image:", document_server_image_name)
 print()
 
 # Stop all backend services
-subprocess.run([os.path.join(dir, "buildtools", "start", "stop.backend.docker.py")])
+subprocess.run(["python", os.path.join(dir, "buildtools", "start", "stop.backend.docker.py")])
 
 print("Run MySQL")
 
@@ -99,7 +99,7 @@ existsnetwork = [line.split()[1] for line in existsnetwork]
 if "onlyoffice" not in existsnetwork:
     subprocess.run(["docker", "network", "create", "--driver", "bridge", "onlyoffice"])
 
-if arch_name == "x86_64":
+if arch_name == "x86_64" or arch_name == "AMD64":
     print("CPU Type: x86_64 -> run db.yml")
     subprocess.run(["docker", "compose", "-f", os.path.join(dockerDir, "db.yml"), "up", "-d"])
 elif arch_name == "arm64":
@@ -119,10 +119,10 @@ print("Clear publish folder")
 shutil.rmtree(os.path.join(dir, "publish/services"), True)
 
 print("Build backend services (to 'publish/' folder)")
-subprocess.run([os.path.join(dir, "buildtools", "install", "common", "build-services.py")])
+subprocess.run(["python", os.path.join(dir, "buildtools", "install", "common", "build-services.py")])
 
 def check_image(image_name):
-    return subprocess.check_output(f'docker images --format "{{.Repository}}:{{.Tag}}"', shell=True, text=True).__contains__(image_name)
+    return subprocess.check_output(["docker", "images", "--format", "'{{.Repository}}:{{.Tag}}'"], shell=True, text=True).__contains__(image_name)
 
 dotnet_image_name = "onlyoffice/4testing-docspace-dotnet-runtime"
 dotnet_version = "dev"
