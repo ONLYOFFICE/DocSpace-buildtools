@@ -77,11 +77,11 @@ jobs:
             DOCKER_TAG="develop.${{ github.run_number }}"
           else
             DOCKER_TAG=$(echo "${{ matrix.branch }}" | sed '/^release\b\|^hotfix\b\|^feature\b/s/release.*\/\|hotfix.*\/\|feature.*\///; s/-git-action$//; s/^v//').${{github.run_number}}
+            
+            # Move build tag to output for use it with zap scanning for non-develop branches
+            echo "tag=${DOCKER_TAG}" >> "$GITHUB_OUTPUT"
           fi
           export DOCKER_TAG
-
-          # Move build tag to output for use it with zap scanning
-          echo "tag=${DOCKER_TAG}" >> "$GITHUB_OUTPUT"
 
           docker buildx bake -f build.yml \
           --set *.args.GIT_BRANCH=${{ matrix.branch }} \
