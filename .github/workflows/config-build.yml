@@ -8,6 +8,7 @@ on:
       - 'develop'
     paths:
       - 'config/**'
+      - 'install/docker/Dockerfile.app'
   workflow_dispatch:
 
 jobs:
