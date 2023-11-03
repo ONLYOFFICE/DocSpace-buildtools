@@ -44,17 +44,28 @@ with open(os.path.join(SRC_PATH, "buildtools", "install", "docker", "docker-migr
 st = os.stat(file_path)
 os.chmod(file_path, st.st_mode | stat.S_IEXEC)
 
+format = "zip"
+
 for service in BACKEND_NODEJS_SERVICES:
     print(f"== Build {service} project ==")
     src =  os.path.join(SRC_PATH, "server", "common", service)
-    subprocess.run(["yarn", "install", "--cwd", src])
+    subprocess.run(["yarn", "install"], cwd=src)
 
     dst = os.path.join(BUILD_PATH, "services", service, "service")
     if not os.path.exists(dst):
         os.makedirs(dst, exist_ok=True)
 
-    print(f"== Copy service data to {dst}")
-    shutil.copytree(src, dst, dirs_exist_ok=True)
+    archive = os.path.join(BUILD_PATH, "services", service, f"service.{format}")
+
+    print("Make service archive", archive)
+
+    shutil.make_archive(root_dir=src, format=format, base_name=dst)
+
+    print("Unpack service archive", archive)
+    shutil.unpack_archive(archive, dst)
+
+    print("Remove service archive", archive)
+    os.remove(archive)
 
     print(f"== Add docker-entrypoint.py to {service}")
     shutil.copyfile(DOCKER_ENTRYPOINT_PATH, os.path.join(dst, DOCKER_ENTRYPOINT))
