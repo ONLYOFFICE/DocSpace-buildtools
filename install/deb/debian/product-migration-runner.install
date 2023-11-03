@@ -1,1 +1,1 @@
-../../../ASC.Migration.Runner/service/*         var/www/{{product}}/services/ASC.Migration.Runner
+../../../server/ASC.Migration.Runner/service/*         var/www/{{product}}/services/ASC.Migration.Runner
