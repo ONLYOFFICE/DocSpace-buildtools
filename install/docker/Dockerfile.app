@@ -312,7 +312,7 @@ WORKDIR ${BUILD_PATH}/studio/ASC.Web.Studio/
 COPY --chown=onlyoffice:onlyoffice docker-entrypoint.py ./docker-entrypoint.py
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Web.Studio/service/ .
 
-CMD ["ASC.Web.Studio.dll", "ASC.Web.Studio"]
+CMD ["ASC.Web.Studio.dll", "ASC.Web.Studio", "core:eventBus:subscriptionClientName=asc_event_bus_webstudio_queue"]
 
 ## ASC.Web.HealthChecks.UI ##
 FROM dotnetrun AS healthchecks
