@@ -4,6 +4,7 @@ import os
 import stat
 import subprocess
 import shutil
+import time
 
 SRC_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 BUILD_PATH = os.path.join(SRC_PATH, "publish")
@@ -35,11 +36,18 @@ subprocess.run(["dotnet", "build", os.path.join(SRC_PATH, "server", "ASC.Migrati
 
 print("== Add docker-migration-entrypoint.sh to ASC.Migration.Runner ==")
 file_path = os.path.join(BUILD_PATH, "services", "ASC.Migration.Runner", "service", "docker-migration-entrypoint.sh")
+src_file_path = os.path.join(SRC_PATH, "buildtools", "install", "docker", "docker-migration-entrypoint.sh")
 
-with open(os.path.join(SRC_PATH, "buildtools", "install", "docker", "docker-migration-entrypoint.sh"), "r") as file:
-    content = file.read().replace("\r", "")
-    with open(file_path, "w") as new_file:
-        new_file.write(content)
+WINDOWS_LINE_ENDING = b'\r\n'
+UNIX_LINE_ENDING = b'\n'
+
+with open(src_file_path, 'rb') as open_file:
+    content = open_file.read()
+    
+content = content.replace(WINDOWS_LINE_ENDING, UNIX_LINE_ENDING)
+
+with open(file_path, 'wb') as open_file:
+    open_file.write(content)
 
 st = os.stat(file_path)
 os.chmod(file_path, st.st_mode | stat.S_IEXEC)
@@ -58,11 +66,16 @@ for service in BACKEND_NODEJS_SERVICES:
     archive = os.path.join(BUILD_PATH, "services", service, f"service.{format}")
 
     print("Make service archive", archive)
-
+    start = time.time()
     shutil.make_archive(root_dir=src, format=format, base_name=dst)
+    end = time.time()
+    print(f"Took {(end-start)*1000.0} ms")
 
     print("Unpack service archive", archive)
+    start = time.time()
     shutil.unpack_archive(archive, dst)
+    end = time.time()
+    print(f"Took {(end-start)*1000.0} ms")
 
     print("Remove service archive", archive)
     os.remove(archive)
