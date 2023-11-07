@@ -42,10 +42,11 @@ done
 	
 echo "== BACK-END-BUILD =="
 
-cd ${SRC_PATH}
+cd ${SRC_PATH}/server
 dotnet build ASC.Web.slnf ${ARGS}
 dotnet build ASC.Migrations.sln -o ${SRC_PATH}/ASC.Migration.Runner/service/
 
+cd ${SRC_PATH}/client
 # Array of names backend services in directory common (Nodejs)
 services_name_backend_nodejs=() 
 services_name_backend_nodejs+=(ASC.Socket.IO)
@@ -54,5 +55,5 @@ services_name_backend_nodejs+=(ASC.SsoAuth)
 # Build backend services (Nodejs) 
 for i in ${!services_name_backend_nodejs[@]}; do
   echo "== Build ${services_name_backend_nodejs[$i]} project =="
-  yarn install --cwd common/${services_name_backend_nodejs[$i]} --frozen-lockfile
+  yarn install --cwd ${SRC_PATH}/server/common/${services_name_backend_nodejs[$i]} --frozen-lockfile
 done

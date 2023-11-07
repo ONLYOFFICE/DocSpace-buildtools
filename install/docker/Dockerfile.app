@@ -56,7 +56,7 @@ RUN cd ${SRC_PATH} && \
     sed -e 's/#//' -i /etc/nginx/conf.d/onlyoffice.conf && \
     cd ${SRC_PATH}/buildtools/install/common/ && \
     bash build-frontend.sh -sp "${SRC_PATH}" -ba "${BUILD_ARGS}" -da "${DEPLOY_ARGS}" -di "${DEBUG_INFO}" && \
-    bash build-backend.sh -sp "${SRC_PATH}/server"  && \
+    bash build-backend.sh -sp "${SRC_PATH}"  && \
     bash publish-backend.sh -pc "${PUBLISH_CNF}" -sp "${SRC_PATH}/server" -bp "${BUILD_PATH}"  && \
     cp -rf ${SRC_PATH}/server/products/ASC.Files/Server/DocStore ${BUILD_PATH}/products/ASC.Files/server/ && \
     rm -rf ${SRC_PATH}/server/common/* && \
