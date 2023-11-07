@@ -49,7 +49,7 @@ format = "zip"
 for service in BACKEND_NODEJS_SERVICES:
     print(f"== Build {service} project ==")
     src =  os.path.join(SRC_PATH, "server", "common", service)
-    subprocess.run(["yarn", "install"], cwd=src)
+    subprocess.run(["yarn", "install"], cwd=src, shell=True)
 
     dst = os.path.join(BUILD_PATH, "services", service, "service")
     if not os.path.exists(dst):
