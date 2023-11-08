@@ -63,9 +63,10 @@ for service in BACKEND_NODEJS_SERVICES:
     if not os.path.exists(dst):
         os.makedirs(dst, exist_ok=True)
 
+    archive_src = os.path.join(SRC_PATH, "server", "common", service, f"service.{format}")
     archive = os.path.join(BUILD_PATH, "services", service, f"service.{format}")
 
-    print("Make service archive", archive)
+    print("Make service archive", archive_src)
     start = time.time()
     shutil.make_archive(root_dir=src, format=format, base_name=dst)
     end = time.time()
