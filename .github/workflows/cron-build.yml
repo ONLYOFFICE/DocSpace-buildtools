@@ -24,6 +24,7 @@ jobs:
               matching_branches="${matching_branches},\"${branch}\""
             fi
           done
+
           matching_branches=${matching_branches#,}
           echo "json_output=[${matching_branches}]" >> $GITHUB_OUTPUT
 
