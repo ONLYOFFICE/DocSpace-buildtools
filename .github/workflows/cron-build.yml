@@ -1,13 +1,8 @@
-name: 4testing multiarch-build
+name: 4testing multiarch-cron-build
 
 on:
   schedule:
-    - cron: '0 20 * * *' 
-env:
-  DOCKER_PATH: "/install/docker"
-  REPO: "onlyoffice"
-  DOCKER_IMAGE_PREFIX: "4testing-docspace"
-  DOCKERFILE: "Dockerfile.app"
+    - cron: '0 20 * * *'
 
 jobs:
 
@@ -17,13 +12,11 @@ jobs:
     steps:
       - name: Check out the code
         uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
 
       - name: List Branches
         id: list-branches
         run: |
-          all_branches=$(git branch -a --format="%(refname:short)"|sed -e "s/^origin\///")
+          all_branches=$(git ls-remote -hq | sed -n 's/^[0-9a-f]\{40\}\s\+refs\/heads\//''/p')
           matching_branches=""
 
           for branch in $all_branches; do
@@ -34,51 +27,14 @@ jobs:
         
           matching_branches=${matching_branches#,}
           echo "json_output=[${matching_branches}]" >> $GITHUB_OUTPUT
-    outputs:
-      selected-branches: ${{ steps.list-branches.outputs.json_output }}
 
-
-  build:
-    needs: select-branches
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        platform: [linux/amd64]
-        branch: ${{ fromJson(needs.select-branches.outputs.selected-branches) }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ matrix.branch }}
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v2
-        
-      - name: Free Disk Space
+      - name: Dispatch Action
         run: |
-          sudo rm -rf /usr/local/lib/android /opt/ghc
-          sudo docker image prune --all --force
+          echo "${{ steps.list-branches.outputs.json_output }}"
 
-      - name: Login to DockerHub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-          
-      - name: Build 4testing
-        run: |
-          cd .${DOCKER_PATH}
-          if [ "${{ matrix.branch }}" = "develop" ]; then
-            DOCKER_TAG="develop.${{ github.run_number }}"
-          else
-            DOCKER_TAG=$(echo "${{ matrix.branch }}" | sed '/^release\b\|^hotfix\b\|^feature\b/s/release.*\/\|hotfix.*\/\|feature.*\///; s/-git-action$//; s/^v//').${{github.run_number}}
-          fi
-          export DOCKER_TAG
-
-          docker buildx bake -f build.yml \
-          --set *.args.GIT_BRANCH=${{ matrix.branch }} \
-          --set *.platform=linux/amd64 \
-          --push
-        shell: bash
+          curl \ 
+          -X POST \ 
+          -u "${{ secrets.USERNAME}}:${{secrets.TOKEN}}" \
+          "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/dispatches" \
+          -H "Accept: application/vnd.github.everest-preview+json" \
+          --data '{"event_type": "cron-trigger-action", "client_payload": { "branches": ${{ steps.list-branches.outputs.json_output }}}}'
