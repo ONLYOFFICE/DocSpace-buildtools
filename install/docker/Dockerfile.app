@@ -28,6 +28,7 @@ RUN apt-get -y update && \
         sudo \
         locales \
         git \
+        python3-pip \
         npm  && \
     locale-gen en_US.UTF-8 && \
     npm install --global yarn && \
@@ -39,25 +40,23 @@ RUN apt-get -y update && \
     rm -rf /var/lib/apt/lists/*
 
 ADD https://api.github.com/repos/ONLYOFFICE/DocSpace/git/refs/heads/${GIT_BRANCH} version.json
-RUN echo ${GIT_BRANCH}  && \
-    git clone --recurse-submodules -b ${GIT_BRANCH} https://github.com/ONLYOFFICE/DocSpace.git ${SRC_PATH}
+RUN git clone -b ${GIT_BRANCH} https://github.com/ONLYOFFICE/DocSpace-buildtools.git ${SRC_PATH}/buildtools && \
+    git clone --recurse-submodules -b ${GIT_BRANCH} https://github.com/ONLYOFFICE/DocSpace-Server.git ${SRC_PATH}/server && \
+    git clone -b ${GIT_BRANCH} https://github.com/ONLYOFFICE/DocSpace-Client.git ${SRC_PATH}/client
 
 RUN cd ${SRC_PATH} && \
     mkdir -p /app/onlyoffice/config/ && \
     cd buildtools/config && \
     ls | grep -v test | grep -v dev | grep -v nginx | xargs cp -t /app/onlyoffice/config/ && \
     cd ${SRC_PATH} && \
-    # mkdir -p /app/onlyoffice/ && \
-    #find buildtools/config/ -maxdepth 1 -name "*.json" | grep -v test | grep -v dev | xargs tar -cvf config.tar && \
-    # tar -C "/app/onlyoffice/" -xvf config.tar && \
     cp buildtools/config/*.config /app/onlyoffice/config/ && \
     mkdir -p /etc/nginx/conf.d && cp -f buildtools/config/nginx/onlyoffice*.conf /etc/nginx/conf.d/ && \
     mkdir -p /etc/nginx/includes/ && cp -f buildtools/config/nginx/includes/onlyoffice*.conf /etc/nginx/includes/ && \
     sed -i "s/\"number\".*,/\"number\": \"${PRODUCT_VERSION}.${BUILD_NUMBER}\",/g" /app/onlyoffice/config/appsettings.json && \
     sed -e 's/#//' -i /etc/nginx/conf.d/onlyoffice.conf && \
     cd ${SRC_PATH}/buildtools/install/common/ && \
-    bash build-frontend.sh -sp "${SRC_PATH}/client" -ba "${BUILD_ARGS}" -da "${DEPLOY_ARGS}" -di "${DEBUG_INFO}" && \
-    bash build-backend.sh -sp "${SRC_PATH}/server"  && \
+    bash build-frontend.sh -sp "${SRC_PATH}" -ba "${BUILD_ARGS}" -da "${DEPLOY_ARGS}" -di "${DEBUG_INFO}" && \
+    bash build-backend.sh -sp "${SRC_PATH}"  && \
     bash publish-backend.sh -pc "${PUBLISH_CNF}" -sp "${SRC_PATH}/server" -bp "${BUILD_PATH}"  && \
     cp -rf ${SRC_PATH}/server/products/ASC.Files/Server/DocStore ${BUILD_PATH}/products/ASC.Files/server/ && \
     rm -rf ${SRC_PATH}/server/common/* && \
@@ -171,7 +170,8 @@ RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.
     sed -i 's/$public_root/\/var\/www\/public\//' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/http:\/\/172.*/$document_server;/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i '/client_body_temp_path/ i \ \ \ \ $MAP_HASH_BUCKET_SIZE' /etc/nginx/nginx.conf.template && \
-    sed -i 's/\(worker_connections\).*;/\1 $COUNT_WORKER_CONNECTIONS;/' /etc/nginx/nginx.conf.template 
+    sed -i 's/\(worker_connections\).*;/\1 $COUNT_WORKER_CONNECTIONS;/' /etc/nginx/nginx.conf.template && \
+    sed -i -e '/^user/s/^/#/' -e 's#/tmp/nginx.pid#nginx.pid#' -e 's#/etc/nginx/mime.types#mime.types#' /etc/nginx/nginx.conf.template 
 
 ENTRYPOINT  [ "/docker-entrypoint.sh" ]
 
@@ -312,7 +312,7 @@ WORKDIR ${BUILD_PATH}/studio/ASC.Web.Studio/
 COPY --chown=onlyoffice:onlyoffice docker-entrypoint.py ./docker-entrypoint.py
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Web.Studio/service/ .
 
-CMD ["ASC.Web.Studio.dll", "ASC.Web.Studio"]
+CMD ["ASC.Web.Studio.dll", "ASC.Web.Studio", "core:eventBus:subscriptionClientName=asc_event_bus_webstudio_queue"]
 
 ## ASC.Web.HealthChecks.UI ##
 FROM dotnetrun AS healthchecks

@@ -491,9 +491,9 @@ while [ "$1" != "" ]; do
 			echo "      -ies, --installelastic            install or update elasticsearch (true|false)"
 			echo "      -espr, --elasticprotocol          the protocol for the connection to elasticsearch (default value http)"
 			echo "      -esh, --elastichost               the IP address or hostname of the elasticsearch"
-			echo "      -esp, --elasticport               elasticsearch port number (default value 6379)"
+			echo "      -esp, --elasticport               elasticsearch port number (default value 9200)"
 			echo "      -rdsh, --redishost                the IP address or hostname of the redis server"
-			echo "      -rdsp, --redisport                redis server port number (default value 9200)"
+			echo "      -rdsp, --redisport                redis server port number (default value 6379)"
 			echo "      -rdsu, --redisusername            redis user name"
 			echo "      -rdspass, --redispassword         password set for redis account"
 			echo "      -rbth, --rabbitmqhost             the IP address or hostname of the rabbitmq server"
@@ -947,7 +947,7 @@ domain_check () {
 			echo "Select 'N' to cancel ${PACKAGE_SYSNAME^^} ${PRODUCT_NAME} installation."
 			if read_continue_installation; then
 				if [[ -f "$DOCKER_DAEMON_FILE" ]]; then	
-					sed -i '/{/a\    "dns": ["8.8.8.8", "8.8.4.4"],' "$DOCKER_DAEMON_FILE"
+					sed -i 's!{!& "dns": ["8.8.8.8", "8.8.4.4"],!' "$DOCKER_DAEMON_FILE"
 				else
 					echo "{\"dns\": [\"8.8.8.8\", \"8.8.4.4\"]}" | tee "$DOCKER_DAEMON_FILE" >/dev/null
 				fi
@@ -1172,7 +1172,7 @@ download_files () {
 		if ! command_exists svn; then
 			install_service svn subversion
 		fi
-		svn export --force https://github.com/${PACKAGE_SYSNAME}/${PRODUCT}/branches/${GIT_BRANCH}/buildtools/install/docker/ ${BASE_DIR} >/dev/null
+		svn export --force https://github.com/${PACKAGE_SYSNAME}/${PRODUCT}-buildtools/branches/${GIT_BRANCH}/install/docker/ ${BASE_DIR} >/dev/null
 	fi
 	
 	echo "OK"

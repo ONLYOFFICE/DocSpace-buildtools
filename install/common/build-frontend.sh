@@ -57,10 +57,12 @@ done
 echo "== FRONT-END-BUILD =="
 
 cd ${SRC_PATH}
-yarn install
 # debug config
 if [ "$DEBUG_INFO" = true ]; then
-	yarn debug-info
+	pip install -r ${SRC_PATH}/buildtools/requirements.txt
+	python3 ${SRC_PATH}/buildtools/debuginfo.py
 fi 
+cd ${SRC_PATH}/client
+yarn install
 yarn ${BUILD_ARGS}
 yarn ${DEPLOY_ARGS}
