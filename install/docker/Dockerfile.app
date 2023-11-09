@@ -28,6 +28,7 @@ RUN apt-get -y update && \
         sudo \
         locales \
         git \
+        python3-pip \
         npm  && \
     locale-gen en_US.UTF-8 && \
     npm install --global yarn && \
@@ -54,8 +55,8 @@ RUN cd ${SRC_PATH} && \
     sed -i "s/\"number\".*,/\"number\": \"${PRODUCT_VERSION}.${BUILD_NUMBER}\",/g" /app/onlyoffice/config/appsettings.json && \
     sed -e 's/#//' -i /etc/nginx/conf.d/onlyoffice.conf && \
     cd ${SRC_PATH}/buildtools/install/common/ && \
-    bash build-frontend.sh -sp "${SRC_PATH}/client" -ba "${BUILD_ARGS}" -da "${DEPLOY_ARGS}" -di "${DEBUG_INFO}" && \
-    bash build-backend.sh -sp "${SRC_PATH}/server"  && \
+    bash build-frontend.sh -sp "${SRC_PATH}" -ba "${BUILD_ARGS}" -da "${DEPLOY_ARGS}" -di "${DEBUG_INFO}" && \
+    bash build-backend.sh -sp "${SRC_PATH}"  && \
     bash publish-backend.sh -pc "${PUBLISH_CNF}" -sp "${SRC_PATH}/server" -bp "${BUILD_PATH}"  && \
     cp -rf ${SRC_PATH}/server/products/ASC.Files/Server/DocStore ${BUILD_PATH}/products/ASC.Files/server/ && \
     rm -rf ${SRC_PATH}/server/common/* && \
@@ -311,7 +312,7 @@ WORKDIR ${BUILD_PATH}/studio/ASC.Web.Studio/
 COPY --chown=onlyoffice:onlyoffice docker-entrypoint.py ./docker-entrypoint.py
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Web.Studio/service/ .
 
-CMD ["ASC.Web.Studio.dll", "ASC.Web.Studio"]
+CMD ["ASC.Web.Studio.dll", "ASC.Web.Studio", "core:eventBus:subscriptionClientName=asc_event_bus_webstudio_queue"]
 
 ## ASC.Web.HealthChecks.UI ##
 FROM dotnetrun AS healthchecks
