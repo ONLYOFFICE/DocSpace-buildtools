@@ -24,9 +24,7 @@ jobs:
         run: |
           echo "${GITHUB_REF_NAME}"
 
-          curl \
-          -X POST \
-          -u "${{ secrets.USERNAME}}:${{secrets.TOKEN}}" \
+          curl -X POST -u "${{ secrets.USERNAME}}:${{secrets.TOKEN}}" \
           "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/dispatches" \
           -H "Accept: application/vnd.github.everest-preview+json" \
           --data '{"event_type": "config-trigger-action", "client_payload": { "branches": ["'"${GITHUB_REF_NAME}"'"]}}'
