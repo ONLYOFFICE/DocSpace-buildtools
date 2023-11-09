@@ -55,7 +55,7 @@ del /f /q buildtools\install\win\Files\config\*.dev.json
 %sed% "s_\(\"samesite\":\).*,_\1 \"None\",_g" -i buildtools\install\win\Files\config\appsettings.json
 
 ::redirectUrl value replacement
-%sed% "s/teamlab.info/onlyoffice.com/g" -i buildtools\install\win\Files\config/autofac.consumers.json
+%sed% "s/teamlab.info/onlyoffice.com/g" -i buildtools\install\win\Files\config\autofac.consumers.json
 %sed% "s_\(\"wrongPortalNameUrl\":\).*,_\1 \"\",_g" -i buildtools\install\win\Files\public\scripts\config.json
 
 REM echo ######## Remove AWSTarget from nlog.config ########
