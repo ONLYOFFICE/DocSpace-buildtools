@@ -4,8 +4,8 @@ cd %{_builddir}/buildtools
 
 bash install/common/systemd/build.sh
 
-bash install/common/build-frontend.sh --srcpath %{_builddir}/client
-bash install/common/build-backend.sh --srcpath %{_builddir}/server
+bash install/common/build-frontend.sh --srcpath %{_builddir} -di "false"
+bash install/common/build-backend.sh --srcpath %{_builddir}
 bash install/common/publish-backend.sh --srcpath %{_builddir}/server
 
 rename -f -v "s/product([^\/]*)$/%{product}\$1/g" install/common/*
@@ -26,7 +26,7 @@ sed 's_\(minlevel=\)"[^"]*"_\1"Warn"_g' -i config/nlog.config
 sed 's/teamlab.info/onlyoffice.com/g' -i config/autofac.consumers.json
 
 sed 's_etc/nginx_etc/openresty_g' -i config/nginx/*.conf
-sed -i 's_$public_root_/var/www/%{product}/public/_' config/nginx/onlyoffice.conf
+sed -i "s#\$public_root#/var/www/%{product}/public/#g" config/nginx/onlyoffice.conf
 sed -e 's/$router_host/127.0.0.1/g' -e 's/the_host/host/g' -e 's/the_scheme/scheme/g' -e 's_includes_/etc/openresty/includes_g' -i install/docker/config/nginx/onlyoffice-proxy*.conf
 sed -e '/.pid/d' -e '/temp_path/d' -e 's_etc/nginx_etc/openresty_g' -e 's/\.log/-openresty.log/g' -i install/docker/config/nginx/templates/nginx.conf.template
 sed -i "s_\(.*root\).*;_\1 \"/var/www/%{product}\";_g" -i install/docker/config/nginx/letsencrypt.conf
