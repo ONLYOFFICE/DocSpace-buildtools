@@ -28,6 +28,8 @@ local_ip = socket.gethostbyname_ex(socket.gethostname())[-1][-1]
 doceditor = f"{local_ip}:5013"
 login = f"{local_ip}:5011"
 client = f"{local_ip}:5001"
+oauth = f"{local_ip}:8080"
+oauth_api = f"{local_ip}:9090"
 portal_url = f"http://{local_ip}"
 
 force = False
@@ -171,6 +173,8 @@ os.environ["DOCUMENT_SERVER_IMAGE_NAME"] = document_server_image_name
 os.environ["SERVICE_DOCEDITOR"] = doceditor
 os.environ["SERVICE_LOGIN"] = login
 os.environ["SERVICE_CLIENT"] = client
+os.environ["SERVICE_OAUTH"] = oauth
+os.environ["SERVICE_OAUTH_API"] = oauth_api
 os.environ["ROOT_DIR"] = dir
 os.environ["BUILD_PATH"] = "/var/www"
 os.environ["SRC_PATH"] = os.path.join(dir, "publish/services")
