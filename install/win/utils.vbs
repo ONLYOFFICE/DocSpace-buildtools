@@ -121,7 +121,34 @@ End Function
 Function SetMACHINEKEY
     On Error Resume Next
 
-    Session.Property("MACHINE_KEY") = RandomString( 12 )
+    Dim strFilePath, strJSON, strPattern, objRegExp, objMatches
+
+    ' Specify the path to your JSON file
+    strFilePath = Session.Property("APPDIR") & "config\appsettings.production.json"
+
+    ' Read the JSON content
+    Set objFSO = CreateObject("Scripting.FileSystemObject")
+    Set objFile = objFSO.OpenTextFile(strFilePath, 1)
+    strJSON = objFile.ReadAll
+    objFile.Close
+
+    ' Define the regular expression pattern to match the "machinekey" value
+    strPattern = """machinekey"": ""([^""]+)"""
+
+    ' Create a regular expression object and execute the pattern on the JSON string
+    Set objRegExp = New RegExp
+    objRegExp.Global = False
+    objRegExp.IgnoreCase = True
+    objRegExp.Pattern = strPattern
+
+    Set objMatches = objRegExp.Execute(strJSON)
+
+    ' Check if a match was found
+    If objMatches.Count > 0 Then
+        Session.Property("MACHINE_KEY") = objMatches(0).Submatches(0)
+    Else
+        Session.Property("MACHINE_KEY") = RandomString(16)
+    End If
 
 End Function
 

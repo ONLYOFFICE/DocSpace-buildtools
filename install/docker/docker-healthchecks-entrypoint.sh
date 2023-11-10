@@ -31,6 +31,7 @@ STUDIO_NOTIFY_HOST=${STUDIO_NOTIFY_HOST:-"${CONTAINER_PREFIX}studio-notify:${SER
 API_HOST=${API_HOST:-"${CONTAINER_PREFIX}api:${SERVICE_PORT}"}
 STUDIO_HOST=${STUDIO_HOST:-"${CONTAINER_PREFIX}studio:${SERVICE_PORT}"}
 
+sed -i "/\"Name\": \"ASC.ApiCache\"/,/{/d" ${PATH_TO_CONF}/appsettings.json
 sed -i "s!localhost:5010!${API_SYSTEM_HOST}!g" ${PATH_TO_CONF}/appsettings.json
 sed -i "s!localhost:5012!${BACKUP_HOST}!g" ${PATH_TO_CONF}/appsettings.json
 sed -i "s!localhost:5032!${BACKUP_BACKGRUOND_TASKS_HOST}!g" ${PATH_TO_CONF}/appsettings.json
