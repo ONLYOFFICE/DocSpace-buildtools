@@ -28,7 +28,7 @@ ARG PRODUCT_VERSION=0.0.0
 ARG BUILD_NUMBER=0
 
 LABEL onlyoffice.appserver.release-date="${RELEASE_DATE}" \
-      maintainer="Ascensio System SIA <support@onlyoffice.com>"
+    maintainer="Ascensio System SIA <support@onlyoffice.com>"
 
 ENV LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
@@ -40,10 +40,10 @@ COPY . .
 
 RUN apt-get -y update && \
     apt-get install -yq \
-        sudo \
-        locales \
-        git \
-        npm  && \
+    sudo \
+    locales \
+    git \
+    npm  && \
     locale-gen en_US.UTF-8 && \
     npm install --global yarn && \
     echo "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_18.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list && \
@@ -81,7 +81,7 @@ RUN mkdir -p /app/onlyoffice/ && \
     rm -rf ${SRC_PATH}/products/ASC.Files/Service/* && \
     rm -rf ${SRC_PATH}/products/ASC.Files/Server/* && \
     rm -rf ${SRC_PATH}/products/ASC.People/Server/* 
-  
+
 FROM $DOTNET_RUN as dotnetrun
 ARG BUILD_PATH
 ARG SRC_PATH
@@ -98,16 +98,16 @@ RUN mkdir -p /var/log/onlyoffice && \
     chown onlyoffice:onlyoffice /var/www -R && \
     apt-get -y update && \
     apt-get install -yq \
-        python3-pip \
-        nano \
-        curl \
-        vim \
-        libgdiplus && \
+    python3-pip \
+    nano \
+    curl \
+    vim \
+    libgdiplus && \
     pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
-        
+
 #USER onlyoffice
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
@@ -127,10 +127,10 @@ RUN mkdir -p /var/log/onlyoffice && \
     chown onlyoffice:onlyoffice /var/www -R && \
     apt-get -y update && \
     apt-get install -yq \ 
-            nano \
-            curl \
-            vim \
-            python3-pip && \
+    nano \
+    curl \
+    vim \
+    python3-pip && \
     pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces && \
     rm -rf /var/lib/apt/lists/*
 

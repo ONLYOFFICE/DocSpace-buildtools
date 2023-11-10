@@ -35,11 +35,11 @@ RUN mkdir -p /var/log/onlyoffice && \
     chown onlyoffice:onlyoffice /var/www -R && \
     apt-get -y update && \
     apt-get install -yq \
-        python3-pip \
-        nano \
-        curl \
-        vim \
-        libgdiplus && \
+    python3-pip \
+    nano \
+    curl \
+    vim \
+    libgdiplus && \
     pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces && \
     rm -rf /var/lib/apt/lists/*
 
@@ -63,10 +63,10 @@ RUN mkdir -p /var/log/onlyoffice && \
     chown onlyoffice:onlyoffice /var/www -R && \
     apt-get -y update && \
     apt-get install -yq \ 
-            nano \
-            curl \
-            vim \
-            python3-pip && \
+    nano \
+    curl \
+    vim \
+    python3-pip && \
     pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces && \
     rm -rf /var/lib/apt/lists/*
 
