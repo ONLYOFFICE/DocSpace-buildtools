@@ -46,7 +46,7 @@ with open(file_path, 'wb') as open_file:
 st = os.stat(file_path)
 os.chmod(file_path, st.st_mode | stat.S_IEXEC)
 
-format = "zip"
+format = "tar"
 
 for service in BACKEND_NODEJS_SERVICES:
     print(f"== Build {service} project ==")
