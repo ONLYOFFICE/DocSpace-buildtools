@@ -926,23 +926,19 @@ domain_check () {
 		fi
 	fi
 
-	DOMAINS=$(dig +short -x $(curl -s ifconfig.me) | sed 's/\.$//')
+	APP_DOMAIN_PORTAL=${LETS_ENCRYPT_DOMAIN:-${APP_URL_PORTAL:-$(get_env_parameter "APP_URL_PORTAL" "${PACKAGE_SYSNAME}-files" | awk -F[/:] '{if ($1 == "https") print $4; else print ""}')}}
 
-	if [[ -n "$DOMAINS" ]]; then
-		while IFS= read -r DOMAIN; do
-			IP_ADDRESS=$(ping -c 1 -W 1 $DOMAIN | grep -oP '(\d+\.\d+\.\d+\.\d+)' | head -n 1)
-			if [[ -n "$IP_ADDRESS" && "$IP_ADDRESS" =~ ^(10\.|127\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.) ]]; then
-				LOCAL_RESOLVED_DOMAINS+="$DOMAIN"
-			elif [[ -n "$IP_ADDRESS" ]]; then
-				APP_URL_PORTAL=${APP_URL_PORTAL:-"http://${DOMAIN}:${EXTERNAL_PORT}"}
-			fi
-		done <<< "$DOMAINS"
-	fi
-	
-	if [[ -n "$LOCAL_RESOLVED_DOMAINS" ]] || [[ $(ip route get 8.8.8.8 | awk '{print $7}') != $(curl -s ifconfig.me) ]]; then
+	while IFS= read -r DOMAIN; do
+		IP_ADDRESS=$(ping -c 1 -W 1 $DOMAIN | grep -oP '(\d+\.\d+\.\d+\.\d+)' | head -n 1)
+		if [[ -n "$IP_ADDRESS" && "$IP_ADDRESS" =~ ^(10\.|127\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.) ]]; then
+			LOCAL_RESOLVED_DOMAINS+="$DOMAIN"
+		fi
+	done <<< "${APP_DOMAIN_PORTAL:-$(dig +short -x $(curl -s ifconfig.me) | sed 's/\.$//')}"
+
+	if [[ -n "${LOCAL_RESOLVED_DOMAINS}" ]] || [[ $(ip route get 8.8.8.8 | awk '{print $7}') != $(curl -s ifconfig.me) ]]; then
 		DOCKER_DAEMON_FILE="/etc/docker/daemon.json"
 		if ! grep -q '"dns"' "$DOCKER_DAEMON_FILE" 2>/dev/null; then
-			echo "A problem was detected for ${LOCAL_RESOLVED_DOMAINS[@]} domains when using a loopback IP address or when using NAT."
+			echo "A problem was detected for ${APP_DOMAIN_PORTAL:-${LOCAL_RESOLVED_DOMAINS}} domains when using a loopback IP address or when using NAT."
 			echo "Select 'Y' to continue installing with configuring the use of external IP in Docker via Google Public DNS."
 			echo "Select 'N' to cancel ${PACKAGE_SYSNAME^^} ${PRODUCT_NAME} installation."
 			if read_continue_installation; then
@@ -955,6 +951,8 @@ domain_check () {
 			fi
 		fi
 	fi
+
+	[[ -n "${APP_DOMAIN_PORTAL}" ]] && APP_URL_PORTAL="http://${APP_DOMAIN_PORTAL}:${EXTERNAL_PORT}"
 }
 
 establish_conn() {
@@ -1109,7 +1107,6 @@ set_mysql_params () {
 set_docspace_params() {
 	ENV_EXTENSION=${ENV_EXTENSION:-$(get_env_parameter "ENV_EXTENSION" "${CONTAINER_NAME}")};
 	APP_CORE_BASE_DOMAIN=${APP_CORE_BASE_DOMAIN:-$(get_env_parameter "APP_CORE_BASE_DOMAIN" "${CONTAINER_NAME}")};
-	APP_URL_PORTAL=${APP_URL_PORTAL:-$(get_env_parameter "APP_URL_PORTAL" "${CONTAINER_NAME}")};
 	EXTERNAL_PORT=${EXTERNAL_PORT:-$(get_env_parameter "EXTERNAL_PORT" "${CONTAINER_NAME}")};
 
 	ELK_SHEME=${ELK_SHEME:-$(get_env_parameter "ELK_SHEME" "${CONTAINER_NAME}")};
@@ -1288,8 +1285,8 @@ install_product () {
 	docker-compose -f $BASE_DIR/notify.yml up -d
 	docker-compose -f $BASE_DIR/healthchecks.yml up -d
 
-	if [ ! -z "${CERTIFICATE_PATH}" ] && [ ! -z "${CERTIFICATE_KEY_PATH}" ]; then
-		bash $BASE_DIR/config/${PRODUCT}-ssl-setup -f "${CERTIFICATE_PATH}" "${CERTIFICATE_KEY_PATH}"
+	if [ ! -z "${CERTIFICATE_PATH}" ] && [ ! -z "${CERTIFICATE_KEY_PATH}" ] && [[ ! -z "${APP_DOMAIN_PORTAL}" ]]; then
+		bash $BASE_DIR/config/${PRODUCT}-ssl-setup -f "${APP_DOMAIN_PORTAL}" "${CERTIFICATE_PATH}" "${CERTIFICATE_KEY_PATH}"
 	elif [ ! -z "${LETS_ENCRYPT_DOMAIN}" ] && [ ! -z "${LETS_ENCRYPT_MAIL}" ]; then
 		bash $BASE_DIR/config/${PRODUCT}-ssl-setup "${LETS_ENCRYPT_MAIL}" "${LETS_ENCRYPT_DOMAIN}"
 	fi
