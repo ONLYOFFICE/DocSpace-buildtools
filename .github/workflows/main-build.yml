@@ -1,7 +1,6 @@
 name: 4testing multiarch-build
 
 on:
-  workflow_dispatch:
   repository_dispatch:
     types:
       - cron-trigger-action
