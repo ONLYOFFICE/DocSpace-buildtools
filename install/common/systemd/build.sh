@@ -111,6 +111,7 @@ reassign_values (){
 		SERVICE_PORT="5003"
 		WORK_DIR="${BASE_DIR}/studio/ASC.Web.Studio/"
 		EXEC_FILE="ASC.Web.Studio.dll"
+		CORE_EVENT_BUS=" --core:eventBus:subscriptionClientName=asc_event_bus_webstudio_queue"
 	;;
 	backup )
 		SERVICE_PORT="5012"
