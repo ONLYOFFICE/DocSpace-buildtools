@@ -46,8 +46,9 @@ if [ "$#" -ge "2" ]; then
   else
     echo "Using specified files to configure SSL..."
 
-    CERTIFICATE_FILE=$2
-    PRIVATEKEY_FILE=$3
+    DOMAIN=$2
+    CERTIFICATE_FILE=$3
+    PRIVATEKEY_FILE=$4
   fi
 
   [[ ! -f "${DHPARAM_FILE}" ]] && openssl dhparam -out ${DHPARAM_FILE} 2048
@@ -60,9 +61,7 @@ if [ "$#" -ge "2" ]; then
       docker-compose -f ${DOCKERCOMPOSE}/proxy.yml down
       docker-compose -f ${DOCKERCOMPOSE}/docspace.yml stop onlyoffice-files
 
-      if [[ ! -z "$DOMAIN" ]] || [[ "$(grep 'APP_URL_PORTAL=' ${DOCKERCOMPOSE}/.env)" != *"https://"* ]]; then
-        sed -i "s~\(APP_URL_PORTAL=\).*~\1\"https://${DOMAIN:-$(hostname --fqdn)}\"~g" ${DOCKERCOMPOSE}/.env
-      fi
+      sed -i "s~\(APP_URL_PORTAL=\).*~\1\"https://${DOMAIN}\"~g" ${DOCKERCOMPOSE}/.env
       sed -i "s~\(CERTIFICATE_PATH=\).*~\1\"${CERTIFICATE_FILE}\"~g" ${DOCKERCOMPOSE}/.env
       sed -i "s~\(CERTIFICATE_KEY_PATH=\).*~\1\"${PRIVATEKEY_FILE}\"~g" ${DOCKERCOMPOSE}/.env
       sed -i "s~\(DHPARAM_PATH=\).*~\1\"${DHPARAM_FILE}\"~g" ${DOCKERCOMPOSE}/.env
@@ -106,7 +105,8 @@ else
   echo "    DOMAIN        Domain name to apply"
   echo ""
   echo "Using your own certificates via the -f parameter:"
-  echo "  docspace-ssl-setup -f CERTIFICATE PRIVATEKEY"
+  echo "  docspace-ssl-setup -f DOMAIN CERTIFICATE PRIVATEKEY"
+  echo "    DOMAIN        Domain name to apply."
   echo "    CERTIFICATE   Path to the certificate file for the domain."
   echo "    PRIVATEKEY    Path to the private key file for the certificate."
   echo ""

@@ -33,8 +33,9 @@ if [ "$#" -ge "2" ]; then
   else
     echo "Using specified files to configure SSL..."
   
-    CERTIFICATE_FILE=$2
-    PRIVATEKEY_FILE=$3
+    DOMAIN=$2
+    CERTIFICATE_FILE=$3
+    PRIVATEKEY_FILE=$4
   fi
 
   [[ ! -f "${DHPARAM_FILE}" ]] && openssl dhparam -out ${DHPARAM_FILE} 2048
@@ -47,7 +48,7 @@ if [ "$#" -ge "2" ]; then
       cp -f ${OPENRESTY}/onlyoffice-proxy-ssl.conf.template ${OPENRESTY}/onlyoffice-proxy.conf
 
       ENVIRONMENT=$(grep -oP 'ENVIRONMENT=\K.*' $(dirname $(dpkg-query -L ${PRODUCT}-api | grep systemd/system/))/${PRODUCT}-api.service)
-      sed -i "s/\(\"portal\":\).*/\1 \"https:\/\/${DOMAIN:-$(hostname --fqdn)}\"/" /etc/onlyoffice/docspace/appsettings.$ENVIRONMENT.json
+      sed -i "s/\(\"portal\":\).*/\1 \"https:\/\/${DOMAIN}\"/" /etc/onlyoffice/docspace/appsettings.$ENVIRONMENT.json
       sed -i "s~\(ssl_certificate \).*;~\1${CERTIFICATE_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
       sed -i "s~\(ssl_certificate_key \).*;~\1${PRIVATEKEY_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
       sed -i "s~\(ssl_dhparam \).*;~\1${DHPARAM_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
@@ -90,7 +91,8 @@ else
   echo "    DOMAIN        Domain name to apply"
   echo ""
   echo "Using your own certificates via the -f parameter:"
-  echo "  docspace-ssl-setup -f CERTIFICATE PRIVATEKEY"
+  echo "  docspace-ssl-setup -f DOMAIN CERTIFICATE PRIVATEKEY"
+  echo "    DOMAIN        Domain name to apply."
   echo "    CERTIFICATE   Path to the certificate file for the domain."
   echo "    PRIVATEKEY    Path to the private key file for the certificate."
   echo ""
