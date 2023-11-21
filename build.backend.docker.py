@@ -28,7 +28,7 @@ local_ip = socket.gethostbyname_ex(socket.gethostname())[-1][-1]
 doceditor = f"{local_ip}:5013"
 login = f"{local_ip}:5011"
 client = f"{local_ip}:5001"
-management = f"{local_ip}:5001"
+management = f"{local_ip}:5015"
 portal_url = f"http://{local_ip}"
 
 force = False
