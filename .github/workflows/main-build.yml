@@ -51,8 +51,6 @@ jobs:
       - name: Build 4testing
         id: build
         run: |
-          set -e
-
           cd .${DOCKER_PATH}
           if [ "${{ matrix.branch }}" = "develop" ]; then
             DOCKER_TAG="develop.${{ github.run_number }}"
