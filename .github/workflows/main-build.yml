@@ -24,9 +24,6 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    outputs:
-      tag: ${{ steps.build.outputs.tag }}
-      branch: ${{ steps.build.outputs.branch }}
     strategy:
       matrix:
         platform: [linux/amd64]
