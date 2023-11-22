@@ -86,7 +86,7 @@ $prerequisites = @(
   }
 )
 
-$path_nuget_packages = "${pwd}\.nuget\packages\"
+$path_nuget_packages = "${pwd}\server\.nuget\packages\"
 
 $nuget_packages = @(
   @{  

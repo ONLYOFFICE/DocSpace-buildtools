@@ -4,6 +4,7 @@
 	<description>ONLYOFFICE DocSpace DocEditor</description>
 	<priority>RealTime</priority>
 	<startmode>Automatic</startmode>
+	<autoRefresh>false</autoRefresh>
 	<onfailure action="restart" delay="10 sec"/>
 	<executable>node</executable>
 	<arguments>&quot;{APPDIR}products\ASC.Files\editor\server.js&quot;</arguments>
