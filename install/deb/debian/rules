@@ -49,7 +49,7 @@ override_dh_auto_build:
 	json -I -f ${SRC_PATH}/buildtools/config/apisystem.json -e "this.core.notify.postman=\"services\""
 	sed 's_\(minlevel=\)"[^"]*"_\1"Warn"_g' -i ${SRC_PATH}/buildtools/config/nlog.config
 
-	sed 's_etc/nginx_etc/openresty_g' -i ${SRC_PATH}/buildtools/config/nginx/*.conf
+	sed -e 's_etc/nginx_etc/openresty_g' -e 's/listen\s\+\([0-9]\+\);/listen 127.0.0.1:\1;/g' -i ${SRC_PATH}/buildtools/config/nginx/*.conf
 	sed -i "s#\$$public_root#/var/www/${PRODUCT}/public/#g" ${SRC_PATH}/buildtools/config/nginx/onlyoffice.conf
 	sed 's/teamlab.info/onlyoffice.com/g' -i ${SRC_PATH}/buildtools/config/autofac.consumers.json
 	json -I -f ${SRC_PATH}/client/public/scripts/config.json -e "this.wrongPortalNameUrl=\"\""
