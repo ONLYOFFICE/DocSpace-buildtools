@@ -71,7 +71,7 @@ jobs:
       - name: Run zap action if needed
         env:
           RUN_ZAP: ${{ github.event.inputs.zap || 'true' }}
-          GH_TOKEN: ${{ secrets.TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
           VERSION: ${{ steps.build.outputs.version }}
         shell: bash
         run: |
