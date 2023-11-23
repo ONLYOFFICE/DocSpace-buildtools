@@ -56,7 +56,6 @@
     <ROW Property="MSIFASTINSTALL" MultiBuildValue="DefaultBuild:3#ExeBuild:7"/>
     <ROW Property="MYSQLODBCDRIVER" Value="MySQL ODBC 8.0 Unicode Driver"/>
     <ROW Property="Manufacturer" Value="Ascensio System SIA"/>
-    <ROW Property="MsiLogging" MultiBuildValue="DefaultBuild:vp#ExeBuild:vp"/>
     <ROW Property="MySQLConnector" Value="MySQL Connector/ODBC 8.0.21 x86"/>
     <ROW Property="NEED_REINDEX_ELASTICSEARCH" Value="FALSE" ValueLocId="-"/>
     <ROW Property="OPEN_INSTALL_CANCEL_URL" Value="1"/>
@@ -923,63 +922,6 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCreateFolderComponent">
     <ROW Directory_="APPDIR" Component_="APPDIR" ManualDelete="true"/>
-    <ROW Directory_="config_Dir" Component_="config" ManualDelete="false"/>
-    <ROW Directory_="config_2_Dir" Component_="config_ssoauth" ManualDelete="false"/>
-    <ROW Directory_="NewFolder_1_Dir" Component_="config_socketio" ManualDelete="false"/>
-    <ROW Directory_="login_Dir" Component_="login" ManualDelete="false"/>
-    <ROW Directory_="editor_Dir" Component_="editor" ManualDelete="false"/>
-    <ROW Directory_="conf_Dir" Component_="conf" ManualDelete="false"/>
-    <ROW Directory_="includes_Dir" Component_="includes" ManualDelete="false"/>
-    <ROW Directory_="nginx_Dir" Component_="nginx" ManualDelete="false"/>
-    <ROW Directory_="tools_Dir" Component_="tools" ManualDelete="false"/>
-    <ROW Directory_="products_Dir" Component_="products" ManualDelete="false"/>
-    <ROW Directory_="ASC.Files_Dir" Component_="ASC.Files" ManualDelete="false"/>
-    <ROW Directory_="server_2_Dir" Component_="server_ASC.Files" ManualDelete="false"/>
-    <ROW Directory_="ASC.Web.HealthChecks.UI_Dir" Component_="ASC.Web.HealthChecks.UI" ManualDelete="false"/>
-    <ROW Directory_="service_4_Dir" Component_="service_ASC.Web.HealthChecks.UI" ManualDelete="false"/>
-    <ROW Directory_="ASC.Login_Dir" Component_="ASC.Login" ManualDelete="false"/>
-    <ROW Directory_="ASC.People_Dir" Component_="ASC.People" ManualDelete="false"/>
-    <ROW Directory_="server_5_Dir" Component_="server_ASC.People" ManualDelete="false"/>
-    <ROW Directory_="services_Dir" Component_="services" ManualDelete="false"/>
-    <ROW Directory_="ASC.Migration.Runner_Dir" Component_="ASC.Migration.Runner" ManualDelete="false"/>
-    <ROW Directory_="service_6_Dir" Component_="service_ASC.Migration.Runner" ManualDelete="false"/>
-    <ROW Directory_="ASC.ClearEvents_Dir" Component_="ASC.ClearEvents" ManualDelete="false"/>
-    <ROW Directory_="service_Dir" Component_="service_ASC.ClearEvents" ManualDelete="false"/>
-    <ROW Directory_="ASC.Data.Backup.BackgroundTasks_Dir" Component_="ASC.Data.Backup.BackgroundTasks" ManualDelete="false"/>
-    <ROW Directory_="service_3_Dir" Component_="service_ASC.Data.Backup.BachgroundTasks" ManualDelete="false"/>
-    <ROW Directory_="ASC.Socket.IO_Dir" Component_="ASC.Socket.IO" ManualDelete="false"/>
-    <ROW Directory_="service_1_Dir" Component_="service_ASC.Socket.IO" ManualDelete="false"/>
-    <ROW Directory_="ASC.Data.Backup_Dir" Component_="ASC.Data.Backup" ManualDelete="false"/>
-    <ROW Directory_="service_2_Dir" Component_="service_ASC.Data.Backup" ManualDelete="false"/>
-    <ROW Directory_="ASC.Files.Service_Dir" Component_="ASC.Files.Service" ManualDelete="false"/>
-    <ROW Directory_="service_7_Dir" Component_="service_ASC.File.Service" ManualDelete="false"/>
-    <ROW Directory_="ASC.Notify_Dir" Component_="ASC.Notify" ManualDelete="false"/>
-    <ROW Directory_="service_9_Dir" Component_="service_ASC.Notify" ManualDelete="false"/>
-    <ROW Directory_="ASC.SsoAuth_Dir" Component_="ASC.SsoAuth" ManualDelete="false"/>
-    <ROW Directory_="service_5_Dir" Component_="service_ASC.SsoAuth" ManualDelete="false"/>
-    <ROW Directory_="ASC.Studio.Notify_Dir" Component_="ASC.Studio.Notify" ManualDelete="false"/>
-    <ROW Directory_="service_11_Dir" Component_="service_ASC.Studio.Notify" ManualDelete="false"/>
-    <ROW Directory_="ASC.Web.Api_Dir" Component_="ASC.Web.Api" ManualDelete="false"/>
-    <ROW Directory_="service_15_Dir" Component_="service_ASC.WebApi" ManualDelete="false"/>
-    <ROW Directory_="ASC.Web.Studio_Dir" Component_="ASC.Web.Studio" ManualDelete="false"/>
-    <ROW Directory_="service_16_Dir" Component_="service_ASC.Web.Studio" ManualDelete="false"/>
-    <ROW Directory_="Logs_Dir" Component_="Logs" ManualDelete="false"/>
-    <ROW Directory_="temp_Dir" Component_="temp_nginx" ManualDelete="false"/>
-    <ROW Directory_="logs_Dir" Component_="logs" ManualDelete="false"/>
-    <ROW Directory_="temp_1_Dir" Component_="temp_ASC.ClearEvents" ManualDelete="false"/>
-    <ROW Directory_="temp_2_Dir" Component_="temp_ASC.Data.Backup.BackgroundTasks" ManualDelete="false"/>
-    <ROW Directory_="temp_3_Dir" Component_="temp_ASC.File.Service" ManualDelete="false"/>
-    <ROW Directory_="temp_4_Dir" Component_="temp_ASC.Data.Buckup" ManualDelete="false"/>
-    <ROW Directory_="temp_5_Dir" Component_="temp_ASC.Web.HealthChecks.UI" ManualDelete="false"/>
-    <ROW Directory_="temp_6_Dir" Component_="temp_ASC.Migration.Runner" ManualDelete="false"/>
-    <ROW Directory_="temp_7_Dir" Component_="temp_ASC.Notify" ManualDelete="false"/>
-    <ROW Directory_="temp_8_Dir" Component_="temp_ASC.Studio.Notify" ManualDelete="false"/>
-    <ROW Directory_="temp_9_Dir" Component_="temp_ASC.Web.Api" ManualDelete="false"/>
-    <ROW Directory_="temp_10_Dir" Component_="temp_ASC.Web.Studio" ManualDelete="false"/>
-    <ROW Directory_="temp_13_Dir" Component_="temp_ASC.Files" ManualDelete="false"/>
-    <ROW Directory_="temp_14_Dir" Component_="temp_ASC.People" ManualDelete="false"/>
-    <ROW Directory_="Data_Dir" Component_="Data" ManualDelete="false"/>
-    <ROW Directory_="temp_16_Dir" Component_="ASC.ApiSystem.exe" ManualDelete="false"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCustActComponent">
     <ROW Action="AI_AppSearchEx" Type="1" Source="Prereq.dll" Target="DoAppSearchEx"/>
@@ -1321,66 +1263,6 @@
     <ROW Condition="SETUPEXEDIR OR (REMOVE=&quot;ALL&quot;)" Description="This package can only be run from a bootstrapper." DescriptionLocId="AI.LaunchCondition.RequireBootstrapper" IsPredefined="true" Builds="DefaultBuild;ExeBuild"/>
     <ROW Condition="VersionNT" Description="[ProductName] cannot be installed on [WindowsType9XDisplay]." DescriptionLocId="AI.LaunchCondition.No9X" IsPredefined="true" Builds="DefaultBuild;ExeBuild"/>
   </COMPONENT>
-  <COMPONENT cid="caphyon.advinst.msicomp.MsiLockPermComponent">
-    <ROW LockObject="APPDIR" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="config_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="nginx_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="conf_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="includes_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="tools_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1180095" Flags="2"/>
-    <ROW LockObject="products_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="editor_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="ASC.Files_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="login_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="server_2_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="ASC.Login_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="ASC.People_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="server_5_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="services_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="ASC.Migration.Runner_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="service_6_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="ASC.ClearEvents_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="service_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="NewFolder_1_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="ASC.Data.Backup.BackgroundTasks_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="service_3_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="ASC.Socket.IO_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="service_1_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="ASC.Data.Backup_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="service_2_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="ASC.Files.Service_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="service_7_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="ASC.Web.HealthChecks.UI_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="service_4_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="ASC.Notify_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="service_9_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="ASC.SsoAuth_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="config_2_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="service_5_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="ASC.Studio.Notify_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="service_11_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="ASC.Web.Api_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="service_15_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="ASC.Web.Studio_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="service_16_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1179785" Flags="2"/>
-    <ROW LockObject="Logs_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1180063" Flags="2"/>
-    <ROW LockObject="temp_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1180063" Flags="2"/>
-    <ROW LockObject="logs_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1180063" Flags="2"/>
-    <ROW LockObject="temp_1_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1180063" Flags="2"/>
-    <ROW LockObject="temp_2_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1180063" Flags="2"/>
-    <ROW LockObject="temp_3_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1180063" Flags="2"/>
-    <ROW LockObject="temp_4_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1180063" Flags="2"/>
-    <ROW LockObject="temp_5_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1180063" Flags="2"/>
-    <ROW LockObject="temp_6_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1180063" Flags="2"/>
-    <ROW LockObject="temp_7_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1180063" Flags="2"/>
-    <ROW LockObject="temp_8_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1180063" Flags="2"/>
-    <ROW LockObject="temp_9_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1180063" Flags="2"/>
-    <ROW LockObject="temp_10_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1180063" Flags="2"/>
-    <ROW LockObject="temp_13_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1180063" Flags="2"/>
-    <ROW LockObject="temp_14_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1180063" Flags="2"/>
-    <ROW LockObject="Data_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1180063" Flags="2"/>
-    <ROW LockObject="temp_16_Dir" Table="CreateFolder" User="[USR_LOCAL_SERVICE]" Permission="1180063" Flags="0"/>
-  </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiRadioButtonComponent">
     <ROW Property="Prereq_IAgree" Order="1" Value="Yes" X="5" Y="0" Width="250" Height="15" Text="I &amp;accept the terms in the License Agreement" TextStyle="DlgFont8" TextLocId="RadioButton.Text.IAgree#1"/>
     <ROW Property="Prereq_IAgree" Order="2" Value="No" X="5" Y="20" Width="250" Height="15" Text="I &amp;do not accept the terms in the License Agreement" TextStyle="DlgFont8" TextLocId="RadioButton.Text.IAgree#2"/>
@@ -1591,7 +1473,7 @@
     <ROW PrereqKey="Node.js" DisplayName="Node.js 18.16.1" VersionMin="18.16.0" SetupFileUrl="redist\node-v18.16.1-x64.msi" Location="0" ExactSize="0" Operator="0" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="ym" TargetName="Node.js\node-v18.16.1-x64.msi" Builds="ExeBuild"/>
     <ROW PrereqKey="OpenResty" DisplayName="OpenResty v1.21.4" VersionMin="1.21.4.2" SetupFileUrl="publish\OpenResty.msi" Location="0" ExactSize="0" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="yxm" TargetName="OpenResty\OpenResty.msi"/>
     <ROW PrereqKey="PostgreSQL_ODBC" DisplayName="PostgreSQL ODBC Driver v15.0 x64" SetupFileUrl="psqlodbc_15_x64.msi" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="myx" TargetName="psqlodbc_x64.msi"/>
-    <ROW PrereqKey="PostgresSQL" DisplayName="PostgresSQL v14.0 x64" VersionMin="14.0" SetupFileUrl="postgresql-14.0-1-windows-x64.exe" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="--unattendedmodeui none --install_runtimes 0 --mode unattended --superaccount &quot;postgres&quot; --superpassword &quot;postgres&quot;" BasicUiComLine="--unattendedmodeui none --install_runtimes 0 --mode unattended --superaccount &quot;postgres&quot; --superpassword &quot;postgres&quot;" NoUiComLine="--unattendedmodeui none --install_runtimes 0 --mode unattended --superaccount &quot;postgres&quot; --superpassword &quot;postgres&quot;" Options="xy" TargetName="postgresql-14.0-1-windows-x64.exe"/>
+    <ROW PrereqKey="PostgresSQL" DisplayName="PostgreSQL v14.0 x64" VersionMin="14.0" SetupFileUrl="postgresql-14.0-1-windows-x64.exe" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="--unattendedmodeui none --install_runtimes 0 --mode unattended --superaccount &quot;postgres&quot; --superpassword &quot;postgres&quot;" BasicUiComLine="--unattendedmodeui none --install_runtimes 0 --mode unattended --superaccount &quot;postgres&quot; --superpassword &quot;postgres&quot;" NoUiComLine="--unattendedmodeui none --install_runtimes 0 --mode unattended --superaccount &quot;postgres&quot; --superpassword &quot;postgres&quot;" Options="xy" TargetName="postgresql-14.0-1-windows-x64.exe"/>
     <ROW PrereqKey="RabbitMQServer" DisplayName="RabbitMQ v3.12.1 x64" VersionMin="3.12" SetupFileUrl="redist\rabbitmq-server-3.12.1.exe" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/S" BasicUiComLine="/S" NoUiComLine="/S" Options="yx" TargetName="RabbitMQ Server\rabbitmq-server-3.12.1.exe" Builds="ExeBuild"/>
     <ROW PrereqKey="RedisonWindows" DisplayName="Redis 5.0.10 x64" VersionMin="5.0" SetupFileUrl="redist\Redis-x64-5.0.10.msi" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet ADD_INSTALLFOLDER_TO_PATH=1" BasicUiComLine="/quiet ADD_INSTALLFOLDER_TO_PATH=1" NoUiComLine="/quiet ADD_INSTALLFOLDER_TO_PATH=1" Options="yx" TargetName="Redis on Windows\Redis-x64-5.0.10.msi" Builds="ExeBuild"/>
     <ROW PrereqKey="RequiredApplication" DisplayName="MySQL Connector/ODBC 8.0.33 x86" VersionMin="8.0.33" SetupFileUrl="https://cdn.mysql.com/Downloads/Connector-ODBC/8.0/mysql-connector-odbc-8.0.33-win32.msi" Location="1" ExactSize="0" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="ym" TargetName="MySQL Connector ODBC 8.0.33 x86" Builds="DefaultBuild"/>

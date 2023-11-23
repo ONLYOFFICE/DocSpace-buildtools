@@ -39,7 +39,7 @@ STORAGE_ROOT="/var/www/onlyoffice/Data"
 LOG_DIR="/var/log/onlyoffice/${PRODUCT}"
 DOTNET_RUN="/usr/bin/dotnet"
 NODE_RUN="/usr/bin/node"
-APP_URLS="http://0.0.0.0"
+APP_URLS="http://127.0.0.1"
 ENVIRONMENT=" --ENVIRONMENT=production"
 CORE=" --core:products:folder=${BASE_DIR}/products --core:products:subfolder=server"
 
@@ -111,6 +111,7 @@ reassign_values (){
 		SERVICE_PORT="5003"
 		WORK_DIR="${BASE_DIR}/studio/ASC.Web.Studio/"
 		EXEC_FILE="ASC.Web.Studio.dll"
+		CORE_EVENT_BUS=" --core:eventBus:subscriptionClientName=asc_event_bus_webstudio_queue"
 	;;
 	backup )
 		SERVICE_PORT="5012"
