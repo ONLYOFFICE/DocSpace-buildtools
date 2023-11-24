@@ -1,1 +1,1 @@
-../../../publish/web/login           var/www/{{product}}/products/ASC.Login
+debian/build/publish/web/login           var/www/{{product}}/products/ASC.Login

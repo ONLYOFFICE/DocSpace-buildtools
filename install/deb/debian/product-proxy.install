@@ -1,9 +1,9 @@
 ## COPY PUBLIC ##
-../../../buildtools/install/common/{{product}}-ssl-setup                 usr/bin
-../../../buildtools/install/docker/config/nginx/templates/*.template     etc/onlyoffice/{{product}}/openresty
-../../../buildtools/install/docker/config/nginx/onlyoffice*              etc/openresty/conf.d
-../../config/nginx/onlyoffice*.conf                                      etc/openresty/conf.d
-../../../buildtools/install/docker/config/nginx/letsencrypt*             etc/openresty/includes
-../../config/nginx/includes/onlyoffice*.conf                             etc/openresty/includes
-../../../publish/web/public/*                                            var/www/{{product}}/public
-../../../publish/web/client/*                                            var/www/{{product}}/client
+debian/build/buildtools/install/common/{{product}}-ssl-setup                 usr/bin
+debian/build/buildtools/install/docker/config/nginx/templates/*.template     etc/onlyoffice/{{product}}/openresty
+debian/build/buildtools/install/docker/config/nginx/onlyoffice*              etc/openresty/conf.d
+debian/build/buildtools/config/nginx/onlyoffice*.conf                                      etc/openresty/conf.d
+debian/build/buildtools/install/docker/config/nginx/letsencrypt*             etc/openresty/includes
+debian/build/buildtools/config/nginx/includes/onlyoffice*.conf                             etc/openresty/includes
+debian/build/publish/web/public/*                                            var/www/{{product}}/public
+debian/build/publish/web/client/*                                            var/www/{{product}}/client
