@@ -9,7 +9,6 @@ bash install/common/build-backend.sh --srcpath %{_builddir}
 bash install/common/publish-backend.sh --srcpath %{_builddir}/server
 
 rename -f -v "s/product([^\/]*)$/%{product}\$1/g" install/common/*
-sed -i "s/{{product}}/%{product}/g" install/common/logrotate/product-common
 
 rm -f config/nginx/onlyoffice-login.conf
 find config/ -type f -regex '.*\.\(test\|dev\).*' -delete
