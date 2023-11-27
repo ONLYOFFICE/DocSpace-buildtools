@@ -1,7 +1,7 @@
 ARG SRC_PATH="/app/onlyoffice/src"
 ARG BUILD_PATH="/var/www"
-ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:7.0"
-ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:7.0"
+ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:8.0"
+ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:8.0"
 
 FROM alpine:latest AS base
 ARG SRC_PATH
@@ -40,7 +40,7 @@ RUN mkdir -p /var/log/onlyoffice && \
         curl \
         vim \
         libgdiplus && \
-    pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces && \
+    pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces --break-system-packages && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
