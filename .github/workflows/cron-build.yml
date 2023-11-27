@@ -37,4 +37,4 @@ jobs:
           -u "${{ secrets.USERNAME}}:${{secrets.TOKEN}}" \
           "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/dispatches" \
           -H "Accept: application/vnd.github.everest-preview+json" \
-          --data '{"event_type": "cron-trigger-action", "client_payload": { "branches": ${{ steps.list-branches.outputs.json_output }}, "event": ${{ github.event_name }}}}'
+          --data '{"event_type": "cron-trigger-action", "client_payload": { "branches": ${{ steps.list-branches.outputs.json_output }}}}'
