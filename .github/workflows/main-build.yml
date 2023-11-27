@@ -76,8 +76,8 @@ jobs:
         shell: bash
         run: |
            if [[ ${{ matrix.branch }} =~ release || ${{ matrix.branch }} =~ hotfix && ${RUN_ZAP} == true ]]; then
-              gh workflow run zap-scanning.yaml \
-                 --repo ${{ github.repository }} \
+              gh workflow run zap-scan.yaml \
+                 --repo ONLYOFFICE/DocSpace \
                  -f branch=${{ matrix.branch }} \
                  -f version=${VERSION}
            fi
