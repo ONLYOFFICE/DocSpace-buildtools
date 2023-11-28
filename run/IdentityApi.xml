@@ -3,7 +3,7 @@
   <name>ONLYOFFICE IdentityApi</name>
   <startmode>manual</startmode>
   <executable>java</executable>
-  <arguments>-jar ../../server/common/ASC.OAuth/api/target/api-0.0.1.jar</arguments>
+  <arguments>-jar ../../server/common/ASC.Identity/api/target/api-0.0.1.jar</arguments>
   <log mode="none"/>
   <delayedAutoStart>true</delayedAutoStart>
   <onfailure action="restart" delay="5 sec" />
