@@ -50,7 +50,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           
-      - name: Build 4testing
+      - name: Build 4load
         id: build
         run: |
           cd .${DOCKER_PATH}
@@ -63,10 +63,79 @@ jobs:
           docker buildx bake -f build.yml \
           --set *.args.GIT_BRANCH=${{ matrix.branch }} \
           --set *.platform=linux/amd64 \
-          --push
-
+          --load
+          echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
           echo "version=${DOCKER_TAG}" >> "$GITHUB_OUTPUT"
         shell: bash
+
+      - name: Test Container
+        run: |
+          echo "test ${{github.head_ref}}"
+          cd .${DOCKER_PATH}
+
+          NETWORK_NAME="onlyoffice"
+          NETWORK_EXISTS=$(docker network ls --filter name=$NETWORK_NAME -q)
+          if [ -z "$NETWORK_EXISTS" ]; then
+            echo "Creating Docker network: $NETWORK_NAME"
+            docker network create -d bridge $NETWORK_NAME
+          else
+            echo "Docker network $NETWORK_NAME already exists."
+          fi
+
+          services=("db.yml" "elasticsearch.yml" "redis.yml" "rabbitmq.yml" "healthchecks.yml" "migration-runner.yml" "docspace.yml" "notify.yml")
+
+          for service in "${services[@]}"; do
+            sleep 10
+            DOCKER_TAG=${{ env.DOCKER_TAG }} docker-compose -f "${service}" up -d
+          done
+          
+
+          HAS_ERROR=false
+          for FILE_NAME in db elasticsearch redis rabbitmq healthchecks migration-runner docspace notify; do
+            CONTAINER_NAMES=$(docker-compose -f ${FILE_NAME}.yml ps --all | grep onlyoffice | awk '{print $1}')
+            for CONTAINER_NAME in $CONTAINER_NAMES; do
+              CONTAINER_STATUS=$(docker inspect -f '{{.State.Status}}' $CONTAINER_NAME)
+              if [ "$CONTAINER_NAME" == "onlyoffice-migration-runner" ] ; then
+                if [ "$CONTAINER_STATUS" == "exited" ] ; then
+                  echo "$CONTAINER_NAME container has successfully exited." >> logs.txt
+                else
+                  echo "Error: $CONTAINER_NAME container is $CONTAINER_STATUS." >> logs.txt
+                  HAS_ERROR=true
+                fi
+              else 
+                if [ "$CONTAINER_STATUS" == "running" ] ; then
+                  echo "$CONTAINER_NAME container is running." >> logs.txt
+                else
+                  echo "Error: $CONTAINER_NAME container is $CONTAINER_STATUS." >> logs.txt
+                  HAS_ERROR=true
+                fi
+              fi
+            done
+            if [ "$HAS_ERROR" = true ]; then
+              exit 1
+            fi         
+            echo "artifactPath=$PWD" >> $GITHUB_ENV
+            echo "artifactName=${{ matrix.branch }}-logs" | sed 's/\///g' >> $GITHUB_ENV
+          done
+        shell: bash
+
+      - name: Build 4push 
+        run: |
+          cd .${DOCKER_PATH}
+          export DOCKER_TAG=${{ env.DOCKER_TAG }}
+          images=$(docker images | grep $DOCKER_TAG | awk '{print $1}')
+          for image in $images
+          do
+              full_image_name="$image:$DOCKER_TAG"
+              echo "Pushing $full_image_name"
+              docker push $full_image_name
+          done
+        shell: bash
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.artifactName }}
+          path: ${{ env.artifactPath }}/logs.txt
 
       - name: Run zap action if needed
         if: ${{ github.event.action == 'cron-trigger-action' || github.event_name == 'workflow_dispatch' }}
