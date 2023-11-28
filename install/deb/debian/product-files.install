@@ -1,2 +1,2 @@
-../../../server/publish/products/ASC.Files/server     var/www/{{product}}/products/ASC.Files
-../../../server/products/ASC.Files/Server/DocStore    var/www/{{product}}/products/ASC.Files/server
+debian/build/server/publish/products/ASC.Files/server     var/www/{{product}}/products/ASC.Files
+debian/build/server/products/ASC.Files/Server/DocStore    var/www/{{product}}/products/ASC.Files/server

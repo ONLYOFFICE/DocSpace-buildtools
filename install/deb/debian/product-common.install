@@ -1,4 +1,4 @@
-../../config/*.json                       etc/onlyoffice/{{product}}
-../../config/*.config                     etc/onlyoffice/{{product}}
-../common/{{product}}-configuration       usr/bin
-../common/logrotate/{{product}}-common    etc/logrotate.d
+debian/build/buildtools/config/*.json                                  etc/onlyoffice/{{product}}
+debian/build/buildtools/config/*.config                                etc/onlyoffice/{{product}}
+debian/build/buildtools/install/common/{{product}}-configuration       usr/bin
+debian/build/buildtools/install/common/logrotate/{{product}}-common    etc/logrotate.d

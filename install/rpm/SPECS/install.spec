@@ -52,7 +52,6 @@ cp -rf %{_builddir}/server/publish/products/ASC.People/server/* "%{buildroot}%{b
 cp -rf %{_builddir}/server/publish/products/ASC.Files/server/* "%{buildroot}%{buildpath}/products/ASC.Files/server/"
 cp -rf %{_builddir}/server/LICENSE "%{buildroot}%{_docdir}/%{name}-%{version}-%{release}/"
 cp -rf %{_builddir}/server/ASC.Migration.Runner/service/* "%{buildroot}%{buildpath}/services/ASC.Migration.Runner/"
-cp -rf %{_builddir}/document-templates-main-community-server/* "%{buildroot}%{buildpath}/products/ASC.Files/server/DocStore/"
 cp -rf %{_builddir}/buildtools/install/RadicalePlugins/* "%{buildroot}%{buildpath}/Tools/radicale/plugins/"
 cp -rf %{_builddir}/buildtools/install/docker/config/nginx/templates/nginx.conf.template "%{buildroot}%{_sysconfdir}/onlyoffice/%{product}/openresty/nginx.conf.template"
 cp -rf %{_builddir}/buildtools/install/docker/config/nginx/onlyoffice-proxy.conf "%{buildroot}%{_sysconfdir}/openresty/conf.d/onlyoffice-proxy.conf"
