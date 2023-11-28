@@ -70,7 +70,6 @@ jobs:
 
       - name: Test Container
         run: |
-          echo "test ${{github.head_ref}}"
           cd .${DOCKER_PATH}
 
           NETWORK_NAME="onlyoffice"
@@ -89,7 +88,6 @@ jobs:
             DOCKER_TAG=${{ env.DOCKER_TAG }} docker-compose -f "${service}" up -d
           done
           
-
           HAS_ERROR=false
           for FILE_NAME in db elasticsearch redis rabbitmq healthchecks migration-runner docspace notify; do
             CONTAINER_NAMES=$(docker-compose -f ${FILE_NAME}.yml ps --all | grep onlyoffice | awk '{print $1}')
