@@ -1,1 +1,1 @@
-../../../ASC.Migration.Runner/service/*         var/www/{{product}}/services/ASC.Migration.Runner
+debian/build/server/ASC.Migration.Runner/service/*         var/www/{{product}}/services/ASC.Migration.Runner

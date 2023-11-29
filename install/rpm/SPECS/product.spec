@@ -20,11 +20,11 @@ Vendor:         Ascensio System SIA
 Packager:       %{packager}
 License:        AGPLv3
 
-Source0:        https://github.com/ONLYOFFICE/%{product}-buildtools/archive/%{BRANCH_BUILDTOOLS}.tar.gz#/%{product_name}-buildtools-%{BRANCH_BUILDTOOLS}.tar.gz
-Source1:        https://github.com/ONLYOFFICE/%{product}-client/archive/%{BRANCH_CLIENT}.tar.gz#/%{product_name}-client-%{BRANCH_CLIENT}.tar.gz
-Source2:        https://github.com/ONLYOFFICE/%{product}-server/archive/%{BRANCH_SERVER}.tar.gz#/%{product_name}-server-%{BRANCH_SERVER}.tar.gz
-Source3:        https://github.com/ONLYOFFICE/document-templates/archive/main/community-server.tar.gz#/document-templates-main-community-server.tar.gz
-Source4:        https://github.com/ONLYOFFICE/dictionaries/archive/master.tar.gz#/dictionaries-master.tar.gz
+Source0:        https://github.com/ONLYOFFICE/%{product}-buildtools/archive/master.tar.gz#/buildtools.tar.gz
+Source1:        https://github.com/ONLYOFFICE/%{product}-client/archive/master.tar.gz#/client.tar.gz
+Source2:        https://github.com/ONLYOFFICE/%{product}-server/archive/master.tar.gz#/server.tar.gz
+Source3:        https://github.com/ONLYOFFICE/document-templates/archive/main/community-server.tar.gz#/DocStore.tar.gz
+Source4:        https://github.com/ONLYOFFICE/dictionaries/archive/master.tar.gz#/dictionaries.tar.gz
 Source5:        %{product}.rpmlintrc
 
 BuildRequires:  nodejs >= 18.0
@@ -63,13 +63,12 @@ predefined permissions.
 %prep
 rm -rf %{_rpmdir}/%{_arch}/%{name}-* %{_builddir}/*
 
-echo "%{SOURCE0} %{SOURCE1} %{SOURCE2} %{SOURCE3} %{SOURCE4}" | xargs -n 1 -P 5 tar -xzf
+tar -xf %{SOURCE0} --transform='s,^[^/]\+,buildtools,'   -C %{_builddir} 
+tar -xf %{SOURCE1} --transform='s,^[^/]\+,client,'       -C %{_builddir} 
+tar -xf %{SOURCE2} --transform='s,^[^/]\+,server,'       -C %{_builddir} 
+tar -xf %{SOURCE3} --transform='s,^[^/]\+,dictionaries,' -C %{_builddir}/client/common/Tests/Frontend.Translations.Tests 
+tar -xf %{SOURCE4} --transform='s,^[^/]\+,DocStore,'     -C %{_builddir}/server/products/ASC.Files/Server 
 cp %{SOURCE5} .
-
-mv -f %{product_name}-buildtools-%{BRANCH_BUILDTOOLS} buildtools
-mv -f %{product_name}-client-%{BRANCH_CLIENT} client
-mv -f %{product_name}-server-%{BRANCH_SERVER} server
-mv -f %{_builddir}/dictionaries-master/*  %{_builddir}/client/common/Tests/Frontend.Translations.Tests/dictionaries/
 
 %include build.spec
 
