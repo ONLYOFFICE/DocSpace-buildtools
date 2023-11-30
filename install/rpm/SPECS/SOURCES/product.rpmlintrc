@@ -28,7 +28,7 @@ addFilter(r'W: only-non-binary-in-usr-lib')
 # Rpmbuild does not support different architectures for child packages
 addFilter(r'E: no-binary')
 
-# There is no manual page for {{product}}-configuration.sh
+# There is no manual page for docspace-configuration.sh
 addFilter(r'W: no-manual-page-for-binary')
 
 # Dependency on a non-existent package
@@ -63,7 +63,7 @@ addFilter(r'arch-independent-package-contains-binary-or-object')
 
 # File is a static library that is used when building our application. 
 # The presence of an executable bit on it is justified, since the object files that are used for linking when building the program are included.
-# /var/www/{{product}}/services/ASC.Web.HealthChecks.UI/runtimes/browser-wasm/nativeassets/net7.0/e_sqlite3.a
+# /var/www/docspace/services/ASC.Web.HealthChecks.UI/runtimes/browser-wasm/nativeassets/net7.0/e_sqlite3.a
 addFilter(r'spurious-executable-perm')
 addFilter(r'devel-file-in-non-devel-package')
 
