@@ -69,7 +69,7 @@ override_dh_auto_build: check_archives
 	-e "this.ssoauth={ 'path': '../ASC.SsoAuth/' }"  -e "this.logLevel=\"warning\"" -e "this.core={ 'products': { 'folder': '/var/www/${PRODUCT}/products', 'subfolder': 'server'} }"
 
 	find ${BUILDTOOLS_PATH}/config/ -type f -regex '.*\.\(test\|dev\).*' -delete
-	json -I -f ${BUILDTOOLS_PATH}/config/appsettings.json -e "this.core.notify.postman=\"services\"" -e "this['debug-info'].enabled=\"false\"" -e "this.web.samesite=\"None\""
+	json -I -f ${BUILDTOOLS_PATH}/config/appsettings.json -e "this.core.notify.postman=\"services\"" -e "this['debug-info'].enabled=\"false\"" -e "this.web.samesite=\"None\"" -e 'this.plugins.allow=["upload","delete"]'
 	json -I -f ${BUILDTOOLS_PATH}/config/apisystem.json -e "this.core.notify.postman=\"services\""
 	sed 's_\(minlevel=\)"[^"]*"_\1"Warn"_g' -i ${BUILDTOOLS_PATH}/config/nlog.config
 
