@@ -53,6 +53,7 @@ del /f /q buildtools\install\win\Files\config\*.dev.json
 %sed% "/\"debug-info\": {/,/}/ s/\(\"enabled\": \)\".*\"/\1\"false\"/" -i buildtools\install\win\Files\config\appsettings.json
 
 %sed% "s_\(\"samesite\":\).*,_\1 \"None\",_g" -i buildtools\install\win\Files\config\appsettings.json
+%sed% "s_\(\"allow\":\).*,_\1 [\"upload\", \"delete\"],_g" -i buildtools\install\win\Files\config\appsettings.json
 
 ::redirectUrl value replacement
 %sed% "s/teamlab.info/onlyoffice.com/g" -i buildtools\install\win\Files\config\autofac.consumers.json
