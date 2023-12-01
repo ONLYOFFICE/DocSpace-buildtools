@@ -65,3 +65,17 @@ read_unsupported_installation () {
 		;;
 	esac
 }
+
+DIST=$(rpm -q --whatprovides redhat-release || rpm -q --whatprovides centos-release)
+DIST=$(echo "${DIST}" | sed -n '/-.*/s///p')
+DIST_LOWER=$(echo "${DIST}" | tr '[:upper:]' '[:lower:]')
+
+REV=$(sed -n 's/.*release\ \([0-9]*\).*/\1/p' /etc/redhat-release)
+REV=${REV:-"7"}
+
+# Check if it's Centos less than 8
+if [ "${REV}" -lt 8 ]; then
+    echo "Your ${DIST} ${REV} operating system has reached the end of its service life."
+    echo "Please consider upgrading your operating system or using a Docker installation."
+    exit 1
+fi
