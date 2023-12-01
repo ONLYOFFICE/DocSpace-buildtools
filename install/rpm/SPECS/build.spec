@@ -18,7 +18,7 @@ if ! grep -q 'var/www/%{product}' config/nginx/*.conf; then find config/nginx/ -
 
 json -I -f config/appsettings.services.json -e "this.logPath=\"/var/log/onlyoffice/%{product}\"" -e "this.socket={ 'path': '../ASC.Socket.IO/' }" \
 -e "this.ssoauth={ 'path': '../ASC.SsoAuth/' }" -e "this.logLevel=\"warning\""  -e "this.core={ 'products': { 'folder': '%{buildpath}/products', 'subfolder': 'server'} }"
-json -I -f config/appsettings.json -e "this.core.notify.postman=\"services\"" -e "this['debug-info'].enabled=\"false\"" -e "this.web.samesite=\"None\""
+json -I -f config/appsettings.json -e "this.core.notify.postman=\"services\"" -e "this['debug-info'].enabled=\"false\"" -e "this.web.samesite=\"None\"" -e 'this.plugins.allow=["upload","delete"]'
 json -I -f config/apisystem.json -e "this.core.notify.postman=\"services\""
 json -I -f %{_builddir}/publish/web/public/scripts/config.json -e "this.wrongPortalNameUrl=\"\""
 
