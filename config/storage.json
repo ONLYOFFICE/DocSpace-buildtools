@@ -138,6 +138,7 @@
       },
       {
         "name": "systemwebplugins",
+        "visible": false,
         "data": "00000000-0000-0000-0000-000000000000",
         "type": "disc",
         "path": "$STORAGE_ROOT\\Studio\\webplugins",
