@@ -80,3 +80,10 @@ fi
 
 DIST=`echo "$DIST" | tr '[:upper:]' '[:lower:]' | xargs`;
 DISTRIB_CODENAME=`echo "$DISTRIB_CODENAME" | tr '[:upper:]' '[:lower:]' | xargs`;
+
+# Check if it's Ubuntu less than 20 or Debian less than 11
+if [[ ( "${DIST}" == "ubuntu" && "${REV%.*}" -lt 20 ) || ( "${DIST}" == "debian" && "${REV%.*}" -lt 11 ) ]]; then
+    echo "Your ${DIST} ${REV} operating system has reached the end of its service life."
+    echo "Please consider upgrading your operating system or using a Docker installation."
+    exit 1
+fi
