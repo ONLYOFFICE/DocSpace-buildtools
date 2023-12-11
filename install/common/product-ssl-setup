@@ -9,78 +9,12 @@ OPENRESTY="/etc/openresty/conf.d"
 DHPARAM_FILE="/etc/ssl/certs/dhparam.pem"
 WEBROOT_PATH="/var/www/${PRODUCT}"
 
-if [ "$#" -ge "2" ]; then
-  if [ "$1" != "-f" ]; then 
-    MAIL=$1
-    DOMAIN=$2
-    LETSENCRYPT_ENABLE="true"
+# Check if configuration files are present
+if [ ! -f "${OPENRESTY}/onlyoffice-proxy-ssl.conf.template" -a ! -f "${OPENRESTY}/onlyoffice-proxy.conf.template" ]; then
+ echo "Error: proxy configuration file not found." && exit 1
+fi
 
-    # Install certbot if not already installed
-    if ! type "certbot" &> /dev/null; then
-      if type "apt-get" &> /dev/null; then
-        apt-get -y update -qq
-        apt-get -y -q install certbot
-      elif type "yum" &> /dev/null; then
-        yum -y install certbot
-      fi
-    fi
-
-    echo "Generating Let's Encrypt SSL Certificates..."
-
-    # Request and generate Let's Encrypt SSL certificate
-    echo certbot certonly --expand --webroot -w ${WEBROOT_PATH} --cert-name ${PRODUCT} --noninteractive --agree-tos --email ${MAIL} -d ${DOMAIN} > /var/log/le-start.log
-    certbot certonly --expand --webroot -w ${WEBROOT_PATH} --cert-name ${PRODUCT} --noninteractive --agree-tos --email ${MAIL} -d ${DOMAIN} > /var/log/le-new.log
-  else
-    echo "Using specified files to configure SSL..."
-  
-    DOMAIN=$2
-    CERTIFICATE_FILE=$3
-    PRIVATEKEY_FILE=$4
-  fi
-
-  [[ ! -f "${DHPARAM_FILE}" ]] && openssl dhparam -out ${DHPARAM_FILE} 2048
-
-  CERTIFICATE_FILE="${CERTIFICATE_FILE:-"${LETSENCRYPT}/${PRODUCT}/fullchain.pem"}"
-  PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${PRODUCT}/privkey.pem"}"
-
-  if [ -f "${CERTIFICATE_FILE}" -a -f ${PRIVATEKEY_FILE} ]; then
-    if [ -f "${OPENRESTY}/onlyoffice-proxy-ssl.conf.template" ]; then
-      cp -f ${OPENRESTY}/onlyoffice-proxy-ssl.conf.template ${OPENRESTY}/onlyoffice-proxy.conf
-
-      ENVIRONMENT=$(grep -oP 'ENVIRONMENT=\K.*' $(dirname $(dpkg-query -L ${PRODUCT}-api | grep systemd/system/))/${PRODUCT}-api.service)
-      sed -i "s/\(\"portal\":\).*/\1 \"https:\/\/${DOMAIN}\"/" /etc/onlyoffice/docspace/appsettings.$ENVIRONMENT.json
-      sed -i "s~\(ssl_certificate \).*;~\1${CERTIFICATE_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
-      sed -i "s~\(ssl_certificate_key \).*;~\1${PRIVATEKEY_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
-      sed -i "s~\(ssl_dhparam \).*;~\1${DHPARAM_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
-
-      if [[ "${LETSENCRYPT_ENABLE}" = "true" ]]; then
-        # Create and set permissions for ${PRODUCT}-renew-letsencrypt
-        echo '#!/bin/bash' > ${DIR}/${PRODUCT}-renew-letsencrypt
-        echo "certbot renew >> /var/log/le-renew.log" >> ${DIR}/${PRODUCT}-renew-letsencrypt
-        if [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ]; then
-          echo 'systemctl reload openresty' >> ${DIR}/${PRODUCT}-renew-letsencrypt
-        else 
-          echo 'service openresty reload' >> ${DIR}/${PRODUCT}-renew-letsencrypt
-        fi
-
-        chmod a+x ${DIR}/${PRODUCT}-renew-letsencrypt
-
-        # Add cron job if /etc/cron.d directory exists
-        if [ -d /etc/cron.d ]; then
-          echo -e "@weekly root ${DIR}/${PRODUCT}-renew-letsencrypt" | tee /etc/cron.d/${PRODUCT}-letsencrypt
-        fi
-      fi
-
-      [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ] && systemctl reload openresty || service openresty reload
-
-      echo "OK"
-    else
-      echo "Error: proxy configuration file not found." && exit 1
-    fi
-  else
-    echo "Error: certificate or private key file not found." && exit 1
-  fi
-else
+help(){
   echo ""
   echo "This script provided to automatically setup SSL Certificates for DocSpace"
   echo "Automatically get Let's Encrypt SSL Certificates:"
@@ -90,10 +24,106 @@ else
   echo "                  u1@example.com,u2@example.com."
   echo "    DOMAIN        Domain name to apply"
   echo ""
-  echo "Using your own certificates via the -f parameter:"
-  echo "  docspace-ssl-setup -f DOMAIN CERTIFICATE PRIVATEKEY"
+  echo "Using your own certificates via the -f or --file parameter:"
+  echo "  docspace-ssl-setup --file DOMAIN CERTIFICATE PRIVATEKEY"
   echo "    DOMAIN        Domain name to apply."
   echo "    CERTIFICATE   Path to the certificate file for the domain."
   echo "    PRIVATEKEY    Path to the private key file for the certificate."
   echo ""
+  echo "Return to the default proxy configuration using the -d or --default parameter:"
+  echo "  docspace-ssl-setup --default"
+  echo ""
+  exit 0
+}
+
+case $1 in
+  -f | --file )
+    if [ -n "$2" ] && [ -n "$3" ] && [ -n "$4" ]; then
+      echo "Using specified files to configure SSL..."
+    
+      DOMAIN=$2
+      CERTIFICATE_FILE=$3
+      PRIVATEKEY_FILE=$4
+    else
+      help
+    fi
+  ;;
+
+  -d | --default )
+    echo "Return to the default proxy configuration..."
+    cp -f ${OPENRESTY}/onlyoffice-proxy.conf.template ${OPENRESTY}/onlyoffice-proxy.conf
+    sed "s!\(^worker_processes\).*;!\1 $(grep processor /proc/cpuinfo | wc -l);!" -i "${OPENRESTY}/onlyoffice-proxy.conf"
+    sed "s!\(worker_connections\).*;!\1 $(ulimit -n);!" -i "${OPENRESTY}/onlyoffice-proxy.conf"
+    [[ -f "${DIR}/${PRODUCT}-renew-letsencrypt" ]] && rm -rf "${DIR}/${PRODUCT}-renew-letsencrypt"
+    [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ] && systemctl reload openresty || service openresty reload
+    echo "OK"
+  ;;
+
+  * )
+    if [ "$#" -ge "2" ]; then
+      MAIL=$1
+      DOMAIN=$2
+      LETSENCRYPT_ENABLE="true"
+
+      # Install certbot if not already installed
+      if ! type "certbot" &> /dev/null; then
+        if type "apt-get" &> /dev/null; then
+          apt-get -y update -qq
+          apt-get -y -q install certbot
+        elif type "yum" &> /dev/null; then
+          yum -y install certbot
+        fi
+      fi
+
+      echo "Generating Let's Encrypt SSL Certificates..."
+
+      # Request and generate Let's Encrypt SSL certificate
+      echo certbot certonly --expand --webroot -w ${WEBROOT_PATH} --cert-name ${PRODUCT} --noninteractive --agree-tos --email ${MAIL} -d ${DOMAIN} > /var/log/le-start.log
+      certbot certonly --expand --webroot -w ${WEBROOT_PATH} --cert-name ${PRODUCT} --noninteractive --agree-tos --email ${MAIL} -d ${DOMAIN} > /var/log/le-new.log
+    else
+      help
+    fi
+  ;;
+esac
+
+[[ ! -f "${DHPARAM_FILE}" ]] && openssl dhparam -out ${DHPARAM_FILE} 2048
+CERTIFICATE_FILE="${CERTIFICATE_FILE:-"${LETSENCRYPT}/${PRODUCT}/fullchain.pem"}"
+PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${PRODUCT}/privkey.pem"}"
+
+if [ -f "${CERTIFICATE_FILE}" ]; then 
+  if [ -f "${PRIVATEKEY_FILE}" ]; then
+    cp -f ${OPENRESTY}/onlyoffice-proxy-ssl.conf.template ${OPENRESTY}/onlyoffice-proxy.conf
+
+    ENVIRONMENT=$(grep -oP 'ENVIRONMENT=\K.*' $(dirname $(dpkg-query -L ${PRODUCT}-api | grep systemd/system/))/${PRODUCT}-api.service)
+    sed -i "s/\(\"portal\":\).*/\1 \"https:\/\/${DOMAIN}\"/" /etc/onlyoffice/docspace/appsettings.$ENVIRONMENT.json
+    sed -i "s~\(ssl_certificate \).*;~\1${CERTIFICATE_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
+    sed -i "s~\(ssl_certificate_key \).*;~\1${PRIVATEKEY_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
+    sed -i "s~\(ssl_dhparam \).*;~\1${DHPARAM_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
+
+    if [[ "${LETSENCRYPT_ENABLE}" = "true" ]]; then
+      # Create and set permissions for ${PRODUCT}-renew-letsencrypt
+      echo '#!/bin/bash' > ${DIR}/${PRODUCT}-renew-letsencrypt
+      echo "certbot renew >> /var/log/le-renew.log" >> ${DIR}/${PRODUCT}-renew-letsencrypt
+      if [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ]; then
+        echo 'systemctl reload openresty' >> ${DIR}/${PRODUCT}-renew-letsencrypt
+      else 
+        echo 'service openresty reload' >> ${DIR}/${PRODUCT}-renew-letsencrypt
+      fi
+
+      chmod a+x ${DIR}/${PRODUCT}-renew-letsencrypt
+
+      # Add cron job if /etc/cron.d directory exists
+      if [ -d /etc/cron.d ]; then
+        echo -e "@weekly root ${DIR}/${PRODUCT}-renew-letsencrypt" | tee /etc/cron.d/${PRODUCT}-letsencrypt
+      fi
+    fi
+
+    [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ] && systemctl reload openresty || service openresty reload
+
+    echo "OK"
+  else
+    echo "Error: private key file at path ${PRIVATEKEY_FILE} not found." && exit 1
+  fi
+else
+  echo "Error: certificate file at path ${CERTIFICATE_FILE} not found." && exit 1
 fi
