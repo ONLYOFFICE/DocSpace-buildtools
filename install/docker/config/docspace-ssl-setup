@@ -35,6 +35,9 @@ help(){
   echo "    CERTIFICATE   Path to the certificate file for the domain."
   echo "    PRIVATEKEY    Path to the private key file for the certificate."
   echo ""
+  echo "Return to the default proxy configuration using the -d or --default parameter:"
+  echo "  docspace-ssl-setup --default"
+  echo ""
   exit 0
 }
 
@@ -48,6 +51,29 @@ case $1 in
     else
       help
     fi
+  ;;
+  
+  -d | --default )
+    echo "Return to the default proxy configuration..."
+    if [ -z "$(awk -F '=' '/^\s*DOCUMENT_SERVER_URL_EXTERNAL/{gsub(/^[[:space:]]*"|"[[:space:]]*$/, "", $2); print $2}' ${DOCKERCOMPOSE}/.env)" ]; then
+      sed "s#\(APP_URL_PORTAL=\).*#\1\"http://onlyoffice-router:8092\"#g" -i ${DOCKERCOMPOSE}/.env
+    else
+      sed "s#\(APP_URL_PORTAL=\).*#\1\"http://$(curl -s ifconfig.me)\"#g" -i ${DOCKERCOMPOSE}/.env
+    fi
+    
+    [[ -f "${DIR}/${PRODUCT}-renew-letsencrypt" ]] && rm -rf "${DIR}/${PRODUCT}-renew-letsencrypt"
+
+    if docker ps -f "name=onlyoffice-proxy" --format '{{.Names}}' | grep -q "onlyoffice-proxy"; then
+      if docker ps -f "name=onlyoffice-proxy" --format "{{.Ports}}" | grep -q "443"; then
+        docker-compose -f ${DOCKERCOMPOSE}/proxy-ssl.yml down
+      fi
+    fi
+
+    docker-compose -f ${DOCKERCOMPOSE}/proxy.yml up -d
+    docker-compose -f ${DOCKERCOMPOSE}/docspace.yml restart onlyoffice-files
+    
+    echo "OK"
+    exit 0
   ;;
 
   * )

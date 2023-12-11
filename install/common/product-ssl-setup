@@ -30,6 +30,9 @@ help(){
   echo "    CERTIFICATE   Path to the certificate file for the domain."
   echo "    PRIVATEKEY    Path to the private key file for the certificate."
   echo ""
+  echo "Return to the default proxy configuration using the -d or --default parameter:"
+  echo "  docspace-ssl-setup --default"
+  echo ""
   exit 0
 }
 
@@ -44,6 +47,16 @@ case $1 in
     else
       help
     fi
+  ;;
+
+  -d | --default )
+    echo "Return to the default proxy configuration..."
+    cp -f ${OPENRESTY}/onlyoffice-proxy.conf.template ${OPENRESTY}/onlyoffice-proxy.conf
+    sed "s!\(^worker_processes\).*;!\1 $(grep processor /proc/cpuinfo | wc -l);!" -i "${OPENRESTY}/onlyoffice-proxy.conf"
+    sed "s!\(worker_connections\).*;!\1 $(ulimit -n);!" -i "${OPENRESTY}/onlyoffice-proxy.conf"
+    [[ -f "${DIR}/${PRODUCT}-renew-letsencrypt" ]] && rm -rf "${DIR}/${PRODUCT}-renew-letsencrypt"
+    [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ] && systemctl reload openresty || service openresty reload
+    echo "OK"
   ;;
 
   * )
