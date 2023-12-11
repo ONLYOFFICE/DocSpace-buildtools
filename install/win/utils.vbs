@@ -482,7 +482,6 @@ Function MoveNginxConfigs
 
     ' Define source and target paths
     Set objFSO = CreateObject("Scripting.FileSystemObject")
-    Set objShell = CreateObject("WScript.Shell")
     sourceFolder = Session.Property("APPDIR") & "nginx\conf"
     targetFolder = "C:\OpenResty\conf"
     nginxFolder =  Session.Property("APPDIR") & "nginx"
@@ -528,7 +527,6 @@ Function MoveNginxConfigs
     End If
 
     Set objFSO = Nothing
-    Set objShell = Nothing
 End Function
 
 Function ReadFile(filePath, objFSO)
