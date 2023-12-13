@@ -647,6 +647,15 @@ change_elasticsearch_config(){
 		sed -i "s/ingest.geoip.downloader.enabled.*/ingest.geoip.downloader.enabled: false/" ${ELASTIC_SEARCH_CONF_PATH}
 	fi
 
+	ELASTIC_SYSTEMD_DIR="${SYSTEMD_DIR}/elasticsearch.service.d"
+	mkdir -p "${ELASTIC_SYSTEMD_DIR}"
+	
+	if [ ! -e "${ELASTIC_SYSTEMD_DIR}/overwrite.conf" ]; then
+		echo "[Service]" > "${ELASTIC_SYSTEMD_DIR}/overwrite.conf"
+		echo "TimeoutStartSec=600" >> "${ELASTIC_SYSTEMD_DIR}/overwrite.conf"
+		systemctl daemon-reload >/dev/null 2>&1
+	fi
+
 	local TOTAL_MEMORY=$(free -m | grep -oP '\d+' | head -n 1);
 	local MEMORY_REQUIREMENTS=12228; #RAM ~4*3Gb
 
