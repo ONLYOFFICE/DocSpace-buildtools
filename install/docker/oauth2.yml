@@ -19,6 +19,7 @@ services:
       RABBIT_PORT: ${RABBIT_PORT}
       RABBIT_USER_NAME: ${RABBIT_USER_NAME}
       RABBIT_PASSWORD: ${RABBIT_PASSWORD}
+      REDIS_ADDRESSES: ${REDIS_ADDRESSES}
   onlyoffice-oauth-api:
     build:
       context: ../../../server/common/ASC.Identity
@@ -37,6 +38,7 @@ services:
       RABBIT_PORT: ${RABBIT_PORT}
       RABBIT_USER_NAME: ${RABBIT_USER_NAME}
       RABBIT_PASSWORD: ${RABBIT_PASSWORD}
+      REDIS_ADDRESSES: ${REDIS_ADDRESSES}
 networks:
   default:
     name: ${NETWORK_NAME}
