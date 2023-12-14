@@ -28,7 +28,7 @@ override_dh_auto_configure:
 
 override_dh_auto_build:
 	cd ${SRC_PATH}/${SCRIPT_PATH}/systemd; \
-	bash build.sh -bp "${CURRENT_PATH}/debian/"; \
+	bash build.sh -pm "deb" -bp "${CURRENT_PATH}/debian/"; \
 	cd ${SRC_PATH}/${SCRIPT_PATH}; \
 	bash build-frontend.sh -sp ${SRC_PATH} -di "false"; \
 	bash build-backend.sh -sp ${SRC_PATH}; \
