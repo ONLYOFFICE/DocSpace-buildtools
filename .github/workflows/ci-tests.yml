@@ -53,9 +53,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
-    steps:          
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v2
+    steps:
 
       - name: Set matrix names
         id: set-matrix
@@ -108,7 +106,13 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Test production scripts
+      - name: Get update and install vagrant
+        run: |
+          set -eux
+          sudo apt update -y
+          sudo apt install vagrant virtualbox -y
+
+      - name: "Test production scripts with ${{matrix.description}}"
         if: ${{ github.event_name == 'schedule' }}
         uses: nick-fields/retry@v2
         with:
@@ -141,7 +145,6 @@ jobs:
           retry_on: error
           command: |
             set -eux
-            sudo apt update && sudo apt install vagrant virtualbox -y
             cd tests/vagrant
             TEST_CASE='--local-install' \
             DISTR='${{ matrix.distr }}' \
