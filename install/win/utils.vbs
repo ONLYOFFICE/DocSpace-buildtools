@@ -478,7 +478,7 @@ End Function
 Function MoveNginxConfigs
     On Error Resume Next
 
-    Dim objFSO, objShell, sourceFolder, targetFolder, nginxFolder, configFile, configSslFile, sslScriptPath, psCommand
+    Dim objFSO, objShell, sourceFolder, targetFolder, nginxFolder, configFile, configSslFile, sslScriptPath, sslCertPath, sslCertKeyPath, psCommand
 
     ' Define source and target paths
     Set objFSO = CreateObject("Scripting.FileSystemObject")
