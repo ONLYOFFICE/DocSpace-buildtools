@@ -1,0 +1,162 @@
+name: Install OneClickInstall DocSpace
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    paths:
+      - 'install/OneClickInstall/**'
+
+  schedule:
+    - cron: '00 20 * * 6'  # At 23:00 on Saturday.
+
+  workflow_dispatch:
+    inputs:
+      centos7:
+         type: boolean
+         description: 'CentOS 7'
+         default: true
+      centos8s:
+         type: boolean
+         description: 'CentOS 8 Stream'
+         default: true
+      centos9s:
+         type: boolean
+         description: 'CentOS 9 Stream'
+         default: true
+      debian10:
+         type: boolean
+         description: 'Debian 10'
+         default: true
+      debian11:
+         type: boolean
+         description: 'Debian 11'
+         default: true
+      debian12:
+         type: boolean
+         description: 'Debian 12'
+         default: true
+      ubuntu1804:
+         type: boolean
+         description: 'Ubuntu 18.04'
+         default: true
+      ubuntu2004:
+         type: boolean
+         description: 'Ubuntu 20.04'
+         default: true
+      ubuntu2204:
+         type: boolean
+         description: 'Ubuntu 22.04'
+         default: true
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+
+      - name: Set matrix names
+        id: set-matrix
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "schedule"]]; then
+            matrix=$(echo '{
+              "include": [
+                {"execute": true, "name": "CentOS7", "os": "centos7", "distr": "generic"},
+                {"execute": true, "name": "CentOS8S", "os": "centos8s", "distr": "generic"},
+                {"execute": true, "name": "CentOS9S", "os": "centos9s", "distr": "generic"},
+                {"execute": true, "name": "Debian10", "os": "debian10", "distr": "generic"},
+                {"execute": true, "name": "Debian11", "os": "debian11", "distr": "generic"},
+                {"execute": true, "name": "Debian12", "os": "debian12", "distr": "generic"},
+                {"execute": true, "name": "Ubuntu18.04", "os": "ubuntu1804", "distr": "generic"},
+                {"execute": true, "name": "Ubuntu20.04", "os": "ubuntu2004", "distr": "generic"},
+                {"execute": true, "name": "Ubuntu22.04", "os": "ubuntu2204", "distr": "generic"}
+              ]
+            }' | jq -c '{include: [.include[] | select(.execute == true)]}')
+          else
+            matrix=$(echo '{
+              "include": [
+                {"execute": '${{ github.event.inputs.centos7 }}', "name": "CentOS7", "os": "centos7", "distr": "generic"},
+                {"execute": '${{ github.event.inputs.centos8s }}', "name": "CentOS8S", "os": "centos8s", "distr": "generic"},
+                {"execute": '${{ github.event.inputs.centos9s }}', "name": "CentOS9S", "os": "centos9s", "distr": "generic"},
+                {"execute": '${{ github.event.inputs.debian10 }}', "name": "Debian10", "os": "debian10", "distr": "generic"},
+                {"execute": '${{ github.event.inputs.debian11 }}', "name": "Debian11", "os": "debian11", "distr": "generic"},
+                {"execute": '${{ github.event.inputs.debian12 }}', "name": "Debian12", "os": "debian12", "distr": "generic"},
+                {"execute": '${{ github.event.inputs.ubuntu1804 }}', "name": "Ubuntu18.04", "os": "ubuntu1804", "distr": "generic"},
+                {"execute": '${{ github.event.inputs.ubuntu2004 }}', "name": "Ubuntu20.04", "os": "ubuntu2004", "distr": "generic"},
+                {"execute": '${{ github.event.inputs.ubuntu2204 }}', "name": "Ubuntu22.04", "os": "ubuntu2204", "distr": "generic"}
+              ]
+            }' | jq -c '{include: [.include[] | select(.execute == true)]}')
+          fi
+          echo "matrix=${matrix}" >> $GITHUB_OUTPUT
+
+  vagrant-up:
+    name: "Test DocSpace with ${{ matrix.name}}"
+    runs-on: ubuntu-22.04
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix: ${{fromJSON(needs.prepare.outputs.matrix)}}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Get update and install vagrant
+        run: |
+          set -eux
+          sudo apt update -y
+          sudo apt install vagrant virtualbox -y
+
+      - name: "Test production scripts with ${{matrix.name}}"
+        if: ${{ github.event_name == 'schedule' }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 2
+          timeout_minutes: 40
+          retry_on: error
+          command: |
+            set -eux
+            cd tests/vagrant
+            TEST_CASE='--production-install' \
+            DISTR='${{ matrix.distr }}' \
+            OS='${{ matrix.os }}' \
+            DOWNLOAD_SCRIPT='-ds true' \
+            RAM='5100' \
+            CPU='3' \
+            ARGUMENTS="-arg '--skiphardwarecheck true --makeswap false'" \
+            vagrant up
+          on_retry_command: |
+            echo "RUN CLEAN UP: Destroy vagrant and one more try"
+            cd tests/vagrant
+            sleep 10
+            vagrant destroy --force
+
+      - name: "Test Local scripts with ${{matrix.name}}"
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 2
+          timeout_minutes: 40
+          retry_on: error
+          command: |
+            set -eux
+            cd tests/vagrant
+            TEST_CASE='--local-install' \
+            DISTR='${{ matrix.distr }}' \
+            OS='${{matrix.os}}' \
+            RAM='5100' \
+            CPU='3' \
+            DOWNLOAD_SCRIPT='-ds false' \
+            TEST_REPO='-tr true' \
+            ARGUMENTS="-arg '--skiphardwarecheck true --makeswap false --localscripts true'" \
+            vagrant up
+          on_retry_command: |
+            echo "RUN CLEAN UP: Destroy vagrant and one more try"
+            cd tests/vagrant
+            sleep 10
+            vagrant destroy --force
