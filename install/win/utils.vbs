@@ -478,13 +478,26 @@ End Function
 Function MoveNginxConfigs
     On Error Resume Next
 
-    Dim objFSO, sourceFolder, targetFolder, nginxFolder
+    Dim objFSO, objShell, sourceFolder, targetFolder, nginxFolder, configFile, configSslFile, sslScriptPath, sslCertPath, sslCertKeyPath, psCommand
 
     ' Define source and target paths
     Set objFSO = CreateObject("Scripting.FileSystemObject")
+    Set objShell = CreateObject("WScript.Shell")
     sourceFolder = Session.Property("APPDIR") & "nginx\conf"
     targetFolder = "C:\OpenResty\conf"
     nginxFolder =  Session.Property("APPDIR") & "nginx"
+    configSslFile = targetFolder & "\onlyoffice-proxy-ssl.conf.tmpl"
+    configFile = targetFolder & "\onlyoffice-proxy.conf"
+    sslScriptPath = Session.Property("APPDIR") & "sbin\docspace-ssl-setup.ps1"
+
+    ' Read content and extract SSL certificate and key paths if it exists
+    If objFSO.FileExists(configFile) Then
+        content = ReadFile(configFile, objFSO)
+        sslCertPath = ExtractPath(content, "ssl_certificate\s+(.*?);", objFSO)
+        sslCertKeyPath = ExtractPath(content, "ssl_certificate_key\s+(.*?);", objFSO)
+    Else
+        WScript.Echo "Configuration file not found!"
+    End If
 
     ' Check if source folder exists
     If objFSO.FolderExists(sourceFolder) Then
@@ -504,7 +517,41 @@ Function MoveNginxConfigs
         WScript.Echo "Source folder does not exist."
     End If
 
+    ' If SSL path variables are present, set the SSL paths
+    If objFSO.FileExists(configSslFile) And ((Len(Trim(sslCertPath)) > 0) And (Len(Trim(sslCertKeyPath)) > 0)) Then
+        psCommand = "powershell -File """ & sslScriptPath & """ -f """ & sslCertPath & """ """ & sslCertKeyPath & """"
+        objShell.Run psCommand, 0, True
+    Else
+        WScript.Echo "Source file not found."
+    End If
+
     Set objFSO = Nothing
+    Set objShell = Nothing
+End Function
+
+Function ReadFile(filePath, objFSO)
+    Dim objFile
+    If objFSO.FileExists(filePath) Then
+        Set objFile = objFSO.OpenTextFile(filePath, 1)
+        ReadFile = objFile.ReadAll
+        objFile.Close
+    Else
+        WScript.Echo "File not found: " & filePath
+    End If
+End Function
+
+Function ExtractPath(content, pattern, objFSO)
+    Dim regex, match
+    Set regex = New RegExp
+    regex.Pattern = pattern
+
+    Set match = regex.Execute(content)
+    If match.Count > 0 Then
+        ExtractPath = match(0).Submatches(0)
+    Else
+        WScript.Echo "Path not found in the content."
+        ExtractPath = Null
+    End If
 End Function
 
 Sub CopyFolderContents(sourceFolder, targetFolder, objFSO)
