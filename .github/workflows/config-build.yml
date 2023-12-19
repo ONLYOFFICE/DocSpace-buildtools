@@ -1,0 +1,32 @@
+name: 4testing multiarch-config-build
+
+on:
+  push:
+    branches:
+      - 'hotfix/v*'
+      - 'release/v*'
+      - 'develop'
+    paths:
+      - 'config/**'
+      - 'install/docker/Dockerfile.app'
+  workflow_dispatch:
+
+jobs:
+
+  select-branches:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v2
+
+      - name: Dispatch Action
+        run: |
+          echo "${GITHUB_REF_NAME}"
+
+          curl \
+          -X POST \
+          -u "${{ secrets.USERNAME}}:${{secrets.TOKEN}}" \
+          "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/dispatches" \
+          -H "Accept: application/vnd.github.everest-preview+json" \
+          --data '{"event_type": "config-trigger-action", "client_payload": { "branches": ["'"${GITHUB_REF_NAME}"'"]}}'

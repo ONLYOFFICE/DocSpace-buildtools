@@ -1,0 +1,40 @@
+name: 4testing multiarch-cron-build
+
+on:
+  schedule:
+    - cron: '0 20 * * *'
+
+jobs:
+
+  select-branches:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v2
+
+      - name: List Branches
+        id: list-branches
+        run: |
+          all_branches=$(git ls-remote -hq | sed -n 's/^[0-9a-f]\{40\}\s\+refs\/heads\//''/p')
+          matching_branches=""
+
+          for branch in $all_branches; do
+            if [[ $branch =~ ^release/v[0-9]+ || $branch =~ ^hotfix/v[0-9]+ || $branch == "develop" ]]; then
+              matching_branches="${matching_branches},\"${branch}\""
+            fi
+          done
+        
+          matching_branches=${matching_branches#,}
+          echo "json_output=[${matching_branches}]" >> $GITHUB_OUTPUT
+
+      - name: Dispatch Action
+        run: |
+          echo "${{ steps.list-branches.outputs.json_output }}"
+
+          curl \
+          -X POST \
+          -u "${{ secrets.USERNAME}}:${{secrets.TOKEN}}" \
+          "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/dispatches" \
+          -H "Accept: application/vnd.github.everest-preview+json" \
+          --data '{"event_type": "cron-trigger-action", "client_payload": { "branches": ${{ steps.list-branches.outputs.json_output }}}}'
