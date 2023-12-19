@@ -88,6 +88,7 @@ if ( $args.Count -ge 2 )
 elseif ($args[0] -eq "-d" -or $args[0] -eq "--default") {
     Copy-Item "${nginx_conf_dir}\${nginx_conf_tmpl}" -Destination "${nginx_conf_dir}\${nginx_conf}"
     Restart-Service -Name $proxy_service
+    Remove-Item -Path "${app}\letsencrypt\letsencrypt_cron.bat" -Force
     Write-Host "Returned to the default proxy configuration."
 }
 
