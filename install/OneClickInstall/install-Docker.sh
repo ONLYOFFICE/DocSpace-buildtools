@@ -1156,22 +1156,23 @@ download_files () {
 
 	echo -n "Downloading configuration files to the ${BASE_DIR} directory..."
 
+	if ! command_exists tar; then
+		install_service tar
+	fi
+
+	[ -d "${BASE_DIR}" ] && rm -rf "${BASE_DIR}"
+	mkdir -p ${BASE_DIR}
+
 	if [ -z "${GIT_BRANCH}" ]; then
-		if ! command_exists tar; then
-			install_service tar
-		fi
-		[ -d "${BASE_DIR}" ] && rm -rf "${BASE_DIR}"
-		mkdir -p ${BASE_DIR}
-		curl -s -O https://download.onlyoffice.com/${PRODUCT}/docker.tar.gz
-		tar -xzvf docker.tar.gz -C ${BASE_DIR} >/dev/null
-		rm -rf docker.tar.gz
+		curl -sL -o docker.tar.gz "https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/docker.tar.gz"
+		tar -xf docker.tar.gz -C ${BASE_DIR}
 	else
-		if ! command_exists svn; then
-			install_service svn subversion
-		fi
-		svn export --force https://github.com/${PACKAGE_SYSNAME}/${PRODUCT}-buildtools/branches/${GIT_BRANCH}/install/docker/ ${BASE_DIR} >/dev/null
+		curl -sL -o docker.tar.gz "https://github.com/${PACKAGE_SYSNAME}/${PRODUCT}-buildtools/archive/${GIT_BRANCH}.tar.gz"
+		tar -xf docker.tar.gz --strip-components=3 -C ${BASE_DIR} --wildcards '*/install/docker/*'
 	fi
 	
+	rm -rf docker.tar.gz
+
 	echo "OK"
 
 	reconfigure STATUS ${STATUS}
