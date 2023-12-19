@@ -179,6 +179,7 @@ function backend-nodejs-publish {
     yarn install --cwd ${SRC_PATH}/server/common/${ARRAY_NAME_SERVICES[$i]} && \
     mkdir -p ${BUILD_PATH}/services/${ARRAY_NAME_SERVICES[$i]}/service/ && \
     cp -rfv ${SRC_PATH}/server/common/${ARRAY_NAME_SERVICES[$i]}/* ${BUILD_PATH}/services/${ARRAY_NAME_SERVICES[$i]}/service/
+
     if [[ ${DOCKER_ENTRYPOINT} != "false" ]]
     then
        echo "== ADD ${DOCKER_ENTRYPOINT} to ${ARRAY_NAME_SERVICES[$i]} =="

@@ -1,0 +1,33 @@
+#!/bin/bash
+
+set -e
+
+PRODUCT="docspace"
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+DOCKERCOMPOSE=$(dirname "$DIR")
+
+if [ -f "${DOCKERCOMPOSE}/docspace.yml" ]; then 
+  :
+elif [ -f "/app/onlyoffice/${PRODUCT}.yml" ]; then
+  DOCKERCOMPOSE="/app/onlyoffice"
+else
+  echo "Error: yml files not found." && exit 1
+fi
+
+FILES=("${PRODUCT}" "notify" "healthchecks" "proxy" "ds" "rabbitmq" "redis" "elasticsearch" "db")
+
+LOG_DIR="${DOCKERCOMPOSE}/logs"
+mkdir -p ${LOG_DIR}
+
+echo "Creating ${PRODUCT} logs to a directory ${LOG_DIR}..."
+for FILE in "${FILES[@]}"; do
+  SERVICE_NAMES=($(docker-compose -f ${DOCKERCOMPOSE}/${FILE}.yml config --services))
+  for SERVICE_NAME in "${SERVICE_NAMES[@]}"; do
+    if [[ $(docker-compose -f ${DOCKERCOMPOSE}/${FILE}.yml ps -q ${SERVICE_NAME} | wc -l) -eq 1 ]]; then
+      docker-compose -f ${DOCKERCOMPOSE}/${FILE}.yml logs ${SERVICE_NAME} > ${LOG_DIR}/${SERVICE_NAME}.log
+    else
+      echo "The ${SERVICE_NAME} service is not running"
+    fi
+  done
+done
+echo "OK"
