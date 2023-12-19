@@ -58,35 +58,19 @@ jobs:
       - name: Set matrix names
         id: set-matrix
         run: |
-          if [[ "${{ github.event_name }}" == "pull_request" || "${{ github.event_name }}" == "schedule"]]; then
-            matrix=$(echo '{
-              "include": [
-                {"execute": true, "name": "CentOS7", "os": "centos7", "distr": "generic"},
-                {"execute": true, "name": "CentOS8S", "os": "centos8s", "distr": "generic"},
-                {"execute": true, "name": "CentOS9S", "os": "centos9s", "distr": "generic"},
-                {"execute": true, "name": "Debian10", "os": "debian10", "distr": "generic"},
-                {"execute": true, "name": "Debian11", "os": "debian11", "distr": "generic"},
-                {"execute": true, "name": "Debian12", "os": "debian12", "distr": "generic"},
-                {"execute": true, "name": "Ubuntu18.04", "os": "ubuntu1804", "distr": "generic"},
-                {"execute": true, "name": "Ubuntu20.04", "os": "ubuntu2004", "distr": "generic"},
-                {"execute": true, "name": "Ubuntu22.04", "os": "ubuntu2204", "distr": "generic"}
-              ]
-            }' | jq -c '{include: [.include[] | select(.execute == true)]}')
-          else
-            matrix=$(echo '{
-              "include": [
-                {"execute": '${{ github.event.inputs.centos7 }}', "name": "CentOS7", "os": "centos7", "distr": "generic"},
-                {"execute": '${{ github.event.inputs.centos8s }}', "name": "CentOS8S", "os": "centos8s", "distr": "generic"},
-                {"execute": '${{ github.event.inputs.centos9s }}', "name": "CentOS9S", "os": "centos9s", "distr": "generic"},
-                {"execute": '${{ github.event.inputs.debian10 }}', "name": "Debian10", "os": "debian10", "distr": "generic"},
-                {"execute": '${{ github.event.inputs.debian11 }}', "name": "Debian11", "os": "debian11", "distr": "generic"},
-                {"execute": '${{ github.event.inputs.debian12 }}', "name": "Debian12", "os": "debian12", "distr": "generic"},
-                {"execute": '${{ github.event.inputs.ubuntu1804 }}', "name": "Ubuntu18.04", "os": "ubuntu1804", "distr": "generic"},
-                {"execute": '${{ github.event.inputs.ubuntu2004 }}', "name": "Ubuntu20.04", "os": "ubuntu2004", "distr": "generic"},
-                {"execute": '${{ github.event.inputs.ubuntu2204 }}', "name": "Ubuntu22.04", "os": "ubuntu2204", "distr": "generic"}
-              ]
-            }' | jq -c '{include: [.include[] | select(.execute == true)]}')
-          fi
+          matrix=$(echo '{
+            "include": [
+              {"execute": '${{ github.event.inputs.centos7 || true }}', "name": "CentOS7", "os": "centos7", "distr": "generic"},
+              {"execute": '${{ github.event.inputs.centos8s || true }}', "name": "CentOS8S", "os": "centos8s", "distr": "generic"},
+              {"execute": '${{ github.event.inputs.centos9s || true }}', "name": "CentOS9S", "os": "centos9s", "distr": "generic"},
+              {"execute": '${{ github.event.inputs.debian10 || true }}', "name": "Debian10", "os": "debian10", "distr": "generic"},
+              {"execute": '${{ github.event.inputs.debian11 || true }}', "name": "Debian11", "os": "debian11", "distr": "generic"},
+              {"execute": '${{ github.event.inputs.debian12 || true }}', "name": "Debian12", "os": "debian12", "distr": "generic"},
+              {"execute": '${{ github.event.inputs.ubuntu1804 || true }}', "name": "Ubuntu18.04", "os": "ubuntu1804", "distr": "generic"},
+              {"execute": '${{ github.event.inputs.ubuntu2004 || true }}', "name": "Ubuntu20.04", "os": "ubuntu2004", "distr": "generic"},
+              {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu22.04", "os": "ubuntu2204", "distr": "generic"}
+            ]
+          }' | jq -c '{include: [.include[] | select(.execute == true)]}')
           echo "matrix=${matrix}" >> $GITHUB_OUTPUT
 
   vagrant-up:
