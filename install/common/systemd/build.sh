@@ -13,10 +13,18 @@ while [ "$1" != "" ]; do
 				    shift
 			    fi
 		;;
+	    
+        -pm | --packagemanager )
+        	if [ "$2" != "" ]; then
+				    PACKAGE_MANAGER=$2
+				    shift
+			    fi
+		;;
 
         -? | -h | --help )
             echo " Usage: bash build.sh [PARAMETER] [[PARAMETER], ...]"
             echo "    Parameters:"
+            echo "      -pm, --packagemanager      dependencies for package manager"
             echo "      -bp, --buildpath           output path"
             echo "      -?, -h, --help             this help"
             echo "  Examples"
@@ -64,6 +72,11 @@ SERVICE_NAME=(
 	)
 
 reassign_values (){
+  if [[ "${PACKAGE_MANAGER}" = "deb" ]]; then
+	DEPENDENCY_LIST="mysql.service redis-server.service rabbitmq-server.service"
+  else
+	DEPENDENCY_LIST="mysqld.service redis.service rabbitmq-server.service"
+  fi
   case $1 in
 	api )
 		SERVICE_PORT="5000"
@@ -79,6 +92,7 @@ reassign_values (){
 		SERVICE_PORT="9899"
 		WORK_DIR="${BASE_DIR}/services/ASC.Socket.IO/"
 		EXEC_FILE="server.js"
+		DEPENDENCY_LIST=""
 	;;
 	studio-notify )
 		SERVICE_PORT="5006"
@@ -106,6 +120,7 @@ reassign_values (){
 		WORK_DIR="${BASE_DIR}/products/ASC.Files/service/"
 		EXEC_FILE="ASC.Files.Service.dll"
 		CORE_EVENT_BUS=" --core:eventBus:subscriptionClientName=asc_event_bus_files_service_queue"
+		DEPENDENCY_LIST="${DEPENDENCY_LIST} elasticsearch.service"
 	;;
 	studio )
 		SERVICE_PORT="5003"
@@ -122,6 +137,7 @@ reassign_values (){
 		SERVICE_PORT="9834"
 		WORK_DIR="${BASE_DIR}/services/ASC.SsoAuth/"
 		EXEC_FILE="app.js"
+		DEPENDENCY_LIST=""
 	;;
 	clear-events )
 		SERVICE_PORT="5027"
@@ -138,6 +154,7 @@ reassign_values (){
 		SERVICE_PORT="5013"
 		WORK_DIR="${BASE_DIR}/products/ASC.Files/editor/"
 		EXEC_FILE="server.js"
+		DEPENDENCY_LIST=""
 	;;
 	migration-runner )
 		WORK_DIR="${BASE_DIR}/services/ASC.Migration.Runner/"
@@ -147,11 +164,13 @@ reassign_values (){
 		SERVICE_PORT="5011"
 		WORK_DIR="${BASE_DIR}/products/ASC.Login/login/"
 		EXEC_FILE="server.js"
+		DEPENDENCY_LIST="openresty.service"
 	;;
 	healthchecks )
 		SERVICE_PORT="5033"
 		WORK_DIR="${BASE_DIR}/services/ASC.Web.HealthChecks.UI/"
 		EXEC_FILE="ASC.Web.HealthChecks.UI.dll"
+		DEPENDENCY_LIST=""
 	;;
   esac
   SERVICE_NAME="$1"
@@ -173,6 +192,7 @@ reassign_values (){
 }
 
 write_to_file () {
+  [[ -n ${DEPENDENCY_LIST} ]] && sed -e "s_\(After=.*\)_\1 ${DEPENDENCY_LIST}_" -e "/After=/a Wants=${DEPENDENCY_LIST}" -i $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
   sed -i -e 's#${SERVICE_NAME}#'$SERVICE_NAME'#g' -e 's#${WORK_DIR}#'$WORK_DIR'#g' -e "s#\${RESTART}#$RESTART#g" \
   -e "s#\${EXEC_START}#$EXEC_START#g" -e "s#\${SERVICE_TYPE}#$SERVICE_TYPE#g"  $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
 }
