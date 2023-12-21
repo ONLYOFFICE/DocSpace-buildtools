@@ -38,7 +38,7 @@ rpm -ivh https://rpms.remirepo.net/enterprise/remi-release-$REV.rpm || true
 yum localinstall -y --nogpgcheck https://download1.rpmfusion.org/free/el/rpmfusion-free-release-$REV.noarch.rpm
 
 [ "$REV" = "9" ] && update-crypto-policies --set DEFAULT:SHA1
-[ $DIST != "redhat" ] && TESTING_REPO="--enablerepo=crb" || /usr/bin/crb enable
+[ "$DIST" != "redhat" ] && { [ "$REV" = "9" ] && TESTING_REPO="--enablerepo=crb" || POWERTOOLS_REPO="--enablerepo=powertools"; } || /usr/bin/crb enable
 
 #add rabbitmq & erlang repo
 curl -s https://packagecloud.io/install/repositories/rabbitmq/rabbitmq-server/script.rpm.sh | os=centos dist=$REV bash
