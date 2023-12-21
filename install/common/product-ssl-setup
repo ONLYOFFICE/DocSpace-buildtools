@@ -57,6 +57,7 @@ case $1 in
     [[ -f "${DIR}/${PRODUCT}-renew-letsencrypt" ]] && rm -rf "${DIR}/${PRODUCT}-renew-letsencrypt"
     [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ] && systemctl reload openresty || service openresty reload
     echo "OK"
+    exit 0
   ;;
 
   * )
