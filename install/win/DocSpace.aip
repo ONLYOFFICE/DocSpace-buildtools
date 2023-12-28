@@ -23,14 +23,14 @@
     <ROW Property="APP_URLS" Value="http://0.0.0.0"/>
     <ROW Property="ARPCOMMENTS" Value="[|PRODUCT_NAME] is a platform based on .NET Core and React engines which comprises document management features and makes it possible to implement advanced folder management." ValueLocId="*"/>
     <ROW Property="ARPCONTACT" Value="20A-6, Ernesta Birznieka-Upisha str., Riga, LV-1050"/>
-    <ROW Property="ARPHELPLINK" Value="http://dev.onlyoffice.org/"/>
+    <ROW Property="ARPHELPLINK" Value="https://forum.onlyoffice.com"/>
     <ROW Property="ARPHELPTELEPHONE" Value="+371 66016425"/>
     <ROW Property="ARPNOMODIFY" MultiBuildValue="DefaultBuild:1"/>
     <ROW Property="ARPNOREPAIR" Value="1" MultiBuildValue="DefaultBuild:1#ExeBuild:1"/>
     <ROW Property="ARPPRODUCTICON" Value="icon.exe" Type="8"/>
     <ROW Property="ARPSYSTEMCOMPONENT" Value="1"/>
-    <ROW Property="ARPURLINFOABOUT" Value="http://www.onlyoffice.com"/>
-    <ROW Property="ARPURLUPDATEINFO" Value="http://www.onlyoffice.com/download.aspx"/>
+    <ROW Property="ARPURLINFOABOUT" Value="https://helpdesk.onlyoffice.com"/>
+    <ROW Property="ARPURLUPDATEINFO" Value="https://www.onlyoffice.com/download-docspace.aspx"/>
     <ROW Property="BASE_DOMAIN" Value="localhost"/>
     <ROW Property="COMMON_SHORTCUT_NAME" Value="ONLYOFFICE"/>
     <ROW Property="DATABASE_MIGRATION" Value="true"/>
