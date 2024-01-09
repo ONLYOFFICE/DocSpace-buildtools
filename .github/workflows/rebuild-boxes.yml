@@ -88,8 +88,8 @@ jobs:
       - name: Rebuild boxes
         uses: nick-fields/retry@v2
         with:
-          max_attempts: 1
-          timeout_minutes: 60
+          max_attempts: 2
+          timeout_minutes: 90
           retry_on: error
           command: |
                   set -eux
