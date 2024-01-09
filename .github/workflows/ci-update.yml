@@ -89,7 +89,7 @@ jobs:
         uses: nick-fields/retry@v2
         with:
           max_attempts: 1
-          timeout_minutes: 40
+          timeout_minutes: 60
           retry_on: error
           command: |
                 cd ./tests/vagrant
