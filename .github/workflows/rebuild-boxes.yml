@@ -107,7 +107,7 @@ jobs:
                   sleep 300
                   vagrant package --output repacked_${{ matrix.os }}.box
                   vagrant cloud publish \
-                    ${VAGRANT_ACCOUNT}/DocSpace-${{ matrix.os }} \
+                    ${VAGRANT_ACCOUNT}/docspace-${{ matrix.os }} \
                     $date virtualbox repacked_${{ matrix.os }}.box \
                     -d "Box with pre-installed DocSpace" \
                     --version-description "DocSpace <version>" \
