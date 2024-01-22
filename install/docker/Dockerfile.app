@@ -338,9 +338,7 @@ ARG BUILD_PATH
 ARG SRC_PATH 
 ENV BUILD_PATH=${BUILD_PATH}
 ENV SRC_PATH=${SRC_PATH}
-RUN mkdir -p /var/log/onlyoffice && \
-    mkdir -p /app/onlyoffice/data && \
-    addgroup --system --gid 107 onlyoffice && \
+RUN addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice
 USER onlyoffice
 WORKDIR ${BUILD_PATH}/services/ASC.Migration.Runner/
