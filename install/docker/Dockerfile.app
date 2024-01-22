@@ -67,7 +67,7 @@ RUN cd ${SRC_PATH} && \
     rm -rf ${SRC_PATH}/server/products/ASC.Files/Service/* && \
     rm -rf ${SRC_PATH}/server/products/ASC.People/Server/* 
   
-COPY config/mysql/conf.d/mysql.cnf /etc/mysql/conf.d/mysql.cnf
+COPY --chown=onlyoffice:onlyoffice config/mysql/conf.d/mysql.cnf /etc/mysql/conf.d/mysql.cnf
 
 FROM $DOTNET_RUN as dotnetrun
 ARG BUILD_PATH
