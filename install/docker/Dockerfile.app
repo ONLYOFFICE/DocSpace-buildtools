@@ -142,6 +142,7 @@ ENV DNS_NAMESERVER=127.0.0.11 \
 
 RUN apt-get -y update && \
     apt-get install -yq vim && \
+    mkdir -p /var/log/nginx/ && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     rm -rf /var/lib/apt/lists/* && \
