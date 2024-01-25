@@ -66,15 +66,30 @@ read_unsupported_installation () {
 	esac
 }
 
-DIST=$(rpm -q --whatprovides redhat-release || rpm -q --whatprovides centos-release)
-DIST=$(echo "${DIST}" | sed -n '/-.*/s///p')
-DIST_LOWER=$(echo "${DIST}" | tr '[:upper:]' '[:lower:]')
-
+DIST=$(rpm -q --queryformat '%{NAME}' centos-release redhat-release fedora-release | awk -F'[- ]|package' '{print tolower($1)}' | tr -cd '[:alpha:]')
+[ -z $DIST ] && DIST=$(cat /etc/redhat-release | awk -F 'Linux|release| ' '{print tolower($1)}')
 REV=$(sed -n 's/.*release\ \([0-9]*\).*/\1/p' /etc/redhat-release)
 REV=${REV:-"7"}
 
-# Check if it's Centos less than 8
-if [ "${REV}" -lt 8 ]; then
+REMI_DISTR_NAME="enterprise"
+RPMFUSION_DISTR_NAME="el"
+MYSQL_DISTR_NAME="el"
+OPENRESTY_DISTR_NAME="centos"
+FEDORA_FLAG=""
+
+if [ "$DIST" == "fedora" ]; then
+	REMI_DISTR_NAME="fedora"
+	OPENRESTY_DISTR_NAME="fedora"
+	RPMFUSION_DISTR_NAME="fedora"
+	MYSQL_DISTR_NAME="fc"
+	OPENRESTY_REV=$([ "$REV" -ge 37 ] && echo 36 || echo "$REV")
+
+	FEDORA_SUPP=$(curl https://docs.fedoraproject.org/en-US/releases/ | awk '/Supported Releases/,/EOL Releases/' | grep -oP 'F\d+' | tr -d 'F')
+	[ ! "$(echo "$FEDORA_SUPP" | grep "$REV")" ] && FEDORA_FLAG="not supported"
+fi
+
+# Check if it's Centos less than 8 or Fedora release is out of service
+if [ "${REV}" -lt 8 ] || [ "$FEDORA_FLAG" == "not supported" ]; then
     echo "Your ${DIST} ${REV} operating system has reached the end of its service life."
     echo "Please consider upgrading your operating system or using a Docker installation."
     exit 1
