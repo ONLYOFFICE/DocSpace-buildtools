@@ -1248,14 +1248,14 @@ install_redis () {
 install_elasticsearch () {
 	if [[ -z ${ELK_HOST} ]] && [ "$INSTALL_ELASTICSEARCH" == "true" ]; then
 		if [ $(free -m | grep -oP '\d+' | head -n 1) -gt "12228" ]; then #RAM ~12Gb
-			sed -i 's/Xms[0-9]g/Xms4g/g; s/Xmx[0-9]g/Xmx4g/g' $BASE_DIR/elasticsearch.yml
+			sed -i 's/Xms[0-9]g/Xms4g/g; s/Xmx[0-9]g/Xmx4g/g' $BASE_DIR/opensearch.yml
 		else
-			sed -i 's/Xms[0-9]g/Xms1g/g; s/Xmx[0-9]g/Xmx1g/g' $BASE_DIR/elasticsearch.yml
+			sed -i 's/Xms[0-9]g/Xms1g/g; s/Xmx[0-9]g/Xmx1g/g' $BASE_DIR/opensearch.yml
 		fi
 		reconfigure ELK_VERSION ${ELK_VERSION}
-		docker-compose -f $BASE_DIR/elasticsearch.yml up -d
+		docker-compose -f $BASE_DIR/opensearch.yml up -d
 	elif [ ! -z "$ELK_HOST" ]; then
-		establish_conn ${ELK_HOST} "${ELK_PORT:-"9200"}" "Elasticsearch"
+		establish_conn ${ELK_HOST} "${ELK_PORT:-"9200"}" "search engine"
 		reconfigure ELK_SHEME "${ELK_SHEME:-"http"}"	
 		reconfigure ELK_HOST ${ELK_HOST}
 		reconfigure ELK_PORT "${ELK_PORT:-"9200"}"	

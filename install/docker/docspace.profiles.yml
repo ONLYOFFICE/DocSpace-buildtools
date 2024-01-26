@@ -64,7 +64,7 @@ x-service: &x-service-base
     - people_data:/var/www/products/ASC.People/server/
 
 services:
-  onlyoffice-elasticsearch:
+  onlyoffice-opensearch:
     <<: [*x-profiles-extra-services]
     image: onlyoffice/elasticsearch:${ELK_VERSION}
     container_name: ${ELK_HOST}

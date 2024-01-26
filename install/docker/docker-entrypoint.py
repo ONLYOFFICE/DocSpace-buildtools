@@ -47,7 +47,7 @@ DOCUMENT_SERVER_URL_EXTERNAL = os.environ["DOCUMENT_SERVER_URL_EXTERNAL"] if env
 DOCUMENT_SERVER_URL_PUBLIC = DOCUMENT_SERVER_URL_EXTERNAL if DOCUMENT_SERVER_URL_EXTERNAL else os.environ["DOCUMENT_SERVER_URL_PUBLIC"] if environ.get("DOCUMENT_SERVER_URL_PUBLIC") else "/ds-vpath/"
 DOCUMENT_SERVER_CONNECTION_HOST = DOCUMENT_SERVER_URL_EXTERNAL if DOCUMENT_SERVER_URL_EXTERNAL else DOCUMENT_SERVER_URL_INTERNAL
 
-ELK_CONTAINER_NAME = os.environ["ELK_CONTAINER_NAME"] if environ.get("ELK_CONTAINER_NAME") else "onlyoffice-elasticsearch"
+ELK_CONTAINER_NAME = os.environ["ELK_CONTAINER_NAME"] if environ.get("ELK_CONTAINER_NAME") else "onlyoffice-opensearch"
 ELK_SHEME = os.environ["ELK_SHEME"] if environ.get("ELK_SHEME") else "http"
 ELK_HOST = os.environ["ELK_HOST"] if environ.get("ELK_HOST") else None
 ELK_PORT = os.environ["ELK_PORT"] if environ.get("ELK_PORT") else "9200"
