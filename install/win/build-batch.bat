@@ -32,14 +32,15 @@ copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\L
 copy buildtools\install\win\tools\Login.xml "buildtools\install\win\Files\tools\Login.xml" /y
 copy "buildtools\install\win\nginx.conf" "buildtools\install\win\Files\nginx\conf\nginx.conf" /y
 copy "buildtools\install\docker\config\nginx\onlyoffice-proxy.conf" "buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf" /y
+copy "buildtools\install\docker\config\nginx\onlyoffice-proxy.conf" "buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf.tmpl" /y
 copy "buildtools\install\docker\config\nginx\onlyoffice-proxy-ssl.conf" "buildtools\install\win\Files\nginx\conf\onlyoffice-proxy-ssl.conf.tmpl" /y
 copy "buildtools\install\docker\config\nginx\letsencrypt.conf" "buildtools\install\win\Files\nginx\conf\includes\letsencrypt.conf" /y
 copy "buildtools\install\win\sbin\docspace-ssl-setup.ps1" "buildtools\install\win\Files\sbin\docspace-ssl-setup.ps1" /y
 rmdir buildtools\install\win\publish /s /q
 
 REM echo ######## SSL configs ########
-%sed% -i "s/the_host/host/g" buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf buildtools\install\win\Files\nginx\conf\onlyoffice-proxy-ssl.conf.tmpl
-%sed% -i "s/the_scheme/scheme/g" buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf buildtools\install\win\Files\nginx\conf\onlyoffice-proxy-ssl.conf.tmpl
+%sed% -i "s/the_host/host/g" buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf.tmpl buildtools\install\win\Files\nginx\conf\onlyoffice-proxy-ssl.conf.tmpl
+%sed% -i "s/the_scheme/scheme/g" buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf.tmpl buildtools\install\win\Files\nginx\conf\onlyoffice-proxy-ssl.conf.tmpl
 %sed% -i "s/ssl_dhparam \/etc\/ssl\/certs\/dhparam.pem;/#ssl_dhparam \/etc\/ssl\/certs\/dhparam.pem;/" buildtools\install\win\Files\nginx\conf\onlyoffice-proxy-ssl.conf.tmpl
 %sed% -i "s_\(.*root\).*;_\1 \"{APPDIR}letsencrypt\";_g" -i buildtools\install\win\Files\nginx\conf\includes\letsencrypt.conf
 
