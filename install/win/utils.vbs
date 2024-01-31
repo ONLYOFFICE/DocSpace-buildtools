@@ -315,8 +315,8 @@ Function OpenSearchSetup
     fileContent = oRE.Replace(fileContent, "path.data: " & Session.Property("APPDIR") & "Data\Index\v2.11.1\")
 
     oRE.Pattern = "#path.logs:.*"
-    fileContent = oRE.Replace(fileContent, "path.logs: " & Session.Property("APPDIR") & "Logs\")
-
+    fileContent = oRE.Replace(fileContent, "path.logs: " & Session.Property("APPDIR") & "Logs\")                           
+    
     If InStrRev(fileContent, "plugins.security.disabled") = 0 Then
         fileContent = fileContent & Chr(13) & Chr(10) & "plugins.security.disabled: true"
     Else
