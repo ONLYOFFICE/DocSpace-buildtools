@@ -12,5 +12,5 @@
 	<log mode="roll-by-size">
   		<sizeThreshold>10240</sizeThreshold>
   		<keepFiles>8</keepFiles>
-	</log
+	</log>
 </service>
