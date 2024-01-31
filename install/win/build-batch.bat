@@ -6,6 +6,10 @@ set "opensearch_version=2.11.1"
 
 REM echo ######## Extracting and preparing files to build ########
 %sevenzip% x buildtools\install\win\opensearch-%opensearch_version%.zip -o"buildtools\install\win" -y
+xcopy "buildtools\install\win\opensearch-%opensearch_version%\plugins\opensearch-security" "buildtools\install\win\OpenSearch\plugins\opensearch-security" /s /y /b /i
+xcopy "buildtools\install\win\opensearch-%opensearch_version%\plugins\opensearch-job-scheduler" "buildtools\install\win\OpenSearch\plugins\opensearch-job-scheduler" /s /y /b /i
+xcopy "buildtools\install\win\opensearch-%opensearch_version%\plugins\opensearch-index-management" "buildtools\install\win\OpenSearch\plugins\opensearch-index-management" /s /y /b /i
+rmdir buildtools\install\win\opensearch-%opensearch_version%\plugins /s /q
 xcopy "buildtools\install\win\opensearch-%opensearch_version%" "buildtools\install\win\OpenSearch" /s /y /b /i
 rmdir buildtools\install\win\opensearch-%opensearch_version% /s /q
 md buildtools\install\win\OpenSearch\tools
