@@ -119,6 +119,7 @@
     <ROW Action="AI_ResolveKnownFolders" Type="1" Source="aicustact.dll" Target="AI_ResolveKnownFolders"/>
     <ROW Action="AI_SHOW_LOG" Type="65" Source="aicustact.dll" Target="LaunchLogFile" WithoutSeq="true"/>
     <ROW Action="AI_STORE_LOCATION" Type="51" Source="ARPINSTALLLOCATION" Target="[APPDIR]"/>
+    <ROW Action="DisableElasticsearch" Type="38" Target="Script Text" TargetUnformatted="Set objShell = CreateObject(&quot;WScript.Shell&quot;)&#13;&#10;Set oExec = objShell.Exec(&quot;cmd /c sc query Elasticsearch&quot;)&#13;&#10;If oExec.Status = 0 Then&#13;&#10;    objShell.Run &quot;cmd /c sc stop Elasticsearch&quot;, 0, True&#13;&#10;    objShell.Run &quot;cmd /c sc config Elasticsearch start=disabled&quot;, 0, True&#13;&#10;Else&#13;&#10;    WScript.Echo &quot;Elasticsearch service does not exist.&quot;&#13;&#10;End If"/>
     <ROW Action="SET_APPDIR" Type="307" Source="APPDIR" Target="[ProgramFilesFolder][Manufacturer]\[ProductName]" MultiBuildTarget="DefaultBuild:[WindowsVolume]\[ProductName]"/>
     <ROW Action="SET_SHORTCUTDIR" Type="307" Source="SHORTCUTDIR" Target="[ProgramMenuFolder][ProductName]"/>
     <ROW Action="SET_TARGETDIR_TO_APPDIR" Type="51" Source="TARGETDIR" Target="[APPDIR]"/>
@@ -138,6 +139,7 @@
     <ROW Action="AI_EnableDebugLog" Sequence="51"/>
     <ROW Action="AI_ProcessFailActions" Sequence="5848"/>
     <ROW Action="AI_DATA_SETTER" Sequence="5847"/>
+    <ROW Action="DisableElasticsearch" Condition="( NOT Installed AND NOT OLDPRODUCTS )" Sequence="6401"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstallUISequenceComponent">
     <ROW Action="AI_PRESERVE_INSTALL_TYPE" Sequence="199"/>
