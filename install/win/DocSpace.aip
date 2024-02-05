@@ -1548,7 +1548,7 @@
     <ROW ConnectionName="MySql.Conection" Condition="1" Dbms="1" Flags="4" Order="0" LoginTimeout="60" ConnectionString="Driver={[MYSQLODBCDRIVER]};Server=[DB_HOST];Port=[DB_PORT];Database=[DB_NAME];User=[DB_USER];Password=[DB_PWD];charset=UTF8;GET_SERVER_PUBLIC_KEY=1;"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.SqlScriptComponent">
-    <ROW ScriptName="SQL_SCRIPT_REINDEX_OPENSEARCH" ConnectionName="MySql.Conection" Condition="NEED_REINDEX_OPENSEARCH = &quot;TRUE&quot;" Separator=";" ScriptInline="TRUNCATE webstudio_index;&#13;&#10;" Flags="18" Order="0"/>
+    <ROW ScriptName="SQL_SCRIPT_REINDEX_OPENSEARCH" ConnectionName="MySql.Conection" Condition="NEED_REINDEX_OPENSEARCH = &quot;TRUE&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot;" Separator=";" ScriptInline="TRUNCATE webstudio_index;&#13;&#10;" Flags="18" Order="0"/>
     <ATTRIBUTE name="ImpersonateUser" value="true"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.SynchronizedFolderComponent">
