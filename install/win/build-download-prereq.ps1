@@ -52,7 +52,15 @@ $psql_version = '14.0'
 
 $path_prereq = "${pwd}\buildtools\install\win\"
 
+$opensearch_version = '2.11.1'
+
 $prerequisites = @(
+  @{
+    download_allways = $false;
+    name = "opensearch-${opensearch_version}.zip";
+    link = "https://artifacts.opensearch.org/releases/bundle/opensearch/${opensearch_version}/opensearch-${opensearch_version}-windows-x64.zip";
+  }
+
   @{  
     download_allways = $false; 
     name = "WinSW.NET4new.exe"; 
