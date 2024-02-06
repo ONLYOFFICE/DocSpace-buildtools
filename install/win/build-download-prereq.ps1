@@ -146,13 +146,13 @@ $enterprise_prerequisites = @(
   @{  
     download_allways = $false; 
     name = "mysql-connector-odbc-8.0.33-win32.msi";
-    link = "https://cdn.mysql.com/Downloads/Connector-ODBC/8.0/mysql-connector-odbc-8.0.33-win32.msi";
+    link = "https://cdn.mysql.com/archives/mysql-connector-odbc-8.0/mysql-connector-odbc-8.0.33-win32.msi";
   }
 
   @{  
     download_allways = $false; 
     name = "mysql-installer-community-8.0.33.0.msi";
-    link = "https://cdn.mysql.com/Downloads/MySQLInstaller/mysql-installer-community-8.0.33.0.msi";
+    link = "https://cdn.mysql.com/archives/mysql-installer/mysql-installer-community-8.0.33.0.msi";
   }
 
   @{  
