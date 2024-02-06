@@ -23,14 +23,14 @@
     <ROW Property="APP_URLS" Value="http://0.0.0.0"/>
     <ROW Property="ARPCOMMENTS" Value="[|PRODUCT_NAME] is a platform based on .NET Core and React engines which comprises document management features and makes it possible to implement advanced folder management." ValueLocId="*"/>
     <ROW Property="ARPCONTACT" Value="20A-6, Ernesta Birznieka-Upisha str., Riga, LV-1050"/>
-    <ROW Property="ARPHELPLINK" Value="http://dev.onlyoffice.org/"/>
+    <ROW Property="ARPHELPLINK" Value="https://forum.onlyoffice.com"/>
     <ROW Property="ARPHELPTELEPHONE" Value="+371 66016425"/>
     <ROW Property="ARPNOMODIFY" MultiBuildValue="DefaultBuild:1"/>
     <ROW Property="ARPNOREPAIR" Value="1" MultiBuildValue="DefaultBuild:1#ExeBuild:1"/>
     <ROW Property="ARPPRODUCTICON" Value="icon.exe" Type="8"/>
     <ROW Property="ARPSYSTEMCOMPONENT" Value="1"/>
-    <ROW Property="ARPURLINFOABOUT" Value="http://www.onlyoffice.com"/>
-    <ROW Property="ARPURLUPDATEINFO" Value="http://www.onlyoffice.com/download.aspx"/>
+    <ROW Property="ARPURLINFOABOUT" Value="https://helpdesk.onlyoffice.com"/>
+    <ROW Property="ARPURLUPDATEINFO" Value="https://www.onlyoffice.com/download-docspace.aspx"/>
     <ROW Property="BASE_DOMAIN" Value="localhost"/>
     <ROW Property="COMMON_SHORTCUT_NAME" Value="ONLYOFFICE"/>
     <ROW Property="DATABASE_MIGRATION" Value="true"/>
@@ -1012,7 +1012,7 @@
     <ROW Action="DetectMySQLService" Type="1" Source="aicustact.dll" Target="DetectProcess" Options="3" AdditionalSeq="AI_DATA_SETTER_9"/>
     <ROW Action="ElasticSearchInstallPlugin" Type="1030" Source="utils.vbs" Target="ElasticSearchInstallPlugin"/>
     <ROW Action="ElasticSearchSetup" Type="6" Source="utils.vbs" Target="ElasticSearchSetup"/>
-    <ROW Action="MoveNginxConfigs" Type="6" Source="utils.vbs" Target="MoveNginxConfigs"/>
+    <ROW Action="MoveNginxConfigs" Type="4102" Source="utils.vbs" Target="MoveNginxConfigs"/>
     <ROW Action="MySQLConfigure" Type="262" Source="utils.vbs" Target="MySQLConfigure"/>
     <ROW Action="OpenCancelUrl" Type="194" Source="viewer.exe" Target="http://www.onlyoffice.com/install-canceled.aspx" WithoutSeq="true" Options="1"/>
     <ROW Action="PostgreSQLConfigure" Type="4102" Source="utils.vbs" Target="PostgreSqlConfigure"/>
@@ -1542,14 +1542,12 @@
     <ROW Name="ReplaceRoot" TxtUpdateSet="YourFile.txt_2" FindPattern="/var/www/public/" ReplacePattern="&quot;[APPDIR]public/&quot;" Options="2" Order="0" FileEncoding="-1"/>
     <ROW Name="ReplaceDsProxyPass" TxtUpdateSet="YourFile.txt" FindPattern="proxy_pass .*;" ReplacePattern="proxy_pass http://[DOCUMENT_SERVER_HOST]:[DOCUMENT_SERVER_PORT];" Options="19" Order="1" FileEncoding="-1"/>
     <ROW Name="ReplaceRouter" TxtUpdateSet="YourFile.txt_3" FindPattern="$router_host" ReplacePattern="127.0.0.1" Options="2" Order="0" FileEncoding="-1"/>
-    <ROW Name="ReplaceRouter1" TxtUpdateSet="YourFile.txt_4" FindPattern="$router_host" ReplacePattern="127.0.0.1" Options="2" Order="0" FileEncoding="-1"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.TxtUpdateSetComponent">
     <ROW Key="YourFile.txt" Component="conf" FileName="onlyoffice.conf" Directory="conf_Dir" Options="17"/>
     <ROW Key="YourFile.txt_1" Component="conf" FileName="onlyoffice-client.conf" Directory="conf_Dir" Options="17"/>
     <ROW Key="YourFile.txt_2" Component="includes" FileName="onlyoffice-public.conf" Directory="includes_Dir" Options="17"/>
-    <ROW Key="YourFile.txt_3" Component="conf" FileName="onlyoffice-proxy.conf" Directory="conf_Dir" Options="17"/>
-    <ROW Key="YourFile.txt_4" Component="conf" FileName="onlyoffice-proxy-ssl.conf.tmpl" Directory="conf_Dir" Options="17"/>
+    <ROW Key="YourFile.txt_3" Component="conf" FileName="onlyoffice-proxy*" Directory="conf_Dir" Options="17"/>
     <ROW Key="YourFile.txt_5" Component="includes" FileName="letsencrypt.conf" Directory="includes_Dir" Options="17"/>
     <ROW Key="xml" Component="tools" FileName="*.xml" Directory="tools_Dir" Options="17"/>
   </COMPONENT>
