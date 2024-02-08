@@ -23,14 +23,14 @@
     <ROW Property="APP_URLS" Value="http://0.0.0.0"/>
     <ROW Property="ARPCOMMENTS" Value="[|PRODUCT_NAME] is a platform based on .NET Core and React engines which comprises document management features and makes it possible to implement advanced folder management." ValueLocId="*"/>
     <ROW Property="ARPCONTACT" Value="20A-6, Ernesta Birznieka-Upisha str., Riga, LV-1050"/>
-    <ROW Property="ARPHELPLINK" Value="http://dev.onlyoffice.org/"/>
+    <ROW Property="ARPHELPLINK" Value="https://forum.onlyoffice.com"/>
     <ROW Property="ARPHELPTELEPHONE" Value="+371 66016425"/>
     <ROW Property="ARPNOMODIFY" MultiBuildValue="DefaultBuild:1"/>
     <ROW Property="ARPNOREPAIR" Value="1" MultiBuildValue="DefaultBuild:1#ExeBuild:1"/>
     <ROW Property="ARPPRODUCTICON" Value="icon.exe" Type="8"/>
     <ROW Property="ARPSYSTEMCOMPONENT" Value="1"/>
-    <ROW Property="ARPURLINFOABOUT" Value="http://www.onlyoffice.com"/>
-    <ROW Property="ARPURLUPDATEINFO" Value="http://www.onlyoffice.com/download.aspx"/>
+    <ROW Property="ARPURLINFOABOUT" Value="https://helpdesk.onlyoffice.com"/>
+    <ROW Property="ARPURLUPDATEINFO" Value="https://www.onlyoffice.com/download-docspace.aspx"/>
     <ROW Property="BASE_DOMAIN" Value="localhost"/>
     <ROW Property="COMMON_SHORTCUT_NAME" Value="ONLYOFFICE"/>
     <ROW Property="DATABASE_MIGRATION" Value="true"/>
@@ -41,10 +41,6 @@
     <ROW Property="DB_USER" Value="root"/>
     <ROW Property="DOCUMENT_SERVER_HOST" Value="localhost"/>
     <ROW Property="DOCUMENT_SERVER_PORT" Value="8083"/>
-    <ROW Property="ELASTICSEARCH_HOST" Value="localhost" ValueLocId="-"/>
-    <ROW Property="ELASTICSEARCH_MSG" Value="Unable to connect to remote Elasticsearch server at "/>
-    <ROW Property="ELASTICSEARCH_PORT" Value="9200" ValueLocId="-"/>
-    <ROW Property="ELASTICSEARCH_SCHEME" Value="http" ValueLocId="-"/>
     <ROW Property="ENVIRONMENT" Value="PRODUCT.ENVIRONMENT.SUB"/>
     <ROW Property="Editor_Port" Value="5013"/>
     <ROW Property="INSTALL_ROOT_FOLDER_NAME" Value="[|Manufacturer]"/>
@@ -57,7 +53,11 @@
     <ROW Property="MYSQLODBCDRIVER" Value="MySQL ODBC 8.0 Unicode Driver"/>
     <ROW Property="Manufacturer" Value="Ascensio System SIA"/>
     <ROW Property="MySQLConnector" Value="MySQL Connector/ODBC 8.0.21 x86"/>
-    <ROW Property="NEED_REINDEX_ELASTICSEARCH" Value="FALSE" ValueLocId="-"/>
+    <ROW Property="NEED_REINDEX_OPENSEARCH" Value="FALSE" ValueLocId="-"/>
+    <ROW Property="OPENSEARCH_HOST" Value="localhost" ValueLocId="-"/>
+    <ROW Property="OPENSEARCH_MSG" Value="Unable to connect to remote OpenSearch server at "/>
+    <ROW Property="OPENSEARCH_PORT" Value="9200" ValueLocId="-"/>
+    <ROW Property="OPENSEARCH_SCHEME" Value="http" ValueLocId="-"/>
     <ROW Property="OPEN_INSTALL_CANCEL_URL" Value="1"/>
     <ROW Property="PACKAGE_NAME" Value="ONLYOFFICE_DocSpace_Community_Win-install.v[|ProductVersion]" MultiBuildValue="ExeBuild:ONLYOFFICE_DocSpace_Enterprise_Win-install.v[|ProductVersion]"/>
     <ROW Property="PRODUCT_NAME" Value="ONLYOFFICE DocSpace Community" MultiBuildValue="ExeBuild:ONLYOFFICE DocSpace Enterprise"/>
@@ -366,14 +366,14 @@
     <ROW JsonProperty="ConnectionString" Parent="__1" Name="ConnectionString" Condition="1" Order="0" Flags="57" Value="Server=[DB_HOST];Database=[DB_NAME];User ID=[DB_USER];Password=[DB_PWD]"/>
     <ROW JsonProperty="ConnectionStrings" Parent="Root_12" Name="ConnectionStrings" Condition="1" Order="1" Flags="60"/>
     <ROW JsonProperty="ConnectionStrings_1" Parent="Root_1" Name="ConnectionStrings" Condition="1" Order="0" Flags="60"/>
-    <ROW JsonProperty="Host" Parent="elastic" Name="Host" Condition="1" Order="0" Flags="57" Value="[ELASTICSEARCH_HOST]"/>
+    <ROW JsonProperty="Host" Parent="elastic" Name="Host" Condition="1" Order="0" Flags="57" Value="[OPENSEARCH_HOST]"/>
     <ROW JsonProperty="Host_1" Parent="_" Name="Host" Condition="1" Order="0" Flags="57" Value="[REDIS_HOST]"/>
     <ROW JsonProperty="Hostname" Parent="RabbitMQ" Name="Hostname" Condition="1" Order="0" Flags="57" Value="[AMQP_HOST]"/>
     <ROW JsonProperty="Hosts" Parent="Redis" Name="Hosts" Condition="1" Order="0" Flags="61"/>
     <ROW JsonProperty="PORT" Parent="Root_9" Name="PORT" Condition="1" Order="1" Flags="57" Value="[Login_Port]"/>
     <ROW JsonProperty="PORT_1" Parent="Root_10" Name="PORT" Condition="1" Order="1" Flags="57" Value="[Editor_Port]"/>
     <ROW JsonProperty="Password" Parent="RabbitMQ" Name="Password" Condition="1" Order="2" Flags="57" Value="[AMQP_PWD]"/>
-    <ROW JsonProperty="Port" Parent="elastic" Name="Port" Condition="1" Order="2" Flags="57" Value="[ELASTICSEARCH_PORT]"/>
+    <ROW JsonProperty="Port" Parent="elastic" Name="Port" Condition="1" Order="2" Flags="57" Value="[OPENSEARCH_PORT]"/>
     <ROW JsonProperty="Port_1" Parent="RabbitMQ" Name="Port" Condition="1" Order="3" Flags="59" Value="[AMQP_PORT]"/>
     <ROW JsonProperty="Port_2" Parent="_" Name="Port" Condition="1" Order="1" Flags="57" Value="[REDIS_PORT]"/>
     <ROW JsonProperty="Providers" Parent="options" Name="Providers" Condition="1" Order="0" Flags="61"/>
@@ -390,7 +390,7 @@
     <ROW JsonProperty="Root_6" Name="Root" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="Root_7" Name="Root" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="Root_9" Name="Root" Condition="1" Order="0" Flags="60"/>
-    <ROW JsonProperty="Scheme" Parent="elastic" Name="Scheme" Condition="1" Order="1" Flags="57" Value="[ELASTICSEARCH_SCHEME]"/>
+    <ROW JsonProperty="Scheme" Parent="elastic" Name="Scheme" Condition="1" Order="1" Flags="57" Value="[OPENSEARCH_SCHEME]"/>
     <ROW JsonProperty="UserName" Parent="RabbitMQ" Name="UserName" Condition="1" Order="1" Flags="57" Value="[AMQP_USER]"/>
     <ROW JsonProperty="VirtualHost" Parent="RabbitMQ" Name="VirtualHost" Condition="1" Order="4" Flags="57" Value="[AMQP_VHOST]"/>
     <ROW JsonProperty="_" Parent="Hosts" Name="0" Condition="1" Order="0" Flags="60"/>
@@ -468,6 +468,12 @@
     <ROW Action="AI_JsonRollback" Description="Rolling back JSON file configurations." DescriptionLocId="ActionText.Description.AI_JsonRollback" Template="Rolling back JSON file configurations." TemplateLocId="ActionText.Template.AI_JsonRollback"/>
     <ROW Action="AI_JsonUninstall" Description="Generating actions to configure JSON files" DescriptionLocId="ActionText.Description.AI_JsonUninstall"/>
     <ROW Action="AI_ProcessFailActions" Description="Generating actions to configure service failure actions" DescriptionLocId="ActionText.Description.AI_ProcessFailActions" Template="Service: [1]" TemplateLocId="ActionText.Template.AI_ProcessFailActions"/>
+    <ROW Action="AI_SqlConfig" Description="Executing install SQL scripts" DescriptionLocId="ActionText.Description.AI_SqlConfig" Template="Connection: [1]  Script: [2]" TemplateLocId="ActionText.Template.AI_SqlConfig"/>
+    <ROW Action="AI_SqlInstall" Description="Generating actions to configure databases for install SQL script execution" DescriptionLocId="ActionText.Description.AI_SqlInstall"/>
+    <ROW Action="AI_SqlMaint" Description="Executing maintenance SQL scripts" DescriptionLocId="ActionText.Description.AI_SqlMaint" Template="Connection: [1]  Script: [2]" TemplateLocId="ActionText.Template.AI_SqlMaint"/>
+    <ROW Action="AI_SqlRemove" Description="Executing uninstall SQL scripts" DescriptionLocId="ActionText.Description.AI_SqlRemove" Template="Connection: [1]  Script: [2]" TemplateLocId="ActionText.Template.AI_SqlRemove"/>
+    <ROW Action="AI_SqlRollback" Description="Executing rollback SQL scripts" DescriptionLocId="ActionText.Description.AI_SqlRollback" Template="Connection: [1]  Script: [2]" TemplateLocId="ActionText.Template.AI_SqlRollback"/>
+    <ROW Action="AI_SqlUninstall" Description="Generating actions to configure databases for uninstall SQL script execution" DescriptionLocId="ActionText.Description.AI_SqlUninstall"/>
     <ROW Action="AI_TxtUpdaterCommit" Description="Commit text file changes." DescriptionLocId="ActionText.Description.AI_TxtUpdaterCommit" Template="Commit text file changes." TemplateLocId="ActionText.Template.AI_TxtUpdaterCommit"/>
     <ROW Action="AI_TxtUpdaterConfig" Description="Executing text file updates" DescriptionLocId="ActionText.Description.AI_TxtUpdaterConfig" Template="Updating text file: &quot;[1]&quot;" TemplateLocId="ActionText.Template.AI_TxtUpdaterConfig"/>
     <ROW Action="AI_TxtUpdaterInstall" Description="Generating actions to configure text files updates" DescriptionLocId="ActionText.Description.AI_TxtUpdaterInstall"/>
@@ -491,9 +497,9 @@
     <ROW Property="PS_DB_PORT" Signature_="AppSearchSign_5"/>
     <ROW Property="PS_DB_NAME" Signature_="AppSearchSign_6"/>
     <ROW Property="PS_DB_HOST" Signature_="AppSearchSign_7"/>
-    <ROW Property="ELASTICSEARCH_SCHEME" Signature_="AppSearchSign_8"/>
-    <ROW Property="ELASTICSEARCH_PORT" Signature_="AppSearchSign_9"/>
-    <ROW Property="ELASTICSEARCH_HOST" Signature_="AppSearchSign_10"/>
+    <ROW Property="OPENSEARCH_SCHEME" Signature_="AppSearchSign_8"/>
+    <ROW Property="OPENSEARCH_PORT" Signature_="AppSearchSign_9"/>
+    <ROW Property="OPENSEARCH_HOST" Signature_="AppSearchSign_10"/>
     <ROW Property="DB_USER" Signature_="AppSearchSign_11"/>
     <ROW Property="DB_PWD" Signature_="AppSearchSign_12"/>
     <ROW Property="DB_PORT" Signature_="AppSearchSign_13"/>
@@ -523,6 +529,7 @@
     <ROW Name="file_deleter.ps1" SourcePath="&lt;AI_SCRIPTS&gt;file_deleter.ps1"/>
     <ROW Name="jsonCfg.dll" SourcePath="&lt;AI_CUSTACTS&gt;jsonCfg.dll"/>
     <ROW Name="lzmaextractor.dll" SourcePath="&lt;AI_CUSTACTS&gt;lzmaextractor.dll"/>
+    <ROW Name="sql.dll" SourcePath="&lt;AI_CUSTACTS&gt;sql.dll"/>
     <ROW Name="userAccounts.dll" SourcePath="&lt;AI_CUSTACTS&gt;userAccounts.dll"/>
     <ROW Name="utils.vbs" SourcePath="utils.vbs"/>
     <ROW Name="viewer.exe" SourcePath="&lt;AI_CUSTACTS&gt;viewer.exe" DigSign="true"/>
@@ -601,20 +608,6 @@
     <ROW Dialog_="DiskCostDlg" Control="Text" Type="Text" X="20" Y="53" Width="330" Height="40" Attributes="3" Text="The highlighted volumes (if any) do not have enough disk space available for the currently selected features.  You can either remove some files from the highlighted volumes, or choose to install less features onto local drive(s), or select different destination       drive(s)." Order="600" TextLocId="Control.Text.DiskCostDlg#Text" MsiKey="DiskCostDlg#Text"/>
     <ROW Dialog_="DiskCostDlg" Control="Description" Type="Text" X="20" Y="20" Width="280" Height="20" Attributes="196611" Text="The disk space required for the installation of the selected features." Order="700" TextLocId="Control.Text.DiskCostDlg#Description" MsiKey="DiskCostDlg#Description"/>
     <ROW Dialog_="DiskCostDlg" Control="BannerLine" Type="Line" X="0" Y="44" Width="372" Height="0" Attributes="1" Order="800" MsiKey="DiskCostDlg#BannerLine"/>
-    <ROW Dialog_="ELKConnectionDlg" Control="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Attributes="3" Text="[ButtonText_Next]" Order="100" Options="1"/>
-    <ROW Dialog_="ELKConnectionDlg" Control="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Attributes="3" Text="[ButtonText_Cancel]" Order="200" Options="1"/>
-    <ROW Dialog_="ELKConnectionDlg" Control="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Attributes="3" Text="[ButtonText_Back]" Order="300" Options="1"/>
-    <ROW Dialog_="ELKConnectionDlg" Control="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" Attributes="1048577" Text="banner.bmp" Order="400"/>
-    <ROW Dialog_="ELKConnectionDlg" Control="BannerLine" Type="Line" X="0" Y="44" Width="372" Height="0" Attributes="1" Order="500"/>
-    <ROW Dialog_="ELKConnectionDlg" Control="BottomLine" Type="Line" X="5" Y="234" Width="368" Height="0" Attributes="1" Order="600"/>
-    <ROW Dialog_="ELKConnectionDlg" Control="Description" Type="Text" X="25" Y="23" Width="280" Height="20" Attributes="196611" Text="Configure Elasticsearch Connection..." Order="700"/>
-    <ROW Dialog_="ELKConnectionDlg" Control="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Attributes="196611" Text="Elasticsearch connection settings" TextStyle="[DlgTitleFont]" Order="800"/>
-    <ROW Dialog_="ELKConnectionDlg" Control="ProtocolLabel" Type="Text" X="25" Y="65" Width="67" Height="11" Attributes="65539" Text="Protocol" Order="900"/>
-    <ROW Dialog_="ELKConnectionDlg" Control="ServerLabel" Type="Text" X="25" Y="92" Width="67" Height="11" Attributes="65539" Text="Server:" Order="1000"/>
-    <ROW Dialog_="ELKConnectionDlg" Control="PortLabel" Type="Text" X="25" Y="119" Width="67" Height="11" Attributes="65539" Text="Port:" Order="1100"/>
-    <ROW Dialog_="ELKConnectionDlg" Control="ProtocolEdit" Type="Edit" X="98" Y="61" Width="253" Height="18" Attributes="3" Property="ELASTICSEARCH_SCHEME" Text="{5}" Order="1200"/>
-    <ROW Dialog_="ELKConnectionDlg" Control="ServerEdit" Type="Edit" X="98" Y="89" Width="253" Height="18" Attributes="3" Property="ELASTICSEARCH_HOST" Text="[ComputerName]" Order="1300"/>
-    <ROW Dialog_="ELKConnectionDlg" Control="PortEdit" Type="Edit" X="98" Y="116" Width="253" Height="18" Attributes="19" Property="ELASTICSEARCH_PORT" Text="{7}" Order="1400"/>
     <ROW Dialog_="ExitDialog" Control="Bitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="234" Attributes="1048577" Text="dialog.bmp" Order="300" MsiKey="ExitDialog#Bitmap"/>
     <ROW Dialog_="ExitDialog" Control="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Attributes="1" Text="[ButtonText_Back]" Order="400" TextLocId="-" MsiKey="ExitDialog#Back" Options="1"/>
     <ROW Dialog_="FatalError" Control="Bitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="234" Attributes="1048577" Text="dialog.bmp" Order="300" MsiKey="FatalError#Bitmap"/>
@@ -650,6 +643,20 @@
     <ROW Dialog_="MaintenanceWelcomeDlg" Control="Bitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="234" Attributes="1048577" Text="dialog.bmp" Order="300" MsiKey="MaintenanceWelcomeDlg#Bitmap"/>
     <ROW Dialog_="MaintenanceWelcomeDlg" Control="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Attributes="1" Text="[ButtonText_Back]" Order="400" TextLocId="-" MsiKey="MaintenanceWelcomeDlg#Back" Options="1"/>
     <ROW Dialog_="MsiRMFilesInUse" Control="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" Attributes="1048577" Text="banner.bmp" Order="300" MsiKey="MsiRMFilesInUse#BannerBitmap"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Attributes="3" Text="[ButtonText_Next]" Order="100" Options="1"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Attributes="3" Text="[ButtonText_Cancel]" Order="200" Options="1"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Attributes="3" Text="[ButtonText_Back]" Order="300" Options="1"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" Attributes="1048577" Text="banner.bmp" Order="400"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control="BannerLine" Type="Line" X="0" Y="44" Width="372" Height="0" Attributes="1" Order="500"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control="BottomLine" Type="Line" X="5" Y="234" Width="368" Height="0" Attributes="1" Order="600"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control="Description" Type="Text" X="25" Y="23" Width="280" Height="20" Attributes="196611" Text="Configure OpenSearch Connection..." Order="700"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Attributes="196611" Text="OpenSearch connection settings" TextStyle="[DlgTitleFont]" Order="800"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control="ProtocolLabel" Type="Text" X="25" Y="65" Width="67" Height="11" Attributes="65539" Text="Protocol" Order="900"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control="ServerLabel" Type="Text" X="25" Y="92" Width="67" Height="11" Attributes="65539" Text="Server:" Order="1000"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control="PortLabel" Type="Text" X="25" Y="119" Width="67" Height="11" Attributes="65539" Text="Port:" Order="1100"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control="ProtocolEdit" Type="Edit" X="98" Y="61" Width="253" Height="18" Attributes="3" Property="OPENSEARCH_SCHEME" Text="{5}" Order="1200"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control="ServerEdit" Type="Edit" X="98" Y="89" Width="253" Height="18" Attributes="3" Property="OPENSEARCH_HOST" Text="[ComputerName]" Order="1300"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control="PortEdit" Type="Edit" X="98" Y="116" Width="253" Height="18" Attributes="19" Property="OPENSEARCH_PORT" Text="{7}" Order="1400"/>
     <ROW Dialog_="OutOfDiskDlg" Control="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" Attributes="1048577" Text="banner.bmp" Order="200" MsiKey="OutOfDiskDlg#BannerBitmap"/>
     <ROW Dialog_="OutOfDiskDlg" Control="VolumeList" Type="VolumeCostList" X="20" Y="100" Width="330" Height="120" Attributes="393223" Text="{120}{70}{70}{70}{70}" Order="400" TextLocId="Control.Text.OutOfDiskDlg#VolumeList" MsiKey="OutOfDiskDlg#VolumeList"/>
     <ROW Dialog_="OutOfDiskDlg" Control="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Attributes="196611" Text="Out of Disk Space" TextStyle="[DlgTitleFont]" Order="500" TextLocId="Control.Text.OutOfDiskDlg#Title" MsiKey="OutOfDiskDlg#Title"/>
@@ -837,38 +844,38 @@
     <ROW Dialog_="SQLConnectionDlg" Control_="SQLConnectionDlgDialogInitializer" Event="[ButtonText_Next]" Argument="[[AI_CommitButton]]" Condition="AI_INSTALL AND ( OLDPRODUCTS=&quot;&quot; AND SQLConnectionDlg_Cond )" Ordering="2"/>
     <ROW Dialog_="SQLConnectionDlg" Control_="SQLConnectionDlgDialogInitializer" Event="[AI_Text_Next_Orig]" Argument="[Text_Next]" Condition="AI_INSTALL AND ( OLDPRODUCTS=&quot;&quot; AND SQLConnectionDlg_Cond )" Ordering="1"/>
     <ROW Dialog_="SQLConnectionDlg" Control_="SQLConnectionDlgDialogInitializer" Event="[Text_Next]" Argument="[Text_Install]" Condition="AI_INSTALL AND ( OLDPRODUCTS=&quot;&quot; AND SQLConnectionDlg_Cond )" Ordering="0"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="ELKConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="6"/>
+    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="6"/>
     <ROW Dialog_="SQLConnectionDlg" Control_="Back" Event="NewDialog" Argument="FolderDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS = &quot;&quot; )" Ordering="2"/>
     <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="TestSqlConnection" Condition="AI_INSTALL" Ordering="1"/>
     <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="SQLConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError &lt;&gt; &quot;&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="20"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND ELK_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="25"/>
+    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="25"/>
     <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="TestSqlConnection" Condition="AI_INSTALL" Ordering="201"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND ELK_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="222"/>
+    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="222"/>
     <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="DoAction" Argument="TestSqlConnection" Condition="AI_INSTALL" Ordering="3"/>
     <ROW Dialog_="VerifyReadyDlg" Control_="Back" Event="NewDialog" Argument="FolderDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS = &quot;&quot; )" Ordering="201"/>
     <ROW Dialog_="VerifyReadyDlg" Control_="Back" Event="NewDialog" Argument="WelcomeDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="202"/>
-    <ROW Dialog_="ELKConnectionDlg" Control_="Cancel" Event="SpawnDialog" Argument="CancelDlg" Condition="1" Ordering="100"/>
-    <ROW Dialog_="ELKConnectionDlg" Control_="Next" Event="NewDialog" Argument="RabbitMQConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  ELK_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="5"/>
-    <ROW Dialog_="ELKConnectionDlg" Control_="Back" Event="NewDialog" Argument="FolderDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS = &quot;&quot; )" Ordering="3"/>
-    <ROW Dialog_="ELKConnectionDlg" Control_="Back" Event="NewDialog" Argument="SQLConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="5"/>
-    <ROW Dialog_="ELKConnectionDlg" Control_="Next" Event="DoAction" Argument="TestElasticsearchConnection" Condition="AI_INSTALL" Ordering="2"/>
-    <ROW Dialog_="ELKConnectionDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_1" Condition="AI_INSTALL" Ordering="1"/>
-    <ROW Dialog_="ELKConnectionDlg" Control_="Next" Event="DoAction" Argument="TestElasticsearchConnectionMsgBox" Condition="AI_INSTALL AND ( ELK_CONNECTION = &quot;False&quot; )" Ordering="4"/>
-    <ROW Dialog_="ELKConnectionDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER" Condition="AI_INSTALL AND ( ELK_CONNECTION = &quot;False&quot; )" Ordering="3"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control_="Cancel" Event="SpawnDialog" Argument="CancelDlg" Condition="1" Ordering="100"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control_="Next" Event="NewDialog" Argument="RabbitMQConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="5"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control_="Back" Event="NewDialog" Argument="FolderDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS = &quot;&quot; )" Ordering="3"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control_="Back" Event="NewDialog" Argument="SQLConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="5"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control_="Next" Event="DoAction" Argument="TestOpenSearchConnection" Condition="AI_INSTALL" Ordering="2"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_1" Condition="AI_INSTALL" Ordering="1"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control_="Next" Event="DoAction" Argument="TestOpenSearchConnectionMsgBox" Condition="AI_INSTALL AND ( OPENSEARCH_CONNECTION = &quot;False&quot; )" Ordering="4"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER" Condition="AI_INSTALL AND ( OPENSEARCH_CONNECTION = &quot;False&quot; )" Ordering="3"/>
     <ROW Dialog_="SQLConnectionDlg" Control_="Back" Event="NewDialog" Argument="WelcomeDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="3"/>
-    <ROW Dialog_="ELKConnectionDlg" Control_="Back" Event="NewDialog" Argument="WelcomeDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="4"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="TestElasticsearchConnection" Condition="AI_INSTALL" Ordering="16"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control_="Back" Event="NewDialog" Argument="WelcomeDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="4"/>
+    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="TestOpenSearchConnection" Condition="AI_INSTALL" Ordering="16"/>
     <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_1" Condition="AI_INSTALL" Ordering="15"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="ELKConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND ELK_CONNECTION = &quot;False&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="22"/>
+    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;False&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="22"/>
     <ROW Dialog_="CancelDlg" Control_="Yes" Event="DoAction" Argument="OpenCancelUrl" Condition="OPEN_INSTALL_CANCEL_URL = &quot;1&quot;" Ordering="101"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="TestElasticsearchConnection" Condition="AI_INSTALL AND ( SqlConnectionError=&quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; )" Ordering="212"/>
+    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="TestOpenSearchConnection" Condition="AI_INSTALL AND ( SqlConnectionError=&quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; )" Ordering="212"/>
     <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_1" Condition="AI_INSTALL AND ( SqlConnectionError=&quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; )" Ordering="211"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="ELKConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND ELK_CONNECTION = &quot;False&quot; )" Ordering="218"/>
+    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;False&quot; )" Ordering="218"/>
     <ROW Dialog_="RabbitMQConnectionDlg" Control_="Cancel" Event="SpawnDialog" Argument="CancelDlg" Condition="1" Ordering="100"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  ELK_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="11"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control_="Back" Event="NewDialog" Argument="ELKConnectionDlg" Condition="AI_INSTALL AND ( ELK_CONNECTION = &quot;False&quot; )" Ordering="3"/>
+    <ROW Dialog_="RabbitMQConnectionDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="11"/>
+    <ROW Dialog_="RabbitMQConnectionDlg" Control_="Back" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND ( OPENSEARCH_CONNECTION = &quot;False&quot; )" Ordering="3"/>
     <ROW Dialog_="RedisServerConnectionDlg" Control_="Cancel" Event="SpawnDialog" Argument="CancelDlg" Condition="1" Ordering="100"/>
-    <ROW Dialog_="RedisServerConnectionDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  ELK_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="5"/>
+    <ROW Dialog_="RedisServerConnectionDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="5"/>
     <ROW Dialog_="RedisServerConnectionDlg" Control_="Back" Event="NewDialog" Argument="RabbitMQConnectionDlg" Condition="AI_INSTALL AND ( RabbitMQServerConnectionError = &quot;&quot; )" Ordering="3"/>
     <ROW Dialog_="RabbitMQConnectionDlg" Control_="Back" Event="NewDialog" Argument="FolderDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS = &quot;&quot; )" Ordering="2"/>
     <ROW Dialog_="RedisServerConnectionDlg" Control_="Back" Event="NewDialog" Argument="FolderDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS = &quot;&quot; )" Ordering="2"/>
@@ -876,20 +883,20 @@
     <ROW Dialog_="RedisServerConnectionDlg" Control_="Back" Event="NewDialog" Argument="WelcomeDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="1"/>
     <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="TestRabbitMQServerConnection" Condition="AI_INSTALL" Ordering="17"/>
     <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="TestRedisServerConnection" Condition="AI_INSTALL" Ordering="18"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="RabbitMQConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND ELK_CONNECTION = &quot;False&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="23"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND ELK_CONNECTION = &quot;False&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="24"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="RabbitMQConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND ELK_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="219"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND ELK_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="221"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="TestRabbitMQServerConnection" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND ELK_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="213"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="TestRedisServerConnection" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND ELK_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="214"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="RabbitMQConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  ELK_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="10"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  ELK_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="11"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  ELK_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="12"/>
-    <ROW Dialog_="ELKConnectionDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  ELK_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="6"/>
-    <ROW Dialog_="ELKConnectionDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  ELK_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="10"/>
+    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="RabbitMQConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;False&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="23"/>
+    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;False&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="24"/>
+    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="RabbitMQConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="219"/>
+    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="221"/>
+    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="TestRabbitMQServerConnection" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="213"/>
+    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="TestRedisServerConnection" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="214"/>
+    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="RabbitMQConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="10"/>
+    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="11"/>
+    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="12"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="6"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="10"/>
     <ROW Dialog_="RabbitMQConnectionDlg" Control_="Next" Event="DoAction" Argument="TestRabbitMQConnectionMsgBox" Condition="AI_INSTALL AND ( RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="10"/>
     <ROW Dialog_="RabbitMQConnectionDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_18" Condition="AI_INSTALL AND ( RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="9"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  ELK_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="12"/>
+    <ROW Dialog_="RabbitMQConnectionDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="12"/>
     <ROW Dialog_="RedisServerConnectionDlg" Control_="Next" Event="DoAction" Argument="TestRedisServerConnection" Condition="AI_INSTALL" Ordering="2"/>
     <ROW Dialog_="RedisServerConnectionDlg" Control_="Next" Event="DoAction" Argument="TestRedisServerConnectionMsgBox" Condition="AI_INSTALL AND ( RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="4"/>
     <ROW Dialog_="RedisServerConnectionDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_17" Condition="AI_INSTALL AND ( RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="3"/>
@@ -901,7 +908,7 @@
     <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="DoAction" Argument="TestPostgreSqlConnection" Condition="AI_INSTALL" Ordering="1"/>
     <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="DoAction" Argument="TestPostgreSqlConnectionMsgBox" Condition="AI_INSTALL AND ( PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="3"/>
     <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_20" Condition="AI_INSTALL AND ( PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="2"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="ELKConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  ELK_CONNECTION = &quot;False&quot; )" Ordering="9"/>
+    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;False&quot; )" Ordering="9"/>
     <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Back" Event="NewDialog" Argument="FolderDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS = &quot;&quot; )" Ordering="1"/>
     <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Back" Event="NewDialog" Argument="WelcomeDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="2"/>
     <ROW Dialog_="CancelDlg" Control_="No" Event="EndDialog" Argument="Return" Condition="1" Ordering="100" MsiKey="CancelDlg#No#EndDialog#Return#1"/>
@@ -913,10 +920,10 @@
     <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="[PostgreSQLConnectionDlg_Cond]" Argument="1" Condition="((&amp;DocumentServer = 3) AND NOT (!DocumentServer = 3))" Ordering="2"/>
     <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="[PostgreSQLConnectionDlg_Cond]" Argument="{}" Condition="1" Ordering="1"/>
     <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="PostgreSQLConnectionDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="8"/>
-    <ROW Dialog_="ELKConnectionDlg" Control_="Back" Event="NewDialog" Argument="PostgreSQLConnectionDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="6"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="ELKConnectionDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND ELK_CONNECTION = &quot;False&quot; )" Ordering="5"/>
+    <ROW Dialog_="OpenSearchConnectionDlg" Control_="Back" Event="NewDialog" Argument="PostgreSQLConnectionDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="6"/>
+    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;False&quot; )" Ordering="5"/>
     <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Back" Event="NewDialog" Argument="SQLConnectionDlg" Condition="PostgreSQLConnectionDlg_Cond AND AI_INSTALL AND ( SqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="3"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND ELK_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="6"/>
+    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="6"/>
     <ROW Dialog_="LicenseAgreementDlg" Control_="Next" Event="NewDialog" Argument="FolderDlg" Condition="AI_INSTALL" Ordering="1"/>
     <ROW Dialog_="LicenseAgreementDlg" Control_="Back" Event="NewDialog" Argument="WelcomeDlg" Condition="AI_INSTALL" Ordering="1"/>
   </COMPONENT>
@@ -930,12 +937,12 @@
     <ROW Action="AI_ConfigFailActions" Type="11265" Source="aicustact.dll" Target="ConfigureServFailActions" WithoutSeq="true"/>
     <ROW Action="AI_ConfigPermissions" Type="1" Source="userAccounts.dll" Target="OnConfigPermissions" AdditionalSeq="AI_DATA_SETTER_4"/>
     <ROW Action="AI_ConfigureChainer" Type="1" Source="Prereq.dll" Target="ConfigurePrereqLauncher"/>
-    <ROW Action="AI_DATA_SETTER" Type="51" Source="CustomActionData" Target="[ELASTICSEARCH_MSG]&#13;\n[ELASTICSEARCH_SCHEME]://[ELASTICSEARCH_HOST]:[ELASTICSEARCH_PORT] |[ProductName] Setup |MB_OK,MB_ICONWARNING,MB_DEFBUTTON1||[CLIENTPROCESSID]"/>
-    <ROW Action="AI_DATA_SETTER_1" Type="51" Source="CustomActionData" Target="HOST=[ELASTICSEARCH_HOST];PORT=[ELASTICSEARCH_PORT];OUTPUT=ELK_CONNECTION"/>
+    <ROW Action="AI_DATA_SETTER" Type="51" Source="CustomActionData" Target="[OPENSEARCH_MSG]&#13;\n[OPENSEARCH_SCHEME]://[OPENSEARCH_HOST]:[OPENSEARCH_PORT] |[ProductName] Setup |MB_OK,MB_ICONWARNING,MB_DEFBUTTON1||[CLIENTPROCESSID]"/>
+    <ROW Action="AI_DATA_SETTER_1" Type="51" Source="CustomActionData" Target="HOST=[OPENSEARCH_HOST];PORT=[OPENSEARCH_PORT];OUTPUT=OPENSEARCH_CONNECTION"/>
     <ROW Action="AI_DATA_SETTER_10" Type="51" Source="CustomActionData" Target="MySQL80"/>
     <ROW Action="AI_DATA_SETTER_11" Type="51" Source="CustomActionData" Target="MySQL80"/>
-    <ROW Action="AI_DATA_SETTER_12" Type="51" Source="CustomActionData" Target="Elasticsearch"/>
-    <ROW Action="AI_DATA_SETTER_13" Type="51" Source="StartElasticSearchService" Target="Elasticsearch"/>
+    <ROW Action="AI_DATA_SETTER_12" Type="51" Source="CustomActionData" Target="OpenSearch"/>
+    <ROW Action="AI_DATA_SETTER_13" Type="51" Source="StartOpenSearchService" Target="OpenSearch"/>
     <ROW Action="AI_DATA_SETTER_14" Type="51" Source="CustomActionData" Target="[~]"/>
     <ROW Action="AI_DATA_SETTER_15" Type="51" Source="CustomActionData" Target="[~]"/>
     <ROW Action="AI_DATA_SETTER_16" Type="51" Source="StopRedisService" Target="Redis"/>
@@ -948,6 +955,8 @@
     <ROW Action="AI_DATA_SETTER_22" Type="51" Source="CustomActionData" Target="[~]"/>
     <ROW Action="AI_DATA_SETTER_23" Type="51" Source="CustomActionData" Target="OpenResty"/>
     <ROW Action="AI_DATA_SETTER_24" Type="51" Source="CustomActionData" Target="OpenResty"/>
+    <ROW Action="AI_DATA_SETTER_25" Type="51" Source="CustomActionData" Target="[~]"/>
+    <ROW Action="AI_DATA_SETTER_26" Type="51" Source="CustomActionData" Target="[~]"/>
     <ROW Action="AI_DATA_SETTER_3" Type="51" Source="CustomActionData" Target="[~]"/>
     <ROW Action="AI_DATA_SETTER_4" Type="51" Source="CustomActionData" Target="[~]"/>
     <ROW Action="AI_DATA_SETTER_5" Type="51" Source="CustomActionData" Target="[SqlConnectionError] |[ProductName] Setup |MB_OK,MB_ICONWARNING,MB_DEFBUTTON1||[CLIENTPROCESSID]"/>
@@ -998,6 +1007,12 @@
     <ROW Action="AI_SHOW_LOG" Type="65" Source="aicustact.dll" Target="LaunchLogFile" WithoutSeq="true"/>
     <ROW Action="AI_STORE_LOCATION" Type="51" Source="ARPINSTALLLOCATION" Target="[APPDIR]"/>
     <ROW Action="AI_SetPermissions" Type="11265" Source="userAccounts.dll" Target="OnSetPermissions" WithoutSeq="true"/>
+    <ROW Action="AI_SqlConfig" Type="9217" Source="sql.dll" Target="OnSqlConfig" WithoutSeq="true"/>
+    <ROW Action="AI_SqlInstall" Type="1" Source="sql.dll" Target="OnSqlInstall" AdditionalSeq="AI_DATA_SETTER_25"/>
+    <ROW Action="AI_SqlMaint" Type="9217" Source="sql.dll" Target="OnSqlMaint" WithoutSeq="true"/>
+    <ROW Action="AI_SqlRemove" Type="9217" Source="sql.dll" Target="OnSqlRemove" WithoutSeq="true"/>
+    <ROW Action="AI_SqlRollback" Type="9473" Source="sql.dll" Target="OnSqlRollback" WithoutSeq="true"/>
+    <ROW Action="AI_SqlUninstall" Type="1" Source="sql.dll" Target="OnSqlUninstall" AdditionalSeq="AI_DATA_SETTER_26"/>
     <ROW Action="AI_TxtUpdaterCommit" Type="11777" Source="TxtUpdater.dll" Target="OnTxtUpdaterCommit" WithoutSeq="true"/>
     <ROW Action="AI_TxtUpdaterConfig" Type="11265" Source="TxtUpdater.dll" Target="OnTxtUpdaterConfig" WithoutSeq="true"/>
     <ROW Action="AI_TxtUpdaterInstall" Type="1" Source="TxtUpdater.dll" Target="OnTxtUpdaterInstall"/>
@@ -1010,11 +1025,11 @@
     <ROW Action="AI_XmlRollback" Type="11521" Source="xmlCfg.dll" Target="OnXmlRollback" WithoutSeq="true"/>
     <ROW Action="AI_XmlUninstall" Type="1" Source="xmlCfg.dll" Target="OnXmlUninstall" AdditionalSeq="AI_DATA_SETTER_15"/>
     <ROW Action="DetectMySQLService" Type="1" Source="aicustact.dll" Target="DetectProcess" Options="3" AdditionalSeq="AI_DATA_SETTER_9"/>
-    <ROW Action="ElasticSearchInstallPlugin" Type="1030" Source="utils.vbs" Target="ElasticSearchInstallPlugin"/>
-    <ROW Action="ElasticSearchSetup" Type="6" Source="utils.vbs" Target="ElasticSearchSetup"/>
     <ROW Action="MoveNginxConfigs" Type="4102" Source="utils.vbs" Target="MoveNginxConfigs"/>
     <ROW Action="MySQLConfigure" Type="262" Source="utils.vbs" Target="MySQLConfigure"/>
     <ROW Action="OpenCancelUrl" Type="194" Source="viewer.exe" Target="http://www.onlyoffice.com/install-canceled.aspx" WithoutSeq="true" Options="1"/>
+    <ROW Action="OpenSearchInstallPlugin" Type="1030" Source="utils.vbs" Target="OpenSearchInstallPlugin"/>
+    <ROW Action="OpenSearchSetup" Type="6" Source="utils.vbs" Target="OpenSearchSetup"/>
     <ROW Action="PostgreSQLConfigure" Type="4102" Source="utils.vbs" Target="PostgreSqlConfigure"/>
     <ROW Action="RedisSearchSetup" Type="6" Source="utils.vbs" Target="RedisSetup"/>
     <ROW Action="SET_APPDIR" Type="307" Source="APPDIR" Target="[ProgramFilesFolder][Manufacturer]\[ProductName]" MultiBuildTarget="DefaultBuild:[ProgramFilesFolder][INSTALL_ROOT_FOLDER_NAME]\DocSpace#ExeBuild:[ProgramFilesFolder][INSTALL_ROOT_FOLDER_NAME]\DocSpace"/>
@@ -1028,17 +1043,17 @@
     <ROW Action="Set_DS_JWT_HEADER" Type="51" Source="DOCUMENT_SERVER_JWT_HEADER" Target="[JWT_HEADER]"/>
     <ROW Action="Set_DS_JWT_SECRET" Type="51" Source="DOCUMENT_SERVER_JWT_SECRET" Target="[JWT_SECRET]"/>
     <ROW Action="Set_LICENSE_PATH" Type="51" Source="LICENSE_PATH" Target="[APPDIR]\Data\license.lic"/>
-    <ROW Action="StartElasticSearchService" Type="3073" Source="aicustact.dll" Target="StartWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_13"/>
     <ROW Action="StartMigrationRunner" Type="3074" Source="viewer.exe" Target="/EnforcedRunAsAdmin /RunAsAdmin /HideWindow /dir &quot;[APPDIR]services\ASC.Migration.Runner\service&quot; &quot;[APPDIR]services\ASC.Migration.Runner\service\ASC.Migration.Runner.exe&quot; standalone=true" Options="1"/>
     <ROW Action="StartMySQLService" Type="1" Source="aicustact.dll" Target="StartWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_11"/>
     <ROW Action="StartOpenResty" Type="1" Source="aicustact.dll" Target="StartWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_24"/>
+    <ROW Action="StartOpenSearchService" Type="3073" Source="aicustact.dll" Target="StartWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_13"/>
     <ROW Action="StartService" Type="3073" Source="aicustact.dll" Target="StartWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_19"/>
-    <ROW Action="StopElasticSearchService" Type="1" Source="aicustact.dll" Target="StopWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_12"/>
     <ROW Action="StopMySQLService" Type="1" Source="aicustact.dll" Target="StopWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_10"/>
     <ROW Action="StopOpenResty" Type="1" Source="aicustact.dll" Target="StopWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_23"/>
+    <ROW Action="StopOpenSearchService" Type="1" Source="aicustact.dll" Target="StopWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_12"/>
     <ROW Action="StopRedisService" Type="3073" Source="aicustact.dll" Target="StopWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_16"/>
-    <ROW Action="TestElasticsearchConnection" Type="1" Source="Utils.CA.dll" Target="CheckTCPAvailability" WithoutSeq="true" AdditionalSeq="AI_DATA_SETTER_1"/>
-    <ROW Action="TestElasticsearchConnectionMsgBox" Type="1" Source="aicustact.dll" Target="MsgBox" WithoutSeq="true" Options="1" AdditionalSeq="AI_DATA_SETTER"/>
+    <ROW Action="TestOpenSearchConnection" Type="1" Source="Utils.CA.dll" Target="CheckTCPAvailability" WithoutSeq="true" AdditionalSeq="AI_DATA_SETTER_1"/>
+    <ROW Action="TestOpenSearchConnectionMsgBox" Type="1" Source="aicustact.dll" Target="MsgBox" WithoutSeq="true" Options="1" AdditionalSeq="AI_DATA_SETTER"/>
     <ROW Action="TestPostgreSqlConnection" Type="4102" Source="utils.vbs" Target="TestPostgreSqlConnection" WithoutSeq="true"/>
     <ROW Action="TestPostgreSqlConnectionMsgBox" Type="1" Source="aicustact.dll" Target="MsgBox" WithoutSeq="true" Options="1" AdditionalSeq="AI_DATA_SETTER_20"/>
     <ROW Action="TestRabbitMQConnectionMsgBox" Type="1" Source="aicustact.dll" Target="MsgBox" WithoutSeq="true" AdditionalSeq="AI_DATA_SETTER_18"/>
@@ -1049,7 +1064,7 @@
     <ROW Action="TestSqlConnection" Type="6" Source="utils.vbs" Target="TestSqlConnection" WithoutSeq="true"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiDialogComponent">
-    <ROW Dialog="ELKConnectionDlg" HCentering="50" VCentering="50" Width="370" Height="270" Attributes="3" Title="[ProductName] [Setup]" Control_Default="Next" Control_Cancel="Cancel"/>
+    <ROW Dialog="OpenSearchConnectionDlg" HCentering="50" VCentering="50" Width="370" Height="270" Attributes="3" Title="[ProductName] [Setup]" Control_Default="Next" Control_Cancel="Cancel"/>
     <ROW Dialog="PostgreSQLConnectionDlg" HCentering="50" VCentering="50" Width="370" Height="270" Attributes="3" Title="[ProductName] [Setup]" Control_Default="Next" Control_Cancel="Cancel"/>
     <ROW Dialog="PrereqLicenseAgreementDlg" HCentering="50" VCentering="50" Width="370" Height="270" Attributes="3" Title="[ProductName] [Setup]" Control_Default="Next" Control_Cancel="Cancel" TitleLocId="-"/>
     <ROW Dialog="RabbitMQConnectionDlg" HCentering="50" VCentering="50" Width="370" Height="270" Attributes="3" Title="[ProductName] [Setup]" Control_Default="Next" Control_Cancel="Cancel"/>
@@ -1186,11 +1201,11 @@
     <ROW Action="AI_DATA_SETTER_6" Condition="( NOT Installed )" Sequence="1621"/>
     <ROW Action="DetectMySQLService" Condition="( ( NOT Installed AND NOT OLDPRODUCTS ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1609"/>
     <ROW Action="AI_DATA_SETTER_9" Condition="( ( NOT Installed AND NOT OLDPRODUCTS ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1608"/>
-    <ROW Action="ElasticSearchSetup" Condition="( NOT Installed )" Sequence="1617"/>
-    <ROW Action="StopElasticSearchService" Condition="( NOT Installed )" Sequence="1615"/>
+    <ROW Action="OpenSearchSetup" Condition="( NOT Installed )" Sequence="1617"/>
+    <ROW Action="StopOpenSearchService" Condition="( NOT Installed )" Sequence="1615"/>
     <ROW Action="AI_DATA_SETTER_12" Condition="( NOT Installed )" Sequence="1614"/>
-    <ROW Action="ElasticSearchInstallPlugin" Condition="( NOT Installed )" Sequence="1616"/>
-    <ROW Action="StartElasticSearchService" Condition="( NOT Installed )" Sequence="1619"/>
+    <ROW Action="OpenSearchInstallPlugin" Condition="( NOT Installed )" Sequence="1616"/>
+    <ROW Action="StartOpenSearchService" Condition="( NOT Installed )" Sequence="1619"/>
     <ROW Action="AI_DATA_SETTER_13" Condition="( NOT Installed )" Sequence="1618"/>
     <ROW Action="AI_GetArpIconPath" Sequence="1401"/>
     <ROW Action="StartMySQLService" Condition="( NOT Installed AND NOT OLDPRODUCTS ) AND ( AI_PROCESS_STATE &lt;&gt; &quot;Not Found&quot; )" Sequence="1613"/>
@@ -1226,6 +1241,10 @@
     <ROW Action="StartOpenResty" Condition="( NOT Installed )" Sequence="6605"/>
     <ROW Action="AI_DATA_SETTER_24" Condition="( NOT Installed )" Sequence="6604"/>
     <ROW Action="Set_LICENSE_PATH" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) OR ( Installed AND ( REMOVE = &quot;ALL&quot; OR AI_INSTALL_MODE = &quot;Remove&quot; ) AND UPGRADINGPRODUCTCODE ) )" Sequence="201"/>
+    <ROW Action="AI_SqlInstall" Condition="(VersionNT &gt;= 500) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5502"/>
+    <ROW Action="AI_DATA_SETTER_25" Condition="(VersionNT &gt;= 500) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5501"/>
+    <ROW Action="AI_SqlUninstall" Condition="(VersionNT &gt;= 500) AND (REMOVE=&quot;ALL&quot;)" Sequence="1704"/>
+    <ROW Action="AI_DATA_SETTER_26" Condition="(VersionNT &gt;= 500) AND (REMOVE=&quot;ALL&quot;)" Sequence="1703"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstallUISequenceComponent">
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>
@@ -1272,7 +1291,7 @@
     <ROW Signature_="AI_EXE_PATH_LM" Root="2" Key="Software\Caphyon\Advanced Installer\LZMA\[ProductCode]\[ProductVersion]" Name="AI_ExePath" Type="2"/>
     <ROW Signature_="AppSearchSign" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="REDIS_PWD" Type="2"/>
     <ROW Signature_="AppSearchSign_1" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="REDIS_PORT" Type="2"/>
-    <ROW Signature_="AppSearchSign_10" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="ELASTICSEARCH_HOST" Type="2"/>
+    <ROW Signature_="AppSearchSign_10" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="OPENSEARCH_HOST" Type="2"/>
     <ROW Signature_="AppSearchSign_11" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="DB_USER" Type="2"/>
     <ROW Signature_="AppSearchSign_12" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="DB_PWD" Type="2"/>
     <ROW Signature_="AppSearchSign_13" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="DB_PORT" Type="2"/>
@@ -1294,8 +1313,8 @@
     <ROW Signature_="AppSearchSign_5" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_PORT" Type="2"/>
     <ROW Signature_="AppSearchSign_6" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_NAME" Type="2"/>
     <ROW Signature_="AppSearchSign_7" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_HOST" Type="2"/>
-    <ROW Signature_="AppSearchSign_8" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="ELASTICSEARCH_SCHEME" Type="2"/>
-    <ROW Signature_="AppSearchSign_9" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="ELASTICSEARCH_PORT" Type="2"/>
+    <ROW Signature_="AppSearchSign_8" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="OPENSEARCH_SCHEME" Type="2"/>
+    <ROW Signature_="AppSearchSign_9" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="OPENSEARCH_PORT" Type="2"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiRegsComponent">
     <ROW Registry="AI_ExePath" Root="-1" Key="Software\Caphyon\Advanced Installer\LZMA\[ProductCode]\[ProductVersion]" Name="AI_ExePath" Value="[AI_SETUPEXEPATH]" Component_="AI_ExePath"/>
@@ -1327,9 +1346,6 @@
     <ROW Registry="HelpTelephone" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="HelpTelephone" Value="[ARPHELPTELEPHONE]" Component_="AI_CustomARPName"/>
     <ROW Registry="InstallLocation" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="InstallLocation" Value="[APPDIR]" Component_="AI_CustomARPName"/>
     <ROW Registry="DOCUMENT_SERVER_PORT" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="DOCUMENT_SERVER_PORT" Value="[DOCUMENT_SERVER_PORT]" Component_="APPDIR"/>
-    <ROW Registry="ELASTICSEARCH_HOST" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="ELASTICSEARCH_HOST" Value="[ELASTICSEARCH_HOST]" Component_="APPDIR"/>
-    <ROW Registry="ELASTICSEARCH_PORT" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="ELASTICSEARCH_PORT" Value="[ELASTICSEARCH_PORT]" Component_="APPDIR"/>
-    <ROW Registry="ELASTICSEARCH_SCHEME" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="ELASTICSEARCH_SCHEME" Value="[ELASTICSEARCH_SCHEME]" Component_="APPDIR"/>
     <ROW Registry="LZMA" Root="-1" Key="Software\Caphyon\Advanced Installer\LZMA" Name="\"/>
     <ROW Registry="MACHINE_KEY" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="MACHINE_KEY" Value="[MACHINE_KEY]" Component_="MACHINE_KEY"/>
     <ROW Registry="Manufacturer_2" Root="2" Key="Software\[Manufacturer]" Name="\"/>
@@ -1337,6 +1353,9 @@
     <ROW Registry="ModifyPath" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="ModifyPath" Value="[AI_UNINSTALLER] /i [ProductCode] AI_UNINSTALLER_CTP=1" Component_="AI_CustomARPName"/>
     <ROW Registry="NoModify" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="NoModify" Value="#1" Component_="AI_DisableModify" VirtualValue="#"/>
     <ROW Registry="NoRepair" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="NoRepair" Value="#1" Component_="AI_CustomARPName" VirtualValue="#"/>
+    <ROW Registry="OPENSEARCH_HOST" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="OPENSEARCH_HOST" Value="[OPENSEARCH_HOST]" Component_="APPDIR"/>
+    <ROW Registry="OPENSEARCH_PORT" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="OPENSEARCH_PORT" Value="[OPENSEARCH_PORT]" Component_="APPDIR"/>
+    <ROW Registry="OPENSEARCH_SCHEME" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="OPENSEARCH_SCHEME" Value="[OPENSEARCH_SCHEME]" Component_="APPDIR"/>
     <ROW Registry="PS_DB_HOST" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_HOST" Value="[PS_DB_HOST]" Component_="APPDIR"/>
     <ROW Registry="PS_DB_NAME" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_NAME" Value="[PS_DB_NAME]" Component_="APPDIR"/>
     <ROW Registry="PS_DB_PORT" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_PORT" Value="[PS_DB_PORT]" Component_="APPDIR"/>
@@ -1455,7 +1474,6 @@
     <ROW PrereqKey="DocumentServer" DisplayName="DocumentServer" SetupFileUrl="onlyoffice-documentserver.exe" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/VERYSILENT /norestart /DIR=&quot;[APPDIR]..\DocumentServer&quot; /DS_PORT=&quot;[DOCUMENT_SERVER_PORT]&quot; /JWT_ENABLED=&quot;[DOCUMENT_SERVER_JWT_ENABLED]&quot; /JWT_SECRET=&quot;[DOCUMENT_SERVER_JWT_SECRET]&quot; /JWT_HEADER=&quot;[DOCUMENT_SERVER_JWT_HEADER]&quot; /DB_HOST=&quot;[PS_DB_HOST]&quot; /DB_USER=&quot;[PS_DB_USER]&quot; /DB_PWD=&quot;[PS_DB_PWD]&quot; /DB_NAME=&quot;[PS_DB_NAME]&quot; /LOG" BasicUiComLine="/VERYSILENT /norestart /DIR=&quot;[APPDIR]..\DocumentServer&quot; /DS_PORT=&quot;[DOCUMENT_SERVER_PORT]&quot; /JWT_ENABLED=&quot;[DOCUMENT_SERVER_JWT_ENABLED]&quot; /JWT_SECRET=&quot;[DOCUMENT_SERVER_JWT_SECRET]&quot; /JWT_HEADER=&quot;[DOCUMENT_SERVER_JWT_HEADER]&quot; /DB_HOST=&quot;[PS_DB_HOST]&quot; /DB_USER=&quot;[PS_DB_USER]&quot; /DB_PWD=&quot;[PS_DB_PWD]&quot; /DB_NAME=&quot;[PS_DB_NAME]&quot; /LOG" NoUiComLine="/VERYSILENT /norestart /DIR=&quot;[APPDIR]..\DocumentServer&quot; /DS_PORT=&quot;[DOCUMENT_SERVER_PORT]&quot; /JWT_ENABLED=&quot;[DOCUMENT_SERVER_JWT_ENABLED]&quot; /JWT_SECRET=&quot;[DOCUMENT_SERVER_JWT_SECRET]&quot; /JWT_HEADER=&quot;[DOCUMENT_SERVER_JWT_HEADER]&quot; /DB_HOST=&quot;[PS_DB_HOST]&quot; /DB_USER=&quot;[PS_DB_USER]&quot; /DB_PWD=&quot;[PS_DB_PWD]&quot; /DB_NAME=&quot;[PS_DB_NAME]&quot; /LOG" Options="fi=" TargetName="onlyoffice-documentserver.exe" Builds="DefaultBuild" Feature="DocumentServer" RepairComLine="/VERYSILENT /norestart /DIR=&quot;[APPDIR]..\DocumentServer&quot; /DS_PORT=&quot;[DOCUMENT_SERVER_PORT]&quot; /JWT_ENABLED=&quot;[DOCUMENT_SERVER_JWT_ENABLED]&quot; /JWT_SECRET=&quot;[DOCUMENT_SERVER_JWT_SECRET]&quot; /JWT_HEADER=&quot;[DOCUMENT_SERVER_JWT_HEADER]&quot; /DB_HOST=&quot;[PS_DB_HOST]&quot; /DB_USER=&quot;[PS_DB_USER]&quot; /DB_PWD=&quot;[PS_DB_PWD]&quot; /DB_NAME=&quot;[PS_DB_NAME]&quot; /LOG"/>
     <ROW PrereqKey="DocumentServer.EE" DisplayName="DocumentServer-EE" SetupFileUrl="onlyoffice-documentserver-ee.exe" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/VERYSILENT /norestart /DIR=&quot;[APPDIR]..\DocumentServer&quot; /DS_PORT=&quot;[DOCUMENT_SERVER_PORT]&quot; /JWT_ENABLED=&quot;[DOCUMENT_SERVER_JWT_ENABLED]&quot; /JWT_SECRET=&quot;[DOCUMENT_SERVER_JWT_SECRET]&quot; /JWT_HEADER=&quot;[DOCUMENT_SERVER_JWT_HEADER]&quot; /DB_HOST=&quot;[PS_DB_HOST]&quot; /DB_USER=&quot;[PS_DB_USER]&quot; /DB_PWD=&quot;[PS_DB_PWD]&quot; /DB_NAME=&quot;[PS_DB_NAME]&quot; /LICENSE_PATH=&quot;[APPDIR]Data\license.lic&quot; /LOG" BasicUiComLine="/VERYSILENT /norestart /DIR=&quot;[APPDIR]..\DocumentServer&quot; /DS_PORT=&quot;[DOCUMENT_SERVER_PORT]&quot; /JWT_ENABLED=&quot;[DOCUMENT_SERVER_JWT_ENABLED]&quot; /JWT_SECRET=&quot;[DOCUMENT_SERVER_JWT_SECRET]&quot; /JWT_HEADER=&quot;[DOCUMENT_SERVER_JWT_HEADER]&quot; /DB_HOST=&quot;[PS_DB_HOST]&quot; /DB_USER=&quot;[PS_DB_USER]&quot; /DB_PWD=&quot;[PS_DB_PWD]&quot; /DB_NAME=&quot;[PS_DB_NAME]&quot; /LICENSE_PATH=&quot;[APPDIR]Data\license.lic&quot; /LOG" NoUiComLine="/VERYSILENT /norestart /DIR=&quot;[APPDIR]..\DocumentServer&quot; /DS_PORT=&quot;[DOCUMENT_SERVER_PORT]&quot; /JWT_ENABLED=&quot;[DOCUMENT_SERVER_JWT_ENABLED]&quot; /JWT_SECRET=&quot;[DOCUMENT_SERVER_JWT_SECRET]&quot; /JWT_HEADER=&quot;[DOCUMENT_SERVER_JWT_HEADER]&quot; /DB_HOST=&quot;[PS_DB_HOST]&quot; /DB_USER=&quot;[PS_DB_USER]&quot; /DB_PWD=&quot;[PS_DB_PWD]&quot; /DB_NAME=&quot;[PS_DB_NAME]&quot; /LICENSE_PATH=&quot;[APPDIR]Data\license.lic&quot; /LOG" Options="fi=" TargetName="onlyoffice-documentserver-ee.exe" Builds="ExeBuild" Feature="DocumentServer.EE" RepairComLine="/VERYSILENT /norestart /DIR=&quot;[APPDIR]..\DocumentServer&quot; /DS_PORT=&quot;[DOCUMENT_SERVER_PORT]&quot; /JWT_ENABLED=&quot;[DOCUMENT_SERVER_JWT_ENABLED]&quot; /JWT_SECRET=&quot;[DOCUMENT_SERVER_JWT_SECRET]&quot; /JWT_HEADER=&quot;[DOCUMENT_SERVER_JWT_HEADER]&quot; /DB_HOST=&quot;[PS_DB_HOST]&quot; /DB_USER=&quot;[PS_DB_USER]&quot; /DB_PWD=&quot;[PS_DB_PWD]&quot; /DB_NAME=&quot;[PS_DB_NAME]&quot; /LICENSE_PATH=&quot;[APPDIR]Data\license.lic&quot; /LOG"/>
     <ROW PrereqKey="EA5B60A5CAD4115A8386D017CC889B9" DisplayName="ASP.NET Core Runtime 7.0.3 x64" VersionMin="7.0" SetupFileUrl="https://download.visualstudio.microsoft.com/download/pr/d37efccc-2ba1-4fc9-a1ef-a8e1e77fb681/b9a20fc29ff05f18d81620ec88ade699/aspnetcore-runtime-7.0.3-win-x64.exe" Location="1" ExactSize="9562088" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" WinNT64Versions="Windows Vista x64, Windows Server 2008 x64, Windows 7 RTM x64, Windows Server 2008 R2 x64, Windows 8 x64, Windows Server 2012 x64, Windows 10 version 1507 x64, Windows 10 version 1511 x64" Operator="1" ComLine="/q /norestart" BasicUiComLine="/q /norestart" NoUiComLine="/q /norestart" Options="xym" MD5="a87c53a62579d43c6e20683ad686c991" TargetName="ASP.NET Core 7.0" Builds="DefaultBuild"/>
-    <ROW PrereqKey="Elasticsearch7.16.3" DisplayName="Elasticsearch v7.16.3 x64" VersionMin="7.16.3" SetupFileUrl="redist\elasticsearch-7.16.3.msi" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="y" TargetName="Elasticsearch 7.16.3\elasticsearch-7.16.3.msi" Builds="ExeBuild"/>
     <ROW PrereqKey="ErlangOTP" DisplayName="Erlang v26.0.2 x64" VersionMin="26.0.2" SetupFileUrl="redist\otp_win64_26.0.2.exe" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/S" BasicUiComLine="/S" NoUiComLine="/S" Options="ym" TargetName="ErlangOTP\otp_win64_26.0.2.exe" Builds="ExeBuild"/>
     <ROW PrereqKey="Erlangv26.0x64" DisplayName="Erlang v26.0.2 x64" VersionMin="26.0.2" SetupFileUrl="https://github.com/erlang/otp/releases/download/OTP-26.0.2/otp_win64_26.0.2.exe" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/S" BasicUiComLine="/S" NoUiComLine="/S" Options="ym" TargetName="Erlang v26.0 x64" Builds="DefaultBuild"/>
     <ROW PrereqKey="F3520F64DA5998338D97129FAD2" DisplayName=".NET Runtime 7.0.3 x64" VersionMin="7.0" SetupFileUrl="https://download.visualstudio.microsoft.com/download/pr/c69813b7-2ece-4c2e-8c45-e33006985e18/61cc8fe4693a662b2da55ad932a46446/dotnet-runtime-7.0.3-win-x64.exe" Location="1" ExactSize="28223424" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" WinNT64Versions="Windows Vista x64, Windows Server 2008 x64, Windows 7 RTM x64, Windows Server 2008 R2 x64, Windows 8 x64, Windows Server 2012 x64, Windows 10 version 1507 x64, Windows 10 version 1511 x64" Operator="1" ComLine="/q /norestart" BasicUiComLine="/q /norestart" NoUiComLine="/q /norestart" Options="ym" MD5="c9d6796b57a1630d4f004302262c241e" TargetName=".NET 7.0" Builds="DefaultBuild"/>
@@ -1472,18 +1490,18 @@
     <ROW PrereqKey="MySQLInstallerRunn" DisplayName="MySQL Installer Community 8.0.33 x86 Runner" SetupFileUrl="MySQL Installer Runner.exe" Location="0" ExactSize="0" Operator="1" ComLine="/VERYSILENT /DB_PWD=&quot;root&quot; /MYSQL_VERSION=&quot;8.0.33&quot;" BasicUiComLine="/VERYSILENT /DB_PWD=&quot;root&quot; /MYSQL_VERSION=&quot;8.0.33&quot;" NoUiComLine="/VERYSILENT /DB_PWD=&quot;root&quot; /MYSQL_VERSION=&quot;8.0.33&quot;" Options="y" TargetName="MySQL Installer Runner                                      \MySQL Installer Runner.exe" ParentPrereq="RequiredApplication_2"/>
     <ROW PrereqKey="Node.js" DisplayName="Node.js 18.16.1" VersionMin="18.16.0" SetupFileUrl="redist\node-v18.16.1-x64.msi" Location="0" ExactSize="0" Operator="0" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="ym" TargetName="Node.js\node-v18.16.1-x64.msi" Builds="ExeBuild"/>
     <ROW PrereqKey="OpenResty" DisplayName="OpenResty v1.21.4" VersionMin="1.21.4.2" SetupFileUrl="publish\OpenResty.msi" Location="0" ExactSize="0" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="yxm" TargetName="OpenResty\OpenResty.msi"/>
+    <ROW PrereqKey="OpenSearch2.11.1" DisplayName="OpenSearch v2.11.1 x64" VersionMin="2.11.1" SetupFileUrl="publish\OpenSearch-2.11.1.msi" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="y" TargetName="OpenSearch 2.11.1\OpenSearch-2.11.1.msi"/>
     <ROW PrereqKey="PostgreSQL_ODBC" DisplayName="PostgreSQL ODBC Driver v15.0 x64" SetupFileUrl="psqlodbc_15_x64.msi" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="myx" TargetName="psqlodbc_x64.msi"/>
     <ROW PrereqKey="PostgresSQL" DisplayName="PostgreSQL v14.0 x64" VersionMin="14.0" SetupFileUrl="postgresql-14.0-1-windows-x64.exe" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="--unattendedmodeui none --install_runtimes 0 --mode unattended --superaccount &quot;postgres&quot; --superpassword &quot;postgres&quot;" BasicUiComLine="--unattendedmodeui none --install_runtimes 0 --mode unattended --superaccount &quot;postgres&quot; --superpassword &quot;postgres&quot;" NoUiComLine="--unattendedmodeui none --install_runtimes 0 --mode unattended --superaccount &quot;postgres&quot; --superpassword &quot;postgres&quot;" Options="xy" TargetName="postgresql-14.0-1-windows-x64.exe"/>
     <ROW PrereqKey="RabbitMQServer" DisplayName="RabbitMQ v3.12.1 x64" VersionMin="3.12" SetupFileUrl="redist\rabbitmq-server-3.12.1.exe" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/S" BasicUiComLine="/S" NoUiComLine="/S" Options="yx" TargetName="RabbitMQ Server\rabbitmq-server-3.12.1.exe" Builds="ExeBuild"/>
     <ROW PrereqKey="RedisonWindows" DisplayName="Redis 5.0.10 x64" VersionMin="5.0" SetupFileUrl="redist\Redis-x64-5.0.10.msi" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet ADD_INSTALLFOLDER_TO_PATH=1" BasicUiComLine="/quiet ADD_INSTALLFOLDER_TO_PATH=1" NoUiComLine="/quiet ADD_INSTALLFOLDER_TO_PATH=1" Options="yx" TargetName="Redis on Windows\Redis-x64-5.0.10.msi" Builds="ExeBuild"/>
-    <ROW PrereqKey="RequiredApplication" DisplayName="MySQL Connector/ODBC 8.0.33 x86" VersionMin="8.0.33" SetupFileUrl="https://cdn.mysql.com/Downloads/Connector-ODBC/8.0/mysql-connector-odbc-8.0.33-win32.msi" Location="1" ExactSize="0" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="ym" TargetName="MySQL Connector ODBC 8.0.33 x86" Builds="DefaultBuild"/>
+    <ROW PrereqKey="RequiredApplication" DisplayName="MySQL Connector/ODBC 8.0.33 x86" VersionMin="8.0.33" SetupFileUrl="https://cdn.mysql.com/archives/mysql-connector-odbc-8.0/mysql-connector-odbc-8.0.33-win32.msi" Location="1" ExactSize="0" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="ym" TargetName="MySQL Connector ODBC 8.0.33 x86" Builds="DefaultBuild"/>
     <ROW PrereqKey="RequiredApplication_1" DisplayName="Node.js 18.16.1" VersionMin="18.16.0" SetupFileUrl="https://nodejs.org/dist/v18.16.1/node-v18.16.1-x64.msi" Location="1" ExactSize="0" Operator="0" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="my" TargetName="Node.js v18.16.1 x64" Builds="DefaultBuild"/>
-    <ROW PrereqKey="RequiredApplication_2" DisplayName="MySQL Installer Community 8.0.33 x86" VersionMin="1.6.6.0" SetupFileUrl="https://cdn.mysql.com/Downloads/MySQLInstaller/mysql-installer-community-8.0.33.0.msi" Location="1" ExactSize="0" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="y" TargetName="MySQL Installer Community 8.0.33 x86" Builds="DefaultBuild"/>
+    <ROW PrereqKey="RequiredApplication_2" DisplayName="MySQL Installer Community 8.0.33 x86" VersionMin="1.6.6.0" SetupFileUrl="https://cdn.mysql.com/archives/mysql-installer/mysql-installer-community-8.0.33.0.msi" Location="1" ExactSize="0" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="y" TargetName="MySQL Installer Community 8.0.33 x86" Builds="DefaultBuild"/>
     <ROW PrereqKey="RequiredApplication_3" DisplayName="Certbot v2.6.0" VersionMin="2.6.0" SetupFileUrl="redist\certbot-2.6.0.exe" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/S" BasicUiComLine="/S" NoUiComLine="/S" Options="yxm" TargetName="Required Application\certbot-2.6.0.exe" Builds="ExeBuild"/>
-    <ROW PrereqKey="RequiredApplication_4" DisplayName="Elasticsearch v7.16.3 x64" VersionMin="7.16.3" SetupFileUrl="https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.16.3.msi" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="y" TargetName="Elasticsearch v7.16.3 x64" Builds="DefaultBuild"/>
     <ROW PrereqKey="RequiredApplication_5" DisplayName="RabbitMQ v3.12.1 x64" VersionMin="3.12" SetupFileUrl="https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.12.1/rabbitmq-server-3.12.1.exe" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/S" BasicUiComLine="/S" NoUiComLine="/S" Options="yx" TargetName="RabbitMQ v3.12.1 x64" Builds="DefaultBuild"/>
     <ROW PrereqKey="RequiredApplication_6" DisplayName="Redis 5.0.10 x64" VersionMin="5.0" SetupFileUrl="http://download.onlyoffice.com/install/windows/redist/Redis-x64-5.0.10.msi" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet ADD_INSTALLFOLDER_TO_PATH=1" BasicUiComLine="/quiet ADD_INSTALLFOLDER_TO_PATH=1" NoUiComLine="/quiet ADD_INSTALLFOLDER_TO_PATH=1" Options="yx" TargetName="Redis 5.0.10 x64" Builds="DefaultBuild"/>
-    <ATTRIBUTE name="PrereqsOrder" value="B96F93FA27E74B02866727AAE83982D0 Microsoft.NETFrame F3520F64DA5998338D97129FAD2 Microsoft.NETRunti EA5B60A5CAD4115A8386D017CC889B9 MicrosoftASP.NETCo CA62D813A4E74FA2AAE86A7D7B7B1493 MicrosoftVisualC A918597FE054CCCB65ABDBA0AD8F63C MicrosoftVisualC_1 C4FE6FD5B7C4D07B3A313E754A9A6A8 MicrosoftVisualC_2 RequiredApplication MySQLConnectorODBC RequiredApplication_2 MySQLInstallerCo MySQLInstallerRunn RequiredApplication_1 Node.js RequiredApplication_4 Elasticsearch7.16.3 Erlangv26.0x64 ErlangOTP RequiredApplication_5 RabbitMQServer RequiredApplication_6 RedisonWindows FFmpegx64 FFmpegEssentials Certbot RequiredApplication_3 PostgreSQL_ODBC PostgresSQL OpenResty DocumentServer DocumentServer.EE"/>
+    <ATTRIBUTE name="PrereqsOrder" value="B96F93FA27E74B02866727AAE83982D0 Microsoft.NETFrame F3520F64DA5998338D97129FAD2 Microsoft.NETRunti EA5B60A5CAD4115A8386D017CC889B9 MicrosoftASP.NETCo CA62D813A4E74FA2AAE86A7D7B7B1493 MicrosoftVisualC A918597FE054CCCB65ABDBA0AD8F63C MicrosoftVisualC_1 C4FE6FD5B7C4D07B3A313E754A9A6A8 MicrosoftVisualC_2 RequiredApplication MySQLConnectorODBC RequiredApplication_2 MySQLInstallerCo MySQLInstallerRunn RequiredApplication_1 Node.js OpenSearch2.11.1 Erlangv26.0x64 ErlangOTP RequiredApplication_5 RabbitMQServer RequiredApplication_6 RedisonWindows FFmpegx64 FFmpegEssentials Certbot RequiredApplication_3 PostgreSQL_ODBC PostgresSQL OpenResty DocumentServer DocumentServer.EE"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.PreReqSearchComponent">
     <ROW SearchKey="A918597FE054CCCB65ABDBA0AD8F63CSyst" Prereq="A918597FE054CCCB65ABDBA0AD8F63C" SearchType="0" SearchString="[SystemFolder]vcruntime140.dll" VerMin="14.26.28720" Order="2" Property="PreReqSearch_A918597FE054CCCB65ABDB"/>
@@ -1513,21 +1531,24 @@
     <ROW SearchKey="SystemFolderfile.dll_9" Prereq="MicrosoftVisualC_1" SearchType="2" SearchString="HKLM\SOFTWARE\Microsoft\DevDiv\VC\Servicing\14.0\RuntimeMinimum\Version" VerMin="14.26.28720" Order="1" Property="PreReqSearch_18"/>
     <ROW SearchKey="SystemFoldervcruntime140.dll" Prereq="MicrosoftVisualC_1" SearchType="0" SearchString="[SystemFolder]vcruntime140.dll" VerMin="14.26.28720" Order="2" Property="PreReqSearch_19"/>
     <ROW SearchKey="UpgradeCode" Prereq="PostgreSQL_ODBC" SearchType="4" SearchString="{BBD29DF5-89F6-4B8B-BDC9-C3EA3A4AFDBB}" VerMin="15.0" Order="1" Property="PreReqSearch_14"/>
-    <ROW SearchKey="UpgradeCode_1" Prereq="RequiredApplication_4" SearchType="4" SearchString="{DAAA2CBA-A1ED-4F29-AFBF-5478617B00F6}" VerMin="7.16.3" Order="2" Property="PreReqSearch_7"/>
     <ROW SearchKey="UpgradeCode_2" Prereq="MySQLConnectorODBC" SearchType="4" SearchString="{7AEDB3F3-7B9D-4FE2-8D8F-3CE3DE6F5B6B}" VerMin="8.0.33" Order="1" Property="PreReqSearch_21"/>
     <ROW SearchKey="UpgradeCode_3" Prereq="RequiredApplication_6" SearchType="4" SearchString="{05410198-7212-4FC4-B7C8-AFEFC3DA0FBC}" VerMin="5.0.10" Order="2" Property="PreReqSearch_12"/>
     <ROW SearchKey="UpgradeCode_4" Prereq="MySQLInstallerCo" SearchType="4" SearchString="{18B94B70-06F1-4AC0-B308-37280DB868C2}" VerMin="1.6.6.0" Order="1" Property="PreReqSearch_22"/>
     <ROW SearchKey="UpgradeCode_5" Prereq="Node.js" SearchType="4" SearchString="{47C07A3A-42EF-4213-A85D-8F5A59077C28}" VerMin="18.16.0" Order="1" Property="PreReqSearch_23"/>
     <ROW SearchKey="UpgradeCode_6" Prereq="RedisonWindows" SearchType="4" SearchString="{05410198-7212-4FC4-B7C8-AFEFC3DA0FBC}" VerMin="5.0.10" Order="1" Property="PreReqSearch_26"/>
     <ROW SearchKey="UpgradeCode_7" Prereq="FFmpegEssentials" SearchType="4" SearchString="{384A74EC-865A-4907-8561-9DE765EE6E14}" Order="1" Property="PreReqSearch_27"/>
-    <ROW SearchKey="UpgradeCode_8" Prereq="Elasticsearch7.16.3" SearchType="4" SearchString="{DAAA2CBA-A1ED-4F29-AFBF-5478617B00F6}" VerMin="7.16.3" Order="1" Property="PreReqSearch_29"/>
+    <ROW SearchKey="UpgradeCode_8" Prereq="OpenSearch2.11.1" SearchType="4" SearchString="{F8561DF7-6238-4927-8DAC-AD0EBC117F6C}" VerMin="2.11.1" Order="1" Property="PreReqSearch_29"/>
     <ROW SearchKey="Version" Prereq="MySQLInstallerRunn" SearchType="2" SearchString="HKLM\SOFTWARE\MySQL AB\MySQL Server 5.7\Version" Order="1" Property="PreReqSearch_4"/>
     <ROW SearchKey="Version_1" Prereq="MySQLInstallerRunn" SearchType="2" SearchString="HKLM\SOFTWARE\MySQL AB\MySQL Server 8.0\Version" Order="2" Property="PreReqSearch_5"/>
     <ROW SearchKey="Version_2" Prereq="MySQLInstallerRunn" SearchType="2" SearchString="HKLM\SOFTWARE\MySQL AB\MySQL Server 5.5\Version" VerMin="5.5" Order="0" Property="PreReqSearch_6"/>
     <ROW SearchKey="__1" Prereq="Erlangv26.0x64" SearchType="5" SearchString="HKLM\SOFTWARE\Wow6432Node\Ericsson\Erlang\14.0.2" Order="2" Property="PreReqSearch_11"/>
     <ROW SearchKey="postgresqlx649.5" Prereq="PostgresSQL" SearchType="5" SearchString="HKLM\SOFTWARE\PostgreSQL\Installations\postgresql-x64-14" Order="1" Property="PreReqSearch_2_1"/>
   </COMPONENT>
+  <COMPONENT cid="caphyon.advinst.msicomp.SqlConnectionComponent">
+    <ROW ConnectionName="MySql.Conection" Condition="1" Dbms="1" Flags="4" Order="0" LoginTimeout="60" ConnectionString="Driver={[MYSQLODBCDRIVER]};Server=[DB_HOST];Port=[DB_PORT];Database=[DB_NAME];User=[DB_USER];Password=[DB_PWD];charset=UTF8;GET_SERVER_PUBLIC_KEY=1;"/>
+  </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.SqlScriptComponent">
+    <ROW ScriptName="SQL_SCRIPT_REINDEX_OPENSEARCH" ConnectionName="MySql.Conection" Condition="NEED_REINDEX_OPENSEARCH = &quot;TRUE&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot;" Separator=";" ScriptInline="TRUNCATE webstudio_index;&#13;&#10;" Flags="18" Order="0"/>
     <ATTRIBUTE name="ImpersonateUser" value="true"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.SynchronizedFolderComponent">

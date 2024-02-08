@@ -46,12 +46,11 @@ curl -s https://packagecloud.io/install/repositories/rabbitmq/erlang/script.rpm.
 
 #add nodejs repo
 NODE_VERSION="18"
-[ "$REV" = "8" ] && NODEJS_OPTION="--setopt=nodesource-nodejs.module_hotfixes=1"
-yum install -y https://rpm.nodesource.com/pub_${NODE_VERSION}.x/nodistro/repo/nodesource-release-nodistro-1.noarch.rpm || true
+curl -fsSL https://rpm.nodesource.com/setup_${NODE_VERSION}.x | sed '/update -y/d' | bash - || true
 
 #add mysql repo
 dnf remove -y @mysql && dnf module -y reset mysql && dnf module -y disable mysql
-MYSQL_REPO_VERSION="$(curl https://repo.mysql.com | grep -oP "mysql80-community-release-el${REV}-\K.*" | grep -o '^[^.]*' | sort | tail -n1)"
+MYSQL_REPO_VERSION="$(curl https://repo.mysql.com | grep -oP "mysql80-community-release-el${REV}-\K.*" | grep -o '^[^.]*' | sort -n | tail -n1)"
 yum localinstall -y https://repo.mysql.com/mysql80-community-release-el${REV}-${MYSQL_REPO_VERSION}.noarch.rpm || true
 
 if ! rpm -q mysql-community-server; then

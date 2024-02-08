@@ -242,7 +242,7 @@ Function WriteToLog(ByVal var)
 
 End Function
 
-Function ElasticSearchSetup
+Function OpenSearchSetup
     On Error Resume Next
     
     Dim ShellCommand
@@ -254,16 +254,16 @@ Function ElasticSearchSetup
     Set Shell = CreateObject("WScript.Shell")
     Set objFSO = CreateObject("Scripting.FileSystemObject")
 
-    APP_INDEX_DIR = Session.Property("APPDIR") & "Data\Index\v7.16.3\"
+    APP_INDEX_DIR = Session.Property("APPDIR") & "Data\Index\v2.11.1\"
    
     If Not fso.FolderExists(APP_INDEX_DIR) Then
-        Session.Property("NEED_REINDEX_ELASTICSEARCH") = "TRUE"
+        Session.Property("NEED_REINDEX_OPENSEARCH") = "TRUE"
     End If
     
-    Call Shell.Run("%COMSPEC% /c mkdir """ & Session.Property("APPDIR") & "Data\Index\v7.16.3\""",0,true)
+    Call Shell.Run("%COMSPEC% /c mkdir """ & Session.Property("APPDIR") & "Data\Index\v2.11.1\""",0,true)
     Call Shell.Run("%COMSPEC% /c mkdir """ & Session.Property("APPDIR") & "Logs\""",0,true)
     
-    Set objFile = objFSO.OpenTextFile(Session.Property("CommonAppDataFolder") & "Elastic\Elasticsearch\config\elasticsearch.yml", ForReading)
+    Set objFile = objFSO.OpenTextFile("C:\OpenSearch\config\opensearch.yml", ForReading)
 
     fileContent = objFile.ReadAll
 
@@ -285,7 +285,7 @@ Function ElasticSearchSetup
        oRE.Pattern = "indices.memory.index_buffer_size:.*"
        fileContent = oRE.Replace(fileContent, "indices.memory.index_buffer_size: 30%")                           
     End if
-        
+
     If InStrRev(fileContent, "http.max_content_length") <> 0 Then    
        oRE.Pattern = "http.max_content_length:.*"
        fileContent = oRE.Replace(fileContent, " ")                           
@@ -311,29 +311,29 @@ Function ElasticSearchSetup
        fileContent = oRE.Replace(fileContent, " ")                           
     End if
 
-    oRE.Pattern = "path.data:.*"
-    fileContent = oRE.Replace(fileContent, "path.data: " & Session.Property("APPDIR") & "Data\Index\v7.16.3\")
+    oRE.Pattern = "#path.data:.*"
+    fileContent = oRE.Replace(fileContent, "path.data: " & Session.Property("APPDIR") & "Data\Index\v2.11.1\")
 
-    oRE.Pattern = "path.logs:.*"
+    oRE.Pattern = "#path.logs:.*"
     fileContent = oRE.Replace(fileContent, "path.logs: " & Session.Property("APPDIR") & "Logs\")                           
     
-    If InStrRev(fileContent, "ingest.geoip.downloader.enabled") = 0 Then
-        fileContent = fileContent & Chr(13) & Chr(10) & "ingest.geoip.downloader.enabled: false"
+    If InStrRev(fileContent, "plugins.security.disabled") = 0 Then
+        fileContent = fileContent & Chr(13) & Chr(10) & "plugins.security.disabled: true"
     Else
-        oRE.Pattern = "ingest.geoip.downloader.enabled.*"
-        fileContent = oRE.Replace(fileContent, "ingest.geoip.downloader.enabled: false")
+        oRE.Pattern = "plugins.security.disabled:.*"
+        fileContent = oRE.Replace(fileContent, "plugins.security.disabled: true")
     End if
 
-    Call WriteToLog("ElasticSearchSetup: New config:" & fileContent)    
-    Call WriteToLog("ElasticSearchSetup:  CommonAppDataFolder :" & Session.Property("CommonAppDataFolder") & "Elastic\Elasticsearch\data")
+    Call WriteToLog("OpenSearchSetup: New config:" & fileContent)
+    Call WriteToLog("OpenSearchSetup:  CommonAppDataFolder :" & "C:\OpenSearch\data")
         
-    Set objFile = objFSO.OpenTextFile(Session.Property("CommonAppDataFolder") & "Elastic\Elasticsearch\config\elasticsearch.yml", ForWriting)
+    Set objFile = objFSO.OpenTextFile("C:\OpenSearch\config\opensearch.yml", ForWriting)
 
     objFile.WriteLine fileContent
 
     objFile.Close
 
-    Set objFile = objFSO.OpenTextFile(Session.Property("CommonAppDataFolder") & "Elastic\Elasticsearch\config\jvm.options", ForReading)
+    Set objFile = objFSO.OpenTextFile("C:\OpenSearch\config\jvm.options", ForReading)
 
     fileContent = objFile.ReadAll
 
@@ -365,7 +365,7 @@ Function ElasticSearchSetup
         fileContent = oRE.Replace(fileContent, "-Dlog4j2.formatMsgNoLookups=true")
     End if
 
-    Set objFile = objFSO.OpenTextFile(Session.Property("CommonAppDataFolder") & "Elastic\Elasticsearch\config\jvm.options", ForWriting)
+    Set objFile = objFSO.OpenTextFile("C:\OpenSearch\config\jvm.options", ForWriting)
 
     objFile.WriteLine fileContent
 
@@ -375,15 +375,15 @@ Function ElasticSearchSetup
     
 End Function
 
-Function ElasticSearchInstallPlugin
+Function OpenSearchInstallPlugin
     On Error Resume Next
 
     Dim Shell
 
     Set Shell = CreateObject("WScript.Shell")
 
-    ShellInstallCommand = """C:\Program Files\Elastic\Elasticsearch\7.16.3\bin\elasticsearch-plugin""" & " install -b -s ingest-attachment"""
-    ShellRemoveCommand = """C:\Program Files\Elastic\Elasticsearch\7.16.3\bin\elasticsearch-plugin""" & " remove -s ingest-attachment"""
+    ShellInstallCommand = """C:\OpenSearch\bin\opensearch-plugin""" & " install -b -s ingest-attachment"""
+    ShellRemoveCommand = """C:\OpenSearch\bin\opensearch-plugin""" & " remove -s ingest-attachment"""
      
     Call Shell.Run("cmd /C " & """" & ShellRemoveCommand  & """",0,true)
     Call Shell.Run("cmd /C " & """" & ShellInstallCommand  & """",0,true)
