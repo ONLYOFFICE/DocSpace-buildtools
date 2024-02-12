@@ -652,8 +652,8 @@ change_elasticsearch_config(){
 		sed -i "s/ingest.geoip.downloader.enabled.*/ingest.geoip.downloader.enabled: false/" ${ELASTIC_SEARCH_CONF_PATH}
 	fi
 
-	local TOTAL_MEMORY=$(free -m | grep -oP '\d+' | head -n 1);
-	local MEMORY_REQUIREMENTS=12228; #RAM ~4*3Gb
+	local TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1);
+	local MEMORY_REQUIREMENTS=12000; #RAM ~12Gb
 
 	if [ ${TOTAL_MEMORY} -gt ${MEMORY_REQUIREMENTS} ]; then
 		ELASTICSEATCH_MEMORY="4g"

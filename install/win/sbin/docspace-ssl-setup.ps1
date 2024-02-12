@@ -76,9 +76,11 @@ if ( $args.Count -ge 2 )
 
   Restart-Service -Name $proxy_service
 
-  "certbot renew >> `"${app}\letsencrypt\Logs\le-renew.log`"" > "${app}\letsencrypt\letsencrypt_cron.bat"
-  "net stop $proxy_service" >> "${app}\letsencrypt\letsencrypt_cron.bat"
-  "net start $proxy_service" >> "${app}\letsencrypt\letsencrypt_cron.bat"
+  @(
+    "certbot renew >> `"${app}\letsencrypt\Logs\le-renew.log`"",
+    "net stop $proxy_service",
+    "net start $proxy_service"
+  ) | Set-Content -Path "${app}\letsencrypt\letsencrypt_cron.bat" -Encoding ascii
 
   $day = (Get-Date -Format "dddd").ToUpper().SubString(0, 3)
   $time = Get-Date -Format "HH:mm"

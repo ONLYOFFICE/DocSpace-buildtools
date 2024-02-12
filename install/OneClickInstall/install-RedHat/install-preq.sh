@@ -50,8 +50,7 @@ curl -s https://packagecloud.io/install/repositories/rabbitmq/erlang/script.rpm.
 
 #add nodejs repo
 NODE_VERSION="18"
-[ "$REV" = "8" ] && NODEJS_OPTION="--setopt=nodesource-nodejs.module_hotfixes=1"
-curl -fsSL https://rpm.nodesource.com/setup_${NODE_VERSION}.x | bash -
+curl -fsSL https://rpm.nodesource.com/setup_${NODE_VERSION}.x | sed '/update -y/d' | bash - || true
 
 #add mysql repo
 dnf remove -y @mysql && dnf module -y reset mysql && dnf module -y disable mysql
