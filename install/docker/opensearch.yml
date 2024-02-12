@@ -24,6 +24,34 @@ services:
     expose:
       - "9200"
       - "9600" # required for Performance Analyzer
+
+  onlyoffice-opensearch-dashboard:
+    image: opensearchproject/opensearch-dashboards:${DASHBOARD_VERSION}
+    container_name: ${DASHBOARD_CONTAINER_NAME}
+    restart: always
+    environment:
+      - OPENSEARCH_DASHBOARD_ALLOW_WILDCARD=true
+      - OPENSEARCH_HOSTS=${ELK_SHEME}://${ELK_CONTAINER_NAME}:${ELK_PORT}
+      - "DISABLE_SECURITY_DASHBOARDS_PLUGIN=true"
+    ports:
+      - 5601:5601
+    expose:
+      - "5601"
+    depends_on:
+      - onlyoffice-opensearch
+
+  onlyoffice-logstash:
+    image: opensearchproject/logstash-oss-with-opensearch-output-plugin:${LOGSTASH_VERSION}
+    container_name: ${LOGSTASH_CONTAINER_NAME}
+    user: root
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./config/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    environment:
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+    depends_on:
+      - onlyoffice-opensearch
+  
 networks:
   default:
     name: ${NETWORK_NAME}
