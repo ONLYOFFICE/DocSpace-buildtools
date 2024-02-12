@@ -24,6 +24,7 @@
         "data": "e67be73d-f9ae-4ce1-8fec-1880cb518cb4",
         "type": "disc",
         "path": "$STORAGE_ROOT\\Products\\Files",
+        "validatorType":"ASC.Files.Core.Security.FileValidator, ASC.Files.Core",
         "expires": "0:16:0",
         "domain": [
           {
@@ -89,6 +90,15 @@
         "public": true
       },
       {
+        "name": "static_partnerdata",
+        "data": "00000000-0000-0000-0000-000000000000",
+        "type": "disc",
+        "path": "$STORAGE_ROOT\\Studio\\partnerdata",
+        "virtualpath": "~/studio/partnerdata",
+        "appendTenantId": false,
+        "public": true
+      },
+      {
         "name": "backup",
         "visible": false,
         "type": "disc",
@@ -138,6 +148,7 @@
       },
       {
         "name": "systemwebplugins",
+        "visible": false,
         "data": "00000000-0000-0000-0000-000000000000",
         "type": "disc",
         "path": "$STORAGE_ROOT\\Studio\\webplugins",

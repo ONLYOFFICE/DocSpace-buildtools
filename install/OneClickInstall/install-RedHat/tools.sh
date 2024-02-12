@@ -4,11 +4,11 @@ set -e
 
 function make_swap () {
 	local DISK_REQUIREMENTS=6144; #6Gb free space
-	local MEMORY_REQUIREMENTS=11000; #RAM ~12Gb
+	local MEMORY_REQUIREMENTS=12000; #RAM ~12Gb
 	SWAPFILE="/${PRODUCT}_swapfile";
 
 	local AVAILABLE_DISK_SPACE=$(df -m /  | tail -1 | awk '{ print $4 }');
-	local TOTAL_MEMORY=$(free -m | grep -oP '\d+' | head -n 1);
+	local TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1);
 	local EXIST=$(swapon -s | awk '{ print $1 }' | { grep -x ${SWAPFILE} || true; });
 
 	if [[ -z $EXIST ]] && [ ${TOTAL_MEMORY} -lt ${MEMORY_REQUIREMENTS} ] && [ ${AVAILABLE_DISK_SPACE} -gt ${DISK_REQUIREMENTS} ]; then
@@ -22,7 +22,7 @@ function make_swap () {
 
 check_hardware () {
     DISK_REQUIREMENTS=40960;
-    MEMORY_REQUIREMENTS=8192;
+    MEMORY_REQUIREMENTS=8000;
     CORE_REQUIREMENTS=4;
 
 	AVAILABLE_DISK_SPACE=$(df -m /  | tail -1 | awk '{ print $4 }');
@@ -32,7 +32,7 @@ check_hardware () {
 		exit 1;
 	fi
 
-	TOTAL_MEMORY=$(free -m | grep -oP '\d+' | head -n 1);
+	TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1);
 
 	if [ ${TOTAL_MEMORY} -lt ${MEMORY_REQUIREMENTS} ]; then
 		echo "Minimal requirements are not met: need at least $MEMORY_REQUIREMENTS MB of RAM"
@@ -65,3 +65,17 @@ read_unsupported_installation () {
 		;;
 	esac
 }
+
+DIST=$(rpm -q --whatprovides redhat-release || rpm -q --whatprovides centos-release)
+DIST=$(echo "${DIST}" | sed -n '/-.*/s///p')
+DIST_LOWER=$(echo "${DIST}" | tr '[:upper:]' '[:lower:]')
+
+REV=$(sed -n 's/.*release\ \([0-9]*\).*/\1/p' /etc/redhat-release)
+REV=${REV:-"7"}
+
+# Check if it's Centos less than 8
+if [ "${REV}" -lt 8 ]; then
+    echo "Your ${DIST} ${REV} operating system has reached the end of its service life."
+    echo "Please consider upgrading your operating system or using a Docker installation."
+    exit 1
+fi

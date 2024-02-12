@@ -112,7 +112,7 @@ COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onl
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
 
-FROM node:18.12.1-slim as noderun
+FROM node:20.11.0-slim as noderun
 ARG BUILD_PATH
 ARG SRC_PATH 
 ENV BUILD_PATH=${BUILD_PATH}
@@ -131,7 +131,7 @@ RUN mkdir -p /var/log/onlyoffice && \
     curl \
     vim \
     python3-pip && \
-    pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces && \
+    pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces --break-system-packages && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
@@ -179,6 +179,7 @@ RUN chown nginx:nginx /etc/nginx/* -R && \
     sed -i 's/127.0.0.1:9090/$service_oauth_api/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:8080/$service_oauth/' /etc/nginx/conf.d/onlyoffice.conf && \
     if [[ -z "${SERVICE_CLIENT}" ]] ; then sed -i 's/127.0.0.1:5001/$service_client/' /etc/nginx/conf.d/onlyoffice.conf; fi && \
+    if [[ -z "${SERVICE_MANAGEMENT}" ]] ; then sed -i 's/127.0.0.1:5015/$service_management/' /etc/nginx/conf.d/onlyoffice.conf; fi && \
     sed -i 's/127.0.0.1:5033/$service_healthchecks/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/$public_root/\/var\/www\/public\//' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/172.*/$document_server;/' /etc/nginx/conf.d/onlyoffice.conf && \

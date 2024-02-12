@@ -39,20 +39,11 @@ echo "deb [signed-by=/usr/share/keyrings/elastic-${ELASTIC_DIST}.x.gpg] https://
 chmod 644 /usr/share/keyrings/elastic-${ELASTIC_DIST}.x.gpg
 
 # add nodejs repo
-[[ "$DISTRIB_CODENAME" =~ ^(bionic|stretch)$ ]] && NODE_VERSION="16" || NODE_VERSION="18"
-echo "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_VERSION.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
-curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/nodesource.gpg --import
-chmod 644 /usr/share/keyrings/nodesource.gpg
+NODE_VERSION="18"
+curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
 
 #add dotnet repo
-if [ "$DIST" = "debian" ] && [ "$DISTRIB_CODENAME" = "stretch" ]; then
-	curl https://packages.microsoft.com/config/$DIST/10/packages-microsoft-prod.deb -O
-elif [ "$DISTRIB_CODENAME" = "bookworm" ]; then
-	#Temporary fix for missing dotnet repository for debian bookworm
-	curl https://packages.microsoft.com/config/$DIST/11/packages-microsoft-prod.deb -O
-else
-	curl https://packages.microsoft.com/config/$DIST/$REV/packages-microsoft-prod.deb -O
-fi
+curl https://packages.microsoft.com/config/$DIST/$REV/packages-microsoft-prod.deb -O
 echo -e "Package: *\nPin: origin \"packages.microsoft.com\"\nPin-Priority: 1002" | tee /etc/apt/preferences.d/99microsoft-prod.pref
 dpkg -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
 
@@ -73,9 +64,6 @@ if ! dpkg -l | grep -q "mysql-server"; then
 	DEBIAN_FRONTEND=noninteractive dpkg -i ${MYSQL_PACKAGE_NAME}
 	rm -f ${MYSQL_PACKAGE_NAME}
 
-	#Temporary fix for missing mysql repository for debian bookworm
-	[ "$DISTRIB_CODENAME" = "bookworm" ] && sed -i "s/$DIST/ubuntu/g; s/$DISTRIB_CODENAME/jammy/g" /etc/apt/sources.list.d/mysql.list
-
 	echo mysql-community-server mysql-community-server/root-pass password ${MYSQL_SERVER_PASS} | debconf-set-selections
 	echo mysql-community-server mysql-community-server/re-root-pass password ${MYSQL_SERVER_PASS} | debconf-set-selections
 	echo mysql-community-server mysql-server/default-auth-override select "Use Strong Password Encryption (RECOMMENDED)" | debconf-set-selections
@@ -86,10 +74,6 @@ elif dpkg -l | grep -q "mysql-apt-config" && [ "$(apt-cache policy mysql-apt-con
 	curl -OL http://repo.mysql.com/${MYSQL_PACKAGE_NAME}
 	DEBIAN_FRONTEND=noninteractive dpkg -i ${MYSQL_PACKAGE_NAME}
 	rm -f ${MYSQL_PACKAGE_NAME}
-fi
-
-if [ "$DIST" = "debian" ] && [ "$DISTRIB_CODENAME" = "stretch" ]; then
-	apt-get install -yq mysql-server mysql-client --allow-unauthenticated
 fi
 
 # add redis repo
@@ -103,15 +87,13 @@ fi
 curl -s http://nginx.org/keys/nginx_signing.key | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/nginx.gpg --import
 echo "deb [signed-by=/usr/share/keyrings/nginx.gpg] http://nginx.org/packages/$DIST/ $DISTRIB_CODENAME nginx" | tee /etc/apt/sources.list.d/nginx.list
 chmod 644 /usr/share/keyrings/nginx.gpg
-#Temporary fix for missing nginx repository for debian bookworm
+#f for missing nginx repository for debian bookworm
 [ "$DISTRIB_CODENAME" = "bookworm" ] && sed -i "s/$DISTRIB_CODENAME/buster/g" /etc/apt/sources.list.d/nginx.list
 
 #add openresty repo
 curl -fsSL https://openresty.org/package/pubkey.gpg | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/openresty.gpg --import
 echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/$DIST $DISTRIB_CODENAME $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
 chmod 644 /usr/share/keyrings/openresty.gpg
-#Temporary fix for missing openresty repository for debian bookworm
-[ "$DISTRIB_CODENAME" = "bookworm" ] && sed -i "s/$DISTRIB_CODENAME/bullseye/g" /etc/apt/sources.list.d/openresty.list
 
 # setup msttcorefonts
 echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
@@ -124,7 +106,7 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 				nodejs \
 				gcc \
 				make \
-				dotnet-sdk-7.0 \
+				dotnet-sdk-8.0 \
 				mysql-server \
 				mysql-client \
 				postgresql \

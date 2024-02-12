@@ -48,7 +48,7 @@ SWAPFILE="/${PRODUCT}_swapfile";
 MAKESWAP="true";
 
 DISK_REQUIREMENTS=40960;
-MEMORY_REQUIREMENTS=8192;
+MEMORY_REQUIREMENTS=8000;
 CORE_REQUIREMENTS=4;
 
 DIST="";
@@ -690,7 +690,7 @@ check_hardware () {
 		exit 1;
 	fi
 
-	TOTAL_MEMORY=$(free -m | grep -oP '\d+' | head -n 1);
+	TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1);
 
 	if [ ${TOTAL_MEMORY} -lt ${MEMORY_REQUIREMENTS} ]; then
 		echo "Minimal requirements are not met: need at least $MEMORY_REQUIREMENTS MB of RAM"
@@ -1156,22 +1156,23 @@ download_files () {
 
 	echo -n "Downloading configuration files to the ${BASE_DIR} directory..."
 
+	if ! command_exists tar; then
+		install_service tar
+	fi
+
+	[ -d "${BASE_DIR}" ] && rm -rf "${BASE_DIR}"
+	mkdir -p ${BASE_DIR}
+
 	if [ -z "${GIT_BRANCH}" ]; then
-		if ! command_exists tar; then
-			install_service tar
-		fi
-		[ -d "${BASE_DIR}" ] && rm -rf "${BASE_DIR}"
-		mkdir -p ${BASE_DIR}
-		curl -s -O https://download.onlyoffice.com/${PRODUCT}/docker.tar.gz
-		tar -xzvf docker.tar.gz -C ${BASE_DIR} >/dev/null
-		rm -rf docker.tar.gz
+		curl -sL -o docker.tar.gz "https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/docker.tar.gz"
+		tar -xf docker.tar.gz -C ${BASE_DIR}
 	else
-		if ! command_exists svn; then
-			install_service svn subversion
-		fi
-		svn export --force https://github.com/${PACKAGE_SYSNAME}/${PRODUCT}-buildtools/branches/${GIT_BRANCH}/install/docker/ ${BASE_DIR} >/dev/null
+		curl -sL -o docker.tar.gz "https://github.com/${PACKAGE_SYSNAME}/${PRODUCT}-buildtools/archive/${GIT_BRANCH}.tar.gz"
+		tar -xf docker.tar.gz --strip-components=3 -C ${BASE_DIR} --wildcards '*/install/docker/*'
 	fi
 	
+	rm -rf docker.tar.gz
+
 	echo "OK"
 
 	reconfigure STATUS ${STATUS}
@@ -1246,7 +1247,7 @@ install_redis () {
 
 install_elasticsearch () {
 	if [[ -z ${ELK_HOST} ]] && [ "$INSTALL_ELASTICSEARCH" == "true" ]; then
-		if [ $(free -m | grep -oP '\d+' | head -n 1) -gt "12228" ]; then #RAM ~12Gb
+		if [ $(free --mega | grep -oP '\d+' | head -n 1) -gt "12000" ]; then #RAM ~12Gb
 			sed -i 's/Xms[0-9]g/Xms4g/g; s/Xmx[0-9]g/Xmx4g/g' $BASE_DIR/elasticsearch.yml
 		else
 			sed -i 's/Xms[0-9]g/Xms1g/g; s/Xmx[0-9]g/Xmx1g/g' $BASE_DIR/elasticsearch.yml
@@ -1294,10 +1295,10 @@ install_product () {
 
 make_swap () {
 	DISK_REQUIREMENTS=6144; #6Gb free space
-	MEMORY_REQUIREMENTS=11000; #RAM ~12Gb
+	MEMORY_REQUIREMENTS=12000; #RAM ~12Gb
 
 	AVAILABLE_DISK_SPACE=$(df -m /  | tail -1 | awk '{ print $4 }');
-	TOTAL_MEMORY=$(free -m | grep -oP '\d+' | head -n 1);
+	TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1);
 	EXIST=$(swapon -s | awk '{ print $1 }' | { grep -x ${SWAPFILE} || true; });
 
 	if [[ -z $EXIST ]] && [ ${TOTAL_MEMORY} -lt ${MEMORY_REQUIREMENTS} ] && [ ${AVAILABLE_DISK_SPACE} -gt ${DISK_REQUIREMENTS} ]; then

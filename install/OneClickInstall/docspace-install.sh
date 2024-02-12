@@ -155,16 +155,6 @@ if [ "$DOCKER" == "true" ]; then
 	fi
 else
 	if [ -f /etc/redhat-release ] ; then
-		DIST=$(cat /etc/redhat-release |sed s/\ release.*//);
-		REV=$(cat /etc/redhat-release | sed s/.*release\ // | sed s/\ .*//);
-
-		REV_PARTS=(${REV//\./ });
-		REV=${REV_PARTS[0]};
-
-		if [[ "${DIST}" == CentOS* ]] && [ ${REV} -lt 7 ]; then
-			echo "CentOS 7 or later is required";
-			exit 1;
-		fi
 		if [ "$LOCAL_SCRIPTS" == "true" ]; then
 			bash install-RedHat.sh ${PARAMETERS}
 		else

@@ -12,6 +12,12 @@ map $SERVICE_DOCEDITOR $service_doceditor {
     default $SERVICE_DOCEDITOR;
 }
 
+map $SERVICE_MANAGEMENT $service_management {
+    volatile;
+    "" 127.0.0.1:5015;
+    default $SERVICE_MANAGEMENT;
+}
+
 map $SERVICE_API_SYSTEM $service_api_system {
     volatile;
     "" 127.0.0.1:5010;

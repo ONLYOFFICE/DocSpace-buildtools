@@ -2,7 +2,7 @@
 
 cd %{_builddir}/buildtools
 
-bash install/common/systemd/build.sh
+bash install/common/systemd/build.sh -pm "rpm"
 
 bash install/common/build-frontend.sh --srcpath %{_builddir} -di "false"
 bash install/common/build-backend.sh --srcpath %{_builddir}

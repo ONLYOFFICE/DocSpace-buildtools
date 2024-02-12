@@ -1,7 +1,7 @@
 ARG SRC_PATH="/app/onlyoffice/src"
 ARG BUILD_PATH="/var/www"
-ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:7.0"
-ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:7.0"
+ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:8.0"
+ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:8.0"
 
 FROM $DOTNET_SDK AS base
 ARG RELEASE_DATE="2016-06-22"
@@ -32,7 +32,7 @@ RUN apt-get -y update && \
     npm  && \
     locale-gen en_US.UTF-8 && \
     npm install --global yarn && \
-    echo "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_18.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list && \
+    echo "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list && \
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/nodesource.gpg --import && \
     chmod 644 /usr/share/keyrings/nodesource.gpg && \
     apt-get -y update && \
@@ -84,13 +84,13 @@ RUN mkdir -p /var/log/onlyoffice && \
     chown onlyoffice:onlyoffice /var/www -R && \
     apt-get -y update && \
     apt-get install -yq \
-    sudo \
-    nano \
-    curl \
-    vim \
-    python3-pip \
-    libgdiplus && \
-    pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces && \
+        sudo \
+        nano \
+        curl \
+        vim \
+        python3-pip \
+        libgdiplus && \
+    pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
@@ -99,7 +99,7 @@ COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onl
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
 
-FROM node:18-slim as noderun
+FROM node:20-slim as noderun
 ARG BUILD_PATH
 ARG SRC_PATH 
 ENV BUILD_PATH=${BUILD_PATH}
@@ -114,12 +114,12 @@ RUN mkdir -p /var/log/onlyoffice && \
     chown onlyoffice:onlyoffice /var/www -R && \
     apt-get -y update && \
     apt-get install -yq \ 
-    sudo \
-    nano \
-    curl \
-    vim \
-    python3-pip && \
-    pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces --break-system-packages && \
+        sudo \
+        nano \
+        curl \
+        vim \
+        python3-pip && \
+        pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/

@@ -81,6 +81,7 @@ override_dh_auto_build: check_archives
 	sed "s_\(.*root\).*;_\1 \"/var/www/${PRODUCT}\";_g" -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/letsencrypt.conf
 	sed -e '/.pid/d' -e '/temp_path/d' -e 's_etc/nginx_etc/openresty_g' -e 's/\.log/-openresty.log/g' -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/templates/nginx.conf.template
 	mv -f ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy-ssl.conf ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy-ssl.conf.template
+	cp -rf ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy.conf ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy.conf.template
 
 	for i in ${PRODUCT} $$(ls ${CURDIR}/debian/*.install | grep -oP 'debian/\K.*' | grep -o '^[^.]*'); do \
 		cp ${CURDIR}/debian/source/lintian-overrides ${CURDIR}/debian/$$i.lintian-overrides; \
