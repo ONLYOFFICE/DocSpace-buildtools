@@ -1109,6 +1109,7 @@ set_docspace_params() {
 	APP_CORE_BASE_DOMAIN=${APP_CORE_BASE_DOMAIN:-$(get_env_parameter "APP_CORE_BASE_DOMAIN" "${CONTAINER_NAME}")};
 	EXTERNAL_PORT=${EXTERNAL_PORT:-$(get_env_parameter "EXTERNAL_PORT" "${CONTAINER_NAME}")};
 
+	PREVIOUS_ELK_VERSION=$(get_env_parameter "ELK_VERSION");
 	ELK_SHEME=${ELK_SHEME:-$(get_env_parameter "ELK_SHEME" "${CONTAINER_NAME}")};
 	ELK_HOST=${ELK_HOST:-$(get_env_parameter "ELK_HOST" "${CONTAINER_NAME}")};
 	ELK_PORT=${ELK_PORT:-$(get_env_parameter "ELK_PORT" "${CONTAINER_NAME}")};
@@ -1285,6 +1286,15 @@ install_product () {
 	docker-compose -f ${PROXY_YML} up -d
 	docker-compose -f $BASE_DIR/notify.yml up -d
 	docker-compose -f $BASE_DIR/healthchecks.yml up -d
+
+	if [[ -n "${PREVIOUS_ELK_VERSION}" && "$(get_env_parameter "ELK_VERSION")" != "${PREVIOUS_ELK_VERSION}" ]]; then
+		MYSQL_CONTAINER_NAME=$(get_env_parameter "MYSQL_CONTAINER_NAME" | sed "s/\${CONTAINER_PREFIX}/${PACKAGE_SYSNAME}-/g")
+		if docker ps -a | grep -q ${MYSQL_CONTAINER_NAME}; then
+			docker exec ${MYSQL_CONTAINER_NAME} bash -c "mysql -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DATABASE}" -e \"TRUNCATE webstudio_index;\""
+		elif [ ! -z "${MYSQL_HOST}" ]; then
+			docker run --rm mysql mysql -h "${MYSQL_HOST}" -P "${MYSQL_PORT}" -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DATABASE}" -e "TRUNCATE webstudio_index;"
+		fi
+	fi
 
 	if [ ! -z "${CERTIFICATE_PATH}" ] && [ ! -z "${CERTIFICATE_KEY_PATH}" ] && [[ ! -z "${APP_DOMAIN_PORTAL}" ]]; then
 		bash $BASE_DIR/config/${PRODUCT}-ssl-setup -f "${APP_DOMAIN_PORTAL}" "${CERTIFICATE_PATH}" "${CERTIFICATE_KEY_PATH}"
