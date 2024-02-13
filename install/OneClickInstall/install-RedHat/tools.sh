@@ -75,7 +75,7 @@ REMI_DISTR_NAME="enterprise"
 RPMFUSION_DISTR_NAME="el"
 MYSQL_DISTR_NAME="el"
 OPENRESTY_DISTR_NAME="centos"
-FEDORA_FLAG=""
+SUPPORTED_FEDORA_FLAG="true"
 
 if [ "$DIST" == "fedora" ]; then
 	REMI_DISTR_NAME="fedora"
@@ -85,11 +85,11 @@ if [ "$DIST" == "fedora" ]; then
 	OPENRESTY_REV=$([ "$REV" -ge 37 ] && echo 36 || echo "$REV")
 
 	FEDORA_SUPP=$(curl https://docs.fedoraproject.org/en-US/releases/ | awk '/Supported Releases/,/EOL Releases/' | grep -oP 'F\d+' | tr -d 'F')
-	[ ! "$(echo "$FEDORA_SUPP" | grep "$REV")" ] && FEDORA_FLAG="not supported"
+	[ ! "$(echo "$FEDORA_SUPP" | grep "$REV")" ] && SUPPORTED_FEDORA_FLAG="false"
 fi
 
 # Check if it's Centos less than 8 or Fedora release is out of service
-if [ "${REV}" -lt 8 ] || [ "$FEDORA_FLAG" == "not supported" ]; then
+if [ "${REV}" -lt 8 ] || [ "$SUPPORTED_FEDORA_FLAG" == "false" ]; then
     echo "Your ${DIST} ${REV} operating system has reached the end of its service life."
     echo "Please consider upgrading your operating system or using a Docker installation."
     exit 1

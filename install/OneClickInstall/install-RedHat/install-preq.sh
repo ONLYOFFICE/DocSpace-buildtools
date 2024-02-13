@@ -77,7 +77,7 @@ type=rpm-md
 END
 
 # add nginx repo, Fedora doesn't need it
-if [ "$DIST" == "fedora" ]; then
+if [ "$DIST" != "fedora" ]; then
 cat > /etc/yum.repos.d/nginx.repo <<END
 [nginx-stable]
 name=nginx stable repo

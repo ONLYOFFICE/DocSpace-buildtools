@@ -493,8 +493,10 @@ setup_openresty(){
 
 	if [ "$DIST" = "RedHat" ]; then
 		# Remove default nginx settings [error] port 80 is already in use
-		if grep -q "server {"  /etc/nginx/nginx.conf ; then
-			sed -e '$a}' -e '/server {/,$d' -i /etc/nginx/nginx.conf
+		if [ -f /etc/nginx/nginx.conf ];
+			if grep -q "server {"  /etc/nginx/nginx.conf ; then
+				sed -e '$a}' -e '/server {/,$d' -i /etc/nginx/nginx.conf
+			fi
 		fi
 		
 		shopt -s nocasematch
