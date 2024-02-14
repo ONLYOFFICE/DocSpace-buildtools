@@ -1,0 +1,123 @@
+name: Rebuild boxes
+
+on:
+  workflow_dispatch:
+    inputs:
+      centos8s:
+         type: boolean
+         description: 'CentOS 8 Stream'
+         default: true
+      centos9s:
+         type: boolean
+         description: 'CentOS 9 Stream'
+         default: true
+      debian11:
+         type: boolean
+         description: 'Debian 11'
+         default: true
+      debian12:
+         type: boolean
+         description: 'Debian 12'
+         default: true
+      ubuntu2004:
+         type: boolean
+         description: 'Ubuntu 20.04'
+         default: true
+      ubuntu2204:
+         type: boolean
+         description: 'Ubuntu 22.04'
+         default: true
+
+env:
+    VAGRANT_TOKEN: ${{ secrets.VAGRANT_TOKEN }}
+    VAGRANT_ACCOUNT: ${{ secrets.VAGRANT_ACCOUNT }} 
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+
+      - name: Set matrix names
+        id: set-matrix
+        run: |
+          matrix=$(echo '{
+            "include": [
+              {"execute": '${{ github.event.inputs.centos8s || true }}', "name": "CentOS8S", "os": "centos8s", "distr": "generic"},
+              {"execute": '${{ github.event.inputs.centos9s || true }}', "name": "CentOS9S", "os": "centos9s", "distr": "generic"},
+              {"execute": '${{ github.event.inputs.debian11 || true }}', "name": "Debian11", "os": "debian11", "distr": "generic"},
+              {"execute": '${{ github.event.inputs.debian12 || true }}', "name": "Debian12", "os": "debian12", "distr": "generic"},
+              {"execute": '${{ github.event.inputs.ubuntu2004 || true }}', "name": "Ubuntu20.04", "os": "ubuntu2004", "distr": "generic"},
+              {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu22.04", "os": "ubuntu2204", "distr": "generic"}
+            ]
+          }' | jq -c '{include: [.include[] | select(.execute == true)]}')
+          echo "matrix=${matrix}" >> $GITHUB_OUTPUT
+
+  rebuild-boxes:
+    name: "Rebuild boxes DocSpace on ${{ matrix.name}}"
+    runs-on: ubuntu-22.04
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix: ${{fromJSON(needs.prepare.outputs.matrix)}}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Get update and install vagrant
+        run: |
+          set -eux
+          sudo apt update -y
+          sudo apt install vagrant virtualbox -y
+
+      - name: Login Vagrant cloud
+        run: vagrant cloud auth login --token ${VAGRANT_TOKEN}
+
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/local/lib/android /opt/ghc
+          sudo docker image prune --all --force        
+
+      - name: Rebuild boxes
+        uses: nick-fields/retry@v2
+        with:
+          max_attempts: 2
+          timeout_minutes: 90
+          retry_on: error
+          command: |
+                  set -eux
+                  
+                  cd tests/vagrant
+                  export date=$(date +%F)
+                    TEST_CASE='--production-install' \
+                    DISTR='${{matrix.distr}}' \
+                    OS='${{ matrix.os }}' \
+                    DOWNLOAD_SCRIPT='-ds true' \
+                    RAM='5100' \
+                    CPU='3' \
+                    ARGUMENTS="-arg '--skiphardwarecheck true --makeswap false'" \
+                    vagrant up
+                  sleep 300
+                  vagrant package --output repacked_${{ matrix.os }}.box
+                  vagrant cloud publish \
+                    ${VAGRANT_ACCOUNT}/docspace-${{ matrix.os }} \
+                    $date virtualbox repacked_${{ matrix.os }}.box \
+                    -d "Box with pre-installed DocSpace" \
+                    --version-description "DocSpace <version>" \
+                    --release --short-description "Boxes for update testing" \
+                    --force \
+                    --no-private
+          on_retry_command: |
+                set -eux
+
+                echo "RUN CLEAN UP: Remove repacked box and destroy"
+                cd tests/vagrant
+                rm -rf repacked_${{ matrix.os }}.box
+                vagrant destroy --force

@@ -1,0 +1,22 @@
+Vagrant.configure("2") do |config|
+    config.vm.box = "#{ENV['DISTR']}/#{ENV['OS']}"
+
+    config.vm.provider "virtualbox" do |v|
+             v.customize ["modifyvm", :id, "--memory", "#{ENV['RAM']}"] #<= total RAM.
+             v.customize ["modifyvm", :id, "--cpus", "#{ENV['CPU']}"] #<= total CPU.
+             v.customize ["modifyvm", :id, "--ioapic", "on"]
+    end
+
+    config.vm.define 'ubuntu'
+
+    config.vm.hostname = "host4test"
+
+    if ENV['TEST_CASE'] != '--production-install'
+       config.vm.provision "file", source: "../../../DocSpace-buildtools/install/OneClickInstall/.", destination: "/tmp/docspace/"
+    end
+
+    config.vm.provision "shell", path: './install.sh', :args => "#{ENV['DOWNLOAD_SCRIPT']} #{ENV['TEST_REPO']} #{ENV['ARGUMENTS']}"
+
+    # Prevent SharedFoldersEnableSymlinksCreate errors
+    config.vm.synced_folder ".", "/vagrant", disabled: true
+end

@@ -55,5 +55,6 @@ services_name_backend_nodejs+=(ASC.SsoAuth)
 # Build backend services (Nodejs) 
 for i in ${!services_name_backend_nodejs[@]}; do
   echo "== Build ${services_name_backend_nodejs[$i]} project =="
-  yarn install --cwd ${SRC_PATH}/server/common/${services_name_backend_nodejs[$i]} --frozen-lockfile
+  cd ${SRC_PATH}/server/common/${services_name_backend_nodejs[$i]}
+  yarn install --frozen-lockfile
 done

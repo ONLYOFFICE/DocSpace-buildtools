@@ -20,6 +20,7 @@ if containers or images:
     os.environ["Baseimage_Proxy_Run"] = "onlyoffice/4testing-docspace-proxy-runtime:dev"
     os.environ["DOCUMENT_SERVER_IMAGE_NAME"] = "onlyoffice/documentserver-de:latest"
     os.environ["SERVICE_CLIENT"] = "localhost:5001"
+    os.environ["SERVICE_MANAGEMENT"] = "localhost:5015"
     os.environ["ROOT_DIR"] = root_dir
     os.environ["BUILD_PATH"] = "/var/www"
     os.environ["SRC_PATH"] = os.path.join(root_dir, "publish/services")

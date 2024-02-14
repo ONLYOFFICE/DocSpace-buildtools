@@ -242,7 +242,7 @@ Function WriteToLog(ByVal var)
 
 End Function
 
-Function ElasticSearchSetup
+Function OpenSearchSetup
     On Error Resume Next
     
     Dim ShellCommand
@@ -254,16 +254,16 @@ Function ElasticSearchSetup
     Set Shell = CreateObject("WScript.Shell")
     Set objFSO = CreateObject("Scripting.FileSystemObject")
 
-    APP_INDEX_DIR = Session.Property("APPDIR") & "Data\Index\v7.16.3\"
+    APP_INDEX_DIR = Session.Property("APPDIR") & "Data\Index\v2.11.1\"
    
     If Not fso.FolderExists(APP_INDEX_DIR) Then
-        Session.Property("NEED_REINDEX_ELASTICSEARCH") = "TRUE"
+        Session.Property("NEED_REINDEX_OPENSEARCH") = "TRUE"
     End If
     
-    Call Shell.Run("%COMSPEC% /c mkdir """ & Session.Property("APPDIR") & "Data\Index\v7.16.3\""",0,true)
+    Call Shell.Run("%COMSPEC% /c mkdir """ & Session.Property("APPDIR") & "Data\Index\v2.11.1\""",0,true)
     Call Shell.Run("%COMSPEC% /c mkdir """ & Session.Property("APPDIR") & "Logs\""",0,true)
     
-    Set objFile = objFSO.OpenTextFile(Session.Property("CommonAppDataFolder") & "Elastic\Elasticsearch\config\elasticsearch.yml", ForReading)
+    Set objFile = objFSO.OpenTextFile("C:\OpenSearch\config\opensearch.yml", ForReading)
 
     fileContent = objFile.ReadAll
 
@@ -285,7 +285,7 @@ Function ElasticSearchSetup
        oRE.Pattern = "indices.memory.index_buffer_size:.*"
        fileContent = oRE.Replace(fileContent, "indices.memory.index_buffer_size: 30%")                           
     End if
-        
+
     If InStrRev(fileContent, "http.max_content_length") <> 0 Then    
        oRE.Pattern = "http.max_content_length:.*"
        fileContent = oRE.Replace(fileContent, " ")                           
@@ -311,29 +311,29 @@ Function ElasticSearchSetup
        fileContent = oRE.Replace(fileContent, " ")                           
     End if
 
-    oRE.Pattern = "path.data:.*"
-    fileContent = oRE.Replace(fileContent, "path.data: " & Session.Property("APPDIR") & "Data\Index\v7.16.3\")
+    oRE.Pattern = "#path.data:.*"
+    fileContent = oRE.Replace(fileContent, "path.data: " & Session.Property("APPDIR") & "Data\Index\v2.11.1\")
 
-    oRE.Pattern = "path.logs:.*"
+    oRE.Pattern = "#path.logs:.*"
     fileContent = oRE.Replace(fileContent, "path.logs: " & Session.Property("APPDIR") & "Logs\")                           
     
-    If InStrRev(fileContent, "ingest.geoip.downloader.enabled") = 0 Then
-        fileContent = fileContent & Chr(13) & Chr(10) & "ingest.geoip.downloader.enabled: false"
+    If InStrRev(fileContent, "plugins.security.disabled") = 0 Then
+        fileContent = fileContent & Chr(13) & Chr(10) & "plugins.security.disabled: true"
     Else
-        oRE.Pattern = "ingest.geoip.downloader.enabled.*"
-        fileContent = oRE.Replace(fileContent, "ingest.geoip.downloader.enabled: false")
+        oRE.Pattern = "plugins.security.disabled:.*"
+        fileContent = oRE.Replace(fileContent, "plugins.security.disabled: true")
     End if
 
-    Call WriteToLog("ElasticSearchSetup: New config:" & fileContent)    
-    Call WriteToLog("ElasticSearchSetup:  CommonAppDataFolder :" & Session.Property("CommonAppDataFolder") & "Elastic\Elasticsearch\data")
+    Call WriteToLog("OpenSearchSetup: New config:" & fileContent)
+    Call WriteToLog("OpenSearchSetup:  CommonAppDataFolder :" & "C:\OpenSearch\data")
         
-    Set objFile = objFSO.OpenTextFile(Session.Property("CommonAppDataFolder") & "Elastic\Elasticsearch\config\elasticsearch.yml", ForWriting)
+    Set objFile = objFSO.OpenTextFile("C:\OpenSearch\config\opensearch.yml", ForWriting)
 
     objFile.WriteLine fileContent
 
     objFile.Close
 
-    Set objFile = objFSO.OpenTextFile(Session.Property("CommonAppDataFolder") & "Elastic\Elasticsearch\config\jvm.options", ForReading)
+    Set objFile = objFSO.OpenTextFile("C:\OpenSearch\config\jvm.options", ForReading)
 
     fileContent = objFile.ReadAll
 
@@ -365,7 +365,7 @@ Function ElasticSearchSetup
         fileContent = oRE.Replace(fileContent, "-Dlog4j2.formatMsgNoLookups=true")
     End if
 
-    Set objFile = objFSO.OpenTextFile(Session.Property("CommonAppDataFolder") & "Elastic\Elasticsearch\config\jvm.options", ForWriting)
+    Set objFile = objFSO.OpenTextFile("C:\OpenSearch\config\jvm.options", ForWriting)
 
     objFile.WriteLine fileContent
 
@@ -375,15 +375,15 @@ Function ElasticSearchSetup
     
 End Function
 
-Function ElasticSearchInstallPlugin
+Function OpenSearchInstallPlugin
     On Error Resume Next
 
     Dim Shell
 
     Set Shell = CreateObject("WScript.Shell")
 
-    ShellInstallCommand = """C:\Program Files\Elastic\Elasticsearch\7.16.3\bin\elasticsearch-plugin""" & " install -b -s ingest-attachment"""
-    ShellRemoveCommand = """C:\Program Files\Elastic\Elasticsearch\7.16.3\bin\elasticsearch-plugin""" & " remove -s ingest-attachment"""
+    ShellInstallCommand = """C:\OpenSearch\bin\opensearch-plugin""" & " install -b -s ingest-attachment"""
+    ShellRemoveCommand = """C:\OpenSearch\bin\opensearch-plugin""" & " remove -s ingest-attachment"""
      
     Call Shell.Run("cmd /C " & """" & ShellRemoveCommand  & """",0,true)
     Call Shell.Run("cmd /C " & """" & ShellInstallCommand  & """",0,true)
@@ -478,13 +478,26 @@ End Function
 Function MoveNginxConfigs
     On Error Resume Next
 
-    Dim objFSO, sourceFolder, targetFolder, nginxFolder
+    Dim objFSO, objShell, sourceFolder, targetFolder, nginxFolder, configFile, configSslFile, sslScriptPath, sslCertPath, sslCertKeyPath, psCommand
 
     ' Define source and target paths
     Set objFSO = CreateObject("Scripting.FileSystemObject")
+    Set objShell = CreateObject("WScript.Shell")
     sourceFolder = Session.Property("APPDIR") & "nginx\conf"
     targetFolder = "C:\OpenResty\conf"
     nginxFolder =  Session.Property("APPDIR") & "nginx"
+    configSslFile = targetFolder & "\onlyoffice-proxy-ssl.conf.tmpl"
+    configFile = targetFolder & "\onlyoffice-proxy.conf"
+    sslScriptPath = Session.Property("APPDIR") & "sbin\docspace-ssl-setup.ps1"
+
+    ' Read content and extract SSL certificate and key paths if it exists
+    If objFSO.FileExists(configFile) Then
+        content = ReadFile(configFile, objFSO)
+        sslCertPath = ExtractPath(content, "ssl_certificate\s+(.*?);", objFSO)
+        sslCertKeyPath = ExtractPath(content, "ssl_certificate_key\s+(.*?);", objFSO)
+    Else
+        WScript.Echo "Configuration file not found!"
+    End If
 
     ' Check if source folder exists
     If objFSO.FolderExists(sourceFolder) Then
@@ -504,7 +517,41 @@ Function MoveNginxConfigs
         WScript.Echo "Source folder does not exist."
     End If
 
+    ' If SSL path variables are present, set the SSL paths
+    If objFSO.FileExists(configSslFile) And ((Len(Trim(sslCertPath)) > 0) And (Len(Trim(sslCertKeyPath)) > 0)) Then
+        psCommand = "powershell -File """ & sslScriptPath & """ -f """ & sslCertPath & """ """ & sslCertKeyPath & """"
+        objShell.Run psCommand, 0, True
+    Else
+        WScript.Echo "Source file not found."
+    End If
+
     Set objFSO = Nothing
+    Set objShell = Nothing
+End Function
+
+Function ReadFile(filePath, objFSO)
+    Dim objFile
+    If objFSO.FileExists(filePath) Then
+        Set objFile = objFSO.OpenTextFile(filePath, 1)
+        ReadFile = objFile.ReadAll
+        objFile.Close
+    Else
+        WScript.Echo "File not found: " & filePath
+    End If
+End Function
+
+Function ExtractPath(content, pattern, objFSO)
+    Dim regex, match
+    Set regex = New RegExp
+    regex.Pattern = pattern
+
+    Set match = regex.Execute(content)
+    If match.Count > 0 Then
+        ExtractPath = match(0).Submatches(0)
+    Else
+        WScript.Echo "Path not found in the content."
+        ExtractPath = Null
+    End If
 End Function
 
 Sub CopyFolderContents(sourceFolder, targetFolder, objFSO)

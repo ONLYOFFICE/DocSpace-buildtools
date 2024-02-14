@@ -55,6 +55,7 @@ cp -rf %{_builddir}/server/ASC.Migration.Runner/service/* "%{buildroot}%{buildpa
 cp -rf %{_builddir}/buildtools/install/RadicalePlugins/* "%{buildroot}%{buildpath}/Tools/radicale/plugins/"
 cp -rf %{_builddir}/buildtools/install/docker/config/nginx/templates/nginx.conf.template "%{buildroot}%{_sysconfdir}/onlyoffice/%{product}/openresty/nginx.conf.template"
 cp -rf %{_builddir}/buildtools/install/docker/config/nginx/onlyoffice-proxy.conf "%{buildroot}%{_sysconfdir}/openresty/conf.d/onlyoffice-proxy.conf"
+cp -rf %{_builddir}/buildtools/install/docker/config/nginx/onlyoffice-proxy.conf "%{buildroot}%{_sysconfdir}/openresty/conf.d/onlyoffice-proxy.conf.template"
 cp -rf %{_builddir}/buildtools/install/docker/config/nginx/onlyoffice-proxy-ssl.conf "%{buildroot}%{_sysconfdir}/openresty/conf.d/onlyoffice-proxy-ssl.conf.template"
 cp -rf %{_builddir}/buildtools/install/docker/config/nginx/letsencrypt.conf "%{buildroot}%{_sysconfdir}/openresty/includes/letsencrypt.conf"
 cp -rf %{_builddir}/buildtools/install/common/systemd/modules/* "%{buildroot}/usr/lib/systemd/system/"

@@ -15,16 +15,6 @@ ${package_manager} clean all
 
 ${package_manager} -y install yum-utils
 
-DIST=$(rpm -q --whatprovides redhat-release || rpm -q --whatprovides centos-release);
-DIST=$(echo $DIST | sed -n '/-.*/s///p');
-REV=$(cat /etc/redhat-release | sed s/.*release\ // | sed s/\ .*//);
-REV_PARTS=(${REV//\./ });
-REV=${REV_PARTS[0]};
-
-if ! [[ "$REV" =~ ^[0-9]+$ ]]; then
-	REV=7;
-fi
-
 { yum check-update postgresql; PSQLExitCode=$?; } || true #Checking for postgresql update
 { yum check-update $DIST*-release; exitCode=$?; } || true #Checking for distribution update
 
@@ -43,33 +33,29 @@ if rpm -qa | grep mariadb.*config >/dev/null 2>&1; then
 fi
 
 #Add repositories: EPEL, REMI and RPMFUSION
-rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-$REV.noarch.rpm || true
-rpm -ivh https://rpms.remirepo.net/enterprise/remi-release-$REV.rpm || true
-yum localinstall -y --nogpgcheck https://download1.rpmfusion.org/free/el/rpmfusion-free-release-$REV.noarch.rpm
+[ "$DIST" != "fedora" ] && { rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-$REV.noarch.rpm || true; }
+rpm -ivh https://rpms.remirepo.net/$REMI_DISTR_NAME/remi-release-$REV.rpm || true
+yum localinstall -y --nogpgcheck https://download1.rpmfusion.org/free/$RPMFUSION_DISTR_NAME/rpmfusion-free-release-$REV.noarch.rpm
 
-if [ "$REV" = "9" ]; then
-	[ $DIST != "redhat" ] && TESTING_REPO="--enablerepo=crb" || /usr/bin/crb enable
-	update-crypto-policies --set DEFAULT:SHA1
-elif [ "$REV" = "8" ]; then
-	[ $DIST != "redhat" ] && POWERTOOLS_REPO="--enablerepo=powertools" || /usr/bin/crb enable
+[ "$REV" = "9" ] && update-crypto-policies --set DEFAULT:SHA1
+if [ "$DIST" == "centos" ]; then
+	[ "$REV" = "9" ] && TESTING_REPO="--enablerepo=crb" || POWERTOOLS_REPO="--enablerepo=powertools"
+elif [ "$DIST" == "redhat" ]; then
+	/usr/bin/crb enable
 fi
 
 #add rabbitmq & erlang repo
-curl -s https://packagecloud.io/install/repositories/rabbitmq/rabbitmq-server/script.rpm.sh | os=centos dist=$REV bash
-curl -s https://packagecloud.io/install/repositories/rabbitmq/erlang/script.rpm.sh | os=centos dist=$REV bash
+curl -s https://packagecloud.io/install/repositories/rabbitmq/rabbitmq-server/script.rpm.sh | bash
+curl -s https://packagecloud.io/install/repositories/rabbitmq/erlang/script.rpm.sh | bash
 
 #add nodejs repo
-[ "$REV" = "8" ] && NODEJS_OPTION="--setopt=nodesource-nodejs.module_hotfixes=1"
-[ "$REV" = "7" ] && NODE_VERSION="16" || NODE_VERSION="18"
-yum install -y https://rpm.nodesource.com/pub_${NODE_VERSION}.x/nodistro/repo/nodesource-release-nodistro-1.noarch.rpm || true
-
-#add dotnet repo
-[ $REV = "7" ] && rpm -Uvh https://packages.microsoft.com/config/centos/$REV/packages-microsoft-prod.rpm || true
+NODE_VERSION="18"
+curl -fsSL https://rpm.nodesource.com/setup_${NODE_VERSION}.x | sed '/update -y/d' | bash - || true
 
 #add mysql repo
-[ "$REV" != "7" ] && dnf remove -y @mysql && dnf module -y reset mysql && dnf module -y disable mysql
-MYSQL_REPO_VERSION="$(curl https://repo.mysql.com | grep -oP "mysql80-community-release-el${REV}-\K.*" | grep -o '^[^.]*' | sort | tail -n1)"
-yum localinstall -y https://repo.mysql.com/mysql80-community-release-el${REV}-${MYSQL_REPO_VERSION}.noarch.rpm || true
+dnf remove -y @mysql && dnf module -y reset mysql && dnf module -y disable mysql
+MYSQL_REPO_VERSION="$(curl https://repo.mysql.com | grep -oP "mysql80-community-release-${MYSQL_DISTR_NAME}${REV}-\K.*" | grep -o '^[^.]*' | sort | tail -n1)"
+yum localinstall -y https://repo.mysql.com/mysql80-community-release-${MYSQL_DISTR_NAME}${REV}-${MYSQL_REPO_VERSION}.noarch.rpm || true
 
 if ! rpm -q mysql-community-server; then
 	MYSQL_FIRST_TIME_INSTALL="true";
@@ -90,7 +76,8 @@ autorefresh=1
 type=rpm-md
 END
 
-# add nginx repo
+# add nginx repo, Fedora doesn't need it
+if [ "$DIST" != "fedora" ]; then
 cat > /etc/yum.repos.d/nginx.repo <<END
 [nginx-stable]
 name=nginx stable repo
@@ -100,15 +87,17 @@ enabled=1
 gpgkey=https://nginx.org/keys/nginx_signing.key
 module_hotfixes=true
 END
+fi
 
 rpm --import https://openresty.org/package/pubkey.gpg
-OPENRESTY_REPO_FILE=$( [[ "$REV" -ge 9 ]] && echo "openresty2.repo" || echo "openresty.repo" )
-curl -o /etc/yum.repos.d/openresty.repo "https://openresty.org/package/centos/${OPENRESTY_REPO_FILE}"
+OPENRESTY_REPO_FILE=$( [[ "$REV" -ge 9 && "$DIST" != "fedora" ]] && echo "openresty2.repo" || echo "openresty.repo" )
+curl -o /etc/yum.repos.d/openresty.repo "https://openresty.org/package/${OPENRESTY_DISTR_NAME}/${OPENRESTY_REPO_FILE}"
+[ "$DIST" == "fedora" ] && sed -i "s/\$releasever/$OPENRESTY_REV/g" /etc/yum.repos.d/openresty.repo
 
-${package_manager} -y install epel-release \
+${package_manager} -y install $([ $DIST != "fedora" ] && echo "epel-release") \
 			python3 \
 			nodejs ${NODEJS_OPTION} \
-			dotnet-sdk-7.0 \
+			dotnet-sdk-8.0 \
 			elasticsearch-${ELASTIC_VERSION} --enablerepo=elasticsearch \
 			mysql-server \
 			postgresql \

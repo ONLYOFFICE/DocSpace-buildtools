@@ -59,7 +59,7 @@ echo "== FRONT-END-BUILD =="
 cd ${SRC_PATH}
 # debug config
 if [ "$DEBUG_INFO" = true ]; then
-	pip install -r ${SRC_PATH}/buildtools/requirements.txt
+	pip install -r ${SRC_PATH}/buildtools/requirements.txt --break-system-packages
 	python3 ${SRC_PATH}/buildtools/debuginfo.py
 fi 
 cd ${SRC_PATH}/client

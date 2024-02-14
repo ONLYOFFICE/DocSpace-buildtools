@@ -28,16 +28,17 @@ if ( -not $certbot_path )
   exit
 }
 
+$letsencrypt_root_dir = "$env:SystemDrive\Certbot\live"
+$app = Resolve-Path -Path ".\..\"
+$root_dir = "${app}\letsencrypt"
+$nginx_conf_dir = "$env:SystemDrive\OpenResty\conf"
+$nginx_conf = "onlyoffice-proxy.conf"
+$nginx_conf_tmpl = "onlyoffice-proxy.conf.tmpl"
+$nginx_ssl_tmpl = "onlyoffice-proxy-ssl.conf.tmpl"
+$proxy_service = "OpenResty"
+
 if ( $args.Count -ge 2 )
 {
-  $letsencrypt_root_dir = "$env:SystemDrive\Certbot\live"
-  $app = Resolve-Path -Path ".\..\"
-  $root_dir = "${app}\letsencrypt"
-  $nginx_conf_dir = "$env:SystemDrive\OpenResty\conf"
-  $nginx_conf = "onlyoffice-proxy.conf"
-  $nginx_tmpl = "onlyoffice-proxy-ssl.conf.tmpl"
-  $proxy_service = "OpenResty"
-  $appsettings_config_path = "${app}\config\appsettings.production.json"
 
   if ($args[0] -eq "-f") {
     $ssl_cert = $args[1]
@@ -59,9 +60,9 @@ if ( $args.Count -ge 2 )
     popd
   }
 
-  if ( [System.IO.File]::Exists($ssl_cert) -and [System.IO.File]::Exists($ssl_key) -and [System.IO.File]::Exists("${nginx_conf_dir}\${nginx_tmpl}"))
+  if ( [System.IO.File]::Exists($ssl_cert) -and [System.IO.File]::Exists($ssl_key) -and [System.IO.File]::Exists("${nginx_conf_dir}\${nginx_ssl_tmpl}"))
   {
-    Copy-Item "${nginx_conf_dir}\${nginx_tmpl}" -Destination "${nginx_conf_dir}\${nginx_conf}"
+    Copy-Item "${nginx_conf_dir}\${nginx_ssl_tmpl}" -Destination "${nginx_conf_dir}\${nginx_conf}"
     ((Get-Content -Path "${nginx_conf_dir}\${nginx_conf}" -Raw) -replace '/usr/local/share/ca-certificates/tls.crt', $ssl_cert) | Set-Content -Path "${nginx_conf_dir}\${nginx_conf}"
     ((Get-Content -Path "${nginx_conf_dir}\${nginx_conf}" -Raw) -replace '/etc/ssl/private/tls.key', $ssl_key) | Set-Content -Path "${nginx_conf_dir}\${nginx_conf}"
 
@@ -75,14 +76,24 @@ if ( $args.Count -ge 2 )
 
   Restart-Service -Name $proxy_service
 
-  "certbot renew >> `"${app}\letsencrypt\Logs\le-renew.log`"" > "${app}\letsencrypt\letsencrypt_cron.bat"
-  "net stop $proxy_service" >> "${app}\letsencrypt\letsencrypt_cron.bat"
-  "net start $proxy_service" >> "${app}\letsencrypt\letsencrypt_cron.bat"
+  @(
+    "certbot renew >> `"${app}\letsencrypt\Logs\le-renew.log`"",
+    "net stop $proxy_service",
+    "net start $proxy_service"
+  ) | Set-Content -Path "${app}\letsencrypt\letsencrypt_cron.bat" -Encoding ascii
 
   $day = (Get-Date -Format "dddd").ToUpper().SubString(0, 3)
   $time = Get-Date -Format "HH:mm"
   cmd.exe /c "SCHTASKS /F /CREATE /SC WEEKLY /D $day /TN `"Certbot renew`" /TR `"${app}\letsencrypt\letsencrypt_cron.bat`" /ST $time"
 }
+
+elseif ($args[0] -eq "-d" -or $args[0] -eq "--default") {
+    Copy-Item "${nginx_conf_dir}\${nginx_conf_tmpl}" -Destination "${nginx_conf_dir}\${nginx_conf}"
+    Restart-Service -Name $proxy_service
+    Remove-Item -Path "${app}\letsencrypt\letsencrypt_cron.bat" -Force
+    Write-Host "Returned to the default proxy configuration."
+}
+
 else
 {
   Write-Output " This script provided to automatically get Let's Encrypt SSL Certificates for DocSpace "
@@ -98,4 +109,7 @@ else
   Write-Output "  docspace-ssl-setup.ps1 -f CERTIFICATE PRIVATEKEY "
   Write-Output "    CERTIFICATE   Path to the certificate file for the domain."
   Write-Output "    PRIVATEKEY    Path to the private key file for the certificate."
+  Write-Output "                                                                   "
+  Write-Output " Return to the default proxy configuration using the -d or --default parameter: "
+  Write-Output "  docspace-ssl-setup.ps1 -d | docspace-ssl-setup.ps1 --default  "
 }

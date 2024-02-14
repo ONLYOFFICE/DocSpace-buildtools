@@ -492,6 +492,13 @@ setup_openresty(){
 	fi
 
 	if [ "$DIST" = "RedHat" ]; then
+		# Remove default nginx settings [error] port 80 is already in use
+		if [ -f /etc/nginx/nginx.conf ];
+			if grep -q "server {"  /etc/nginx/nginx.conf ; then
+				sed -e '$a}' -e '/server {/,$d' -i /etc/nginx/nginx.conf
+			fi
+		fi
+		
 		shopt -s nocasematch
 		PORTS=()
 		if command -v getenforce &> /dev/null; then
@@ -647,21 +654,25 @@ change_elasticsearch_config(){
 		sed -i "s/ingest.geoip.downloader.enabled.*/ingest.geoip.downloader.enabled: false/" ${ELASTIC_SEARCH_CONF_PATH}
 	fi
 
-	local TOTAL_MEMORY=$(free -m | grep -oP '\d+' | head -n 1);
-	local MEMORY_REQUIREMENTS=12228; #RAM ~4*3Gb
+	local TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1);
+	local MEMORY_REQUIREMENTS=12000; #RAM ~12Gb
 
 	if [ ${TOTAL_MEMORY} -gt ${MEMORY_REQUIREMENTS} ]; then
-		if ! grep -q "[-]Xms1g" ${ELASTIC_SEARCH_JAVA_CONF_PATH}; then
-			echo "-Xms4g" >> ${ELASTIC_SEARCH_JAVA_CONF_PATH}
-		else
-			sed -i "s/-Xms1g/-Xms4g/" ${ELASTIC_SEARCH_JAVA_CONF_PATH} 
-		fi
+		ELASTICSEATCH_MEMORY="4g"
+	else
+		ELASTICSEATCH_MEMORY="1g"
+	fi
 
-		if ! grep -q "[-]Xmx1g" ${ELASTIC_SEARCH_JAVA_CONF_PATH}; then
-			echo "-Xmx4g" >> ${ELASTIC_SEARCH_JAVA_CONF_PATH}
-		else
-			sed -i "s/-Xmx1g/-Xmx4g/" ${ELASTIC_SEARCH_JAVA_CONF_PATH} 
-		fi
+	if grep -qE "^[^#]*-Xms[0-9]g" "${ELASTIC_SEARCH_JAVA_CONF_PATH}"; then
+		sed -i "s/-Xms[0-9]g/-Xms${ELASTICSEATCH_MEMORY}/" "${ELASTIC_SEARCH_JAVA_CONF_PATH}"
+	else
+		echo "-Xms${ELASTICSEATCH_MEMORY}" >> "${ELASTIC_SEARCH_JAVA_CONF_PATH}"
+	fi
+
+	if grep -qE "^[^#]*-Xmx[0-9]g" "${ELASTIC_SEARCH_JAVA_CONF_PATH}"; then
+		sed -i "s/-Xmx[0-9]g/-Xmx${ELASTICSEATCH_MEMORY}/" "${ELASTIC_SEARCH_JAVA_CONF_PATH}"
+	else
+		echo "-Xmx${ELASTICSEATCH_MEMORY}" >> "${ELASTIC_SEARCH_JAVA_CONF_PATH}"
 	fi
 
 	if [ -d /etc/elasticsearch/ ]; then 
