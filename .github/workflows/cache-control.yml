@@ -1,0 +1,127 @@
+name: Cache-Control Test
+
+on: 
+  workflow_dispatch:
+
+jobs:
+  test-cache-control:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Create configuration files
+      run: |
+        cat <<EOF > install/docker/config/nginx/test_cache.conf
+        server {
+            listen 8092;
+
+            location / {
+                default_type text/plain;
+                content_by_lua_block {
+                    local args = ngx.req.get_uri_args()
+                    local cache_control = args["cache_control"]
+
+                    if cache_control then
+                        ngx.header["Cache-Control"] = cache_control
+                        ngx.say("Cache-Control set to: ", cache_control)
+                    else
+                        ngx.say("Cache-Control not specified. Use ?cache_control=<value> to set one.")
+                    end
+                }
+            }
+        }
+        EOF
+
+        cat <<EOF > install/docker/router.yml
+        services:
+          onlyoffice-router:
+            image: openresty/openresty:latest
+            container_name: onlyoffice-router
+            restart: always
+            ports:
+              - "8092:8092"
+            volumes:
+              - ./config/nginx/test_cache.conf:/etc/nginx/conf.d/default.conf
+
+        networks:
+          default:
+            name: \${NETWORK_NAME}
+            external: true
+        EOF
+      
+    - name: Run Docker containers and script
+      run: |
+        docker network create onlyoffice
+        docker-compose -f install/docker/proxy.yml -f install/docker/router.yml up -d
+    
+    - name: Wait for containers to become ready
+      run: |
+        timeout 30 bash -c 'until curl -s http://localhost:80; do sleep 1; done'
+        timeout 30 bash -c 'until curl -s http://localhost:8092; do sleep 1; done'
+    
+    - name: Execute testing script
+      run: |
+        CACHE_CONTROLS_HITS=(
+          "max-age=60"
+          "s-maxage=60"
+          "max-age=3600"
+          "max-age=120,must-revalidate"
+          "public,max-age=60"
+          "immutable"
+          "public,s-maxage=60,max-age=30"
+          "immutable,max-age=3600"
+          "max-age=300,must-revalidate"
+          "proxy-revalidate,max-age=600"
+          "no-transform,max-age=900"
+          "must-revalidate,max-age=1200"
+          "proxy-revalidate,s-maxage=150"
+          "public,immutable,max-age=31536000"
+          "public,max-age=120,proxy-revalidate"
+          "public,no-transform,s-maxage=60,max-age=30"
+          "max-age=60,no-transform,must-revalidate"
+        )
+        CACHE_CONTROLS_MISSES=(
+          "no-cache"
+          "no-store"
+          "public"
+          "private"
+          "max-age=0"
+          "must-revalidate"
+          "proxy-revalidate"
+          "no-cache,no-store"
+          "private,max-age=120"
+          "no-cache,max-age=0"
+          "private,no-cache"
+          "public,no-transform"
+          "no-store,must-revalidate,max-age=0"
+          "public,max-age=0"
+          "private,s-maxage=60"
+          "no-cache,max-age=30"
+          "no-store,s-maxage=120"
+          "public,no-cache"
+          "private,no-store"
+          "no-cache,no-store,max-age=0"
+          "private,max-age=60,must-revalidate"
+          "no-store,no-cache,must-revalidate,max-age=0"
+          "private,immutable,s-maxage=43200"
+        )
+    
+        for CC in "${CACHE_CONTROLS_HITS[@]}" "${CACHE_CONTROLS_MISSES[@]}"; do
+            curl -s -I "http://localhost/?cache_control=${CC}" > /dev/null
+            if $(curl -s -I "http://localhost/?cache_control=${CC}" | grep "X-Cache-Status" | grep -q "HIT"); then
+                if [[ " ${CACHE_CONTROLS_MISSES[@]} " =~ " $CC " ]]; then
+                    echo "Error: HIT received for $CC"
+                    exit 1
+                else
+                    echo "- HIT - $CC"
+                fi
+            else
+                if [[ " ${CACHE_CONTROLS_HITS[@]} " =~ " $CC " ]]; then
+                    echo "Error: HIT expected for $CC"
+                    exit 1
+                else
+                    echo "- MISS - $CC"
+                fi
+            fi
+        done
