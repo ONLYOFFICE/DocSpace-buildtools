@@ -3,6 +3,7 @@
   <name>ONLYOFFICE IdentityApi</name>
   <startmode>manual</startmode>
   <executable>java</executable>
+  <env name="LOG_FILE_PATH" value="../../Logs/identity-api.log"/>
   <arguments>-jar ../../server/common/ASC.Identity/api/target/identity-api.jar</arguments>
   <log mode="none"/>
   <delayedAutoStart>true</delayedAutoStart>
