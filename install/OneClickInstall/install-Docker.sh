@@ -60,6 +60,7 @@ INSTALL_RABBITMQ="true";
 INSTALL_MYSQL_SERVER="true";
 INSTALL_DOCUMENT_SERVER="true";
 INSTALL_ELASTICSEARCH="true";
+INSTALL_FLUENT_BIT="true";
 INSTALL_PRODUCT="true";
 UPDATE="false";
 
@@ -372,6 +373,13 @@ while [ "$1" != "" ]; do
 			fi
 		;;
 
+		-ifb | --installfluentbit )
+			if [ "$2" != "" ]; then
+				INSTALL_FLUENT_BIT=$2
+				shift
+			fi
+		;;
+
 		-rdsh | --redishost )
 			if [ "$2" != "" ]; then
 				REDIS_HOST=$2
@@ -489,6 +497,7 @@ while [ "$1" != "" ]; do
 			echo "      -irds, --installredis             install or update redis (true|false)"
 			echo "      -imysql, --installmysql           install or update mysql (true|false)"		
 			echo "      -ies, --installelastic            install or update elasticsearch (true|false)"
+			echo "      -ifb, --installfluentbit          install or update fluent-bit (true|false)"
 			echo "      -espr, --elasticprotocol          the protocol for the connection to elasticsearch (default value http)"
 			echo "      -esh, --elastichost               the IP address or hostname of the elasticsearch"
 			echo "      -esp, --elasticport               elasticsearch port number (default value 9200)"
@@ -1263,6 +1272,23 @@ install_elasticsearch () {
 	fi
 }
 
+install_fluent_bit () {
+	if [ "$INSTALL_FLUENT_BIT" == "true" ]; then
+		[ ! -z "$ELK_HOST" ] && sed -i "s/ELK_CONTAINER_NAME/ELK_HOST/g" $BASE_DIR/fluent.yml
+
+		docker-compose -f $BASE_DIR/fluent.yml up -d
+
+		DOCKER_DAEMON_FILE="/etc/docker/daemon.json"
+		if [[ ! -f "${DOCKER_DAEMON_FILE}" ]]; then
+			echo "{\"log-driver\": \"fluentd\", \"log-opts\": { \"fluentd-address\": \"localhost:24224\" }}" > "${DOCKER_DAEMON_FILE}"
+			systemctl restart docker
+		elif ! grep -q "log-driver" ${DOCKER_DAEMON_FILE}; then
+			sed -i 's!{!& "log-driver": "fluentd", "log-opts": { "fluentd-address": "localhost:24224" },!' "${DOCKER_DAEMON_FILE}"
+			systemctl restart docker
+		fi
+	fi
+}
+
 install_product () {
 	DOCKER_TAG="${DOCKER_TAG:-$(get_available_version ${IMAGE_NAME})}"
 	reconfigure DOCKER_TAG ${DOCKER_TAG}
@@ -1375,15 +1401,17 @@ start_installation () {
 
 	download_files
 
+	install_elasticsearch
+
+	install_fluent_bit
+
 	install_mysql_server
-	
-	install_document_server
 
 	install_rabbitmq
 
 	install_redis
 
-	install_elasticsearch
+	install_document_server
 
 	if [ "$INSTALL_PRODUCT" == "true" ]; then
 		install_product
