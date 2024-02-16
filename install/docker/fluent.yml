@@ -1,0 +1,31 @@
+version: "3"
+services:
+  onlyoffice-opensearch-dashboard:
+    image: opensearchproject/opensearch-dashboards:${DASHBOARD_VERSION}
+    container_name: ${DASHBOARD_CONTAINER_NAME}
+    restart: always
+    environment:
+      - OPENSEARCH_HOSTS=${ELK_SHEME}://${ELK_CONTAINER_NAME}:${ELK_PORT}
+      - OPENSEARCH_DASHBOARD_ALLOW_WILDCARD=true
+      - "DISABLE_SECURITY_DASHBOARDS_PLUGIN=true"
+    ports:
+      - 5601:5601
+    expose:
+      - "5601"
+
+  fluent-bit:
+    image: fluent/fluent-bit:${FLUENT_BIT_VERSION}
+    container_name: ${FLUENT_BIT_CONTAINER_NAME}
+    restart: always
+    environment:
+      - HOST=${ELK_CONTAINER_NAME}
+      - PORT=${ELK_PORT}
+    ports:
+      - "127.0.0.1:24224:24224"
+    volumes:
+      - ./config/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
+
+networks:
+  default:
+    name: ${NETWORK_NAME}
+    external: true
