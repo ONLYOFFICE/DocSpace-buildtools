@@ -99,7 +99,7 @@ ${package_manager} -y install $([ $DIST != "fedora" ] && echo "epel-release") \
 			nodejs ${NODEJS_OPTION} \
 			dotnet-sdk-8.0 \
 			elasticsearch-${ELASTIC_VERSION} --enablerepo=elasticsearch \
-			mysql-server \
+			mysql-community-server \
 			postgresql \
 			postgresql-server \
 			rabbitmq-server$rabbitmq_version \
