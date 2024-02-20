@@ -31,6 +31,9 @@ def move_folder():
     srcPath = publicDir + "/src"
     campaignsPath = srcPath + "/campaigns"
     newPath = publicDir + "/campaigns"
+
+    if os.path.exists(newPath):
+          shutil.rmtree(newPath)
     shutil.move(campaignsPath, newPath)
     shutil.rmtree(srcPath)
 
