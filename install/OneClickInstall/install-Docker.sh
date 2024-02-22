@@ -1276,6 +1276,7 @@ install_fluent_bit () {
 	if [ "$INSTALL_FLUENT_BIT" == "true" ]; then
 		curl https://raw.githubusercontent.com/fluent/fluent-bit/master/install.sh | sh
 
+		sed -i "s/OPENSEARCH_SCHEME/$(get_env_parameter "ELK_SHEME")/g" "${BASE_DIR}/config/fluent-bit.conf"
 		sed -i "s/OPENSEARCH_HOST/${ELK_HOST:-127.0.0.1}/g" "${BASE_DIR}/config/fluent-bit.conf"
 		sed -i "s/OPENSEARCH_PORT/$(get_env_parameter "ELK_PORT")/g" ${BASE_DIR}/config/fluent-bit.conf
 		[ ! -z "${ELK_HOST}" ] && sed -i "s/ELK_CONTAINER_NAME/ELK_HOST/g" ${BASE_DIR}/dashboard.yml
