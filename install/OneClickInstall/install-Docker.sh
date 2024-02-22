@@ -1274,18 +1274,24 @@ install_elasticsearch () {
 
 install_fluent_bit () {
 	if [ "$INSTALL_FLUENT_BIT" == "true" ]; then
-		[ ! -z "$ELK_HOST" ] && sed -i "s/ELK_CONTAINER_NAME/ELK_HOST/g" $BASE_DIR/fluent.yml
+		curl https://raw.githubusercontent.com/fluent/fluent-bit/master/install.sh | sh
 
-		docker-compose -f $BASE_DIR/fluent.yml up -d
+		sed -i "s/OPENSEARCH_HOST/${ELK_HOST:-127.0.0.1}/g" "${BASE_DIR}/config/fluent-bit.conf"
+		sed -i "s/OPENSEARCH_PORT/$(get_env_parameter "ELK_PORT")/g" ${BASE_DIR}/config/fluent-bit.conf
+		[ ! -z "${ELK_HOST}" ] && sed -i "s/ELK_CONTAINER_NAME/ELK_HOST/g" ${BASE_DIR}/dashboard.yml
+		cp -rf ${BASE_DIR}/config/fluent-bit.conf /etc/fluent-bit/fluent-bit.conf
+		systemctl restart fluent-bit
 
 		DOCKER_DAEMON_FILE="/etc/docker/daemon.json"
 		if [[ ! -f "${DOCKER_DAEMON_FILE}" ]]; then
-			echo "{\"log-driver\": \"fluentd\", \"log-opts\": { \"fluentd-address\": \"localhost:24224\" }}" > "${DOCKER_DAEMON_FILE}"
+			echo "{\"log-driver\": \"fluentd\", \"log-opts\": { \"fluentd-address\": \"127.0.0.1:24224\" }}" > "${DOCKER_DAEMON_FILE}"
 			systemctl restart docker
 		elif ! grep -q "log-driver" ${DOCKER_DAEMON_FILE}; then
-			sed -i 's!{!& "log-driver": "fluentd", "log-opts": { "fluentd-address": "localhost:24224" },!' "${DOCKER_DAEMON_FILE}"
+			sed -i 's!{!& "log-driver": "fluentd", "log-opts": { "fluentd-address": "127.0.0.1:24224" },!' "${DOCKER_DAEMON_FILE}"
 			systemctl restart docker
 		fi
+
+		docker-compose -f ${BASE_DIR}/dashboard.yml up -d
 	fi
 }
 

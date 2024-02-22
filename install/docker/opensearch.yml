@@ -24,6 +24,8 @@ services:
     expose:
       - "9200"
       - "9600" # required for Performance Analyzer
+    ports:
+      - 127.0.0.1:9200:9200
   
 networks:
   default:
