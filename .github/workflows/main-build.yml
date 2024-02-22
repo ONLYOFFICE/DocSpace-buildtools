@@ -55,14 +55,20 @@ jobs:
         run: |
           cd .${DOCKER_PATH}
           if [ "${{ matrix.branch }}" = "develop" ]; then
-            DOCKER_TAG="develop.${{ github.run_number }}"
+            PRODUCT_VERSION="develop"
+            DOCKER_TAG=${PRODUCT_VERSION}.${{ github.run_number }}
           else
-            DOCKER_TAG=$(echo "${{ matrix.branch }}" | sed '/^release\b\|^hotfix\b\|^feature\b/s/release.*\/\|hotfix.*\/\|feature.*\///; s/-git-action$//; s/^v//').${{github.run_number}}          
+            PRODUCT_VERSION=$(echo "${{ matrix.branch }}" | sed '/^release\b\|^hotfix\b\|^feature\b/s/release.*\/\|hotfix.*\/\|feature.*\///; s/-git-action$//; s/^v//') 
+            DOCKER_TAG=${PRODUCT_VERSION}.${{github.run_number}}
           fi
           export DOCKER_TAG
           docker buildx bake -f build.yml \
           --set *.args.GIT_BRANCH=${{ matrix.branch }} \
+          --set *.args.PRODUCT_VERSION=${PRODUCT_VERSION} \
+          --set *.args.BUILD_NUMBER=${BUILD_NUMBER} \
           --set *.platform=linux/amd64 \
+          --set *.args.PRODUCT_VERSION=${PRODUCT_VERSION} \
+          --set *.args.BUILD_NUMBER=${BUILD_NUMBER} \
           --push
 
           echo "version=${DOCKER_TAG}" >> "$GITHUB_OUTPUT"
