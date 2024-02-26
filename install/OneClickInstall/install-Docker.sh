@@ -1288,12 +1288,9 @@ install_product () {
 	docker-compose -f $BASE_DIR/healthchecks.yml up -d
 
 	if [[ -n "${PREVIOUS_ELK_VERSION}" && "$(get_env_parameter "ELK_VERSION")" != "${PREVIOUS_ELK_VERSION}" ]]; then
+		MYSQL_TAG=$(docker images --format "{{.Tag}}" mysql | head -n1)
 		MYSQL_CONTAINER_NAME=$(get_env_parameter "MYSQL_CONTAINER_NAME" | sed "s/\${CONTAINER_PREFIX}/${PACKAGE_SYSNAME}-/g")
-		if docker ps -a | grep -q ${MYSQL_CONTAINER_NAME}; then
-			docker exec ${MYSQL_CONTAINER_NAME} bash -c "mysql -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DATABASE}" -e \"TRUNCATE webstudio_index;\""
-		elif [ ! -z "${MYSQL_HOST}" ]; then
-			docker run --rm mysql mysql -h "${MYSQL_HOST}" -P "${MYSQL_PORT}" -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DATABASE}" -e "TRUNCATE webstudio_index;"
-		fi
+		docker run --rm --network="$(get_env_parameter "NETWORK_NAME")" mysql:${MYSQL_TAG:-latest} mysql -h "${MYSQL_HOST:-${MYSQL_CONTAINER_NAME}}" -P "${MYSQL_PORT:-3306}" -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DATABASE}" -e "TRUNCATE webstudio_index;"
 	fi
 
 	if [ ! -z "${CERTIFICATE_PATH}" ] && [ ! -z "${CERTIFICATE_KEY_PATH}" ] && [[ ! -z "${APP_DOMAIN_PORTAL}" ]]; then
