@@ -15,6 +15,7 @@ RUN find config/ -maxdepth 1 -name "*.json" | grep -v test | grep -v dev | xargs
     tar -C "/app/onlyoffice/" -xvf config.tar && \
     cp config/*.config /app/onlyoffice/config/ && \
     mkdir -p /etc/nginx/conf.d && cp -f config/nginx/onlyoffice*.conf /etc/nginx/conf.d/ && \
+    mkdir -p /etc/nginx/html && cp -f config/nginx/html/* /etc/nginx/html/ && \
     mkdir -p /etc/nginx/includes/ && cp -f config/nginx/includes/onlyoffice*.conf /etc/nginx/includes/ && \
     sed -i "s/\"number\".*,/\"number\": \"${PRODUCT_VERSION}.${BUILD_NUMBER}\",/g" /app/onlyoffice/config/appsettings.json && \
     sed -e 's/#//' -i /etc/nginx/conf.d/onlyoffice.conf
@@ -92,6 +93,7 @@ RUN apt-get -y update && \
 
 # copy static services files and config values 
 COPY --from=base /etc/nginx/conf.d /etc/nginx/conf.d
+COPY --from=base /etc/nginx/html /etc/nginx/html
 
 COPY /buildtools/install/docker/config/nginx/docker-entrypoint.sh /docker-entrypoint.sh
 COPY /buildtools/install/docker/config/nginx/docker-entrypoint.d /docker-entrypoint.d

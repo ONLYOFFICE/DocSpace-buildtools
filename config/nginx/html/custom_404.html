@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>404 Error Page</title>
+    <style>
+      body,
+      html {
+        height: 100%;
+        margin: 0px;
+        font-family: "Open Sans", Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #f0f0f0;
+      }
+
+      .error-container {
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+        cursor: default;
+        width: auto;
+        height: 100vh;
+        overflow-x: hidden;
+        margin: 0px auto;
+        padding-top: 36px;
+        border: 0px;
+        box-sizing: border-box;
+        text-align: center;
+      }
+
+      .error-image {
+        max-width: 100%;
+        height: auto;
+        margin-bottom: 40px;
+      }
+
+      .error-header {
+        font-size: 23px;
+        line-height: 28px;
+        font-weight: 700;
+        color: #333333;
+        margin: 0px;
+        margin-bottom: 8px;
+      }
+
+      .error-text {
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 400;
+        color: #555f65;
+        margin: 0px;
+        margin-bottom: 24px;
+      }
+
+      @media (max-width: 600px) {
+        .error-container {
+          width: 343px;
+        }
+        .error-image {
+          width: 200px;
+          height: 200px;
+        }
+
+        .error-text {
+          max-width: 287px;
+          text-align: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="error-container">
+      <img
+        src="/static/images/error404.svg"
+        alt="Error Character"
+        class="error-image"
+      />
+      <h1 class="error-header">404 Error!</h1>
+      <p class="error-text">
+        Page not found. The server cannot find the requested resource.
+      </p>
+    </div>
+  </body>
+</html>
