@@ -1276,24 +1276,28 @@ install_fluent_bit () {
 	if [ "$INSTALL_FLUENT_BIT" == "true" ]; then
 		curl https://raw.githubusercontent.com/fluent/fluent-bit/master/install.sh | sh
 
-		sed -i "s/OPENSEARCH_SCHEME/$(get_env_parameter "ELK_SHEME")/g" "${BASE_DIR}/config/fluent-bit.conf"
-		sed -i "s/OPENSEARCH_HOST/${ELK_HOST:-127.0.0.1}/g" "${BASE_DIR}/config/fluent-bit.conf"
-		sed -i "s/OPENSEARCH_PORT/$(get_env_parameter "ELK_PORT")/g" ${BASE_DIR}/config/fluent-bit.conf
-		sed -i "s/OPENSEARCH_INDEX/${OPENSEARCH_INDEX:-"${PACKAGE_SYSNAME}-fluent-bit"}/g" ${BASE_DIR}/config/fluent-bit.conf
-		[ ! -z "${ELK_HOST}" ] && sed -i "s/ELK_CONTAINER_NAME/ELK_HOST/g" ${BASE_DIR}/dashboard.yml
-		cp -rf ${BASE_DIR}/config/fluent-bit.conf /etc/fluent-bit/fluent-bit.conf
-		systemctl restart fluent-bit
+		if systemctl list-unit-files --type=service | grep -q "fluent-bit.service"; then
+			sed -i "s/OPENSEARCH_SCHEME/$(get_env_parameter "ELK_SHEME")/g" "${BASE_DIR}/config/fluent-bit.conf"
+			sed -i "s/OPENSEARCH_HOST/${ELK_HOST:-127.0.0.1}/g" "${BASE_DIR}/config/fluent-bit.conf"
+			sed -i "s/OPENSEARCH_PORT/$(get_env_parameter "ELK_PORT")/g" ${BASE_DIR}/config/fluent-bit.conf
+			sed -i "s/OPENSEARCH_INDEX/${OPENSEARCH_INDEX:-"${PACKAGE_SYSNAME}-fluent-bit"}/g" ${BASE_DIR}/config/fluent-bit.conf
+			[ ! -z "${ELK_HOST}" ] && sed -i "s/ELK_CONTAINER_NAME/ELK_HOST/g" ${BASE_DIR}/dashboard.yml
+			cp -rf ${BASE_DIR}/config/fluent-bit.conf /etc/fluent-bit/fluent-bit.conf
+			systemctl restart fluent-bit
 
-		DOCKER_DAEMON_FILE="/etc/docker/daemon.json"
-		if [[ ! -f "${DOCKER_DAEMON_FILE}" ]]; then
-			echo "{\"log-driver\": \"fluentd\", \"log-opts\": { \"fluentd-address\": \"127.0.0.1:24224\" }}" > "${DOCKER_DAEMON_FILE}"
-			systemctl restart docker
-		elif ! grep -q "log-driver" ${DOCKER_DAEMON_FILE}; then
-			sed -i 's!{!& "log-driver": "fluentd", "log-opts": { "fluentd-address": "127.0.0.1:24224" },!' "${DOCKER_DAEMON_FILE}"
-			systemctl restart docker
+			DOCKER_DAEMON_FILE="/etc/docker/daemon.json"
+			if [[ ! -f "${DOCKER_DAEMON_FILE}" ]]; then
+				echo "{\"log-driver\": \"fluentd\", \"log-opts\": { \"fluentd-address\": \"127.0.0.1:24224\" }}" > "${DOCKER_DAEMON_FILE}"
+				systemctl restart docker
+			elif ! grep -q "log-driver" ${DOCKER_DAEMON_FILE}; then
+				sed -i 's!{!& "log-driver": "fluentd", "log-opts": { "fluentd-address": "127.0.0.1:24224" },!' "${DOCKER_DAEMON_FILE}"
+				systemctl restart docker
+			fi
+
+			docker-compose -f ${BASE_DIR}/dashboard.yml up -d
+		else
+			echo "The installation of the fluent-bit service was unsuccessful."
 		fi
-
-		docker-compose -f ${BASE_DIR}/dashboard.yml up -d
 	fi
 }
 
