@@ -1,6 +1,7 @@
 ## COPY PUBLIC ##
 debian/build/buildtools/install/common/{{product}}-ssl-setup                 usr/bin
 debian/build/buildtools/install/docker/config/nginx/templates/*.template     etc/onlyoffice/{{product}}/openresty
+debian/build/buildtools/config/nginx/html/*.html                             etc/openresty/html
 debian/build/buildtools/install/docker/config/nginx/onlyoffice*              etc/openresty/conf.d
 debian/build/buildtools/config/nginx/onlyoffice*.conf                        etc/openresty/conf.d
 debian/build/buildtools/install/docker/config/nginx/letsencrypt*             etc/openresty/includes
