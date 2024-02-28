@@ -68,7 +68,7 @@ jobs:
           --set *.args.BUILD_NUMBER=${BUILD_NUMBER} \
           --set *.platform=linux/amd64 \
           --set *.args.PRODUCT_VERSION=${PRODUCT_VERSION} \
-          --set *.args.BUILD_NUMBER=${BUILD_NUMBER} \
+          --set *.args.BUILD_NUMBER=${{github.run_number}} \
           --push
 
           echo "version=${DOCKER_TAG}" >> "$GITHUB_OUTPUT"
