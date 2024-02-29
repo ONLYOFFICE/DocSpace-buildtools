@@ -15,9 +15,9 @@ map $http_x_forwarded_host $the_host {
   "" $host;
 }
 
-map $http_x_forwarded_port $proxy_x_forwarded_port {
-  default $http_x_forwarded_port;
-  '' $server_port;
+map $http_x_forwarded_port $the_port {
+  default $EXTERNAL_PORT;
+  ~^(.*)$ $1;
 }
 
 map $http_upgrade $proxy_connection {
