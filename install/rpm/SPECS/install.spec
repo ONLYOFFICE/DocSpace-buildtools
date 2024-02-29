@@ -64,4 +64,5 @@ cp -rf %{_builddir}/buildtools/install/common/%{product}-ssl-setup "%{buildroot}
 cp -rf %{_builddir}/buildtools/install/common/%{product}-configuration "%{buildroot}%{_bindir}/%{product}-configuration"
 cp -rf %{_builddir}/buildtools/config/nginx/onlyoffice*.conf "%{buildroot}%{_sysconfdir}/openresty/conf.d/"
 cp -rf %{_builddir}/buildtools/config/nginx/includes/onlyoffice*.conf "%{buildroot}%{_sysconfdir}/openresty/includes/"
+cp -rf %{_builddir}/buildtools/config/nginx/html/*.html "%{buildroot}%{_sysconfdir}/openresty/html/"
 cp -rf %{_builddir}/buildtools/config/* "%{buildroot}%{_sysconfdir}/onlyoffice/%{product}/"
