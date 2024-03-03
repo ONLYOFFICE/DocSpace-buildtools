@@ -55,6 +55,7 @@
     <ROW Property="MySQLConnector" Value="MySQL Connector/ODBC 8.0.21 x86"/>
     <ROW Property="NEED_REINDEX_OPENSEARCH" Value="FALSE" ValueLocId="-"/>
     <ROW Property="OPENSEARCH_HOST" Value="localhost" ValueLocId="-"/>
+    <ROW Property="OPENSEARCH_INDEX" Value="fluentbit" ValueLocId="-"/>
     <ROW Property="OPENSEARCH_MSG" Value="Unable to connect to remote OpenSearch server at "/>
     <ROW Property="OPENSEARCH_PORT" Value="9200" ValueLocId="-"/>
     <ROW Property="OPENSEARCH_SCHEME" Value="http" ValueLocId="-"/>
@@ -957,7 +958,11 @@
     <ROW Action="AI_DATA_SETTER_24" Type="51" Source="CustomActionData" Target="OpenResty"/>
     <ROW Action="AI_DATA_SETTER_25" Type="51" Source="CustomActionData" Target="[~]"/>
     <ROW Action="AI_DATA_SETTER_26" Type="51" Source="CustomActionData" Target="[~]"/>
+    <ROW Action="AI_DATA_SETTER_27" Type="51" Source="StartOpenSearchDashboardsService" Target="OpenSearchDashboards"/>
+    <ROW Action="AI_DATA_SETTER_28" Type="51" Source="CustomActionData" Target="OpenSearchDashboards"/>
+    <ROW Action="AI_DATA_SETTER_29" Type="51" Source="CustomActionData" Target="Fluent-Bit"/>
     <ROW Action="AI_DATA_SETTER_3" Type="51" Source="CustomActionData" Target="[~]"/>
+    <ROW Action="AI_DATA_SETTER_30" Type="51" Source="CustomActionData" Target="Fluent-Bit"/>
     <ROW Action="AI_DATA_SETTER_4" Type="51" Source="CustomActionData" Target="[~]"/>
     <ROW Action="AI_DATA_SETTER_5" Type="51" Source="CustomActionData" Target="[SqlConnectionError] |[ProductName] Setup |MB_OK,MB_ICONWARNING,MB_DEFBUTTON1||[CLIENTPROCESSID]"/>
     <ROW Action="AI_DATA_SETTER_6" Type="51" Source="CustomActionData" Target="[APPDIR_FORWARD_SLASH]"/>
@@ -1025,7 +1030,7 @@
     <ROW Action="AI_XmlRollback" Type="11521" Source="xmlCfg.dll" Target="OnXmlRollback" WithoutSeq="true"/>
     <ROW Action="AI_XmlUninstall" Type="1" Source="xmlCfg.dll" Target="OnXmlUninstall" AdditionalSeq="AI_DATA_SETTER_15"/>
     <ROW Action="DetectMySQLService" Type="1" Source="aicustact.dll" Target="DetectProcess" Options="3" AdditionalSeq="AI_DATA_SETTER_9"/>
-    <ROW Action="MoveNginxConfigs" Type="4102" Source="utils.vbs" Target="MoveNginxConfigs"/>
+    <ROW Action="MoveConfigs" Type="4102" Source="utils.vbs" Target="MoveConfigs"/>
     <ROW Action="MySQLConfigure" Type="262" Source="utils.vbs" Target="MySQLConfigure"/>
     <ROW Action="OpenCancelUrl" Type="194" Source="viewer.exe" Target="http://www.onlyoffice.com/install-canceled.aspx" WithoutSeq="true" Options="1"/>
     <ROW Action="OpenSearchInstallPlugin" Type="1030" Source="utils.vbs" Target="OpenSearchInstallPlugin"/>
@@ -1043,13 +1048,17 @@
     <ROW Action="Set_DS_JWT_HEADER" Type="51" Source="DOCUMENT_SERVER_JWT_HEADER" Target="[JWT_HEADER]"/>
     <ROW Action="Set_DS_JWT_SECRET" Type="51" Source="DOCUMENT_SERVER_JWT_SECRET" Target="[JWT_SECRET]"/>
     <ROW Action="Set_LICENSE_PATH" Type="51" Source="LICENSE_PATH" Target="[APPDIR]\Data\license.lic"/>
+    <ROW Action="StartFluentBitService" Type="1" Source="aicustact.dll" Target="StartWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_30"/>
     <ROW Action="StartMigrationRunner" Type="3074" Source="viewer.exe" Target="/EnforcedRunAsAdmin /RunAsAdmin /HideWindow /dir &quot;[APPDIR]services\ASC.Migration.Runner\service&quot; &quot;[APPDIR]services\ASC.Migration.Runner\service\ASC.Migration.Runner.exe&quot; standalone=true" Options="1"/>
     <ROW Action="StartMySQLService" Type="1" Source="aicustact.dll" Target="StartWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_11"/>
     <ROW Action="StartOpenResty" Type="1" Source="aicustact.dll" Target="StartWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_24"/>
+    <ROW Action="StartOpenSearchDashboardsService" Type="3073" Source="aicustact.dll" Target="StartWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_27"/>
     <ROW Action="StartOpenSearchService" Type="3073" Source="aicustact.dll" Target="StartWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_13"/>
     <ROW Action="StartService" Type="3073" Source="aicustact.dll" Target="StartWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_19"/>
+    <ROW Action="StopFluentBitService" Type="1" Source="aicustact.dll" Target="StopWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_29"/>
     <ROW Action="StopMySQLService" Type="1" Source="aicustact.dll" Target="StopWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_10"/>
     <ROW Action="StopOpenResty" Type="1" Source="aicustact.dll" Target="StopWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_23"/>
+    <ROW Action="StopOpenSearchDashboardsService" Type="1" Source="aicustact.dll" Target="StopWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_28"/>
     <ROW Action="StopOpenSearchService" Type="1" Source="aicustact.dll" Target="StopWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_12"/>
     <ROW Action="StopRedisService" Type="3073" Source="aicustact.dll" Target="StopWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_16"/>
     <ROW Action="TestOpenSearchConnection" Type="1" Source="Utils.CA.dll" Target="CheckTCPAvailability" WithoutSeq="true" AdditionalSeq="AI_DATA_SETTER_1"/>
@@ -1197,16 +1206,16 @@
     <ROW Action="AI_DATA_SETTER_8" Condition="(REMOVE)" Sequence="3103"/>
     <ROW Action="StopMySQLService" Condition="( NOT Installed AND NOT OLDPRODUCTS ) AND ( AI_PROCESS_STATE &lt;&gt; &quot;Not Found&quot; )" Sequence="1611"/>
     <ROW Action="AI_DATA_SETTER_10" Condition="( NOT Installed AND NOT OLDPRODUCTS ) AND ( AI_PROCESS_STATE &lt;&gt; &quot;Not Found&quot; )" Sequence="1610"/>
-    <ROW Action="Set_APPDIR_FORWARD_SLASH" Condition="( NOT Installed )" Sequence="1626"/>
-    <ROW Action="AI_DATA_SETTER_6" Condition="( NOT Installed )" Sequence="1621"/>
+    <ROW Action="Set_APPDIR_FORWARD_SLASH" Condition="( NOT Installed )" Sequence="1632"/>
+    <ROW Action="AI_DATA_SETTER_6" Condition="( NOT Installed )" Sequence="1627"/>
     <ROW Action="DetectMySQLService" Condition="( ( NOT Installed AND NOT OLDPRODUCTS ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1609"/>
     <ROW Action="AI_DATA_SETTER_9" Condition="( ( NOT Installed AND NOT OLDPRODUCTS ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1608"/>
-    <ROW Action="OpenSearchSetup" Condition="( NOT Installed )" Sequence="1617"/>
-    <ROW Action="StopOpenSearchService" Condition="( NOT Installed )" Sequence="1615"/>
-    <ROW Action="AI_DATA_SETTER_12" Condition="( NOT Installed )" Sequence="1614"/>
-    <ROW Action="OpenSearchInstallPlugin" Condition="( NOT Installed )" Sequence="1616"/>
-    <ROW Action="StartOpenSearchService" Condition="( NOT Installed )" Sequence="1619"/>
-    <ROW Action="AI_DATA_SETTER_13" Condition="( NOT Installed )" Sequence="1618"/>
+    <ROW Action="OpenSearchSetup" Condition="( NOT Installed )" Sequence="1621"/>
+    <ROW Action="StopOpenSearchService" Condition="( NOT Installed )" Sequence="1617"/>
+    <ROW Action="AI_DATA_SETTER_12" Condition="( NOT Installed )" Sequence="1616"/>
+    <ROW Action="OpenSearchInstallPlugin" Condition="( NOT Installed )" Sequence="1620"/>
+    <ROW Action="StartOpenSearchService" Condition="( NOT Installed )" Sequence="1623"/>
+    <ROW Action="AI_DATA_SETTER_13" Condition="( NOT Installed )" Sequence="1622"/>
     <ROW Action="AI_GetArpIconPath" Sequence="1401"/>
     <ROW Action="StartMySQLService" Condition="( NOT Installed AND NOT OLDPRODUCTS ) AND ( AI_PROCESS_STATE &lt;&gt; &quot;Not Found&quot; )" Sequence="1613"/>
     <ROW Action="AI_DATA_SETTER_11" Condition="( NOT Installed AND NOT OLDPRODUCTS ) AND ( AI_PROCESS_STATE &lt;&gt; &quot;Not Found&quot; )" Sequence="1612"/>
@@ -1223,28 +1232,36 @@
     <ROW Action="AI_DATA_SETTER_15" Condition="(REMOVE)" Sequence="3101"/>
     <ROW Action="AI_ConfigPermissions" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="5852"/>
     <ROW Action="AI_DATA_SETTER_4" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="5851"/>
-    <ROW Action="MsiUnpublishAssemblies" Condition="Installed" Sequence="1628" SeqType="0" MsiKey="MsiUnpublishAssemblies"/>
-    <ROW Action="RedisSearchSetup" Condition="( NOT Installed )" Sequence="1620"/>
-    <ROW Action="StopRedisService" Condition="( NOT Installed )" Sequence="1623"/>
-    <ROW Action="AI_DATA_SETTER_16" Condition="( NOT Installed )" Sequence="1622"/>
-    <ROW Action="StartService" Condition="( NOT Installed )" Sequence="1625"/>
-    <ROW Action="AI_DATA_SETTER_19" Condition="( NOT Installed )" Sequence="1624"/>
+    <ROW Action="MsiUnpublishAssemblies" Condition="Installed" Sequence="1635" SeqType="0" MsiKey="MsiUnpublishAssemblies"/>
+    <ROW Action="RedisSearchSetup" Condition="( NOT Installed )" Sequence="1626"/>
+    <ROW Action="StopRedisService" Condition="( NOT Installed )" Sequence="1629"/>
+    <ROW Action="AI_DATA_SETTER_16" Condition="( NOT Installed )" Sequence="1628"/>
+    <ROW Action="StartService" Condition="( NOT Installed )" Sequence="1631"/>
+    <ROW Action="AI_DATA_SETTER_19" Condition="( NOT Installed )" Sequence="1630"/>
     <ROW Action="PostgreSQLConfigure" Condition="( NOT Installed )" Sequence="1607"/>
     <ROW Action="AI_FwInstall" Condition="(VersionNT &gt;= 501) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5802"/>
     <ROW Action="AI_DATA_SETTER_21" Condition="(VersionNT &gt;= 501) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5801"/>
     <ROW Action="AI_FwUninstall" Condition="(VersionNT &gt;= 501) AND (REMOVE=&quot;ALL&quot;)" Sequence="1702"/>
     <ROW Action="AI_DATA_SETTER_22" Condition="(VersionNT &gt;= 501) AND (REMOVE=&quot;ALL&quot;)" Sequence="1701"/>
     <ROW Action="SetSERVERNAME" Condition="( NOT Installed )" Sequence="1604"/>
-    <ROW Action="MoveNginxConfigs" Condition="( NOT Installed )" Sequence="6601"/>
-    <ROW Action="StopOpenResty" Condition="( NOT Installed )" Sequence="6603"/>
-    <ROW Action="AI_DATA_SETTER_23" Condition="( NOT Installed )" Sequence="6602"/>
-    <ROW Action="StartOpenResty" Condition="( NOT Installed )" Sequence="6605"/>
-    <ROW Action="AI_DATA_SETTER_24" Condition="( NOT Installed )" Sequence="6604"/>
+    <ROW Action="MoveConfigs" Condition="( NOT Installed )" Sequence="6601"/>
+    <ROW Action="StopOpenResty" Condition="( NOT Installed )" Sequence="6605"/>
+    <ROW Action="AI_DATA_SETTER_23" Condition="( NOT Installed )" Sequence="6604"/>
+    <ROW Action="StartOpenResty" Condition="( NOT Installed )" Sequence="6607"/>
+    <ROW Action="AI_DATA_SETTER_24" Condition="( NOT Installed )" Sequence="6606"/>
     <ROW Action="Set_LICENSE_PATH" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) OR ( Installed AND ( REMOVE = &quot;ALL&quot; OR AI_INSTALL_MODE = &quot;Remove&quot; ) AND UPGRADINGPRODUCTCODE ) )" Sequence="201"/>
     <ROW Action="AI_SqlInstall" Condition="(VersionNT &gt;= 500) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5502"/>
     <ROW Action="AI_DATA_SETTER_25" Condition="(VersionNT &gt;= 500) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5501"/>
     <ROW Action="AI_SqlUninstall" Condition="(VersionNT &gt;= 500) AND (REMOVE=&quot;ALL&quot;)" Sequence="1704"/>
     <ROW Action="AI_DATA_SETTER_26" Condition="(VersionNT &gt;= 500) AND (REMOVE=&quot;ALL&quot;)" Sequence="1703"/>
+    <ROW Action="StopOpenSearchDashboardsService" Condition="( NOT Installed )" Sequence="1619"/>
+    <ROW Action="AI_DATA_SETTER_28" Condition="( NOT Installed )" Sequence="1618"/>
+    <ROW Action="StopFluentBitService" Condition="( NOT Installed )" Sequence="1615"/>
+    <ROW Action="AI_DATA_SETTER_29" Condition="( NOT Installed )" Sequence="1614"/>
+    <ROW Action="StartFluentBitService" Condition="( NOT Installed )" Sequence="6603"/>
+    <ROW Action="AI_DATA_SETTER_30" Condition="( NOT Installed )" Sequence="6602"/>
+    <ROW Action="StartOpenSearchDashboardsService" Condition="( NOT Installed )" Sequence="1625"/>
+    <ROW Action="AI_DATA_SETTER_27" Condition="( NOT Installed )" Sequence="1624"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstallUISequenceComponent">
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>
@@ -1491,6 +1508,7 @@
     <ROW PrereqKey="Node.js" DisplayName="Node.js 18.16.1" VersionMin="18.16.0" SetupFileUrl="redist\node-v18.16.1-x64.msi" Location="0" ExactSize="0" Operator="0" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="ym" TargetName="Node.js\node-v18.16.1-x64.msi" Builds="ExeBuild"/>
     <ROW PrereqKey="OpenResty" DisplayName="OpenResty v1.21.4" VersionMin="1.21.4.2" SetupFileUrl="publish\OpenResty.msi" Location="0" ExactSize="0" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="yxm" TargetName="OpenResty\OpenResty.msi"/>
     <ROW PrereqKey="OpenSearch2.11.1" DisplayName="OpenSearch v2.11.1 x64" VersionMin="2.11.1" SetupFileUrl="publish\OpenSearch-2.11.1.msi" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="y" TargetName="OpenSearch 2.11.1\OpenSearch-2.11.1.msi"/>
+    <ROW PrereqKey="OpenSearchStack" DisplayName="OpenSearchStack v1.0.0 x64" VersionMin="1.0.0" SetupFileUrl="publish\OpenSearchStack.msi" Location="0" ExactSize="0" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="y" TargetName="OpenSearchStack\OpenSearchStack.msi"/>
     <ROW PrereqKey="PostgreSQL_ODBC" DisplayName="PostgreSQL ODBC Driver v15.0 x64" SetupFileUrl="psqlodbc_15_x64.msi" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="myx" TargetName="psqlodbc_x64.msi"/>
     <ROW PrereqKey="PostgresSQL" DisplayName="PostgreSQL v14.0 x64" VersionMin="14.0" SetupFileUrl="postgresql-14.0-1-windows-x64.exe" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="--unattendedmodeui none --install_runtimes 0 --mode unattended --superaccount &quot;postgres&quot; --superpassword &quot;postgres&quot;" BasicUiComLine="--unattendedmodeui none --install_runtimes 0 --mode unattended --superaccount &quot;postgres&quot; --superpassword &quot;postgres&quot;" NoUiComLine="--unattendedmodeui none --install_runtimes 0 --mode unattended --superaccount &quot;postgres&quot; --superpassword &quot;postgres&quot;" Options="xy" TargetName="postgresql-14.0-1-windows-x64.exe"/>
     <ROW PrereqKey="RabbitMQServer" DisplayName="RabbitMQ v3.12.1 x64" VersionMin="3.12" SetupFileUrl="redist\rabbitmq-server-3.12.1.exe" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/S" BasicUiComLine="/S" NoUiComLine="/S" Options="yx" TargetName="RabbitMQ Server\rabbitmq-server-3.12.1.exe" Builds="ExeBuild"/>
@@ -1501,7 +1519,7 @@
     <ROW PrereqKey="RequiredApplication_3" DisplayName="Certbot v2.6.0" VersionMin="2.6.0" SetupFileUrl="redist\certbot-2.6.0.exe" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/S" BasicUiComLine="/S" NoUiComLine="/S" Options="yxm" TargetName="Required Application\certbot-2.6.0.exe" Builds="ExeBuild"/>
     <ROW PrereqKey="RequiredApplication_5" DisplayName="RabbitMQ v3.12.1 x64" VersionMin="3.12" SetupFileUrl="https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.12.1/rabbitmq-server-3.12.1.exe" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/S" BasicUiComLine="/S" NoUiComLine="/S" Options="yx" TargetName="RabbitMQ v3.12.1 x64" Builds="DefaultBuild"/>
     <ROW PrereqKey="RequiredApplication_6" DisplayName="Redis 5.0.10 x64" VersionMin="5.0" SetupFileUrl="http://download.onlyoffice.com/install/windows/redist/Redis-x64-5.0.10.msi" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet ADD_INSTALLFOLDER_TO_PATH=1" BasicUiComLine="/quiet ADD_INSTALLFOLDER_TO_PATH=1" NoUiComLine="/quiet ADD_INSTALLFOLDER_TO_PATH=1" Options="yx" TargetName="Redis 5.0.10 x64" Builds="DefaultBuild"/>
-    <ATTRIBUTE name="PrereqsOrder" value="B96F93FA27E74B02866727AAE83982D0 Microsoft.NETFrame F3520F64DA5998338D97129FAD2 Microsoft.NETRunti EA5B60A5CAD4115A8386D017CC889B9 MicrosoftASP.NETCo CA62D813A4E74FA2AAE86A7D7B7B1493 MicrosoftVisualC A918597FE054CCCB65ABDBA0AD8F63C MicrosoftVisualC_1 C4FE6FD5B7C4D07B3A313E754A9A6A8 MicrosoftVisualC_2 RequiredApplication MySQLConnectorODBC RequiredApplication_2 MySQLInstallerCo MySQLInstallerRunn RequiredApplication_1 Node.js OpenSearch2.11.1 Erlangv26.0x64 ErlangOTP RequiredApplication_5 RabbitMQServer RequiredApplication_6 RedisonWindows FFmpegx64 FFmpegEssentials Certbot RequiredApplication_3 PostgreSQL_ODBC PostgresSQL OpenResty DocumentServer DocumentServer.EE"/>
+    <ATTRIBUTE name="PrereqsOrder" value="B96F93FA27E74B02866727AAE83982D0 Microsoft.NETFrame F3520F64DA5998338D97129FAD2 Microsoft.NETRunti EA5B60A5CAD4115A8386D017CC889B9 MicrosoftASP.NETCo CA62D813A4E74FA2AAE86A7D7B7B1493 MicrosoftVisualC A918597FE054CCCB65ABDBA0AD8F63C MicrosoftVisualC_1 C4FE6FD5B7C4D07B3A313E754A9A6A8 MicrosoftVisualC_2 RequiredApplication MySQLConnectorODBC RequiredApplication_2 MySQLInstallerCo MySQLInstallerRunn RequiredApplication_1 Node.js OpenSearch2.11.1 Erlangv26.0x64 ErlangOTP RequiredApplication_5 RabbitMQServer RequiredApplication_6 RedisonWindows FFmpegx64 FFmpegEssentials Certbot RequiredApplication_3 PostgreSQL_ODBC PostgresSQL OpenResty OpenSearchStack DocumentServer DocumentServer.EE"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.PreReqSearchComponent">
     <ROW SearchKey="A918597FE054CCCB65ABDBA0AD8F63CSyst" Prereq="A918597FE054CCCB65ABDBA0AD8F63C" SearchType="0" SearchString="[SystemFolder]vcruntime140.dll" VerMin="14.26.28720" Order="2" Property="PreReqSearch_A918597FE054CCCB65ABDB"/>
@@ -1531,6 +1549,7 @@
     <ROW SearchKey="SystemFolderfile.dll_9" Prereq="MicrosoftVisualC_1" SearchType="2" SearchString="HKLM\SOFTWARE\Microsoft\DevDiv\VC\Servicing\14.0\RuntimeMinimum\Version" VerMin="14.26.28720" Order="1" Property="PreReqSearch_18"/>
     <ROW SearchKey="SystemFoldervcruntime140.dll" Prereq="MicrosoftVisualC_1" SearchType="0" SearchString="[SystemFolder]vcruntime140.dll" VerMin="14.26.28720" Order="2" Property="PreReqSearch_19"/>
     <ROW SearchKey="UpgradeCode" Prereq="PostgreSQL_ODBC" SearchType="4" SearchString="{BBD29DF5-89F6-4B8B-BDC9-C3EA3A4AFDBB}" VerMin="15.0" Order="1" Property="PreReqSearch_14"/>
+    <ROW SearchKey="UpgradeCode_1" Prereq="OpenSearchStack" SearchType="4" SearchString="{93CD82F0-18A5-4803-AC50-9A0021E92A56}" VerMin="1.0.0" Order="1" Property="PreReqSearch_7"/>
     <ROW SearchKey="UpgradeCode_2" Prereq="MySQLConnectorODBC" SearchType="4" SearchString="{7AEDB3F3-7B9D-4FE2-8D8F-3CE3DE6F5B6B}" VerMin="8.0.33" Order="1" Property="PreReqSearch_21"/>
     <ROW SearchKey="UpgradeCode_3" Prereq="RequiredApplication_6" SearchType="4" SearchString="{05410198-7212-4FC4-B7C8-AFEFC3DA0FBC}" VerMin="5.0.10" Order="2" Property="PreReqSearch_12"/>
     <ROW SearchKey="UpgradeCode_4" Prereq="MySQLInstallerCo" SearchType="4" SearchString="{18B94B70-06F1-4AC0-B308-37280DB868C2}" VerMin="1.6.6.0" Order="1" Property="PreReqSearch_22"/>
@@ -1563,6 +1582,11 @@
     <ROW Name="ReplaceRoot" TxtUpdateSet="YourFile.txt_2" FindPattern="/var/www/public/" ReplacePattern="&quot;[APPDIR]public/&quot;" Options="2" Order="0" FileEncoding="-1"/>
     <ROW Name="ReplaceDsProxyPass" TxtUpdateSet="YourFile.txt" FindPattern="proxy_pass .*;" ReplacePattern="proxy_pass http://[DOCUMENT_SERVER_HOST]:[DOCUMENT_SERVER_PORT];" Options="19" Order="1" FileEncoding="-1"/>
     <ROW Name="ReplaceRouter" TxtUpdateSet="YourFile.txt_3" FindPattern="$router_host" ReplacePattern="127.0.0.1" Options="2" Order="0" FileEncoding="-1"/>
+    <ROW Name="Replace" TxtUpdateSet="fluentbit.conf" FindPattern="{APPDIR}" ReplacePattern="[APPDIR]" Options="2" Order="0" FileEncoding="-1"/>
+    <ROW Name="ReplaceHost" TxtUpdateSet="fluentbit.conf" FindPattern="OPENSEARCH_HOST" ReplacePattern="[OPENSEARCH_HOST]" Options="2" Order="1" FileEncoding="-1"/>
+    <ROW Name="ReplacePort" TxtUpdateSet="fluentbit.conf" FindPattern="OPENSEARCH_PORT" ReplacePattern="[OPENSEARCH_PORT]" Options="2" Order="2" FileEncoding="-1"/>
+    <ROW Name="ReplaceScheme" TxtUpdateSet="fluentbit.conf" FindPattern="OPENSEARCH_SCHEME" ReplacePattern="[OPENSEARCH_SCHEME]" Options="2" Order="3" FileEncoding="-1"/>
+    <ROW Name="ReplaceIndex" TxtUpdateSet="fluentbit.conf" FindPattern="OPENSEARCH_INDEX" ReplacePattern="[OPENSEARCH_INDEX]" Options="2" Order="4" FileEncoding="-1"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.TxtUpdateSetComponent">
     <ROW Key="YourFile.txt" Component="conf" FileName="onlyoffice.conf" Directory="conf_Dir" Options="17"/>
@@ -1570,6 +1594,7 @@
     <ROW Key="YourFile.txt_2" Component="includes" FileName="onlyoffice-public.conf" Directory="includes_Dir" Options="17"/>
     <ROW Key="YourFile.txt_3" Component="conf" FileName="onlyoffice-proxy*" Directory="conf_Dir" Options="17"/>
     <ROW Key="YourFile.txt_5" Component="includes" FileName="letsencrypt.conf" Directory="includes_Dir" Options="17"/>
+    <ROW Key="fluentbit.conf" Component="APPDIR" FileName="fluent-bit.conf" Directory="APPDIR" Options="17"/>
     <ROW Key="xml" Component="tools" FileName="*.xml" Directory="tools_Dir" Options="17"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.XmlAttributeComponent">
