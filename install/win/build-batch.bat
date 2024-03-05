@@ -55,6 +55,7 @@ REM echo ######## SSL configs ########
 %sed% -i "s/the_scheme/scheme/g" buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf.tmpl buildtools\install\win\Files\nginx\conf\onlyoffice-proxy-ssl.conf.tmpl
 %sed% -i "s/ssl_dhparam \/etc\/ssl\/certs\/dhparam.pem;/#ssl_dhparam \/etc\/ssl\/certs\/dhparam.pem;/" buildtools\install\win\Files\nginx\conf\onlyoffice-proxy-ssl.conf.tmpl
 %sed% -i "s_\(.*root\).*;_\1 \"{APPDIR}letsencrypt\";_g" -i buildtools\install\win\Files\nginx\conf\includes\letsencrypt.conf
+%sed% -i "s#/etc/nginx/html#conf/html#g" buildtools\install\win\Files\nginx\conf\onlyoffice.conf
 
 REM echo ######## Delete test and dev configs ########
 del /f /q buildtools\install\win\Files\config\*.test.json
