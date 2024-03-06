@@ -115,6 +115,22 @@
         "expires": "0:10:0",
 		"disableEncryption": true
       },
+	  {
+        "name": "migration",
+        "visible": false,
+        "type": "disc",
+        "path": "$STORAGE_ROOT\\Studio\\{0}\\migration",
+        "expires": "0:10:0",
+		"disableEncryption": true
+      },
+	  {
+        "name": "migration_log",
+        "visible": false,
+        "type": "disc",
+        "path": "$STORAGE_ROOT\\Studio\\{0}\\log\\migration",
+        "expires": "0:10:0",
+		"disableEncryption": true
+      },
       {
         "name": "customnavigation",
         "data": "00000000-0000-0000-0000-000000000000",
