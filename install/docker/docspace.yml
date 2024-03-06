@@ -52,6 +52,7 @@ x-service: &x-service-base
     ROUTER_HOST: ${ROUTER_HOST}
     LOG_LEVEL: ${LOG_LEVEL}
     DEBUG_INFO: ${DEBUG_INFO}
+    CERTIFICATE_PATH: ${CERTIFICATE_PATH}
   volumes:
     #- /app/onlyoffice/CommunityServer/data:/app/onlyoffice/data
     - app_data:/app/onlyoffice/data

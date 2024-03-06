@@ -69,8 +69,18 @@ case $1 in
       fi
     fi
 
-    docker-compose -f ${DOCKERCOMPOSE}/proxy.yml up -d
-    docker-compose -f ${DOCKERCOMPOSE}/docspace.yml restart onlyoffice-files
+    if grep -q '${CERTIFICATE_PATH}:' ${DOCKERCOMPOSE}/docspace.yml; then
+      sed -i '/${CERTIFICATE_PATH}:/d' ${DOCKERCOMPOSE}/docspace.yml
+      docker-compose -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-doceditor onlyoffice-login onlyoffice-socket onlyoffice-ssoauth
+    fi
+
+    if grep -q 'USE_UNAUTHORIZED_STORAGE' ${DOCKERCOMPOSE}/ds.yml; then
+      sed -i '/USE_UNAUTHORIZED_STORAGE/d' ${DOCKERCOMPOSE}/ds.yml
+      docker-compose -f ${DOCKERCOMPOSE}/ds.yml up --force-recreate -d
+    fi
+
+    docker-compose -f ${DOCKERCOMPOSE}/proxy.yml up --force-recreate -d
+    docker-compose -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-files
     
     echo "OK"
     exit 0
@@ -113,9 +123,6 @@ PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${PRODUCT}/privkey.pem"}"
 
 if [ -f "${CERTIFICATE_FILE}" ]; then 
   if [ -f "${PRIVATEKEY_FILE}" ]; then
-    docker-compose -f ${DOCKERCOMPOSE}/proxy.yml down
-    docker-compose -f ${DOCKERCOMPOSE}/docspace.yml stop onlyoffice-files
-
     sed -i "s~\(APP_URL_PORTAL=\).*~\1\"https://${DOMAIN}\"~g" ${DOCKERCOMPOSE}/.env
     sed -i "s~\(CERTIFICATE_PATH=\).*~\1\"${CERTIFICATE_FILE}\"~g" ${DOCKERCOMPOSE}/.env
     sed -i "s~\(CERTIFICATE_KEY_PATH=\).*~\1\"${PRIVATEKEY_FILE}\"~g" ${DOCKERCOMPOSE}/.env
@@ -137,10 +144,21 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
       if [ -d /etc/cron.d ]; then
         echo -e "@weekly root ${DIR}/${PRODUCT}-renew-letsencrypt" | tee /etc/cron.d/${PRODUCT}-letsencrypt
       fi
+    else
+      CERTIFICATE_SUBJECT=$(openssl x509 -subject -noout -in "${CERTIFICATE_FILE}" | sed 's/subject=//')
+      CERTIFICATE_ISSUER=$(openssl x509 -issuer -noout -in "${CERTIFICATE_FILE}" | sed 's/issuer=//')
+      
+      #Checking whether the certificate is self-signed
+      if [[ -n "$CERTIFICATE_SUBJECT" && -n "$CERTIFICATE_ISSUER" && "$CERTIFICATE_SUBJECT" == "$CERTIFICATE_ISSUER" ]]; then
+        sed -i '/app_data:\/.*/a \    - ${CERTIFICATE_PATH}:${CERTIFICATE_PATH}' ${DOCKERCOMPOSE}/docspace.yml
+        docker-compose -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-doceditor onlyoffice-login onlyoffice-socket onlyoffice-ssoauth
+        sed -i '/environment:/a \      - USE_UNAUTHORIZED_STORAGE=true' ${DOCKERCOMPOSE}/ds.yml
+        docker-compose -f ${DOCKERCOMPOSE}/ds.yml up --force-recreate -d
+      fi
     fi
 
-    docker-compose -f ${DOCKERCOMPOSE}/proxy-ssl.yml up -d
-    docker-compose -f ${DOCKERCOMPOSE}/docspace.yml up -d onlyoffice-files
+    docker-compose -f ${DOCKERCOMPOSE}/proxy-ssl.yml up --force-recreate -d
+    docker-compose -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-files
 
     echo "OK"
   else
