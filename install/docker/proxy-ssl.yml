@@ -20,7 +20,6 @@ services:
       - 443:443
     environment:
       - ROUTER_HOST=${ROUTER_HOST}
-      - EXTERNAL_PORT=${EXTERNAL_PORT}
     volumes:
       - webroot_path:/letsencrypt
       - proxy_log:/var/log/nginx
