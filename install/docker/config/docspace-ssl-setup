@@ -70,12 +70,8 @@ case $1 in
     fi
 
     if grep -q '${CERTIFICATE_PATH}:' ${DOCKERCOMPOSE}/docspace.yml; then
-      sed -i '/${CERTIFICATE_PATH}:/d' ${DOCKERCOMPOSE}/docspace.yml
+      sed -i '/${CERTIFICATE_PATH}:/d' ${DOCKERCOMPOSE}/docspace.yml ${DOCKERCOMPOSE}/ds.yml
       docker-compose -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-doceditor onlyoffice-login onlyoffice-socket onlyoffice-ssoauth
-    fi
-
-    if grep -q 'USE_UNAUTHORIZED_STORAGE' ${DOCKERCOMPOSE}/ds.yml; then
-      sed -i '/USE_UNAUTHORIZED_STORAGE/d' ${DOCKERCOMPOSE}/ds.yml
       docker-compose -f ${DOCKERCOMPOSE}/ds.yml up --force-recreate -d
     fi
 
@@ -152,7 +148,7 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
       if [[ -n "$CERTIFICATE_SUBJECT" && -n "$CERTIFICATE_ISSUER" && "$CERTIFICATE_SUBJECT" == "$CERTIFICATE_ISSUER" ]]; then
         sed -i '/app_data:\/.*/a \    - ${CERTIFICATE_PATH}:${CERTIFICATE_PATH}' ${DOCKERCOMPOSE}/docspace.yml
         docker-compose -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-doceditor onlyoffice-login onlyoffice-socket onlyoffice-ssoauth
-        sed -i '/environment:/a \      - USE_UNAUTHORIZED_STORAGE=true' ${DOCKERCOMPOSE}/ds.yml
+        sed -i '/app_data:\/.*/a \      - ${CERTIFICATE_PATH}:/var/www/onlyoffice/Data/certs/onlyoffice.crt' ${DOCKERCOMPOSE}/ds.yml
         docker-compose -f ${DOCKERCOMPOSE}/ds.yml up --force-recreate -d
       fi
     fi
