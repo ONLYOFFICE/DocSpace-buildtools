@@ -39,6 +39,9 @@ LOG_LEVEL = os.environ["LOG_LEVEL"].lower() if environ.get("LOG_LEVEL") else Non
 DEBUG_INFO = os.environ["DEBUG_INFO"] if environ.get("DEBUG_INFO") else "false"
 SAMESITE = os.environ["SAMESITE"] if environ.get("SAMESITE") else "None"
 
+CERTIFICATE_PATH = os.environ.get("CERTIFICATE_PATH")
+CERTIFICATE_PARAM = "NODE_EXTRA_CA_CERTS=" + CERTIFICATE_PATH + " " if CERTIFICATE_PATH and os.path.exists(CERTIFICATE_PATH) else ""
+
 DOCUMENT_CONTAINER_NAME = os.environ["DOCUMENT_CONTAINER_NAME"] if environ.get("DOCUMENT_CONTAINER_NAME") else "onlyoffice-document-server"
 DOCUMENT_SERVER_JWT_SECRET = os.environ["DOCUMENT_SERVER_JWT_SECRET"] if environ.get("DOCUMENT_SERVER_JWT_SECRET") else "your_jwt_secret"
 DOCUMENT_SERVER_JWT_HEADER = os.environ["DOCUMENT_SERVER_JWT_HEADER"] if environ.get("DOCUMENT_SERVER_JWT_HEADER") else "AuthorizationJwt"
@@ -81,7 +84,7 @@ class RunServices:
         self.PATH_TO_CONF = PATH_TO_CONF
     @dispatch(str)    
     def RunService(self, RUN_FILE):
-        os.system("node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
+        os.system(CERTIFICATE_PARAM + "node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
              " --app.appsettings=" + self.PATH_TO_CONF)
         return 1
         
@@ -89,7 +92,7 @@ class RunServices:
     def RunService(self, RUN_FILE, ENV_EXTENSION):
         if ENV_EXTENSION == "none":
             self.RunService(RUN_FILE)
-        os.system("node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
+        os.system(CERTIFICATE_PARAM + "node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
              " --app.appsettings=" + self.PATH_TO_CONF +\
                 " --app.environment=" + ENV_EXTENSION)
         return 1
