@@ -84,6 +84,7 @@
 %dir %{_sysconfdir}/onlyoffice/%{product}/openresty/
 %{buildpath}/public/
 %{buildpath}/client/
+%{buildpath}/management/
 
 %files studio-notify
 %defattr(-, onlyoffice, onlyoffice, -)
