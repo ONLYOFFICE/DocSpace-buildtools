@@ -1,0 +1,16 @@
+<service>
+	<id>OpenSearch</id>
+	<name>OpenSearch</name>
+	<description>OpenSearch</description>
+	<priority>RealTime</priority>
+	<startmode>Automatic</startmode>
+	<delayedAutoStart>true</delayedAutoStart>
+	<onfailure action="restart" delay="1 sec"/>
+	<logpath>%BASE%\..\Log\</logpath>
+	<workingdirectory>%BASE%\..\</workingdirectory>
+	<executable>%BASE%\..\opensearch-windows-install.bat</executable>
+	<log mode="roll-by-size">
+  		<sizeThreshold>10240</sizeThreshold>
+  		<keepFiles>8</keepFiles>
+	</log>
+</service>

@@ -8,6 +8,7 @@ LETSENCRYPT="/etc/letsencrypt/live";
 OPENRESTY="/etc/openresty/conf.d"
 DHPARAM_FILE="/etc/ssl/certs/dhparam.pem"
 WEBROOT_PATH="/var/www/${PRODUCT}"
+SYSTEMD_DIR="/usr/lib/systemd/system"
 
 # Check if configuration files are present
 if [ ! -f "${OPENRESTY}/onlyoffice-proxy-ssl.conf.template" -a ! -f "${OPENRESTY}/onlyoffice-proxy.conf.template" ]; then
@@ -56,6 +57,14 @@ case $1 in
     sed "s!\(worker_connections\).*;!\1 $(ulimit -n);!" -i "${OPENRESTY}/onlyoffice-proxy.conf"
     [[ -f "${DIR}/${PRODUCT}-renew-letsencrypt" ]] && rm -rf "${DIR}/${PRODUCT}-renew-letsencrypt"
     [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ] && systemctl reload openresty || service openresty reload
+
+    SYSTEMD_NODE_FILES=$(grep -l "NODE_EXTRA_CA_CERTS" ${SYSTEMD_DIR}/${PRODUCT}-*.service ${SYSTEMD_DIR}/ds-*.service || true)
+    if [ -n "$SYSTEMD_NODE_FILES" ]; then
+      sed -i '/NODE_EXTRA_CA_CERTS/d' ${SYSTEMD_NODE_FILES}
+      systemctl daemon-reload
+      echo "${SYSTEMD_NODE_FILES[@]}" | xargs -I % basename % | xargs systemctl restart
+    fi
+
     echo "OK"
     exit 0
   ;;
@@ -117,6 +126,21 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
       # Add cron job if /etc/cron.d directory exists
       if [ -d /etc/cron.d ]; then
         echo -e "@weekly root ${DIR}/${PRODUCT}-renew-letsencrypt" | tee /etc/cron.d/${PRODUCT}-letsencrypt
+      fi
+    else
+      CERTIFICATE_SUBJECT=$(openssl x509 -subject -noout -in "${CERTIFICATE_FILE}" | sed 's/subject=//')
+      CERTIFICATE_ISSUER=$(openssl x509 -issuer -noout -in "${CERTIFICATE_FILE}" | sed 's/issuer=//')
+      
+      #Checking whether the certificate is self-signed
+      if [[ -n "$CERTIFICATE_SUBJECT" && -n "$CERTIFICATE_ISSUER" && "$CERTIFICATE_SUBJECT" == "$CERTIFICATE_ISSUER" ]]; then
+        SYSTEMD_NODE_FILES=$(grep -l "ExecStart=/usr/bin/node" ${SYSTEMD_DIR}/${PRODUCT}-*.service; ls ${SYSTEMD_DIR}/ds-*.service 2>/dev/null | grep -v "ds-example" || true)
+        for SYSTEMD_NODE_FILE in ${SYSTEMD_NODE_FILES}; do
+          if ! grep -q "NODE_EXTRA_CA_CERTS" "${SYSTEMD_NODE_FILE}"; then
+             sed -i "/ExecStart=/i Environment=NODE_EXTRA_CA_CERTS=${CERTIFICATE_FILE}" "${SYSTEMD_NODE_FILE}"
+          fi
+        done
+        systemctl daemon-reload
+        echo "${SYSTEMD_NODE_FILES[@]}" | xargs -I % basename % | xargs systemctl restart
       fi
     fi
 
