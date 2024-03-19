@@ -30,9 +30,3 @@ map $ROUTER_HOST $router_host {
     default onlyoffice-router;
     ~^(.*)$ $1;
 }
-
-map $DASHBOARD_CONTAINER_NAME $dashboard_host {
-    volatile;
-    default onlyoffice-opensearch-dashboards;
-    ~^(.*)$ $1;
-}
