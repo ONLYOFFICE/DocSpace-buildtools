@@ -6,10 +6,8 @@ services:
     restart: always
     environment:
       - OPENSEARCH_HOSTS=${ELK_SHEME}://${ELK_CONTAINER_NAME}:${ELK_PORT}
-      - OPENSEARCH_DASHBOARD_ALLOW_WILDCARD=true
       - "DISABLE_SECURITY_DASHBOARDS_PLUGIN=true"
-    ports:
-      - 5601:5601
+      - "SERVER_BASEPATH=/dashboard"
     expose:
       - "5601"
 
