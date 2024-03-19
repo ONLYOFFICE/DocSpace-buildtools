@@ -1281,7 +1281,7 @@ install_fluent_bit () {
 			sed -i "s/OPENSEARCH_HOST/${ELK_HOST:-127.0.0.1}/g" "${BASE_DIR}/config/fluent-bit.conf"
 			sed -i "s/OPENSEARCH_PORT/$(get_env_parameter "ELK_PORT")/g" ${BASE_DIR}/config/fluent-bit.conf
 			sed -i "s/OPENSEARCH_INDEX/${OPENSEARCH_INDEX:-"${PACKAGE_SYSNAME}-fluent-bit"}/g" ${BASE_DIR}/config/fluent-bit.conf
-			[ ! -z "${ELK_HOST}" ] && sed -i "s/ELK_CONTAINER_NAME/ELK_HOST/g" ${BASE_DIR}/dashboard.yml
+			[ ! -z "${ELK_HOST}" ] && sed -i "s/ELK_CONTAINER_NAME/ELK_HOST/g" ${BASE_DIR}/dashboards.yml
 			cp -rf ${BASE_DIR}/config/fluent-bit.conf /etc/fluent-bit/fluent-bit.conf
 			systemctl restart fluent-bit
 
@@ -1294,7 +1294,7 @@ install_fluent_bit () {
 				systemctl restart docker
 			fi
 
-			docker-compose -f ${BASE_DIR}/dashboard.yml up -d
+			docker-compose -f ${BASE_DIR}/dashboards.yml up -d
 		else
 			echo "The installation of the fluent-bit service was unsuccessful."
 		fi

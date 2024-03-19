@@ -1,13 +1,13 @@
 version: "3"
 services:
-  onlyoffice-opensearch-dashboard:
-    image: opensearchproject/opensearch-dashboards:${DASHBOARD_VERSION}
-    container_name: ${DASHBOARD_CONTAINER_NAME}
+  onlyoffice-opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:${DASHBOARDS_VERSION}
+    container_name: ${DASHBOARDS_CONTAINER_NAME}
     restart: always
     environment:
       - OPENSEARCH_HOSTS=${ELK_SHEME}://${ELK_CONTAINER_NAME}:${ELK_PORT}
       - "DISABLE_SECURITY_DASHBOARDS_PLUGIN=true"
-      - "SERVER_BASEPATH=/dashboard"
+      - "SERVER_BASEPATH=/dashboards"
     expose:
       - "5601"
 
