@@ -29,7 +29,7 @@ AutoReqProv:    no
 BuildArch:      noarch
 %description    files-services
 The service which launches additional services related to file management:
- - ElasticSearchIndexService - indexes documents using Elasticsearch;
+ - ElasticSearchIndexService - indexes documents using OpenSearch;
  - FeedAggregatorService - aggregates notifications;
  - FeedCleanerService - removes notifications;
  - FileConverterService - converts documents;

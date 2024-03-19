@@ -79,7 +79,7 @@ elif [ "$UPDATE" = "true" ] && [ "$PRODUCT_INSTALLED" = "true" ]; then
 	CURRENT_VERSION=$(dpkg-query -W -f='${Version}' ${product} 2>/dev/null)
 	AVAILABLE_VERSIONS=$(apt show  ${product} 2>/dev/null | grep -E '^Version:' | awk '{print $2}')
 	if [[ "$AVAILABLE_VERSIONS" != *"$CURRENT_VERSION"* ]]; then
-		apt-get install -o DPkg::options::="--force-confnew" -y --only-upgrade ${product} elasticsearch=${ELASTIC_VERSION}
+		apt-get install -o DPkg::options::="--force-confnew" -y --only-upgrade ${product} opensearch=${ELASTIC_VERSION}
 	elif [ "${RECONFIGURE_PRODUCT}" = "true" ]; then
 		DEBIAN_FRONTEND=noninteractive dpkg-reconfigure ${product}
 	fi
