@@ -152,6 +152,7 @@ COPY --from=base ${SRC_PATH}/publish/web/management ${BUILD_PATH}/management
 COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/docker-entrypoint.d /docker-entrypoint.d
 COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
 COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/nginx.conf.template /etc/nginx/nginx.conf.template
+COPY --from=base ${SRC_PATH}/buildtools/config/nginx/html /etc/nginx/html
 COPY --from=base ${SRC_PATH}/buildtools/install/docker/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
 COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/docker-entrypoint.sh /docker-entrypoint.sh
 
