@@ -2,9 +2,19 @@ REM echo ######## Set variables ########
 set "publisher="Ascensio System SIA""
 set "nuget="%cd%\server\thirdparty\SimpleRestServices\src\.nuget\NuGet.exe""
 set "environment=production"
+set "opensearch_version=2.11.1"
 
 REM echo ######## Extracting and preparing files to build ########
+%sevenzip% x buildtools\install\win\opensearch-%opensearch_version%.zip -o"buildtools\install\win" -y
+xcopy "buildtools\install\win\opensearch-%opensearch_version%\plugins\opensearch-security" "buildtools\install\win\OpenSearch\plugins\opensearch-security" /s /y /b /i
+xcopy "buildtools\install\win\opensearch-%opensearch_version%\plugins\opensearch-job-scheduler" "buildtools\install\win\OpenSearch\plugins\opensearch-job-scheduler" /s /y /b /i
+xcopy "buildtools\install\win\opensearch-%opensearch_version%\plugins\opensearch-index-management" "buildtools\install\win\OpenSearch\plugins\opensearch-index-management" /s /y /b /i
+rmdir buildtools\install\win\opensearch-%opensearch_version%\plugins /s /q
+xcopy "buildtools\install\win\opensearch-%opensearch_version%" "buildtools\install\win\OpenSearch" /s /y /b /i
+rmdir buildtools\install\win\opensearch-%opensearch_version% /s /q
+md buildtools\install\win\OpenSearch\tools
 md buildtools\install\win\OpenResty\tools
+md buildtools\install\win\OpenSearchStack\tools
 md buildtools\install\win\Files\tools
 md buildtools\install\win\Files\Logs
 md buildtools\install\win\Files\Data
@@ -30,6 +40,10 @@ copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\D
 copy buildtools\install\win\tools\DocEditor.xml "buildtools\install\win\Files\tools\DocEditor.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\Login.exe" /y
 copy buildtools\install\win\tools\Login.xml "buildtools\install\win\Files\tools\Login.xml" /y
+copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\OpenSearch\tools\OpenSearch.exe" /y
+copy buildtools\install\win\tools\OpenSearch.xml "buildtools\install\win\OpenSearch\tools\OpenSearch.xml" /y
+copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\OpenSearchStack\tools\OpenSearchDashboards.exe" /y
+copy buildtools\install\win\tools\OpenSearchDashboards.xml "buildtools\install\win\OpenSearchStack\tools\OpenSearchDashboards.xml" /y
 copy "buildtools\install\win\nginx.conf" "buildtools\install\win\Files\nginx\conf\nginx.conf" /y
 copy "buildtools\install\docker\config\nginx\onlyoffice-proxy.conf" "buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf" /y
 copy "buildtools\install\docker\config\nginx\onlyoffice-proxy.conf" "buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf.tmpl" /y
@@ -40,9 +54,11 @@ rmdir buildtools\install\win\publish /s /q
 
 REM echo ######## SSL configs ########
 %sed% -i "s/the_host/host/g" buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf.tmpl buildtools\install\win\Files\nginx\conf\onlyoffice-proxy-ssl.conf.tmpl
+%sed% -i "s/the_port/server_port/g" buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf.tmpl buildtools\install\win\Files\nginx\conf\onlyoffice-proxy-ssl.conf.tmpl
 %sed% -i "s/the_scheme/scheme/g" buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf.tmpl buildtools\install\win\Files\nginx\conf\onlyoffice-proxy-ssl.conf.tmpl
 %sed% -i "s/ssl_dhparam \/etc\/ssl\/certs\/dhparam.pem;/#ssl_dhparam \/etc\/ssl\/certs\/dhparam.pem;/" buildtools\install\win\Files\nginx\conf\onlyoffice-proxy-ssl.conf.tmpl
 %sed% -i "s_\(.*root\).*;_\1 \"{APPDIR}letsencrypt\";_g" -i buildtools\install\win\Files\nginx\conf\includes\letsencrypt.conf
+%sed% -i "s#/etc/nginx/html#conf/html#g" buildtools\install\win\Files\nginx\conf\onlyoffice.conf
 
 REM echo ######## Delete test and dev configs ########
 del /f /q buildtools\install\win\Files\config\*.test.json
@@ -97,6 +113,20 @@ IF "%SignBuild%"=="true" (
 %AdvancedInstaller% /edit buildtools\install\win\OpenResty.aip /SetDigitalCertificateFile -file %onlyoffice_codesign_path% -password "%onlyoffice_codesign_password%"
 )
 %AdvancedInstaller% /rebuild buildtools\install\win\OpenResty.aip
+
+REM echo ######## Build OpenSearch ########
+IF "%SignBuild%"=="true" (
+%AdvancedInstaller% /edit buildtools\install\win\OpenSearch.aip /SetSig
+%AdvancedInstaller% /edit buildtools\install\win\OpenSearch.aip /SetDigitalCertificateFile -file %onlyoffice_codesign_path% -password "%onlyoffice_codesign_password%"
+)
+%AdvancedInstaller% /rebuild buildtools\install\win\OpenSearch.aip
+
+REM echo ######## Build OpenSearchStack ########
+IF "%SignBuild%"=="true" (
+%AdvancedInstaller% /edit buildtools\install\win\OpenSearchStack.aip /SetSig
+%AdvancedInstaller% /edit buildtools\install\win\OpenSearchStack.aip /SetDigitalCertificateFile -file %onlyoffice_codesign_path% -password "%onlyoffice_codesign_password%"
+)
+%AdvancedInstaller% /rebuild buildtools\install\win\OpenSearchStack.aip
 
 REM echo ######## Build DocSpace package ########
 %AdvancedInstaller% /edit buildtools\install\win\DocSpace.aip /SetVersion %BUILD_VERSION%.%BUILD_NUMBER%

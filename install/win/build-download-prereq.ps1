@@ -52,7 +52,15 @@ $psql_version = '14.0'
 
 $path_prereq = "${pwd}\buildtools\install\win\"
 
+$opensearch_version = '2.11.1'
+
 $prerequisites = @(
+  @{
+    download_allways = $false;
+    name = "opensearch-${opensearch_version}.zip";
+    link = "https://artifacts.opensearch.org/releases/bundle/opensearch/${opensearch_version}/opensearch-${opensearch_version}-windows-x64.zip";
+  }
+
   @{  
     download_allways = $false; 
     name = "WinSW.NET4new.exe"; 
@@ -107,14 +115,14 @@ $enterprise_prerequisites = @(
 
   @{
     download_allways = $false;
-    name = "aspnetcore-runtime-7.0.4-win-x64.exe";
-    link = "https://download.visualstudio.microsoft.com/download/pr/1c260404-69d2-4c07-979c-644846ba1f46/7d27639ac67f1e502b83a738406da0ee/aspnetcore-runtime-7.0.4-win-x64.exe";
+    name = "aspnetcore-runtime-8.0.2-win-x64.exe";
+    link = "https://download.visualstudio.microsoft.com/download/pr/34d3e426-9f3c-45a6-8496-f21b3adbbf5f/475aec17378cc8ab0fcfe535e84698f9/aspnetcore-runtime-8.0.2-win-x64.exe";
   }
 
   @{
     download_allways = $false;
-    name = "dotnet-runtime-7.0.4-win-x64.exe";
-    link = "https://download.visualstudio.microsoft.com/download/pr/7e842a78-9877-4b82-8450-f3311b406a6f/83352282a0bdf1e5f9dfc5fcc88dc83f/dotnet-runtime-7.0.4-win-x64.exe";
+    name = "dotnet-runtime-8.0.2-win-x64.exe";
+    link = "https://download.visualstudio.microsoft.com/download/pr/a4bc7333-6e30-4e2d-b300-0b4f23537e5b/4b81af6d46a02fba5d9ce030af438c67/dotnet-runtime-8.0.2-win-x64.exe";
   }
 
   @{
@@ -138,19 +146,19 @@ $enterprise_prerequisites = @(
   @{  
     download_allways = $false; 
     name = "mysql-connector-odbc-8.0.33-win32.msi";
-    link = "https://cdn.mysql.com/Downloads/Connector-ODBC/8.0/mysql-connector-odbc-8.0.33-win32.msi";
+    link = "https://cdn.mysql.com/archives/mysql-connector-odbc-8.0/mysql-connector-odbc-8.0.33-win32.msi";
   }
 
   @{  
     download_allways = $false; 
     name = "mysql-installer-community-8.0.33.0.msi";
-    link = "https://cdn.mysql.com/Downloads/MySQLInstaller/mysql-installer-community-8.0.33.0.msi";
+    link = "https://cdn.mysql.com/archives/mysql-installer/mysql-installer-community-8.0.33.0.msi";
   }
 
   @{  
     download_allways = $false; 
-    name = "node-v18.16.1-x64.msi"; 
-    link = "https://nodejs.org/dist/v18.16.1/node-v18.16.1-x64.msi";
+    name = "node-v20.11.1-x64.msi";
+    link = "https://nodejs.org/dist/v20.11.1/node-v20.11.1-x64.msi";
   }
 
   @{  

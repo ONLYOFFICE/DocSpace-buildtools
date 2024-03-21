@@ -105,7 +105,7 @@ if arch_name == "x86_64" or arch_name == "AMD64":
     subprocess.run(["docker", "compose", "-f", os.path.join(dockerDir, "db.yml"), "up", "-d"])
 elif arch_name == "arm64":
     print("CPU Type: arm64 -> run db.yml with arm64v8 image")
-    os.environ["MYSQL_IMAGE"] = "arm64v8/mysql:8.0.32-oracle"
+    os.environ["MYSQL_IMAGE"] = "arm64v8/mysql:8.3.0-oracle"
     subprocess.run(["docker", "compose", "-f", os.path.join(dockerDir, "db.yml"), "up", "-d"])
 else:
     print("Error: Unknown CPU Type:", arch_name)

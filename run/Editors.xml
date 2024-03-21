@@ -3,7 +3,8 @@
   <name>ONLYOFFICE Editors SSR</name>
   <startmode>manual</startmode>
   <executable>node</executable>
-  <arguments>../../publish/web/editor/server.js</arguments>
+  <arguments>server.js</arguments>
+  <workingdirectory>%BASE%\..\..\client\packages\doceditor</workingdirectory>
   <log mode="none"/>
   <delayedAutoStart>true</delayedAutoStart>
   <onfailure action="none" />

@@ -24,6 +24,7 @@
         "data": "e67be73d-f9ae-4ce1-8fec-1880cb518cb4",
         "type": "disc",
         "path": "$STORAGE_ROOT\\Products\\Files",
+        "validatorType":"ASC.Files.Core.Security.FileValidator, ASC.Files.Core",
         "expires": "0:16:0",
         "domain": [
           {
@@ -111,6 +112,22 @@
         "visible": false,
         "type": "disc",
         "path": "$STORAGE_ROOT\\Studio\\{0}\\temp\\backup",
+        "expires": "0:10:0",
+		"disableEncryption": true
+      },
+	  {
+        "name": "migration",
+        "visible": false,
+        "type": "disc",
+        "path": "$STORAGE_ROOT\\Studio\\{0}\\migration",
+        "expires": "0:10:0",
+		"disableEncryption": true
+      },
+	  {
+        "name": "migration_log",
+        "visible": false,
+        "type": "disc",
+        "path": "$STORAGE_ROOT\\Studio\\{0}\\log\\migration",
         "expires": "0:10:0",
 		"disableEncryption": true
       },
