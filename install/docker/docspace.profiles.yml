@@ -302,7 +302,7 @@ networks:
     external: true
 
 volumes:
-  es_data:
+  os_data:
   router_log:
   app_data:
   files_data:
