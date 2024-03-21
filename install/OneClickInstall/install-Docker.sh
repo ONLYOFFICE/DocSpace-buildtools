@@ -1109,6 +1109,7 @@ set_docspace_params() {
 	APP_CORE_BASE_DOMAIN=${APP_CORE_BASE_DOMAIN:-$(get_env_parameter "APP_CORE_BASE_DOMAIN" "${CONTAINER_NAME}")};
 	EXTERNAL_PORT=${EXTERNAL_PORT:-$(get_env_parameter "EXTERNAL_PORT" "${CONTAINER_NAME}")};
 
+	PREVIOUS_ELK_VERSION=$(get_env_parameter "ELK_VERSION");
 	ELK_SHEME=${ELK_SHEME:-$(get_env_parameter "ELK_SHEME" "${CONTAINER_NAME}")};
 	ELK_HOST=${ELK_HOST:-$(get_env_parameter "ELK_HOST" "${CONTAINER_NAME}")};
 	ELK_PORT=${ELK_PORT:-$(get_env_parameter "ELK_PORT" "${CONTAINER_NAME}")};
@@ -1248,14 +1249,14 @@ install_redis () {
 install_elasticsearch () {
 	if [[ -z ${ELK_HOST} ]] && [ "$INSTALL_ELASTICSEARCH" == "true" ]; then
 		if [ $(free --mega | grep -oP '\d+' | head -n 1) -gt "12000" ]; then #RAM ~12Gb
-			sed -i 's/Xms[0-9]g/Xms4g/g; s/Xmx[0-9]g/Xmx4g/g' $BASE_DIR/elasticsearch.yml
+			sed -i 's/Xms[0-9]g/Xms4g/g; s/Xmx[0-9]g/Xmx4g/g' $BASE_DIR/opensearch.yml
 		else
-			sed -i 's/Xms[0-9]g/Xms1g/g; s/Xmx[0-9]g/Xmx1g/g' $BASE_DIR/elasticsearch.yml
+			sed -i 's/Xms[0-9]g/Xms1g/g; s/Xmx[0-9]g/Xmx1g/g' $BASE_DIR/opensearch.yml
 		fi
 		reconfigure ELK_VERSION ${ELK_VERSION}
-		docker-compose -f $BASE_DIR/elasticsearch.yml up -d
+		docker-compose -f $BASE_DIR/opensearch.yml up -d
 	elif [ ! -z "$ELK_HOST" ]; then
-		establish_conn ${ELK_HOST} "${ELK_PORT:-"9200"}" "Elasticsearch"
+		establish_conn ${ELK_HOST} "${ELK_PORT:-"9200"}" "search engine"
 		reconfigure ELK_SHEME "${ELK_SHEME:-"http"}"	
 		reconfigure ELK_HOST ${ELK_HOST}
 		reconfigure ELK_PORT "${ELK_PORT:-"9200"}"	
@@ -1285,6 +1286,12 @@ install_product () {
 	docker-compose -f ${PROXY_YML} up -d
 	docker-compose -f $BASE_DIR/notify.yml up -d
 	docker-compose -f $BASE_DIR/healthchecks.yml up -d
+
+	if [[ -n "${PREVIOUS_ELK_VERSION}" && "$(get_env_parameter "ELK_VERSION")" != "${PREVIOUS_ELK_VERSION}" ]]; then
+		MYSQL_TAG=$(docker images --format "{{.Tag}}" mysql | head -n1)
+		MYSQL_CONTAINER_NAME=$(get_env_parameter "MYSQL_CONTAINER_NAME" | sed "s/\${CONTAINER_PREFIX}/${PACKAGE_SYSNAME}-/g")
+		docker run --rm --network="$(get_env_parameter "NETWORK_NAME")" mysql:${MYSQL_TAG:-latest} mysql -h "${MYSQL_HOST:-${MYSQL_CONTAINER_NAME}}" -P "${MYSQL_PORT:-3306}" -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DATABASE}" -e "TRUNCATE webstudio_index;"
+	fi
 
 	if [ ! -z "${CERTIFICATE_PATH}" ] && [ ! -z "${CERTIFICATE_KEY_PATH}" ] && [[ ! -z "${APP_DOMAIN_PORTAL}" ]]; then
 		bash $BASE_DIR/config/${PRODUCT}-ssl-setup -f "${APP_DOMAIN_PORTAL}" "${CERTIFICATE_PATH}" "${CERTIFICATE_KEY_PATH}"
