@@ -68,7 +68,7 @@ Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-8.0, 
 Recommends: ffmpeg, opensearch (= 2.11.1)
 Description: {{product}}-files-services
 	The service which launches additional services related to file management:
-	 - ElasticSearchIndexService - indexes documents using opensearch;
+	 - ElasticSearchIndexService - indexes documents using elasticsearch;
 	 - FeedAggregatorService - aggregates notifications;
 	 - FeedCleanerService - removes notifications;
 	 - FileConverterService - converts documents;

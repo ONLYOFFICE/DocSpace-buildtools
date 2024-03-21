@@ -618,6 +618,7 @@ change_elasticsearch_config(){
 	chmod o-rwx $APP_DIR/.private/opensearch-version
 
 	sed -i '/^plugins\.security/d' /etc/opensearch/opensearch.yml
+	sed -i '/CN=kirk,OU=client,O=client,L=test, C=de/d' /etc/opensearch/opensearch.yml
   	/usr/share/opensearch/bin/opensearch-plugin remove opensearch-security
 
 	local ELASTIC_SEARCH_CONF_PATH="/etc/opensearch/opensearch.yml"
