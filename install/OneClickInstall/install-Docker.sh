@@ -471,6 +471,20 @@ while [ "$1" != "" ]; do
 			fi
 		;;
 
+		-du | --dashboadrsusername )
+			if [ "$2" != "" ]; then
+				DASHBOARDS_USERNAME=$2
+				shift
+			fi
+		;;
+
+		-dp | --dashboadrspassword )
+			if [ "$2" != "" ]; then
+				DASHBOARDS_PASSWORD=$2
+				shift
+			fi
+		;;
+
 		-? | -h | --help )
 			echo "  Usage: bash $HELP_TARGET [PARAMETER] [[PARAMETER], ...]"
 			echo
@@ -498,6 +512,8 @@ while [ "$1" != "" ]; do
 			echo "      -imysql, --installmysql           install or update mysql (true|false)"		
 			echo "      -ies, --installelastic            install or update elasticsearch (true|false)"
 			echo "      -ifb, --installfluentbit          install or update fluent-bit (true|false)"
+			echo "      -du, --dashboadrsusername         login for authorization in /dashboards/"
+			echo "      -dp, --dashboadrspassword         password for authorization in /dashboards/"
 			echo "      -espr, --elasticprotocol          the protocol for the connection to elasticsearch (default value http)"
 			echo "      -esh, --elastichost               the IP address or hostname of the elasticsearch"
 			echo "      -esp, --elasticport               elasticsearch port number (default value 9200)"
@@ -1134,6 +1150,9 @@ set_docspace_params() {
 	RABBIT_PASSWORD=${RABBIT_PASSWORD:-$(get_env_parameter "RABBIT_PASSWORD" "${CONTAINER_NAME}")};
 	RABBIT_VIRTUAL_HOST=${RABBIT_VIRTUAL_HOST:-$(get_env_parameter "RABBIT_VIRTUAL_HOST" "${CONTAINER_NAME}")};
 	
+	DASHBOARDS_USERNAME=${DASHBOARDS_USERNAME:-$(get_env_parameter "DASHBOARDS_USERNAME" "${CONTAINER_NAME}")};
+	DASHBOARDS_PASSWORD=${DASHBOARDS_PASSWORD:-$(get_env_parameter "DASHBOARDS_PASSWORD" "${CONTAINER_NAME}")};
+
 	CERTIFICATE_PATH=${CERTIFICATE_PATH:-$(get_env_parameter "CERTIFICATE_PATH")};
 	CERTIFICATE_KEY_PATH=${CERTIFICATE_KEY_PATH:-$(get_env_parameter "CERTIFICATE_KEY_PATH")};
 	DHPARAM_PATH=${DHPARAM_PATH:-$(get_env_parameter "DHPARAM_PATH")};
@@ -1293,6 +1312,9 @@ install_fluent_bit () {
 				sed -i 's!{!& "log-driver": "fluentd", "log-opts": { "fluentd-address": "127.0.0.1:24224" },!' "${DOCKER_DAEMON_FILE}"
 				systemctl restart docker
 			fi
+
+			reconfigure DASHBOARDS_USERNAME "${DASHBOARDS_USERNAME:-"onlyoffice"}"
+			reconfigure DASHBOARDS_PASSWORD "${DASHBOARDS_PASSWORD:-$(get_random_str 20)}"
 
 			docker-compose -f ${BASE_DIR}/dashboards.yml up -d
 		else

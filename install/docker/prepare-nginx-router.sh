@@ -9,4 +9,4 @@ sed -i "s~\(redis_host =\).*~\1 \"$REDIS_HOST\"~" /etc/nginx/conf.d/onlyoffice.c
 sed -i "s~\(redis_port =\).*~\1 $REDIS_PORT~" /etc/nginx/conf.d/onlyoffice.conf
 sed -i "s~\(redis_pass =\).*~\1 \"$REDIS_PASSWORD\"~" /etc/nginx/conf.d/onlyoffice.conf
 sed -i "s~\(\"wrongPortalNameUrl\":\).*,~\1 \"${WRONG_PORTAL_NAME_URL}\",~g" /var/www/public/scripts/config.json
-echo "${DASHBOARDS_USERNAME:-admin}:$(openssl passwd -6 -stdin <<< "${DASHBOARDS_PASSWORD:-admin}")" > /etc/nginx/.htpasswd_dashboards
+echo "${DASHBOARDS_USERNAME:-onlyoffice}:$(openssl passwd -6 -stdin <<< "${DASHBOARDS_PASSWORD:-onlyoffice}")" > /etc/nginx/.htpasswd_dashboards
