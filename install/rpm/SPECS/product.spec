@@ -66,8 +66,8 @@ rm -rf %{_rpmdir}/%{_arch}/%{name}-* %{_builddir}/*
 tar -xf %{SOURCE0} --transform='s,^[^/]\+,buildtools,'   -C %{_builddir} 
 tar -xf %{SOURCE1} --transform='s,^[^/]\+,client,'       -C %{_builddir} 
 tar -xf %{SOURCE2} --transform='s,^[^/]\+,server,'       -C %{_builddir} 
-tar -xf %{SOURCE3} --transform='s,^[^/]\+,dictionaries,' -C %{_builddir}/client/common/Tests/Frontend.Translations.Tests 
-tar -xf %{SOURCE4} --transform='s,^[^/]\+,DocStore,'     -C %{_builddir}/server/products/ASC.Files/Server 
+tar -xf %{SOURCE4} --transform='s,^[^/]\+,dictionaries,' -C %{_builddir}/client/common/Tests/Frontend.Translations.Tests 
+tar -xf %{SOURCE3} --transform='s,^[^/]\+,DocStore,'     -C %{_builddir}/server/products/ASC.Files/Server 
 cp %{SOURCE5} .
 
 %include build.spec
