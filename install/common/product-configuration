@@ -608,15 +608,26 @@ setup_enterprise() {
 
 change_elasticsearch_config(){
 
-	systemctl stop elasticsearch
+	systemctl stop opensearch
+	systemctl is-active --quiet elasticsearch && systemctl stop elasticsearch
 
-	local ELASTIC_SEARCH_CONF_PATH="/etc/elasticsearch/elasticsearch.yml"
-	local ELASTIC_SEARCH_JAVA_CONF_PATH="/etc/elasticsearch/jvm.options";
+	ELASTIC_VERSION=$(awk '/build:/{f=1} f&&/version:/{gsub(/"/,"",$2);print $2; exit}' /usr/share/opensearch/manifest.yml 2>/dev/null || echo "2.11.1")
+	[[ -f "$APP_DIR/.private/opensearch-version" && $(cat $APP_DIR/.private/opensearch-version) != *$ELASTIC_VERSION* ]] && $MYSQL "$DB_NAME" -e "TRUNCATE webstudio_index";
 
-	if /usr/share/elasticsearch/bin/elasticsearch-plugin list | grep -q "ingest-attachment"; then
-		/usr/share/elasticsearch/bin/elasticsearch-plugin remove -s ingest-attachment
+	echo "$ELASTIC_VERSION" > $APP_DIR/.private/opensearch-version
+	chmod o-rwx $APP_DIR/.private/opensearch-version
+
+	sed -i '/^plugins\.security/d' /etc/opensearch/opensearch.yml
+	sed -i '/CN=kirk,OU=client,O=client,L=test, C=de/d' /etc/opensearch/opensearch.yml
+  	/usr/share/opensearch/bin/opensearch-plugin remove opensearch-security
+
+	local ELASTIC_SEARCH_CONF_PATH="/etc/opensearch/opensearch.yml"
+	local ELASTIC_SEARCH_JAVA_CONF_PATH="/etc/opensearch/jvm.options";
+
+	if /usr/share/opensearch/bin/opensearch-plugin list | grep -q "ingest-attachment"; then
+		/usr/share/opensearch/bin/opensearch-plugin remove -s ingest-attachment
 	fi
-		/usr/share/elasticsearch/bin/elasticsearch-plugin install -s -b ingest-attachment	
+		/usr/share/opensearch/bin/opensearch-plugin install -s -b ingest-attachment	
 
 	if [ -f ${ELASTIC_SEARCH_CONF_PATH}.rpmnew ]; then
 		cp -rf ${ELASTIC_SEARCH_CONF_PATH}.rpmnew ${ELASTIC_SEARCH_CONF_PATH};   
@@ -648,12 +659,6 @@ change_elasticsearch_config(){
 		sed -i "s/Dlog4j2.formatMsgNoLookups.*/Dlog4j2.formatMsgNoLookups=true/" ${ELASTIC_SEARCH_JAVA_CONF_PATH} 
 	fi
 
-	if ! grep -q "ingest.geoip.downloader.enabled" ${ELASTIC_SEARCH_CONF_PATH}; then
-		echo "ingest.geoip.downloader.enabled: false" >> ${ELASTIC_SEARCH_CONF_PATH}
-	else
-		sed -i "s/ingest.geoip.downloader.enabled.*/ingest.geoip.downloader.enabled: false/" ${ELASTIC_SEARCH_CONF_PATH}
-	fi
-
 	local TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1);
 	local MEMORY_REQUIREMENTS=12000; #RAM ~12Gb
 
@@ -675,13 +680,13 @@ change_elasticsearch_config(){
 		echo "-Xmx${ELASTICSEATCH_MEMORY}" >> "${ELASTIC_SEARCH_JAVA_CONF_PATH}"
 	fi
 
-	if [ -d /etc/elasticsearch/ ]; then 
-		chmod g+ws /etc/elasticsearch/
+	if [ -d /etc/opensearch/ ]; then 
+		chmod g+ws /etc/opensearch/
 	fi
 }
 
 setup_elasticsearch() {
-	echo -n "Configuring elasticsearch... "
+	echo -n "Configuring opensearch... "
 
 	#Save elasticsearch parameters in .json
 	[[ $1 == "EXTERNAL_ELASTIC_SERVER" ]] && local EXTERNAL_ELASTIC_FLAG="rewrite"
@@ -693,8 +698,8 @@ setup_elasticsearch() {
 	if [ $1 == "LOCAL_ELASTIC_SERVER" ]; then
 		change_elasticsearch_config
 	
-		systemctl enable elasticsearch >/dev/null 2>&1
-		systemctl restart elasticsearch
+		systemctl enable opensearch >/dev/null 2>&1
+		systemctl restart opensearch
 	fi
 	echo "OK"
 }
@@ -811,7 +816,7 @@ fi
 if [[ ! -z $EXTERNAL_ELK_FLAG ]]; then
 	check_connection_external_services "$ELK_HOST" "$ELK_PORT" "Elasticsearch"
 	setup_elasticsearch "EXTERNAL_ELASTIC_SERVER" 
-elif $PACKAGE_MANAGER elasticsearch >/dev/null 2>&1; then
+elif $PACKAGE_MANAGER opensearch >/dev/null 2>&1; then
     setup_elasticsearch "LOCAL_ELASTIC_SERVER"
 fi
 
