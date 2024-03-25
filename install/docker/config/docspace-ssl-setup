@@ -28,10 +28,12 @@ help(){
   echo "                  Use comma to register multiple emails, ex:"
   echo "                  u1@example.com,u2@example.com."
   echo "    DOMAIN        Domain name to apply"
+  echo "                  Use comma to register multiple domains, ex:"
+  echo "                  example.com,s1.example.com,s2.example.com."
   echo ""
   echo "Using your own certificates via the -f or --file parameter:"
   echo "  docspace-ssl-setup --file DOMAIN CERTIFICATE PRIVATEKEY"
-  echo "    DOMAIN        Domain name to apply."
+  echo "    DOMAIN        Main domain name to apply."
   echo "    CERTIFICATE   Path to the certificate file for the domain."
   echo "    PRIVATEKEY    Path to the private key file for the certificate."
   echo ""
@@ -89,7 +91,8 @@ case $1 in
   * )
     if [ "$#" -ge "2" ]; then
       MAIL=$1
-      DOMAIN=$2
+      DOMAINS=$2
+      DOMAIN=$(cut -d ',' -f 1 <<< "$DOMAINS")
       LETSENCRYPT_ENABLE="true"
 
       if ! docker volume inspect "onlyoffice_webroot_path" &> /dev/null; then
@@ -110,7 +113,7 @@ case $1 in
       -v onlyoffice_webroot_path:${WEBROOT_PATH} \
       certbot/certbot certonly \
       --expand --webroot -w ${WEBROOT_PATH} \
-      --cert-name ${PRODUCT} --non-interactive --agree-tos --email ${MAIL} -d ${DOMAIN}
+      --cert-name ${PRODUCT} --non-interactive --agree-tos --email ${MAIL} -d ${DOMAINS[@]}
     else
       help
     fi
