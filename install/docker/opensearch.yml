@@ -1,4 +1,3 @@
-version: "3"
 services:
   onlyoffice-opensearch:
     image: onlyoffice/opensearch:${ELK_VERSION}

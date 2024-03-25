@@ -1,4 +1,3 @@
-version: "3.8"
 x-service: 
     &x-service-base
     container_name: base
