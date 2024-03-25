@@ -91,7 +91,7 @@ jobs:
         uses: nick-fields/retry@v3
         with:
           max_attempts: 2
-          timeout_minutes: 40
+          timeout_minutes: 80
           retry_on: error
           command: |
             set -eux
@@ -115,7 +115,7 @@ jobs:
         uses: nick-fields/retry@v3
         with:
           max_attempts: 2
-          timeout_minutes: 40
+          timeout_minutes: 80
           retry_on: error
           command: |
             set -eux
