@@ -24,10 +24,12 @@ help(){
   echo "                  Use comma to register multiple emails, ex:"
   echo "                  u1@example.com,u2@example.com."
   echo "    DOMAIN        Domain name to apply"
+  echo "                  Use comma to register multiple domains, ex:"
+  echo "                  example.com,s1.example.com,s2.example.com."
   echo ""
   echo "Using your own certificates via the -f or --file parameter:"
   echo "  docspace-ssl-setup --file DOMAIN CERTIFICATE PRIVATEKEY"
-  echo "    DOMAIN        Domain name to apply."
+  echo "    DOMAIN        Main domain name to apply."
   echo "    CERTIFICATE   Path to the certificate file for the domain."
   echo "    PRIVATEKEY    Path to the private key file for the certificate."
   echo ""
@@ -72,7 +74,8 @@ case $1 in
   * )
     if [ "$#" -ge "2" ]; then
       MAIL=$1
-      DOMAIN=$2
+      DOMAINS=$2
+      DOMAIN=$(cut -d ',' -f 1 <<< "$DOMAINS")
       LETSENCRYPT_ENABLE="true"
 
       # Install certbot if not already installed
@@ -88,8 +91,8 @@ case $1 in
       echo "Generating Let's Encrypt SSL Certificates..."
 
       # Request and generate Let's Encrypt SSL certificate
-      echo certbot certonly --expand --webroot -w ${WEBROOT_PATH} --cert-name ${PRODUCT} --noninteractive --agree-tos --email ${MAIL} -d ${DOMAIN} > /var/log/le-start.log
-      certbot certonly --expand --webroot -w ${WEBROOT_PATH} --cert-name ${PRODUCT} --noninteractive --agree-tos --email ${MAIL} -d ${DOMAIN} > /var/log/le-new.log
+      echo certbot certonly --expand --webroot -w ${WEBROOT_PATH} --cert-name ${PRODUCT} --noninteractive --agree-tos --email ${MAIL} -d ${DOMAINS[@]} > /var/log/le-start.log
+      certbot certonly --expand --webroot -w ${WEBROOT_PATH} --cert-name ${PRODUCT} --noninteractive --agree-tos --email ${MAIL} -d ${DOMAINS[@]} > /var/log/le-new.log
     else
       help
     fi
