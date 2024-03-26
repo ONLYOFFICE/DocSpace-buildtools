@@ -65,6 +65,13 @@ fi
 curl -SL https://artifacts.opensearch.org/releases/bundle/opensearch/2.x/opensearch-2.x.repo -o /etc/yum.repos.d/opensearch-2.x.repo
 ELASTIC_VERSION="2.11.1"
 
+#add opensearch dashboards repo
+curl -SL https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/2.x/opensearch-dashboards-2.x.repo -o /etc/yum.repos.d/opensearch-dashboards-2.x.repo
+DASHBOARDS_VERSION="2.11.1"
+
+#add repo, install fluent-bit
+curl https://raw.githubusercontent.com/fluent/fluent-bit/master/install.sh | bash
+
 # add nginx repo, Fedora doesn't need it
 if [ "$DIST" != "fedora" ]; then
 cat > /etc/yum.repos.d/nginx.repo <<END
@@ -88,6 +95,7 @@ ${package_manager} -y install $([ $DIST != "fedora" ] && echo "epel-release") \
 			nodejs ${NODEJS_OPTION} \
 			dotnet-sdk-8.0 \
 			opensearch-${ELASTIC_VERSION} --enablerepo=opensearch-2.x \
+			opensearch-dashboards-${DASHBOARDS_VERSION} --enablerepo=opensearch-dashboards-2.x \
 			mysql-community-server \
 			postgresql \
 			postgresql-server \
