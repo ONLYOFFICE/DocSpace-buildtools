@@ -83,3 +83,9 @@ map $SERVICE_CLIENT $service_client {
     "" 127.0.0.1:5001;
     default $SERVICE_CLIENT;
 }
+
+map $DASHBOARDS_CONTAINER_NAME $dashboards_host {
+    volatile;
+    default onlyoffice-opensearch-dashboards;
+    ~^(.*)$ $1;
+}
