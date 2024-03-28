@@ -33,6 +33,7 @@
     <ROW Property="ARPURLUPDATEINFO" Value="https://www.onlyoffice.com/download-docspace.aspx"/>
     <ROW Property="BASE_DOMAIN" Value="localhost"/>
     <ROW Property="COMMON_SHORTCUT_NAME" Value="ONLYOFFICE"/>
+    <ROW Property="DASHBOARDS_PWD" Value=" "/>
     <ROW Property="DATABASE_MIGRATION" Value="true"/>
     <ROW Property="DB_HOST" Value="localhost"/>
     <ROW Property="DB_NAME" Value="onlyoffice"/>
@@ -516,6 +517,7 @@
     <ROW Property="DOCUMENT_SERVER_JWT_SECRET" Signature_="AppSearchSign_23"/>
     <ROW Property="DOCUMENT_SERVER_PORT" Signature_="AppSearchSign_24"/>
     <ROW Property="MACHINE_KEY" Signature_="AppSearchSign_25"/>
+    <ROW Property="DASHBOARDS_PWD" Signature_="AppSearchSign_26"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiBinaryComponent">
     <ROW Name="NetFirewall.dll" SourcePath="&lt;AI_CUSTACTS&gt;NetFirewall.dll"/>
@@ -1040,6 +1042,7 @@
     <ROW Action="SET_APPDIR" Type="307" Source="APPDIR" Target="[ProgramFilesFolder][Manufacturer]\[ProductName]" MultiBuildTarget="DefaultBuild:[ProgramFilesFolder][INSTALL_ROOT_FOLDER_NAME]\DocSpace#ExeBuild:[ProgramFilesFolder][INSTALL_ROOT_FOLDER_NAME]\DocSpace"/>
     <ROW Action="SET_SHORTCUTDIR" Type="307" Source="SHORTCUTDIR" Target="[ProgramMenuFolder][ProductName]" MultiBuildTarget="DefaultBuild:[ProgramMenuFolder][INSTALL_ROOT_FOLDER_NAME]\DocSpace#ExeBuild:[ProgramMenuFolder][INSTALL_ROOT_FOLDER_NAME]\DocSpace"/>
     <ROW Action="SET_TARGETDIR_TO_APPDIR" Type="51" Source="TARGETDIR" Target="[APPDIR]"/>
+    <ROW Action="SetDashboardsPwd" Type="6" Source="utils.vbs" Target="SetDashboardsPwd"/>
     <ROW Action="SetDocumentServerJWTSecretProp" Type="6" Source="utils.vbs" Target="SetDocumentServerJWTSecretProp"/>
     <ROW Action="SetMACHINEKEY" Type="262" Source="utils.vbs" Target="SetMACHINEKEY"/>
     <ROW Action="SetSERVERNAME" Type="51" Source="SERVER_NAME" Target="[ComputerName]"/>
@@ -1287,6 +1290,7 @@
     <ROW Action="AI_PRESERVE_INSTALL_TYPE" Sequence="199"/>
     <ROW Action="AI_RestartElevated" Sequence="51" Builds="ExeBuild"/>
     <ROW Action="SetMACHINEKEY" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( MACHINE_KEY = &quot; &quot; )" Sequence="1107"/>
+    <ROW Action="SetDashboardsPwd" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( DASHBOARDS_PWD = &quot; &quot; )" Sequence="1108"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiLaunchConditionsComponent">
     <ROW Condition="( Version9X OR ( NOT VersionNT64 ) OR ( VersionNT64 AND ((VersionNT64 &lt;&gt; 600) OR (MsiNTProductType &lt;&gt; 1)) AND ((VersionNT64 &lt;&gt; 600) OR (MsiNTProductType = 1)) AND ((VersionNT64 &lt;&gt; 601) OR (MsiNTProductType &lt;&gt; 1)) AND ((VersionNT64 &lt;&gt; 601) OR (MsiNTProductType = 1)) AND ((VersionNT64 &lt;&gt; 602) OR (MsiNTProductType &lt;&gt; 1)) AND ((VersionNT64 &lt;&gt; 602) OR (MsiNTProductType = 1)) AND ((VersionNT64 &lt;&gt; 603) OR (MsiNTProductType &lt;&gt; 1)) AND ((VersionNT64 &lt;&gt; 603) OR (MsiNTProductType = 1)) AND ((VersionNT64 &lt;&gt; 1000) OR (MsiNTProductType &lt;&gt; 1)) AND ((VersionNT64 &lt;&gt; 1100) OR (MsiNTProductType &lt;&gt; 1)) ) )" Description="[ProductName] cannot be installed on the following Windows versions: [WindowsTypeNT64Display]." DescriptionLocId="AI.LaunchCondition.NoSpecificNT64" IsPredefined="true" Builds="DefaultBuild;ExeBuild"/>
@@ -1325,6 +1329,7 @@
     <ROW Signature_="AppSearchSign_23" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="DOCUMENT_SERVER_JWT_SECRET" Type="2"/>
     <ROW Signature_="AppSearchSign_24" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="DOCUMENT_SERVER_PORT" Type="2"/>
     <ROW Signature_="AppSearchSign_25" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="MACHINE_KEY" Type="2"/>
+    <ROW Signature_="AppSearchSign_26" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="DASHBOARDS_PWD" Type="2"/>
     <ROW Signature_="AppSearchSign_3" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_USER" Type="2"/>
     <ROW Signature_="AppSearchSign_4" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_PWD" Type="2"/>
     <ROW Signature_="AppSearchSign_5" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_PORT" Type="2"/>
@@ -1345,6 +1350,7 @@
     <ROW Registry="Comments" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="Comments" Value="[ARPCOMMENTS]" Component_="AI_CustomARPName"/>
     <ROW Registry="Contact" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="Contact" Value="[ARPCONTACT]" Component_="AI_CustomARPName"/>
     <ROW Registry="CurrentVersion" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion" Name="\"/>
+    <ROW Registry="DASHBOARDS_PWD" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="DASHBOARDS_PWD" Value="[DASHBOARDS_PWD]" Component_="APPDIR"/>
     <ROW Registry="DB_HOST" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="DB_HOST" Value="[DB_HOST]" Component_="APPDIR"/>
     <ROW Registry="DB_NAME" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="DB_NAME" Value="[DB_NAME]" Component_="APPDIR"/>
     <ROW Registry="DB_PORT" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="DB_PORT" Value="[DB_PORT]" Component_="APPDIR"/>
@@ -1587,6 +1593,7 @@
     <ROW Name="ReplacePort" TxtUpdateSet="fluentbit.conf" FindPattern="OPENSEARCH_PORT" ReplacePattern="[OPENSEARCH_PORT]" Options="2" Order="2" FileEncoding="-1"/>
     <ROW Name="ReplaceScheme" TxtUpdateSet="fluentbit.conf" FindPattern="OPENSEARCH_SCHEME" ReplacePattern="[OPENSEARCH_SCHEME]" Options="2" Order="3" FileEncoding="-1"/>
     <ROW Name="ReplaceIndex" TxtUpdateSet="fluentbit.conf" FindPattern="OPENSEARCH_INDEX" ReplacePattern="[OPENSEARCH_INDEX]" Options="2" Order="4" FileEncoding="-1"/>
+    <ROW Name="Append/Create" TxtUpdateSet="htpasswd_dashboards" FindPattern="onlyoffice:[DASHBOARDS_PWD]" Options="160" Order="0" FileEncoding="0"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.TxtUpdateSetComponent">
     <ROW Key="YourFile.txt" Component="conf" FileName="onlyoffice.conf" Directory="conf_Dir" Options="17"/>
@@ -1594,7 +1601,8 @@
     <ROW Key="YourFile.txt_2" Component="includes" FileName="onlyoffice-public.conf" Directory="includes_Dir" Options="17"/>
     <ROW Key="YourFile.txt_3" Component="conf" FileName="onlyoffice-proxy*" Directory="conf_Dir" Options="17"/>
     <ROW Key="YourFile.txt_5" Component="includes" FileName="letsencrypt.conf" Directory="includes_Dir" Options="17"/>
-    <ROW Key="fluentbit.conf" Component="APPDIR" FileName="fluent-bit.conf" Directory="APPDIR" Options="17"/>
+    <ROW Key="fluentbit.conf" Component="APPDIR" FileName="fluent-bit.conf" Directory="config_Dir" Options="17"/>
+    <ROW Key="htpasswd_dashboards" Component="conf" FileName=".htpasswd_dashboards" Directory="conf_Dir" Options="17"/>
     <ROW Key="xml" Component="tools" FileName="*.xml" Directory="tools_Dir" Options="17"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.XmlAttributeComponent">
