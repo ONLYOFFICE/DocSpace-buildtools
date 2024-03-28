@@ -1601,7 +1601,7 @@
     <ROW Key="YourFile.txt_2" Component="includes" FileName="onlyoffice-public.conf" Directory="includes_Dir" Options="17"/>
     <ROW Key="YourFile.txt_3" Component="conf" FileName="onlyoffice-proxy*" Directory="conf_Dir" Options="17"/>
     <ROW Key="YourFile.txt_5" Component="includes" FileName="letsencrypt.conf" Directory="includes_Dir" Options="17"/>
-    <ROW Key="fluentbit.conf" Component="APPDIR" FileName="fluent-bit.conf" Directory="config_Dir" Options="17"/>
+    <ROW Key="fluentbit.conf" Component="config" FileName="fluent-bit.conf" Directory="config_Dir" Options="17"/>
     <ROW Key="htpasswd_dashboards" Component="conf" FileName=".htpasswd_dashboards" Directory="conf_Dir" Options="17"/>
     <ROW Key="xml" Component="tools" FileName="*.xml" Directory="tools_Dir" Options="17"/>
   </COMPONENT>
