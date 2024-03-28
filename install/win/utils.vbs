@@ -118,6 +118,13 @@ Function SetDocumentServerJWTSecretProp
 
 End Function
 
+Function SetDashboardsPwd
+    On Error Resume Next
+
+    Session.Property("DASHBOARDS_PWD") = RandomString( 20 )
+
+End Function
+
 Function SetMACHINEKEY
     On Error Resume Next
 
@@ -393,7 +400,21 @@ Function OpenSearchSetup
         oRE.Pattern = "opensearch.hosts:.*"
         fileContent = oRE.Replace(fileContent, "opensearch.hosts: [http://localhost:9200]")
     End if
-    
+
+    If InStrRev(fileContent, "server.host") = 0 Then
+        fileContent = fileContent & Chr(13) & Chr(10) & "server.host: 127.0.0.1"
+    Else
+        oRE.Pattern = "server.host:.*"
+        fileContent = oRE.Replace(fileContent, "server.host: 127.0.0.1")
+    End if
+
+    If InStrRev(fileContent, "server.basePath") = 0 Then
+        fileContent = fileContent & Chr(13) & Chr(10) & "server.basePath: /dashboards"
+    Else
+        oRE.Pattern = "server.basePath:.*"
+        fileContent = oRE.Replace(fileContent, "server.basePath: /dashboards")
+    End if
+
     Set objFile = objFSO.OpenTextFile(OPENSEARCH_DASHBOARDS_YML, ForWriting)
 
     objFile.WriteLine fileContent
@@ -548,7 +569,7 @@ Function MoveConfigs
     configSslFile = targetFolder & "\onlyoffice-proxy-ssl.conf.tmpl"
     configFile = targetFolder & "\onlyoffice-proxy.conf"
     sslScriptPath = Session.Property("APPDIR") & "sbin\docspace-ssl-setup.ps1"
-    FluentBitSourceFile = Session.Property("APPDIR") & "fluent-bit.conf"
+    FluentBitSourceFile = Session.Property("APPDIR") & "config\fluent-bit.conf"
     FluentBitDstFolder = "C:\OpenSearchStack\fluent-bit-2.2.2-win64\conf\"
 
     ' Read content and extract SSL certificate and key paths if it exists
