@@ -463,6 +463,13 @@ while [ "$1" != "" ]; do
 			fi
 		;;
 
+		-noni | --noninteractive )
+			if [ "$2" != "" ]; then
+				NON_INTERACTIVE=$2
+				shift
+			fi
+		;;
+
 		-? | -h | --help )
 			echo "  Usage: bash $HELP_TARGET [PARAMETER] [[PARAMETER], ...]"
 			echo
@@ -511,6 +518,7 @@ while [ "$1" != "" ]; do
 			echo "      -lem, --letsencryptmail           defines the domain administator mail address for Let's Encrypt certificate"
 			echo "      -cf, --certfile                   path to the certificate file for the domain"
 			echo "      -ckf, --certkeyfile               path to the private key file for the certificate"
+			echo "      -noni, --noninteractive           auto confirm all questions (true|false)"
 			echo "      -dbm, --databasemigration         database migration (true|false)"
 			echo "      -ms, --makeswap                   make swap file (true|false)"
 			echo "      -?, -h, --help                    this help"
@@ -884,6 +892,10 @@ create_network () {
 }
 
 read_continue_installation () {
+	if [[ "${NON_INTERACTIVE}" = "true" ]]; then
+		return 0
+	fi
+
 	read -p "Continue installation [Y/N]? " CHOICE_INSTALLATION
 	case "$CHOICE_INSTALLATION" in
 		y|Y )
