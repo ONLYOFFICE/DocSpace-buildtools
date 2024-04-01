@@ -57,6 +57,10 @@ dnf remove -y @mysql && dnf module -y reset mysql && dnf module -y disable mysql
 MYSQL_REPO_VERSION="$(curl https://repo.mysql.com | grep -oP "mysql80-community-release-${MYSQL_DISTR_NAME}${REV}-\K.*" | grep -o '^[^.]*' | sort | tail -n1)"
 yum localinstall -y https://repo.mysql.com/mysql80-community-release-${MYSQL_DISTR_NAME}${REV}-${MYSQL_REPO_VERSION}.noarch.rpm || true
 
+if ! yum repolist enabled | grep -q mysql-innovation-community; then
+    sudo yum-config-manager --enable mysql-innovation-community
+fi
+
 if ! rpm -q mysql-community-server; then
 	MYSQL_FIRST_TIME_INSTALL="true";
 fi
