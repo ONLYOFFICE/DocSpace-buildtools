@@ -20,10 +20,19 @@ def help():
     print("d     Run dnsmasq.")
     print()
 
+
 rd = os.path.dirname(os.path.abspath(__file__))
 dir = os.path.abspath(os.path.join(rd, ".."))
 dockerDir = os.path.join(dir, "buildtools", "install", "docker")
-local_ip = socket.gethostbyname_ex(socket.gethostname())[-1][-1]
+networks = socket.gethostbyname_ex(socket.gethostname())
+local_ip = networks[-1][-1]
+
+if local_ip == "127.0.0.1":
+    local_ip = networks[-1][0]
+
+if local_ip == "127.0.0.1":
+    print("Error: Local IP is 127.0.0.1", networks)
+    sys.exit(1)
 
 doceditor = f"{local_ip}:5013"
 login = f"{local_ip}:5011"
