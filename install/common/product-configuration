@@ -619,7 +619,9 @@ change_elasticsearch_config(){
 
 	sed -i '/^plugins\.security/d' /etc/opensearch/opensearch.yml
 	sed -i '/CN=kirk,OU=client,O=client,L=test, C=de/d' /etc/opensearch/opensearch.yml
-  	/usr/share/opensearch/bin/opensearch-plugin remove opensearch-security
+  	if /usr/share/opensearch/bin/opensearch-plugin list | grep -x "opensearch-security" > /dev/null 2>&1 ; then
+		/usr/share/opensearch/bin/opensearch-plugin remove opensearch-security > /dev/null 2>&1
+	fi
 
 	local ELASTIC_SEARCH_CONF_PATH="/etc/opensearch/opensearch.yml"
 	local ELASTIC_SEARCH_JAVA_CONF_PATH="/etc/opensearch/jvm.options";

@@ -1304,6 +1304,7 @@ install_product () {
 		reconfigure EXTERNAL_PORT ${EXTERNAL_PORT}
 
 		docker-compose -f $BASE_DIR/migration-runner.yml up -d
+		docker wait ${PACKAGE_SYSNAME}-migration-runner
 		docker-compose -f $BASE_DIR/${PRODUCT}.yml up -d
 		docker-compose -f ${PROXY_YML} up -d
 		docker-compose -f $BASE_DIR/notify.yml up -d
