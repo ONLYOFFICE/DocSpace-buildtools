@@ -35,6 +35,7 @@ PARAMETERS="$PARAMETERS -it COMMUNITY";
 DOCKER="";
 LOCAL_SCRIPTS="false"
 product="docspace"
+product_sysname="onlyoffice";
 FILE_NAME="$(basename "$0")"
 
 while [ "$1" != "" ]; do
@@ -104,7 +105,7 @@ install_curl () {
 }
 
 read_installation_method () {
-	echo "Select 'Y' to install ONLYOFFICE $product using Docker (recommended). Select 'N' to install it using RPM/DEB packages.";
+	echo "Select 'Y' to install ${product_sysname^^} $product using Docker (recommended). Select 'N' to install it using RPM/DEB packages.";
 	read -p "Install with Docker [Y/N/C]? " choice
 	case "$choice" in
 		y|Y )
@@ -135,14 +136,22 @@ if ! command_exists curl ; then
 	install_curl;
 fi
 
+if command_exists docker &> /dev/null && docker ps -a --format '{{.Names}}' | grep -q "${product_sysname}-api"; then
+    DOCKER="true"
+elif command_exists apt-get &> /dev/null && dpkg -s ${product}-api >/dev/null 2>&1; then
+    DOCKER="false"
+elif command_exists yum &> /dev/null && rpm -q ${product}-api >/dev/null 2>&1; then
+    DOCKER="false"
+fi
+ 
 if [ -z "$DOCKER" ]; then
 	read_installation_method;
 fi
 
 if [ -z $GIT_BRANCH ]; then
-	DOWNLOAD_URL_PREFIX="https://download.onlyoffice.com/${product}"
+	DOWNLOAD_URL_PREFIX="https://download.${product_sysname}.com/${product}"
 else
-	DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
+	DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${product_sysname^^}/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
 fi
 
 if [ "$DOCKER" == "true" ]; then
