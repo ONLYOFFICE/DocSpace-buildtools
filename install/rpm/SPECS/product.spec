@@ -2,8 +2,11 @@
 %define         _build_id_links none
 %define         __os_install_post /usr/lib/rpm/brp-compress %{nil}
 
-%global         product docspace
-%global         product_name DocSpace
+%global         product %{?another_product:%{another_product}}%{!?another_product:docspace}
+%global         product_name %{?another_product_name:%{another_product_name}}%{!?another_product_name:DocSpace}
+%global         product_sysname %{?another_product_sysname:%{another_product_sysname}}%{!?another_product_sysname:onlyoffice}
+%global         url %{?another_url:%{another_url}}%{!?another_url:http://onlyoffice.com}
+%global         vendor %{?another_vendor:%{another_vendor}}%{!?another_vendor:Ascensio System SIA}
 %global         buildpath %{_var}/www/%{product}
 
 Name:           %{product}
@@ -15,16 +18,16 @@ Release:        %{release}
 AutoReqProv:    no
 
 BuildArch:      noarch
-URL:            http://onlyoffice.com
-Vendor:         Ascensio System SIA
+URL:            %{url}
+Vendor:         %{vendor}
 Packager:       %{packager}
 License:        AGPLv3
 
-Source0:        https://github.com/ONLYOFFICE/%{product}-buildtools/archive/master.tar.gz#/buildtools.tar.gz
-Source1:        https://github.com/ONLYOFFICE/%{product}-client/archive/master.tar.gz#/client.tar.gz
-Source2:        https://github.com/ONLYOFFICE/%{product}-server/archive/master.tar.gz#/server.tar.gz
-Source3:        https://github.com/ONLYOFFICE/document-templates/archive/main/community-server.tar.gz#/DocStore.tar.gz
-Source4:        https://github.com/ONLYOFFICE/dictionaries/archive/master.tar.gz#/dictionaries.tar.gz
+Source0:        https://github.com/%{toupper:product_sysname}/%{product}-buildtools/archive/master.tar.gz#/buildtools.tar.gz
+Source1:        https://github.com/%{toupper:product_sysname}/%{product}-client/archive/master.tar.gz#/client.tar.gz
+Source2:        https://github.com/%{toupper:product_sysname}/%{product}-server/archive/master.tar.gz#/server.tar.gz
+Source3:        https://github.com/%{toupper:product_sysname}/document-templates/archive/main/community-server.tar.gz#/DocStore.tar.gz
+Source4:        https://github.com/%{toupper:product_sysname}/dictionaries/archive/master.tar.gz#/dictionaries.tar.gz
 Source5:        %{product}.rpmlintrc
 
 BuildRequires:  nodejs >= 18.0
@@ -54,7 +57,7 @@ Requires:       %name-studio = %version-%release
 Requires:       %name-studio-notify = %version-%release
 
 %description
-ONLYOFFICE DocSpace is a new way to collaborate on documents with teams, 
+%{toupper:product_sysname} %{product_name} is a new way to collaborate on documents with teams, 
 clients, partners, etc., based on the concept of rooms - special spaces with 
 predefined permissions. 
 
@@ -80,14 +83,14 @@ cp %{SOURCE5} .
 
 %pre common
 
-getent group onlyoffice >/dev/null || groupadd -r onlyoffice
-getent passwd onlyoffice >/dev/null || useradd -r -g onlyoffice -s /sbin/nologin onlyoffice
+getent group %{product_sysname} >/dev/null || groupadd -r %{product_sysname}
+getent passwd %{product_sysname} >/dev/null || useradd -r -g %{product_sysname} -s /sbin/nologin %{product_sysname}
 
 %pre proxy
 
 # (DS v1.1.3) Removing old nginx configs to prevent conflicts before upgrading on OpenResty.
-if [ -f /etc/nginx/conf.d/onlyoffice.conf ]; then
-    rm -rf /etc/nginx/conf.d/onlyoffice*
+if [ -f /etc/nginx/conf.d/%{product_sysname}.conf ]; then
+    rm -rf /etc/nginx/conf.d/%{product_sysname}*
     systemctl reload nginx
 fi
 

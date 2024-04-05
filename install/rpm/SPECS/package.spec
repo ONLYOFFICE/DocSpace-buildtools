@@ -46,7 +46,7 @@ AutoReqProv:    no
 BuildArch:      noarch
 %description    notify
 The service which launches additional services
-related to notifications about DocSpace events:
+related to notifications about %{product_name} events:
 NotifySenderService which sends messages from the base,
 and NotifyCleanerService which removes messages
 
@@ -156,7 +156,7 @@ BuildArch:      noarch
 %description    ssoauth
 The service responsible for enabling and configuring 
 SAML-based single sign-on (SSO) authentication to provide a more quick, 
-easy and secure way to access DocSpace for users
+easy and secure way to access %{product_name} for users
 
 %package        clear-events
 Packager:       %{packager}

@@ -20,6 +20,20 @@ while [ "$1" != "" ]; do
 				    shift
 			    fi
 		;;
+	    
+        -p | --product )
+        	if [ "$2" != "" ]; then
+				    PRODUCT=$2
+				    shift
+			    fi
+		;;
+	    
+        -ps | --productsysname )
+        	if [ "$2" != "" ]; then
+				    PRODUCT_SYSNAME=$2
+				    shift
+			    fi
+		;;
 
         -? | -h | --help )
             echo " Usage: bash build.sh [PARAMETER] [[PARAMETER], ...]"
@@ -40,11 +54,12 @@ while [ "$1" != "" ]; do
   shift
 done
 
-PRODUCT="docspace"
+PRODUCT="${PRODUCT:-"docspace"}"
+PRODUCT_SYSNAME="${PRODUCT_SYSNAME:-"onlyoffice"}"
 BASE_DIR="/var/www/${PRODUCT}"
-PATH_TO_CONF="/etc/onlyoffice/${PRODUCT}"
-STORAGE_ROOT="/var/www/onlyoffice/Data"
-LOG_DIR="/var/log/onlyoffice/${PRODUCT}"
+PATH_TO_CONF="/etc/${PRODUCT_SYSNAME}/${PRODUCT}"
+STORAGE_ROOT="/var/www/${PRODUCT_SYSNAME}/Data"
+LOG_DIR="/var/log/${PRODUCT_SYSNAME}/${PRODUCT}"
 DOTNET_RUN="/usr/bin/dotnet"
 NODE_RUN="/usr/bin/node"
 APP_URLS="http://127.0.0.1"
