@@ -5,6 +5,8 @@ on:
     types: [opened, reopened, synchronize]
     paths:
       - 'install/OneClickInstall/**'
+      - '!install/OneClickInstall/install-Docker.sh'
+      - '!install/OneClickInstall/docspace-install.sh'
 
   schedule:
     - cron: '00 20 * * 6'  # At 23:00 on Saturday.
