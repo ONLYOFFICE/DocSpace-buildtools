@@ -8,3 +8,4 @@ debian/build/buildtools/install/docker/config/nginx/letsencrypt*             etc
 debian/build/buildtools/config/nginx/includes/onlyoffice*.conf               etc/openresty/includes
 debian/build/publish/web/public/*                                            var/www/{{product}}/public
 debian/build/publish/web/client/*                                            var/www/{{product}}/client
+debian/build/publish/web/management/*                                        var/www/{{product}}/management
