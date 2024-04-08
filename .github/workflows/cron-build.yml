@@ -28,6 +28,9 @@ jobs:
           matching_branches=${matching_branches#,}
           echo "json_output=[${matching_branches}]" >> $GITHUB_OUTPUT
 
+          last_branch=$(echo ${matching_branches} | awk -F, '{print $NF}' | sed 's/"//g')
+          echo "last_branch=${last_branch}" >> $GITHUB_OUTPUT
+
       - name: Dispatch Action
         run: |
           echo "${{ steps.list-branches.outputs.json_output }}"
@@ -38,3 +41,17 @@ jobs:
           "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/dispatches" \
           -H "Accept: application/vnd.github.everest-preview+json" \
           --data '{"event_type": "cron-trigger-action", "client_payload": { "branches": ${{ steps.list-branches.outputs.json_output }}}}'
+
+          curl \
+          -X POST \
+          -u "${{ secrets.USERNAME}}:${{secrets.TOKEN}}" \
+          https://api.github.com/repos/ONLYOFFICE/DocSpace/actions/workflows/59268961/dispatches \
+          -H "Accept: application/vnd.github.everest-preview+json" \
+          --data '{
+            "ref": "${{ steps.list-branches.outputs.last_branch }}",
+            "inputs": {
+              "branch-buildtools": "${{ steps.list-branches.outputs.last_branch }}",
+              "branch-client": "${{ steps.list-branches.outputs.last_branch }}",
+              "branch-server": "${{ steps.list-branches.outputs.last_branch }}"
+            }
+          }'

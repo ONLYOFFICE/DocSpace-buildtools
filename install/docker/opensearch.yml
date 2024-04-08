@@ -1,0 +1,32 @@
+services:
+  onlyoffice-opensearch:
+    image: onlyoffice/opensearch:${ELK_VERSION}
+    container_name: ${ELK_CONTAINER_NAME}
+    restart: always
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms4g -Xmx4g -Dlog4j2.formatMsgNoLookups=true"
+      - "indices.fielddata.cache.size=30%"
+      - "indices.memory.index_buffer_size=30%"
+      - "DISABLE_INSTALL_DEMO_CONFIG=true"
+      - "DISABLE_SECURITY_PLUGIN=true"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536 # maximum number of open files for the OpenSearch user, set to at least 65536 on modern systems
+        hard: 65536
+    volumes:
+      - os_data:/usr/share/opensearch/data
+    expose:
+      - "9200"
+      - "9600" # required for Performance Analyzer
+networks:
+  default:
+    name: ${NETWORK_NAME}
+    external: true
+
+volumes:
+  os_data:

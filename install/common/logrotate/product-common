@@ -1,4 +1,4 @@
-/var/log/onlyoffice/{{product}}/*.log {
+/var/log/onlyoffice/docspace/*.log {
         daily
         missingok
         rotate 30
@@ -10,7 +10,7 @@
         sharedscripts
         postrotate
             if pgrep -x ""systemd"" >/dev/null; then
-                systemctl restart {{product}}* > /dev/null
+                systemctl restart docspace* > /dev/null
             fi
         endscript
 }

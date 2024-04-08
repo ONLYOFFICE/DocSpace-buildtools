@@ -1,4 +1,3 @@
-version: "3.6"
 services:  
   onlyoffice-zookeeper:
     image: zookeeper:latest

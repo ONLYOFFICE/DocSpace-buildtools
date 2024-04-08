@@ -492,6 +492,13 @@ setup_openresty(){
 	fi
 
 	if [ "$DIST" = "RedHat" ]; then
+		# Remove default nginx settings [error] port 80 is already in use
+		if [ -f /etc/nginx/nginx.conf ]; then
+			if grep -q "server {"  /etc/nginx/nginx.conf ; then
+				sed -e '$a}' -e '/server {/,$d' -i /etc/nginx/nginx.conf
+			fi
+		fi
+		
 		shopt -s nocasematch
 		PORTS=()
 		if command -v getenforce &> /dev/null; then
@@ -601,15 +608,28 @@ setup_enterprise() {
 
 change_elasticsearch_config(){
 
-	systemctl stop elasticsearch
+	systemctl stop opensearch
+	systemctl is-active --quiet elasticsearch && systemctl stop elasticsearch
 
-	local ELASTIC_SEARCH_CONF_PATH="/etc/elasticsearch/elasticsearch.yml"
-	local ELASTIC_SEARCH_JAVA_CONF_PATH="/etc/elasticsearch/jvm.options";
+	ELASTIC_VERSION=$(awk '/build:/{f=1} f&&/version:/{gsub(/"/,"",$2);print $2; exit}' /usr/share/opensearch/manifest.yml 2>/dev/null || echo "2.11.1")
+	[[ -f "$APP_DIR/.private/opensearch-version" && $(cat $APP_DIR/.private/opensearch-version) != *$ELASTIC_VERSION* ]] && $MYSQL "$DB_NAME" -e "TRUNCATE webstudio_index";
 
-	if /usr/share/elasticsearch/bin/elasticsearch-plugin list | grep -q "ingest-attachment"; then
-		/usr/share/elasticsearch/bin/elasticsearch-plugin remove -s ingest-attachment
+	echo "$ELASTIC_VERSION" > $APP_DIR/.private/opensearch-version
+	chmod o-rwx $APP_DIR/.private/opensearch-version
+
+	sed -i '/^plugins\.security/d' /etc/opensearch/opensearch.yml
+	sed -i '/CN=kirk,OU=client,O=client,L=test, C=de/d' /etc/opensearch/opensearch.yml
+  	if /usr/share/opensearch/bin/opensearch-plugin list | grep -x "opensearch-security" > /dev/null 2>&1 ; then
+		/usr/share/opensearch/bin/opensearch-plugin remove opensearch-security > /dev/null 2>&1
 	fi
-		/usr/share/elasticsearch/bin/elasticsearch-plugin install -s -b ingest-attachment	
+
+	local ELASTIC_SEARCH_CONF_PATH="/etc/opensearch/opensearch.yml"
+	local ELASTIC_SEARCH_JAVA_CONF_PATH="/etc/opensearch/jvm.options";
+
+	if /usr/share/opensearch/bin/opensearch-plugin list | grep -q "ingest-attachment"; then
+		/usr/share/opensearch/bin/opensearch-plugin remove -s ingest-attachment
+	fi
+		/usr/share/opensearch/bin/opensearch-plugin install -s -b ingest-attachment	
 
 	if [ -f ${ELASTIC_SEARCH_CONF_PATH}.rpmnew ]; then
 		cp -rf ${ELASTIC_SEARCH_CONF_PATH}.rpmnew ${ELASTIC_SEARCH_CONF_PATH};   
@@ -641,14 +661,8 @@ change_elasticsearch_config(){
 		sed -i "s/Dlog4j2.formatMsgNoLookups.*/Dlog4j2.formatMsgNoLookups=true/" ${ELASTIC_SEARCH_JAVA_CONF_PATH} 
 	fi
 
-	if ! grep -q "ingest.geoip.downloader.enabled" ${ELASTIC_SEARCH_CONF_PATH}; then
-		echo "ingest.geoip.downloader.enabled: false" >> ${ELASTIC_SEARCH_CONF_PATH}
-	else
-		sed -i "s/ingest.geoip.downloader.enabled.*/ingest.geoip.downloader.enabled: false/" ${ELASTIC_SEARCH_CONF_PATH}
-	fi
-
-	local TOTAL_MEMORY=$(free -m | grep -oP '\d+' | head -n 1);
-	local MEMORY_REQUIREMENTS=12228; #RAM ~4*3Gb
+	local TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1);
+	local MEMORY_REQUIREMENTS=12000; #RAM ~12Gb
 
 	if [ ${TOTAL_MEMORY} -gt ${MEMORY_REQUIREMENTS} ]; then
 		ELASTICSEATCH_MEMORY="4g"
@@ -668,13 +682,13 @@ change_elasticsearch_config(){
 		echo "-Xmx${ELASTICSEATCH_MEMORY}" >> "${ELASTIC_SEARCH_JAVA_CONF_PATH}"
 	fi
 
-	if [ -d /etc/elasticsearch/ ]; then 
-		chmod g+ws /etc/elasticsearch/
+	if [ -d /etc/opensearch/ ]; then 
+		chmod g+ws /etc/opensearch/
 	fi
 }
 
 setup_elasticsearch() {
-	echo -n "Configuring elasticsearch... "
+	echo -n "Configuring opensearch... "
 
 	#Save elasticsearch parameters in .json
 	[[ $1 == "EXTERNAL_ELASTIC_SERVER" ]] && local EXTERNAL_ELASTIC_FLAG="rewrite"
@@ -686,8 +700,8 @@ setup_elasticsearch() {
 	if [ $1 == "LOCAL_ELASTIC_SERVER" ]; then
 		change_elasticsearch_config
 	
-		systemctl enable elasticsearch >/dev/null 2>&1
-		systemctl restart elasticsearch
+		systemctl enable opensearch >/dev/null 2>&1
+		systemctl restart opensearch
 	fi
 	echo "OK"
 }
@@ -766,6 +780,16 @@ check_connection_external_services() {
 	return $HOST_RESPONCE
 }
 
+# Function to prevent package auto-update
+hold_package_version(){
+	if command -v apt >/dev/null 2>&1 && 
+		dpkg -s $1 >/dev/null 2>&1 && 
+		! apt-mark showhold | grep -q $1 >/dev/null 2>&1
+	then
+		apt-mark hold $1 >/dev/null 2>&1
+	fi
+}
+
 if command -v yum >/dev/null 2>&1; then
 	DIST="RedHat"
 	PACKAGE_MANAGER="rpm -q"
@@ -778,6 +802,7 @@ elif command -v apt >/dev/null 2>&1; then
 	MYSQL_PACKAGE="mysql"
 	REDIS_PACKAGE="redis-server"
 	SYSTEMD_DIR="$(dirname $(dpkg-query -L ${PRODUCT}-api | grep systemd/system/))"
+	hold_package_version dotnet-host
 fi
 
 install_json
@@ -804,8 +829,9 @@ fi
 if [[ ! -z $EXTERNAL_ELK_FLAG ]]; then
 	check_connection_external_services "$ELK_HOST" "$ELK_PORT" "Elasticsearch"
 	setup_elasticsearch "EXTERNAL_ELASTIC_SERVER" 
-elif $PACKAGE_MANAGER elasticsearch >/dev/null 2>&1; then
+elif $PACKAGE_MANAGER opensearch >/dev/null 2>&1; then
     setup_elasticsearch "LOCAL_ELASTIC_SERVER"
+    hold_package_version opensearch
 fi
 
 if [[ ! -z $EXTERNAL_REDIS_FLAG ]]; then
@@ -813,6 +839,7 @@ if [[ ! -z $EXTERNAL_REDIS_FLAG ]]; then
 	setup_redis "EXTERNAL_REDIS_SERVER"
 elif $PACKAGE_MANAGER $REDIS_PACKAGE >/dev/null 2>&1; then
     setup_redis "LOCAL_REDIS_SERVER"
+    hold_package_version $REDIS_PACKAGE
 fi
 
 if [[ ! -z $EXTERNAL_RABBITMQ_FLAG ]]; then
@@ -820,6 +847,7 @@ if [[ ! -z $EXTERNAL_RABBITMQ_FLAG ]]; then
     setup_rabbitmq "EXTERNAL_RABBITMQ_SERVER"
 elif $PACKAGE_MANAGER rabbitmq-server >/dev/null 2>&1; then
     setup_rabbitmq "LOCAL_RABBITMQ_SERVER"
+    hold_package_version rabbitmq-server
 fi
 
 restart_services

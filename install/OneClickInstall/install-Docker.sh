@@ -48,7 +48,7 @@ SWAPFILE="/${PRODUCT}_swapfile";
 MAKESWAP="true";
 
 DISK_REQUIREMENTS=40960;
-MEMORY_REQUIREMENTS=8192;
+MEMORY_REQUIREMENTS=8000;
 CORE_REQUIREMENTS=4;
 
 DIST="";
@@ -463,6 +463,13 @@ while [ "$1" != "" ]; do
 			fi
 		;;
 
+		-noni | --noninteractive )
+			if [ "$2" != "" ]; then
+				NON_INTERACTIVE=$2
+				shift
+			fi
+		;;
+
 		-? | -h | --help )
 			echo "  Usage: bash $HELP_TARGET [PARAMETER] [[PARAMETER], ...]"
 			echo
@@ -511,6 +518,7 @@ while [ "$1" != "" ]; do
 			echo "      -lem, --letsencryptmail           defines the domain administator mail address for Let's Encrypt certificate"
 			echo "      -cf, --certfile                   path to the certificate file for the domain"
 			echo "      -ckf, --certkeyfile               path to the private key file for the certificate"
+			echo "      -noni, --noninteractive           auto confirm all questions (true|false)"
 			echo "      -dbm, --databasemigration         database migration (true|false)"
 			echo "      -ms, --makeswap                   make swap file (true|false)"
 			echo "      -?, -h, --help                    this help"
@@ -690,7 +698,7 @@ check_hardware () {
 		exit 1;
 	fi
 
-	TOTAL_MEMORY=$(free -m | grep -oP '\d+' | head -n 1);
+	TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1);
 
 	if [ ${TOTAL_MEMORY} -lt ${MEMORY_REQUIREMENTS} ]; then
 		echo "Minimal requirements are not met: need at least $MEMORY_REQUIREMENTS MB of RAM"
@@ -884,6 +892,10 @@ create_network () {
 }
 
 read_continue_installation () {
+	if [[ "${NON_INTERACTIVE}" = "true" ]]; then
+		return 0
+	fi
+
 	read -p "Continue installation [Y/N]? " CHOICE_INSTALLATION
 	case "$CHOICE_INSTALLATION" in
 		y|Y )
@@ -1109,6 +1121,7 @@ set_docspace_params() {
 	APP_CORE_BASE_DOMAIN=${APP_CORE_BASE_DOMAIN:-$(get_env_parameter "APP_CORE_BASE_DOMAIN" "${CONTAINER_NAME}")};
 	EXTERNAL_PORT=${EXTERNAL_PORT:-$(get_env_parameter "EXTERNAL_PORT" "${CONTAINER_NAME}")};
 
+	PREVIOUS_ELK_VERSION=$(get_env_parameter "ELK_VERSION");
 	ELK_SHEME=${ELK_SHEME:-$(get_env_parameter "ELK_SHEME" "${CONTAINER_NAME}")};
 	ELK_HOST=${ELK_HOST:-$(get_env_parameter "ELK_HOST" "${CONTAINER_NAME}")};
 	ELK_PORT=${ELK_PORT:-$(get_env_parameter "ELK_PORT" "${CONTAINER_NAME}")};
@@ -1195,10 +1208,12 @@ install_mysql_server () {
 	reconfigure MYSQL_USER ${MYSQL_USER}
 	reconfigure MYSQL_PASSWORD ${MYSQL_PASSWORD}
 	reconfigure MYSQL_ROOT_PASSWORD ${MYSQL_ROOT_PASSWORD}
+	reconfigure MYSQL_VERSION ${MYSQL_VERSION}
 
-	if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ]; then	
-		reconfigure MYSQL_VERSION ${MYSQL_VERSION}
+	if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ]; then
 		docker-compose -f $BASE_DIR/db.yml up -d
+	elif [ "$INSTALL_MYSQL_SERVER" == "pull" ]; then
+		docker-compose -f $BASE_DIR/db.yml pull
 	elif [ ! -z "$MYSQL_HOST" ]; then
 		establish_conn ${MYSQL_HOST} "${MYSQL_PORT:-"3306"}" "MySQL"
 		reconfigure MYSQL_HOST ${MYSQL_HOST}
@@ -1209,9 +1224,11 @@ install_mysql_server () {
 install_document_server () {
 	reconfigure DOCUMENT_SERVER_JWT_HEADER ${DOCUMENT_SERVER_JWT_HEADER}
 	reconfigure DOCUMENT_SERVER_JWT_SECRET ${DOCUMENT_SERVER_JWT_SECRET}
+	reconfigure DOCUMENT_SERVER_IMAGE_NAME "${DOCUMENT_SERVER_IMAGE_NAME}:${DOCUMENT_SERVER_VERSION:-$(get_available_version "$DOCUMENT_SERVER_IMAGE_NAME")}"
 	if [[ -z ${DOCUMENT_SERVER_HOST} ]] && [ "$INSTALL_DOCUMENT_SERVER" == "true" ]; then
-		reconfigure DOCUMENT_SERVER_IMAGE_NAME "${DOCUMENT_SERVER_IMAGE_NAME}:${DOCUMENT_SERVER_VERSION:-$(get_available_version "$DOCUMENT_SERVER_IMAGE_NAME")}"
 		docker-compose -f $BASE_DIR/ds.yml up -d
+	elif [ "$INSTALL_DOCUMENT_SERVER" == "pull" ]; then
+		docker-compose -f $BASE_DIR/ds.yml pull
 	elif [ ! -z "$DOCUMENT_SERVER_HOST" ]; then
 		APP_URL_PORTAL=${APP_URL_PORTAL:-"http://$(curl -s ifconfig.me):${EXTERNAL_PORT}"}  
 		establish_conn ${DOCUMENT_SERVER_HOST} ${DOCUMENT_SERVER_PORT} "${PACKAGE_SYSNAME^^} Docs"
@@ -1223,6 +1240,8 @@ install_document_server () {
 install_rabbitmq () {
 	if [[ -z ${RABBIT_HOST} ]] && [ "$INSTALL_RABBITMQ" == "true" ]; then
 		docker-compose -f $BASE_DIR/rabbitmq.yml up -d
+	elif [ "$INSTALL_RABBITMQ" == "pull" ]; then
+		docker-compose -f $BASE_DIR/rabbitmq.yml pull
 	elif [ ! -z "$RABBIT_HOST" ]; then
 		establish_conn ${RABBIT_HOST} "${RABBIT_PORT:-"5672"}" "RabbitMQ"
 		reconfigure RABBIT_HOST ${RABBIT_HOST}
@@ -1236,6 +1255,8 @@ install_rabbitmq () {
 install_redis () {
 	if [[ -z ${REDIS_HOST} ]] && [ "$INSTALL_REDIS" == "true" ]; then
 		docker-compose -f $BASE_DIR/redis.yml up -d
+	elif [ "$INSTALL_REDIS" == "pull" ]; then
+		docker-compose -f $BASE_DIR/redis.yml pull
 	elif [ ! -z "$REDIS_HOST" ]; then
 		establish_conn ${REDIS_HOST} "${REDIS_PORT:-"6379"}" "Redis"
 		reconfigure REDIS_HOST ${REDIS_HOST}
@@ -1246,16 +1267,18 @@ install_redis () {
 }
 
 install_elasticsearch () {
+	reconfigure ELK_VERSION ${ELK_VERSION}
 	if [[ -z ${ELK_HOST} ]] && [ "$INSTALL_ELASTICSEARCH" == "true" ]; then
-		if [ $(free -m | grep -oP '\d+' | head -n 1) -gt "12228" ]; then #RAM ~12Gb
-			sed -i 's/Xms[0-9]g/Xms4g/g; s/Xmx[0-9]g/Xmx4g/g' $BASE_DIR/elasticsearch.yml
+		if [ $(free --mega | grep -oP '\d+' | head -n 1) -gt "12000" ]; then #RAM ~12Gb
+			sed -i 's/Xms[0-9]g/Xms4g/g; s/Xmx[0-9]g/Xmx4g/g' $BASE_DIR/opensearch.yml
 		else
-			sed -i 's/Xms[0-9]g/Xms1g/g; s/Xmx[0-9]g/Xmx1g/g' $BASE_DIR/elasticsearch.yml
+			sed -i 's/Xms[0-9]g/Xms1g/g; s/Xmx[0-9]g/Xmx1g/g' $BASE_DIR/opensearch.yml
 		fi
-		reconfigure ELK_VERSION ${ELK_VERSION}
-		docker-compose -f $BASE_DIR/elasticsearch.yml up -d
+		docker-compose -f $BASE_DIR/opensearch.yml up -d
+	elif [ "$INSTALL_ELASTICSEARCH" == "pull" ]; then
+		docker-compose -f $BASE_DIR/opensearch.yml pull
 	elif [ ! -z "$ELK_HOST" ]; then
-		establish_conn ${ELK_HOST} "${ELK_PORT:-"9200"}" "Elasticsearch"
+		establish_conn ${ELK_HOST} "${ELK_PORT:-"9200"}" "search engine"
 		reconfigure ELK_SHEME "${ELK_SHEME:-"http"}"	
 		reconfigure ELK_HOST ${ELK_HOST}
 		reconfigure ELK_PORT "${ELK_PORT:-"9200"}"	
@@ -1265,40 +1288,54 @@ install_elasticsearch () {
 install_product () {
 	DOCKER_TAG="${DOCKER_TAG:-$(get_available_version ${IMAGE_NAME})}"
 	reconfigure DOCKER_TAG ${DOCKER_TAG}
+	if [ "$INSTALL_PRODUCT" == "true" ]; then
+		[ "${UPDATE}" = "true" ] && LOCAL_CONTAINER_TAG="$(docker inspect --format='{{index .Config.Image}}' ${CONTAINER_NAME} | awk -F':' '{print $2}')"
 
-	[ "${UPDATE}" = "true" ] && LOCAL_CONTAINER_TAG="$(docker inspect --format='{{index .Config.Image}}' ${CONTAINER_NAME} | awk -F':' '{print $2}')"
+		if [ "${UPDATE}" = "true" ] && [ "${LOCAL_CONTAINER_TAG}" != "${DOCKER_TAG}" ]; then
+			docker-compose -f $BASE_DIR/build.yml pull
+			docker-compose -f $BASE_DIR/migration-runner.yml -f $BASE_DIR/notify.yml -f $BASE_DIR/healthchecks.yml -f ${PROXY_YML} down
+			docker-compose -f $BASE_DIR/${PRODUCT}.yml down --volumes
+		fi
 
-	if [ "${UPDATE}" = "true" ] && [ "${LOCAL_CONTAINER_TAG}" != "${DOCKER_TAG}" ]; then
-		docker-compose -f $BASE_DIR/build.yml pull
-		docker-compose -f $BASE_DIR/migration-runner.yml -f $BASE_DIR/notify.yml -f $BASE_DIR/healthchecks.yml -f ${PROXY_YML} down
-		docker-compose -f $BASE_DIR/${PRODUCT}.yml down --volumes
-	fi
+		reconfigure ENV_EXTENSION ${ENV_EXTENSION}
+		reconfigure APP_CORE_MACHINEKEY ${APP_CORE_MACHINEKEY}
+		reconfigure APP_CORE_BASE_DOMAIN ${APP_CORE_BASE_DOMAIN}
+		reconfigure APP_URL_PORTAL "${APP_URL_PORTAL:-"http://${PACKAGE_SYSNAME}-router:8092"}"
+		reconfigure EXTERNAL_PORT ${EXTERNAL_PORT}
 
-	reconfigure ENV_EXTENSION ${ENV_EXTENSION}
-	reconfigure APP_CORE_MACHINEKEY ${APP_CORE_MACHINEKEY}
-	reconfigure APP_CORE_BASE_DOMAIN ${APP_CORE_BASE_DOMAIN}
-	reconfigure APP_URL_PORTAL "${APP_URL_PORTAL:-"http://${PACKAGE_SYSNAME}-router:8092"}"
-	reconfigure EXTERNAL_PORT ${EXTERNAL_PORT}
+		docker-compose -f $BASE_DIR/migration-runner.yml up -d
+		docker wait ${PACKAGE_SYSNAME}-migration-runner
+		docker-compose -f $BASE_DIR/${PRODUCT}.yml up -d
+		docker-compose -f ${PROXY_YML} up -d
+		docker-compose -f $BASE_DIR/notify.yml up -d
+		docker-compose -f $BASE_DIR/healthchecks.yml up -d
 
-	docker-compose -f $BASE_DIR/migration-runner.yml up -d
-	docker-compose -f $BASE_DIR/${PRODUCT}.yml up -d
-	docker-compose -f ${PROXY_YML} up -d
-	docker-compose -f $BASE_DIR/notify.yml up -d
-	docker-compose -f $BASE_DIR/healthchecks.yml up -d
+		if [[ -n "${PREVIOUS_ELK_VERSION}" && "$(get_env_parameter "ELK_VERSION")" != "${PREVIOUS_ELK_VERSION}" ]]; then
+			MYSQL_TAG=$(docker images --format "{{.Tag}}" mysql | head -n1)
+			MYSQL_CONTAINER_NAME=$(get_env_parameter "MYSQL_CONTAINER_NAME" | sed "s/\${CONTAINER_PREFIX}/${PACKAGE_SYSNAME}-/g")
+			docker run --rm --network="$(get_env_parameter "NETWORK_NAME")" mysql:${MYSQL_TAG:-latest} mysql -h "${MYSQL_HOST:-${MYSQL_CONTAINER_NAME}}" -P "${MYSQL_PORT:-3306}" -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DATABASE}" -e "TRUNCATE webstudio_index;"
+		fi
 
-	if [ ! -z "${CERTIFICATE_PATH}" ] && [ ! -z "${CERTIFICATE_KEY_PATH}" ] && [[ ! -z "${APP_DOMAIN_PORTAL}" ]]; then
-		bash $BASE_DIR/config/${PRODUCT}-ssl-setup -f "${APP_DOMAIN_PORTAL}" "${CERTIFICATE_PATH}" "${CERTIFICATE_KEY_PATH}"
-	elif [ ! -z "${LETS_ENCRYPT_DOMAIN}" ] && [ ! -z "${LETS_ENCRYPT_MAIL}" ]; then
-		bash $BASE_DIR/config/${PRODUCT}-ssl-setup "${LETS_ENCRYPT_MAIL}" "${LETS_ENCRYPT_DOMAIN}"
+		if [ ! -z "${CERTIFICATE_PATH}" ] && [ ! -z "${CERTIFICATE_KEY_PATH}" ] && [[ ! -z "${APP_DOMAIN_PORTAL}" ]]; then
+			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -f "${APP_DOMAIN_PORTAL}" "${CERTIFICATE_PATH}" "${CERTIFICATE_KEY_PATH}"
+		elif [ ! -z "${LETS_ENCRYPT_DOMAIN}" ] && [ ! -z "${LETS_ENCRYPT_MAIL}" ]; then
+			bash $BASE_DIR/config/${PRODUCT}-ssl-setup "${LETS_ENCRYPT_MAIL}" "${LETS_ENCRYPT_DOMAIN}"
+		fi
+	elif [ "$INSTALL_PRODUCT" == "pull" ]; then
+		docker-compose -f $BASE_DIR/migration-runner.yml pull
+		docker-compose -f $BASE_DIR/${PRODUCT}.yml pull
+		docker-compose -f ${PROXY_YML} pull
+		docker-compose -f $BASE_DIR/notify.yml pull
+		docker-compose -f $BASE_DIR/healthchecks.yml pull
 	fi
 }
 
 make_swap () {
 	DISK_REQUIREMENTS=6144; #6Gb free space
-	MEMORY_REQUIREMENTS=11000; #RAM ~12Gb
+	MEMORY_REQUIREMENTS=12000; #RAM ~12Gb
 
 	AVAILABLE_DISK_SPACE=$(df -m /  | tail -1 | awk '{ print $4 }');
-	TOTAL_MEMORY=$(free -m | grep -oP '\d+' | head -n 1);
+	TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1);
 	EXIST=$(swapon -s | awk '{ print $1 }' | { grep -x ${SWAPFILE} || true; });
 
 	if [[ -z $EXIST ]] && [ ${TOTAL_MEMORY} -lt ${MEMORY_REQUIREMENTS} ] && [ ${AVAILABLE_DISK_SPACE} -gt ${DISK_REQUIREMENTS} ]; then
@@ -1375,9 +1412,7 @@ start_installation () {
 
 	install_elasticsearch
 
-	if [ "$INSTALL_PRODUCT" == "true" ]; then
-		install_product
-	fi
+	install_product
 
 	echo ""
 	echo "Thank you for installing ${PACKAGE_SYSNAME^^} ${PRODUCT_NAME}."

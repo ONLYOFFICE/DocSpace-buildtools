@@ -39,6 +39,9 @@ LOG_LEVEL = os.environ["LOG_LEVEL"].lower() if environ.get("LOG_LEVEL") else Non
 DEBUG_INFO = os.environ["DEBUG_INFO"] if environ.get("DEBUG_INFO") else "false"
 SAMESITE = os.environ["SAMESITE"] if environ.get("SAMESITE") else "None"
 
+CERTIFICATE_PATH = os.environ.get("CERTIFICATE_PATH")
+CERTIFICATE_PARAM = "NODE_EXTRA_CA_CERTS=" + CERTIFICATE_PATH + " " if CERTIFICATE_PATH and os.path.exists(CERTIFICATE_PATH) else ""
+
 DOCUMENT_CONTAINER_NAME = os.environ["DOCUMENT_CONTAINER_NAME"] if environ.get("DOCUMENT_CONTAINER_NAME") else "onlyoffice-document-server"
 DOCUMENT_SERVER_JWT_SECRET = os.environ["DOCUMENT_SERVER_JWT_SECRET"] if environ.get("DOCUMENT_SERVER_JWT_SECRET") else "your_jwt_secret"
 DOCUMENT_SERVER_JWT_HEADER = os.environ["DOCUMENT_SERVER_JWT_HEADER"] if environ.get("DOCUMENT_SERVER_JWT_HEADER") else "AuthorizationJwt"
@@ -47,7 +50,7 @@ DOCUMENT_SERVER_URL_EXTERNAL = os.environ["DOCUMENT_SERVER_URL_EXTERNAL"] if env
 DOCUMENT_SERVER_URL_PUBLIC = DOCUMENT_SERVER_URL_EXTERNAL if DOCUMENT_SERVER_URL_EXTERNAL else os.environ["DOCUMENT_SERVER_URL_PUBLIC"] if environ.get("DOCUMENT_SERVER_URL_PUBLIC") else "/ds-vpath/"
 DOCUMENT_SERVER_CONNECTION_HOST = DOCUMENT_SERVER_URL_EXTERNAL if DOCUMENT_SERVER_URL_EXTERNAL else DOCUMENT_SERVER_URL_INTERNAL
 
-ELK_CONTAINER_NAME = os.environ["ELK_CONTAINER_NAME"] if environ.get("ELK_CONTAINER_NAME") else "onlyoffice-elasticsearch"
+ELK_CONTAINER_NAME = os.environ["ELK_CONTAINER_NAME"] if environ.get("ELK_CONTAINER_NAME") else "onlyoffice-opensearch"
 ELK_SHEME = os.environ["ELK_SHEME"] if environ.get("ELK_SHEME") else "http"
 ELK_HOST = os.environ["ELK_HOST"] if environ.get("ELK_HOST") else None
 ELK_PORT = os.environ["ELK_PORT"] if environ.get("ELK_PORT") else "9200"
@@ -81,7 +84,7 @@ class RunServices:
         self.PATH_TO_CONF = PATH_TO_CONF
     @dispatch(str)    
     def RunService(self, RUN_FILE):
-        os.system("node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
+        os.system(CERTIFICATE_PARAM + "node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
              " --app.appsettings=" + self.PATH_TO_CONF)
         return 1
         
@@ -89,7 +92,7 @@ class RunServices:
     def RunService(self, RUN_FILE, ENV_EXTENSION):
         if ENV_EXTENSION == "none":
             self.RunService(RUN_FILE)
-        os.system("node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
+        os.system(CERTIFICATE_PARAM + "node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
              " --app.appsettings=" + self.PATH_TO_CONF +\
                 " --app.environment=" + ENV_EXTENSION)
         return 1

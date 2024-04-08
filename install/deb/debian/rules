@@ -9,16 +9,19 @@ export DH_OPTIONS=-v
 	dh $@ --with=systemd
 
 PRODUCT={{product}}
-CURRENT_PATH=${CURDIR}
-SRC_PATH=$(shell cd ../../../; pwd)
-SCRIPT_PATH=buildtools/install/common
+SOURCE_PATH=${CURDIR}/debian/source
+BUILD_PATH=${CURDIR}/debian/build
+BUILDTOOLS_PATH=${BUILD_PATH}/buildtools
+SERVER_PATH=${BUILD_PATH}/server
+CLENT_PATH=${BUILD_PATH}/client
 
 override_dh_auto_clean:
 	@echo "RULES.$@"
 	dh_testdir 
-	rm -rf ${CURRENT_PATH}/debian/*.service
-	rm -rf ${CURRENT_PATH}/debian/*.lintian-overrides
-	rm -rf ${SRC_PATH}/buildtools/install/${PRODUCT}*
+	rm -rf ${BUILD_PATH}
+	rm -rf ${CURDIR}/debian/*.service
+	rm -rf ${CURDIR}/debian/*.lintian-overrides
+	find "${CURDIR}/../" -type f -regex ".\/${PRODUCT}.*\.\(deb\|tar\.gz\|dsc\|changes\|buildinfo\)" -delete
 
 override_dh_auto_configure:
 	@echo "RULES.$@"
@@ -26,45 +29,66 @@ override_dh_auto_configure:
 	dh_auto_configure
 	dh_lintian
 
-override_dh_auto_build:
-	cd ${SRC_PATH}/${SCRIPT_PATH}/systemd; \
-	bash build.sh -pm "deb" -bp "${CURRENT_PATH}/debian/"; \
-	cd ${SRC_PATH}/${SCRIPT_PATH}; \
-	bash build-frontend.sh -sp ${SRC_PATH} -di "false"; \
-	bash build-backend.sh -sp ${SRC_PATH}; \
-	bash publish-backend.sh -sp ${SRC_PATH}/server 
+extract_archive = \
+	if [ ! -f "$1" ]; then \
+		echo "Error: $2.tar.gz archive not found in ${SOURCE_PATH}"; \
+		exit 1; \
+	fi; \
+	tar -xf "$1" $3 --transform='s,^[^/]\+,$2,'
 
-	find ${SRC_PATH}/**/publish/ \
+.PHONY: check_archives
+
+check_archives:
+	@echo "Checking for archives in sources directories..."
+	mkdir -p ${BUILD_PATH}
+	@$(call extract_archive,${SOURCE_PATH}/buildtools.tar.gz,buildtools,-C ${BUILD_PATH})
+	@$(call extract_archive,${SOURCE_PATH}/server.tar.gz,server,-C ${BUILD_PATH})
+	@$(call extract_archive,${SOURCE_PATH}/client.tar.gz,client,-C ${BUILD_PATH})
+	@$(call extract_archive,${SOURCE_PATH}/dictionaries.tar.gz,dictionaries,-C ${CLENT_PATH}/common/Tests/Frontend.Translations.Tests)
+	@$(call extract_archive,${SOURCE_PATH}/DocStore.tar.gz,DocStore,-C ${SERVER_PATH}/products/ASC.Files/Server)
+	@echo "Source archives check passed."
+
+override_dh_auto_build: check_archives
+	cd ${BUILDTOOLS_PATH}/install/common/systemd; \
+	bash build.sh -bp "${CURDIR}/debian/"; \
+	cd ${BUILDTOOLS_PATH}/install/common; \
+	bash build-frontend.sh -sp ${BUILD_PATH} -di "false"; \
+	bash build-backend.sh -sp ${BUILD_PATH}; \
+	bash publish-backend.sh -sp ${SERVER_PATH}
+
+	find ${BUILDTOOLS_PATH}/install/common -type f -exec rename -f -v "s/product([^\/]*)$$/${PRODUCT}\$$1/g" {} ';'
+
+	find ${BUILD_PATH}/**/publish/ \
 		 -depth -type f -regex '.*\(eslintrc.*\|npmignore\|gitignore\|gitattributes\|gitmodules\|un~\|DS_Store\)' -exec rm -f {} \;
 
-	rm -f ${SRC_PATH}/buildtools/config/nginx/onlyoffice-login.conf
+	rm -f ${BUILDTOOLS_PATH}/config/nginx/onlyoffice-login.conf
 
-	if ! grep -q 'var/www/${PRODUCT}' ${SRC_PATH}/buildtools/config/nginx/*.conf; then find ${SRC_PATH}/buildtools/config/nginx/ -name "*.conf" -exec sed -i "s@\(var/www/\)@\1${PRODUCT}/@" {} +; fi
+	if ! grep -q 'var/www/${PRODUCT}' ${BUILDTOOLS_PATH}/config/nginx/*.conf; then find ${BUILDTOOLS_PATH}/config/nginx/ -name "*.conf" -exec sed -i "s@\(var/www/\)@\1${PRODUCT}/@" {} +; fi
 
-	json -I -f ${SRC_PATH}/buildtools/config/appsettings.services.json -e "this.logPath=\"/var/log/onlyoffice/${PRODUCT}\"" -e "this.socket={ 'path': '../ASC.Socket.IO/' }" \
+	json -I -f ${BUILDTOOLS_PATH}/config/appsettings.services.json -e "this.logPath=\"/var/log/onlyoffice/${PRODUCT}\"" -e "this.socket={ 'path': '../ASC.Socket.IO/' }" \
 	-e "this.ssoauth={ 'path': '../ASC.SsoAuth/' }"  -e "this.logLevel=\"warning\"" -e "this.core={ 'products': { 'folder': '/var/www/${PRODUCT}/products', 'subfolder': 'server'} }"
 
-	find ${SRC_PATH}/buildtools/config/ -type f -regex '.*\.\(test\|dev\).*' -delete
-	json -I -f ${SRC_PATH}/buildtools/config/appsettings.json -e "this.core.notify.postman=\"services\"" -e "this['debug-info'].enabled=\"false\"" -e "this.web.samesite=\"None\""
-	json -I -f ${SRC_PATH}/buildtools/config/apisystem.json -e "this.core.notify.postman=\"services\""
-	sed 's_\(minlevel=\)"[^"]*"_\1"Warn"_g' -i ${SRC_PATH}/buildtools/config/nlog.config
+	find ${BUILDTOOLS_PATH}/config/ -type f -regex '.*\.\(test\|dev\).*' -delete
+	json -I -f ${BUILDTOOLS_PATH}/config/appsettings.json -e "this.core.notify.postman=\"services\"" -e "this['debug-info'].enabled=\"false\"" -e "this.web.samesite=\"None\""
+	json -I -f ${BUILDTOOLS_PATH}/config/apisystem.json -e "this.core.notify.postman=\"services\""
+	sed 's_\(minlevel=\)"[^"]*"_\1"Warn"_g' -i ${BUILDTOOLS_PATH}/config/nlog.config
 
-	sed -e 's_etc/nginx_etc/openresty_g' -e 's/listen\s\+\([0-9]\+\);/listen 127.0.0.1:\1;/g' -i ${SRC_PATH}/buildtools/config/nginx/*.conf
-	sed -i "s#\$$public_root#/var/www/${PRODUCT}/public/#g" ${SRC_PATH}/buildtools/config/nginx/onlyoffice.conf
-	sed 's/teamlab.info/onlyoffice.com/g' -i ${SRC_PATH}/buildtools/config/autofac.consumers.json
-	json -I -f ${SRC_PATH}/client/public/scripts/config.json -e "this.wrongPortalNameUrl=\"\""
-	sed -e 's/$$router_host/127.0.0.1/g' -e 's/the_host/host/g' -e 's/the_scheme/scheme/g' -e 's_includes_/etc/openresty/includes_g' -i ${SRC_PATH}/buildtools/install/docker/config/nginx/onlyoffice-proxy*.conf
-	sed "s_\(.*root\).*;_\1 \"/var/www/${PRODUCT}\";_g" -i ${SRC_PATH}/buildtools/install/docker/config/nginx/letsencrypt.conf
-	sed -e '/.pid/d' -e '/temp_path/d' -e 's_etc/nginx_etc/openresty_g' -e 's/\.log/-openresty.log/g' -i ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/nginx.conf.template
-	mv -f ${SRC_PATH}/buildtools/install/docker/config/nginx/onlyoffice-proxy-ssl.conf ${SRC_PATH}/buildtools/install/docker/config/nginx/onlyoffice-proxy-ssl.conf.template
-	cp -rf ${SRC_PATH}/buildtools/install/docker/config/nginx/onlyoffice-proxy.conf ${SRC_PATH}/buildtools/install/docker/config/nginx/onlyoffice-proxy.conf.template
+	sed -e 's_etc/nginx_etc/openresty_g' -e 's/listen\s\+\([0-9]\+\);/listen 127.0.0.1:\1;/g' -i ${BUILDTOOLS_PATH}/config/nginx/*.conf
+	sed -i "s#\$$public_root#/var/www/${PRODUCT}/public/#g" ${BUILDTOOLS_PATH}/config/nginx/onlyoffice.conf
+	sed 's/teamlab.info/onlyoffice.com/g' -i ${BUILDTOOLS_PATH}/config/autofac.consumers.json
+	json -I -f ${CLENT_PATH}/public/scripts/config.json -e "this.wrongPortalNameUrl=\"\""
+	sed -e 's/$$router_host/127.0.0.1/g' -e 's/this_host\|proxy_x_forwarded_host/host/g' -e 's/proxy_x_forwarded_proto/scheme/g' -e 's/proxy_x_forwarded_port/server_port/g' -e 's_includes_/etc/openresty/includes_g' -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy*.conf
+	sed "s_\(.*root\).*;_\1 \"/var/www/${PRODUCT}\";_g" -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/letsencrypt.conf
+	sed -e '/.pid/d' -e '/temp_path/d' -e 's_etc/nginx_etc/openresty_g' -e 's/\.log/-openresty.log/g' -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/templates/nginx.conf.template
+	mv -f ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy-ssl.conf ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy-ssl.conf.template
+	cp -rf ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy.conf ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy.conf.template
 
-	for i in ${PRODUCT} $$(ls ${CURRENT_PATH}/debian/*.install | grep -oP 'debian/\K.*' | grep -o '^[^.]*'); do \
-		cp ${CURRENT_PATH}/debian/source/lintian-overrides ${CURRENT_PATH}/debian/$$i.lintian-overrides; \
+	for i in ${PRODUCT} $$(ls ${CURDIR}/debian/*.install | grep -oP 'debian/\K.*' | grep -o '^[^.]*'); do \
+		cp ${CURDIR}/debian/source/lintian-overrides ${CURDIR}/debian/$$i.lintian-overrides; \
 	done
 
 execute_after_dh_fixperms:
-	chmod o-rwx debian/${PRODUCT}-common/etc/onlyoffice/${PRODUCT}/*
+	chmod o-rwx ${CURDIR}/debian/${PRODUCT}-common/etc/onlyoffice/${PRODUCT}/*
 
 override_dh_auto_install:
 	dh_systemd_enable --no-enable

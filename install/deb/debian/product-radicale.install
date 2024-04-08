@@ -1,1 +1,1 @@
-../../../buildtools/install/RadicalePlugins/*         var/www/{{product}}/Tools/radicale/plugins
+debian/build/buildtools/install/RadicalePlugins/*         var/www/{{product}}/Tools/radicale/plugins
