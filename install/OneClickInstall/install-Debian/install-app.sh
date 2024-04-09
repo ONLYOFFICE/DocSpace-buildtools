@@ -85,6 +85,8 @@ elif [ "$UPDATE" = "true" ] && [ "$PRODUCT_INSTALLED" = "true" ]; then
 	fi
 fi
 
+hold_package_version dotnet-host opensearch redis-server rabbitmq-server
+
 if [ "$MAKESWAP" == "true" ]; then
 	make_swap
 fi

@@ -24,6 +24,18 @@ command_exists () {
 	type "$1" &> /dev/null;
 }
 
+# Function to prevent package auto-update
+hold_package_version() {
+    for package in "$@"; do
+        if command -v apt-mark >/dev/null 2>&1 && 
+            dpkg -s "$package" >/dev/null 2>&1 && 
+            ! apt-mark showhold | grep -q "$package" >/dev/null 2>&1
+        then
+            apt-mark hold "$package"
+        fi
+    done
+}
+
 check_hardware () {
     DISK_REQUIREMENTS=40960;
     MEMORY_REQUIREMENTS=8000;
