@@ -236,7 +236,7 @@ set_core_machinekey () {
 	save_undefined_param "${USER_CONF}" "core.machinekey" "${CORE_MACHINEKEY}"
 	save_undefined_param "${USER_CONF}" "core['base-domain']" "${APP_HOST}"
 	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core.machinekey" "${CORE_MACHINEKEY}"
-	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core['base-domain']" "${CORE_MACHINEKEY}"
+	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core['base-domain']" "${APP_HOST}"
 
 	sed "s^\(machine_key\)\s*=.*^\1 = ${CORE_MACHINEKEY}^g" -i $APP_DIR/radicale.config
 }
