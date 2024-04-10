@@ -780,16 +780,6 @@ check_connection_external_services() {
 	return $HOST_RESPONCE
 }
 
-# Function to prevent package auto-update
-hold_package_version(){
-	if command -v apt >/dev/null 2>&1 && 
-		dpkg -s $1 >/dev/null 2>&1 && 
-		! apt-mark showhold | grep -q $1 >/dev/null 2>&1
-	then
-		apt-mark hold $1 >/dev/null 2>&1
-	fi
-}
-
 if command -v yum >/dev/null 2>&1; then
 	DIST="RedHat"
 	PACKAGE_MANAGER="rpm -q"
@@ -802,7 +792,6 @@ elif command -v apt >/dev/null 2>&1; then
 	MYSQL_PACKAGE="mysql"
 	REDIS_PACKAGE="redis-server"
 	SYSTEMD_DIR="$(dirname $(dpkg-query -L ${PRODUCT}-api | grep systemd/system/))"
-	hold_package_version dotnet-host
 fi
 
 install_json
@@ -831,7 +820,6 @@ if [[ ! -z $EXTERNAL_ELK_FLAG ]]; then
 	setup_elasticsearch "EXTERNAL_ELASTIC_SERVER" 
 elif $PACKAGE_MANAGER opensearch >/dev/null 2>&1; then
     setup_elasticsearch "LOCAL_ELASTIC_SERVER"
-    hold_package_version opensearch
 fi
 
 if [[ ! -z $EXTERNAL_REDIS_FLAG ]]; then
@@ -839,7 +827,6 @@ if [[ ! -z $EXTERNAL_REDIS_FLAG ]]; then
 	setup_redis "EXTERNAL_REDIS_SERVER"
 elif $PACKAGE_MANAGER $REDIS_PACKAGE >/dev/null 2>&1; then
     setup_redis "LOCAL_REDIS_SERVER"
-    hold_package_version $REDIS_PACKAGE
 fi
 
 if [[ ! -z $EXTERNAL_RABBITMQ_FLAG ]]; then
@@ -847,7 +834,6 @@ if [[ ! -z $EXTERNAL_RABBITMQ_FLAG ]]; then
     setup_rabbitmq "EXTERNAL_RABBITMQ_SERVER"
 elif $PACKAGE_MANAGER rabbitmq-server >/dev/null 2>&1; then
     setup_rabbitmq "LOCAL_RABBITMQ_SERVER"
-    hold_package_version rabbitmq-server
 fi
 
 restart_services
