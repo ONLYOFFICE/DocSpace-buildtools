@@ -1,10 +1,10 @@
 Source: {{product}}
 Section: web
 Priority: optional
-Maintainer: Ascensio System SIA <support@onlyoffice.com>
+Maintainer: {{vendor}} <{{support_email}}>
 Build-Depends: debhelper (>= 10), po-debconf, nodejs (>=18), dotnet-sdk-8.0, yarn
 Standards-Version: {{package_header_tag_version}}
-Homepage: https://www.onlyoffice.com/
+Homepage: https://www.{{url}}/
 Architecture: all 
 Multi-Arch: foreign
 
@@ -33,7 +33,7 @@ Depends: debconf,
          {{product}}-studio (= {{package_header_tag_version}}),
          {{product}}-studio-notify (= {{package_header_tag_version}})
 Description: {{product}}
-	ONLYOFFICE {{product}} is a new way to collaborate on documents with teams, 
+	{{product_sysname^^}} {{product}} is a new way to collaborate on documents with teams, 
 	clients, partners, etc., based on the concept of rooms - special spaces with 
 	predefined permissions. Dependency package.
 

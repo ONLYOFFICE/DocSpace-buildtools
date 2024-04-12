@@ -1,9 +1,9 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: ONLYOFFICE-{{product}}
-Source: http://onlyoffice.com
+Upstream-Name: {{product_sysname^^}}-{{product}}
+Source: http://{{url}}
 
 Files: *
-Copyright: 2023, Ascensio System SIA <support@onlyoffice.com>
+Copyright: 2023, {{vendor}} <{{support_email}}>
 License: AGPL-3
  This program is a free software product. You can redistribute it and/or 
  modify it under the terms of the GNU Affero General Public License (AGPL) 
