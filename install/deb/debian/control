@@ -82,7 +82,7 @@ Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-8.0, 
 Recommends: ffmpeg, opensearch (= 2.11.1)
 Description: {{product}}-notify
 	The service which launches additional services
-	related to notifications about DocSpace events:
+	related to notifications about {{product}} events:
 	NotifySenderService which sends messages from the base,
 	and NotifyCleanerService which removes messages
 
@@ -149,7 +149,7 @@ Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= 16), 
 Description: {{product}}-ssoauth
 	The service responsible for enabling and configuring 
 	SAML-based single sign-on (SSO) authentication to provide a more quick, 
-	easy and secure way to access DocSpace for users
+	easy and secure way to access {{product}} for users
 
 Package: {{product}}-backup-background
 Architecture: all

@@ -4,8 +4,8 @@
 
 set -e
 
-if ! cat /etc/passwd | grep -q "onlyoffice:"; then
-	adduser --quiet --home /var/www/{{product}} --system --group onlyoffice
+if ! cat /etc/passwd | grep -q "{{product_sysname}}:"; then
+	adduser --quiet --home /var/www/{{product}} --system --group {{product_sysname}}
 fi
 		
 if ! cat /etc/group | grep -q "nginx:"; then
@@ -17,6 +17,6 @@ if ! cat /etc/passwd | grep -q "nginx:"; then
 	usermod -aG nginx nginx
 fi
 
-usermod -aG onlyoffice,nginx onlyoffice
+usermod -aG {{product_sysname}},nginx {{product_sysname}}
 
 #DEBHELPER#
