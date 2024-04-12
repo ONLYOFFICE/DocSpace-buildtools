@@ -36,6 +36,13 @@ curl -o- https://artifacts.opensearch.org/publickeys/opensearch.pgp | gpg --dear
 echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch/2.x/apt stable main" >> /etc/apt/sources.list.d/opensearch-2.x.list
 ELASTIC_VERSION="2.11.1"
 
+#add opensearch dashboards repo
+if [ ${INSTALL_FLUENT_BIT} == "true" ]; then
+	curl -o- https://artifacts.opensearch.org/publickeys/opensearch.pgp | gpg --dearmor --batch --yes -o /usr/share/keyrings/opensearch-keyring
+	echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/2.x/apt stable main" >> /etc/apt/sources.list.d/opensearch-dashboards-2.x.list
+	DASHBOARDS_VERSION="2.11.1"
+fi
+
 # add nodejs repo
 NODE_VERSION="18"
 curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
@@ -122,6 +129,11 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 
 if ! dpkg -l | grep -q "opensearch"; then
 	apt-get install -yq opensearch=${ELASTIC_VERSION}
+fi
+
+if [ ${INSTALL_FLUENT_BIT} == "true" ]; then
+	apt-get install -yq opensearch-dashboards=${DASHBOARDS_VERSION}
+	curl https://raw.githubusercontent.com/fluent/fluent-bit/master/install.sh | sh
 fi
 
 # disable apparmor for mysql
