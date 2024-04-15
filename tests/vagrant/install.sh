@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e 
+set -ex
 
 while [ "$1" != "" ]; do
 	case $1 in
@@ -106,6 +106,32 @@ function check_hw() {
 
 
 #############################################################################################
+# Add nexus repositories for test packages for .deb and .rpm packages 
+# Globals:     None
+# Arguments:   None
+# Outputs:     None
+#############################################################################################
+function add-repo-deb() {
+  mkdir -p -m 700 $HOME/.gnupg
+  echo "deb [signed-by=/usr/share/keyrings/onlyoffice.gpg] https://nexus.onlyoffice.com/repository/4testing-debian stable main" | \
+  sudo tee /etc/apt/sources.list.d/onlyoffice4testing.list
+  curl -fsSL https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE | \
+  gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/onlyoffice.gpg --import
+  chmod 644 /usr/share/keyrings/onlyoffice.gpg
+}
+
+function add-repo-rpm() {
+  cat > /etc/yum.repos.d/onlyoffice4testing.repo <<END
+[onlyoffice4testing]
+name=onlyoffice4testing repo
+baseurl=https://nexus.onlyoffice.com/repository/centos-testing/4testing/main/noarch
+gpgcheck=1
+enabled=1
+gpgkey=https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE
+END
+}
+
+#############################################################################################
 # Prepare vagrant boxes like: set hostname/remove postfix for DEB distributions
 # Globals:
 #   None
@@ -115,70 +141,60 @@ function check_hw() {
 #   ☑ PREPAVE_VM: **<prepare_message>**
 #############################################################################################
 function prepare_vm() {
+  if [ -f /etc/os-release ]; then
+    source /etc/os-release
+    case $ID in
+      ubuntu)
+          cat /etc/os-release
+          [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-deb
+          echo "Ubuntu"
+          ;;
 
-  if [ -f /etc/lsb-release ] ; then
-        DIST=`cat /etc/lsb-release | grep '^DISTRIB_ID' | awk -F=  '{ print $2 }'`
-        REV=`cat /etc/lsb-release | grep '^DISTRIB_RELEASE' | awk -F=  '{ print $2 }'`
-        DISTRIB_CODENAME=`cat /etc/lsb-release | grep '^DISTRIB_CODENAME' | awk -F=  '{ print $2 }'`
-        DISTRIB_RELEASE=`cat /etc/lsb-release | grep '^DISTRIB_RELEASE' | awk -F=  '{ print $2 }'`
-  elif [ -f /etc/lsb_release ] || [ -f /usr/bin/lsb_release ] ; then
-        DIST=`lsb_release -a 2>&1 | grep 'Distributor ID:' | awk -F ":" '{print $2 }'`
-        REV=`lsb_release -a 2>&1 | grep 'Release:' | awk -F ":" '{print $2 }'`
-        DISTRIB_CODENAME=`lsb_release -a 2>&1 | grep 'Codename:' | awk -F ":" '{print $2 }'`
-        DISTRIB_RELEASE=`lsb_release -a 2>&1 | grep 'Release:' | awk -F ":" '{print $2 }'`
-  elif [ -f /etc/os-release ] ; then
-        DISTRIB_CODENAME=$(grep "VERSION=" /etc/os-release |awk -F= {' print $2'}|sed s/\"//g |sed s/[0-9]//g | sed s/\)$//g |sed s/\(//g | tr -d '[:space:]')
-        DISTRIB_RELEASE=$(grep "VERSION_ID=" /etc/os-release |awk -F= {' print $2'}|sed s/\"//g |sed s/[0-9]//g | sed s/\)$//g |sed s/\(//g | tr -d '[:space:]')
-  fi
 
-  DIST=`echo "$DIST" | tr '[:upper:]' '[:lower:]' | xargs`;
-  DISTRIB_CODENAME=`echo "$DISTRIB_CODENAME" | tr '[:upper:]' '[:lower:]' | xargs`;
-  REV=`echo "$REV" | xargs`;
+      debian)
+          cat /etc/os-release
+          [[ "$VERSION_ID" = "bookworm" ]] && apt-get update -y; apt install -y curl gnupg
+          apt-get remove postfix -y
+          echo "${COLOR_GREEN}☑ PREPAVE_VM: Postfix was removed${COLOR_RESET}"
+          
+          [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-deb
+          echo "Debian"
+          ;;
 
-  if [ ! -f /etc/centos-release ]; then
-	if [ "${DIST}" = "debian" ]; then
-	     if [ "${DISTRIB_CODENAME}" == "bookworm" ]; then
-		     apt-get update -y
-		     apt install -y curl gnupg
-             fi
 
-             apt-get remove postfix -y
-             echo "${COLOR_GREEN}☑ PREPAVE_VM: Postfix was removed${COLOR_RESET}"
-        fi
+      fedora)
+          cat /etc/os-release
+          [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-deb
+          echo "Fedora"
+          ;;
 
-	if [ "${TEST_REPO_ENABLE}" == 'true' ]; then
-   	   mkdir -p -m 700 $HOME/.gnupg
-  	   echo "deb [signed-by=/usr/share/keyrings/onlyoffice.gpg] https://nexus.onlyoffice.com/repository/4testing-debian stable main" | sudo tee /etc/apt/sources.list.d/onlyoffice4testing.list
-  	   curl -fsSL https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/onlyoffice.gpg --import
-  	   chmod 644 /usr/share/keyrings/onlyoffice.gpg
-	fi
-  fi
 
-  if [ -f /etc/centos-release ]; then
-	  if [ "${TEST_REPO_ENABLE}" == 'true' ]; then
-	  cat > /etc/yum.repos.d/onlyoffice4testing.repo <<END
-[onlyoffice4testing]
-name=onlyoffice4testing repo
-baseurl=https://nexus.onlyoffice.com/repository/centos-testing/4testing/main/noarch
-gpgcheck=1
-enabled=1
-gpgkey=https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE
-END
-          yum -y install centos*-release
-	  fi
+      centos)
+          cat /etc/os-release
+          if [ "$VERSION_ID" =~ ^9 ]; then
+            update-crypto-policies --set LEGACY
+            echo "${COLOR_GREEN}☑ PREPAVE_VM: sha1 gpg key chek enabled${COLOR_RESET}"
+          fi
+          [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-rpm
+          yum -y install centos*-release 
+          echo "CentOS"
+          ;;
 
-	  local REV=$(cat /etc/redhat-release | sed 's/[^0-9.]*//g')
-	  if [[ "${REV}" =~ ^9 ]]; then
-		  update-crypto-policies --set LEGACY
-		  echo "${COLOR_GREEN}☑ PREPAVE_VM: sha1 gpg key chek enabled${COLOR_RESET}"
-	  fi
+
+      *)
+          echo "${COLOR_RED}Failed to determine Linux dist${COLOR_RESET}"; exit 1
+          ;;
+    esac
+
+  else
+      echo "${COLOR_RED}File /etc/os-release doesn't exist${COLOR_RESET}"; exit 1
   fi
 
   # Clean up home folder
   rm -rf /home/vagrant/*
 
   if [ -d /tmp/docspace ]; then
-          mv /tmp/docspace/* /home/vagrant
+      mv /tmp/docspace/* /home/vagrant
   fi
 
   echo '127.0.0.1 host4test' | sudo tee -a /etc/hosts   
