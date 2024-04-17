@@ -69,6 +69,12 @@ fi
 curl -SL https://artifacts.opensearch.org/releases/bundle/opensearch/2.x/opensearch-2.x.repo -o /etc/yum.repos.d/opensearch-2.x.repo
 ELASTIC_VERSION="2.11.1"
 
+#add opensearch dashboards repo
+if [ ${INSTALL_FLUENT_BIT} == "true" ]; then
+	curl -SL https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/2.x/opensearch-dashboards-2.x.repo -o /etc/yum.repos.d/opensearch-dashboards-2.x.repo
+	DASHBOARDS_VERSION="2.11.1"
+fi
+
 # add nginx repo, Fedora doesn't need it
 if [ "$DIST" != "fedora" ]; then
 cat > /etc/yum.repos.d/nginx.repo <<END
@@ -100,6 +106,12 @@ ${package_manager} -y install $([ $DIST != "fedora" ] && echo "epel-release") \
 			SDL2 $POWERTOOLS_REPO \
 			expect \
 			ffmpeg $TESTING_REPO
+
+#add repo, install fluent-bit
+if [ ${INSTALL_FLUENT_BIT} == "true" ]; then 
+	curl https://raw.githubusercontent.com/fluent/fluent-bit/master/install.sh | bash
+	${package_manager} -y install opensearch-dashboards-${DASHBOARDS_VERSION} --enablerepo=opensearch-dashboards-2.x
+fi
 
 if [[ $PSQLExitCode -eq $UPDATE_AVAILABLE_CODE ]]; then
 	yum -y install postgresql-upgrade
