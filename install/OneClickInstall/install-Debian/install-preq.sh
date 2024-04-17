@@ -31,12 +31,10 @@ fi
 
 locale-gen en_US.UTF-8
 
-# add elasticsearch repo
-ELASTIC_VERSION="7.16.3"
-ELASTIC_DIST=$(echo $ELASTIC_VERSION | awk '{ print int($1) }')
-curl -fsSL https://artifacts.elastic.co/GPG-KEY-elasticsearch | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/elastic-${ELASTIC_DIST}.x.gpg --import
-echo "deb [signed-by=/usr/share/keyrings/elastic-${ELASTIC_DIST}.x.gpg] https://artifacts.elastic.co/packages/${ELASTIC_DIST}.x/apt stable main" | tee /etc/apt/sources.list.d/elastic-${ELASTIC_DIST}.x.list
-chmod 644 /usr/share/keyrings/elastic-${ELASTIC_DIST}.x.gpg
+# add opensearch repo
+curl -o- https://artifacts.opensearch.org/publickeys/opensearch.pgp | gpg --dearmor --batch --yes -o /usr/share/keyrings/opensearch-keyring
+echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch/2.x/apt stable main" >> /etc/apt/sources.list.d/opensearch-2.x.list
+ELASTIC_VERSION="2.11.1"
 
 # add nodejs repo
 NODE_VERSION="18"
@@ -74,6 +72,14 @@ elif dpkg -l | grep -q "mysql-apt-config" && [ "$(apt-cache policy mysql-apt-con
 	curl -OL http://repo.mysql.com/${MYSQL_PACKAGE_NAME}
 	DEBIAN_FRONTEND=noninteractive dpkg -i ${MYSQL_PACKAGE_NAME}
 	rm -f ${MYSQL_PACKAGE_NAME}
+fi
+
+if ! grep -q "mysql-innovation" /etc/apt/sources.list.d/mysql.list; then
+	echo "deb [signed-by=/usr/share/keyrings/mysql-apt-config.gpg] http://repo.mysql.com/apt/${DIST} ${DISTRIB_CODENAME} mysql-innovation" | sudo tee -a /etc/apt/sources.list.d/mysql.list
+
+	if apt-get -y update 2>&1 | grep -q "^W: .*mysql-innovation"; then
+		sudo sed -i '/mysql-innovation/d' /etc/apt/sources.list.d/mysql.list
+	fi
 fi
 
 # add redis repo
@@ -114,8 +120,8 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 				rabbitmq-server \
 				ffmpeg 
 
-if ! dpkg -l | grep -q "elasticsearch"; then
-	apt-get install -yq elasticsearch=${ELASTIC_VERSION}
+if ! dpkg -l | grep -q "opensearch"; then
+	apt-get install -yq opensearch=${ELASTIC_VERSION}
 fi
 
 # disable apparmor for mysql

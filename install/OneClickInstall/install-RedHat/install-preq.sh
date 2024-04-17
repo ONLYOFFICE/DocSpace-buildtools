@@ -57,24 +57,17 @@ dnf remove -y @mysql && dnf module -y reset mysql && dnf module -y disable mysql
 MYSQL_REPO_VERSION="$(curl https://repo.mysql.com | grep -oP "mysql80-community-release-${MYSQL_DISTR_NAME}${REV}-\K.*" | grep -o '^[^.]*' | sort | tail -n1)"
 yum localinstall -y https://repo.mysql.com/mysql80-community-release-${MYSQL_DISTR_NAME}${REV}-${MYSQL_REPO_VERSION}.noarch.rpm || true
 
+if ! yum repolist enabled | grep -q mysql-innovation-community; then
+    sudo yum-config-manager --enable mysql-innovation-community
+fi
+
 if ! rpm -q mysql-community-server; then
 	MYSQL_FIRST_TIME_INSTALL="true";
 fi
 
-#add elasticsearch repo
-ELASTIC_VERSION="7.16.3"
-ELASTIC_DIST=$(echo $ELASTIC_VERSION | awk '{ print int($1) }')
-rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch
-cat > /etc/yum.repos.d/elasticsearch.repo <<END
-[elasticsearch]
-name=Elasticsearch repository for ${ELASTIC_DIST}.x packages
-baseurl=https://artifacts.elastic.co/packages/${ELASTIC_DIST}.x/yum
-gpgcheck=1
-gpgkey=https://artifacts.elastic.co/GPG-KEY-elasticsearch
-enabled=0
-autorefresh=1
-type=rpm-md
-END
+#add opensearch repo
+curl -SL https://artifacts.opensearch.org/releases/bundle/opensearch/2.x/opensearch-2.x.repo -o /etc/yum.repos.d/opensearch-2.x.repo
+ELASTIC_VERSION="2.11.1"
 
 # add nginx repo, Fedora doesn't need it
 if [ "$DIST" != "fedora" ]; then
@@ -98,7 +91,7 @@ ${package_manager} -y install $([ $DIST != "fedora" ] && echo "epel-release") \
 			python3 \
 			nodejs ${NODEJS_OPTION} \
 			dotnet-sdk-8.0 \
-			elasticsearch-${ELASTIC_VERSION} --enablerepo=elasticsearch \
+			opensearch-${ELASTIC_VERSION} --enablerepo=opensearch-2.x \
 			mysql-community-server \
 			postgresql \
 			postgresql-server \

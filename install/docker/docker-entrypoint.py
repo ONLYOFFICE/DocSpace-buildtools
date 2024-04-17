@@ -57,7 +57,6 @@ ELK_PORT = os.environ["ELK_PORT"] if environ.get("ELK_PORT") else "9200"
 ELK_THREADS = os.environ["ELK_THREADS"] if environ.get("ELK_THREADS") else "1"
 ELK_CONNECTION_HOST = ELK_HOST if ELK_HOST else ELK_CONTAINER_NAME
 
-KAFKA_HOST = os.environ["KAFKA_HOST"] if environ.get("KAFKA_HOST") else "kafka:9092"
 RUN_FILE = sys.argv[1] if (len(sys.argv) > 1) else "none"
 LOG_FILE = sys.argv[2] if (len(sys.argv) > 2) else "none"
 CORE_EVENT_BUS = sys.argv[3] if (len(sys.argv) > 3) else ""
@@ -222,11 +221,6 @@ jsonData["elastic"]["Scheme"] = ELK_SHEME
 jsonData["elastic"]["Host"] = ELK_CONNECTION_HOST
 jsonData["elastic"]["Port"] = ELK_PORT
 jsonData["elastic"]["Threads"] = ELK_THREADS
-writeJsonFile(filePath, jsonData)
-
-filePath = "/app/onlyoffice/config/kafka.json"
-jsonData = openJsonFile(filePath)
-jsonData.update({"kafka": {"BootstrapServers": KAFKA_HOST}})
 writeJsonFile(filePath, jsonData)
 
 filePath = "/app/onlyoffice/config/socket.json"

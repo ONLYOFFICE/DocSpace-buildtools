@@ -17,6 +17,7 @@ if defined SecondArg (
 )
 
 xcopy "%PathToRepository%\publish\web\public" "%PathToAppFolder%\public" /s /y /b /i
+xcopy "%PathToRepository%\campaigns\src\campaigns" "%PathToAppFolder%\public\campaigns" /s /y /b /i
 xcopy "%PathToRepository%\publish\web\client" "%PathToAppFolder%\client" /s /y /b /i
 xcopy "%PathToRepository%\buildtools\config\nginx" "%PathToAppFolder%\nginx\conf" /s /y /b /i
 xcopy "%PathToRepository%\buildtools\config\*" "%PathToAppFolder%\config" /y /b /i

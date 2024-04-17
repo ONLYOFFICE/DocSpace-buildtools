@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   onlyoffice-mysql-server:
     image: ${MYSQL_IMAGE}
