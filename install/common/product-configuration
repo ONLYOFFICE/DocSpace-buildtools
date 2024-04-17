@@ -511,6 +511,7 @@ setup_openresty(){
 		if [ -f /etc/nginx/nginx.conf ]; then
 			if grep -q "server {"  /etc/nginx/nginx.conf ; then
 				sed -e '$a}' -e '/server {/,$d' -i /etc/nginx/nginx.conf
+				systemctl reload nginx
 			fi
 		fi
 		
