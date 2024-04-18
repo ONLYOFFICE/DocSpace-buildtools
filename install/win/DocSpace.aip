@@ -1035,7 +1035,6 @@
     <ROW Action="MoveConfigs" Type="4102" Source="utils.vbs" Target="MoveConfigs"/>
     <ROW Action="MySQLConfigure" Type="262" Source="utils.vbs" Target="MySQLConfigure"/>
     <ROW Action="OpenCancelUrl" Type="194" Source="viewer.exe" Target="http://www.onlyoffice.com/install-canceled.aspx" WithoutSeq="true" Options="1"/>
-    <ROW Action="OpenSearchInstallPlugin" Type="1030" Source="utils.vbs" Target="OpenSearchInstallPlugin"/>
     <ROW Action="OpenSearchSetup" Type="6" Source="utils.vbs" Target="OpenSearchSetup"/>
     <ROW Action="PostgreSQLConfigure" Type="4102" Source="utils.vbs" Target="PostgreSqlConfigure"/>
     <ROW Action="RedisSearchSetup" Type="6" Source="utils.vbs" Target="RedisSetup"/>
@@ -1216,7 +1215,6 @@
     <ROW Action="OpenSearchSetup" Condition="( NOT Installed )" Sequence="1621"/>
     <ROW Action="StopOpenSearchService" Condition="( NOT Installed )" Sequence="1617"/>
     <ROW Action="AI_DATA_SETTER_12" Condition="( NOT Installed )" Sequence="1616"/>
-    <ROW Action="OpenSearchInstallPlugin" Condition="( NOT Installed )" Sequence="1620"/>
     <ROW Action="StartOpenSearchService" Condition="( NOT Installed )" Sequence="1623"/>
     <ROW Action="AI_DATA_SETTER_13" Condition="( NOT Installed )" Sequence="1622"/>
     <ROW Action="AI_GetArpIconPath" Sequence="1401"/>
@@ -1513,7 +1511,7 @@
     <ROW PrereqKey="MySQLInstallerRunn" DisplayName="MySQL Installer Community 8.0.33 x86 Runner" SetupFileUrl="MySQL Installer Runner.exe" Location="0" ExactSize="0" Operator="1" ComLine="/VERYSILENT /DB_PWD=&quot;root&quot; /MYSQL_VERSION=&quot;8.0.33&quot;" BasicUiComLine="/VERYSILENT /DB_PWD=&quot;root&quot; /MYSQL_VERSION=&quot;8.0.33&quot;" NoUiComLine="/VERYSILENT /DB_PWD=&quot;root&quot; /MYSQL_VERSION=&quot;8.0.33&quot;" Options="y" TargetName="MySQL Installer Runner                                      \MySQL Installer Runner.exe" ParentPrereq="RequiredApplication_2"/>
     <ROW PrereqKey="Node.js" DisplayName="Node.js 20.11.1" VersionMin="20.11.1" SetupFileUrl="redist\node-v20.11.1-x64.msi" Location="0" ExactSize="0" Operator="0" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="ym" TargetName="Node.js\node-v20.11.1-x64.msi" Builds="ExeBuild"/>
     <ROW PrereqKey="OpenResty" DisplayName="OpenResty v1.21.4" VersionMin="1.21.4.2" SetupFileUrl="publish\OpenResty.msi" Location="0" ExactSize="0" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="yxm" TargetName="OpenResty\OpenResty.msi"/>
-    <ROW PrereqKey="OpenSearch2.11.1" DisplayName="OpenSearch v2.11.1 x64" VersionMin="2.11.1" SetupFileUrl="publish\OpenSearch-2.11.1.msi" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="y" TargetName="OpenSearch 2.11.1\OpenSearch-2.11.1.msi"/>
+    <ROW PrereqKey="OpenSearch2.11.1" DisplayName="OpenSearch v2.11.1 x64" VersionMin="2.11.1" SetupFileUrl="publish\OpenSearch-2.11.1.exe" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/exenoui /qn" BasicUiComLine="/exenoui /qn" NoUiComLine="/exenoui /qn" Options="y" TargetName="OpenSearch 2.11.1\OpenSearch-2.11.1.exe"/>
     <ROW PrereqKey="OpenSearchStack" DisplayName="OpenSearchStack v1.0.0 x64" VersionMin="1.0.0" SetupFileUrl="publish\OpenSearchStack.msi" Location="0" ExactSize="0" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="y" TargetName="OpenSearchStack\OpenSearchStack.msi"/>
     <ROW PrereqKey="PostgreSQL_ODBC" DisplayName="PostgreSQL ODBC Driver v15.0 x64" SetupFileUrl="psqlodbc_15_x64.msi" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="myx" TargetName="psqlodbc_x64.msi"/>
     <ROW PrereqKey="PostgresSQL" DisplayName="PostgreSQL v14.0 x64" VersionMin="14.0" SetupFileUrl="postgresql-14.0-1-windows-x64.exe" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="--unattendedmodeui none --install_runtimes 0 --mode unattended --superaccount &quot;postgres&quot; --superpassword &quot;postgres&quot;" BasicUiComLine="--unattendedmodeui none --install_runtimes 0 --mode unattended --superaccount &quot;postgres&quot; --superpassword &quot;postgres&quot;" NoUiComLine="--unattendedmodeui none --install_runtimes 0 --mode unattended --superaccount &quot;postgres&quot; --superpassword &quot;postgres&quot;" Options="xy" TargetName="postgresql-14.0-1-windows-x64.exe"/>
