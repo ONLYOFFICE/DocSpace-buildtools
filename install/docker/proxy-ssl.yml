@@ -16,7 +16,8 @@ services:
      test: nginx -t || exit 1
     ports:
       - 80:80
-      - 443:443
+      - 443:443/tcp
+      - 443:443/udp
     environment:
       - ROUTER_HOST=${ROUTER_HOST}
       - EXTERNAL_PORT=${EXTERNAL_PORT}
