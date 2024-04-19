@@ -26,6 +26,7 @@ APP_PORT="80"
 ELK_SHEME="http"
 ELK_HOST="localhost"
 ELK_PORT="9200"
+OPENSEARCH_INDEX="${PACKAGE_SYSNAME}-${PRODUCT}-logs"
 
 RABBITMQ_HOST="localhost"
 RABBITMQ_USER="guest"
@@ -177,6 +178,20 @@ while [ "$1" != "" ]; do
 				DOCUMENT_SERVER_JWT_HEADER=$2
 				shift
 			fi 
+		;;
+
+		-du | --dashboadrsusername )
+			if [ "$2" != "" ]; then
+				DASHBOARDS_USERNAME=$2
+				shift
+			fi
+		;;
+
+		-dp | --dashboadrspassword )
+			if [ "$2" != "" ]; then
+				DASHBOARDS_PASSWORD=$2
+				shift
+			fi
 		;;
 
 		-docsurl | --docsurl )
@@ -496,6 +511,7 @@ setup_openresty(){
 		if [ -f /etc/nginx/nginx.conf ]; then
 			if grep -q "server {"  /etc/nginx/nginx.conf ; then
 				sed -e '$a}' -e '/server {/,$d' -i /etc/nginx/nginx.conf
+				systemctl reload nginx
 			fi
 		fi
 		
@@ -706,6 +722,40 @@ setup_elasticsearch() {
 	echo "OK"
 }
 
+setup_dashboards() {
+	echo -n "Configuring dashboards... "
+
+	DASHBOARDS_CONF_PATH="/etc/opensearch-dashboards/opensearch_dashboards.yml"
+
+	# configure login&pass for Dashboards, used by Nginx HTTP Basic Authentication
+	echo "${DASHBOARDS_USERNAME:-"onlyoffice"}:$(openssl passwd -6 -stdin <<< "${DASHBOARDS_PASSWORD:-"onlyoffice"}")" > /etc/openresty/.htpasswd_dashboards
+	chown nginx:nginx /etc/openresty/.htpasswd_dashboards
+
+	# enable connection with opensearch
+	sed -i 's~\(opensearch\.hosts:\).*~\1 \[http://localhost:9200\]~' ${DASHBOARDS_CONF_PATH}
+	sed -i '/^opensearch\_security/d' ${DASHBOARDS_CONF_PATH}
+	if /usr/share/opensearch-dashboards/bin/opensearch-dashboards-plugin list --allow-root | grep "securityDashboards*" > /dev/null 2>&1 ; then
+		/usr/share/opensearch-dashboards/bin/opensearch-dashboards-plugin remove securityDashboards --allow-root > /dev/null 2>&1
+	fi
+
+	# set basePath variable to get access to Dashboards from a remote host
+	sed 's_.*\(server.basePath:\).*_\1 "/dashboards"_' -i ${DASHBOARDS_CONF_PATH}
+
+	systemctl restart opensearch-dashboards
+	echo "OK"
+}
+
+setup_fluentbit() {
+	echo -n "Configuring fluent-bit... "
+
+	# Replace variables in fluent-bit config file template, force copy to conf directory
+	sed -i "s/OPENSEARCH_HOST/$ELK_HOST/g; s/OPENSEARCH_PORT/$ELK_PORT/g; s/OPENSEARCH_INDEX/$OPENSEARCH_INDEX/g; s/OPENSEARCH_SCHEME/$ELK_SHEME/g" ${APP_DIR}/fluent-bit.conf
+	cp -f ${APP_DIR}/fluent-bit.conf /etc/fluent-bit/fluent-bit.conf
+
+	systemctl restart fluent-bit
+	echo "OK"
+}
+
 setup_redis() {
 	echo -n "Configuring redis... "
 
@@ -820,6 +870,14 @@ if [[ ! -z $EXTERNAL_ELK_FLAG ]]; then
 	setup_elasticsearch "EXTERNAL_ELASTIC_SERVER" 
 elif $PACKAGE_MANAGER opensearch >/dev/null 2>&1; then
     setup_elasticsearch "LOCAL_ELASTIC_SERVER"
+fi
+
+if $PACKAGE_MANAGER opensearch-dashboards >/dev/null 2>&1; then
+	setup_dashboards
+fi
+
+if $PACKAGE_MANAGER fluent-bit >/dev/null 2>&1; then
+	setup_fluentbit
 fi
 
 if [[ ! -z $EXTERNAL_REDIS_FLAG ]]; then
