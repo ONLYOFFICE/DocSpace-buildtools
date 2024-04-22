@@ -1316,6 +1316,7 @@ install_elasticsearch () {
 install_fluent_bit () {
 	if [ "$INSTALL_FLUENT_BIT" == "true" ]; then
 		curl https://raw.githubusercontent.com/fluent/fluent-bit/master/install.sh | sh
+		systemctl enable fluent-bit
 
 		if systemctl list-unit-files --type=service | grep -q "fluent-bit.service"; then
 			sed -i "s/OPENSEARCH_SCHEME/$(get_env_parameter "ELK_SHEME")/g" "${BASE_DIR}/config/fluent-bit.conf"
@@ -1325,6 +1326,13 @@ install_fluent_bit () {
 			[ ! -z "${ELK_HOST}" ] && sed -i "s/ELK_CONTAINER_NAME/ELK_HOST/g" ${BASE_DIR}/dashboards.yml
 			cp -rf ${BASE_DIR}/config/fluent-bit.conf /etc/fluent-bit/fluent-bit.conf
 			systemctl restart fluent-bit
+
+			DOCKER_SYSTEMD_DIR="/etc/systemd/system/docker.service.d"
+			if [ ! -f "${DOCKER_SYSTEMD_DIR}/fluent-after.conf" ]; then
+				mkdir -p ${DOCKER_SYSTEMD_DIR}
+				echo -e "[Unit]\n$(grep After= $(systemctl show -p FragmentPath docker.service | awk -F= '{print $2}')) fluent-bit.service" > "${DOCKER_SYSTEMD_DIR}/fluent-after.conf"
+				systemctl daemon-reload
+			fi
 
 			DOCKER_DAEMON_FILE="/etc/docker/daemon.json"
 			if [[ ! -f "${DOCKER_DAEMON_FILE}" ]]; then
