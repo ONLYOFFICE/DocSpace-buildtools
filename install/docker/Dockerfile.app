@@ -65,9 +65,9 @@ RUN cd ${SRC_PATH} && \
     rm -rf ${SRC_PATH}/server/web/ASC.Web.Studio/* && \
     rm -rf ${SRC_PATH}/server/products/ASC.Files/Server/* && \
     rm -rf ${SRC_PATH}/server/products/ASC.Files/Service/* && \
-    rm -rf ${SRC_PATH}/server/products/ASC.People/Server/* 
-  
-COPY config/mysql/conf.d/mysql.cnf /etc/mysql/conf.d/mysql.cnf
+    rm -rf ${SRC_PATH}/server/products/ASC.People/Server/*
+
+COPY --chown=onlyoffice:onlyoffice config/mysql/conf.d/mysql.cnf /etc/mysql/conf.d/mysql.cnf
 
 FROM $DOTNET_RUN as dotnetrun
 ARG BUILD_PATH
@@ -95,26 +95,28 @@ RUN mkdir -p /var/log/onlyoffice && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
-        
-#USER onlyoffice
+
+USER onlyoffice
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
 
 FROM node:20-slim as noderun
 ARG BUILD_PATH
-ARG SRC_PATH 
+ARG SRC_PATH
 ENV BUILD_PATH=${BUILD_PATH}
 ENV SRC_PATH=${SRC_PATH}
 
 RUN mkdir -p /var/log/onlyoffice && \
     mkdir -p /app/onlyoffice/data && \
+    mkdir -p /var/Logs && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     chown onlyoffice:onlyoffice /app/onlyoffice -R && \
     chown onlyoffice:onlyoffice /var/log -R  && \
+    chown onlyoffice:onlyoffice /var/Logs -R && \
     chown onlyoffice:onlyoffice /var/www -R && \
     apt-get -y update && \
-    apt-get install -yq \ 
+    apt-get install -yq \
         sudo \
         nano \
         curl \
@@ -125,6 +127,7 @@ RUN mkdir -p /var/log/onlyoffice && \
 
 COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
 
+USER onlyoffice
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
 
@@ -139,25 +142,31 @@ ENV DNS_NAMESERVER=127.0.0.11 \
 
 RUN apt-get -y update && \
     apt-get install -yq vim && \
+    mkdir -p /var/log/nginx/ && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     rm -rf /var/lib/apt/lists/* && \
-    rm -rf /usr/share/nginx/html/* 
+    rm -rf /usr/share/nginx/html/* && \
+    chown -R onlyoffice:onlyoffice /etc/nginx/ && \
+    chown -R onlyoffice:onlyoffice /var/ && \
+    chown -R onlyoffice:onlyoffice /usr/ && \
+    chown -R onlyoffice:onlyoffice /run/
 
-# copy static services files and config values 
-COPY --from=base /etc/nginx/conf.d /etc/nginx/conf.d
-COPY --from=base /etc/nginx/includes /etc/nginx/includes
-COPY --from=base ${SRC_PATH}/publish/web/client ${BUILD_PATH}/client
-COPY --from=base ${SRC_PATH}/publish/web/public ${BUILD_PATH}/public
-COPY --from=base ${SRC_PATH}/campaigns/src/campaigns ${BUILD_PATH}/public/campaigns
-COPY --from=base ${SRC_PATH}/publish/web/management ${BUILD_PATH}/management
-COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/docker-entrypoint.d /docker-entrypoint.d
-COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
-COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/nginx.conf.template /etc/nginx/nginx.conf.template
-COPY --from=base ${SRC_PATH}/buildtools/config/nginx/html /etc/nginx/html
-COPY --from=base ${SRC_PATH}/buildtools/install/docker/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
-COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/docker-entrypoint.sh /docker-entrypoint.sh
+# copy static services files and config values
+COPY --from=base --chown=onlyoffice:onlyoffice /etc/nginx/conf.d /etc/nginx/conf.d
+COPY --from=base --chown=onlyoffice:onlyoffice /etc/nginx/includes /etc/nginx/includes
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/client ${BUILD_PATH}/client
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/public ${BUILD_PATH}/public
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/campaigns/src/campaigns ${BUILD_PATH}/public/campaigns
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management ${BUILD_PATH}/management
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/docker-entrypoint.d /docker-entrypoint.d
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/nginx.conf.template /etc/nginx/nginx.conf.template
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/config/nginx/html /etc/nginx/html
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/docker-entrypoint.sh /docker-entrypoint.sh
 
+USER onlyoffice
 
 # changes for upstream configure
 RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.conf && \
@@ -178,7 +187,7 @@ RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.
     sed -i 's/http:\/\/172.*/$document_server;/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i '/client_body_temp_path/ i \ \ \ \ $MAP_HASH_BUCKET_SIZE' /etc/nginx/nginx.conf.template && \
     sed -i 's/\(worker_connections\).*;/\1 $COUNT_WORKER_CONNECTIONS;/' /etc/nginx/nginx.conf.template && \
-    sed -i -e '/^user/s/^/#/' -e 's#/tmp/nginx.pid#nginx.pid#' -e 's#/etc/nginx/mime.types#mime.types#' /etc/nginx/nginx.conf.template 
+    sed -i -e '/^user/s/^/#/' -e 's#/tmp/nginx.pid#nginx.pid#' -e 's#/etc/nginx/mime.types#mime.types#' /etc/nginx/nginx.conf.template
 
 ENTRYPOINT  [ "/docker-entrypoint.sh" ]
 
@@ -251,14 +260,14 @@ CMD ["ASC.Files.dll", "ASC.Files"]
 FROM dotnetrun AS files_services
 ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
 WORKDIR ${BUILD_PATH}/products/ASC.Files/service/
-
+USER root
 RUN  echo "deb http://security.ubuntu.com/ubuntu focal-security main" | tee /etc/apt/sources.list && \
      apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3B4FE6ACC0B21F32 && \
      apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 871920D1991BC93C && \
      apt-get -y update && \
      apt-get install -yq libssl1.1 && \
      rm -rf /var/lib/apt/lists/*
-
+USER onlyoffice
 COPY --chown=onlyoffice:onlyoffice docker-entrypoint.py ./docker-entrypoint.py
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Files.Service/service/ .
 COPY --from=onlyoffice/ffvideo:6.0 --chown=onlyoffice:onlyoffice /usr/local /usr/local/
@@ -341,9 +350,12 @@ CMD ["ASC.Web.HealthChecks.UI.dll", "ASC.Web.HealthChecks.UI"]
 ## ASC.Migration.Runner ##
 FROM $DOTNET_RUN AS onlyoffice-migration-runner
 ARG BUILD_PATH
-ARG SRC_PATH 
+ARG SRC_PATH
 ENV BUILD_PATH=${BUILD_PATH}
 ENV SRC_PATH=${SRC_PATH}
+RUN addgroup --system --gid 107 onlyoffice && \
+    adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice
+USER onlyoffice
 WORKDIR ${BUILD_PATH}/services/ASC.Migration.Runner/
 COPY  ./docker-migration-entrypoint.sh ./docker-migration-entrypoint.sh
 COPY --from=base ${SRC_PATH}/server/ASC.Migration.Runner/service/ .
@@ -352,19 +364,25 @@ ENTRYPOINT ["./docker-migration-entrypoint.sh"]
 
 ## image for k8s bin-share ##
 FROM busybox:latest AS bin_share
-RUN mkdir -p /app/ASC.Files/server && \
-    mkdir -p /app/ASC.People/server && \
-    addgroup --system --gid 107 onlyoffice && \
-    adduser -u 104 onlyoffice --home /var/www/onlyoffice --system -G onlyoffice
+RUN addgroup --system --gid 107 onlyoffice && \
+    adduser -u 104 onlyoffice --home /var/www/onlyoffice --system -G onlyoffice && \
+    mkdir -p /app/ASC.Files/server && \
+    mkdir -p /app/ASC.People/server
 
-COPY bin-share-docker-entrypoint.sh /app/docker-entrypoint.sh
-COPY --from=base /var/www/products/ASC.Files/server/ /app/ASC.Files/server/
-COPY --from=base /var/www/products/ASC.People/server/ /app/ASC.People/server/
+USER onlyoffice
+
+COPY --chown=onlyoffice:onlyoffice bin-share-docker-entrypoint.sh /app/docker-entrypoint.sh
+COPY --from=base --chown=onlyoffice:onlyoffice /var/www/products/ASC.Files/server/ /app/ASC.Files/server/
+COPY --from=base --chown=onlyoffice:onlyoffice /var/www/products/ASC.People/server/ /app/ASC.People/server/
 ENTRYPOINT ["./app/docker-entrypoint.sh"]
 
 ## image for k8s wait-bin-share ##
 FROM busybox:latest AS wait_bin_share
-RUN mkdir /app
+RUN addgroup --system --gid 107 onlyoffice && \
+    adduser -u 104 onlyoffice --home /var/www/onlyoffice --system -G onlyoffice && \
+    mkdir /app
 
-COPY wait-bin-share-docker-entrypoint.sh /app/docker-entrypoint.sh
+USER onlyoffice
+
+COPY --chown=onlyoffice:onlyoffice wait-bin-share-docker-entrypoint.sh /app/docker-entrypoint.sh
 ENTRYPOINT ["./app/docker-entrypoint.sh"]
