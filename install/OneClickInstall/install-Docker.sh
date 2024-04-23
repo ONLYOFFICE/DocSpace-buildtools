@@ -1379,6 +1379,7 @@ install_product () {
 		docker-compose -f $BASE_DIR/healthchecks.yml up -d
 
 		if [[ -n "${PREVIOUS_ELK_VERSION}" && "$(get_env_parameter "ELK_VERSION")" != "${PREVIOUS_ELK_VERSION}" ]]; then
+			docker ps -q -f name=${PACKAGE_SYSNAME}-elasticsearch | xargs -r docker stop
 			MYSQL_TAG=$(docker images --format "{{.Tag}}" mysql | head -n1)
 			MYSQL_CONTAINER_NAME=$(get_env_parameter "MYSQL_CONTAINER_NAME" | sed "s/\${CONTAINER_PREFIX}/${PACKAGE_SYSNAME}-/g")
 			docker run --rm --network="$(get_env_parameter "NETWORK_NAME")" mysql:${MYSQL_TAG:-latest} mysql -h "${MYSQL_HOST:-${MYSQL_CONTAINER_NAME}}" -P "${MYSQL_PORT:-3306}" -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DATABASE}" -e "TRUNCATE webstudio_index;"
