@@ -249,9 +249,9 @@ set_core_machinekey () {
 	fi
 
 	save_undefined_param "${USER_CONF}" "core.machinekey" "${CORE_MACHINEKEY}"
-	save_undefined_param "${USER_CONF}" "core['base-domain']" "${APP_HOST}"
+	save_undefined_param "${USER_CONF}" "core['base-domain']" "${APP_HOST}" "rewrite"
 	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core.machinekey" "${CORE_MACHINEKEY}"
-	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core['base-domain']" "${APP_HOST}"
+	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core['base-domain']" "${APP_HOST}" "rewrite"
 
 	sed "s^\(machine_key\)\s*=.*^\1 = ${CORE_MACHINEKEY}^g" -i $APP_DIR/radicale.config
 }
@@ -295,7 +295,7 @@ restart_services() {
 
 	echo -n "Restarting services... "
 	for SVC in login api socket studio-notify notify \
-	people-server files files-services studio backup \
+	people-server files files-services studio backup api-system \
 	clear-events backup-background ssoauth doceditor healthchecks
 	do
 		systemctl enable ${PRODUCT}-$SVC >/dev/null 2>&1
