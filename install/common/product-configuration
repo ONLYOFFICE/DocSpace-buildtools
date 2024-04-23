@@ -249,9 +249,9 @@ set_core_machinekey () {
 	fi
 
 	save_undefined_param "${USER_CONF}" "core.machinekey" "${CORE_MACHINEKEY}"
-	save_undefined_param "${USER_CONF}" "core['base-domain']" "${APP_HOST}"
+	save_undefined_param "${USER_CONF}" "core['base-domain']" "${APP_HOST}" "rewrite"
 	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core.machinekey" "${CORE_MACHINEKEY}"
-	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core['base-domain']" "${APP_HOST}"
+	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core['base-domain']" "${APP_HOST}" "rewrite"
 
 	sed "s^\(machine_key\)\s*=.*^\1 = ${CORE_MACHINEKEY}^g" -i $APP_DIR/radicale.config
 }
@@ -295,7 +295,7 @@ restart_services() {
 
 	echo -n "Restarting services... "
 	for SVC in login api socket studio-notify notify \
-	people-server files files-services studio backup \
+	people-server files files-services studio backup api-system \
 	clear-events backup-background ssoauth doceditor healthchecks
 	do
 		systemctl enable ${PRODUCT}-$SVC >/dev/null 2>&1
@@ -727,8 +727,18 @@ setup_dashboards() {
 
 	DASHBOARDS_CONF_PATH="/etc/opensearch-dashboards/opensearch_dashboards.yml"
 
+	if [[ -n ${DASHBOARDS_PASSWORD} ]]; then
+		echo "${DASHBOARDS_PASSWORD}" > ${APP_DIR}/.private/dashboards-password
+	elif [[ -f ${APP_DIR}/.private/dashboards-password ]]; then
+		DASHBOARDS_PASSWORD=$(cat ${APP_DIR}/.private/dashboards-password);
+	else
+		DASHBOARDS_PASSWORD=$(echo "$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 20)" | tee ${APP_DIR}/.private/dashboards-password)
+	fi
+
+	chmod o-rwx $APP_DIR/.private/dashboards-password
+
 	# configure login&pass for Dashboards, used by Nginx HTTP Basic Authentication
-	echo "${DASHBOARDS_USERNAME:-"onlyoffice"}:$(openssl passwd -6 -stdin <<< "${DASHBOARDS_PASSWORD:-"onlyoffice"}")" > /etc/openresty/.htpasswd_dashboards
+	echo "${DASHBOARDS_USERNAME:-"onlyoffice"}:$(openssl passwd -6 -stdin <<< "${DASHBOARDS_PASSWORD}")" > /etc/openresty/.htpasswd_dashboards
 	chown nginx:nginx /etc/openresty/.htpasswd_dashboards
 
 	# enable connection with opensearch
@@ -741,6 +751,7 @@ setup_dashboards() {
 	# set basePath variable to get access to Dashboards from a remote host
 	sed 's_.*\(server.basePath:\).*_\1 "/dashboards"_' -i ${DASHBOARDS_CONF_PATH}
 
+	systemctl enable opensearch-dashboards
 	systemctl restart opensearch-dashboards
 	echo "OK"
 }
@@ -752,6 +763,7 @@ setup_fluentbit() {
 	sed -i "s/OPENSEARCH_HOST/$ELK_HOST/g; s/OPENSEARCH_PORT/$ELK_PORT/g; s/OPENSEARCH_INDEX/$OPENSEARCH_INDEX/g; s/OPENSEARCH_SCHEME/$ELK_SHEME/g" ${APP_DIR}/fluent-bit.conf
 	cp -f ${APP_DIR}/fluent-bit.conf /etc/fluent-bit/fluent-bit.conf
 
+	systemctl enable fluent-bit
 	systemctl restart fluent-bit
 	echo "OK"
 }
