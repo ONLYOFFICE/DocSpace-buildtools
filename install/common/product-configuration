@@ -727,8 +727,18 @@ setup_dashboards() {
 
 	DASHBOARDS_CONF_PATH="/etc/opensearch-dashboards/opensearch_dashboards.yml"
 
+	if [[ -n ${DASHBOARDS_PASSWORD} ]]; then
+		echo "${DASHBOARDS_PASSWORD}" > ${APP_DIR}/.private/dashboards-password
+	elif [[ -f ${APP_DIR}/.private/dashboards-password ]]; then
+		DASHBOARDS_PASSWORD=$(cat ${APP_DIR}/.private/dashboards-password);
+	else
+		DASHBOARDS_PASSWORD=$(echo "$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 20)" | tee ${APP_DIR}/.private/dashboards-password)
+	fi
+
+	chmod o-rwx $APP_DIR/.private/dashboards-password
+
 	# configure login&pass for Dashboards, used by Nginx HTTP Basic Authentication
-	echo "${DASHBOARDS_USERNAME:-"onlyoffice"}:$(openssl passwd -6 -stdin <<< "${DASHBOARDS_PASSWORD:-"onlyoffice"}")" > /etc/openresty/.htpasswd_dashboards
+	echo "${DASHBOARDS_USERNAME:-"onlyoffice"}:$(openssl passwd -6 -stdin <<< "${DASHBOARDS_PASSWORD}")" > /etc/openresty/.htpasswd_dashboards
 	chown nginx:nginx /etc/openresty/.htpasswd_dashboards
 
 	# enable connection with opensearch
