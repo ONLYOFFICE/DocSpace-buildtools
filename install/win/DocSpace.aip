@@ -113,68 +113,68 @@
     <ROW Property="WindowsTypeNTDisplay" MultiBuildValue="DefaultBuild:32-bit Windows versions#ExeBuild:32-bit Windows versions" ValueLocId="-"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiDirsComponent">
-    <ROW Directory="APPDIR" Directory_Parent="TARGETDIR" DefaultDir="APPDIR:." IsPseudoRoot="1" DirectoryOptions="12"/>
-    <ROW Directory="ASC.ApiSystem_Dir" Directory_Parent="services_Dir" DefaultDir="ASC~1.API|ASC.ApiSystem" DirectoryOptions="12"/>
-    <ROW Directory="ASC.ClearEvents_Dir" Directory_Parent="services_Dir" DefaultDir="ASC~1.CLE|ASC.ClearEvents" DirectoryOptions="12"/>
-    <ROW Directory="ASC.Data.Backup.BackgroundTasks_Dir" Directory_Parent="services_Dir" DefaultDir="ASCDAT~2.BAC|ASC.Data.Backup.BackgroundTasks" DirectoryOptions="12"/>
-    <ROW Directory="ASC.Data.Backup_Dir" Directory_Parent="services_Dir" DefaultDir="ASCDAT~1.BAC|ASC.Data.Backup" DirectoryOptions="12"/>
-    <ROW Directory="ASC.Files.Service_Dir" Directory_Parent="services_Dir" DefaultDir="ASCFIL~1.SER|ASC.Files.Service" DirectoryOptions="12"/>
-    <ROW Directory="ASC.Files_Dir" Directory_Parent="products_Dir" DefaultDir="ASC~1.FIL|ASC.Files" DirectoryOptions="12"/>
-    <ROW Directory="ASC.Login_Dir" Directory_Parent="products_Dir" DefaultDir="ASC~1.LOG|ASC.Login" DirectoryOptions="12"/>
-    <ROW Directory="ASC.Migration.Runner_Dir" Directory_Parent="services_Dir" DefaultDir="ASCMIG~1.RUN|ASC.Migration.Runner" DirectoryOptions="12"/>
-    <ROW Directory="ASC.Notify_Dir" Directory_Parent="services_Dir" DefaultDir="ASC~1.NOT|ASC.Notify" DirectoryOptions="12"/>
-    <ROW Directory="ASC.People_Dir" Directory_Parent="products_Dir" DefaultDir="ASC~1.PEO|ASC.People" DirectoryOptions="12"/>
-    <ROW Directory="ASC.Socket.IO_Dir" Directory_Parent="services_Dir" DefaultDir="ASCSOC~1.IO|ASC.Socket.IO" DirectoryOptions="12"/>
-    <ROW Directory="ASC.SsoAuth_Dir" Directory_Parent="services_Dir" DefaultDir="ASC~1.SSO|ASC.SsoAuth" DirectoryOptions="12"/>
-    <ROW Directory="ASC.Studio.Notify_Dir" Directory_Parent="services_Dir" DefaultDir="ASCSTU~1.NOT|ASC.Studio.Notify" DirectoryOptions="12"/>
-    <ROW Directory="ASC.Web.Api_Dir" Directory_Parent="services_Dir" DefaultDir="ASCWEB~1.API|ASC.Web.Api" DirectoryOptions="12"/>
-    <ROW Directory="ASC.Web.HealthChecks.UI_Dir" Directory_Parent="services_Dir" DefaultDir="ASCWEB~1.UI|ASC.Web.HealthChecks.UI" DirectoryOptions="12"/>
-    <ROW Directory="ASC.Web.Studio_Dir" Directory_Parent="services_Dir" DefaultDir="ASCWEB~1.STU|ASC.Web.Studio" DirectoryOptions="12"/>
-    <ROW Directory="Data_Dir" Directory_Parent="APPDIR" DefaultDir="Data" DirectoryOptions="12"/>
+    <ROW Directory="APPDIR" Directory_Parent="TARGETDIR" DefaultDir="APPDIR:." IsPseudoRoot="1" DirectoryOptions="15"/>
+    <ROW Directory="ASC.ApiSystem_Dir" Directory_Parent="services_Dir" DefaultDir="ASC~1.API|ASC.ApiSystem" DirectoryOptions="15"/>
+    <ROW Directory="ASC.ClearEvents_Dir" Directory_Parent="services_Dir" DefaultDir="ASC~1.CLE|ASC.ClearEvents" DirectoryOptions="15"/>
+    <ROW Directory="ASC.Data.Backup.BackgroundTasks_Dir" Directory_Parent="services_Dir" DefaultDir="ASCDAT~2.BAC|ASC.Data.Backup.BackgroundTasks" DirectoryOptions="15"/>
+    <ROW Directory="ASC.Data.Backup_Dir" Directory_Parent="services_Dir" DefaultDir="ASCDAT~1.BAC|ASC.Data.Backup" DirectoryOptions="15"/>
+    <ROW Directory="ASC.Files.Service_Dir" Directory_Parent="services_Dir" DefaultDir="ASCFIL~1.SER|ASC.Files.Service" DirectoryOptions="15"/>
+    <ROW Directory="ASC.Files_Dir" Directory_Parent="products_Dir" DefaultDir="ASC~1.FIL|ASC.Files" DirectoryOptions="15"/>
+    <ROW Directory="ASC.Login_Dir" Directory_Parent="products_Dir" DefaultDir="ASC~1.LOG|ASC.Login" DirectoryOptions="15"/>
+    <ROW Directory="ASC.Migration.Runner_Dir" Directory_Parent="services_Dir" DefaultDir="ASCMIG~1.RUN|ASC.Migration.Runner" DirectoryOptions="15"/>
+    <ROW Directory="ASC.Notify_Dir" Directory_Parent="services_Dir" DefaultDir="ASC~1.NOT|ASC.Notify" DirectoryOptions="15"/>
+    <ROW Directory="ASC.People_Dir" Directory_Parent="products_Dir" DefaultDir="ASC~1.PEO|ASC.People" DirectoryOptions="15"/>
+    <ROW Directory="ASC.Socket.IO_Dir" Directory_Parent="services_Dir" DefaultDir="ASCSOC~1.IO|ASC.Socket.IO" DirectoryOptions="15"/>
+    <ROW Directory="ASC.SsoAuth_Dir" Directory_Parent="services_Dir" DefaultDir="ASC~1.SSO|ASC.SsoAuth" DirectoryOptions="15"/>
+    <ROW Directory="ASC.Studio.Notify_Dir" Directory_Parent="services_Dir" DefaultDir="ASCSTU~1.NOT|ASC.Studio.Notify" DirectoryOptions="15"/>
+    <ROW Directory="ASC.Web.Api_Dir" Directory_Parent="services_Dir" DefaultDir="ASCWEB~1.API|ASC.Web.Api" DirectoryOptions="15"/>
+    <ROW Directory="ASC.Web.HealthChecks.UI_Dir" Directory_Parent="services_Dir" DefaultDir="ASCWEB~1.UI|ASC.Web.HealthChecks.UI" DirectoryOptions="15"/>
+    <ROW Directory="ASC.Web.Studio_Dir" Directory_Parent="services_Dir" DefaultDir="ASCWEB~1.STU|ASC.Web.Studio" DirectoryOptions="15"/>
+    <ROW Directory="Data_Dir" Directory_Parent="APPDIR" DefaultDir="Data" DirectoryOptions="15"/>
     <ROW Directory="DesktopFolder" Directory_Parent="TARGETDIR" DefaultDir="DESKTO~1|DesktopFolder" IsPseudoRoot="1"/>
-    <ROW Directory="Logs_Dir" Directory_Parent="APPDIR" DefaultDir="Logs" DirectoryOptions="12"/>
-    <ROW Directory="NewFolder_1_Dir" Directory_Parent="service_1_Dir" DefaultDir="config" DirectoryOptions="12"/>
+    <ROW Directory="Logs_Dir" Directory_Parent="APPDIR" DefaultDir="Logs" DirectoryOptions="15"/>
+    <ROW Directory="NewFolder_1_Dir" Directory_Parent="service_1_Dir" DefaultDir="config" DirectoryOptions="15"/>
     <ROW Directory="TARGETDIR" DefaultDir="SourceDir"/>
-    <ROW Directory="conf_Dir" Directory_Parent="nginx_Dir" DefaultDir="conf" DirectoryOptions="12"/>
-    <ROW Directory="config_2_Dir" Directory_Parent="service_5_Dir" DefaultDir="config" DirectoryOptions="12"/>
-    <ROW Directory="config_Dir" Directory_Parent="APPDIR" DefaultDir="config" DirectoryOptions="12"/>
-    <ROW Directory="editor_Dir" Directory_Parent="ASC.Files_Dir" DefaultDir="editor" DirectoryOptions="12"/>
-    <ROW Directory="includes_Dir" Directory_Parent="conf_Dir" DefaultDir="includes" DirectoryOptions="12"/>
-    <ROW Directory="login_Dir" Directory_Parent="ASC.Login_Dir" DefaultDir="login" DirectoryOptions="12"/>
-    <ROW Directory="logs_Dir" Directory_Parent="nginx_Dir" DefaultDir="logs" DirectoryOptions="12"/>
-    <ROW Directory="nginx_Dir" Directory_Parent="APPDIR" DefaultDir="nginx" DirectoryOptions="12"/>
-    <ROW Directory="products_Dir" Directory_Parent="APPDIR" DefaultDir="products" DirectoryOptions="12"/>
-    <ROW Directory="server_2_Dir" Directory_Parent="ASC.Files_Dir" DefaultDir="server" DirectoryOptions="12"/>
-    <ROW Directory="server_5_Dir" Directory_Parent="ASC.People_Dir" DefaultDir="server" DirectoryOptions="12"/>
-    <ROW Directory="service_11_Dir" Directory_Parent="ASC.Studio.Notify_Dir" DefaultDir="service" DirectoryOptions="12"/>
-    <ROW Directory="service_15_Dir" Directory_Parent="ASC.Web.Api_Dir" DefaultDir="service" DirectoryOptions="12"/>
-    <ROW Directory="service_16_Dir" Directory_Parent="ASC.Web.Studio_Dir" DefaultDir="service" DirectoryOptions="12"/>
-    <ROW Directory="service_17_Dir" Directory_Parent="ASC.ApiSystem_Dir" DefaultDir="service" DirectoryOptions="12"/>
-    <ROW Directory="service_1_Dir" Directory_Parent="ASC.Socket.IO_Dir" DefaultDir="service" DirectoryOptions="12"/>
-    <ROW Directory="service_2_Dir" Directory_Parent="ASC.Data.Backup_Dir" DefaultDir="service" DirectoryOptions="12"/>
-    <ROW Directory="service_3_Dir" Directory_Parent="ASC.Data.Backup.BackgroundTasks_Dir" DefaultDir="service" DirectoryOptions="12"/>
-    <ROW Directory="service_4_Dir" Directory_Parent="ASC.Web.HealthChecks.UI_Dir" DefaultDir="service" DirectoryOptions="12"/>
-    <ROW Directory="service_5_Dir" Directory_Parent="ASC.SsoAuth_Dir" DefaultDir="service" DirectoryOptions="12"/>
-    <ROW Directory="service_6_Dir" Directory_Parent="ASC.Migration.Runner_Dir" DefaultDir="service" DirectoryOptions="12"/>
-    <ROW Directory="service_7_Dir" Directory_Parent="ASC.Files.Service_Dir" DefaultDir="service" DirectoryOptions="12"/>
-    <ROW Directory="service_9_Dir" Directory_Parent="ASC.Notify_Dir" DefaultDir="service" DirectoryOptions="12"/>
-    <ROW Directory="service_Dir" Directory_Parent="ASC.ClearEvents_Dir" DefaultDir="service" DirectoryOptions="12"/>
-    <ROW Directory="services_Dir" Directory_Parent="APPDIR" DefaultDir="services" DirectoryOptions="12"/>
-    <ROW Directory="temp_10_Dir" Directory_Parent="service_16_Dir" DefaultDir="temp" DirectoryOptions="12"/>
-    <ROW Directory="temp_13_Dir" Directory_Parent="server_2_Dir" DefaultDir="temp" DirectoryOptions="12"/>
-    <ROW Directory="temp_14_Dir" Directory_Parent="server_5_Dir" DefaultDir="temp" DirectoryOptions="12"/>
-    <ROW Directory="temp_16_Dir" Directory_Parent="service_17_Dir" DefaultDir="temp" DirectoryOptions="12"/>
-    <ROW Directory="temp_1_Dir" Directory_Parent="service_Dir" DefaultDir="temp" DirectoryOptions="12"/>
-    <ROW Directory="temp_2_Dir" Directory_Parent="service_3_Dir" DefaultDir="temp" DirectoryOptions="12"/>
-    <ROW Directory="temp_3_Dir" Directory_Parent="service_7_Dir" DefaultDir="temp" DirectoryOptions="12"/>
-    <ROW Directory="temp_4_Dir" Directory_Parent="service_2_Dir" DefaultDir="temp" DirectoryOptions="12"/>
-    <ROW Directory="temp_5_Dir" Directory_Parent="service_4_Dir" DefaultDir="temp" DirectoryOptions="12"/>
-    <ROW Directory="temp_6_Dir" Directory_Parent="service_6_Dir" DefaultDir="temp" DirectoryOptions="12"/>
-    <ROW Directory="temp_7_Dir" Directory_Parent="service_9_Dir" DefaultDir="temp" DirectoryOptions="12"/>
-    <ROW Directory="temp_8_Dir" Directory_Parent="service_11_Dir" DefaultDir="temp" DirectoryOptions="12"/>
-    <ROW Directory="temp_9_Dir" Directory_Parent="service_15_Dir" DefaultDir="temp" DirectoryOptions="12"/>
-    <ROW Directory="temp_Dir" Directory_Parent="nginx_Dir" DefaultDir="temp" DirectoryOptions="12"/>
-    <ROW Directory="tools_Dir" Directory_Parent="APPDIR" DefaultDir="tools" DirectoryOptions="12"/>
+    <ROW Directory="conf_Dir" Directory_Parent="nginx_Dir" DefaultDir="conf" DirectoryOptions="15"/>
+    <ROW Directory="config_2_Dir" Directory_Parent="service_5_Dir" DefaultDir="config" DirectoryOptions="15"/>
+    <ROW Directory="config_Dir" Directory_Parent="APPDIR" DefaultDir="config" DirectoryOptions="15"/>
+    <ROW Directory="editor_Dir" Directory_Parent="ASC.Files_Dir" DefaultDir="editor" DirectoryOptions="15"/>
+    <ROW Directory="includes_Dir" Directory_Parent="conf_Dir" DefaultDir="includes" DirectoryOptions="15"/>
+    <ROW Directory="login_Dir" Directory_Parent="ASC.Login_Dir" DefaultDir="login" DirectoryOptions="15"/>
+    <ROW Directory="logs_Dir" Directory_Parent="nginx_Dir" DefaultDir="logs" DirectoryOptions="15"/>
+    <ROW Directory="nginx_Dir" Directory_Parent="APPDIR" DefaultDir="nginx" DirectoryOptions="15"/>
+    <ROW Directory="products_Dir" Directory_Parent="APPDIR" DefaultDir="products" DirectoryOptions="15"/>
+    <ROW Directory="server_2_Dir" Directory_Parent="ASC.Files_Dir" DefaultDir="server" DirectoryOptions="15"/>
+    <ROW Directory="server_5_Dir" Directory_Parent="ASC.People_Dir" DefaultDir="server" DirectoryOptions="15"/>
+    <ROW Directory="service_11_Dir" Directory_Parent="ASC.Studio.Notify_Dir" DefaultDir="service" DirectoryOptions="15"/>
+    <ROW Directory="service_15_Dir" Directory_Parent="ASC.Web.Api_Dir" DefaultDir="service" DirectoryOptions="15"/>
+    <ROW Directory="service_16_Dir" Directory_Parent="ASC.Web.Studio_Dir" DefaultDir="service" DirectoryOptions="15"/>
+    <ROW Directory="service_17_Dir" Directory_Parent="ASC.ApiSystem_Dir" DefaultDir="service" DirectoryOptions="15"/>
+    <ROW Directory="service_1_Dir" Directory_Parent="ASC.Socket.IO_Dir" DefaultDir="service" DirectoryOptions="15"/>
+    <ROW Directory="service_2_Dir" Directory_Parent="ASC.Data.Backup_Dir" DefaultDir="service" DirectoryOptions="15"/>
+    <ROW Directory="service_3_Dir" Directory_Parent="ASC.Data.Backup.BackgroundTasks_Dir" DefaultDir="service" DirectoryOptions="15"/>
+    <ROW Directory="service_4_Dir" Directory_Parent="ASC.Web.HealthChecks.UI_Dir" DefaultDir="service" DirectoryOptions="15"/>
+    <ROW Directory="service_5_Dir" Directory_Parent="ASC.SsoAuth_Dir" DefaultDir="service" DirectoryOptions="15"/>
+    <ROW Directory="service_6_Dir" Directory_Parent="ASC.Migration.Runner_Dir" DefaultDir="service" DirectoryOptions="15"/>
+    <ROW Directory="service_7_Dir" Directory_Parent="ASC.Files.Service_Dir" DefaultDir="service" DirectoryOptions="15"/>
+    <ROW Directory="service_9_Dir" Directory_Parent="ASC.Notify_Dir" DefaultDir="service" DirectoryOptions="15"/>
+    <ROW Directory="service_Dir" Directory_Parent="ASC.ClearEvents_Dir" DefaultDir="service" DirectoryOptions="15"/>
+    <ROW Directory="services_Dir" Directory_Parent="APPDIR" DefaultDir="services" DirectoryOptions="15"/>
+    <ROW Directory="temp_10_Dir" Directory_Parent="service_16_Dir" DefaultDir="temp" DirectoryOptions="15"/>
+    <ROW Directory="temp_13_Dir" Directory_Parent="server_2_Dir" DefaultDir="temp" DirectoryOptions="15"/>
+    <ROW Directory="temp_14_Dir" Directory_Parent="server_5_Dir" DefaultDir="temp" DirectoryOptions="15"/>
+    <ROW Directory="temp_16_Dir" Directory_Parent="service_17_Dir" DefaultDir="temp" DirectoryOptions="15"/>
+    <ROW Directory="temp_1_Dir" Directory_Parent="service_Dir" DefaultDir="temp" DirectoryOptions="15"/>
+    <ROW Directory="temp_2_Dir" Directory_Parent="service_3_Dir" DefaultDir="temp" DirectoryOptions="15"/>
+    <ROW Directory="temp_3_Dir" Directory_Parent="service_7_Dir" DefaultDir="temp" DirectoryOptions="15"/>
+    <ROW Directory="temp_4_Dir" Directory_Parent="service_2_Dir" DefaultDir="temp" DirectoryOptions="15"/>
+    <ROW Directory="temp_5_Dir" Directory_Parent="service_4_Dir" DefaultDir="temp" DirectoryOptions="15"/>
+    <ROW Directory="temp_6_Dir" Directory_Parent="service_6_Dir" DefaultDir="temp" DirectoryOptions="15"/>
+    <ROW Directory="temp_7_Dir" Directory_Parent="service_9_Dir" DefaultDir="temp" DirectoryOptions="15"/>
+    <ROW Directory="temp_8_Dir" Directory_Parent="service_11_Dir" DefaultDir="temp" DirectoryOptions="15"/>
+    <ROW Directory="temp_9_Dir" Directory_Parent="service_15_Dir" DefaultDir="temp" DirectoryOptions="15"/>
+    <ROW Directory="temp_Dir" Directory_Parent="nginx_Dir" DefaultDir="temp" DirectoryOptions="15"/>
+    <ROW Directory="tools_Dir" Directory_Parent="APPDIR" DefaultDir="tools" DirectoryOptions="15"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
     <ROW Component="AI_CustomARPName" ComponentId="{5283455D-3786-42EC-9887-FCF453E2FBF9}" Directory_="APPDIR" Attributes="4" KeyPath="DisplayName" Options="1"/>
@@ -289,25 +289,25 @@
     <ATTRIBUTE name="CurrentFeature" value="MainFeature"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiFilesComponent">
-    <ROW File="ASC.Files.exe" Component_="ASC.Files.exe" FileName="ASCFIL~1.EXE|ASC.Files.exe" Attributes="0" SourcePath="Files\products\ASC.Files\server\ASC.Files.exe" SelfReg="false" DigSign="true"/>
-    <ROW File="ASC.People.exe" Component_="ASC.People.exe" FileName="ASCPEO~1.EXE|ASC.People.exe" Attributes="0" SourcePath="Files\products\ASC.People\server\ASC.People.exe" SelfReg="false" DigSign="true"/>
-    <ROW File="ASC.ApiSystem.exe" Component_="ASC.ApiSystem.exe" FileName="ASCAPI~1.EXE|ASC.ApiSystem.exe" Attributes="0" SourcePath="Files\services\ASC.ApiSystem\service\ASC.ApiSystem.exe" SelfReg="false" DigSign="true"/>
-    <ROW File="ASC.Data.Backup.exe" Component_="ASC.Data.Backup.exe" FileName="ASCDAT~1.EXE|ASC.Data.Backup.exe" Attributes="0" SourcePath="Files\services\ASC.Data.Backup\service\ASC.Data.Backup.exe" SelfReg="false" DigSign="true"/>
-    <ROW File="ASC.Files.Service.exe" Component_="ASC.Files.Service.exe" FileName="ASCFIL~1.EXE|ASC.Files.Service.exe" Attributes="0" SourcePath="Files\services\ASC.Files.Service\service\ASC.Files.Service.exe" SelfReg="false" DigSign="true"/>
-    <ROW File="ASC.Notify.exe" Component_="ASC.Notify.exe" FileName="ASCNOT~1.EXE|ASC.Notify.exe" Attributes="0" SourcePath="Files\services\ASC.Notify\service\ASC.Notify.exe" SelfReg="false" DigSign="true"/>
-    <ROW File="ASC.Studio.Notify.exe" Component_="ASC.Studio.Notify.exe" FileName="ASCSTU~1.EXE|ASC.Studio.Notify.exe" Attributes="0" SourcePath="Files\services\ASC.Studio.Notify\service\ASC.Studio.Notify.exe" SelfReg="false" DigSign="true"/>
-    <ROW File="ASC.Web.Studio.exe" Component_="ASC.Web.Studio.exe" FileName="ASCWEB~1.EXE|ASC.Web.Studio.exe" Attributes="0" SourcePath="Files\services\ASC.Web.Studio\service\ASC.Web.Studio.exe" SelfReg="false" DigSign="true"/>
-    <ROW File="ASC.Web.Api.exe" Component_="ASC.Web.Api.exe" FileName="ASCWEB~1.EXE|ASC.Web.Api.exe" Attributes="0" SourcePath="Files\services\ASC.Web.Api\service\ASC.Web.Api.exe" SelfReg="false" DigSign="true"/>
-    <ROW File="Proxy.exe" Component_="Proxy.exe" FileName="Proxy.exe" Attributes="0" SourcePath="Files\tools\Proxy.exe" SelfReg="false" DigSign="true"/>
-    <ROW File="Socket.IO.exe" Component_="Socket.IO.exe" FileName="SOCKET~1.EXE|Socket.IO.exe" Attributes="0" SourcePath="Files\tools\Socket.IO.exe" SelfReg="false" DigSign="true"/>
-    <ROW File="SsoAuth.exe" Component_="SsoAuth.exe" FileName="SsoAuth.exe" Attributes="0" SourcePath="Files\tools\SsoAuth.exe" SelfReg="false" DigSign="true"/>
-    <ROW File="ASC.ClearEvents.exe" Component_="ASC.ClearEvents.exe" FileName="ASCCLE~1.EXE|ASC.ClearEvents.exe" Attributes="0" SourcePath="Files\services\ASC.ClearEvents\service\ASC.ClearEvents.exe" SelfReg="false" DigSign="true"/>
-    <ROW File="ASC.Data.Backup.BackgroundTasks.exe" Component_="ASC.Data.Backup.BackgroundTasks.exe" FileName="ASCDAT~1.EXE|ASC.Data.Backup.BackgroundTasks.exe" Attributes="0" SourcePath="Files\services\ASC.Data.Backup.BackgroundTasks\service\ASC.Data.Backup.BackgroundTasks.exe" SelfReg="false" DigSign="true"/>
-    <ROW File="ASC.Migration.Runner.exe" Component_="ASC.Migration.Runner.exe" FileName="ASCMIG~2.EXE|ASC.Migration.Runner.exe" Attributes="0" SourcePath="Files\services\ASC.Migration.Runner\service\ASC.Migration.Runner.exe" SelfReg="false" DigSign="true"/>
-    <ROW File="DocEditor.exe" Component_="DocEditor.exe" FileName="DOCEDI~1.EXE|DocEditor.exe" Attributes="0" SourcePath="Files\tools\DocEditor.exe" SelfReg="false" DigSign="true"/>
-    <ROW File="Login.exe" Component_="Login.exe" FileName="LOGIN~1.EXE|Login.exe" Attributes="0" SourcePath="Files\tools\Login.exe" SelfReg="false" DigSign="true"/>
-    <ROW File="icon.ico" Component_="icon.ico" FileName="icon.ico" Attributes="0" SourcePath="Resources\icon.ico" SelfReg="false"/>
-    <ROW File="ASC.Web.HealthChecks.UI.exe" Component_="ASC.Web.HealthChecks.UI.exe" FileName="ASCWEB~1.EXE|ASC.Web.HealthChecks.UI.exe" Attributes="0" SourcePath="Files\services\ASC.Web.HealthChecks.UI\service\ASC.Web.HealthChecks.UI.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="ASC.Files.exe" Component_="ASC.Files.exe" FileName="ASCFIL~1.EXE|ASC.Files.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\products\ASC.Files\server\ASC.Files.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="ASC.People.exe" Component_="ASC.People.exe" FileName="ASCPEO~1.EXE|ASC.People.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\products\ASC.People\server\ASC.People.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="ASC.ApiSystem.exe" Component_="ASC.ApiSystem.exe" FileName="ASCAPI~1.EXE|ASC.ApiSystem.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.ApiSystem\service\ASC.ApiSystem.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="ASC.Data.Backup.exe" Component_="ASC.Data.Backup.exe" FileName="ASCDAT~1.EXE|ASC.Data.Backup.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.Data.Backup\service\ASC.Data.Backup.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="ASC.Files.Service.exe" Component_="ASC.Files.Service.exe" FileName="ASCFIL~1.EXE|ASC.Files.Service.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.Files.Service\service\ASC.Files.Service.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="ASC.Notify.exe" Component_="ASC.Notify.exe" FileName="ASCNOT~1.EXE|ASC.Notify.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.Notify\service\ASC.Notify.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="ASC.Studio.Notify.exe" Component_="ASC.Studio.Notify.exe" FileName="ASCSTU~1.EXE|ASC.Studio.Notify.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.Studio.Notify\service\ASC.Studio.Notify.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="ASC.Web.Studio.exe" Component_="ASC.Web.Studio.exe" FileName="ASCWEB~1.EXE|ASC.Web.Studio.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.Web.Studio\service\ASC.Web.Studio.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="ASC.Web.Api.exe" Component_="ASC.Web.Api.exe" FileName="ASCWEB~1.EXE|ASC.Web.Api.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.Web.Api\service\ASC.Web.Api.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="Proxy.exe" Component_="Proxy.exe" FileName="Proxy.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\Proxy.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="Socket.IO.exe" Component_="Socket.IO.exe" FileName="SOCKET~1.EXE|Socket.IO.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\Socket.IO.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="SsoAuth.exe" Component_="SsoAuth.exe" FileName="SsoAuth.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\SsoAuth.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="ASC.ClearEvents.exe" Component_="ASC.ClearEvents.exe" FileName="ASCCLE~1.EXE|ASC.ClearEvents.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.ClearEvents\service\ASC.ClearEvents.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="ASC.Data.Backup.BackgroundTasks.exe" Component_="ASC.Data.Backup.BackgroundTasks.exe" FileName="ASCDAT~1.EXE|ASC.Data.Backup.BackgroundTasks.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.Data.Backup.BackgroundTasks\service\ASC.Data.Backup.BackgroundTasks.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="ASC.Migration.Runner.exe" Component_="ASC.Migration.Runner.exe" FileName="ASCMIG~2.EXE|ASC.Migration.Runner.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.Migration.Runner\service\ASC.Migration.Runner.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="DocEditor.exe" Component_="DocEditor.exe" FileName="DOCEDI~1.EXE|DocEditor.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\DocEditor.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="Login.exe" Component_="Login.exe" FileName="LOGIN~1.EXE|Login.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\Login.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="icon.ico" Component_="icon.ico" FileName="icon.ico" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Resources\icon.ico" SelfReg="false"/>
+    <ROW File="ASC.Web.HealthChecks.UI.exe" Component_="ASC.Web.HealthChecks.UI.exe" FileName="ASCWEB~1.EXE|ASC.Web.HealthChecks.UI.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.Web.HealthChecks.UI\service\ASC.Web.HealthChecks.UI.exe" SelfReg="false" DigSign="true"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.BootstrOptComponent">
     <ROW BootstrOptKey="GlobalOptions" DownloadFolder="[AppDataFolder][|Manufacturer]\[|ProductName]\prerequisites" Options="2"/>
