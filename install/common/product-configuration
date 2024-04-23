@@ -751,6 +751,7 @@ setup_dashboards() {
 	# set basePath variable to get access to Dashboards from a remote host
 	sed 's_.*\(server.basePath:\).*_\1 "/dashboards"_' -i ${DASHBOARDS_CONF_PATH}
 
+	systemctl enable opensearch-dashboards
 	systemctl restart opensearch-dashboards
 	echo "OK"
 }
@@ -762,6 +763,7 @@ setup_fluentbit() {
 	sed -i "s/OPENSEARCH_HOST/$ELK_HOST/g; s/OPENSEARCH_PORT/$ELK_PORT/g; s/OPENSEARCH_INDEX/$OPENSEARCH_INDEX/g; s/OPENSEARCH_SCHEME/$ELK_SHEME/g" ${APP_DIR}/fluent-bit.conf
 	cp -f ${APP_DIR}/fluent-bit.conf /etc/fluent-bit/fluent-bit.conf
 
+	systemctl enable fluent-bit
 	systemctl restart fluent-bit
 	echo "OK"
 }
