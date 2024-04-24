@@ -61,6 +61,12 @@ $prerequisites = @(
     link = "https://artifacts.opensearch.org/releases/bundle/opensearch/${opensearch_version}/opensearch-${opensearch_version}-windows-x64.zip";
   }
 
+  @{
+    download_allways = $false;
+    name = "ingest-attachment-${opensearch_version}.zip";
+    link = "https://artifacts.opensearch.org/releases/plugins/ingest-attachment/${opensearch_version}/ingest-attachment-${opensearch_version}.zip";
+  }
+
   @{  
     download_allways = $false; 
     name = "WinSW.NET4new.exe"; 
