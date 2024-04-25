@@ -53,6 +53,7 @@ x-service: &x-service-base
     CERTIFICATE_PATH: ${CERTIFICATE_PATH}
   volumes:
     #- /app/onlyoffice/CommunityServer/data:/app/onlyoffice/data
+    - log_data:/var/log/onlyoffice
     - app_data:/app/onlyoffice/data
     - files_data:/var/www/products/ASC.Files/server/
     - people_data:/var/www/products/ASC.People/server/
@@ -227,7 +228,7 @@ services:
       - DASHBOARDS_USERNAME=${DASHBOARDS_USERNAME}
       - DASHBOARDS_PASSWORD=${DASHBOARDS_PASSWORD}
     volumes:
-      - router_log:/var/log/nginx
+      - log_data:/var/log/nginx
 
 networks:
   default:
@@ -235,7 +236,7 @@ networks:
     external: true
 
 volumes:
-  router_log:
+  log_data:
   app_data:
   files_data:
   people_data:

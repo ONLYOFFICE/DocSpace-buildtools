@@ -64,10 +64,7 @@ REM echo ######## SSL configs ########
 %sed% -i "s/\/etc\/nginx\/\.htpasswd_dashboards/\.htpasswd_dashboards/g" buildtools\install\win\Files\nginx\conf\onlyoffice.conf
 
 REM echo ######## Configure fluent-bit config for windows ########
-%sed% -i "s/forward/tail/" buildtools\install\win\Files\config\fluent-bit.conf
-%sed% -i "s/Port/Path/" buildtools\install\win\Files\config\fluent-bit.conf
-%sed% -i "s/24224/{APPDIR}Logs\*.log/" buildtools\install\win\Files\config\fluent-bit.conf
-%sed% -i "/Listen\s*127\.0\.0\.1/d" buildtools\install\win\Files\config\fluent-bit.conf
+%sed% -i "s|/var/log/onlyoffice/|{APPDIR}Logs\|" buildtools\install\win\Files\config\fluent-bit.conf
 
 REM echo ######## Delete test and dev configs ########
 del /f /q buildtools\install\win\Files\config\*.test.json

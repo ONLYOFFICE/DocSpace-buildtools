@@ -60,7 +60,7 @@ INSTALL_RABBITMQ="true";
 INSTALL_MYSQL_SERVER="true";
 INSTALL_DOCUMENT_SERVER="true";
 INSTALL_ELASTICSEARCH="true";
-INSTALL_FLUENT_BIT="false";
+INSTALL_FLUENT_BIT="true";
 INSTALL_PRODUCT="true";
 UPDATE="false";
 
@@ -1315,41 +1315,17 @@ install_elasticsearch () {
 
 install_fluent_bit () {
 	if [ "$INSTALL_FLUENT_BIT" == "true" ]; then
-		curl https://raw.githubusercontent.com/fluent/fluent-bit/master/install.sh | sh
-		systemctl enable fluent-bit
+		[ ! -z "$ELK_HOST" ] && sed -i "s/ELK_CONTAINER_NAME/ELK_HOST/g" $BASE_DIR/fluent.yml ${BASE_DIR}/dashboards.yml
 
-		if systemctl list-unit-files --type=service | grep -q "fluent-bit.service"; then
-			sed -i "s/OPENSEARCH_SCHEME/$(get_env_parameter "ELK_SHEME")/g" "${BASE_DIR}/config/fluent-bit.conf"
-			sed -i "s/OPENSEARCH_HOST/${ELK_HOST:-127.0.0.1}/g" "${BASE_DIR}/config/fluent-bit.conf"
-			sed -i "s/OPENSEARCH_PORT/$(get_env_parameter "ELK_PORT")/g" ${BASE_DIR}/config/fluent-bit.conf
-			sed -i "s/OPENSEARCH_INDEX/${OPENSEARCH_INDEX:-"${PACKAGE_SYSNAME}-fluent-bit"}/g" ${BASE_DIR}/config/fluent-bit.conf
-			[ ! -z "${ELK_HOST}" ] && sed -i "s/ELK_CONTAINER_NAME/ELK_HOST/g" ${BASE_DIR}/dashboards.yml
-			cp -rf ${BASE_DIR}/config/fluent-bit.conf /etc/fluent-bit/fluent-bit.conf
-			systemctl restart fluent-bit
+		sed -i "s/OPENSEARCH_SCHEME/$(get_env_parameter "ELK_SHEME")/g" "${BASE_DIR}/config/fluent-bit.conf"
+		sed -i "s/OPENSEARCH_HOST/${ELK_HOST:-"${PACKAGE_SYSNAME}-opensearch"}/g" "${BASE_DIR}/config/fluent-bit.conf" 
+		sed -i "s/OPENSEARCH_PORT/$(get_env_parameter "ELK_PORT")/g" ${BASE_DIR}/config/fluent-bit.conf
+		sed -i "s/OPENSEARCH_INDEX/${OPENSEARCH_INDEX:-"${PACKAGE_SYSNAME}-fluent-bit"}/g" ${BASE_DIR}/config/fluent-bit.conf
 
-			DOCKER_SYSTEMD_DIR="/etc/systemd/system/docker.service.d"
-			if [ ! -f "${DOCKER_SYSTEMD_DIR}/fluent-after.conf" ]; then
-				mkdir -p ${DOCKER_SYSTEMD_DIR}
-				echo -e "[Unit]\n$(grep After= $(systemctl show -p FragmentPath docker.service | awk -F= '{print $2}')) fluent-bit.service" > "${DOCKER_SYSTEMD_DIR}/fluent-after.conf"
-				systemctl daemon-reload
-			fi
+		reconfigure DASHBOARDS_USERNAME "${DASHBOARDS_USERNAME:-"${PACKAGE_SYSNAME}"}"
+		reconfigure DASHBOARDS_PASSWORD "${DASHBOARDS_PASSWORD:-$(get_random_str 20)}"
 
-			DOCKER_DAEMON_FILE="/etc/docker/daemon.json"
-			if [[ ! -f "${DOCKER_DAEMON_FILE}" ]]; then
-				echo "{\"log-driver\": \"fluentd\", \"log-opts\": { \"fluentd-address\": \"127.0.0.1:24224\" }}" > "${DOCKER_DAEMON_FILE}"
-				systemctl restart docker
-			elif ! grep -q "log-driver" ${DOCKER_DAEMON_FILE}; then
-				sed -i 's!{!& "log-driver": "fluentd", "log-opts": { "fluentd-address": "127.0.0.1:24224" },!' "${DOCKER_DAEMON_FILE}"
-				systemctl restart docker
-			fi
-
-			reconfigure DASHBOARDS_USERNAME "${DASHBOARDS_USERNAME:-"onlyoffice"}"
-			reconfigure DASHBOARDS_PASSWORD "${DASHBOARDS_PASSWORD:-$(get_random_str 20)}"
-
-			docker-compose -f ${BASE_DIR}/dashboards.yml up -d
-		else
-			echo "The installation of the fluent-bit service was unsuccessful."
-		fi
+		docker-compose -f ${BASE_DIR}/fluent.yml -f ${BASE_DIR}/dashboards.yml up -d
 	fi
 }
 

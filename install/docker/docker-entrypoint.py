@@ -200,6 +200,7 @@ writeJsonFile(filePath, jsonData)
 
 filePath = "/app/onlyoffice/config/appsettings.services.json"
 jsonData = openJsonFile(filePath)
+updateJsonData(jsonData,"$.logPath", LOG_DIR)
 updateJsonData(jsonData,"$.logLevel", LOG_LEVEL)
 writeJsonFile(filePath, jsonData)
 

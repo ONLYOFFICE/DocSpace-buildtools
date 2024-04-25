@@ -3,3 +3,6 @@ sql_mode = 'NO_ENGINE_SUBSTITUTION'
 max_connections = 1000
 max_allowed_packet = 1048576000
 group_concat_max_len = 2048
+general-log-file = /var/log/mysqld.log
+log-error = /var/log/mysqld.log
+log_error_verbosity = 2

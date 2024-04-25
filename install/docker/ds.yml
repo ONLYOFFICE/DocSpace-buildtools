@@ -9,6 +9,7 @@ services:
       - JWT_HEADER=${DOCUMENT_SERVER_JWT_HEADER}
       - JWT_IN_BODY=true
     volumes:
+      - log_data:/var/log/onlyoffice
       - app_data:/var/www/onlyoffice/Data
     expose:
       - '80'
@@ -22,4 +23,5 @@ networks:
     external: true
 
 volumes:
+  log_data:
   app_data:

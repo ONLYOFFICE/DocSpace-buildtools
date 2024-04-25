@@ -21,7 +21,7 @@ services:
       - EXTERNAL_PORT=${EXTERNAL_PORT}
     volumes:
       - webroot_path:/letsencrypt
-      - proxy_log:/var/log/nginx
+      - log_data:/var/log/nginx
       - ./config/nginx/templates/nginx.conf.template:/etc/nginx/nginx.conf
       - ./config/nginx/letsencrypt.conf:/etc/nginx/includes/letsencrypt.conf
       - ./config/nginx/templates/proxy.upstream.conf.template:/etc/nginx/templates/proxy.upstream.conf.template:ro
@@ -33,5 +33,5 @@ networks:
     external: true
 
 volumes:
-  proxy_log:
+  log_data:
   webroot_path:

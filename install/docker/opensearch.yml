@@ -19,12 +19,11 @@ services:
         soft: 65536 # maximum number of open files for the OpenSearch user, set to at least 65536 on modern systems
         hard: 65536
     volumes:
+      - log_data:/usr/share/opensearch/logs
       - os_data:/usr/share/opensearch/data
     expose:
       - "9200"
       - "9600" # required for Performance Analyzer
-    ports:
-      - 127.0.0.1:9200:9200
   
 networks:
   default:
@@ -32,4 +31,5 @@ networks:
     external: true
 
 volumes:
+  log_data:
   os_data:

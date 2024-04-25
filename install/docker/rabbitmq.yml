@@ -3,10 +3,17 @@ services:
     image: rabbitmq:3
     container_name: ${RABBIT_CONTAINER_NAME}
     restart: always
+    environment:
+      - RABBITMQ_LOGS=/var/log/rabbitmq
     expose:
       - "5672"
       - "80"
+    volumes:
+      - log_data:/var/log/rabbitmq
 networks:
   default:
     name: ${NETWORK_NAME}
     external: true
+
+volumes:
+  log_data:

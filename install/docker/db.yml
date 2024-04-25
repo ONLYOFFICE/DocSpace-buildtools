@@ -18,6 +18,7 @@ services:
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
+      - log_data:/var/log
       - mysql_data:/var/lib/mysql
       - ./config/mysql/conf.d/:/etc/mysql/conf.d
     networks:
@@ -30,4 +31,5 @@ networks:
     external: true
 
 volumes:
+  log_data:
   mysql_data:
