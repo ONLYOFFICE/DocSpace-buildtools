@@ -39,6 +39,9 @@ LOG_LEVEL = os.environ["LOG_LEVEL"].lower() if environ.get("LOG_LEVEL") else Non
 DEBUG_INFO = os.environ["DEBUG_INFO"] if environ.get("DEBUG_INFO") else "false"
 SAMESITE = os.environ["SAMESITE"] if environ.get("SAMESITE") else "None"
 
+CERTIFICATE_PATH = os.environ.get("CERTIFICATE_PATH")
+CERTIFICATE_PARAM = "NODE_EXTRA_CA_CERTS=" + CERTIFICATE_PATH + " " if CERTIFICATE_PATH and os.path.exists(CERTIFICATE_PATH) else ""
+
 DOCUMENT_CONTAINER_NAME = os.environ["DOCUMENT_CONTAINER_NAME"] if environ.get("DOCUMENT_CONTAINER_NAME") else "onlyoffice-document-server"
 DOCUMENT_SERVER_JWT_SECRET = os.environ["DOCUMENT_SERVER_JWT_SECRET"] if environ.get("DOCUMENT_SERVER_JWT_SECRET") else "your_jwt_secret"
 DOCUMENT_SERVER_JWT_HEADER = os.environ["DOCUMENT_SERVER_JWT_HEADER"] if environ.get("DOCUMENT_SERVER_JWT_HEADER") else "AuthorizationJwt"
@@ -47,14 +50,13 @@ DOCUMENT_SERVER_URL_EXTERNAL = os.environ["DOCUMENT_SERVER_URL_EXTERNAL"] if env
 DOCUMENT_SERVER_URL_PUBLIC = DOCUMENT_SERVER_URL_EXTERNAL if DOCUMENT_SERVER_URL_EXTERNAL else os.environ["DOCUMENT_SERVER_URL_PUBLIC"] if environ.get("DOCUMENT_SERVER_URL_PUBLIC") else "/ds-vpath/"
 DOCUMENT_SERVER_CONNECTION_HOST = DOCUMENT_SERVER_URL_EXTERNAL if DOCUMENT_SERVER_URL_EXTERNAL else DOCUMENT_SERVER_URL_INTERNAL
 
-ELK_CONTAINER_NAME = os.environ["ELK_CONTAINER_NAME"] if environ.get("ELK_CONTAINER_NAME") else "onlyoffice-elasticsearch"
+ELK_CONTAINER_NAME = os.environ["ELK_CONTAINER_NAME"] if environ.get("ELK_CONTAINER_NAME") else "onlyoffice-opensearch"
 ELK_SHEME = os.environ["ELK_SHEME"] if environ.get("ELK_SHEME") else "http"
 ELK_HOST = os.environ["ELK_HOST"] if environ.get("ELK_HOST") else None
 ELK_PORT = os.environ["ELK_PORT"] if environ.get("ELK_PORT") else "9200"
 ELK_THREADS = os.environ["ELK_THREADS"] if environ.get("ELK_THREADS") else "1"
 ELK_CONNECTION_HOST = ELK_HOST if ELK_HOST else ELK_CONTAINER_NAME
 
-KAFKA_HOST = os.environ["KAFKA_HOST"] if environ.get("KAFKA_HOST") else "kafka:9092"
 RUN_FILE = sys.argv[1] if (len(sys.argv) > 1) else "none"
 LOG_FILE = sys.argv[2] if (len(sys.argv) > 2) else "none"
 CORE_EVENT_BUS = sys.argv[3] if (len(sys.argv) > 3) else ""
@@ -81,7 +83,7 @@ class RunServices:
         self.PATH_TO_CONF = PATH_TO_CONF
     @dispatch(str)    
     def RunService(self, RUN_FILE):
-        os.system("node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
+        os.system(CERTIFICATE_PARAM + "node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
              " --app.appsettings=" + self.PATH_TO_CONF)
         return 1
         
@@ -89,7 +91,7 @@ class RunServices:
     def RunService(self, RUN_FILE, ENV_EXTENSION):
         if ENV_EXTENSION == "none":
             self.RunService(RUN_FILE)
-        os.system("node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
+        os.system(CERTIFICATE_PARAM + "node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
              " --app.appsettings=" + self.PATH_TO_CONF +\
                 " --app.environment=" + ENV_EXTENSION)
         return 1
@@ -219,11 +221,6 @@ jsonData["elastic"]["Scheme"] = ELK_SHEME
 jsonData["elastic"]["Host"] = ELK_CONNECTION_HOST
 jsonData["elastic"]["Port"] = ELK_PORT
 jsonData["elastic"]["Threads"] = ELK_THREADS
-writeJsonFile(filePath, jsonData)
-
-filePath = "/app/onlyoffice/config/kafka.json"
-jsonData = openJsonFile(filePath)
-jsonData.update({"kafka": {"BootstrapServers": KAFKA_HOST}})
 writeJsonFile(filePath, jsonData)
 
 filePath = "/app/onlyoffice/config/socket.json"

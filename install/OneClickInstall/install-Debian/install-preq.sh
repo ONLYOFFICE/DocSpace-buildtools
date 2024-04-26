@@ -31,26 +31,24 @@ fi
 
 locale-gen en_US.UTF-8
 
-# add elasticsearch repo
-ELASTIC_VERSION="7.16.3"
-ELASTIC_DIST=$(echo $ELASTIC_VERSION | awk '{ print int($1) }')
-curl -fsSL https://artifacts.elastic.co/GPG-KEY-elasticsearch | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/elastic-${ELASTIC_DIST}.x.gpg --import
-echo "deb [signed-by=/usr/share/keyrings/elastic-${ELASTIC_DIST}.x.gpg] https://artifacts.elastic.co/packages/${ELASTIC_DIST}.x/apt stable main" | tee /etc/apt/sources.list.d/elastic-${ELASTIC_DIST}.x.list
-chmod 644 /usr/share/keyrings/elastic-${ELASTIC_DIST}.x.gpg
+# add opensearch repo
+curl -o- https://artifacts.opensearch.org/publickeys/opensearch.pgp | gpg --dearmor --batch --yes -o /usr/share/keyrings/opensearch-keyring
+echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch/2.x/apt stable main" >> /etc/apt/sources.list.d/opensearch-2.x.list
+ELASTIC_VERSION="2.11.1"
+
+#add opensearch dashboards repo
+if [ ${INSTALL_FLUENT_BIT} == "true" ]; then
+	curl -o- https://artifacts.opensearch.org/publickeys/opensearch.pgp | gpg --dearmor --batch --yes -o /usr/share/keyrings/opensearch-keyring
+	echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/2.x/apt stable main" >> /etc/apt/sources.list.d/opensearch-dashboards-2.x.list
+	DASHBOARDS_VERSION="2.11.1"
+fi
 
 # add nodejs repo
-[[ "$DISTRIB_CODENAME" =~ ^(bionic|stretch)$ ]] && NODE_VERSION="16" || NODE_VERSION="18"
+NODE_VERSION="18"
 curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
 
 #add dotnet repo
-if [ "$DIST" = "debian" ] && [ "$DISTRIB_CODENAME" = "stretch" ]; then
-	curl https://packages.microsoft.com/config/$DIST/10/packages-microsoft-prod.deb -O
-elif [ "$DISTRIB_CODENAME" = "bookworm" ]; then
-	#Temporary fix for missing dotnet repository for debian bookworm
-	curl https://packages.microsoft.com/config/$DIST/11/packages-microsoft-prod.deb -O
-else
-	curl https://packages.microsoft.com/config/$DIST/$REV/packages-microsoft-prod.deb -O
-fi
+curl https://packages.microsoft.com/config/$DIST/$REV/packages-microsoft-prod.deb -O
 echo -e "Package: *\nPin: origin \"packages.microsoft.com\"\nPin-Priority: 1002" | tee /etc/apt/preferences.d/99microsoft-prod.pref
 dpkg -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
 
@@ -71,9 +69,6 @@ if ! dpkg -l | grep -q "mysql-server"; then
 	DEBIAN_FRONTEND=noninteractive dpkg -i ${MYSQL_PACKAGE_NAME}
 	rm -f ${MYSQL_PACKAGE_NAME}
 
-	#Temporary fix for missing mysql repository for debian bookworm
-	[ "$DISTRIB_CODENAME" = "bookworm" ] && sed -i "s/$DIST/ubuntu/g; s/$DISTRIB_CODENAME/jammy/g" /etc/apt/sources.list.d/mysql.list
-
 	echo mysql-community-server mysql-community-server/root-pass password ${MYSQL_SERVER_PASS} | debconf-set-selections
 	echo mysql-community-server mysql-community-server/re-root-pass password ${MYSQL_SERVER_PASS} | debconf-set-selections
 	echo mysql-community-server mysql-server/default-auth-override select "Use Strong Password Encryption (RECOMMENDED)" | debconf-set-selections
@@ -86,8 +81,12 @@ elif dpkg -l | grep -q "mysql-apt-config" && [ "$(apt-cache policy mysql-apt-con
 	rm -f ${MYSQL_PACKAGE_NAME}
 fi
 
-if [ "$DIST" = "debian" ] && [ "$DISTRIB_CODENAME" = "stretch" ]; then
-	apt-get install -yq mysql-server mysql-client --allow-unauthenticated
+if ! grep -q "mysql-innovation" /etc/apt/sources.list.d/mysql.list; then
+	echo "deb [signed-by=/usr/share/keyrings/mysql-apt-config.gpg] http://repo.mysql.com/apt/${DIST} ${DISTRIB_CODENAME} mysql-innovation" | sudo tee -a /etc/apt/sources.list.d/mysql.list
+
+	if apt-get -y update 2>&1 | grep -q "^W: .*mysql-innovation"; then
+		sudo sed -i '/mysql-innovation/d' /etc/apt/sources.list.d/mysql.list
+	fi
 fi
 
 # add redis repo
@@ -101,15 +100,13 @@ fi
 curl -s http://nginx.org/keys/nginx_signing.key | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/nginx.gpg --import
 echo "deb [signed-by=/usr/share/keyrings/nginx.gpg] http://nginx.org/packages/$DIST/ $DISTRIB_CODENAME nginx" | tee /etc/apt/sources.list.d/nginx.list
 chmod 644 /usr/share/keyrings/nginx.gpg
-#Temporary fix for missing nginx repository for debian bookworm
+#f for missing nginx repository for debian bookworm
 [ "$DISTRIB_CODENAME" = "bookworm" ] && sed -i "s/$DISTRIB_CODENAME/buster/g" /etc/apt/sources.list.d/nginx.list
 
 #add openresty repo
 curl -fsSL https://openresty.org/package/pubkey.gpg | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/openresty.gpg --import
 echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/$DIST $DISTRIB_CODENAME $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
 chmod 644 /usr/share/keyrings/openresty.gpg
-#Temporary fix for missing openresty repository for debian bookworm
-[ "$DISTRIB_CODENAME" = "bookworm" ] && sed -i "s/$DISTRIB_CODENAME/bullseye/g" /etc/apt/sources.list.d/openresty.list
 
 # setup msttcorefonts
 echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
@@ -122,7 +119,7 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 				nodejs \
 				gcc \
 				make \
-				dotnet-sdk-7.0 \
+				dotnet-sdk-8.0 \
 				mysql-server \
 				mysql-client \
 				postgresql \
@@ -130,8 +127,13 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 				rabbitmq-server \
 				ffmpeg 
 
-if ! dpkg -l | grep -q "elasticsearch"; then
-	apt-get install -yq elasticsearch=${ELASTIC_VERSION}
+if ! dpkg -l | grep -q "opensearch"; then
+	apt-get install -yq opensearch=${ELASTIC_VERSION}
+fi
+
+if [ ${INSTALL_FLUENT_BIT} == "true" ]; then
+	apt-get install -yq opensearch-dashboards=${DASHBOARDS_VERSION}
+	curl https://raw.githubusercontent.com/fluent/fluent-bit/master/install.sh | sh
 fi
 
 # disable apparmor for mysql

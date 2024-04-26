@@ -14,6 +14,7 @@ RES_CHECK_PORTS="please, make sure that the ports are free.";
 RES_INSTALL_SUCCESS="Thank you for installing ONLYOFFICE ${product_name}.";
 RES_QUESTIONS="In case you have any questions contact us via http://support.onlyoffice.com or visit our forum at http://forum.onlyoffice.com"
 RES_MARIADB="To continue the installation, you need to remove MariaDB"
+INSTALL_FLUENT_BIT="true"
 
 res_unsupported_version () {
 	RES_CHOICE="Please, enter Y or N"
@@ -62,6 +63,27 @@ while [ "$1" != "" ]; do
 			fi
 		;;
 		
+		-ifb | --installfluentbit )
+			if [ "$2" != "" ]; then
+				INSTALL_FLUENT_BIT=$2
+				shift
+			fi
+		;;
+
+		-du | --dashboadrsusername )
+			if [ "$2" != "" ]; then
+				DASHBOARDS_USERNAME=$2
+				shift
+			fi
+		;;
+
+		-dp | --dashboadrspassword )
+			if [ "$2" != "" ]; then
+				DASHBOARDS_PASSWORD=$2
+				shift
+			fi
+		;;
+
 		-ls | --localscripts )
 			if [ "$2" != "" ]; then
 				LOCAL_SCRIPTS=$2
@@ -98,6 +120,9 @@ while [ "$1" != "" ]; do
 			echo "      -je, --jwtenabled                 specifies the enabling the JWT validation (true|false)"
 			echo "      -jh, --jwtheader                  defines the http header that will be used to send the JWT"
 			echo "      -js, --jwtsecret                  defines the secret key to validate the JWT in the request"
+			echo "      -ifb, --installfluentbit          install or update fluent-bit (true|false)"
+			echo "      -du, --dashboadrsusername         login for authorization in /dashboards/"
+			echo "      -dp, --dashboadrspassword         password for authorization in /dashboards/"
 			echo "      -ls, --local_scripts              use 'true' to run local scripts (true|false)"
 			echo "      -skiphc, --skiphardwarecheck      use to skip hardware check (true|false)"
 			echo "      -ms, --makeswap                   make swap file (true|false)"

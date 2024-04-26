@@ -90,6 +90,15 @@
         "public": true
       },
       {
+        "name": "static_partnerdata",
+        "data": "00000000-0000-0000-0000-000000000000",
+        "type": "disc",
+        "path": "$STORAGE_ROOT\\Studio\\partnerdata",
+        "virtualpath": "~/studio/partnerdata",
+        "appendTenantId": false,
+        "public": true
+      },
+      {
         "name": "backup",
         "visible": false,
         "type": "disc",
@@ -103,6 +112,22 @@
         "visible": false,
         "type": "disc",
         "path": "$STORAGE_ROOT\\Studio\\{0}\\temp\\backup",
+        "expires": "0:10:0",
+		"disableEncryption": true
+      },
+	  {
+        "name": "migration",
+        "visible": false,
+        "type": "disc",
+        "path": "$STORAGE_ROOT\\Studio\\{0}\\migration",
+        "expires": "0:10:0",
+		"disableEncryption": true
+      },
+	  {
+        "name": "migration_log",
+        "visible": false,
+        "type": "disc",
+        "path": "$STORAGE_ROOT\\Studio\\{0}\\log\\migration",
         "expires": "0:10:0",
 		"disableEncryption": true
       },

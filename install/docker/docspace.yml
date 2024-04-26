@@ -1,4 +1,3 @@
-version: "3.8"
 x-healthcheck:
   &x-healthcheck
   test: curl --fail http://127.0.0.1 || exit 1
@@ -33,7 +32,6 @@ x-service: &x-service-base
     DOCUMENT_SERVER_URL_PUBLIC: ${DOCUMENT_SERVER_URL_PUBLIC}
     DOCUMENT_CONTAINER_NAME: ${DOCUMENT_CONTAINER_NAME}
     DOCUMENT_SERVER_URL_EXTERNAL: ${DOCUMENT_SERVER_URL_EXTERNAL}
-    KAFKA_HOST: ${KAFKA_HOST}
     ELK_CONTAINER_NAME: ${ELK_CONTAINER_NAME}
     ELK_SHEME: ${ELK_SHEME}
     ELK_HOST: ${ELK_HOST}
@@ -52,6 +50,7 @@ x-service: &x-service-base
     ROUTER_HOST: ${ROUTER_HOST}
     LOG_LEVEL: ${LOG_LEVEL}
     DEBUG_INFO: ${DEBUG_INFO}
+    CERTIFICATE_PATH: ${CERTIFICATE_PATH}
   volumes:
     #- /app/onlyoffice/CommunityServer/data:/app/onlyoffice/data
     - app_data:/app/onlyoffice/data
@@ -224,6 +223,9 @@ services:
       - REDIS_PORT=${REDIS_PORT}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - SERVICE_PORT=${SERVICE_PORT}
+      - DASHBOARDS_CONTAINER_NAME=${DASHBOARDS_CONTAINER_NAME}
+      - DASHBOARDS_USERNAME=${DASHBOARDS_USERNAME}
+      - DASHBOARDS_PASSWORD=${DASHBOARDS_PASSWORD}
     volumes:
       - router_log:/var/log/nginx
 

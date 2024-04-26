@@ -76,6 +76,7 @@
 %defattr(-, onlyoffice, onlyoffice, -)
 %config %{_sysconfdir}/openresty/includes/*
 %config %{_sysconfdir}/openresty/conf.d/*
+%config %{_sysconfdir}/openresty/html/*
 %attr(744, root, root) %{_bindir}/%{product}-ssl-setup
 %config %{_sysconfdir}/onlyoffice/%{product}/openresty/nginx.conf.template
 %dir %{_sysconfdir}/onlyoffice/
@@ -83,6 +84,7 @@
 %dir %{_sysconfdir}/onlyoffice/%{product}/openresty/
 %{buildpath}/public/
 %{buildpath}/client/
+%{buildpath}/management/
 
 %files studio-notify
 %defattr(-, onlyoffice, onlyoffice, -)

@@ -4,11 +4,11 @@ set -e
 
 make_swap () {
 	DISK_REQUIREMENTS=6144; #6Gb free space
-	MEMORY_REQUIREMENTS=11000; #RAM ~12Gb
+	MEMORY_REQUIREMENTS=12000; #RAM ~12Gb
 	SWAPFILE="/${PRODUCT}_swapfile";
 
 	AVAILABLE_DISK_SPACE=$(df -m /  | tail -1 | awk '{ print $4 }');
-	TOTAL_MEMORY=$(free -m | grep -oP '\d+' | head -n 1);
+	TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1);
 	EXIST=$(swapon -s | awk '{ print $1 }' | { grep -x ${SWAPFILE} || true; });
 
 	if [[ -z $EXIST ]] && [ ${TOTAL_MEMORY} -lt ${MEMORY_REQUIREMENTS} ] && [ ${AVAILABLE_DISK_SPACE} -gt ${DISK_REQUIREMENTS} ]; then
@@ -24,9 +24,21 @@ command_exists () {
 	type "$1" &> /dev/null;
 }
 
+# Function to prevent package auto-update
+hold_package_version() {
+    for package in "$@"; do
+        if command -v apt-mark >/dev/null 2>&1 && 
+            dpkg -s "$package" >/dev/null 2>&1 && 
+            ! apt-mark showhold | grep -q "$package" >/dev/null 2>&1
+        then
+            apt-mark hold "$package"
+        fi
+    done
+}
+
 check_hardware () {
     DISK_REQUIREMENTS=40960;
-    MEMORY_REQUIREMENTS=8192;
+    MEMORY_REQUIREMENTS=8000;
     CORE_REQUIREMENTS=4;
 
 	AVAILABLE_DISK_SPACE=$(df -m /  | tail -1 | awk '{ print $4 }');
@@ -36,7 +48,7 @@ check_hardware () {
 		exit 1;
 	fi
 
-	TOTAL_MEMORY=$(free -m | grep -oP '\d+' | head -n 1);
+	TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1);
 
 	if [ ${TOTAL_MEMORY} -lt ${MEMORY_REQUIREMENTS} ]; then
 		echo "Minimal requirements are not met: need at least $MEMORY_REQUIREMENTS MB of RAM"
@@ -80,3 +92,10 @@ fi
 
 DIST=`echo "$DIST" | tr '[:upper:]' '[:lower:]' | xargs`;
 DISTRIB_CODENAME=`echo "$DISTRIB_CODENAME" | tr '[:upper:]' '[:lower:]' | xargs`;
+
+# Check if it's Ubuntu less than 20 or Debian less than 11
+if [[ ( "${DIST}" == "ubuntu" && "${REV%.*}" -lt 20 ) || ( "${DIST}" == "debian" && "${REV%.*}" -lt 11 ) ]]; then
+    echo "Your ${DIST} ${REV} operating system has reached the end of its service life."
+    echo "Please consider upgrading your operating system or using a Docker installation."
+    exit 1
+fi

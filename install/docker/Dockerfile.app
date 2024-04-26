@@ -1,7 +1,7 @@
 ARG SRC_PATH="/app/onlyoffice/src"
 ARG BUILD_PATH="/var/www"
-ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:7.0"
-ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:7.0"
+ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:8.0"
+ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:8.0"
 
 FROM $DOTNET_SDK AS base
 ARG RELEASE_DATE="2016-06-22"
@@ -39,10 +39,11 @@ RUN apt-get -y update && \
     apt-get install -y nodejs && \
     rm -rf /var/lib/apt/lists/*
 
-#ADD https://api.github.com/repos/ONLYOFFICE/DocSpace/git/refs/heads/${GIT_BRANCH} version.json
+ADD https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/git/refs/heads/${GIT_BRANCH} version.json
 RUN git clone -b ${GIT_BRANCH} https://github.com/ONLYOFFICE/DocSpace-buildtools.git ${SRC_PATH}/buildtools && \
     git clone --recurse-submodules -b ${GIT_BRANCH} https://github.com/ONLYOFFICE/DocSpace-Server.git ${SRC_PATH}/server && \
-    git clone -b ${GIT_BRANCH} https://github.com/ONLYOFFICE/DocSpace-Client.git ${SRC_PATH}/client
+    git clone -b ${GIT_BRANCH} https://github.com/ONLYOFFICE/DocSpace-Client.git ${SRC_PATH}/client && \
+    git clone -b "master" --depth 1 https://github.com/ONLYOFFICE/ASC.Web.Campaigns.git ${SRC_PATH}/campaigns
 
 RUN cd ${SRC_PATH} && \
     mkdir -p /app/onlyoffice/config/ && \
@@ -90,7 +91,7 @@ RUN mkdir -p /var/log/onlyoffice && \
         vim \
         python3-pip \
         libgdiplus && \
-    pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces && \
+    pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
@@ -119,7 +120,7 @@ RUN mkdir -p /var/log/onlyoffice && \
         curl \
         vim \
         python3-pip && \
-        pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces --break-system-packages && \
+        pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
@@ -148,9 +149,12 @@ COPY --from=base /etc/nginx/conf.d /etc/nginx/conf.d
 COPY --from=base /etc/nginx/includes /etc/nginx/includes
 COPY --from=base ${SRC_PATH}/publish/web/client ${BUILD_PATH}/client
 COPY --from=base ${SRC_PATH}/publish/web/public ${BUILD_PATH}/public
+COPY --from=base ${SRC_PATH}/campaigns/src/campaigns ${BUILD_PATH}/public/campaigns
+COPY --from=base ${SRC_PATH}/publish/web/management ${BUILD_PATH}/management
 COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/docker-entrypoint.d /docker-entrypoint.d
 COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
 COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/nginx.conf.template /etc/nginx/nginx.conf.template
+COPY --from=base ${SRC_PATH}/buildtools/config/nginx/html /etc/nginx/html
 COPY --from=base ${SRC_PATH}/buildtools/install/docker/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
 COPY --from=base ${SRC_PATH}/buildtools/install/docker/config/nginx/docker-entrypoint.sh /docker-entrypoint.sh
 
@@ -166,7 +170,10 @@ RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.
     sed -i 's/127.0.0.1:9834/$service_sso/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5013/$service_doceditor/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5011/$service_login/' /etc/nginx/conf.d/onlyoffice.conf && \
+    if [[ -z "${SERVICE_CLIENT}" ]] ; then sed -i 's/127.0.0.1:5001/$service_client/' /etc/nginx/conf.d/onlyoffice.conf; fi && \
+    if [[ -z "${SERVICE_MANAGEMENT}" ]] ; then sed -i 's/127.0.0.1:5015/$service_management/' /etc/nginx/conf.d/onlyoffice.conf; fi && \
     sed -i 's/127.0.0.1:5033/$service_healthchecks/' /etc/nginx/conf.d/onlyoffice.conf && \
+    sed -i 's/127.0.0.1:5601/$dashboards_host:5601/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/$public_root/\/var\/www\/public\//' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/http:\/\/172.*/$document_server;/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i '/client_body_temp_path/ i \ \ \ \ $MAP_HASH_BUCKET_SIZE' /etc/nginx/nginx.conf.template && \
@@ -244,6 +251,13 @@ CMD ["ASC.Files.dll", "ASC.Files"]
 FROM dotnetrun AS files_services
 ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
 WORKDIR ${BUILD_PATH}/products/ASC.Files/service/
+
+RUN  echo "deb http://security.ubuntu.com/ubuntu focal-security main" | tee /etc/apt/sources.list && \
+     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3B4FE6ACC0B21F32 && \
+     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 871920D1991BC93C && \
+     apt-get -y update && \
+     apt-get install -yq libssl1.1 && \
+     rm -rf /var/lib/apt/lists/*
 
 COPY --chown=onlyoffice:onlyoffice docker-entrypoint.py ./docker-entrypoint.py
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Files.Service/service/ .

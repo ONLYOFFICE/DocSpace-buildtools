@@ -64,6 +64,8 @@ jobs:
           export DOCKER_TAG
           docker buildx bake -f build.yml \
           --set *.args.GIT_BRANCH=${{ matrix.branch }} \
+          --set *.args.PRODUCT_VERSION=${PRODUCT_VERSION} \
+          --set *.args.BUILD_NUMBER=${BUILD_NUMBER} \
           --set *.platform=linux/amd64 \
           --set *.args.PRODUCT_VERSION=${PRODUCT_VERSION} \
           --set *.args.BUILD_NUMBER=${{github.run_number}} \

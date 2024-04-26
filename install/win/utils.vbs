@@ -118,6 +118,13 @@ Function SetDocumentServerJWTSecretProp
 
 End Function
 
+Function SetDashboardsPwd
+    On Error Resume Next
+
+    Session.Property("DASHBOARDS_PWD") = RandomString( 20 )
+
+End Function
+
 Function SetMACHINEKEY
     On Error Resume Next
 
@@ -242,11 +249,11 @@ Function WriteToLog(ByVal var)
 
 End Function
 
-Function ElasticSearchSetup
+Function OpenSearchSetup
     On Error Resume Next
     
     Dim ShellCommand
-    Dim APP_INDEX_DIR
+    Dim APP_INDEX_DIR, OPENSEARCH_DASHBOARDS_YML
     
     Const ForReading = 1
     Const ForWriting = 2
@@ -254,16 +261,18 @@ Function ElasticSearchSetup
     Set Shell = CreateObject("WScript.Shell")
     Set objFSO = CreateObject("Scripting.FileSystemObject")
 
-    APP_INDEX_DIR = Session.Property("APPDIR") & "Data\Index\v7.16.3\"
+    APP_INDEX_DIR = Session.Property("APPDIR") & "Data\Index\v2.11.1\"
+
+    OPENSEARCH_DASHBOARDS_YML = "C:\OpenSearchStack\opensearch-dashboards-2.11.1\config\opensearch_dashboards.yml"
    
     If Not fso.FolderExists(APP_INDEX_DIR) Then
-        Session.Property("NEED_REINDEX_ELASTICSEARCH") = "TRUE"
+        Session.Property("NEED_REINDEX_OPENSEARCH") = "TRUE"
     End If
     
-    Call Shell.Run("%COMSPEC% /c mkdir """ & Session.Property("APPDIR") & "Data\Index\v7.16.3\""",0,true)
+    Call Shell.Run("%COMSPEC% /c mkdir """ & Session.Property("APPDIR") & "Data\Index\v2.11.1\""",0,true)
     Call Shell.Run("%COMSPEC% /c mkdir """ & Session.Property("APPDIR") & "Logs\""",0,true)
     
-    Set objFile = objFSO.OpenTextFile(Session.Property("CommonAppDataFolder") & "Elastic\Elasticsearch\config\elasticsearch.yml", ForReading)
+    Set objFile = objFSO.OpenTextFile("C:\OpenSearch\config\opensearch.yml", ForReading)
 
     fileContent = objFile.ReadAll
 
@@ -285,7 +294,7 @@ Function ElasticSearchSetup
        oRE.Pattern = "indices.memory.index_buffer_size:.*"
        fileContent = oRE.Replace(fileContent, "indices.memory.index_buffer_size: 30%")                           
     End if
-        
+
     If InStrRev(fileContent, "http.max_content_length") <> 0 Then    
        oRE.Pattern = "http.max_content_length:.*"
        fileContent = oRE.Replace(fileContent, " ")                           
@@ -311,29 +320,29 @@ Function ElasticSearchSetup
        fileContent = oRE.Replace(fileContent, " ")                           
     End if
 
-    oRE.Pattern = "path.data:.*"
-    fileContent = oRE.Replace(fileContent, "path.data: " & Session.Property("APPDIR") & "Data\Index\v7.16.3\")
+    oRE.Pattern = "#path.data:.*"
+    fileContent = oRE.Replace(fileContent, "path.data: " & Session.Property("APPDIR") & "Data\Index\v2.11.1\")
 
-    oRE.Pattern = "path.logs:.*"
+    oRE.Pattern = "#path.logs:.*"
     fileContent = oRE.Replace(fileContent, "path.logs: " & Session.Property("APPDIR") & "Logs\")                           
     
-    If InStrRev(fileContent, "ingest.geoip.downloader.enabled") = 0 Then
-        fileContent = fileContent & Chr(13) & Chr(10) & "ingest.geoip.downloader.enabled: false"
+    If InStrRev(fileContent, "plugins.security.disabled") = 0 Then
+        fileContent = fileContent & Chr(13) & Chr(10) & "plugins.security.disabled: true"
     Else
-        oRE.Pattern = "ingest.geoip.downloader.enabled.*"
-        fileContent = oRE.Replace(fileContent, "ingest.geoip.downloader.enabled: false")
+        oRE.Pattern = "plugins.security.disabled:.*"
+        fileContent = oRE.Replace(fileContent, "plugins.security.disabled: true")
     End if
 
-    Call WriteToLog("ElasticSearchSetup: New config:" & fileContent)    
-    Call WriteToLog("ElasticSearchSetup:  CommonAppDataFolder :" & Session.Property("CommonAppDataFolder") & "Elastic\Elasticsearch\data")
+    Call WriteToLog("OpenSearchSetup: New config:" & fileContent)
+    Call WriteToLog("OpenSearchSetup:  CommonAppDataFolder :" & "C:\OpenSearch\data")
         
-    Set objFile = objFSO.OpenTextFile(Session.Property("CommonAppDataFolder") & "Elastic\Elasticsearch\config\elasticsearch.yml", ForWriting)
+    Set objFile = objFSO.OpenTextFile("C:\OpenSearch\config\opensearch.yml", ForWriting)
 
     objFile.WriteLine fileContent
 
     objFile.Close
 
-    Set objFile = objFSO.OpenTextFile(Session.Property("CommonAppDataFolder") & "Elastic\Elasticsearch\config\jvm.options", ForReading)
+    Set objFile = objFSO.OpenTextFile("C:\OpenSearch\config\jvm.options", ForReading)
 
     fileContent = objFile.ReadAll
 
@@ -365,25 +374,66 @@ Function ElasticSearchSetup
         fileContent = oRE.Replace(fileContent, "-Dlog4j2.formatMsgNoLookups=true")
     End if
 
-    Set objFile = objFSO.OpenTextFile(Session.Property("CommonAppDataFolder") & "Elastic\Elasticsearch\config\jvm.options", ForWriting)
+    Set objFile = objFSO.OpenTextFile("C:\OpenSearch\config\jvm.options", ForWriting)
 
     objFile.WriteLine fileContent
 
     objFile.Close
-    
+
+    If objFSO.FileExists(OPENSEARCH_DASHBOARDS_YML) Then
+        Set objFile = objFSO.OpenTextFile(OPENSEARCH_DASHBOARDS_YML, ForWriting)
+        objFile.WriteLine ""
+        objFile.Close
+    Else
+        WScript.Echo "File doesn't exist: " & OPENSEARCH_DASHBOARDS_YML
+    End If
+
+    Set objFile = objFSO.OpenTextFile(OPENSEARCH_DASHBOARDS_YML, ForReading)
+
+    fileContent = objFile.ReadAll
+
+    objFile.Close
+
+    If InStrRev(fileContent, "opensearch.hosts") = 0 Then
+        fileContent = fileContent & Chr(13) & Chr(10) & "opensearch.hosts: [http://localhost:9200]"
+    Else
+        oRE.Pattern = "opensearch.hosts:.*"
+        fileContent = oRE.Replace(fileContent, "opensearch.hosts: [http://localhost:9200]")
+    End if
+
+    If InStrRev(fileContent, "server.host") = 0 Then
+        fileContent = fileContent & Chr(13) & Chr(10) & "server.host: 127.0.0.1"
+    Else
+        oRE.Pattern = "server.host:.*"
+        fileContent = oRE.Replace(fileContent, "server.host: 127.0.0.1")
+    End if
+
+    If InStrRev(fileContent, "server.basePath") = 0 Then
+        fileContent = fileContent & Chr(13) & Chr(10) & "server.basePath: /dashboards"
+    Else
+        oRE.Pattern = "server.basePath:.*"
+        fileContent = oRE.Replace(fileContent, "server.basePath: /dashboards")
+    End if
+
+    Set objFile = objFSO.OpenTextFile(OPENSEARCH_DASHBOARDS_YML, ForWriting)
+
+    objFile.WriteLine fileContent
+
+    objFile.Close
+
     Set Shell = Nothing
     
 End Function
 
-Function ElasticSearchInstallPlugin
+Function OpenSearchInstallPlugin
     On Error Resume Next
 
     Dim Shell
 
     Set Shell = CreateObject("WScript.Shell")
 
-    ShellInstallCommand = """C:\Program Files\Elastic\Elasticsearch\7.16.3\bin\elasticsearch-plugin""" & " install -b -s ingest-attachment"""
-    ShellRemoveCommand = """C:\Program Files\Elastic\Elasticsearch\7.16.3\bin\elasticsearch-plugin""" & " remove -s ingest-attachment"""
+    ShellInstallCommand = """C:\OpenSearch\bin\opensearch-plugin""" & " install -b -s ingest-attachment"""
+    ShellRemoveCommand = """C:\OpenSearch\bin\opensearch-plugin""" & " remove -s ingest-attachment"""
      
     Call Shell.Run("cmd /C " & """" & ShellRemoveCommand  & """",0,true)
     Call Shell.Run("cmd /C " & """" & ShellInstallCommand  & """",0,true)
@@ -475,10 +525,40 @@ Function OpenRestySetup
 
 End Function
 
-Function MoveNginxConfigs
+Function OpenSearchStackSetup
     On Error Resume Next
 
-    Dim objFSO, objShell, sourceFolder, targetFolder, nginxFolder, configFile, configSslFile, sslScriptPath, sslCertPath, sslCertKeyPath, psCommand
+    Dim ToolsFolder, OpenSearchDashboardsDir, OpenSearchDashboardsService, OpenSearchDashboardsPlugin, RemoveOSDSecurity, FluentBitDir, FluentBitService
+
+    Set objShell = CreateObject("WScript.Shell")
+
+    ToolsFolder = Session.Property("APPDIR") & "tools\"
+    OpenSearchDashboardsDir = Session.Property("APPDIR") & "opensearch-dashboards-2.11.1\"
+    OpenSearchDashboardsService = OpenSearchDashboardsDir & "winsw\OpenSearchDashboards.exe"
+    OpenSearchDashboardsPlugin = OpenSearchDashboardsDir & "bin\opensearch-dashboards-plugin.bat"
+    FluentBitDir = Session.Property("APPDIR") & "fluent-bit-2.2.2-win64\"
+
+    FluentBitService = "sc.exe create Fluent-Bit binpath= """ & "\""" & FluentBitDir & "bin\fluent-bit.exe\"" -c \""" & FluentBitDir & "conf\fluent-bit.conf\""""" & " start=delayed-auto"
+    Call objShell.Run("cmd /C " & """" & FluentBitService  & """",0,true)
+
+    RemoveOSDSecurity = """" & OpenSearchDashboardsPlugin & """ remove securityDashboards"
+    Call objShell.Run("cmd /C " & """" & RemoveOSDSecurity  & """",0,true)
+
+    objShell.Run "xcopy """ & ToolsFolder & "\OpenSearchDashboards*"" """ & OpenSearchDashboardsDir & "winsw\"" /E /I /Y", 0, True
+
+    objShell.Run """" & OpenSearchDashboardsService & """ install", 0, True
+    objShell.Run """" & OpenSearchDashboardsService & """ start", 0, True
+
+    objShell.Run "cmd /c RMDIR /S /Q """ & ToolsFolder & """", 0, True
+
+    Set objShell = Nothing
+
+End Function
+
+Function MoveConfigs
+    On Error Resume Next
+
+    Dim objFSO, objShell, sourceFolder, targetFolder, nginxFolder, configFile, configSslFile, sslScriptPath, sslCertPath, sslCertKeyPath, psCommand, FluentBitSourceFile, FluentBitDstFolder
 
     ' Define source and target paths
     Set objFSO = CreateObject("Scripting.FileSystemObject")
@@ -489,6 +569,8 @@ Function MoveNginxConfigs
     configSslFile = targetFolder & "\onlyoffice-proxy-ssl.conf.tmpl"
     configFile = targetFolder & "\onlyoffice-proxy.conf"
     sslScriptPath = Session.Property("APPDIR") & "sbin\docspace-ssl-setup.ps1"
+    FluentBitSourceFile = Session.Property("APPDIR") & "config\fluent-bit.conf"
+    FluentBitDstFolder = "C:\OpenSearchStack\fluent-bit-2.2.2-win64\conf\"
 
     ' Read content and extract SSL certificate and key paths if it exists
     If objFSO.FileExists(configFile) Then
@@ -523,6 +605,14 @@ Function MoveNginxConfigs
         objShell.Run psCommand, 0, True
     Else
         WScript.Echo "Source file not found."
+    End If
+
+    ' Delete
+    If objFSO.FileExists(FluentBitDstFolder & "fluent-bit.conf") Then
+        objFSO.DeleteFile FluentBitDstFolder & "fluent-bit.conf", True
+        If objFSO.FileExists(FluentBitSourceFile) Then
+            objFSO.MoveFile FluentBitSourceFile, FluentBitDstFolder
+        End If
     End If
 
     Set objFSO = Nothing

@@ -26,6 +26,7 @@ APP_PORT="80"
 ELK_SHEME="http"
 ELK_HOST="localhost"
 ELK_PORT="9200"
+OPENSEARCH_INDEX="${PACKAGE_SYSNAME}-${PRODUCT}-logs"
 
 RABBITMQ_HOST="localhost"
 RABBITMQ_USER="guest"
@@ -179,6 +180,20 @@ while [ "$1" != "" ]; do
 			fi 
 		;;
 
+		-du | --dashboadrsusername )
+			if [ "$2" != "" ]; then
+				DASHBOARDS_USERNAME=$2
+				shift
+			fi
+		;;
+
+		-dp | --dashboadrspassword )
+			if [ "$2" != "" ]; then
+				DASHBOARDS_PASSWORD=$2
+				shift
+			fi
+		;;
+
 		-docsurl | --docsurl )
 			if [ "$2" != "" ]; then
 				DOCUMENT_SERVER_URL_EXTERNAL=$2
@@ -234,9 +249,9 @@ set_core_machinekey () {
 	fi
 
 	save_undefined_param "${USER_CONF}" "core.machinekey" "${CORE_MACHINEKEY}"
-	save_undefined_param "${USER_CONF}" "core['base-domain']" "${APP_HOST}"
+	save_undefined_param "${USER_CONF}" "core['base-domain']" "${APP_HOST}" "rewrite"
 	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core.machinekey" "${CORE_MACHINEKEY}"
-	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core['base-domain']" "${CORE_MACHINEKEY}"
+	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core['base-domain']" "${APP_HOST}" "rewrite"
 
 	sed "s^\(machine_key\)\s*=.*^\1 = ${CORE_MACHINEKEY}^g" -i $APP_DIR/radicale.config
 }
@@ -280,7 +295,7 @@ restart_services() {
 
 	echo -n "Restarting services... "
 	for SVC in login api socket studio-notify notify \
-	people-server files files-services studio backup \
+	people-server files files-services studio backup api-system \
 	clear-events backup-background ssoauth doceditor healthchecks
 	do
 		systemctl enable ${PRODUCT}-$SVC >/dev/null 2>&1
@@ -492,6 +507,14 @@ setup_openresty(){
 	fi
 
 	if [ "$DIST" = "RedHat" ]; then
+		# Remove default nginx settings [error] port 80 is already in use
+		if [ -f /etc/nginx/nginx.conf ]; then
+			if grep -q "server {"  /etc/nginx/nginx.conf ; then
+				sed -e '$a}' -e '/server {/,$d' -i /etc/nginx/nginx.conf
+				systemctl reload nginx
+			fi
+		fi
+		
 		shopt -s nocasematch
 		PORTS=()
 		if command -v getenforce &> /dev/null; then
@@ -601,15 +624,22 @@ setup_enterprise() {
 
 change_elasticsearch_config(){
 
-	systemctl stop elasticsearch
+	systemctl stop opensearch
+	systemctl is-active --quiet elasticsearch && systemctl stop elasticsearch
 
-	local ELASTIC_SEARCH_CONF_PATH="/etc/elasticsearch/elasticsearch.yml"
-	local ELASTIC_SEARCH_JAVA_CONF_PATH="/etc/elasticsearch/jvm.options";
-
-	if /usr/share/elasticsearch/bin/elasticsearch-plugin list | grep -q "ingest-attachment"; then
-		/usr/share/elasticsearch/bin/elasticsearch-plugin remove -s ingest-attachment
+	sed -i '/^plugins\.security/d' /etc/opensearch/opensearch.yml
+	sed -i '/CN=kirk,OU=client,O=client,L=test, C=de/d' /etc/opensearch/opensearch.yml
+  	if /usr/share/opensearch/bin/opensearch-plugin list | grep -x "opensearch-security" > /dev/null 2>&1 ; then
+		/usr/share/opensearch/bin/opensearch-plugin remove opensearch-security > /dev/null 2>&1
 	fi
-		/usr/share/elasticsearch/bin/elasticsearch-plugin install -s -b ingest-attachment	
+
+	local ELASTIC_SEARCH_CONF_PATH="/etc/opensearch/opensearch.yml"
+	local ELASTIC_SEARCH_JAVA_CONF_PATH="/etc/opensearch/jvm.options";
+
+	if /usr/share/opensearch/bin/opensearch-plugin list | grep -q "ingest-attachment"; then
+		/usr/share/opensearch/bin/opensearch-plugin remove -s ingest-attachment
+	fi
+		/usr/share/opensearch/bin/opensearch-plugin install -s -b ingest-attachment	
 
 	if [ -f ${ELASTIC_SEARCH_CONF_PATH}.rpmnew ]; then
 		cp -rf ${ELASTIC_SEARCH_CONF_PATH}.rpmnew ${ELASTIC_SEARCH_CONF_PATH};   
@@ -641,14 +671,8 @@ change_elasticsearch_config(){
 		sed -i "s/Dlog4j2.formatMsgNoLookups.*/Dlog4j2.formatMsgNoLookups=true/" ${ELASTIC_SEARCH_JAVA_CONF_PATH} 
 	fi
 
-	if ! grep -q "ingest.geoip.downloader.enabled" ${ELASTIC_SEARCH_CONF_PATH}; then
-		echo "ingest.geoip.downloader.enabled: false" >> ${ELASTIC_SEARCH_CONF_PATH}
-	else
-		sed -i "s/ingest.geoip.downloader.enabled.*/ingest.geoip.downloader.enabled: false/" ${ELASTIC_SEARCH_CONF_PATH}
-	fi
-
-	local TOTAL_MEMORY=$(free -m | grep -oP '\d+' | head -n 1);
-	local MEMORY_REQUIREMENTS=12228; #RAM ~4*3Gb
+	local TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1);
+	local MEMORY_REQUIREMENTS=12000; #RAM ~12Gb
 
 	if [ ${TOTAL_MEMORY} -gt ${MEMORY_REQUIREMENTS} ]; then
 		ELASTICSEATCH_MEMORY="4g"
@@ -668,13 +692,13 @@ change_elasticsearch_config(){
 		echo "-Xmx${ELASTICSEATCH_MEMORY}" >> "${ELASTIC_SEARCH_JAVA_CONF_PATH}"
 	fi
 
-	if [ -d /etc/elasticsearch/ ]; then 
-		chmod g+ws /etc/elasticsearch/
+	if [ -d /etc/opensearch/ ]; then 
+		chmod g+ws /etc/opensearch/
 	fi
 }
 
 setup_elasticsearch() {
-	echo -n "Configuring elasticsearch... "
+	echo -n "Configuring opensearch... "
 
 	#Save elasticsearch parameters in .json
 	[[ $1 == "EXTERNAL_ELASTIC_SERVER" ]] && local EXTERNAL_ELASTIC_FLAG="rewrite"
@@ -686,9 +710,55 @@ setup_elasticsearch() {
 	if [ $1 == "LOCAL_ELASTIC_SERVER" ]; then
 		change_elasticsearch_config
 	
-		systemctl enable elasticsearch >/dev/null 2>&1
-		systemctl restart elasticsearch
+		systemctl enable opensearch >/dev/null 2>&1
+		systemctl restart opensearch
 	fi
+	echo "OK"
+}
+
+setup_dashboards() {
+	echo -n "Configuring dashboards... "
+
+	DASHBOARDS_CONF_PATH="/etc/opensearch-dashboards/opensearch_dashboards.yml"
+
+	if [[ -n ${DASHBOARDS_PASSWORD} ]]; then
+		echo "${DASHBOARDS_PASSWORD}" > ${APP_DIR}/.private/dashboards-password
+	elif [[ -f ${APP_DIR}/.private/dashboards-password ]]; then
+		DASHBOARDS_PASSWORD=$(cat ${APP_DIR}/.private/dashboards-password);
+	else
+		DASHBOARDS_PASSWORD=$(echo "$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 20)" | tee ${APP_DIR}/.private/dashboards-password)
+	fi
+
+	chmod o-rwx $APP_DIR/.private/dashboards-password
+
+	# configure login&pass for Dashboards, used by Nginx HTTP Basic Authentication
+	echo "${DASHBOARDS_USERNAME:-"onlyoffice"}:$(openssl passwd -6 -stdin <<< "${DASHBOARDS_PASSWORD}")" > /etc/openresty/.htpasswd_dashboards
+	chown nginx:nginx /etc/openresty/.htpasswd_dashboards
+
+	# enable connection with opensearch
+	sed -i 's~\(opensearch\.hosts:\).*~\1 \[http://localhost:9200\]~' ${DASHBOARDS_CONF_PATH}
+	sed -i '/^opensearch\_security/d' ${DASHBOARDS_CONF_PATH}
+	if /usr/share/opensearch-dashboards/bin/opensearch-dashboards-plugin list --allow-root | grep "securityDashboards*" > /dev/null 2>&1 ; then
+		/usr/share/opensearch-dashboards/bin/opensearch-dashboards-plugin remove securityDashboards --allow-root > /dev/null 2>&1
+	fi
+
+	# set basePath variable to get access to Dashboards from a remote host
+	sed 's_.*\(server.basePath:\).*_\1 "/dashboards"_' -i ${DASHBOARDS_CONF_PATH}
+
+	systemctl enable opensearch-dashboards
+	systemctl restart opensearch-dashboards
+	echo "OK"
+}
+
+setup_fluentbit() {
+	echo -n "Configuring fluent-bit... "
+
+	# Replace variables in fluent-bit config file template, force copy to conf directory
+	sed -i "s/OPENSEARCH_HOST/$ELK_HOST/g; s/OPENSEARCH_PORT/$ELK_PORT/g; s/OPENSEARCH_INDEX/$OPENSEARCH_INDEX/g; s/OPENSEARCH_SCHEME/$ELK_SHEME/g" ${APP_DIR}/fluent-bit.conf
+	cp -f ${APP_DIR}/fluent-bit.conf /etc/fluent-bit/fluent-bit.conf
+
+	systemctl enable fluent-bit
+	systemctl restart fluent-bit
 	echo "OK"
 }
 
@@ -804,8 +874,16 @@ fi
 if [[ ! -z $EXTERNAL_ELK_FLAG ]]; then
 	check_connection_external_services "$ELK_HOST" "$ELK_PORT" "Elasticsearch"
 	setup_elasticsearch "EXTERNAL_ELASTIC_SERVER" 
-elif $PACKAGE_MANAGER elasticsearch >/dev/null 2>&1; then
+elif $PACKAGE_MANAGER opensearch >/dev/null 2>&1; then
     setup_elasticsearch "LOCAL_ELASTIC_SERVER"
+fi
+
+if $PACKAGE_MANAGER opensearch-dashboards >/dev/null 2>&1; then
+	setup_dashboards
+fi
+
+if $PACKAGE_MANAGER fluent-bit >/dev/null 2>&1; then
+	setup_fluentbit
 fi
 
 if [[ ! -z $EXTERNAL_REDIS_FLAG ]]; then
@@ -823,3 +901,11 @@ elif $PACKAGE_MANAGER rabbitmq-server >/dev/null 2>&1; then
 fi
 
 restart_services
+
+# Truncate MySQL DB to make opensearch work with updated app. Strictly after restart_services ()
+if $PACKAGE_MANAGER opensearch >/dev/null 2>&1; then
+	ELASTIC_VERSION=$(awk '/build:/{f=1} f&&/version:/{gsub(/"/,"",$2);print $2; exit}' /usr/share/opensearch/manifest.yml 2>/dev/null || echo "2.11.1")
+	[[ ! -f "$APP_DIR/.private/opensearch-version" || $(cat "$APP_DIR/.private/opensearch-version") != *"$ELASTIC_VERSION"* ]] && $MYSQL "$DB_NAME" -e "TRUNCATE webstudio_index";
+	echo "$ELASTIC_VERSION" > $APP_DIR/.private/opensearch-version
+	chmod o-rwx $APP_DIR/.private/opensearch-version
+fi

@@ -8,6 +8,7 @@ LETSENCRYPT="/etc/letsencrypt/live";
 OPENRESTY="/etc/openresty/conf.d"
 DHPARAM_FILE="/etc/ssl/certs/dhparam.pem"
 WEBROOT_PATH="/var/www/${PRODUCT}"
+SYSTEMD_DIR="/usr/lib/systemd/system"
 
 # Check if configuration files are present
 if [ ! -f "${OPENRESTY}/onlyoffice-proxy-ssl.conf.template" -a ! -f "${OPENRESTY}/onlyoffice-proxy.conf.template" ]; then
@@ -23,10 +24,12 @@ help(){
   echo "                  Use comma to register multiple emails, ex:"
   echo "                  u1@example.com,u2@example.com."
   echo "    DOMAIN        Domain name to apply"
+  echo "                  Use comma to register multiple domains, ex:"
+  echo "                  example.com,s1.example.com,s2.example.com."
   echo ""
   echo "Using your own certificates via the -f or --file parameter:"
   echo "  docspace-ssl-setup --file DOMAIN CERTIFICATE PRIVATEKEY"
-  echo "    DOMAIN        Domain name to apply."
+  echo "    DOMAIN        Main domain name to apply."
   echo "    CERTIFICATE   Path to the certificate file for the domain."
   echo "    PRIVATEKEY    Path to the private key file for the certificate."
   echo ""
@@ -56,6 +59,14 @@ case $1 in
     sed "s!\(worker_connections\).*;!\1 $(ulimit -n);!" -i "${OPENRESTY}/onlyoffice-proxy.conf"
     [[ -f "${DIR}/${PRODUCT}-renew-letsencrypt" ]] && rm -rf "${DIR}/${PRODUCT}-renew-letsencrypt"
     [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ] && systemctl reload openresty || service openresty reload
+
+    SYSTEMD_NODE_FILES=$(grep -l "NODE_EXTRA_CA_CERTS" ${SYSTEMD_DIR}/${PRODUCT}-*.service ${SYSTEMD_DIR}/ds-*.service || true)
+    if [ -n "$SYSTEMD_NODE_FILES" ]; then
+      sed -i '/NODE_EXTRA_CA_CERTS/d' ${SYSTEMD_NODE_FILES}
+      systemctl daemon-reload
+      echo "${SYSTEMD_NODE_FILES[@]}" | xargs -I % basename % | xargs systemctl restart
+    fi
+
     echo "OK"
     exit 0
   ;;
@@ -63,7 +74,8 @@ case $1 in
   * )
     if [ "$#" -ge "2" ]; then
       MAIL=$1
-      DOMAIN=$2
+      DOMAINS=$2
+      DOMAIN=$(cut -d ',' -f 1 <<< "$DOMAINS")
       LETSENCRYPT_ENABLE="true"
 
       # Install certbot if not already installed
@@ -79,8 +91,8 @@ case $1 in
       echo "Generating Let's Encrypt SSL Certificates..."
 
       # Request and generate Let's Encrypt SSL certificate
-      echo certbot certonly --expand --webroot -w ${WEBROOT_PATH} --cert-name ${PRODUCT} --noninteractive --agree-tos --email ${MAIL} -d ${DOMAIN} > /var/log/le-start.log
-      certbot certonly --expand --webroot -w ${WEBROOT_PATH} --cert-name ${PRODUCT} --noninteractive --agree-tos --email ${MAIL} -d ${DOMAIN} > /var/log/le-new.log
+      echo certbot certonly --expand --webroot -w ${WEBROOT_PATH} --cert-name ${PRODUCT} --noninteractive --agree-tos --email ${MAIL} -d ${DOMAINS[@]} > /var/log/le-start.log
+      certbot certonly --expand --webroot -w ${WEBROOT_PATH} --cert-name ${PRODUCT} --noninteractive --agree-tos --email ${MAIL} -d ${DOMAINS[@]} > /var/log/le-new.log
     else
       help
     fi
@@ -117,6 +129,21 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
       # Add cron job if /etc/cron.d directory exists
       if [ -d /etc/cron.d ]; then
         echo -e "@weekly root ${DIR}/${PRODUCT}-renew-letsencrypt" | tee /etc/cron.d/${PRODUCT}-letsencrypt
+      fi
+    else
+      CERTIFICATE_SUBJECT=$(openssl x509 -subject -noout -in "${CERTIFICATE_FILE}" | sed 's/subject=//')
+      CERTIFICATE_ISSUER=$(openssl x509 -issuer -noout -in "${CERTIFICATE_FILE}" | sed 's/issuer=//')
+      
+      #Checking whether the certificate is self-signed
+      if [[ -n "$CERTIFICATE_SUBJECT" && -n "$CERTIFICATE_ISSUER" && "$CERTIFICATE_SUBJECT" == "$CERTIFICATE_ISSUER" ]]; then
+        SYSTEMD_NODE_FILES=$(grep -l "ExecStart=/usr/bin/node" ${SYSTEMD_DIR}/${PRODUCT}-*.service; ls ${SYSTEMD_DIR}/ds-*.service 2>/dev/null | grep -v "ds-example" || true)
+        for SYSTEMD_NODE_FILE in ${SYSTEMD_NODE_FILES}; do
+          if ! grep -q "NODE_EXTRA_CA_CERTS" "${SYSTEMD_NODE_FILE}"; then
+             sed -i "/ExecStart=/i Environment=NODE_EXTRA_CA_CERTS=${CERTIFICATE_FILE}" "${SYSTEMD_NODE_FILE}"
+          fi
+        done
+        systemctl daemon-reload
+        echo "${SYSTEMD_NODE_FILES[@]}" | xargs -I % basename % | xargs systemctl restart
       fi
     fi
 

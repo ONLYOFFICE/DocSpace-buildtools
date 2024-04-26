@@ -76,13 +76,19 @@ if ( $args.Count -ge 2 )
 
   Restart-Service -Name $proxy_service
 
-  "certbot renew >> `"${app}\letsencrypt\Logs\le-renew.log`"" > "${app}\letsencrypt\letsencrypt_cron.bat"
-  "net stop $proxy_service" >> "${app}\letsencrypt\letsencrypt_cron.bat"
-  "net start $proxy_service" >> "${app}\letsencrypt\letsencrypt_cron.bat"
+  @(
+    "certbot renew >> `"${app}\letsencrypt\Logs\le-renew.log`"",
+    "net stop $proxy_service",
+    "net start $proxy_service"
+  ) | Set-Content -Path "${app}\letsencrypt\letsencrypt_cron.bat" -Encoding ascii
 
   $day = (Get-Date -Format "dddd").ToUpper().SubString(0, 3)
   $time = Get-Date -Format "HH:mm"
-  cmd.exe /c "SCHTASKS /F /CREATE /SC WEEKLY /D $day /TN `"Certbot renew`" /TR `"${app}\letsencrypt\letsencrypt_cron.bat`" /ST $time"
+  $taskName = "Certbot renew"
+  $action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c `"${app}\letsencrypt\letsencrypt_cron.bat`""
+  $trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $day -At $time
+
+  Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Force
 }
 
 elseif ($args[0] -eq "-d" -or $args[0] -eq "--default") {
