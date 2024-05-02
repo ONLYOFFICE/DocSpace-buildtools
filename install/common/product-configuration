@@ -625,7 +625,10 @@ setup_enterprise() {
 change_elasticsearch_config(){
 
 	systemctl stop opensearch
-	systemctl is-active --quiet elasticsearch && systemctl stop elasticsearch
+	if $PACKAGE_MANAGER elasticsearch >/dev/null 2>&1; then
+		systemctl disable elasticsearch >/dev/null 2>&1
+		systemctl stop elasticsearch >/dev/null 2>&1
+	fi
 
 	sed -i '/^plugins\.security/d' /etc/opensearch/opensearch.yml
 	sed -i '/CN=kirk,OU=client,O=client,L=test, C=de/d' /etc/opensearch/opensearch.yml
