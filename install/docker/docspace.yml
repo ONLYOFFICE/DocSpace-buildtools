@@ -161,7 +161,7 @@ services:
       - "5013"
     healthcheck:
      <<: *x-healthcheck
-     test: curl --fail http://${SERVICE_DOCEDITOR}/health || exit 1
+     test: curl --fail http://${SERVICE_DOCEDITOR}/doceditor/health || exit 1
 
   onlyoffice-login:
     <<: *x-service-base
@@ -171,7 +171,7 @@ services:
       - "5011"
     healthcheck:
      <<: *x-healthcheck
-     test: curl --fail http://${SERVICE_LOGIN}/health || exit 1
+     test: curl --fail http://${SERVICE_LOGIN}/login/health || exit 1
 
   onlyoffice-router:
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-router:${DOCKER_TAG}"
