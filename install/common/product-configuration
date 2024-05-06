@@ -346,7 +346,7 @@ establish_mysql_conn(){
 	$MYSQL -e ";" >/dev/null 2>&1
 	ERRCODE=$?
 	if [ $ERRCODE -ne 0 ]; then
-		systemctl ${MYSQL_PACKAGE} start >/dev/null 2>&1
+		systemctl start ${MYSQL_PACKAGE} >/dev/null 2>&1
 		$MYSQL -e ";" >/dev/null 2>&1 || { echo "FAILURE"; exit 1; }
 	fi
 
