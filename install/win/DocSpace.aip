@@ -1062,13 +1062,13 @@
     <ROW Action="StopOpenSearchDashboardsService" Type="1" Source="aicustact.dll" Target="StopWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_28"/>
     <ROW Action="StopOpenSearchService" Type="1" Source="aicustact.dll" Target="StopWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_12"/>
     <ROW Action="StopRedisService" Type="3073" Source="aicustact.dll" Target="StopWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_16"/>
-    <ROW Action="TestOpenSearchConnection" Type="1" Source="Utils.CA.dll" Target="CheckTCPAvailability" WithoutSeq="true" AdditionalSeq="AI_DATA_SETTER_1"/>
+    <ROW Action="TestOpenSearchConnection" Type="65" Source="Utils.CA.dll" Target="CheckTCPAvailability" WithoutSeq="true" AdditionalSeq="AI_DATA_SETTER_1"/>
     <ROW Action="TestOpenSearchConnectionMsgBox" Type="1" Source="aicustact.dll" Target="MsgBox" WithoutSeq="true" Options="1" AdditionalSeq="AI_DATA_SETTER"/>
-    <ROW Action="TestPostgreSqlConnection" Type="4102" Source="utils.vbs" Target="TestPostgreSqlConnection" WithoutSeq="true"/>
+    <ROW Action="TestPostgreSqlConnection" Type="4166" Source="utils.vbs" Target="TestPostgreSqlConnection" WithoutSeq="true"/>
     <ROW Action="TestPostgreSqlConnectionMsgBox" Type="1" Source="aicustact.dll" Target="MsgBox" WithoutSeq="true" Options="1" AdditionalSeq="AI_DATA_SETTER_20"/>
     <ROW Action="TestRabbitMQConnectionMsgBox" Type="1" Source="aicustact.dll" Target="MsgBox" WithoutSeq="true" AdditionalSeq="AI_DATA_SETTER_18"/>
-    <ROW Action="TestRabbitMQServerConnection" Type="1" Source="Utils.CA.dll" Target="TestRabbitMQConnection" WithoutSeq="true"/>
-    <ROW Action="TestRedisServerConnection" Type="1" Source="Utils.CA.dll" Target="TestRedisServerConnection" WithoutSeq="true"/>
+    <ROW Action="TestRabbitMQServerConnection" Type="65" Source="Utils.CA.dll" Target="TestRabbitMQConnection" WithoutSeq="true"/>
+    <ROW Action="TestRedisServerConnection" Type="65" Source="Utils.CA.dll" Target="TestRedisServerConnection" WithoutSeq="true"/>
     <ROW Action="TestRedisServerConnectionMsgBox" Type="1" Source="aicustact.dll" Target="MsgBox" WithoutSeq="true" AdditionalSeq="AI_DATA_SETTER_17"/>
     <ROW Action="TestSQLConnectionMsgBox" Type="1" Source="aicustact.dll" Target="MsgBox" WithoutSeq="true" Options="1" AdditionalSeq="AI_DATA_SETTER_5"/>
     <ROW Action="TestSqlConnection" Type="6" Source="utils.vbs" Target="TestSqlConnection" WithoutSeq="true"/>
