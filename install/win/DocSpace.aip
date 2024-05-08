@@ -645,20 +645,6 @@
     <ROW Dialog_="MaintenanceWelcomeDlg" Control="Bitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="234" Attributes="1048577" Text="dialog.bmp" Order="300" MsiKey="MaintenanceWelcomeDlg#Bitmap"/>
     <ROW Dialog_="MaintenanceWelcomeDlg" Control="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Attributes="1" Text="[ButtonText_Back]" Order="400" TextLocId="-" MsiKey="MaintenanceWelcomeDlg#Back" Options="1"/>
     <ROW Dialog_="MsiRMFilesInUse" Control="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" Attributes="1048577" Text="banner.bmp" Order="300" MsiKey="MsiRMFilesInUse#BannerBitmap"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Attributes="3" Text="[ButtonText_Next]" Order="100" Options="1"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Attributes="3" Text="[ButtonText_Cancel]" Order="200" Options="1"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Attributes="3" Text="[ButtonText_Back]" Order="300" Options="1"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" Attributes="1048577" Text="banner.bmp" Order="400"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control="BannerLine" Type="Line" X="0" Y="44" Width="372" Height="0" Attributes="1" Order="500"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control="BottomLine" Type="Line" X="5" Y="234" Width="368" Height="0" Attributes="1" Order="600"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control="Description" Type="Text" X="25" Y="23" Width="280" Height="20" Attributes="196611" Text="Configure OpenSearch Connection..." Order="700"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Attributes="196611" Text="OpenSearch connection settings" TextStyle="[DlgTitleFont]" Order="800"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control="ProtocolLabel" Type="Text" X="25" Y="65" Width="67" Height="11" Attributes="65539" Text="Protocol" Order="900"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control="ServerLabel" Type="Text" X="25" Y="92" Width="67" Height="11" Attributes="65539" Text="Server:" Order="1000"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control="PortLabel" Type="Text" X="25" Y="119" Width="67" Height="11" Attributes="65539" Text="Port:" Order="1100"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control="ProtocolEdit" Type="Edit" X="98" Y="61" Width="253" Height="18" Attributes="3" Property="OPENSEARCH_SCHEME" Text="{5}" Order="1200"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control="ServerEdit" Type="Edit" X="98" Y="89" Width="253" Height="18" Attributes="3" Property="OPENSEARCH_HOST" Text="[ComputerName]" Order="1300"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control="PortEdit" Type="Edit" X="98" Y="116" Width="253" Height="18" Attributes="19" Property="OPENSEARCH_PORT" Text="{7}" Order="1400"/>
     <ROW Dialog_="OutOfDiskDlg" Control="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" Attributes="1048577" Text="banner.bmp" Order="200" MsiKey="OutOfDiskDlg#BannerBitmap"/>
     <ROW Dialog_="OutOfDiskDlg" Control="VolumeList" Type="VolumeCostList" X="20" Y="100" Width="330" Height="120" Attributes="393223" Text="{120}{70}{70}{70}{70}" Order="400" TextLocId="Control.Text.OutOfDiskDlg#VolumeList" MsiKey="OutOfDiskDlg#VolumeList"/>
     <ROW Dialog_="OutOfDiskDlg" Control="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Attributes="196611" Text="Out of Disk Space" TextStyle="[DlgTitleFont]" Order="500" TextLocId="Control.Text.OutOfDiskDlg#Title" MsiKey="OutOfDiskDlg#Title"/>
@@ -674,24 +660,6 @@
     <ROW Dialog_="OutOfRbDiskDlg" Control="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Attributes="196611" Text="Out of Disk Space" TextStyle="[DlgTitleFont]" Order="1000" TextLocId="Control.Text.OutOfRbDiskDlg#Title" MsiKey="OutOfRbDiskDlg#Title"/>
     <ROW Dialog_="PatchWelcomeDlg" Control="Bitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="234" Attributes="1048577" Text="dialog.bmp" Order="300" MsiKey="PatchWelcomeDlg#Bitmap"/>
     <ROW Dialog_="PatchWelcomeDlg" Control="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Attributes="1" Text="[ButtonText_Back]" Order="400" TextLocId="-" MsiKey="PatchWelcomeDlg#Back" Options="1"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Attributes="3" Text="[ButtonText_Next]" Order="100" Options="1"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Attributes="3" Text="[ButtonText_Cancel]" Order="200" Options="1"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Attributes="3" Text="[ButtonText_Back]" Order="300" Options="1"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" Attributes="1048577" Text="banner.bmp" Order="400"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control="BannerLine" Type="Line" X="0" Y="44" Width="372" Height="0" Attributes="1" Order="500"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control="BottomLine" Type="Line" X="5" Y="234" Width="368" Height="0" Attributes="1" Order="600"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Attributes="196611" Text="Configure PostgreSQL Connection..." Order="700"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Attributes="196611" Text="PostgreSQL Database" TextStyle="[DlgTitleFont]" Order="800"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control="ServerEdit" Type="Edit" X="98" Y="61" Width="253" Height="18" Attributes="3" Property="PS_DB_HOST" Text="{255}" Order="900" TextLocId="Control.Text.SQLConnectionDlg#ServerEdit"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control="PortEdit" Type="Edit" X="98" Y="89" Width="253" Height="18" Attributes="19" Property="PS_DB_PORT" Text="{5}" Order="1000" TextLocId="Control.Text.SQLConnectionDlg#PortEdit"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control="DatabaseEdit" Type="Edit" X="98" Y="116" Width="253" Height="18" Attributes="3" Property="PS_DB_NAME" Text="{255}" Order="1100" TextLocId="Control.Text.SQLConnectionDlg#DatabaseEdit"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control="UsernameEdit" Type="Edit" X="98" Y="143" Width="253" Height="18" Attributes="3" Property="PS_DB_USER" Text="{255}" Order="1200" TextLocId="Control.Text.SQLConnectionDlg#UsernameEdit"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control="PasswordEdit" Type="Edit" X="98" Y="172" Width="253" Height="18" Attributes="2097155" Property="PS_DB_PWD" Text="{255}" Order="1300" TextLocId="Control.Text.SQLConnectionDlg#PasswordEdit"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control="ServerLabel" Type="Text" X="25" Y="65" Width="67" Height="11" Attributes="196611" Text="Server:" Order="1400"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control="PortLabel" Type="Text" X="25" Y="92" Width="67" Height="11" Attributes="196611" Text="Port:" Order="1500"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control="DatabaseLabel" Type="Text" X="25" Y="119" Width="67" Height="11" Attributes="196611" Text="Database:" Order="1600"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control="UsernameLabel" Type="Text" X="25" Y="148" Width="67" Height="11" Attributes="196611" Text="Username:" Order="1700"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control="PasswordLabel" Type="Text" X="25" Y="176" Width="67" Height="11" Attributes="196611" Text="Password:" Order="1800"/>
     <ROW Dialog_="PrepareDlg" Control="Bitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="234" Attributes="1048577" Text="dialog.bmp" Order="200" MsiKey="PrepareDlg#Bitmap"/>
     <ROW Dialog_="PrepareDlg" Control="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Attributes="1048577" Text="[ButtonText_Back]" Order="700" TextLocId="-" MsiKey="PrepareDlg#Back" Options="1"/>
     <ROW Dialog_="PreparePrereqDlg" Control="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Attributes="1" Text="[ButtonText_Back]" Order="300" TextLocId="-" MsiKey="PreparePrereqDlg#Back" Options="1"/>
@@ -728,58 +696,8 @@
     <ROW Dialog_="ProgressPrereqDlg" Control="Text" Type="Text" X="35" Y="65" Width="300" Height="30" Attributes="196611" Text="Please wait while the [Wizard] [Progress2] prerequisites for [ProductName].  This may take several minutes." Order="900" TextLocId="Control.Text.ProgressPrereqDlg#Text" MsiKey="ProgressPrereqDlg#Text"/>
     <ROW Dialog_="ProgressPrereqDlg" Control="StatusLabel" Type="Text" X="35" Y="100" Width="45" Height="10" Attributes="3" Text="Status:" Order="1000" TextLocId="Control.Text.ProgressPrereqDlg#StatusLabel" MsiKey="ProgressPrereqDlg#StatusLabel"/>
     <ROW Dialog_="ProgressPrereqDlg" Control="ProgressBar" Type="ProgressBar" X="35" Y="115" Width="300" Height="10" Attributes="65537" Text="Progress done" Order="1100" TextLocId="Control.Text.ProgressPrereqDlg#ProgressBar" MsiKey="ProgressPrereqDlg#ProgressBar"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Attributes="3" Text="[ButtonText_Next]" Order="100" Options="1"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Attributes="3" Text="[ButtonText_Cancel]" Order="200" Options="1"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Attributes="3" Text="[ButtonText_Back]" Order="300" Options="1"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" Attributes="1048577" Text="banner.bmp" Order="400"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="BannerLine" Type="Line" X="0" Y="44" Width="372" Height="0" Attributes="1" Order="500"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="BottomLine" Type="Line" X="5" Y="234" Width="368" Height="0" Attributes="1" Order="600"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="Description" Type="Text" X="25" Y="23" Width="280" Height="20" Attributes="196611" Text="Configure RabbitMQ Connection..." Order="700"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="Text_1" Type="Text" X="15" Y="6" Width="289" Height="15" Attributes="196611" Text="RabbitMQ connection settings" TextStyle="[DlgTitleFont]" Order="800"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="ServerLabel" Type="Text" X="25" Y="65" Width="65" Height="11" Attributes="65539" Text="Server:" Order="900" TextLocId="Control.Text.SQLConnectionDlg#ServerLabel"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="PortLabel" Type="Text" X="25" Y="92" Width="65" Height="11" Attributes="65539" Text="Port:" Order="1000" TextLocId="Control.Text.SQLConnectionDlg#PortLabel"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="DatabaseLabel" Type="Text" X="25" Y="119" Width="65" Height="11" Attributes="65539" Text="Virtual Host:" Order="1100"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="UsernameLabel" Type="Text" X="25" Y="148" Width="65" Height="11" Attributes="65539" Text="Username:" Order="1200" TextLocId="Control.Text.SQLConnectionDlg#UsernameLabel"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="PasswordLabel" Type="Text" X="25" Y="176" Width="73" Height="11" Attributes="65539" Text="Password:" Order="1300" TextLocId="Control.Text.SQLConnectionDlg#PasswordLabel"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="Edit_1" Type="Edit" X="98" Y="63" Width="253" Height="18" Attributes="3" Property="AMQP_HOST" Text="{260}" Order="1400"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="PortEdit" Type="Edit" X="98" Y="89" Width="253" Height="18" Attributes="19" Property="AMQP_PORT" Text="{5}" Order="1500"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="DatabaseEdit" Type="Edit" X="98" Y="116" Width="253" Height="18" Attributes="3" Property="AMQP_VHOST" Text="{255}" Order="1600"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="UsernameEdit" Type="Edit" X="98" Y="143" Width="253" Height="18" Attributes="3" Property="AMQP_USER" Text="[LogonUser]" Order="1700"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="PasswordEdit" Type="Edit" X="98" Y="171" Width="253" Height="18" Attributes="2097155" Property="AMQP_PWD" Text="{255}" Order="1800"/>
-    <ROW Dialog_="RedisServerConnectionDlg" Control="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Attributes="3" Text="[ButtonText_Next]" Order="100" Options="1"/>
-    <ROW Dialog_="RedisServerConnectionDlg" Control="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Attributes="3" Text="[ButtonText_Cancel]" Order="200" Options="1"/>
-    <ROW Dialog_="RedisServerConnectionDlg" Control="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Attributes="3" Text="[ButtonText_Back]" Order="300" Options="1"/>
-    <ROW Dialog_="RedisServerConnectionDlg" Control="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" Attributes="1048577" Text="banner.bmp" Order="400"/>
-    <ROW Dialog_="RedisServerConnectionDlg" Control="BannerLine" Type="Line" X="0" Y="44" Width="372" Height="0" Attributes="1" Order="500"/>
-    <ROW Dialog_="RedisServerConnectionDlg" Control="BottomLine" Type="Line" X="5" Y="234" Width="368" Height="0" Attributes="1" Order="600"/>
-    <ROW Dialog_="RedisServerConnectionDlg" Control="Description" Type="Text" X="25" Y="23" Width="280" Height="20" Attributes="196611" Text="Redis Server connection settings" Order="700"/>
-    <ROW Dialog_="RedisServerConnectionDlg" Control="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Attributes="196611" Text="Redis Server connection settings" TextStyle="[DlgTitleFont]" Order="800"/>
-    <ROW Dialog_="RedisServerConnectionDlg" Control="ServerLabel" Type="Text" X="25" Y="65" Width="65" Height="11" Attributes="65539" Text="Host:" Order="900"/>
-    <ROW Dialog_="RedisServerConnectionDlg" Control="PortLabel" Type="Text" X="25" Y="92" Width="65" Height="11" Attributes="65539" Text="Port:" Order="1000" TextLocId="Control.Text.SQLConnectionDlg#PortLabel"/>
-    <ROW Dialog_="RedisServerConnectionDlg" Control="Text_1" Type="Text" X="25" Y="120" Width="66" Height="11" Attributes="65539" Text="Auth (Optional):" Order="1100"/>
-    <ROW Dialog_="RedisServerConnectionDlg" Control="ServerEdit" Type="Edit" X="98" Y="61" Width="253" Height="18" Attributes="3" Property="REDIS_HOST" Text="[ComputerName]" Help="|" Order="1200" ExtDataLocId="-"/>
-    <ROW Dialog_="RedisServerConnectionDlg" Control="PortEdit" Type="Edit" X="98" Y="89" Width="253" Height="18" Attributes="19" Property="REDIS_PORT" Text="{5}" Help="|" Order="1300"/>
-    <ROW Dialog_="RedisServerConnectionDlg" Control="Edit_1" Type="Edit" X="98" Y="117" Width="253" Height="18" Attributes="2097155" Property="REDIS_PWD" Text="{5}" Help="|" Order="1400"/>
     <ROW Dialog_="ResumeDlg" Control="Bitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="234" Attributes="1048577" Text="dialog.bmp" Order="300" MsiKey="ResumeDlg#Bitmap"/>
     <ROW Dialog_="ResumeDlg" Control="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Attributes="1" Text="[ButtonText_Back]" Order="400" TextLocId="-" MsiKey="ResumeDlg#Back" Options="1"/>
-    <ROW Dialog_="SQLConnectionDlg" Control="SQLConnectionDlgDialogInitializer" Type="DialogInitializer" X="0" Y="0" Width="0" Height="0" Attributes="0" Order="-1" TextLocId="-" HelpLocId="-" ExtDataLocId="-"/>
-    <ROW Dialog_="SQLConnectionDlg" Control="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" Attributes="1048577" Text="banner.bmp" Order="100" MsiKey="SQLConnectionDlg#BannerBitmap"/>
-    <ROW Dialog_="SQLConnectionDlg" Control="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Attributes="196611" Text="MySQL Database" TextStyle="[DlgTitleFont]" Order="200" MsiKey="SQLConnectionDlg#Title"/>
-    <ROW Dialog_="SQLConnectionDlg" Control="Description" Type="Text" X="25" Y="23" Width="280" Height="20" Attributes="196611" Text="Configure MySQL Connection..." Order="300" MsiKey="SQLConnectionDlg#Description"/>
-    <ROW Dialog_="SQLConnectionDlg" Control="ServerEdit" Type="Edit" X="98" Y="61" Width="253" Height="18" Attributes="3" Property="DB_HOST" Text="{255}" Order="500" TextLocId="Control.Text.SQLConnectionDlg#ServerEdit" MsiKey="SQLConnectionDlg#ServerEdit"/>
-    <ROW Dialog_="SQLConnectionDlg" Control="PortEdit" Type="Edit" X="98" Y="89" Width="253" Height="18" Attributes="19" Property="DB_PORT" Text="{5}" Order="600" TextLocId="Control.Text.SQLConnectionDlg#PortEdit" MsiKey="SQLConnectionDlg#PortEdit"/>
-    <ROW Dialog_="SQLConnectionDlg" Control="DatabaseEdit" Type="Edit" X="98" Y="116" Width="253" Height="18" Attributes="3" Property="DB_NAME" Text="{255}" Order="700" TextLocId="Control.Text.SQLConnectionDlg#DatabaseEdit" MsiKey="SQLConnectionDlg#DatabaseEdit"/>
-    <ROW Dialog_="SQLConnectionDlg" Control="UsernameEdit" Type="Edit" X="98" Y="143" Width="253" Height="18" Attributes="3" Property="DB_USER" Text="{255}" Order="800" TextLocId="Control.Text.SQLConnectionDlg#UsernameEdit" MsiKey="SQLConnectionDlg#UsernameEdit"/>
-    <ROW Dialog_="SQLConnectionDlg" Control="PasswordEdit" Type="Edit" X="98" Y="172" Width="253" Height="18" Attributes="2097155" Property="DB_PWD" Text="{255}" Order="900" TextLocId="Control.Text.SQLConnectionDlg#PasswordEdit" MsiKey="SQLConnectionDlg#PasswordEdit"/>
-    <ROW Dialog_="SQLConnectionDlg" Control="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Attributes="3" Text="[ButtonText_Next]" Order="1000" TextLocId="-" MsiKey="SQLConnectionDlg#Next" Options="1"/>
-    <ROW Dialog_="SQLConnectionDlg" Control="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Attributes="3" Text="[ButtonText_Back]" Order="1100" TextLocId="-" MsiKey="SQLConnectionDlg#Back" Options="1"/>
-    <ROW Dialog_="SQLConnectionDlg" Control="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Attributes="3" Text="[ButtonText_Cancel]" Order="1200" TextLocId="-" MsiKey="SQLConnectionDlg#Cancel" Options="1"/>
-    <ROW Dialog_="SQLConnectionDlg" Control="ServerLabel" Type="Text" X="25" Y="65" Width="67" Height="11" Attributes="196611" Text="Server:" Order="1300" MsiKey="SQLConnectionDlg#ServerLabel"/>
-    <ROW Dialog_="SQLConnectionDlg" Control="PortLabel" Type="Text" X="25" Y="92" Width="67" Height="11" Attributes="196611" Text="Port:" Order="1400" MsiKey="SQLConnectionDlg#PortLabel"/>
-    <ROW Dialog_="SQLConnectionDlg" Control="DatabaseLabel" Type="Text" X="25" Y="119" Width="67" Height="11" Attributes="196611" Text="Database:" Order="1500" MsiKey="SQLConnectionDlg#DatabaseLabel"/>
-    <ROW Dialog_="SQLConnectionDlg" Control="UsernameLabel" Type="Text" X="25" Y="148" Width="67" Height="11" Attributes="196611" Text="Username:" Order="1600" MsiKey="SQLConnectionDlg#UsernameLabel"/>
-    <ROW Dialog_="SQLConnectionDlg" Control="PasswordLabel" Type="Text" X="25" Y="176" Width="67" Height="11" Attributes="196611" Text="Password:" Order="1700" MsiKey="SQLConnectionDlg#PasswordLabel"/>
-    <ROW Dialog_="SQLConnectionDlg" Control="BottomLine" Type="Line" X="5" Y="234" Width="368" Height="0" Attributes="1" Order="1800" MsiKey="SQLConnectionDlg#BottomLine"/>
     <ROW Dialog_="UserExit" Control="Bitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="234" Attributes="1048577" Text="dialog.bmp" Order="300" MsiKey="UserExit#Bitmap"/>
     <ROW Dialog_="UserExit" Control="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Attributes="1" Text="[ButtonText_Back]" Order="400" TextLocId="-" MsiKey="UserExit#Back" Options="1"/>
     <ROW Dialog_="VerifyReadyDlg" Control="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" Attributes="1048577" Text="banner.bmp" Order="300" MsiKey="VerifyReadyDlg#BannerBitmap"/>
@@ -812,10 +730,8 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiControlEventComponent">
     <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="LicenseAgreementDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS = &quot;&quot; )" Ordering="19"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="SQLConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="216"/>
     <ROW Dialog_="FolderDlg" Control_="Back" Event="NewDialog" Argument="LicenseAgreementDlg" Condition="AI_INSTALL" Ordering="1"/>
     <ROW Dialog_="VerifyReadyDlg" Control_="Install" Event="EndDialog" Argument="Return" Condition="AI_INSTALL" Ordering="197"/>
-    <ROW Dialog_="VerifyReadyDlg" Control_="Back" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="203"/>
     <ROW Dialog_="MaintenanceWelcomeDlg" Control_="Next" Event="NewDialog" Argument="MaintenanceTypeDlg" Condition="AI_MAINT" Ordering="99"/>
     <ROW Dialog_="CustomizeDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_MAINT" Ordering="101"/>
     <ROW Dialog_="CustomizeDlg" Control_="Back" Event="NewDialog" Argument="MaintenanceTypeDlg" Condition="AI_MAINT" Ordering="1"/>
@@ -839,93 +755,18 @@
     <ROW Dialog_="PrereqLicenseAgreementDlg" Control_="Back" Event="NewDialog" Argument="WelcomePrereqDlg" Condition="AI_BOOTSTRAPPER" Ordering="1"/>
     <ROW Dialog_="VerifyReadyDlg" Control_="Install" Event="EndDialog" Argument="Return" Condition="AI_PATCH" Ordering="199"/>
     <ROW Dialog_="VerifyReadyDlg" Control_="Back" Event="NewDialog" Argument="PatchWelcomeDlg" Condition="AI_PATCH" Ordering="205"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_5" Condition="AI_INSTALL AND ( SqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="4"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="DoAction" Argument="TestSQLConnectionMsgBox" Condition="AI_INSTALL AND ( SqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="5"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="SQLConnectionDlgDialogInitializer" Event="[DB_PWD]" Argument="{}" Condition="AI_INSTALL AND ( OLDPRODUCTS=&quot;&quot; AND SQLConnectionDlg_Cond )" Ordering="4"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="SQLConnectionDlgDialogInitializer" Event="[AI_ButtonText_Next_Orig]" Argument="[ButtonText_Next]" Condition="AI_INSTALL AND ( OLDPRODUCTS=&quot;&quot; AND SQLConnectionDlg_Cond )" Ordering="3"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="SQLConnectionDlgDialogInitializer" Event="[ButtonText_Next]" Argument="[[AI_CommitButton]]" Condition="AI_INSTALL AND ( OLDPRODUCTS=&quot;&quot; AND SQLConnectionDlg_Cond )" Ordering="2"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="SQLConnectionDlgDialogInitializer" Event="[AI_Text_Next_Orig]" Argument="[Text_Next]" Condition="AI_INSTALL AND ( OLDPRODUCTS=&quot;&quot; AND SQLConnectionDlg_Cond )" Ordering="1"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="SQLConnectionDlgDialogInitializer" Event="[Text_Next]" Argument="[Text_Install]" Condition="AI_INSTALL AND ( OLDPRODUCTS=&quot;&quot; AND SQLConnectionDlg_Cond )" Ordering="0"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="6"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Back" Event="NewDialog" Argument="FolderDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS = &quot;&quot; )" Ordering="2"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="TestSqlConnection" Condition="AI_INSTALL" Ordering="1"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="SQLConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError &lt;&gt; &quot;&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="20"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="25"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="TestSqlConnection" Condition="AI_INSTALL" Ordering="201"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="222"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="DoAction" Argument="TestSqlConnection" Condition="AI_INSTALL" Ordering="3"/>
+    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL" Ordering="25"/>
+    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL" Ordering="222"/>
     <ROW Dialog_="VerifyReadyDlg" Control_="Back" Event="NewDialog" Argument="FolderDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS = &quot;&quot; )" Ordering="201"/>
     <ROW Dialog_="VerifyReadyDlg" Control_="Back" Event="NewDialog" Argument="WelcomeDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="202"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control_="Cancel" Event="SpawnDialog" Argument="CancelDlg" Condition="1" Ordering="100"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control_="Next" Event="NewDialog" Argument="RabbitMQConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="5"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control_="Back" Event="NewDialog" Argument="FolderDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS = &quot;&quot; )" Ordering="3"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control_="Back" Event="NewDialog" Argument="SQLConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="5"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control_="Next" Event="DoAction" Argument="TestOpenSearchConnection" Condition="AI_INSTALL" Ordering="2"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_1" Condition="AI_INSTALL" Ordering="1"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control_="Next" Event="DoAction" Argument="TestOpenSearchConnectionMsgBox" Condition="AI_INSTALL AND ( OPENSEARCH_CONNECTION = &quot;False&quot; )" Ordering="4"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER" Condition="AI_INSTALL AND ( OPENSEARCH_CONNECTION = &quot;False&quot; )" Ordering="3"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Back" Event="NewDialog" Argument="WelcomeDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="3"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control_="Back" Event="NewDialog" Argument="WelcomeDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="4"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="TestOpenSearchConnection" Condition="AI_INSTALL" Ordering="16"/>
     <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_1" Condition="AI_INSTALL" Ordering="15"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;False&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="22"/>
     <ROW Dialog_="CancelDlg" Control_="Yes" Event="DoAction" Argument="OpenCancelUrl" Condition="OPEN_INSTALL_CANCEL_URL = &quot;1&quot;" Ordering="101"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="TestOpenSearchConnection" Condition="AI_INSTALL AND ( SqlConnectionError=&quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; )" Ordering="212"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_1" Condition="AI_INSTALL AND ( SqlConnectionError=&quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; )" Ordering="211"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;False&quot; )" Ordering="218"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control_="Cancel" Event="SpawnDialog" Argument="CancelDlg" Condition="1" Ordering="100"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="11"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control_="Back" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND ( OPENSEARCH_CONNECTION = &quot;False&quot; )" Ordering="3"/>
-    <ROW Dialog_="RedisServerConnectionDlg" Control_="Cancel" Event="SpawnDialog" Argument="CancelDlg" Condition="1" Ordering="100"/>
-    <ROW Dialog_="RedisServerConnectionDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="5"/>
-    <ROW Dialog_="RedisServerConnectionDlg" Control_="Back" Event="NewDialog" Argument="RabbitMQConnectionDlg" Condition="AI_INSTALL AND ( RabbitMQServerConnectionError = &quot;&quot; )" Ordering="3"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control_="Back" Event="NewDialog" Argument="FolderDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS = &quot;&quot; )" Ordering="2"/>
-    <ROW Dialog_="RedisServerConnectionDlg" Control_="Back" Event="NewDialog" Argument="FolderDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS = &quot;&quot; )" Ordering="2"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control_="Back" Event="NewDialog" Argument="WelcomeDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="1"/>
-    <ROW Dialog_="RedisServerConnectionDlg" Control_="Back" Event="NewDialog" Argument="WelcomeDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="1"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="TestRabbitMQServerConnection" Condition="AI_INSTALL" Ordering="17"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="TestRedisServerConnection" Condition="AI_INSTALL" Ordering="18"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="RabbitMQConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;False&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="23"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;False&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="24"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="RabbitMQConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="219"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="221"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="TestRabbitMQServerConnection" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="213"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="TestRedisServerConnection" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="214"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="RabbitMQConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="10"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="11"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="12"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="6"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="10"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control_="Next" Event="DoAction" Argument="TestRabbitMQConnectionMsgBox" Condition="AI_INSTALL AND ( RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="10"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_18" Condition="AI_INSTALL AND ( RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="9"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="12"/>
-    <ROW Dialog_="RedisServerConnectionDlg" Control_="Next" Event="DoAction" Argument="TestRedisServerConnection" Condition="AI_INSTALL" Ordering="2"/>
-    <ROW Dialog_="RedisServerConnectionDlg" Control_="Next" Event="DoAction" Argument="TestRedisServerConnectionMsgBox" Condition="AI_INSTALL AND ( RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="4"/>
-    <ROW Dialog_="RedisServerConnectionDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_17" Condition="AI_INSTALL AND ( RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="3"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control_="Next" Event="DoAction" Argument="TestRabbitMQServerConnection" Condition="AI_INSTALL" Ordering="8"/>
+    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_1" Condition="AI_INSTALL" Ordering="211"/>
     <ROW Dialog_="ExitDialog" Control_="Finish" Event="DoAction" Argument="AI_CleanPrereq" Condition="1" Ordering="301"/>
     <ROW Dialog_="FatalError" Control_="Finish" Event="DoAction" Argument="AI_CleanPrereq" Condition="1" Ordering="102"/>
     <ROW Dialog_="UserExit" Control_="Finish" Event="DoAction" Argument="AI_CleanPrereq" Condition="1" Ordering="101"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Cancel" Event="SpawnDialog" Argument="CancelDlg" Condition="1" Ordering="100"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="DoAction" Argument="TestPostgreSqlConnection" Condition="AI_INSTALL" Ordering="1"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="DoAction" Argument="TestPostgreSqlConnectionMsgBox" Condition="AI_INSTALL AND ( PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="3"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_20" Condition="AI_INSTALL AND ( PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="2"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;False&quot; )" Ordering="9"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Back" Event="NewDialog" Argument="FolderDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS = &quot;&quot; )" Ordering="1"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Back" Event="NewDialog" Argument="WelcomeDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="2"/>
     <ROW Dialog_="CancelDlg" Control_="No" Event="EndDialog" Argument="Return" Condition="1" Ordering="100" MsiKey="CancelDlg#No#EndDialog#Return#1"/>
     <ROW Dialog_="CancelDlg" Control_="Yes" Event="EndDialog" Argument="Exit" Condition="1" Ordering="100" MsiKey="CancelDlg#Yes#EndDialog#Exit#1"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="TestPostgreSqlConnection" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; )" Ordering="210"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="PostgreSQLConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="217"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="PostgreSQLConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError &lt;&gt; &quot;&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="21"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="TestPostgreSqlConnection" Condition="AI_INSTALL" Ordering="14"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="[PostgreSQLConnectionDlg_Cond]" Argument="1" Condition="((&amp;DocumentServer = 3) AND NOT (!DocumentServer = 3))" Ordering="2"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="[PostgreSQLConnectionDlg_Cond]" Argument="{}" Condition="1" Ordering="1"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="PostgreSQLConnectionDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="8"/>
-    <ROW Dialog_="OpenSearchConnectionDlg" Control_="Back" Event="NewDialog" Argument="PostgreSQLConnectionDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="6"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;False&quot; )" Ordering="5"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Back" Event="NewDialog" Argument="SQLConnectionDlg" Condition="PostgreSQLConnectionDlg_Cond AND AI_INSTALL AND ( SqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="3"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="6"/>
     <ROW Dialog_="LicenseAgreementDlg" Control_="Next" Event="NewDialog" Argument="FolderDlg" Condition="AI_INSTALL" Ordering="1"/>
     <ROW Dialog_="LicenseAgreementDlg" Control_="Back" Event="NewDialog" Argument="WelcomeDlg" Condition="AI_INSTALL" Ordering="1"/>
   </COMPONENT>
@@ -1079,9 +920,6 @@
     <ROW Dialog="PrereqLicenseAgreementDlg" HCentering="50" VCentering="50" Width="370" Height="270" Attributes="3" Title="[ProductName] [Setup]" Control_Default="Next" Control_Cancel="Cancel" TitleLocId="-"/>
     <ROW Dialog="RabbitMQConnectionDlg" HCentering="50" VCentering="50" Width="370" Height="270" Attributes="3" Title="[ProductName] [Setup]" Control_Default="Next" Control_Cancel="Cancel"/>
     <ROW Dialog="RedisServerConnectionDlg" HCentering="50" VCentering="50" Width="370" Height="270" Attributes="3" Title="[ProductName] [Setup]" Control_Default="Next" Control_Cancel="Cancel"/>
-  </COMPONENT>
-  <COMPONENT cid="caphyon.advinst.msicomp.MsiEventMappingComponent">
-    <ROW Dialog_="RabbitMQConnectionDlg" Control_="PasswordLabel" Event="ActionData" Attribute="Visible"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiFeatCompsComponent">
     <ROW Feature_="MainFeature" Component_="APPDIR"/>
