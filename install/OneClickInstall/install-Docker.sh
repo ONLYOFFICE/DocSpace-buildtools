@@ -1326,6 +1326,8 @@ install_fluent_bit () {
 		reconfigure DASHBOARDS_PASSWORD "${DASHBOARDS_PASSWORD:-$(get_random_str 20)}"
 
 		docker-compose -f ${BASE_DIR}/fluent.yml -f ${BASE_DIR}/dashboards.yml up -d
+	elif [ "$INSTALL_FLUENT_BIT" == "pull" ]; then
+		docker-compose -f ${BASE_DIR}/fluent.yml -f ${BASE_DIR}/dashboards.yml pull
 	fi
 }
 
