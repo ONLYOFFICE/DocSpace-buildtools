@@ -1317,10 +1317,15 @@ install_fluent_bit () {
 	if [ "$INSTALL_FLUENT_BIT" == "true" ]; then
 		[ ! -z "$ELK_HOST" ] && sed -i "s/ELK_CONTAINER_NAME/ELK_HOST/g" $BASE_DIR/fluent.yml ${BASE_DIR}/dashboards.yml
 
-		sed -i "s/OPENSEARCH_SCHEME/$(get_env_parameter "ELK_SHEME")/g" "${BASE_DIR}/config/fluent-bit.conf"
+		OPENSEARCH_INDEX="${OPENSEARCH_INDEX:-"${PACKAGE_SYSNAME}-fluent-bit"}"
+		if crontab -l | grep -q "${OPENSEARCH_INDEX}"; then
+			crontab < <(crontab -l | grep -v "${OPENSEARCH_INDEX}")
+		fi
+		(crontab -l 2>/dev/null; echo "0 0 */1 * * curl -s -X POST "$(get_env_parameter 'ELK_SHEME')"://${ELK_HOST:-127.0.0.1}:$(get_env_parameter 'ELK_PORT')/${OPENSEARCH_INDEX}/_delete_by_query -H 'Content-Type: application/json' -d '{\"query\": {\"range\": {\"@timestamp\": {\"lt\": \"now-30d\"}}}}'") | crontab -		
+
 		sed -i "s/OPENSEARCH_HOST/${ELK_HOST:-"${PACKAGE_SYSNAME}-opensearch"}/g" "${BASE_DIR}/config/fluent-bit.conf" 
 		sed -i "s/OPENSEARCH_PORT/$(get_env_parameter "ELK_PORT")/g" ${BASE_DIR}/config/fluent-bit.conf
-		sed -i "s/OPENSEARCH_INDEX/${OPENSEARCH_INDEX:-"${PACKAGE_SYSNAME}-fluent-bit"}/g" ${BASE_DIR}/config/fluent-bit.conf
+		sed -i "s/OPENSEARCH_INDEX/${OPENSEARCH_INDEX}/g" ${BASE_DIR}/config/fluent-bit.conf
 
 		reconfigure DASHBOARDS_USERNAME "${DASHBOARDS_USERNAME:-"${PACKAGE_SYSNAME}"}"
 		reconfigure DASHBOARDS_PASSWORD "${DASHBOARDS_PASSWORD:-$(get_random_str 20)}"

@@ -31,6 +31,11 @@ sed -e 's/$router_host/127.0.0.1/g' -e 's/this_host\|proxy_x_forwarded_host/host
 sed -e '/.pid/d' -e '/temp_path/d' -e 's_etc/nginx_etc/openresty_g' -e 's/\.log/-openresty.log/g' -i install/docker/config/nginx/templates/nginx.conf.template
 sed -i "s_\(.*root\).*;_\1 \"/var/www/%{product}\";_g" -i install/docker/config/nginx/letsencrypt.conf
 sed -i "s#\(/var/log/onlyoffice/\)#\1%{product}#" install/docker/config/fluent-bit.conf
+sed -i '/^\[OUTPUT\]/i\[INPUT]' install/docker/config/fluent-bit.conf
+sed -i '/^\[OUTPUT\]/i\    Name                exec' install/docker/config/fluent-bit.conf
+sed -i '/^\[OUTPUT\]/i\    Interval_Sec        86400' install/docker/config/fluent-bit.conf
+sed -i '/^\[OUTPUT\]/i\    Command             curl -s -X POST OPENSEARCH_SCHEME://OPENSEARCH_HOST:OPENSEARCH_PORT/OPENSEARCH_INDEX/_delete_by_query -H '\''Content-Type: application/json'\'' -d '\''{"query": {"range": {"@timestamp": {"lt": "now-30d"}}}}'\'' ${BUILDTOOLS_PATH}/install/docker/config/fluent-bit.conf 
+sed -i '/^\[OUTPUT\]/i\\' install/docker/config/fluent-bit.conf
 
 find %{_builddir}/server/publish/ \
      %{_builddir}/server/ASC.Migration.Runner \

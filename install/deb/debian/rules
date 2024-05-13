@@ -85,6 +85,11 @@ override_dh_auto_build: check_archives
 	mv -f ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy-ssl.conf ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy-ssl.conf.template
 	cp -rf ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy.conf ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy.conf.template
 	sed -i "s#\(/var/log/onlyoffice/\)#\1${PRODUCT}/#" ${BUILDTOOLS_PATH}/install/docker/config/fluent-bit.conf 
+	sed -i '/^\[OUTPUT\]/i\[INPUT]' ${BUILDTOOLS_PATH}/install/docker/config/fluent-bit.conf 
+	sed -i '/^\[OUTPUT\]/i\    Name                exec' ${BUILDTOOLS_PATH}/install/docker/config/fluent-bit.conf 
+	sed -i '/^\[OUTPUT\]/i\    Interval_Sec        86400' ${BUILDTOOLS_PATH}/install/docker/config/fluent-bit.conf 
+	sed -i '/^\[OUTPUT\]/i\    Command             curl -s -X POST OPENSEARCH_SCHEME://OPENSEARCH_HOST:OPENSEARCH_PORT/OPENSEARCH_INDEX/_delete_by_query -H '\''Content-Type: application/json'\'' -d '\''{"query": {"range": {"@timestamp": {"lt": "now-30d"}}}}'\'' ${BUILDTOOLS_PATH}/install/docker/config/fluent-bit.conf 
+	sed -i '/^\[OUTPUT\]/i\\' ${BUILDTOOLS_PATH}/install/docker/config/fluent-bit.conf 
 
 	for i in ${PRODUCT} $$(ls ${CURDIR}/debian/*.install | grep -oP 'debian/\K.*' | grep -o '^[^.]*'); do \
 		cp ${CURDIR}/debian/source/lintian-overrides ${CURDIR}/debian/$$i.lintian-overrides; \
