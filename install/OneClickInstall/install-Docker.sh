@@ -1315,6 +1315,14 @@ install_elasticsearch () {
 
 install_fluent_bit () {
 	if [ "$INSTALL_FLUENT_BIT" == "true" ]; then
+		if ! command_exists crontab; then
+			if command_exists apt-get; then
+				install_service crontab cron
+			elif command_exists yum; then
+				install_service crontab cronie
+			fi
+		fi
+
 		[ ! -z "$ELK_HOST" ] && sed -i "s/ELK_CONTAINER_NAME/ELK_HOST/g" $BASE_DIR/fluent.yml ${BASE_DIR}/dashboards.yml
 
 		OPENSEARCH_INDEX="${OPENSEARCH_INDEX:-"${PACKAGE_SYSNAME}-fluent-bit"}"
