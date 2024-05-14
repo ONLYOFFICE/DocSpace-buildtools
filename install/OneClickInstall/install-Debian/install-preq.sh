@@ -89,23 +89,27 @@ if ! grep -q "mysql-innovation" /etc/apt/sources.list.d/mysql.list; then
 	fi
 fi
 
-# add redis repo
+# add redis repo  --- temporary fix for complete installation on Ubuntu 24.04. REDIS_DIST_CODENAME change to DISTRIB_CODENAME
 if [ "$DIST" = "ubuntu" ]; then	
+	[[ "$DISTRIB_CODENAME" =~ noble ]] && REDIS_DIST_CODENAME="jammy" || REDIS_DIST_CODENAME="${DISTRIB_CODENAME}"
 	curl -fsSL https://packages.redis.io/gpg | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/redis.gpg --import
-	echo "deb [signed-by=/usr/share/keyrings/redis.gpg] https://packages.redis.io/deb $DISTRIB_CODENAME main" | tee /etc/apt/sources.list.d/redis.list
+	echo "deb [signed-by=/usr/share/keyrings/redis.gpg] https://packages.redis.io/deb $REDIS_DIST_CODENAME main" | tee /etc/apt/sources.list.d/redis.list
 	chmod 644 /usr/share/keyrings/redis.gpg
 fi
 
 #add nginx repo
-curl -s http://nginx.org/keys/nginx_signing.key | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/nginx.gpg --import
-echo "deb [signed-by=/usr/share/keyrings/nginx.gpg] http://nginx.org/packages/$DIST/ $DISTRIB_CODENAME nginx" | tee /etc/apt/sources.list.d/nginx.list
-chmod 644 /usr/share/keyrings/nginx.gpg
-#f for missing nginx repository for debian bookworm
+if [[ "$DISTRIB_CODENAME" != noble ]]; then
+	curl -s http://nginx.org/keys/nginx_signing.key | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/nginx.gpg --import
+	echo "deb [signed-by=/usr/share/keyrings/nginx.gpg] http://nginx.org/packages/$DIST/ $DISTRIB_CODENAME nginx" | tee /etc/apt/sources.list.d/nginx.list
+	chmod 644 /usr/share/keyrings/nginx.gpg
+fi
+# Fix for missing nginx repository for debian bookworm
 [ "$DISTRIB_CODENAME" = "bookworm" ] && sed -i "s/$DISTRIB_CODENAME/buster/g" /etc/apt/sources.list.d/nginx.list
 
-#add openresty repo
+#add openresty repo --- temporary fix for complete installation on Ubuntu 24.04: OPENRESTY_DIST_CODENAME change to DISTRIB_CODENAME
+[[ "$DISTRIB_CODENAME" =~ noble ]] && OPENRESTY_DIST_CODENAME="jammy" || OPENRESTY_DIST_CODENAME="${DISTRIB_CODENAME}"
 curl -fsSL https://openresty.org/package/pubkey.gpg | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/openresty.gpg --import
-echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/$DIST $DISTRIB_CODENAME $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
+echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/$DIST $OPENRESTY_DIST_CODENAME $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
 chmod 644 /usr/share/keyrings/openresty.gpg
 
 # setup msttcorefonts
@@ -132,8 +136,11 @@ if ! dpkg -l | grep -q "opensearch"; then
 fi
 
 if [ ${INSTALL_FLUENT_BIT} == "true" ]; then
-	apt-get install -yq opensearch-dashboards=${DASHBOARDS_VERSION}
-	curl https://raw.githubusercontent.com/fluent/fluent-bit/master/install.sh | sh
+	[[ "$DISTRIB_CODENAME" =~ noble ]] && FLUENTBIT_DIST_CODENAME="jammy" || FLUENTBIT_DIST_CODENAME="${DISTRIB_CODENAME}"
+	curl https://packages.fluentbit.io/fluentbit.key | gpg --dearmor > /usr/share/keyrings/fluentbit-keyring.gpg
+	echo "deb [signed-by=/usr/share/keyrings/fluentbit-keyring.gpg] https://packages.fluentbit.io/$DIST/$FLUENTBIT_DIST_CODENAME $FLUENTBIT_DIST_CODENAME main" | tee /etc/apt/sources.list.d/fluent-bit.list
+	apt update
+	apt-get install -yq opensearch-dashboards=${DASHBOARDS_VERSION} fluent-bit
 fi
 
 # disable apparmor for mysql
