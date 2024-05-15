@@ -61,32 +61,24 @@ if ! dpkg -l | grep -q "mysql-server"; then
 	MYSQL_SERVER_USER=${MYSQL_SERVER_USER:-"root"}
 	MYSQL_SERVER_PASS=${MYSQL_SERVER_PASS:-"$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)"}
 
-	# setup mysql 8.0 package
+	# setup mysql 8.4 package
 	curl -OL http://repo.mysql.com/${MYSQL_PACKAGE_NAME}
 	echo "mysql-apt-config mysql-apt-config/repo-codename  select  $DISTRIB_CODENAME" | debconf-set-selections
 	echo "mysql-apt-config mysql-apt-config/repo-distro  select  $DIST" | debconf-set-selections
-	echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.0" | debconf-set-selections
+	echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.4-lts" | debconf-set-selections
 	DEBIAN_FRONTEND=noninteractive dpkg -i ${MYSQL_PACKAGE_NAME}
 	rm -f ${MYSQL_PACKAGE_NAME}
 
 	echo mysql-community-server mysql-community-server/root-pass password ${MYSQL_SERVER_PASS} | debconf-set-selections
 	echo mysql-community-server mysql-community-server/re-root-pass password ${MYSQL_SERVER_PASS} | debconf-set-selections
 	echo mysql-community-server mysql-server/default-auth-override select "Use Strong Password Encryption (RECOMMENDED)" | debconf-set-selections
-	echo mysql-server-8.0 mysql-server/root_password password ${MYSQL_SERVER_PASS} | debconf-set-selections
-	echo mysql-server-8.0 mysql-server/root_password_again password ${MYSQL_SERVER_PASS} | debconf-set-selections
+	echo mysql-server mysql-server/root_password password ${MYSQL_SERVER_PASS} | debconf-set-selections
+	echo mysql-server mysql-server/root_password_again password ${MYSQL_SERVER_PASS} | debconf-set-selections
 
 elif dpkg -l | grep -q "mysql-apt-config" && [ "$(apt-cache policy mysql-apt-config | awk 'NR==2{print $2}')" != "${MYSQL_REPO_VERSION}" ]; then
 	curl -OL http://repo.mysql.com/${MYSQL_PACKAGE_NAME}
 	DEBIAN_FRONTEND=noninteractive dpkg -i ${MYSQL_PACKAGE_NAME}
 	rm -f ${MYSQL_PACKAGE_NAME}
-fi
-
-if ! grep -q "mysql-innovation" /etc/apt/sources.list.d/mysql.list; then
-	echo "deb [signed-by=/usr/share/keyrings/mysql-apt-config.gpg] http://repo.mysql.com/apt/${DIST} ${DISTRIB_CODENAME} mysql-innovation" | sudo tee -a /etc/apt/sources.list.d/mysql.list
-
-	if apt-get -y update 2>&1 | grep -q "^W: .*mysql-innovation"; then
-		sudo sed -i '/mysql-innovation/d' /etc/apt/sources.list.d/mysql.list
-	fi
 fi
 
 # add redis repo  --- temporary fix for complete installation on Ubuntu 24.04. REDIS_DIST_CODENAME change to DISTRIB_CODENAME
