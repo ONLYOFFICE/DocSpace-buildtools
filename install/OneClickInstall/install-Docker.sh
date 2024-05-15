@@ -675,8 +675,8 @@ get_os_info () {
 			fi
 		fi
 
-		DIST=$(trim $DIST);
 		REV=$(trim $REV);
+		DIST=$(trim "$DIST")
 	fi
 }
 
@@ -863,7 +863,7 @@ install_docker () {
 		systemctl start docker
 		systemctl enable docker
 
-	elif [ "${DIST}" == "Red Hat Enterprise Linux Server" ]; then
+	elif [[ "${DIST}" == Red\ Hat\ Enterprise\ Linux* ]]; then
 
 		echo ""
 		echo "Your operating system does not allow Docker CE installation."
