@@ -865,11 +865,20 @@ install_docker () {
 
 	elif [[ "${DIST}" == Red\ Hat\ Enterprise\ Linux* ]]; then
 
-		echo ""
-		echo "Your operating system does not allow Docker CE installation."
-		echo "You can install Docker EE using the manual here - https://docs.docker.com/engine/installation/linux/rhel/"
-		echo ""
-		exit 1;
+		if [[ "${REV}" -gt "7" ]]; then
+			yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine podman runc > null
+			yum install -y yum-utils
+			yum-config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+			yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin
+			systemctl start docker
+			systemctl enable docker
+		else
+			echo ""
+			echo "Your operating system does not allow Docker CE installation."
+			echo "You can install Docker EE using the manual here - https://docs.docker.com/engine/installation/linux/rhel/"
+			echo ""
+			exit 1;
+		fi
 
 	elif [ "${DIST}" == "SuSe" ]; then
 
