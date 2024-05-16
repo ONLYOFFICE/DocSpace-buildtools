@@ -145,41 +145,31 @@ function prepare_vm() {
     source /etc/os-release
     case $ID in
       ubuntu)
-          cat /etc/os-release
           [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-deb
-          echo "Ubuntu"
           ;;
-
 
       debian)
-          cat /etc/os-release
-          [[ "$VERSION_ID" = "bookworm" ]] && apt-get update -y; apt install -y curl gnupg
+          if [ "$VERSION_CODENAME" == "bookworm" ]; then
+            apt-get update -y
+            apt install -y curl gnupg
+          fi
           apt-get remove postfix -y
           echo "${COLOR_GREEN}☑ PREPAVE_VM: Postfix was removed${COLOR_RESET}"
-          
           [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-deb
-          echo "Debian"
           ;;
-
 
       fedora)
-          cat /etc/os-release
-          [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-deb
-          echo "Fedora"
+          [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-rpm
           ;;
 
-
       centos)
-          cat /etc/os-release
-          if [ "$VERSION_ID" =~ ^9 ]; then
+          if [ "$VERSION_ID" == "9" ]; then
             update-crypto-policies --set LEGACY
             echo "${COLOR_GREEN}☑ PREPAVE_VM: sha1 gpg key chek enabled${COLOR_RESET}"
           fi
           [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-rpm
           yum -y install centos*-release 
-          echo "CentOS"
           ;;
-
 
       *)
           echo "${COLOR_RED}Failed to determine Linux dist${COLOR_RESET}"; exit 1
