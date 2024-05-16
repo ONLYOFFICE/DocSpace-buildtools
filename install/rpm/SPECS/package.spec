@@ -13,7 +13,6 @@ The service which handles API requests related to backup
 Packager:       %{packager}
 Summary:        Common
 Group:          Applications/Internet
-Requires:       logrotate
 BuildArch:      noarch
 %description    common
 A package containing configure and scripts
