@@ -48,9 +48,11 @@ NODE_VERSION="18"
 curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
 
 #add dotnet repo
-curl https://packages.microsoft.com/config/$DIST/$REV/packages-microsoft-prod.deb -O
-echo -e "Package: *\nPin: origin \"packages.microsoft.com\"\nPin-Priority: 1002" | tee /etc/apt/preferences.d/99microsoft-prod.pref
-dpkg -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
+if [[ "$DISTRIB_CODENAME" != noble ]]; then
+	curl https://packages.microsoft.com/config/$DIST/$REV/packages-microsoft-prod.deb -O
+	echo -e "Package: *\nPin: origin \"packages.microsoft.com\"\nPin-Priority: 1002" | tee /etc/apt/preferences.d/99microsoft-prod.pref
+	dpkg -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
+fi
 
 MYSQL_REPO_VERSION="$(curl https://repo.mysql.com | grep -oP 'mysql-apt-config_\K.*' | grep -o '^[^_]*' | sort --version-sort --field-separator=. | tail -n1)"
 MYSQL_PACKAGE_NAME="mysql-apt-config_${MYSQL_REPO_VERSION}_all.deb"
