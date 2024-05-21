@@ -5,7 +5,7 @@ set -e
 make_swap () {
 	DISK_REQUIREMENTS=6144; #6Gb free space
 	MEMORY_REQUIREMENTS=12000; #RAM ~12Gb
-	SWAPFILE="/${PRODUCT}_swapfile";
+	SWAPFILE="/${product}_swapfile";
 
 	AVAILABLE_DISK_SPACE=$(df -m /  | tail -1 | awk '{ print $4 }');
 	TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1);
