@@ -87,7 +87,8 @@
         "type": "disc",
         "path": "$STORAGE_ROOT\\Studio\\{0}\\CoBranding",
         "virtualpath": "~/studio/{0}/cobranding",
-        "public": true
+        "public": true,
+        "contentAsAttachment": true
       },
       {
         "name": "static_partnerdata",
@@ -112,6 +113,22 @@
         "visible": false,
         "type": "disc",
         "path": "$STORAGE_ROOT\\Studio\\{0}\\temp\\backup",
+        "expires": "0:10:0",
+		"disableEncryption": true
+      },
+	  {
+        "name": "migration",
+        "visible": false,
+        "type": "disc",
+        "path": "$STORAGE_ROOT\\Studio\\{0}\\migration",
+        "expires": "0:10:0",
+		"disableEncryption": true
+      },
+	  {
+        "name": "migration_log",
+        "visible": false,
+        "type": "disc",
+        "path": "$STORAGE_ROOT\\Studio\\{0}\\log\\migration",
         "expires": "0:10:0",
 		"disableEncryption": true
       },

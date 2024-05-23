@@ -20,10 +20,19 @@ def help():
     print("d     Run dnsmasq.")
     print()
 
+
 rd = os.path.dirname(os.path.abspath(__file__))
 dir = os.path.abspath(os.path.join(rd, ".."))
 dockerDir = os.path.join(dir, "buildtools", "install", "docker")
-local_ip = socket.gethostbyname_ex(socket.gethostname())[-1][-1]
+networks = socket.gethostbyname_ex(socket.gethostname())
+local_ip = networks[-1][-1]
+
+if local_ip == "127.0.0.1":
+    local_ip = networks[-1][0]
+
+if local_ip == "127.0.0.1":
+    print("Error: Local IP is 127.0.0.1", networks)
+    sys.exit(1)
 
 doceditor = f"{local_ip}:5013"
 login = f"{local_ip}:5011"
@@ -107,7 +116,7 @@ if arch_name == "x86_64" or arch_name == "AMD64":
     subprocess.run(["docker", "compose", "-f", os.path.join(dockerDir, "db.yml"), "up", "-d"])
 elif arch_name == "arm64":
     print("CPU Type: arm64 -> run db.yml with arm64v8 image")
-    os.environ["MYSQL_IMAGE"] = "arm64v8/mysql:8.0.32-oracle"
+    os.environ["MYSQL_IMAGE"] = "arm64v8/mysql:8.3.0-oracle"
     subprocess.run(["docker", "compose", "-f", os.path.join(dockerDir, "db.yml"), "up", "-d"])
 else:
     print("Error: Unknown CPU Type:", arch_name)

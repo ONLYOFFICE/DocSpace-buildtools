@@ -2,3 +2,4 @@ debian/build/buildtools/config/*.json                                  etc/onlyo
 debian/build/buildtools/config/*.config                                etc/onlyoffice/{{product}}
 debian/build/buildtools/install/common/{{product}}-configuration       usr/bin
 debian/build/buildtools/install/common/logrotate/{{product}}-common    etc/logrotate.d
+debian/build/buildtools/install/docker/config/fluent-bit.conf          etc/onlyoffice/{{product}}

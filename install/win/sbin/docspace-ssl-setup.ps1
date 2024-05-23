@@ -84,7 +84,11 @@ if ( $args.Count -ge 2 )
 
   $day = (Get-Date -Format "dddd").ToUpper().SubString(0, 3)
   $time = Get-Date -Format "HH:mm"
-  cmd.exe /c "SCHTASKS /F /CREATE /SC WEEKLY /D $day /TN `"Certbot renew`" /TR `"${app}\letsencrypt\letsencrypt_cron.bat`" /ST $time"
+  $taskName = "Certbot renew"
+  $action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c `"${app}\letsencrypt\letsencrypt_cron.bat`""
+  $trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $day -At $time
+
+  Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Force
 }
 
 elseif ($args[0] -eq "-d" -or $args[0] -eq "--default") {

@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   onlyoffice-migration-runner:
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-migration-runner:${DOCKER_TAG}"

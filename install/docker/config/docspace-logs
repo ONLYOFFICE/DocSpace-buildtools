@@ -14,7 +14,7 @@ else
   echo "Error: yml files not found." && exit 1
 fi
 
-FILES=("${PRODUCT}" "notify" "healthchecks" "proxy" "ds" "rabbitmq" "redis" "elasticsearch" "db")
+FILES=("${PRODUCT}" "notify" "healthchecks" "proxy" "ds" "rabbitmq" "redis" "opensearch" "dashboards" "db")
 
 LOG_DIR="${DOCKERCOMPOSE}/logs"
 mkdir -p ${LOG_DIR}

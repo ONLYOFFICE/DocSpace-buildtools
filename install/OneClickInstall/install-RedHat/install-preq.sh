@@ -33,16 +33,20 @@ if rpm -qa | grep mariadb.*config >/dev/null 2>&1; then
 fi
 
 #Add repositories: EPEL, REMI and RPMFUSION
-rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-$REV.noarch.rpm || true
-rpm -ivh https://rpms.remirepo.net/enterprise/remi-release-$REV.rpm || true
-yum localinstall -y --nogpgcheck https://download1.rpmfusion.org/free/el/rpmfusion-free-release-$REV.noarch.rpm
+[ "$DIST" != "fedora" ] && { rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-$REV.noarch.rpm || true; }
+rpm -ivh https://rpms.remirepo.net/$REMI_DISTR_NAME/remi-release-$REV.rpm || true
+yum localinstall -y --nogpgcheck https://download1.rpmfusion.org/free/$RPMFUSION_DISTR_NAME/rpmfusion-free-release-$REV.noarch.rpm
 
 [ "$REV" = "9" ] && update-crypto-policies --set DEFAULT:SHA1
-[ "$DIST" != "redhat" ] && { [ "$REV" = "9" ] && TESTING_REPO="--enablerepo=crb" || POWERTOOLS_REPO="--enablerepo=powertools"; } || /usr/bin/crb enable
+if [ "$DIST" == "centos" ]; then
+	[ "$REV" = "9" ] && TESTING_REPO="--enablerepo=crb" || POWERTOOLS_REPO="--enablerepo=powertools"
+elif [ "$DIST" == "redhat" ]; then
+	/usr/bin/crb enable
+fi
 
 #add rabbitmq & erlang repo
-curl -s https://packagecloud.io/install/repositories/rabbitmq/rabbitmq-server/script.rpm.sh | os=centos dist=$REV bash
-curl -s https://packagecloud.io/install/repositories/rabbitmq/erlang/script.rpm.sh | os=centos dist=$REV bash
+curl -s https://packagecloud.io/install/repositories/rabbitmq/rabbitmq-server/script.rpm.sh | bash
+curl -s https://packagecloud.io/install/repositories/rabbitmq/erlang/script.rpm.sh | bash
 
 #add nodejs repo
 NODE_VERSION="18"
@@ -50,29 +54,25 @@ curl -fsSL https://rpm.nodesource.com/setup_${NODE_VERSION}.x | sed '/update -y/
 
 #add mysql repo
 dnf remove -y @mysql && dnf module -y reset mysql && dnf module -y disable mysql
-MYSQL_REPO_VERSION="$(curl https://repo.mysql.com | grep -oP "mysql80-community-release-el${REV}-\K.*" | grep -o '^[^.]*' | sort -n | tail -n1)"
-yum localinstall -y https://repo.mysql.com/mysql80-community-release-el${REV}-${MYSQL_REPO_VERSION}.noarch.rpm || true
+MYSQL_REPO_VERSION="$(curl https://repo.mysql.com | grep -oP "mysql84-community-release-${MYSQL_DISTR_NAME}${REV}-\K.*" | grep -o '^[^.]*' | sort | tail -n1)"
+yum localinstall -y https://repo.mysql.com/mysql84-community-release-${MYSQL_DISTR_NAME}${REV}-${MYSQL_REPO_VERSION}.noarch.rpm || true
 
 if ! rpm -q mysql-community-server; then
 	MYSQL_FIRST_TIME_INSTALL="true";
 fi
 
-#add elasticsearch repo
-ELASTIC_VERSION="7.16.3"
-ELASTIC_DIST=$(echo $ELASTIC_VERSION | awk '{ print int($1) }')
-rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch
-cat > /etc/yum.repos.d/elasticsearch.repo <<END
-[elasticsearch]
-name=Elasticsearch repository for ${ELASTIC_DIST}.x packages
-baseurl=https://artifacts.elastic.co/packages/${ELASTIC_DIST}.x/yum
-gpgcheck=1
-gpgkey=https://artifacts.elastic.co/GPG-KEY-elasticsearch
-enabled=0
-autorefresh=1
-type=rpm-md
-END
+#add opensearch repo
+curl -SL https://artifacts.opensearch.org/releases/bundle/opensearch/2.x/opensearch-2.x.repo -o /etc/yum.repos.d/opensearch-2.x.repo
+ELASTIC_VERSION="2.11.1"
 
-# add nginx repo
+#add opensearch dashboards repo
+if [ ${INSTALL_FLUENT_BIT} == "true" ]; then
+	curl -SL https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/2.x/opensearch-dashboards-2.x.repo -o /etc/yum.repos.d/opensearch-dashboards-2.x.repo
+	DASHBOARDS_VERSION="2.11.1"
+fi
+
+# add nginx repo, Fedora doesn't need it
+if [ "$DIST" != "fedora" ]; then
 cat > /etc/yum.repos.d/nginx.repo <<END
 [nginx-stable]
 name=nginx stable repo
@@ -82,17 +82,19 @@ enabled=1
 gpgkey=https://nginx.org/keys/nginx_signing.key
 module_hotfixes=true
 END
+fi
 
 rpm --import https://openresty.org/package/pubkey.gpg
-OPENRESTY_REPO_FILE=$( [[ "$REV" -ge 9 ]] && echo "openresty2.repo" || echo "openresty.repo" )
-curl -o /etc/yum.repos.d/openresty.repo "https://openresty.org/package/centos/${OPENRESTY_REPO_FILE}"
+OPENRESTY_REPO_FILE=$( [[ "$REV" -ge 9 && "$DIST" != "fedora" ]] && echo "openresty2.repo" || echo "openresty.repo" )
+curl -o /etc/yum.repos.d/openresty.repo "https://openresty.org/package/${OPENRESTY_DISTR_NAME}/${OPENRESTY_REPO_FILE}"
+[ "$DIST" == "fedora" ] && sed -i "s/\$releasever/$OPENRESTY_REV/g" /etc/yum.repos.d/openresty.repo
 
-${package_manager} -y install epel-release \
+${package_manager} -y install $([ $DIST != "fedora" ] && echo "epel-release") \
 			python3 \
 			nodejs ${NODEJS_OPTION} \
 			dotnet-sdk-8.0 \
-			elasticsearch-${ELASTIC_VERSION} --enablerepo=elasticsearch \
-			mysql-server \
+			opensearch-${ELASTIC_VERSION} --enablerepo=opensearch-2.x \
+			mysql-community-server \
 			postgresql \
 			postgresql-server \
 			rabbitmq-server$rabbitmq_version \
@@ -100,6 +102,12 @@ ${package_manager} -y install epel-release \
 			SDL2 $POWERTOOLS_REPO \
 			expect \
 			ffmpeg $TESTING_REPO
+
+#add repo, install fluent-bit
+if [ ${INSTALL_FLUENT_BIT} == "true" ]; then 
+	curl https://raw.githubusercontent.com/fluent/fluent-bit/master/install.sh | bash
+	${package_manager} -y install opensearch-dashboards-${DASHBOARDS_VERSION} --enablerepo=opensearch-dashboards-2.x
+fi
 
 if [[ $PSQLExitCode -eq $UPDATE_AVAILABLE_CODE ]]; then
 	yum -y install postgresql-upgrade

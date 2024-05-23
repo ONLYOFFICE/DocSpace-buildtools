@@ -1,7 +1,7 @@
 {
     "elastic": {
         "Scheme": "http",
-        "Host": "onlyoffice-elasticsearch",
+        "Host": "onlyoffice-opensearch",
         "Port": "9200",
         "Threads": "1"
     }

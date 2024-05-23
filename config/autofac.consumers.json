@@ -146,9 +146,7 @@
 			"dropboxClientSecret": ""
 		  },
 		  "additional": {
-			"dropboxRedirectUrl" : "https://service.teamlab.info/oauth2.aspx",
-			"dropboxappkey" : "",
-			"dropboxappsecret" : ""
+			"dropboxRedirectUrl" : "https://service.teamlab.info/oauth2.aspx"
 		  }
 	  }
     },

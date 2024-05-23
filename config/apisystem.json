@@ -33,7 +33,7 @@
 	"auth" : {
 		"allowskip" : {
 			"default" : false,
-			"registerportal": true
+			"registerportal": false
 		}
 	},
 	 "ConnectionStrings": {

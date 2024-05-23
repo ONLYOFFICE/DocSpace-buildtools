@@ -120,7 +120,7 @@ reassign_values (){
 		WORK_DIR="${BASE_DIR}/products/ASC.Files/service/"
 		EXEC_FILE="ASC.Files.Service.dll"
 		CORE_EVENT_BUS=" --core:eventBus:subscriptionClientName=asc_event_bus_files_service_queue"
-		DEPENDENCY_LIST="${DEPENDENCY_LIST} elasticsearch.service"
+		DEPENDENCY_LIST="${DEPENDENCY_LIST} opensearch.service"
 	;;
 	studio )
 		SERVICE_PORT="5003"

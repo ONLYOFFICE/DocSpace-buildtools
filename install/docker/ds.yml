@@ -1,4 +1,3 @@
-version: '3.6'
 services:
   onlyoffice-document-server:
     image: "${DOCUMENT_SERVER_IMAGE_NAME}"
