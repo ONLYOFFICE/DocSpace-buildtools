@@ -215,13 +215,14 @@ if OAUTH_REDIRECT_URL:
                     
     writeJsonFile(filePath, jsonData)
 
-filePath = "/app/onlyoffice/config/elastic.json"
-jsonData = openJsonFile(filePath)
-jsonData["elastic"]["Scheme"] = ELK_SHEME
-jsonData["elastic"]["Host"] = ELK_CONNECTION_HOST
-jsonData["elastic"]["Port"] = ELK_PORT
-jsonData["elastic"]["Threads"] = ELK_THREADS
-writeJsonFile(filePath, jsonData)
+if ENV_EXTENSION != "dev":
+    filePath = "/app/onlyoffice/config/elastic.json"
+    jsonData = openJsonFile(filePath)
+    jsonData["elastic"]["Scheme"] = ELK_SHEME
+    jsonData["elastic"]["Host"] = ELK_CONNECTION_HOST
+    jsonData["elastic"]["Port"] = ELK_PORT
+    jsonData["elastic"]["Threads"] = ELK_THREADS
+    writeJsonFile(filePath, jsonData)
 
 filePath = "/app/onlyoffice/config/socket.json"
 jsonData = openJsonFile(filePath)

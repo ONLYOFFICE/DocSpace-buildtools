@@ -346,7 +346,7 @@ establish_mysql_conn(){
 	$MYSQL -e ";" >/dev/null 2>&1
 	ERRCODE=$?
 	if [ $ERRCODE -ne 0 ]; then
-		systemctl ${MYSQL_PACKAGE} start >/dev/null 2>&1
+		systemctl start ${MYSQL_PACKAGE} >/dev/null 2>&1
 		$MYSQL -e ";" >/dev/null 2>&1 || { echo "FAILURE"; exit 1; }
 	fi
 
@@ -446,14 +446,9 @@ change_mysql_config(){
 	else
 		sed "s/collation_server.*/collation_server = utf8_general_ci/" -i ${CNF_PATH} || true # ignore errors
 	fi
-	
-	MYSQL_AUTHENTICATION_PLUGIN=$($MYSQL -e "SHOW VARIABLES LIKE 'default_authentication_plugin';" -s | awk '{print $2}' >/dev/null 2>&1)
-	MYSQL_AUTHENTICATION_PLUGIN=${MYSQL_AUTHENTICATION_PLUGIN:-caching_sha2_password}
 
-	if ! grep -q "^default-authentication-plugin"  ${CNF_PATH}; then
-		sed "/\[mysqld\]/a default-authentication-plugin = ${MYSQL_AUTHENTICATION_PLUGIN}" -i ${CNF_PATH}
-	else
-		sed "s/default-authentication-plugin.*/default-authentication-plugin = ${MYSQL_AUTHENTICATION_PLUGIN}/" -i ${CNF_PATH} || true # ignore errors
+	if grep -q "^default-authentication-plugin"  ${CNF_PATH}; then
+		sed "/^default-authentication-plugin/d" -i "${CNF_PATH}" || true # ignore errors
 	fi
 
 	if [ -e ${CNF_SERVICE_PATH} ]; then
@@ -625,7 +620,10 @@ setup_enterprise() {
 change_elasticsearch_config(){
 
 	systemctl stop opensearch
-	systemctl is-active --quiet elasticsearch && systemctl stop elasticsearch
+	if $PACKAGE_MANAGER elasticsearch >/dev/null 2>&1; then
+		systemctl disable elasticsearch >/dev/null 2>&1
+		systemctl stop elasticsearch >/dev/null 2>&1
+	fi
 
 	sed -i '/^plugins\.security/d' /etc/opensearch/opensearch.yml
 	sed -i '/CN=kirk,OU=client,O=client,L=test, C=de/d' /etc/opensearch/opensearch.yml

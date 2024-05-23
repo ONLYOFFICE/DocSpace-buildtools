@@ -675,8 +675,8 @@ get_os_info () {
 			fi
 		fi
 
-		DIST=$(trim $DIST);
 		REV=$(trim $REV);
+		DIST=$(trim "$DIST")
 	fi
 }
 
@@ -863,13 +863,22 @@ install_docker () {
 		systemctl start docker
 		systemctl enable docker
 
-	elif [ "${DIST}" == "Red Hat Enterprise Linux Server" ]; then
+	elif [[ "${DIST}" == Red\ Hat\ Enterprise\ Linux* ]]; then
 
-		echo ""
-		echo "Your operating system does not allow Docker CE installation."
-		echo "You can install Docker EE using the manual here - https://docs.docker.com/engine/installation/linux/rhel/"
-		echo ""
-		exit 1;
+		if [[ "${REV}" -gt "7" ]]; then
+			yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine podman runc > null
+			yum install -y yum-utils
+			yum-config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+			yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin
+			systemctl start docker
+			systemctl enable docker
+		else
+			echo ""
+			echo "Your operating system does not allow Docker CE installation."
+			echo "You can install Docker EE using the manual here - https://docs.docker.com/engine/installation/linux/rhel/"
+			echo ""
+			exit 1;
+		fi
 
 	elif [ "${DIST}" == "SuSe" ]; then
 
@@ -1371,8 +1380,13 @@ install_product () {
 		reconfigure APP_URL_PORTAL "${APP_URL_PORTAL:-"http://${PACKAGE_SYSNAME}-router:8092"}"
 		reconfigure EXTERNAL_PORT ${EXTERNAL_PORT}
 
+		if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ]; then
+			echo -n "Waiting for MySQL container to become healthy..."
+			(timeout 30 bash -c "while ! docker inspect --format '{{json .State.Health.Status }}' ${PACKAGE_SYSNAME}-mysql-server | grep -q 'healthy'; do sleep 1; done") && echo "OK" || (echo "FAILED")
+		fi
+
 		docker-compose -f $BASE_DIR/migration-runner.yml up -d
-		docker wait ${PACKAGE_SYSNAME}-migration-runner
+		echo -n "Waiting for database migration to complete..." && docker wait ${PACKAGE_SYSNAME}-migration-runner && echo "OK"
 		docker-compose -f $BASE_DIR/${PRODUCT}.yml up -d
 		docker-compose -f ${PROXY_YML} up -d
 		docker-compose -f $BASE_DIR/notify.yml up -d

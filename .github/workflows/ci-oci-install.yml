@@ -4,6 +4,7 @@ on:
   pull_request:
     types: [opened, reopened, synchronize]
     paths:
+      - '.github/workflows/ci-oci-install.yml'
       - 'install/OneClickInstall/**'
       - '!install/OneClickInstall/install-Docker.sh'
       - '!install/OneClickInstall/docspace-install.sh'
@@ -37,6 +38,14 @@ on:
          type: boolean
          description: 'Ubuntu 22.04'
          default: true
+      ubuntu2404:
+          type: boolean
+          description: 'Ubuntu 24.04'
+          default: true
+      fedora39:
+         type: boolean
+         description: 'Fedora 39'
+         default: true
 
 jobs:
   prepare:
@@ -55,7 +64,9 @@ jobs:
               {"execute": '${{ github.event.inputs.debian11 || true }}', "name": "Debian11", "os": "debian11", "distr": "generic"},
               {"execute": '${{ github.event.inputs.debian12 || true }}', "name": "Debian12", "os": "debian12", "distr": "generic"},
               {"execute": '${{ github.event.inputs.ubuntu2004 || true }}', "name": "Ubuntu20.04", "os": "ubuntu2004", "distr": "generic"},
-              {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu22.04", "os": "ubuntu2204", "distr": "generic"}
+              {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu22.04", "os": "ubuntu2204", "distr": "generic"},
+              {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu24.04", "os": "ubuntu-24.04", "distr": "bento"},            
+              {"execute": '${{ github.event.inputs.fedora39 || true }}', "name": "Fedora39", "os": "39-cloud-base", "distr": "fedora"}
             ]
           }' | jq -c '{include: [.include[] | select(.execute == true)]}')
           echo "matrix=${matrix}" >> $GITHUB_OUTPUT
@@ -104,7 +115,7 @@ jobs:
             DOWNLOAD_SCRIPT='-ds true' \
             RAM='5100' \
             CPU='3' \
-            ARGUMENTS="-arg '--skiphardwarecheck true --makeswap false'" \
+            ARGUMENTS="-arg '--skiphardwarecheck true'" \
             vagrant up
           on_retry_command: |
             echo "RUN CLEAN UP: Destroy vagrant and one more try"
@@ -129,7 +140,7 @@ jobs:
             CPU='3' \
             DOWNLOAD_SCRIPT='-ds false' \
             TEST_REPO='-tr true' \
-            ARGUMENTS="-arg '--skiphardwarecheck true --makeswap false --localscripts true'" \
+            ARGUMENTS="-arg '--skiphardwarecheck true --localscripts true'" \
             vagrant up
           on_retry_command: |
             echo "RUN CLEAN UP: Destroy vagrant and one more try"
