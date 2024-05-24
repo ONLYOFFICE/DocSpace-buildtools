@@ -11,7 +11,7 @@ Multi-Arch: foreign
 Package: {{product}}
 Architecture: all
 Multi-Arch: foreign
-Depends: debconf,
+Depends: debconf, openssl,
          ${misc:Depends}, ${shlibs:Depends},
          {{product}}-api (= {{package_header_tag_version}}),
          {{product}}-api-system (= {{package_header_tag_version}}),
