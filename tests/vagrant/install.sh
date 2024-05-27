@@ -202,11 +202,8 @@ function prepare_vm() {
 #   Script log
 #############################################################################################
 function install_docspace() {
-	if [ "${DOWNLOAD_SCRIPTS}" == 'true' ]; then
-            wget https://download.onlyoffice.com/docspace/docspace-install.sh
-  else
-    sed 's/set -e/set -xe/' -i *.sh
-  fi
+  [[ "${DOWNLOAD_SCRIPTS}" == 'true' ]] && wget https://download.onlyoffice.com/docspace/docspace-install.sh
+  find . -type f -name "*.sh" -exec sed -i 's/set -e/set -xe/' {} \;
 
 	printf "N\nY\nY" | bash docspace-install.sh ${ARGUMENTS}
 
