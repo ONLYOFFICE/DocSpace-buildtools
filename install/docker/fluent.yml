@@ -1,0 +1,19 @@
+services:
+  fluent-bit:
+    image: fluent/fluent-bit:${FLUENT_BIT_VERSION}
+    container_name: ${FLUENT_BIT_CONTAINER_NAME}
+    restart: always
+    environment:
+      - HOST=${ELK_CONTAINER_NAME}
+      - PORT=${ELK_PORT}
+    volumes:
+      - log_data:/var/log/onlyoffice
+      - ./config/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
+
+networks:
+  default:
+    name: ${NETWORK_NAME}
+    external: true
+
+volumes:
+  log_data:
