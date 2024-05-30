@@ -40,7 +40,7 @@ Description: {{product}}
 Package: {{product}}-common
 Architecture: all
 Multi-Arch: foreign
-Depends: adduser, logrotate, ${misc:Depends}, ${shlibs:Depends}
+Depends: adduser, ${misc:Depends}, ${shlibs:Depends}
 Recommends: default-mysql-client
 Description: {{product}}-common
 	A package containing configs and scripts
