@@ -48,10 +48,12 @@ NODE_VERSION="18"
 curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
 
 #add dotnet repo
-if [[ "$DISTRIB_CODENAME" != noble ]]; then
+if [ "$DIST" = "debian" ] || [ "$DISTRIB_CODENAME" = "focal" ]; then
 	curl https://packages.microsoft.com/config/$DIST/$REV/packages-microsoft-prod.deb -O
 	echo -e "Package: *\nPin: origin \"packages.microsoft.com\"\nPin-Priority: 1002" | tee /etc/apt/preferences.d/99microsoft-prod.pref
 	dpkg -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
+elif dpkg -l | grep -q packages-microsoft-prod; then
+    apt-get purge -y packages-microsoft-prod
 fi
 
 MYSQL_REPO_VERSION="$(curl https://repo.mysql.com | grep -oP 'mysql-apt-config_\K.*' | grep -o '^[^_]*' | sort --version-sort --field-separator=. | tail -n1)"
@@ -142,3 +144,5 @@ if which apparmor_parser && [ ! -f /etc/apparmor.d/disable/usr.sbin.mysqld ] && 
 	ln -sf /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/;
 	apparmor_parser -R /etc/apparmor.d/usr.sbin.mysqld;
 fi
+
+hold_package_version "dotnet-*" "aspnetcore-*" opensearch redis-server rabbitmq-server opensearch-dashboards fluent-bit
