@@ -30,6 +30,9 @@
 			"ios": ""
 		}
 	},
+	"hcaptcha" : {
+		"private-key" : ""
+	},
 	"auth" : {
 		"allowskip" : {
 			"default" : false,
