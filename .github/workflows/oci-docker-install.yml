@@ -1,0 +1,55 @@
+name: OCI test Docker
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    paths:
+      - '.github/workflows/oci-docker-install.yml'
+      - 'install/OneClickInstall/install-Docker.sh'
+  workflow_dispatch:
+    inputs:
+      script-branch:
+        description: 'Branch name for OCI script docker'
+        required: true
+        type: string
+        default: develop
+
+env:
+    PRODUCT: docspace
+    SYSNAME: onlyoffice
+    
+jobs:
+  check-install-DocSpace-Docker:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Determine script branch
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "SCRIPT_BRANCH=${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
+          elif [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "SCRIPT_BRANCH=${{ github.event.inputs.script-branch }}" >> $GITHUB_ENV
+          fi
+            
+      - name: Install DocSpace docker
+        run: |
+          wget https://download.onlyoffice.com/docspace/docspace-install.sh
+          sed 's/set -e/set -xe/' -i *.sh
+          sudo docker image prune --all --force
+          sudo bash docspace-install.sh docker --skiphardwarecheck true --noninteractive true --gitbranch ${{ env.SCRIPT_BRANCH }}
+          sleep 120
+      
+      - name: Check containers
+        run: |
+          set -ex
+          docker ps --all --format "{{.Names}}" | xargs -I {} sh -c '
+            state=$(docker inspect --format="{{.State.Running}}" {});
+            if [ "$state" != "true" ]; then
+              echo "{}: error - container is not running";
+              exit 1;
+            fi;
+            status=$(docker inspect --format="{{if .State.Health}}{{.State.Health.Status}}{{else}}no healthcheck (Up since {{.State.StartedAt}}){{end}}" {});
+            echo "{}: $status"
+          '
+
+
+                
