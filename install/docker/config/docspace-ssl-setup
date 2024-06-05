@@ -148,8 +148,8 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
         echo -e "@weekly root ${DIR}/${PRODUCT}-renew-letsencrypt" | tee /etc/cron.d/${PRODUCT}-letsencrypt
       fi
     else
-      CERTIFICATE_SUBJECT=$(openssl x509 -subject -noout -in "${CERTIFICATE_FILE}" | sed -n 's/^.*CN *= *\([^,]*\).*$/\1/p')
-      CERTIFICATE_ISSUER=$(openssl x509 -issuer -noout -in "${CERTIFICATE_FILE}" | sed -n 's/^.*CN *= *\([^,]*\).*$/\1/p')
+      CERTIFICATE_SUBJECT=$(openssl x509 -subject -noout -in "${CERTIFICATE_FILE}" | sed -n 's/^.*CN *= *\([^,]*\).*$/\1/p' | awk -F. '{print $(NF-1)"."$NF}')
+      CERTIFICATE_ISSUER=$(openssl x509 -issuer -noout -in "${CERTIFICATE_FILE}" | sed -n 's/^.*CN *= *\([^,]*\).*$/\1/p' | awk -F. '{print $(NF-1)"."$NF}')
       
       #Checking whether the certificate is self-signed
       if [[ -n "$CERTIFICATE_SUBJECT" && -n "$CERTIFICATE_ISSUER" && "$CERTIFICATE_SUBJECT" == "$CERTIFICATE_ISSUER" ]]; then
