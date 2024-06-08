@@ -1032,7 +1032,7 @@
     <ROW Action="AI_XmlUninstall" Type="1" Source="xmlCfg.dll" Target="OnXmlUninstall" AdditionalSeq="AI_DATA_SETTER_15"/>
     <ROW Action="DetectMySQLService" Type="1" Source="aicustact.dll" Target="DetectProcess" Options="3" AdditionalSeq="AI_DATA_SETTER_9"/>
     <ROW Action="MoveConfigs" Type="4102" Source="utils.vbs" Target="MoveConfigs"/>
-    <ROW Action="MySQLConfigure" Type="262" Source="utils.vbs" Target="MySQLConfigure"/>
+    <ROW Action="MySQLConfigure" Type="4358" Source="utils.vbs" Target="MySQLConfigure"/>
     <ROW Action="OpenCancelUrl" Type="194" Source="viewer.exe" Target="http://www.onlyoffice.com/install-canceled.aspx" WithoutSeq="true" Options="1"/>
     <ROW Action="OpenSearchSetup" Type="6" Source="utils.vbs" Target="OpenSearchSetup"/>
     <ROW Action="PostgreSQLConfigure" Type="4102" Source="utils.vbs" Target="PostgreSqlConfigure"/>
