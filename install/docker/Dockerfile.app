@@ -65,8 +65,8 @@ RUN cd ${SRC_PATH} && \
     rm -rf ${SRC_PATH}/server/web/ASC.Web.Studio/* && \
     rm -rf ${SRC_PATH}/server/products/ASC.Files/Server/* && \
     rm -rf ${SRC_PATH}/server/products/ASC.Files/Service/* && \
-    rm -rf ${SRC_PATH}/server/products/ASC.People/Server/*
-
+    rm -rf ${SRC_PATH}/server/products/ASC.People/Server/* 
+  
 COPY --chown=onlyoffice:onlyoffice config/mysql/conf.d/mysql.cnf /etc/mysql/conf.d/mysql.cnf
 
 FROM $DOTNET_RUN as dotnetrun
@@ -102,7 +102,7 @@ ENTRYPOINT ["python3", "docker-entrypoint.py"]
 
 FROM node:20-slim as noderun
 ARG BUILD_PATH
-ARG SRC_PATH
+ARG SRC_PATH 
 ENV BUILD_PATH=${BUILD_PATH}
 ENV SRC_PATH=${SRC_PATH}
 
@@ -116,7 +116,7 @@ RUN mkdir -p /var/log/onlyoffice && \
     chown onlyoffice:onlyoffice /var/Logs -R && \
     chown onlyoffice:onlyoffice /var/www -R && \
     apt-get -y update && \
-    apt-get install -yq \
+    apt-get install -yq \ 
         sudo \
         nano \
         curl \
@@ -187,7 +187,7 @@ RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.
     sed -i 's/http:\/\/172.*/$document_server;/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i '/client_body_temp_path/ i \ \ \ \ $MAP_HASH_BUCKET_SIZE' /etc/nginx/nginx.conf.template && \
     sed -i 's/\(worker_connections\).*;/\1 $COUNT_WORKER_CONNECTIONS;/' /etc/nginx/nginx.conf.template && \
-    sed -i -e '/^user/s/^/#/' -e 's#/tmp/nginx.pid#nginx.pid#' -e 's#/etc/nginx/mime.types#mime.types#' /etc/nginx/nginx.conf.template
+    sed -i -e '/^user/s/^/#/' -e 's#/tmp/nginx.pid#nginx.pid#' -e 's#/etc/nginx/mime.types#mime.types#' /etc/nginx/nginx.conf.template 
 
 ENTRYPOINT  [ "/docker-entrypoint.sh" ]
 
@@ -350,7 +350,7 @@ CMD ["ASC.Web.HealthChecks.UI.dll", "ASC.Web.HealthChecks.UI"]
 ## ASC.Migration.Runner ##
 FROM $DOTNET_RUN AS onlyoffice-migration-runner
 ARG BUILD_PATH
-ARG SRC_PATH
+ARG SRC_PATH 
 ENV BUILD_PATH=${BUILD_PATH}
 ENV SRC_PATH=${SRC_PATH}
 RUN addgroup --system --gid 107 onlyoffice && \
