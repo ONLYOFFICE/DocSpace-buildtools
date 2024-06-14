@@ -28,8 +28,7 @@ command_exists () {
 hold_package_version() {
     for package in "$@"; do
         if command -v apt-mark >/dev/null 2>&1 && 
-            dpkg -s "$package" >/dev/null 2>&1 && 
-            ! apt-mark showhold | grep -q "$package" >/dev/null 2>&1
+            dpkg-query -l "$package" >/dev/null 2>&1
         then
             apt-mark hold "$package"
         fi
