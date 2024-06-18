@@ -366,6 +366,7 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.JsonPropertyComponent">
     <ROW JsonProperty="ConnectionString" Parent="__1" Name="ConnectionString" Condition="1" Order="0" Flags="57" Value="Server=[DB_HOST];Database=[DB_NAME];User ID=[DB_USER];Password=[DB_PWD]"/>
+    <ROW JsonProperty="ConnectionString_1" Parent="__2" Name="ConnectionString" Condition="1" Order="0" Flags="57" Value="Server=[DB_HOST];Database=[DB_NAME];User ID=[DB_USER];Password=[DB_PWD]"/>
     <ROW JsonProperty="ConnectionStrings" Parent="Root_12" Name="ConnectionStrings" Condition="1" Order="1" Flags="60"/>
     <ROW JsonProperty="ConnectionStrings_1" Parent="Root_1" Name="ConnectionStrings" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="Host" Parent="elastic" Name="Host" Condition="1" Order="0" Flags="57" Value="[OPENSEARCH_HOST]"/>
@@ -393,10 +394,12 @@
     <ROW JsonProperty="Root_7" Name="Root" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="Root_9" Name="Root" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="Scheme" Parent="elastic" Name="Scheme" Condition="1" Order="1" Flags="57" Value="[OPENSEARCH_SCHEME]"/>
+    <ROW JsonProperty="TeamlabsiteProviders" Parent="options" Name="TeamlabsiteProviders" Condition="1" Order="1" Flags="61"/>
     <ROW JsonProperty="UserName" Parent="RabbitMQ" Name="UserName" Condition="1" Order="1" Flags="57" Value="[AMQP_USER]"/>
     <ROW JsonProperty="VirtualHost" Parent="RabbitMQ" Name="VirtualHost" Condition="1" Order="4" Flags="57" Value="[AMQP_VHOST]"/>
     <ROW JsonProperty="_" Parent="Hosts" Name="0" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="__1" Parent="Providers" Name="0" Condition="1" Order="0" Flags="60"/>
+    <ROW JsonProperty="__2" Parent="TeamlabsiteProviders" Name="0" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="app" Parent="Root_6" Name="app" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="app_1" Parent="Root_7" Name="app" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="app_3" Parent="Root_9" Name="app" Condition="1" Order="0" Flags="60"/>
