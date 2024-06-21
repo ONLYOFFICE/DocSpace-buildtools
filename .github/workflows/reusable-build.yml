@@ -85,7 +85,7 @@ jobs:
           
       - name: Build 4testing
         id: build
-        working_directory: ${{ env.DOCKER_PATH }}
+        working-directory: ${{ env.DOCKER_PATH }}
         env:
           BUILD_NUMBER: ${{ github.run_number }}
           PLATFORM: ${{ matrix.platform }}
