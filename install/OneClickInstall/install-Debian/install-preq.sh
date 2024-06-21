@@ -10,6 +10,8 @@ cat<<EOF
 
 EOF
 
+hold_package_version
+
 if [ "$DIST" = "debian" ] && [ $(apt-cache search ttf-mscorefonts-installer | wc -l) -eq 0 ]; then
 		echo "deb http://ftp.uk.debian.org/debian/ $DISTRIB_CODENAME main contrib" >> /etc/apt/sources.list
 		echo "deb-src http://ftp.uk.debian.org/debian/ $DISTRIB_CODENAME main contrib" >> /etc/apt/sources.list
@@ -144,5 +146,3 @@ if which apparmor_parser && [ ! -f /etc/apparmor.d/disable/usr.sbin.mysqld ] && 
 	ln -sf /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/;
 	apparmor_parser -R /etc/apparmor.d/usr.sbin.mysqld;
 fi
-
-hold_package_version "dotnet-*" "aspnetcore-*" opensearch redis-server rabbitmq-server opensearch-dashboards fluent-bit
