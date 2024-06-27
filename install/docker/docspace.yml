@@ -62,6 +62,7 @@ services:
     <<: *x-service-base
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-backup-background:${DOCKER_TAG}"
     container_name: ${BACKUP_BACKGRUOND_TASKS_HOST}
+    user: "${UID}:${GID}"
     healthcheck:
      <<: *x-healthcheck
      test: curl --fail http://${SERVICE_BACKUP_BACKGRUOND_TASKS}/health/ || exit 1
@@ -70,6 +71,7 @@ services:
     <<: *x-service-base
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-backup:${DOCKER_TAG}"
     container_name: ${BACKUP_HOST}
+    user: "${UID}:${GID}"
     healthcheck:
      <<: *x-healthcheck
      test: curl --fail http://${SERVICE_BACKUP}/health/ || exit 1
@@ -78,6 +80,7 @@ services:
     <<: *x-service-base
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-clear-events:${DOCKER_TAG}"
     container_name: ${CLEAR_EVENTS_HOST}
+    user: "${UID}:${GID}"
     healthcheck:
      <<: *x-healthcheck
      test: curl --fail http://${SERVICE_CLEAR_EVENTS}/health/ || exit 1
@@ -86,6 +89,7 @@ services:
     <<: *x-service-base
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-files:${DOCKER_TAG}"
     container_name: ${FILES_HOST}
+    user: "${UID}:${GID}"
     healthcheck:
      <<: *x-healthcheck
      test: curl --fail http://${SERVICE_FILES}/health/ || exit 1
@@ -94,6 +98,7 @@ services:
     <<: *x-service-base
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-files-services:${DOCKER_TAG}"
     container_name: ${FILES_SERVICES_HOST}
+    user: "${UID}:${GID}"
     healthcheck:
      <<: *x-healthcheck
      test: curl --fail http://${SERVICE_FILES_SERVICES}/health/ || exit 1
@@ -102,6 +107,7 @@ services:
     <<: *x-service-base
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-people-server:${DOCKER_TAG}"
     container_name: ${PEOPLE_SERVER_HOST}
+    user: "${UID}:${GID}"
     healthcheck:
      <<: *x-healthcheck
      test: curl --fail http://${SERVICE_PEOPLE_SERVER}/health/ || exit 1
@@ -110,6 +116,7 @@ services:
     <<: *x-service-base
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-socket:${DOCKER_TAG}"
     container_name: ${SOCKET_HOST}
+    user: "${UID}:${GID}"
     expose:
       - ${SERVICE_PORT}
 
@@ -117,6 +124,7 @@ services:
     <<: *x-service-base
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-studio-notify:${DOCKER_TAG}"
     container_name: ${STUDIO_NOTIFY_HOST}
+    user: "${UID}:${GID}"
     healthcheck:
      <<: *x-healthcheck
      test: curl --fail http://${SERVICE_STUDIO_NOTIFY}/health/ || exit 1
@@ -125,6 +133,7 @@ services:
     <<: *x-service-base
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-api:${DOCKER_TAG}"
     container_name: ${API_HOST}
+    user: "${UID}:${GID}"
     healthcheck:
      <<: *x-healthcheck
      test: curl --fail http://${SERVICE_API}/health/ || exit 1
@@ -133,6 +142,7 @@ services:
     <<: *x-service-base
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-api-system:${DOCKER_TAG}"
     container_name: ${API_SYSTEM_HOST}
+    user: "${UID}:${GID}"
     healthcheck:
      <<: *x-healthcheck
      test: curl --fail http://${SERVICE_API_SYSTEM}/health/ || exit 1
@@ -141,6 +151,7 @@ services:
     <<: *x-service-base
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-studio:${DOCKER_TAG}"
     container_name: ${STUDIO_HOST}
+    user: "${UID}:${GID}"
     healthcheck:
      <<: *x-healthcheck
      test: curl --fail http://${SERVICE_STUDIO}/health/ || exit 1
@@ -149,6 +160,7 @@ services:
     <<: *x-service-base
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-ssoauth:${DOCKER_TAG}"
     container_name: ${SSOAUTH_HOST}
+    user: "${UID}:${GID}"
     expose:
       - ${SERVICE_PORT}
       - "9834"
@@ -157,6 +169,7 @@ services:
     <<: *x-service-base
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-doceditor:${DOCKER_TAG}"
     container_name: ${DOCEDITOR_HOST}
+    user: "${UID}:${GID}"
     expose:
       - "5013"
     healthcheck:
@@ -167,6 +180,7 @@ services:
     <<: *x-service-base
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-login:${DOCKER_TAG}"
     container_name: ${LOGIN_HOST}
+    user: "${UID}:${GID}"
     expose:
       - "5011"
     healthcheck:
@@ -176,6 +190,7 @@ services:
   onlyoffice-router:
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-router:${DOCKER_TAG}"
     container_name: ${ROUTER_HOST}
+    user: "${UID}:${GID}"
     restart: always
     healthcheck:
      <<: *x-healthcheck
