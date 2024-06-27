@@ -5,53 +5,11 @@ on:
     - cron: '0 20 * * *'
 
 jobs:
-
-  select-branches:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out the code
-        uses: actions/checkout@v2
-
-      - name: List Branches
-        id: list-branches
-        run: |
-          all_branches=$(git ls-remote -hq | sed -n 's/^[0-9a-f]\{40\}\s\+refs\/heads\//''/p')
-          matching_branches=""
-
-          for branch in $all_branches; do
-            if [[ $branch =~ ^release/v[0-9]+ || $branch =~ ^hotfix/v[0-9]+ || $branch == "develop" ]]; then
-              matching_branches="${matching_branches},\"${branch}\""
-            fi
-          done
-        
-          matching_branches=${matching_branches#,}
-          echo "json_output=[${matching_branches}]" >> $GITHUB_OUTPUT
-
-          last_branch=$(echo ${matching_branches} | awk -F, '{print $NF}' | sed 's/"//g')
-          echo "last_branch=${last_branch}" >> $GITHUB_OUTPUT
-
-      - name: Dispatch Action
-        run: |
-          echo "${{ steps.list-branches.outputs.json_output }}"
-
-          curl \
-          -X POST \
-          -u "${{ secrets.USERNAME}}:${{secrets.TOKEN}}" \
-          "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/dispatches" \
-          -H "Accept: application/vnd.github.everest-preview+json" \
-          --data '{"event_type": "cron-trigger-action", "client_payload": { "branches": ${{ steps.list-branches.outputs.json_output }}}}'
-
-          curl \
-          -X POST \
-          -u "${{ secrets.USERNAME}}:${{secrets.TOKEN}}" \
-          https://api.github.com/repos/ONLYOFFICE/DocSpace/actions/workflows/59268961/dispatches \
-          -H "Accept: application/vnd.github.everest-preview+json" \
-          --data '{
-            "ref": "${{ steps.list-branches.outputs.last_branch }}",
-            "inputs": {
-              "branch-buildtools": "${{ steps.list-branches.outputs.last_branch }}",
-              "branch-client": "${{ steps.list-branches.outputs.last_branch }}",
-              "branch-server": "${{ steps.list-branches.outputs.last_branch }}"
-            }
-          }'
+  call-cron-build:
+    uses: ONLYOFFICE/DocSpace-buildtools/.github/workflows/reusable-cron.yml@master
+    with:
+      organization: 'ONLYOFFICE'
+      repository: 'DocSpace-buildtools'
+    secrets:
+      git-user: ${{ secrets.USERNAME }}
+      git-token: ${{ secrets.TOKEN }}
