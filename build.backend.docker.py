@@ -194,9 +194,6 @@ os.environ["APP_URL_PORTAL"] = portal_url
 os.environ["MIGRATION_TYPE"] = migration_type
 subprocess.run(["docker-compose", "-f", os.path.join(dockerDir, "docspace.profiles.yml"), "-f", os.path.join(dockerDir, "docspace.overcome.yml"), "--profile", "migration-runner", "--profile", "backend-local", "up", "-d"])
 
-print("Run OAuth2 migration")
-subprocess.run(["docker-compose", "-f",os.path.join(dockerDir, "oauth2-migration.yml"), "up", "-d" ])
-
 print("Run OAuth2")
 subprocess.run(["docker-compose", "-f",os.path.join(dockerDir, "oauth2.yml"), "up", "-d" ])
 
