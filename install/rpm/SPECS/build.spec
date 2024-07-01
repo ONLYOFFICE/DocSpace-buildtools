@@ -34,7 +34,7 @@ sed -i "s#\(/var/log/onlyoffice/\)#\1%{product}#" install/docker/config/fluent-b
 sed -i '/^\[OUTPUT\]/i\[INPUT]' install/docker/config/fluent-bit.conf
 sed -i '/^\[OUTPUT\]/i\    Name                exec' install/docker/config/fluent-bit.conf
 sed -i '/^\[OUTPUT\]/i\    Interval_Sec        86400' install/docker/config/fluent-bit.conf
-sed -i '/^\[OUTPUT\]/i\    Command             curl -s -X POST OPENSEARCH_SCHEME://OPENSEARCH_HOST:OPENSEARCH_PORT/OPENSEARCH_INDEX/_delete_by_query -H '\''Content-Type: application/json'\'' -d '\''{"query": {"range": {"@timestamp": {"lt": "now-30d"}}}}'\'' ${BUILDTOOLS_PATH}/install/docker/config/fluent-bit.conf 
+sed -i '/^\[OUTPUT\]/i\    Command             curl -s -X POST OPENSEARCH_SCHEME://OPENSEARCH_HOST:OPENSEARCH_PORT/OPENSEARCH_INDEX/_delete_by_query -H '\''Content-Type: application/json'\'' -d '\''{"query": {"range": {"@timestamp": {"lt": "now-30d"}}}}'\''' install/docker/config/fluent-bit.conf 
 sed -i '/^\[OUTPUT\]/i\\' install/docker/config/fluent-bit.conf
 
 find %{_builddir}/server/publish/ \
