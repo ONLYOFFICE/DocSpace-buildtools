@@ -56,7 +56,7 @@
     <ROW Property="MySQLConnector" Value="MySQL Connector/ODBC 8.0.21 x86"/>
     <ROW Property="NEED_REINDEX_OPENSEARCH" Value="FALSE" ValueLocId="-"/>
     <ROW Property="OPENSEARCH_HOST" Value="localhost" ValueLocId="-"/>
-    <ROW Property="OPENSEARCH_INDEX" Value="fluentbit" ValueLocId="-"/>
+    <ROW Property="OPENSEARCH_INDEX" Value="onlyoffice-fluent-bit" ValueLocId="-"/>
     <ROW Property="OPENSEARCH_MSG" Value="Unable to connect to remote OpenSearch server at "/>
     <ROW Property="OPENSEARCH_PORT" Value="9200" ValueLocId="-"/>
     <ROW Property="OPENSEARCH_SCHEME" Value="http" ValueLocId="-"/>
