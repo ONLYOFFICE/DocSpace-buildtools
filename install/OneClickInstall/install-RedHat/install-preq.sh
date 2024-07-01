@@ -39,7 +39,7 @@ yum localinstall -y --nogpgcheck https://download1.rpmfusion.org/free/$RPMFUSION
 
 [ "$REV" = "9" ] && update-crypto-policies --set DEFAULT:SHA1
 if [ "$DIST" == "centos" ]; then
-	[ "$REV" = "9" ] && TESTING_REPO="--enablerepo=crb" || POWERTOOLS_REPO="--enablerepo=powertools"
+	[ "$REV" = "9" ] && { ${package_manager} -y install xorg-x11-font-utils; TESTING_REPO="--enablerepo=crb"; } || POWERTOOLS_REPO="--enablerepo=powertools"
 elif [ "$DIST" == "redhat" ]; then
 	/usr/bin/crb enable
 fi
