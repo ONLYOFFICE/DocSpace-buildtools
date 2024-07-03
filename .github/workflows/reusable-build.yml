@@ -1,4 +1,4 @@
-name: "Reusable DocSpace build action"
+name: "<reusable> DocSpace build action"
 
 on:
   workflow_call:

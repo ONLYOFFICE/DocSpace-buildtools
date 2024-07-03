@@ -1,4 +1,4 @@
-name: "Reusable DocSpace cron trigger"
+name: "<reusable> DocSpace cron trigger"
 
 on:
   workflow_call:
