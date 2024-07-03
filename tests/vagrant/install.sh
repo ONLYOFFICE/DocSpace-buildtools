@@ -110,6 +110,7 @@ function prepare_vm() {
           ;;
 
       centos)
+          [ "$VERSION_ID" == "8" ] && sed -i 's|^mirrorlist=|#&|; s|^#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|' /etc/yum.repos.d/CentOS-*
           [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-rpm
           yum -y install centos*-release 
           ;;
