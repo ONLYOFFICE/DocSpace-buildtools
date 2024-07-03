@@ -1,0 +1,49 @@
+name: "<reusable> release Docker-DocSpace"
+
+on:
+  workflow_call:
+    inputs:
+      repo:
+        type: string
+        required: true
+        description: 'hub.docker repo owner (ex. onlyoffice)'
+      release_version:
+        type: string
+        required: true
+        description: 'Tag for stable release (ex. 1.0.0.1)'
+      source_version:
+        type: string
+        required: true
+        description: '4testing tag from which the release will be created (ex. 2.5.1.5678)'
+    secrets:
+      docker-username:
+        required: true
+        description: "hub.docker username"
+      docker-usertoken:
+        description: "hub.docker token"
+        required: true
+
+jobs:
+  Release:
+    name: "Release Docker-DocSpace"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with: 
+        repository: 'ONLYOFFICE/DocSpace-buildtools'
+
+    - name: Login to DockerHub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.docker-username }}
+        password: ${{ secrets.docker-usertoken }}
+           
+    - name: "Release Docker-DocSpace"
+      shell: bash
+      env:
+        REPO: ${{ inputs.repo }}
+        DOCKER_TAG: ${{ inputs.source_version }}
+        RELEASE_VERSION: ${{ inputs.release_version }}
+        DOCKER_IMAGE_PREFIX: "4testing-docspace"
+      run: |
+         ./.github/scripts/release-docspace.sh
