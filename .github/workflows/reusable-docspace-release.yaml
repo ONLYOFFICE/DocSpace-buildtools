@@ -46,4 +46,4 @@ jobs:
         RELEASE_VERSION: ${{ inputs.release_version }}
         DOCKER_IMAGE_PREFIX: "4testing-docspace"
       run: |
-         ./.github/scripts/release-docspace.sh
+         ${GITHUB_WORKSPACE}/.github/scripts/release-docspace.sh
