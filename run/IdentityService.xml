@@ -4,7 +4,9 @@
   <startmode>manual</startmode>
   <executable>java</executable>
   <env name="LOG_FILE_PATH" value="../../Logs/identity-authorization.log"/>
-  <arguments>-jar ../../server/common/ASC.Identity/authorization/target/identity-authorization.jar</arguments>
+  <env name="SERVER_PORT" value="8080"/>
+  <env name="SPRING_PROFILES_ACTIVE" value=""/>
+  <arguments>-jar ../../server/common/ASC.Identity/authorization/authorization-container/target/authorization-container-1.0.0.jar</arguments>
   <log mode="none"/>
   <delayedAutoStart>true</delayedAutoStart>
   <onfailure action="restart" delay="5 sec" />

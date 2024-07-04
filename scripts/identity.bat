@@ -1,13 +1,28 @@
 PUSHD %~dp0..
 
-cd %~dp0../../server/common/ASC.Identity/api/
+cd %~dp0../../server/common/ASC.Identity/
 
-call mvnw compiler:compile
-call mvnw package -Dmaven.test.skip
+echo Start build ASC.Identity project...
+echo.
 
-cd %~dp0../../server/common/ASC.Identity/authorization/
+echo ASC.Identity: resolves all project dependencies...
+echo.
 
-call mvnw compiler:compile
-call mvnw package -Dmaven.test.skip
+call mvn dependency:go-offline -q
+
+if %errorlevel% == 0 (
+
+echo ASC.Identity: take the compiled code and package it in its distributable format, such as a JAR...
+call mvn package -DskipTests -q
+
+)
+
+if %errorlevel% == 0 (
+
+echo ASC.Identity: build completed
+echo.
+
+)
+
 
 POPD

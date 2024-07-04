@@ -4,7 +4,8 @@
   <startmode>manual</startmode>
   <executable>java</executable>
   <env name="LOG_FILE_PATH" value="../../Logs/identity-api.log"/>
-  <arguments>-jar ../../server/common/ASC.Identity/api/target/identity-api.jar</arguments>
+  <env name="SPRING_PROFILES_ACTIVE" value=""/>
+  <arguments>-jar ../../server/common/ASC.Identity/registration/registration-container/target/registration-container-1.0.0.jar</arguments>
   <log mode="none"/>
   <delayedAutoStart>true</delayedAutoStart>
   <onfailure action="restart" delay="5 sec" />
