@@ -47,6 +47,8 @@ case $1 in
       DOMAIN=$2
       CERTIFICATE_FILE=$3
       PRIVATEKEY_FILE=$4
+
+      [[ $DOMAIN =~ ^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,6}$ ]] || { echo "Error: domain name '$DOMAIN' is incorrect." >&2; exit 1; }
     else
       help
     fi
