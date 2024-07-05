@@ -8,7 +8,8 @@ LETSENCRYPT="/etc/letsencrypt/live";
 OPENRESTY="/etc/openresty/conf.d"
 DHPARAM_FILE="/etc/ssl/certs/dhparam.pem"
 WEBROOT_PATH="/var/www/${PRODUCT}"
-SYSTEMD_DIR="/usr/lib/systemd/system"
+CONFIG_DIR="/etc/onlyoffice/${PRODUCT}"
+SYSTEMD_DIR=$(dirname $($(command -v dpkg-query &> /dev/null && echo "dpkg-query -L" || echo "rpm -ql") ${PRODUCT}-api | grep systemd/system/))
 
 # Check if configuration files are present
 if [ ! -f "${OPENRESTY}/onlyoffice-proxy-ssl.conf.template" -a ! -f "${OPENRESTY}/onlyoffice-proxy.conf.template" ]; then
@@ -61,7 +62,7 @@ case $1 in
     sed "s!\(worker_connections\).*;!\1 $(ulimit -n);!" -i "${OPENRESTY}/onlyoffice-proxy.conf"
     [[ -f "${DIR}/${PRODUCT}-renew-letsencrypt" ]] && rm -rf "${DIR}/${PRODUCT}-renew-letsencrypt"
     [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ] && systemctl reload openresty || service openresty reload
-
+    sed -i "s/\(\"portal\":\).*/\1 \"http:\/\/localhost:80\"/" ${CONFIG_DIR}/appsettings.$(grep -oP 'ENVIRONMENT=\K.*' ${SYSTEMD_DIR}/${PRODUCT}-api.service).json
     SYSTEMD_NODE_FILES=$(grep -l "NODE_EXTRA_CA_CERTS" ${SYSTEMD_DIR}/${PRODUCT}-*.service ${SYSTEMD_DIR}/ds-*.service || true)
     if [ -n "$SYSTEMD_NODE_FILES" ]; then
       sed -i '/NODE_EXTRA_CA_CERTS/d' ${SYSTEMD_NODE_FILES}
@@ -108,10 +109,7 @@ PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${PRODUCT}/privkey.pem"}"
 if [ -f "${CERTIFICATE_FILE}" ]; then 
   if [ -f "${PRIVATEKEY_FILE}" ]; then
     cp -f ${OPENRESTY}/onlyoffice-proxy-ssl.conf.template ${OPENRESTY}/onlyoffice-proxy.conf
-
-    PACKAGE_FILE_CHECKER=$(command -v dpkg-query &> /dev/null && echo "dpkg-query -L" || echo "rpm -ql")
-    ENVIRONMENT=$(grep -oP 'ENVIRONMENT=\K.*' $(dirname $(${PACKAGE_FILE_CHECKER} ${PRODUCT}-api | grep systemd/system/))/${PRODUCT}-api.service)
-    sed -i "s/\(\"portal\":\).*/\1 \"https:\/\/${DOMAIN}\"/" /etc/onlyoffice/docspace/appsettings.$ENVIRONMENT.json
+    sed -i "s/\(\"portal\":\).*/\1 \"https:\/\/${DOMAIN}\"/" ${CONFIG_DIR}/appsettings.$(grep -oP 'ENVIRONMENT=\K.*' ${SYSTEMD_DIR}/${PRODUCT}-api.service).json
     sed -i "s~\(ssl_certificate \).*;~\1${CERTIFICATE_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
     sed -i "s~\(ssl_certificate_key \).*;~\1${PRIVATEKEY_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
     sed -i "s~\(ssl_dhparam \).*;~\1${DHPARAM_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
