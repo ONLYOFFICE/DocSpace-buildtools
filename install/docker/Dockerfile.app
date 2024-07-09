@@ -85,12 +85,12 @@ RUN mkdir -p /var/log/onlyoffice && \
     chown onlyoffice:onlyoffice /var/www -R && \
     apt-get -y update && \
     apt-get install -yq \
-        sudo \
-        nano \
-        curl \
-        vim \
-        python3-pip \
-        libgdiplus && \
+    sudo \
+    nano \
+    curl \
+    vim \
+    python3-pip \
+    libgdiplus && \
     pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces && \
     rm -rf /var/lib/apt/lists/*
 
@@ -115,12 +115,12 @@ RUN mkdir -p /var/log/onlyoffice && \
     chown onlyoffice:onlyoffice /var/www -R && \
     apt-get -y update && \
     apt-get install -yq \ 
-        sudo \
-        nano \
-        curl \
-        vim \
-        python3-pip && \
-        pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces && \
+    sudo \
+    nano \
+    curl \
+    vim \
+    python3-pip && \
+    pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
@@ -170,8 +170,8 @@ RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.
     sed -i 's/127.0.0.1:9834/$service_sso/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5013/$service_doceditor/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5011/$service_login/' /etc/nginx/conf.d/onlyoffice.conf && \
-    sed -i 's/127.0.0.1:9090/$service_oauth_api/' /etc/nginx/conf.d/onlyoffice.conf && \
-    sed -i 's/127.0.0.1:8080/$service_oauth/' /etc/nginx/conf.d/onlyoffice.conf && \
+    sed -i 's/127.0.0.1:9090/$service_identity_api/' /etc/nginx/conf.d/onlyoffice.conf && \
+    sed -i 's/127.0.0.1:8080/$service_identity/' /etc/nginx/conf.d/onlyoffice.conf && \
     if [[ -z "${SERVICE_CLIENT}" ]] ; then sed -i 's/127.0.0.1:5001/$service_client/' /etc/nginx/conf.d/onlyoffice.conf; fi && \
     if [[ -z "${SERVICE_MANAGEMENT}" ]] ; then sed -i 's/127.0.0.1:5015/$service_management/' /etc/nginx/conf.d/onlyoffice.conf; fi && \
     sed -i 's/127.0.0.1:5033/$service_healthchecks/' /etc/nginx/conf.d/onlyoffice.conf && \
@@ -255,11 +255,11 @@ ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
 WORKDIR ${BUILD_PATH}/products/ASC.Files/service/
 
 RUN  echo "deb http://security.ubuntu.com/ubuntu focal-security main" | tee /etc/apt/sources.list && \
-     apt-key adv --keyserver keys.gnupg.net --recv-keys 3B4FE6ACC0B21F32 && \
-     apt-key adv --keyserver keys.gnupg.net --recv-keys 871920D1991BC93C && \
-     apt-get -y update && \
-     apt-get install -yq libssl1.1 && \
-     rm -rf /var/lib/apt/lists/*
+    apt-key adv --keyserver keys.gnupg.net --recv-keys 3B4FE6ACC0B21F32 && \
+    apt-key adv --keyserver keys.gnupg.net --recv-keys 871920D1991BC93C && \
+    apt-get -y update && \
+    apt-get install -yq libssl1.1 && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY --chown=onlyoffice:onlyoffice docker-entrypoint.py ./docker-entrypoint.py
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Files.Service/service/ .
