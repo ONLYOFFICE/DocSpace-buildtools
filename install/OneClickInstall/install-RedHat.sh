@@ -26,93 +26,19 @@ res_unsupported_version () {
 
 while [ "$1" != "" ]; do
 	case $1 in
-
-		-u | --update )
-			if [ "$2" != "" ]; then
-				UPDATE=$2
-				shift
-			fi
-		;;
-
-		-je | --jwtenabled )
-			if [ "$2" != "" ]; then
-				JWT_ENABLED=$2
-				shift
-			fi
-		;;
-
-		-jh | --jwtheader )
-			if [ "$2" != "" ]; then
-				JWT_HEADER=$2
-				shift
-			fi
-		;;
-
-		-js | --jwtsecret )
-			if [ "$2" != "" ]; then
-				JWT_SECRET=$2
-				shift
-			fi
-		;;
-		
-		-gb | --gitbranch )
-			if [ "$2" != "" ]; then
-				PARAMETERS="$PARAMETERS ${1}";
-				GIT_BRANCH=$2
-				shift
-			fi
-		;;
-		
-		-ifb | --installfluentbit )
-			if [ "$2" != "" ]; then
-				INSTALL_FLUENT_BIT=$2
-				shift
-			fi
-		;;
-
-		-du | --dashboadrsusername )
-			if [ "$2" != "" ]; then
-				DASHBOARDS_USERNAME=$2
-				shift
-			fi
-		;;
-
-		-dp | --dashboadrspassword )
-			if [ "$2" != "" ]; then
-				DASHBOARDS_PASSWORD=$2
-				shift
-			fi
-		;;
-
-		-ls | --localscripts )
-			if [ "$2" != "" ]; then
-				LOCAL_SCRIPTS=$2
-				shift
-			fi
-		;;
-
-		-skiphc | --skiphardwarecheck )
-			if [ "$2" != "" ]; then
-				SKIP_HARDWARE_CHECK=$2
-				shift
-			fi
-		;;
-
-		-it | --installation_type )
-			if [ "$2" != "" ]; then
-				INSTALLATION_TYPE=$(echo "$2" | awk '{print toupper($0)}');
-				shift
-			fi
-		;;
-		
-		-ms | --makeswap )
-			if [ "$2" != "" ]; then
-				MAKESWAP=$2
-				shift
-			fi
-		;;
-
-		-? | -h | --help )
+		-u      | --update             ) [ -n "$2" ]                           && UPDATE=$2              && shift ;;
+		-je     | --jwtenabled         ) [ -n "$2" ]                           && JWT_ENABLED=$2         && shift ;;
+		-jh     | --jwtheader          ) [ -n "$2" ]                           && JWT_HEADER=$2          && shift ;;
+		-js     | --jwtsecret          ) [ -n "$2" ]                           && JWT_SECRET=$2          && shift ;;
+		-gb     | --gitbranch          ) [ -n "$2" ]                           && GIT_BRANCH=$2          && shift ;;
+		-ifb    | --installfluentbit   ) [ -n "$2" ]                           && INSTALL_FLUENT_BIT=$2  && shift ;;
+		-du     | --dashboadrsusername ) [ -n "$2" ]                           && DASHBOARDS_USERNAME=$2 && shift ;;
+		-dp     | --dashboadrspassword ) [ -n "$2" ]                           && DASHBOARDS_PASSWORD=$2 && shift ;;
+		-ls     | --localscripts       ) [ "$2" == "true" -o "$2" == "false" ] && LOCAL_SCRIPTS=$2       && shift ;;
+		-skiphc | --skiphardwarecheck  ) [ "$2" == "true" -o "$2" == "false" ] && SKIP_HARDWARE_CHECK=$2 && shift ;;
+		-ms     | --makeswap           ) [ "$2" == "true" -o "$2" == "false" ] && MAKESWAP=$2            && shift ;;
+		-it     | --installation_type  ) [ -n "$2" ]                           && INSTALLATION_TYPE=$(echo "$2" | awk '{print toupper($0)}') && shift ;;
+		-?      | -h        | --help   )
 			echo "  Usage $0 [PARAMETER] [[PARAMETER], ...]"
 			echo "    Parameters:"
 			echo "      -it, --installation_type          installation type (community|enterprise)"
@@ -130,22 +56,13 @@ while [ "$1" != "" ]; do
 			echo
 			exit 0
 		;;
-
 	esac
 	shift
 done
 
-if [ -z "${UPDATE}" ]; then
-   UPDATE="false";
-fi
-
-if [ -z "${LOCAL_SCRIPTS}" ]; then
-   LOCAL_SCRIPTS="false";
-fi
-
-if [ -z "${SKIP_HARDWARE_CHECK}" ]; then
-   SKIP_HARDWARE_CHECK="false";
-fi
+UPDATE="${UPDATE:-false}"
+LOCAL_SCRIPTS="${LOCAL_SCRIPTS:-false}"
+SKIP_HARDWARE_CHECK="${SKIP_HARDWARE_CHECK:-false}"
 
 cat > /etc/yum.repos.d/onlyoffice.repo <<END
 [onlyoffice]
@@ -156,11 +73,8 @@ enabled=1
 gpgkey=https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE
 END
 
-if [ -z $GIT_BRANCH ]; then
-	DOWNLOAD_URL_PREFIX="https://download.onlyoffice.com/${product}/install-RedHat"
-else
-	DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall/install-RedHat"
-fi
+DOWNLOAD_URL_PREFIX="https://download.${product_sysname}.com/${product}/install-RedHat"
+[ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${product_sysname^^}/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall/install-RedHat"
 
 if [ "$LOCAL_SCRIPTS" = "true" ]; then
 	source install-RedHat/tools.sh
