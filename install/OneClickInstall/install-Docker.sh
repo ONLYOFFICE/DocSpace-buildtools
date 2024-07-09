@@ -1,7 +1,7 @@
 #!/bin/bash
 
  #
- # (c) Copyright Ascensio System SIA 2021
+ # (c) Copyright Ascensio System SIA 2024
  #
  # This program is a free software product. You can redistribute it and/or
  # modify it under the terms of the GNU Affero General Public License (AGPL)
@@ -112,387 +112,61 @@ EXTERNAL_PORT="80"
 
 while [ "$1" != "" ]; do
 	case $1 in
-
-		-u | --update )
-			if [ "$2" != "" ]; then
-				UPDATE=$2
-				shift
-			fi
-		;;
-
-		-hub | --hub )
-			if [ "$2" != "" ]; then
-				HUB=$2
-				shift
-			fi
-		;;
-
-		-un | --username )
-			if [ "$2" != "" ]; then
-				USERNAME=$2
-				shift
-			fi
-		;;
-
-		-p | --password )
-			if [ "$2" != "" ]; then
-				PASSWORD=$2
-				shift
-			fi
-		;;
-
-		-ids | --installdocspace )
-			if [ "$2" != "" ]; then
-				INSTALL_PRODUCT=$2
-				shift
-			fi
-		;;
-
-		-idocs | --installdocs )
-			if [ "$2" != "" ]; then
-				INSTALL_DOCUMENT_SERVER=$2
-				shift
-			fi
-		;;
-
-		-imysql | --installmysql )
-			if [ "$2" != "" ]; then
-				INSTALL_MYSQL_SERVER=$2
-				shift
-			fi
-		;;		
-		
-		-irbt | --installrabbitmq )
-			if [ "$2" != "" ]; then
-				INSTALL_RABBITMQ=$2
-				shift
-			fi
-		;;
-
-		-irds | --installredis )
-			if [ "$2" != "" ]; then
-				INSTALL_REDIS=$2
-				shift
-			fi
-		;;
-
-		-ht | --helptarget )
-			if [ "$2" != "" ]; then
-				HELP_TARGET=$2
-				shift
-			fi
-		;;
-
-		-mysqld | --mysqldatabase )
-			if [ "$2" != "" ]; then
-				MYSQL_DATABASE=$2
-				shift
-			fi
-		;;
-
-		-mysqlrp | --mysqlrootpassword )
-			if [ "$2" != "" ]; then
-				MYSQL_ROOT_PASSWORD=$2
-				shift
-			fi
-		;;
-
-		-mysqlu | --mysqluser )
-			if [ "$2" != "" ]; then
-				MYSQL_USER=$2
-				shift
-			fi
-		;;
-
-		-mysqlh | --mysqlhost )
-			if [ "$2" != "" ]; then
-				MYSQL_HOST=$2
-				shift
-			fi
-		;;
-
-		-mysqlport | --mysqlport )
-			if [ "$2" != "" ]; then
-				MYSQL_PORT=$2
-				shift
-			fi
-		;;
-
-		-mysqlp | --mysqlpassword )
-			if [ "$2" != "" ]; then
-				MYSQL_PASSWORD=$2
-				shift
-			fi
-		;;
-
-		-espr | --elasticprotocol )
-			if [ "$2" != "" ]; then
-				ELK_SHEME=$2
-				shift
-			fi
-		;;
-
-		-esh | --elastichost )
-			if [ "$2" != "" ]; then
-				ELK_HOST=$2
-				shift
-			fi
-		;;
-
-		-esp | --elasticport )
-			if [ "$2" != "" ]; then
-				ELK_PORT=$2
-				shift
-			fi
-		;;
-
-		-skiphc | --skiphardwarecheck )
-			if [ "$2" != "" ]; then
-				SKIP_HARDWARE_CHECK=$2
-				shift
-			fi
-		;;
-
-		-ep | --externalport )
-			if [ "$2" != "" ]; then
-				EXTERNAL_PORT=$2
-				shift
-			fi
-		;;
-
-		-dsh | --docspacehost )
-			if [ "$2" != "" ]; then
-				APP_URL_PORTAL=$2
-				shift
-			fi
-		;;
-		
-		-mk | --machinekey )
-			if [ "$2" != "" ]; then
-				APP_CORE_MACHINEKEY=$2
-				shift
-			fi
-		;;
-		
-		-env | --environment )
-			if [ "$2" != "" ]; then
-				ENV_EXTENSION=$2
-				shift
-			fi
-		;;
-
-		-s | --status )
-			if [ "$2" != "" ]; then
-				STATUS=$2
-				IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-api"
-				shift
-			fi
-		;;
-
-		-ls | --localscripts )
-			if [ "$2" != "" ]; then
-				shift
-			fi
-		;;
-		
-		-dsv | --docspaceversion )
-			if [ "$2" != "" ]; then
-				DOCKER_TAG=$2
-				shift
-			fi
-		;;
-		
-		-gb | --gitbranch )
-			if [ "$2" != "" ]; then
-				PARAMETERS="$PARAMETERS ${1}";
-				GIT_BRANCH=$2
-				shift
-			fi
-		;;
-		
-		-docsi | --docsimage )
-			if [ "$2" != "" ]; then
-				DOCUMENT_SERVER_IMAGE_NAME=$2
-				shift
-			fi
-		;;
-		
-		-docsv | --docsversion )
-			if [ "$2" != "" ]; then
-				DOCUMENT_SERVER_VERSION=$2
-				shift
-			fi
-		;;
-		
-		-docsurl | --docsurl )
-			if [ "$2" != "" ]; then
-				DOCUMENT_SERVER_URL_EXTERNAL=$2
-				shift
-			fi
-		;;
-		
-		-dbm | --databasemigration )
-			if [ "$2" != "" ]; then
-				DATABASE_MIGRATION=$2
-				shift
-			fi
-		;;
-
-		-jh | --jwtheader )
-			if [ "$2" != "" ]; then
-				DOCUMENT_SERVER_JWT_HEADER=$2
-				shift
-			fi
-		;;
-
-		-js | --jwtsecret )
-			if [ "$2" != "" ]; then
-				DOCUMENT_SERVER_JWT_SECRET=$2
-				shift
-			fi
-		;;
-
-		-it | --installation_type )
-			if [ "$2" != "" ]; then
-				INSTALLATION_TYPE=$(echo "$2" | awk '{print toupper($0)}');
-				shift
-			fi
-		;;
-
-		-ms | --makeswap )
-			if [ "$2" != "" ]; then
-				MAKESWAP=$2
-				shift
-			fi
-		;;
-
-		-ies | --installelastic )
-			if [ "$2" != "" ]; then
-				INSTALL_ELASTICSEARCH=$2
-				shift
-			fi
-		;;
-
-		-ifb | --installfluentbit )
-			if [ "$2" != "" ]; then
-				INSTALL_FLUENT_BIT=$2
-				shift
-			fi
-		;;
-
-		-rdsh | --redishost )
-			if [ "$2" != "" ]; then
-				REDIS_HOST=$2
-				shift
-			fi
-		;;
-
-		-rdsp | --redisport )
-			if [ "$2" != "" ]; then
-				REDIS_PORT=$2
-				shift
-			fi
-		;;
-
-		-rdsu | --redisusername )
-			if [ "$2" != "" ]; then
-				REDIS_USER_NAME=$2
-				shift
-			fi
-		;;
-
-		-rdspass | --redispassword )
-			if [ "$2" != "" ]; then
-				REDIS_PASSWORD=$2
-				shift
-			fi
-		;;
-
-		-rbth | --rabbitmqhost )
-			if [ "$2" != "" ]; then
-				RABBIT_HOST=$2
-				shift
-			fi
-		;;
-
-		-rbtp | --rabbitmqport )
-			if [ "$2" != "" ]; then
-				RABBIT_PORT=$2
-				shift
-			fi
-		;;
-
-		-rbtu | --rabbitmqusername )
-			if [ "$2" != "" ]; then
-				RABBIT_USER_NAME=$2
-				shift
-			fi
-		;;
-
-		-rbtpass | --rabbitmqpassword )
-			if [ "$2" != "" ]; then
-				RABBIT_PASSWORD=$2
-				shift
-			fi
-		;;
-
-		-rbtvh | --rabbitmqvirtualhost )
-			if [ "$2" != "" ]; then
-				RABBIT_VIRTUAL_HOST=$2
-				shift
-			fi
-		;;
-
-		-led | --letsencryptdomain )
-			if [ "$2" != "" ]; then
-				LETS_ENCRYPT_DOMAIN=$2
-				shift
-			fi
-		;;
-
-		-lem | --letsencryptmail )
-			if [ "$2" != "" ]; then
-				LETS_ENCRYPT_MAIL=$2
-				shift
-			fi
-		;;
-
-		-cf | --certfile )
-			if [ "$2" != "" ]; then
-				CERTIFICATE_PATH=$2
-				shift
-			fi
-		;;
-
-		-ckf | --certkeyfile )
-			if [ "$2" != "" ]; then
-				CERTIFICATE_KEY_PATH=$2
-				shift
-			fi
-		;;
-
-		-du | --dashboadrsusername )
-			if [ "$2" != "" ]; then
-				DASHBOARDS_USERNAME=$2
-				shift
-			fi
-		;;
-
-		-dp | --dashboadrspassword )
-			if [ "$2" != "" ]; then
-				DASHBOARDS_PASSWORD=$2
-				shift
-			fi
-		;;
-		
-		-noni | --noninteractive )
-			if [ "$2" != "" ]; then
-				NON_INTERACTIVE=$2
-				shift
-			fi
-		;;
-
-		-? | -h | --help )
+		-u         | --update             ) [ -n "$2" ]                           && UPDATE=$2                       && shift ;;
+		-hub       | --hub                ) [ -n "$2" ]                           && HUB=$2                          && shift ;;
+		-un        | --username           ) [ -n "$2" ]                           && USERNAME=$2                     && shift ;;
+		-p         | --password           ) [ -n "$2" ]                           && PASSWORD=$2                     && shift ;;
+		-ids       | --installdocspace    ) [ -n "$2" ]                           && INSTALL_PRODUCT=$2              && shift ;;
+		-idocs     | --installdocs        ) [ -n "$2" ]                           && INSTALL_DOCUMENT_SERVER=$2      && shift ;;
+		-imysql    | --installmysql       ) [ -n "$2" ]                           && INSTALL_MYSQL_SERVER=$2         && shift ;;
+		-irbt      | --installrabbitmq    ) [ -n "$2" ]                           && INSTALL_RABBITMQ=$2             && shift ;;
+		-irds      | --installredis       ) [ -n "$2" ]                           && INSTALL_REDIS=$2                && shift ;;
+		-ht        | --helptarget         ) [ -n "$2" ]                           && HELP_TARGET=$2                  && shift ;;
+		-mysqld    | --mysqldatabase      ) [ -n "$2" ]                           && MYSQL_DATABASE=$2               && shift ;;
+		-mysqlrp   | --mysqlrootpassword  ) [ -n "$2" ]                           && MYSQL_ROOT_PASSWORD=$2          && shift ;;
+		-mysqlu    | --mysqluser          ) [ -n "$2" ]                           && MYSQL_USER=$2                   && shift ;;
+		-mysqlh    | --mysqlhost          ) [ -n "$2" ]                           && MYSQL_HOST=$2                   && shift ;;
+		-mysqlport | --mysqlport          ) [ -n "$2" ]                           && MYSQL_PORT=$2                   && shift ;;
+		-mysqlp    | --mysqlpassword      ) [ -n "$2" ]                           && MYSQL_PASSWORD=$2               && shift ;;
+		-espr      | --elasticprotocol    ) [ -n "$2" ]                           && ELK_SHEME=$2                    && shift ;;
+		-esh       | --elastichost        ) [ -n "$2" ]                           && ELK_HOST=$2                     && shift ;;
+		-esp       | --elasticport        ) [ -n "$2" ]                           && ELK_PORT=$2                     && shift ;;
+		-skiphc    | --skiphardwarecheck  ) [ -n "$2" ]                           && SKIP_HARDWARE_CHECK=$2          && shift ;;
+		-ep        | --externalport       ) [ -n "$2" ]                           && EXTERNAL_PORT=$2                && shift ;;
+		-dsh       | --docspacehost       ) [ -n "$2" ]                           && APP_URL_PORTAL=$2               && shift ;;
+		-mk        | --machinekey         ) [ -n "$2" ]                           && APP_CORE_MACHINEKEY=$2          && shift ;;
+		-env       | --environment        ) [ -n "$2" ]                           && ENV_EXTENSION=$2                && shift ;;
+		-dsv       | --docspaceversion    ) [ -n "$2" ]                           && DOCKER_TAG=$2                   && shift ;;
+		-gb        | --gitbranch          ) [ -n "$2" ]                           && GIT_BRANCH=$2                   && shift ;;
+		-docsi     | --docsimage          ) [ -n "$2" ]                           && DOCUMENT_SERVER_IMAGE_NAME=$2   && shift ;;
+		-docsv     | --docsversion        ) [ -n "$2" ]                           && DOCUMENT_SERVER_VERSION=$2      && shift ;;
+		-docsurl   | --docsurl            ) [ -n "$2" ]                           && DOCUMENT_SERVER_URL_EXTERNAL=$2 && shift ;;
+		-dbm       | --databasemigration  ) [ -n "$2" ]                           && DATABASE_MIGRATION=$2           && shift ;;
+		-jh        | --jwtheader          ) [ -n "$2" ]                           && DOCUMENT_SERVER_JWT_HEADER=$2   && shift ;;
+		-js        | --jwtsecret          ) [ -n "$2" ]                           && DOCUMENT_SERVER_JWT_SECRET=$2   && shift ;;
+		-ies       | --installelastic     ) [ -n "$2" ]                           && INSTALL_ELASTICSEARCH=$2        && shift ;;
+		-ifb       | --installfluentbit   ) [ -n "$2" ]                           && INSTALL_FLUENT_BIT=$2           && shift ;;
+		-rdsh      | --redishost          ) [ -n "$2" ]                           && REDIS_HOST=$2                   && shift ;;
+		-rdsp      | --redisport          ) [ -n "$2" ]                           && REDIS_PORT=$2                   && shift ;;
+		-rdsu      | --redisusername      ) [ -n "$2" ]                           && REDIS_USER_NAME=$2              && shift ;;
+		-rdspass   | --redispassword      ) [ -n "$2" ]                           && REDIS_PASSWORD=$2               && shift ;;
+		-rbth      | --rabbitmqhost       ) [ -n "$2" ]                           && RABBIT_HOST=$2                  && shift ;;
+		-rbtp      | --rabbitmqport       ) [ -n "$2" ]                           && RABBIT_PORT=$2                  && shift ;;
+		-rbtu      | --rabbitmqusername   ) [ -n "$2" ]                           && RABBIT_USER_NAME=$2             && shift ;;
+		-rbtpass   | --rabbitmqpassword   ) [ -n "$2" ]                           && RABBIT_PASSWORD=$2              && shift ;;
+		-rbtvh     | --rabbitmqvirtualhost) [ -n "$2" ]                           && RABBIT_VIRTUAL_HOST=$2          && shift ;;
+		-led       | --letsencryptdomain  ) [ -n "$2" ]                           && LETS_ENCRYPT_DOMAIN=$2          && shift ;;
+		-lem       | --letsencryptmail    ) [ -n "$2" ]                           && LETS_ENCRYPT_MAIL=$2            && shift ;;
+		-cf        | --certfile           ) [ -n "$2" ]                           && CERTIFICATE_PATH=$2             && shift ;;
+		-ckf       | --certkeyfile        ) [ -n "$2" ]                           && CERTIFICATE_KEY_PATH=$2         && shift ;;
+		-du        | --dashboadrsusername ) [ -n "$2" ]                           && DASHBOARDS_USERNAME=$2          && shift ;;
+		-dp        | --dashboadrspassword ) [ -n "$2" ]                           && DASHBOARDS_PASSWORD=$2          && shift ;;
+		-s         | --status             ) [ -n "$2" ]                           && STATUS=$2 && IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-api" && shift ;;
+		-it        | --installation_type  ) [ -n "$2" ]                           && INSTALLATION_TYPE=$(echo "$2" | awk '{print toupper($0)}') && shift ;;
+		-noni      | --noninteractive     ) [ "$2" == "true" -o "$2" == "false" ] && NON_INTERACTIVE=$2              && shift ;;
+		-ls        | --localscripts       ) [ "$2" == "true" -o "$2" == "false" ] && LOCAL_SCRIPTS=$2                && shift ;;
+		-ms        | --makeswap           ) [ "$2" == "true" -o "$2" == "false" ] && MAKESWAP=$2                     && shift ;;
+		-?         | -h        | --help   )
 			echo "  Usage: bash $HELP_TARGET [PARAMETER] [[PARAMETER], ...]"
 			echo
 			echo "    Parameters:"
@@ -548,21 +222,21 @@ while [ "$1" != "" ]; do
 			echo "      -ms, --makeswap                   make swap file (true|false)"
 			echo "      -?, -h, --help                    this help"
 			echo
-			echo "    Install all the components without document server:"
+			echo "    Install all the components without Document Server:"
 			echo "      bash $HELP_TARGET -idocs false"
 			echo
-			echo "    Install Document Server only. Skip the installation of mysql, $PRODUCT, rabbitmq, redis:"
-			echo "      bash $HELP_TARGET -ids false -idocs true -imysql false -irbt false -irds false"
+			echo "    Install Document Server only. Skip the installation of $PRODUCT, mysql, rabbitmq, redis, elasticsearch, fluent-bit:"
+			echo "      bash $HELP_TARGET -idocs true -ids false -imysql false -irbt false -irds false -ies false -ifb false"
 			echo
 			echo "    Update all installed components. Stop the containers that need to be updated, remove them and run the latest versions of the corresponding components."
 			echo "    The portal data should be picked up automatically:"
 			echo "      bash $HELP_TARGET -u true"
 			echo
-			echo "    Update Document Server only to version 7.2.1.34 and skip the update for all other components:"
-			echo "      bash $HELP_TARGET -u true -docsi ${PACKAGE_SYSNAME}/documentserver-ee -docsv 7.2.1.34 -idocs true -ids false -irbt false -irds false"
+			echo "    Update Document Server only to version 8.1.0 and skip the update for all other components:"
+			echo "      bash $HELP_TARGET -u true -docsi ${PACKAGE_SYSNAME}/documentserver-ee -docsv 8.1.0 -idocs true -ids false -imysql false -irbt false -irds false -ies false -ifb false"
 			echo
-			echo "    Update $PRODUCT only to version 1.2.0 and skip the update for all other components:"
-			echo "      bash $HELP_TARGET -u true -dsv v1.2.0 -idocs false -irbt false -irds false"
+			echo "    Update $PRODUCT only to version 2.5.1 and skip the update for all other components:"
+			echo "      bash $HELP_TARGET -u true -dsv 2.5.1 -idocs false -imysql false -irbt false -irds false -ies false -ifb false"
 			echo
 			exit 0
 		;;
@@ -577,27 +251,11 @@ done
 
 root_checking () {
 	PID=$$
-	if [ ! $( id -u ) -eq 0 ]; then
-		echo "To perform this action you must be logged in with root rights"
-		exit 1;
-	fi
+	[ $(id -u) -ne 0 ] && echo "To perform this action you must be logged in with root rights" && exit 1
 }
 
 command_exists () {
     type "$1" &> /dev/null;
-}
-
-file_exists () {
-	if [ -z "$1" ]; then
-		echo "file path is empty"
-		exit 1;
-	fi
-
-	if [ -f "$1" ]; then
-		return 0; #true
-	else
-		return 1; #false
-	fi
 }
 
 to_lowercase () {
@@ -609,14 +267,9 @@ trim () {
 }
 
 get_random_str () {
-	LENGTH=$1;
-
-	if [[ -z ${LENGTH} ]]; then
-		LENGTH=12;
-	fi
-
-	VALUE=$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c ${LENGTH});
-	echo "$VALUE"
+    LENGTH=${1:-12}
+    VALUE=$(tr -dc A-Za-z0-9 < /dev/urandom | head -c "$LENGTH")
+    echo "$VALUE"
 }
 
 get_os_info () {
@@ -926,25 +579,16 @@ create_network () {
 }
 
 read_continue_installation () {
-	if [[ "${NON_INTERACTIVE}" = "true" ]]; then
-		return 0
-	fi
+    [ "$NON_INTERACTIVE" = "true" ] && return 0
 
-	read -p "Continue installation [Y/N]? " CHOICE_INSTALLATION
-	case "$CHOICE_INSTALLATION" in
-		y|Y )
-			return 0
-		;;
-
-		n|N )
-			exit 0;
-		;;
-
-		* )
-			echo "Please, enter Y or N";
-			read_continue_installation
-		;;
-	esac
+    while true; do
+        read -p "Continue installation [Y/N]? " CHOICE_INSTALLATION
+        case "$CHOICE_INSTALLATION" in
+            [yY]) return 0 ;;
+            [nN]) exit 0 ;;
+            *) echo "Please, enter Y or N" ;;
+        esac
+    done
 }
 
 domain_check () {
