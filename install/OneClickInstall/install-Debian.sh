@@ -17,93 +17,19 @@ INSTALL_FLUENT_BIT="true"
 
 while [ "$1" != "" ]; do
 	case $1 in
-
-		-u | --update )
-			if [ "$2" != "" ]; then
-				UPDATE=$2
-				shift
-			fi
-		;;
-
-		-je | --jwtenabled )
-			if [ "$2" != "" ]; then
-				DS_JWT_ENABLED=$2
-				shift
-			fi
-		;;
-
-		-jh | --jwtheader )
-			if [ "$2" != "" ]; then
-				DS_JWT_HEADER=$2
-				shift
-			fi
-		;;
-
-		-js | --jwtsecret )
-			if [ "$2" != "" ]; then
-				DS_JWT_SECRET=$2
-				shift
-			fi
-		;;
-		
-		-gb | --gitbranch )
-			if [ "$2" != "" ]; then
-				PARAMETERS="$PARAMETERS ${1}";
-				GIT_BRANCH=$2
-				shift
-			fi
-		;;
-
-		-ifb | --installfluentbit )
-			if [ "$2" != "" ]; then
-				INSTALL_FLUENT_BIT=$2
-				shift
-			fi
-		;;
-
-		-du | --dashboadrsusername )
-			if [ "$2" != "" ]; then
-				DASHBOARDS_USERNAME=$2
-				shift
-			fi
-		;;
-
-		-dp | --dashboadrspassword )
-			if [ "$2" != "" ]; then
-				DASHBOARDS_PASSWORD=$2
-				shift
-			fi
-		;;
-
-		-ls | --localscripts )
-			if [ "$2" != "" ]; then
-				LOCAL_SCRIPTS=$2
-				shift
-			fi
-		;;
-
-		-skiphc | --skiphardwarecheck )
-			if [ "$2" != "" ]; then
-				SKIP_HARDWARE_CHECK=$2
-				shift
-			fi
-		;;
-
-		-it | --installation_type )
-			if [ "$2" != "" ]; then
-				INSTALLATION_TYPE=$(echo "$2" | awk '{print toupper($0)}');
-				shift
-			fi
-		;;
-		
-		-ms | --makeswap )
-			if [ "$2" != "" ]; then
-				MAKESWAP=$2
-				shift
-			fi
-		;;
-
-		-? | -h | --help )
+		-je     | --jwtenabled         ) [ -n "$2" ]                           && DS_JWT_ENABLED=$2        && shift ;;
+		-jh     | --jwtheader          ) [ -n "$2" ]                           && DS_JWT_HEADER=$2         && shift ;;
+		-js     | --jwtsecret          ) [ -n "$2" ]                           && DS_JWT_SECRET=$2         && shift ;;
+		-gb     | --gitbranch          ) [ -n "$2" ]                           && GIT_BRANCH=$2            && shift ;;
+		-du     | --dashboadrsusername ) [ -n "$2" ]                           && DASHBOARDS_USERNAME=$2   && shift ;;
+		-dp     | --dashboadrspassword ) [ -n "$2" ]                           && DASHBOARDS_PASSWORD=$2   && shift ;;
+		-it     | --installation_type  ) [ -n "$2" ]                           && INSTALLATION_TYPE=${2^^} && shift ;;
+		-u      | --update             ) [ "$2" == "true" -o "$2" == "false" ] && UPDATE=$2                && shift ;;
+		-ifb    | --installfluentbit   ) [ "$2" == "true" -o "$2" == "false" ] && INSTALL_FLUENT_BIT=$2    && shift ;;
+		-ls     | --localscripts       ) [ "$2" == "true" -o "$2" == "false" ] && LOCAL_SCRIPTS=$2         && shift ;;
+		-skiphc | --skiphardwarecheck  ) [ "$2" == "true" -o "$2" == "false" ] && SKIP_HARDWARE_CHECK=$2   && shift ;;
+		-ms     | --makeswap           ) [ "$2" == "true" -o "$2" == "false" ] && MAKESWAP=$2              && shift ;;
+		-?      | -h        | --help   )
 			echo "  Usage $0 [PARAMETER] [[PARAMETER], ...]"
 			echo "    Parameters:"
 			echo "      -it, --installation_type          installation type (community|enterprise)"
@@ -121,39 +47,21 @@ while [ "$1" != "" ]; do
 			echo
 			exit 0
 		;;
-
 	esac
 	shift
 done
 
-if [ -z "${UPDATE}" ]; then
-   UPDATE="false";
-fi
-
-if [ -z "${LOCAL_SCRIPTS}" ]; then
-   LOCAL_SCRIPTS="false";
-fi
-
-if [ -z "${SKIP_HARDWARE_CHECK}" ]; then
-   SKIP_HARDWARE_CHECK="false";
-fi
+UPDATE="${UPDATE:-false}"
+LOCAL_SCRIPTS="${LOCAL_SCRIPTS:-false}"
+SKIP_HARDWARE_CHECK="${SKIP_HARDWARE_CHECK:-false}"
 
 apt-get update -y --allow-releaseinfo-change;
-if [ $(dpkg-query -W -f='${Status}' curl 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
-  apt-get install -yq curl;
-fi
+dpkg -l | grep -q "^ii  curl" || apt-get install -yq curl
 
-if [ -z $GIT_BRANCH ]; then
-	DOWNLOAD_URL_PREFIX="https://download.onlyoffice.com/${product}/install-Debian"
-else
-	DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall/install-Debian"
-fi
+DOWNLOAD_URL_PREFIX="https://download.${product_sysname}.com/${product}/install-Debian"
+[ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${product_sysname^^}/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall/install-Debian"
 
-if [ "${LOCAL_SCRIPTS}" == "true" ]; then
-	source install-Debian/bootstrap.sh
-else
-	source <(curl ${DOWNLOAD_URL_PREFIX}/bootstrap.sh)
-fi
+[[ "${LOCAL_SCRIPTS}" == "true" ]] && source install-Debian/bootstrap.sh || source <(curl ${DOWNLOAD_URL_PREFIX}/bootstrap.sh)
 
 # add onlyoffice repo
 mkdir -p -m 700 $HOME/.gnupg
