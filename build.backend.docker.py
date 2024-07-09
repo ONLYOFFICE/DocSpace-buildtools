@@ -11,13 +11,14 @@ def help():
     # Display Help
     print("Build and run backend and working environment. (Use 'yarn start' to run client -> https://github.com/ONLYOFFICE/DocSpace-client)")
     print()
-    print("Syntax: available params [-h|f|s|c|d|]")
+    print("Syntax: available params [-h|f|s|c|d|i")
     print("options:")
     print("h     Print this Help.")
     print("f     Force rebuild base images.")
     print("s     Run as SAAS otherwise as STANDALONE.")
     print("c     Run as COMMUNITY otherwise ENTERPRISE.")
     print("d     Run dnsmasq.")
+    print("i     Run identity (oauth2).")
     print()
 
 
@@ -37,6 +38,8 @@ if local_ip == "127.0.0.1":
 doceditor = f"{local_ip}:5013"
 login = f"{local_ip}:5011"
 client = f"{local_ip}:5001"
+identity_auth = f"{local_ip}:8080"
+identity_api = f"{local_ip}:9090"
 management = f"{local_ip}:5015"
 portal_url = f"http://{local_ip}"
 
@@ -44,13 +47,14 @@ force = False
 dns = False
 standalone = True
 community = False
+identity = False
 
 migration_type = "STANDALONE" # SAAS
 installation_type = "ENTERPRISE"
 document_server_image_name = "onlyoffice/documentserver-de:latest"
 
 # Get the options
-opts, args = getopt.getopt(sys.argv[1:], "hfscd")
+opts, args = getopt.getopt(sys.argv[1:], "hfscdi")
 for opt, arg in opts:
     if opt == "-h":
         help()
@@ -63,6 +67,8 @@ for opt, arg in opts:
         community = arg if arg else True
     elif opt == "-d":
         dns = arg if arg else True
+    elif opt == "-i":
+        identity = arg if arg else True
     else:
         print("Error: Invalid '-" + opt + "' option")
         sys.exit()
@@ -80,6 +86,7 @@ print(f"DOCSPACE_APP_URL: {portal_url}")
 print()
 print("FORCE REBUILD BASE IMAGES:", force)
 print("Run dnsmasq:", dns)
+print("Run identity:", identity)
 
 if standalone == False:
     migration_type = "SAAS"
@@ -182,6 +189,8 @@ os.environ["SERVICE_DOCEDITOR"] = doceditor
 os.environ["SERVICE_LOGIN"] = login
 os.environ["SERVICE_MANAGEMENT"] = management
 os.environ["SERVICE_CLIENT"] = client
+os.environ["SERVICE_IDENTITY"] = identity_auth
+os.environ["SERVICE_IDENTITY_API"] = identity_api
 os.environ["ROOT_DIR"] = dir
 os.environ["BUILD_PATH"] = "/var/www"
 os.environ["SRC_PATH"] = os.path.join(dir, "publish/services")
@@ -189,6 +198,10 @@ os.environ["DATA_DIR"] = os.path.join(dir, "data")
 os.environ["APP_URL_PORTAL"] = portal_url
 os.environ["MIGRATION_TYPE"] = migration_type
 subprocess.run(["docker-compose", "-f", os.path.join(dockerDir, "docspace.profiles.yml"), "-f", os.path.join(dockerDir, "docspace.overcome.yml"), "--profile", "migration-runner", "--profile", "backend-local", "up", "-d"])
+
+if identity:
+    print("Run identity")
+    subprocess.run(["docker-compose", "-f",os.path.join(dockerDir, "identity.yml"), "up", "-d" ])
 
 print()
 print("Run script directory:", dir)
