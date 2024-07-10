@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -ex
  #
  # (c) Copyright Ascensio System SIA 2021
  #
@@ -105,6 +105,7 @@ LETS_ENCRYPT_DOMAIN=""
 LETS_ENCRYPT_MAIL=""
 
 HELP_TARGET="install-Docker.sh";
+OFFLINE_INSTALLATION="false"
 
 SKIP_HARDWARE_CHECK="false";
 
@@ -491,6 +492,13 @@ while [ "$1" != "" ]; do
 				shift
 			fi
 		;;
+		
+		-off | --offline )
+			if [ "$2" != "" ]; then
+				OFFLINE_INSTALLATION=$2
+				shift
+			fi
+		;;
 
 		-? | -h | --help )
 			echo "  Usage: bash $HELP_TARGET [PARAMETER] [[PARAMETER], ...]"
@@ -543,6 +551,7 @@ while [ "$1" != "" ]; do
 			echo "      -lem, --letsencryptmail           defines the domain administator mail address for Let's Encrypt certificate"
 			echo "      -cf, --certfile                   path to the certificate file for the domain"
 			echo "      -ckf, --certkeyfile               path to the private key file for the certificate"
+			echo "      -off, --offline                   set the script for offline installation (true|false)"
 			echo "      -noni, --noninteractive           auto confirm all questions (true|false)"
 			echo "      -dbm, --databasemigration         database migration (true|false)"
 			echo "      -ms, --makeswap                   make swap file (true|false)"
@@ -744,11 +753,13 @@ install_service () {
 
 	PACKAGE_NAME=${PACKAGE_NAME:-"$COMMAND_NAME"}
 
-	if command_exists apt-get; then
-		apt-get -y update -qq
-		apt-get -y -q install $PACKAGE_NAME
-	elif command_exists yum; then
-		yum -y install $PACKAGE_NAME
+	if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
+		if command_exists apt-get; then
+			apt-get -y update -qq
+			apt-get -y -q install $PACKAGE_NAME
+		elif command_exists yum; then
+			yum -y install $PACKAGE_NAME
+		fi
 	fi
 
 	if ! command_exists $COMMAND_NAME; then
@@ -758,7 +769,7 @@ install_service () {
 }
 
 install_docker_compose () {
-	curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/bin/docker-compose
+	curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-${OS}-${MACH}" -o /usr/bin/docker-compose
 	chmod +x /usr/bin/docker-compose
 }
 
@@ -947,6 +958,18 @@ read_continue_installation () {
 	esac
 }
 
+read_offline_installation () {
+	[ "$NON_INTERACTIVE" = "true" ] && OFFLINE_INSTALLATION="false" || while true; do
+		read -p "Switch the installation to offline [Y/N/C]? " choice
+		case "${choice,,}" in
+			y | yes) OFFLINE_INSTALLATION="true"; break ;;
+			n | no) OFFLINE_INSTALLATION="false"; break ;;
+			c | cancel) exit 0 ;;
+			*) echo "Please, enter Y, N, or C to cancel." ;;
+		esac
+	done
+}
+
 domain_check () {
 	if ! command_exists dig; then
 		if command_exists apt-get; then
@@ -998,7 +1021,7 @@ domain_check () {
 		fi
 	fi
 
-	[[ -n "${APP_DOMAIN_PORTAL}" ]] && APP_URL_PORTAL="http://${APP_DOMAIN_PORTAL}:${EXTERNAL_PORT}"
+	[[ -n "${APP_DOMAIN_PORTAL}" ]] && APP_URL_PORTAL="http://${APP_DOMAIN_PORTAL}:${EXTERNAL_PORT}" || true
 }
 
 establish_conn() {
@@ -1038,74 +1061,54 @@ get_env_parameter () {
 	echo ${VALUE//\"}
 }
 
-get_available_version () {
-	if [[ -z "$1" ]]; then
-		echo "image name is empty";
-		exit 1;
-	fi
-
+retrieving_tag_from_hub () {
 	if ! command_exists curl ; then
-		install_curl;
+		install_service curl
 	fi
-
-	CREDENTIALS="";
-	AUTH_HEADER="";
-	TAGS_RESP="";
 
 	if [[ -n ${HUB} ]]; then
 		DOCKER_CONFIG="$HOME/.docker/config.json";
 
-		if [[ -f "$DOCKER_CONFIG" ]]; then
-			CREDENTIALS=$(jq -r '.auths."'$HUB'".auth' < "$DOCKER_CONFIG");
-			if [ "$CREDENTIALS" == "null" ]; then
-				CREDENTIALS="";
-			fi
-		fi
+		[[ -f "$DOCKER_CONFIG" ]] && CREDENTIALS=$(jq -r '.auths."'$HUB'".auth' < "$DOCKER_CONFIG");
 
 		if [[ -z ${CREDENTIALS} && -n ${USERNAME} && -n ${PASSWORD} ]]; then
-			CREDENTIALS=$(echo -n "$USERNAME:$PASSWORD" | base64);
+			CREDENTIALS=$(echo -n "$USERNAME:$PASSWORD" | base64)
 		fi
 
-		if [[ -n ${CREDENTIALS} ]]; then
-			AUTH_HEADER="Authorization: Basic $CREDENTIALS";
-		fi
+		[[ -n ${CREDENTIALS} ]] && AUTH_HEADER="Authorization: Basic $CREDENTIALS"
 
-		REPO=$(echo $1 | sed "s/$HUB\///g");
-		TAGS_RESP=$(curl -s -H "$AUTH_HEADER" -X GET https://$HUB/v2/$REPO/tags/list);
-		TAGS_RESP=$(echo $TAGS_RESP | jq -r '.tags')
+		REPO=$(echo $1 | sed "s/$HUB\///g")
+		TAGS_RESP=$(curl -s -H "$AUTH_HEADER" -X GET https://$HUB/v2/$REPO/tags/list | jq -r '.tags // ""')
 	else
 		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
-			CREDENTIALS="{\"username\":\"$USERNAME\",\"password\":\"$PASSWORD\"}";
-		fi
-
-		if [[ -n ${CREDENTIALS} ]]; then
-			LOGIN_RESP=$(curl -s -H "Content-Type: application/json" -X POST -d "$CREDENTIALS" https://hub.docker.com/v2/users/login/);
-			TOKEN=$(echo $LOGIN_RESP | jq -r '.token');
-			AUTH_HEADER="Authorization: JWT $TOKEN";
+			CREDENTIALS="{\"username\":\"$USERNAME\",\"password\":\"$PASSWORD\"}"
+			TOKEN=$(curl -s -H "Content-Type: application/json" -X POST -d "$CREDENTIALS" https://hub.docker.com/v2/users/login/ | jq -r '.token');
+			AUTH_HEADER="Authorization: JWT $TOKEN"
 			sleep 1;
 		fi
 
-		TAGS_RESP=$(curl -s -H "$AUTH_HEADER" -X GET https://hub.docker.com/v2/repositories/$1/tags/);
-		TAGS_RESP=$(echo $TAGS_RESP | jq -r '.results[].name')
+		TAGS_RESP=$(curl -s -H "$AUTH_HEADER" -X GET "https://hub.docker.com/v2/repositories/$1/tags/" | jq -r '.results[].name // ""')
+	fi
+}
+
+get_available_version () {
+	if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
+		retrieving_tag_from_hub ${1}
+	else
+		TAGS_RESP=$(docker images --format "{{.Tag}}" ${1})
 	fi
 
-	VERSION_REGEX="[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$"
-	
-	TAG_LIST=""
-
-	for item in $TAGS_RESP
-	do
-		if [[ $item =~ $VERSION_REGEX ]]; then
-			TAG_LIST="$item,$TAG_LIST"
-		fi
-	done
-
-	LATEST_TAG=$(echo $TAG_LIST | tr ',' '\n' | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n | awk '/./{line=$0} END{print line}');
+	[ "${OFFLINE_INSTALLATION}" = "false" ] && VERSION_REGEX="[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$"
+	LATEST_TAG=$(echo "$TAGS_RESP" | grep -E "$VERSION_REGEX" | sort -V | tail -n 1)
 
 	if [ ! -z "${LATEST_TAG}" ]; then
 		echo "${LATEST_TAG}" | sed "s/\"//g"
 	else
-		echo "Unable to retrieve tag from ${1} repository" >&2
+		if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
+			echo "Unable to retrieve tag from ${1} repository" >&2
+		else
+			echo "Error: The image '${1}' is not found in the local Docker registry." >&2
+		fi
 		kill -s TERM $PID
 	fi
 }
@@ -1190,13 +1193,13 @@ set_installation_type_data () {
 download_files () {
 	if ! command_exists jq ; then
 		if command_exists yum; then 
-			rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-$REV.noarch.rpm
+			[ "${OFFLINE_INSTALLATION}" = "false" ] && rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-$REV.noarch.rpm
 		fi
 		install_service jq
 	fi
 
 	if ! command_exists docker-compose; then
-		install_docker_compose
+		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker_compose || { echo "docker-compose not installed"; exit 1; }
 	fi
 
 	# Fixes issues with variables when upgrading to v1.1.3
@@ -1204,7 +1207,11 @@ download_files () {
 	for HOST in "${HOSTS[@]}"; do [[ "${!HOST}" == *CONTAINER_PREFIX* || "${!HOST}" == *$PACKAGE_SYSNAME* ]] && export "$HOST="; done
 	[[ "${APP_URL_PORTAL}" == *${PACKAGE_SYSNAME}-proxy* ]] && APP_URL_PORTAL=""
 
-	echo -n "Downloading configuration files to the ${BASE_DIR} directory..."
+	if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
+		echo -n "Downloading configuration files to the ${BASE_DIR} directory..."
+	else
+		echo "Unzip docker.tar.gz to the directory ${BASE_DIR}..."
+	fi
 
 	if ! command_exists tar; then
 		install_service tar
@@ -1213,15 +1220,24 @@ download_files () {
 	[ -d "${BASE_DIR}" ] && rm -rf "${BASE_DIR}"
 	mkdir -p ${BASE_DIR}
 
-	if [ -z "${GIT_BRANCH}" ]; then
-		curl -sL -o docker.tar.gz "https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/docker.tar.gz"
-		tar -xf docker.tar.gz -C ${BASE_DIR}
-	else
-		curl -sL -o docker.tar.gz "https://github.com/${PACKAGE_SYSNAME}/${PRODUCT}-buildtools/archive/${GIT_BRANCH}.tar.gz"
-		tar -xf docker.tar.gz --strip-components=3 -C ${BASE_DIR} --wildcards '*/install/docker/*'
-	fi
 	
-	rm -rf docker.tar.gz
+	if [ "${OFFLINE_INSTALLATION}" = "true" ]; then
+		if [ -f "docker.tar.gz" ]; then
+			tar -xf docker.tar.gz -C "${BASE_DIR}"
+		else
+			echo "Error: docker.tar.gz not found in the same directory as the script."
+			echo "You need to download the docker.tar.gz file from https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/docker.tar.gz"
+			exit 1
+		fi
+	else
+		DOWNLOAD_URL="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/docker.tar.gz"
+		if [ -n "${GIT_BRANCH}" ]; then
+			DOWNLOAD_URL="https://github.com/${PACKAGE_SYSNAME}/${PRODUCT}-buildtools/archive/${GIT_BRANCH}.tar.gz"
+			STRIP_COMPONENTS="--strip-components=3 --wildcards */install/docker/*"
+		fi
+
+		curl -sL "${DOWNLOAD_URL}" | tar -xzf - -C "${BASE_DIR}" ${STRIP_COMPONENTS}
+	fi
 
 	echo "OK"
 
@@ -1248,6 +1264,7 @@ install_mysql_server () {
 	reconfigure MYSQL_VERSION ${MYSQL_VERSION}
 
 	if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ]; then
+		offline_check_docker_image ${BASE_DIR}/db.yml
 		docker-compose -f $BASE_DIR/db.yml up -d
 	elif [ "$INSTALL_MYSQL_SERVER" == "pull" ]; then
 		docker-compose -f $BASE_DIR/db.yml pull
@@ -1276,6 +1293,7 @@ install_document_server () {
 
 install_rabbitmq () {
 	if [[ -z ${RABBIT_HOST} ]] && [ "$INSTALL_RABBITMQ" == "true" ]; then
+		offline_check_docker_image ${BASE_DIR}/rabbitmq.yml
 		docker-compose -f $BASE_DIR/rabbitmq.yml up -d
 	elif [ "$INSTALL_RABBITMQ" == "pull" ]; then
 		docker-compose -f $BASE_DIR/rabbitmq.yml pull
@@ -1291,6 +1309,7 @@ install_rabbitmq () {
 
 install_redis () {
 	if [[ -z ${REDIS_HOST} ]] && [ "$INSTALL_REDIS" == "true" ]; then
+		offline_check_docker_image ${BASE_DIR}/redis.yml
 		docker-compose -f $BASE_DIR/redis.yml up -d
 	elif [ "$INSTALL_REDIS" == "pull" ]; then
 		docker-compose -f $BASE_DIR/redis.yml pull
@@ -1311,6 +1330,7 @@ install_elasticsearch () {
 		else
 			sed -i 's/Xms[0-9]g/Xms1g/g; s/Xmx[0-9]g/Xmx1g/g' $BASE_DIR/opensearch.yml
 		fi
+		offline_check_docker_image ${BASE_DIR}/opensearch.yml
 		docker-compose -f $BASE_DIR/opensearch.yml up -d
 	elif [ "$INSTALL_ELASTICSEARCH" == "pull" ]; then
 		docker-compose -f $BASE_DIR/opensearch.yml pull
@@ -1347,6 +1367,9 @@ install_fluent_bit () {
 		reconfigure DASHBOARDS_USERNAME "${DASHBOARDS_USERNAME:-"${PACKAGE_SYSNAME}"}"
 		reconfigure DASHBOARDS_PASSWORD "${DASHBOARDS_PASSWORD:-$(get_random_str 20)}"
 
+		offline_check_docker_image ${BASE_DIR}/fluent.yml
+		offline_check_docker_image ${BASE_DIR}/dashboards.yml
+		
 		docker-compose -f ${BASE_DIR}/fluent.yml -f ${BASE_DIR}/dashboards.yml up -d
 	elif [ "$INSTALL_FLUENT_BIT" == "pull" ]; then
 		docker-compose -f ${BASE_DIR}/fluent.yml -f ${BASE_DIR}/dashboards.yml pull
@@ -1376,6 +1399,12 @@ install_product () {
 			(timeout 30 bash -c "while ! docker inspect --format '{{json .State.Health.Status }}' ${PACKAGE_SYSNAME}-mysql-server | grep -q 'healthy'; do sleep 1; done") && echo "OK" || (echo "FAILED")
 		fi
 
+		offline_check_docker_image ${BASE_DIR}/migration-runner.yml
+		offline_check_docker_image ${BASE_DIR}/${PRODUCT}.yml
+		offline_check_docker_image ${PROXY_YML}
+		offline_check_docker_image ${BASE_DIR}/notify.yml
+		offline_check_docker_image ${BASE_DIR}/healthchecks.yml
+		
 		docker-compose -f $BASE_DIR/migration-runner.yml up -d
 		echo -n "Waiting for database migration to complete..." && docker wait ${PACKAGE_SYSNAME}-migration-runner && echo "OK"
 		docker-compose -f $BASE_DIR/${PRODUCT}.yml up -d
@@ -1427,6 +1456,25 @@ make_swap () {
 	fi
 }
 
+offline_check_docker_image() {
+	if [ "${OFFLINE_INSTALLATION}" = "true" ]; then
+		[ ! -f "$1" ] && { echo "Error: File '$1' does not exist."; exit 1; }
+
+		docker-compose -f "$1" config | grep -oP 'image:\s*\K\S+' | while IFS= read -r IMAGE_TAG; do
+			docker images "${IMAGE_TAG}" | grep -q "${IMAGE_TAG%%:*}" || { echo "Error: The image '${IMAGE_TAG}' is not found in the local Docker registry."; kill -s TERM $PID; }
+		done
+	fi
+}
+
+check_hub_connection() {
+	if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
+		retrieving_tag_from_hub ${IMAGE_NAME}
+		if [ -z "$TAGS_RESP" ]; then
+  			echo "Unable to download actual tags from ${HUB:-hub.docker.com}"
+			read_offline_installation
+		fi
+	fi
+}
 
 start_installation () {
 	root_checking
@@ -1449,18 +1497,20 @@ start_installation () {
 		make_swap
 	fi
 
+	check_hub_connection
+
 	if command_exists docker ; then
 		check_docker_version
 		service docker start
 	else
-		install_docker
+		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker || { echo "docker not installed"; exit 1; }
 	fi
 
 	docker_login
 
 	create_network
 
-	domain_check
+	[ "${OFFLINE_INSTALLATION}" = "false" ] && domain_check
 
 	if [ "$UPDATE" = "true" ]; then
 		set_docspace_params
