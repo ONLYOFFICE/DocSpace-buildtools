@@ -208,7 +208,7 @@ function install_docspace() {
     sed 's/set -e/set -xe/' -i *.sh
   fi
 
-	printf "N\nY\nY" | bash docspace-install.sh ${ARGUMENTS}
+	printf "N\nY\nY" | bash docspace-install.sh ${ARGUMENTS} -log false
 
 	if [[ $? != 0 ]]; then
 	    echo "Exit code non-zero. Exit with 1."
