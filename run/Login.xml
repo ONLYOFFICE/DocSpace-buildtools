@@ -4,7 +4,7 @@
   <startmode>manual</startmode>
   <executable>node</executable>
   <arguments>server.js</arguments>
-  <workingdirectory>%BASE%\..\..\client\packages\login</workingdirectory>
+   <workingdirectory>%BASE%\..\..\client\packages\login</workingdirectory>
   <log mode="none"/>
   <delayedAutoStart>true</delayedAutoStart>
   <onfailure action="none" />

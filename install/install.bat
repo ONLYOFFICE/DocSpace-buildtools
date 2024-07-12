@@ -1,5 +1,7 @@
 @echo off
 
+chcp 65001 > nul
+
 PUSHD %~dp0..
 call runasadmin.bat "%~dpnx0"
 

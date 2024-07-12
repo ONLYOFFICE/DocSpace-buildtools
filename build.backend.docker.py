@@ -197,7 +197,8 @@ os.environ["SRC_PATH"] = os.path.join(dir, "publish/services")
 os.environ["DATA_DIR"] = os.path.join(dir, "data")
 os.environ["APP_URL_PORTAL"] = portal_url
 os.environ["MIGRATION_TYPE"] = migration_type
-subprocess.run(["docker-compose", "-f", os.path.join(dockerDir, "docspace.profiles.yml"), "-f", os.path.join(dockerDir, "docspace.overcome.yml"), "--profile", "migration-runner", "--profile", "backend-local", "up", "-d"])
+subprocess.run(["docker", "compose", "-f", os.path.join(dockerDir, "docspace.profiles.yml"), "-f", os.path.join(
+    dockerDir, "docspace.overcome.yml"), "--profile", "migration-runner", "--profile", "backend-local", "up", "-d"])
 
 if identity:
     print("Run identity")
