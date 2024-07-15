@@ -30,13 +30,13 @@ function release_service() {
    # If specifyed tag look like 2.5.1.1 it will release like 3 different tags: 2.5.1 2.5.1.1 latest
    # Make new image manigest and push it to stable images repository
    
-   docker buildx imagetool create --tag ${service_release_tag}:${RELEASE_VERSION%.*} \
-                                  --tag ${service_release_tag}:${RELEASE_VERSION} \
-                                  --tag ${service_release_tag}:latest \
-                                  ${service_source_tag} || local STATUS=$?
+   docker buildx imagetools create --tag ${service_release_tag}:${RELEASE_VERSION%.*} \
+                                   --tag ${service_release_tag}:${RELEASE_VERSION} \
+                                   --tag ${service_release_tag}:latest \
+                                   ${service_source_tag} || local STATUS=$?
 
    # Make alert
-   if [[ ${STATUS} == 0 ]]; then
+   if [[ ! ${STATUS} ]]; then
      RELEASED_SERVICES+=("${service_release_tag}")
    else
      UNRELEASED_SERVICES+=("${service_release_tag}")
