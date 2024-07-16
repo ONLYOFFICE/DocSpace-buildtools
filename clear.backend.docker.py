@@ -31,6 +31,10 @@ if containers or images:
     db_command = f"docker compose -f {os.path.join(docker_dir, 'db.yml')} down --volumes"
     subprocess.run(db_command, shell=True)
 
+    print("Remove docker contatiners 'Identity'")
+    identity_command = f"docker compose -f {os.path.join(docker_dir, 'identity.yml')} down --volumes"
+    subprocess.run(identity_command, shell=True)
+
     print("Remove docker volumes")
     volumes_command = f"docker volume prune -fa"
     subprocess.run(volumes_command, shell=True)

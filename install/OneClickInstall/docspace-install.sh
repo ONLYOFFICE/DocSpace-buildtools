@@ -156,27 +156,27 @@ fi
 
 if [ "$DOCKER" == "true" ]; then
 	if [ "$LOCAL_SCRIPTS" == "true" ]; then
-		bash install-Docker.sh ${PARAMETERS}
+		bash install-Docker.sh ${PARAMETERS} || EXIT_CODE=$?
 	else
 		curl -s -O  ${DOWNLOAD_URL_PREFIX}/install-Docker.sh
-		bash install-Docker.sh ${PARAMETERS}
+		bash install-Docker.sh ${PARAMETERS} || EXIT_CODE=$?
 		rm install-Docker.sh
 	fi
 else
 	if [ -f /etc/redhat-release ] ; then
 		if [ "$LOCAL_SCRIPTS" == "true" ]; then
-			bash install-RedHat.sh ${PARAMETERS}
+			bash install-RedHat.sh ${PARAMETERS} || EXIT_CODE=$?
 		else
 			curl -s -O ${DOWNLOAD_URL_PREFIX}/install-RedHat.sh
-			bash install-RedHat.sh ${PARAMETERS}
+			bash install-RedHat.sh ${PARAMETERS} || EXIT_CODE=$?
 			rm install-RedHat.sh
 		fi
 	elif [ -f /etc/debian_version ] ; then
 		if [ "$LOCAL_SCRIPTS" == "true" ]; then
-			bash install-Debian.sh ${PARAMETERS}
+			bash install-Debian.sh ${PARAMETERS} || EXIT_CODE=$?
 		else
 			curl -s -O ${DOWNLOAD_URL_PREFIX}/install-Debian.sh
-			bash install-Debian.sh ${PARAMETERS}
+			bash install-Debian.sh ${PARAMETERS} || EXIT_CODE=$?
 			rm install-Debian.sh
 		fi
 	else
@@ -184,3 +184,5 @@ else
 		exit 1;
 	fi
 fi
+
+exit ${EXIT_CODE:-0}
