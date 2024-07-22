@@ -109,7 +109,7 @@ case $1 in
       -v /var/log:/var/log \
       -v onlyoffice_webroot_path:${WEBROOT_PATH} \
       certbot/certbot certonly \
-      --expand --webroot -w ${WEBROOT_PATH} \
+      --expand --webroot -w ${WEBROOT_PATH} --key-type rsa \
       --cert-name ${PRODUCT} --non-interactive --agree-tos --email ${MAIL} -d ${DOMAINS[@]}
     else
       help
