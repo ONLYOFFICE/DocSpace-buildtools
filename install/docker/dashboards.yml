@@ -1,6 +1,6 @@
 services:
   onlyoffice-opensearch-dashboards:
-    image: opensearchproject/opensearch-dashboards:${DASHBOARDS_VERSION}
+    image: ${HUB}opensearchproject/opensearch-dashboards:${DASHBOARDS_VERSION}
     container_name: ${DASHBOARDS_CONTAINER_NAME}
     restart: always
     environment:
