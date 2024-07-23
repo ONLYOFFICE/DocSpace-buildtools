@@ -18,10 +18,29 @@ jobs:
         run: |
           all_branches=$(git ls-remote -hq | sed -n 's/^[0-9a-f]\{40\}\s\+refs\/heads\//''/p')
           matching_branches=""
+          hashes=""
 
           for branch in $all_branches; do
             if [[ $branch =~ ^release/v[0-9]+ || $branch =~ ^hotfix/v[0-9]+ || $branch == "develop" ]]; then
               matching_branches="${matching_branches},\"${branch}\""
+              curl_buildtools=$(curl -L \
+                -H "Accept: application/vnd.github+json" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/commits/${branch}" | jq -r '.sha')
+              
+              curl_client=$(curl -L \
+                -H "Accept: application/vnd.github+json" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                "https://api.github.com/repos/ONLYOFFICE/DocSpace-client/commits/${branch}" | jq -r '.sha')
+              
+              curl_server=$(curl -L \
+                -H "Accept: application/vnd.github+json" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                "https://api.github.com/repos/ONLYOFFICE/DocSpace-server/commits/${branch}" | jq -r '.sha')
+      
+              echo "${branch}_buildtools_hash=${curl_buildtools}" >> $GITHUB_ENV
+              echo "${branch}_client_hash=${curl_client}" >> $GITHUB_ENV
+              echo "${branch}_server_hash=${curl_server}" >> $GITHUB_ENV
             fi
           done
         
@@ -35,12 +54,15 @@ jobs:
         run: |
           echo "${{ steps.list-branches.outputs.json_output }}"
 
+          payload=$((env | grep '_hash=' | awk -F'=' '{print "\"" $1 "\": \"" $2 "\""}' | paste -sd, - | sed 's/^/{/;s/$/}/')| tr -d '[:space:]')
+          echo "Payload JSON: $payload"
+
           curl \
           -X POST \
           -u "${{ secrets.USERNAME}}:${{secrets.TOKEN}}" \
           "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/dispatches" \
           -H "Accept: application/vnd.github.everest-preview+json" \
-          --data '{"event_type": "cron-trigger-action", "client_payload": { "branches": ${{ steps.list-branches.outputs.json_output }}}}'
+          --data '{"event_type": "cron-trigger-action", "client_payload": { "branches": ${{ steps.list-branches.outputs.json_output }}, "hashes": '$payload' } }'
 
           curl \
           -X POST \
