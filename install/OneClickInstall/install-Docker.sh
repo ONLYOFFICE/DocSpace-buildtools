@@ -914,7 +914,6 @@ install_docker () {
 docker_login () {
 	if [[ -n ${USERNAME} && -n ${PASSWORD}  ]]; then
 		docker login ${HUB} --username ${USERNAME} --password ${PASSWORD}
-		regctl login ${HUB} --username ${USERNAME} --password ${PASSWORD}
 	fi
 }
 
@@ -1040,12 +1039,43 @@ get_env_parameter () {
 }
 
 retrieving_tag_from_hub () {
-	if ! command_exists regctl; then
-		curl -L "https://github.com/regclient/regclient/releases/latest/download/regctl-${OS}-$( [ "$MACH" = "x86_64" ] && echo "amd64" || echo "arm64" )" -o /usr/bin/regctl
-		chmod +x /usr/bin/regctl
+	if ! command_exists curl ; then
+		install_service curl
 	fi
 
-	TAGS_RESP=($(regctl tag list ${HUB:+$HUB/}${1}))
+	if ! command_exists jq ; then
+		if command_exists yum; then 
+			if ! rpm -q epel-release > /dev/null 2>&1; then
+				rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-$REV.noarch.rpm
+			fi
+		fi
+		install_service jq
+	fi
+
+	if [[ -n ${HUB} ]]; then
+		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
+			CREDENTIALS=$(echo -n "$USERNAME:$PASSWORD" | base64)
+		elif [[ -f "$HOME/.docker/config.json" ]]; then
+			CREDENTIALS=$(jq -r --arg hub "${HUBL}" '.auths | to_entries[] | select(.key | contains($hub)).value.auth // empty' "$HOME/.docker/config.json")
+		fi
+
+		[[ -n ${CREDENTIALS} ]] && AUTH_HEADER="Authorization: Basic $CREDENTIALS"
+
+		HUB_URL="https://${HUB}/v2/${1/#$HUB\//}/tags/list"
+		JQ_FILTER='.tags | join("\n")'
+	else
+		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
+			CREDENTIALS="{\"username\":\"$USERNAME\",\"password\":\"$PASSWORD\"}"
+			TOKEN=$(curl -s -H "Content-Type: application/json" -X POST -d "$CREDENTIALS" https://hub.docker.com/v2/users/login/ | jq -r '.token');
+			AUTH_HEADER="Authorization: JWT $TOKEN"
+			sleep 1;
+		fi
+
+		HUB_URL="https://hub.docker.com/v2/repositories/${1}/tags/"
+		JQ_FILTER='.results[].name // empty'
+	fi
+
+	TAGS_RESP=($(curl -s -H "${AUTH_HEADER}" -X GET "${HUB_URL}" | jq -r "${JQ_FILTER}"))
 }
 
 get_available_version () {
@@ -1142,13 +1172,6 @@ set_installation_type_data () {
 }
 
 download_files () {
-	if ! command_exists jq ; then
-		if command_exists yum; then 
-			rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-$REV.noarch.rpm
-		fi
-		install_service jq
-	fi
-
 	if ! command_exists docker-compose; then
 		install_docker_compose
 	fi
