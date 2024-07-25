@@ -1056,7 +1056,7 @@ retrieving_tag_from_hub () {
 		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
 			CREDENTIALS=$(echo -n "$USERNAME:$PASSWORD" | base64)
 		elif [[ -f "$HOME/.docker/config.json" ]]; then
-			CREDENTIALS=$(jq -r --arg hub "${HUBL}" '.auths | to_entries[] | select(.key | contains($hub)).value.auth // empty' "$HOME/.docker/config.json")
+			CREDENTIALS=$(jq -r --arg hub "${HUB}" '.auths | to_entries[] | select(.key | contains($hub)).value.auth // empty' "$HOME/.docker/config.json")
 		fi
 
 		[[ -n ${CREDENTIALS} ]] && AUTH_HEADER="Authorization: Basic $CREDENTIALS"
