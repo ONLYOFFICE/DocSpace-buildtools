@@ -7,8 +7,8 @@ TEMP_DIR=$(mktemp -d)
 echo "Unpacking files to ${TEMP_DIR}..."
 tail -n +$(awk '/^__END_OF_SHELL_SCRIPT__$/{print NR + 1; exit 0;}' "$0") "$0" | tar xz -C "$TEMP_DIR"
 
-echo "Loading Docker images from offline_images.tgz..."
-docker load -i ${TEMP_DIR}/offline_images.tgz
+echo "Loading Docker images from docker_images.tgz..."
+docker load -i ${TEMP_DIR}/docker_images.tgz
 
 echo "Run the install-Docker.sh script..."
 chmod +x ${TEMP_DIR}/install-Docker.sh

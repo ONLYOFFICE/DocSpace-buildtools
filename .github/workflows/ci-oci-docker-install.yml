@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       offline:
-        description: 'Creating and publishing an offline archive'
+        description: 'Creating and publishing an offline self-extracting archive'
         required: true
         default: false
         type: boolean
@@ -17,6 +17,8 @@ on:
 jobs:
   Install-OneClickInstall-Docker:
     runs-on: ubuntu-22.04
+    env:
+      INSTALL_PATH: ${{ github.workspace }}/install
     steps:
       - name: Test OCI docker scripts
         run: |
@@ -70,17 +72,16 @@ jobs:
         if: ${{ github.event.inputs.offline == 'true' }}
         uses: actions/checkout@v4
 
-      - name: Create offline archive
+      - name: Creating offline self-extracting archive
         if: ${{ github.event.inputs.offline == 'true' }}
         run: |
-          echo "Creating offline archive..."
-          sed -i -e 's~\(OFFLINE_INSTALLATION="\).*"$~\1true"~' -e 's~\(SKIP_HARDWARE_CHECK="\).*"$~\1true"~' "$GITHUB_WORKSPACE/install/OneClickInstall/install-Docker.sh"
-          docker save $(docker images --format "{{.Repository}}:{{.Tag}}") | gzip > $GITHUB_WORKSPACE/install/OneClickInstall/offline_images.tgz
-          cd $GITHUB_WORKSPACE/install/docker && tar -czvf $GITHUB_WORKSPACE/install/OneClickInstall/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
+          sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\).*"$~\1true"~' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
+          docker save $(docker images --format "{{.Repository}}:{{.Tag}}") | gzip > ${INSTALL_PATH}/docker_images.tgz
+          cd ${INSTALL_PATH}/docker && tar -czvf ${INSTALL_PATH}/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
+          
+          tar -cvzf - "${INSTALL_PATH}/OneClickInstall/install-Docker.sh" \
+                      "${INSTALL_PATH}/docker_images.tgz" \
+                      "${INSTALL_PATH}/docker.tar.gz" | gzip > ${INSTALL_PATH}/offline-docspace.tar.gz
 
-          tar -cvzf - "$GITHUB_WORKSPACE/install/OneClickInstall/install-Docker.sh" \
-                      "$GITHUB_WORKSPACE/install/OneClickInstall/offline_images.tgz" \
-                      "$GITHUB_WORKSPACE/install/OneClickInstall/docker.tar.gz" | gzip > $GITHUB_WORKSPACE/install/docker/package.tar.gz
-
-          cat self-extracting.sh package.tar.gz > final-self-extracting.sh
-          chmod +x $GITHUB_WORKSPACE/install/docker/final-self-extracting.sh
+          cat ${INSTALL_PATH}/common/self-extracting.sh ${INSTALL_PATH}/offline-docspace.tar.gz > ${INSTALL_PATH}/offline-docspace-installation.sh
+          chmod +x ${INSTALL_PATH}/offline-docspace-installation.sh
