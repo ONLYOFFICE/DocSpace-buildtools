@@ -8,11 +8,11 @@ on:
       - 'install/OneClickInstall/install-Docker.sh'
   workflow_dispatch:
     inputs:
-      script-branch:
-        description: 'Branch for OCI script docker'
+      offline:
+        description: 'Creating and publishing an offline archive'
         required: true
-        type: string
-        default: master
+        default: false
+        type: boolean
     
 jobs:
   Install-OneClickInstall-Docker:
@@ -25,7 +25,7 @@ jobs:
           BRANCH_NAME=$(
             case "${{ github.event_name }}" in
               pull_request) echo "${{ github.event.pull_request.head.ref }}";;
-              workflow_dispatch) echo "${{ github.event.inputs.script-branch }}";;
+              workflow_dispatch) echo "${{ github.head_ref }}";;
               push) echo "${GITHUB_REF#refs/heads/}";;
             esac
           )
@@ -66,3 +66,21 @@ jobs:
               red) echo "One or more containers have status 'red'. Job will fail."; exit 1 ;;
           esac
 
+      - name: Checkout
+        if: ${{ github.event.inputs.offline == 'true' }}
+        uses: actions/checkout@v4
+
+      - name: Create offline archive
+        if: ${{ github.event.inputs.offline == 'true' }}
+        run: |
+          echo "Creating offline archive..."
+          sed -i -e 's~\(OFFLINE_INSTALLATION="\).*"$~\1true"~' -e 's~\(SKIP_HARDWARE_CHECK="\).*"$~\1true"~' "$GITHUB_WORKSPACE/install/OneClickInstall/install-Docker.sh"
+          docker save $(docker images --format "{{.Repository}}:{{.Tag}}") | gzip > $GITHUB_WORKSPACE/install/OneClickInstall/offline_images.tgz
+          cd $GITHUB_WORKSPACE/install/docker && tar -czvf $GITHUB_WORKSPACE/install/OneClickInstall/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
+
+          tar -cvzf - "$GITHUB_WORKSPACE/install/OneClickInstall/install-Docker.sh" \
+                      "$GITHUB_WORKSPACE/install/OneClickInstall/offline_images.tgz" \
+                      "$GITHUB_WORKSPACE/install/OneClickInstall/docker.tar.gz" | gzip > $GITHUB_WORKSPACE/install/docker/package.tar.gz
+
+          cat self-extracting.sh package.tar.gz > final-self-extracting.sh
+          chmod +x $GITHUB_WORKSPACE/install/docker/final-self-extracting.sh
