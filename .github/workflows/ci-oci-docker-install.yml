@@ -79,9 +79,10 @@ jobs:
           docker save $(docker images --format "{{.Repository}}:{{.Tag}}") | gzip > ${INSTALL_PATH}/docker_images.tgz
           cd ${INSTALL_PATH}/docker && tar -czvf ${INSTALL_PATH}/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
           
-          tar -cvzf - "${INSTALL_PATH}/OneClickInstall/install-Docker.sh" \
-                      "${INSTALL_PATH}/docker_images.tgz" \
-                      "${INSTALL_PATH}/docker.tar.gz" | gzip > ${INSTALL_PATH}/offline-docspace.tar.gz
+          tar -cvf ${INSTALL_PATH}/offline-docspace.tar \
+          "${INSTALL_PATH}/OneClickInstall/install-Docker.sh" \
+          "${INSTALL_PATH}/docker_images.tgz" \
+          "${INSTALL_PATH}/docker.tar.gz"
 
-          cat ${INSTALL_PATH}/common/self-extracting.sh ${INSTALL_PATH}/offline-docspace.tar.gz > ${INSTALL_PATH}/offline-docspace-installation.sh
+          cat ${INSTALL_PATH}/common/self-extracting.sh ${INSTALL_PATH}/offline-docspace.tar > ${INSTALL_PATH}/offline-docspace-installation.sh
           chmod +x ${INSTALL_PATH}/offline-docspace-installation.sh
