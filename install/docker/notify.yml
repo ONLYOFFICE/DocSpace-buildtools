@@ -61,7 +61,7 @@ x-service:
 services:
   onlyoffice-notify:
     <<: *x-service-base
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-notify:${DOCKER_TAG}"
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-notify:${DOCKER_TAG}"
     container_name: ${NOTIFY_HOST}
     healthcheck:
      <<: *x-healthcheck
