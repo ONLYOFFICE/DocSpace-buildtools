@@ -1038,7 +1038,7 @@ get_env_parameter () {
 	echo ${VALUE//\"}
 }
 
-get_available_version () {
+retrieving_tag_from_hub () {
 	if [[ -z "$1" ]]; then
 		echo "image name is empty";
 		exit 1;
@@ -1088,6 +1088,10 @@ get_available_version () {
 		TAGS_RESP=$(curl -s -H "$AUTH_HEADER" -X GET https://hub.docker.com/v2/repositories/$1/tags/);
 		TAGS_RESP=$(echo $TAGS_RESP | jq -r '.results[].name')
 	fi
+}
+
+get_available_version () {
+	retrieving_tag_from_hub ${1}
 
 	VERSION_REGEX="[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$"
 	
@@ -1151,6 +1155,8 @@ set_mysql_params () {
 }
 
 set_docspace_params() {
+	HUB=${HUB:-$(get_env_parameter "HUB")};
+
 	ENV_EXTENSION=${ENV_EXTENSION:-$(get_env_parameter "ENV_EXTENSION" "${CONTAINER_NAME}")};
 	APP_CORE_BASE_DOMAIN=${APP_CORE_BASE_DOMAIN:-$(get_env_parameter "APP_CORE_BASE_DOMAIN" "${CONTAINER_NAME}")};
 	EXTERNAL_PORT=${EXTERNAL_PORT:-$(get_env_parameter "EXTERNAL_PORT" "${CONTAINER_NAME}")};
@@ -1225,6 +1231,7 @@ download_files () {
 
 	echo "OK"
 
+	reconfigure HUB "${HUB%/}${HUB:+/}"
 	reconfigure STATUS ${STATUS}
 	reconfigure INSTALLATION_TYPE ${INSTALLATION_TYPE}
 	reconfigure NETWORK_NAME ${NETWORK_NAME}
@@ -1261,7 +1268,7 @@ install_mysql_server () {
 install_document_server () {
 	reconfigure DOCUMENT_SERVER_JWT_HEADER ${DOCUMENT_SERVER_JWT_HEADER}
 	reconfigure DOCUMENT_SERVER_JWT_SECRET ${DOCUMENT_SERVER_JWT_SECRET}
-	reconfigure DOCUMENT_SERVER_IMAGE_NAME "${DOCUMENT_SERVER_IMAGE_NAME}:${DOCUMENT_SERVER_VERSION:-$(get_available_version "$DOCUMENT_SERVER_IMAGE_NAME")}"
+	reconfigure DOCUMENT_SERVER_IMAGE_NAME "${HUB%/}${HUB:+/}${DOCUMENT_SERVER_IMAGE_NAME}:${DOCUMENT_SERVER_VERSION:-$(get_available_version "$DOCUMENT_SERVER_IMAGE_NAME")}"
 	if [[ -z ${DOCUMENT_SERVER_HOST} ]] && [ "$INSTALL_DOCUMENT_SERVER" == "true" ]; then
 		docker-compose -f $BASE_DIR/ds.yml up -d
 	elif [ "$INSTALL_DOCUMENT_SERVER" == "pull" ]; then
@@ -1427,6 +1434,10 @@ make_swap () {
 	fi
 }
 
+check_hub_connection() {
+	retrieving_tag_from_hub ${IMAGE_NAME}
+	[ -z "$TAGS_RESP" ] && { echo -e "Unable to download tags from ${HUB:-hub.docker.com}.\nTry specifying another dockerhub name using -hub"; exit 1; } || true
+}
 
 start_installation () {
 	root_checking
@@ -1457,6 +1468,8 @@ start_installation () {
 	fi
 
 	docker_login
+
+	check_hub_connection
 
 	create_network
 

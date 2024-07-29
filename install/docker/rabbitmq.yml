@@ -1,6 +1,6 @@
 services:
   onlyoffice-rabbitmq:
-    image: rabbitmq:3
+    image: ${HUB}rabbitmq:3
     container_name: ${RABBIT_CONTAINER_NAME}
     restart: always
     expose:
