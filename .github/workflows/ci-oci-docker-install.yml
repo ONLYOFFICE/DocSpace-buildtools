@@ -8,31 +8,29 @@ on:
       - 'install/OneClickInstall/install-Docker.sh'
   workflow_dispatch:
     inputs:
-      script-branch:
-        description: 'Branch for OCI script docker'
+      offline:
+        description: 'Publish offline self-extracting archive'
         required: true
-        type: string
-        default: master
-    
+        default: false
+        type: boolean
+
 jobs:
   Install-OneClickInstall-Docker:
     runs-on: ubuntu-22.04
     steps:
+      - name: Determine Branch Name
+        id: set-branch-name
+        run: |
+          BRANCH_NAME=$([ "${{ github.event_name }}" = "pull_request" ] && echo "${{ github.event.pull_request.head.ref }}" || echo "${GITHUB_REF#refs/heads/}")
+          echo "BRANCH_NAME=${BRANCH_NAME:-master}" >> $GITHUB_ENV
+
       - name: Test OCI docker scripts
         run: |
           sudo docker image prune --all --force
-          
-          BRANCH_NAME=$(
-            case "${{ github.event_name }}" in
-              pull_request) echo "${{ github.event.pull_request.head.ref }}";;
-              workflow_dispatch) echo "${{ github.event.inputs.script-branch }}";;
-              push) echo "${GITHUB_REF#refs/heads/}";;
-            esac
-          )
 
-          wget https://download.onlyoffice.com/docspace/docspace-install.sh
-          sed '/bash install-Docker.sh/i sed -i "1i set -x" install-Docker.sh' -i docspace-install.sh
-          sudo bash docspace-install.sh docker -skiphc true -noni true $([ $BRANCH_NAME != "master" ] && echo "-gb $BRANCH_NAME -s 4testing-") || exit $?
+          wget https://download.onlyoffice.com/docspace/docspace-enterprise-install.sh
+          sed '/bash install-Docker.sh/i sed -i "1i set -x" install-Docker.sh' -i docspace-enterprise-install.sh
+          sudo bash docspace-enterprise-install.sh docker -skiphc true -noni true $([ ${{ env.BRANCH_NAME }} != "master" ] && echo "-gb ${{ env.BRANCH_NAME }} -s 4testing-") || exit $?
           
           echo -n "Waiting for all containers to start..."
           timeout 300 bash -c 'while docker ps | grep -q "starting"; do sleep 5; done' && echo "OK" || echo "container_status=timeout" >> $GITHUB_ENV
@@ -66,3 +64,67 @@ jobs:
               red) echo "One or more containers have status 'red'. Job will fail."; exit 1 ;;
           esac
 
+      - name: Checkout repository
+        if: ${{ github.event.inputs.offline == 'true' }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BRANCH_NAME }}
+
+      - name: Creating offline self-extracting archive
+        if: ${{ github.event.inputs.offline == 'true' }}
+        run: |
+          INSTALL_PATH=${{ github.workspace }}/install
+
+          docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q) && docker volume rm $(docker volume ls -q)
+          sudo rm -rf /usr/local/lib/android /opt/ghc
+
+          [ "${{ env.BRANCH_NAME }}" != "master" ] && STATUS="4testing-" && sed -i "s~\(STATUS=\"\).*\"$~\14testing-\"~" "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
+          sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\).*"$~\1true"~' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
+
+          echo "Creating offline self-extracting archive..."
+          docker save $(docker images --format "{{.Repository}}:{{.Tag}}") | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docker_images.tar.xz
+          cd ${INSTALL_PATH}/docker && tar -czvf ${INSTALL_PATH}/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
+          
+          tar -cvf ${INSTALL_PATH}/offline-docspace.tar \
+          -C "${INSTALL_PATH}/OneClickInstall" install-Docker.sh \
+          -C "${INSTALL_PATH}" docker_images.tar.xz \
+          -C "${INSTALL_PATH}" docker.tar.gz
+          rm -rf ${INSTALL_PATH}/docker_images.tar.xz ${INSTALL_PATH}/docker.tar.gz
+
+          echo "ARTIFACT_NAME=${ARTIFACT_NAME:=${STATUS}offline-docspace-installation.sh}" >> $GITHUB_ENV
+          [ "${{ env.BRANCH_NAME }}" = "master" ] && echo "ARTIFACT_VERSION_NAME=${STATUS}offline-docspace-$(docker images onlyoffice/docspace-api --format "{{.Tag}}")-installation.sh" >> $GITHUB_ENV
+          
+          cat ${INSTALL_PATH}/common/self-extracting.sh ${INSTALL_PATH}/offline-docspace.tar > ${INSTALL_PATH}/${ARTIFACT_NAME}
+          chmod +x ${INSTALL_PATH}/${ARTIFACT_NAME} 
+
+
+      - name: Configure AWS Credentials
+        if: ${{ github.event.inputs.offline == 'true' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_OCI }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_OCI }}
+          aws-region: us-east-1
+      
+      - name: Upload offline self-extracting archive
+        if: ${{ github.event.inputs.offline == 'true' }}
+        run: |
+          aws s3 cp ${{ github.workspace }}/install/${{ env.ARTIFACT_NAME }} \
+            ${{ secrets.AWS_BUCKET_URL_OCI }}/${{ env.ARTIFACT_NAME }} \
+            --acl public-read \
+            --content-type application/x-xz \
+            --metadata-directive REPLACE 
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.AWS_DISTRIBUTION_ID_OCI }} \
+            --paths "/docspace/${{ env.ARTIFACT_NAME }}"
+      
+      - name: Upload offline self-extracting archive with version
+        if: ${{ env.ARTIFACT_VERSION_NAME != '' }}
+        run: |
+          aws s3 cp ${{ secrets.AWS_BUCKET_URL_OCI }}/${{ env.ARTIFACT_NAME }} \
+            ${{ secrets.AWS_BUCKET_URL_OCI }}/${{ env.ARTIFACT_VERSION_NAME }} \
+            --acl public-read \
+            --metadata-directive REPLACE
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.AWS_DISTRIBUTION_ID_OCI }} \
+            --paths "/docspace/${{ env.ARTIFACT_VERSION_NAME }}"
