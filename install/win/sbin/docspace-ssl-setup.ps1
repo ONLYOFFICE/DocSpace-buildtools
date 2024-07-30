@@ -28,6 +28,7 @@ if ( -not $certbot_path )
   exit
 }
 
+$product = "docspace"
 $letsencrypt_root_dir = "$env:SystemDrive\Certbot\live"
 $app = Resolve-Path -Path ".\..\"
 $root_dir = "${app}\letsencrypt"
@@ -52,8 +53,8 @@ if ( $args.Count -ge 2 )
 
     [void](New-Item -ItemType "directory" -Path "${root_dir}\Logs" -Force)
 
-    "certbot certonly --expand --webroot -w `"${root_dir}`" --key-type rsa --noninteractive --agree-tos --email ${letsencrypt_mail} -d ${letsencrypt_domain}" > "${app}\letsencrypt\Logs\le-start.log"
-    cmd.exe /c "certbot certonly --expand --webroot -w `"${root_dir}`" --key-type rsa --noninteractive --agree-tos --email ${letsencrypt_mail} -d ${letsencrypt_domain}" > "${app}\letsencrypt\Logs\le-new.log"
+    "certbot certonly --expand --webroot -w `"${root_dir}`" --key-type rsa --cert-name ${product} --noninteractive --agree-tos --email ${letsencrypt_mail} -d ${letsencrypt_domain}" > "${app}\letsencrypt\Logs\le-start.log"
+    cmd.exe /c "certbot certonly --expand --webroot -w `"${root_dir}`" --key-type rsa --cert-name ${product} --noninteractive --agree-tos --email ${letsencrypt_mail} -d ${letsencrypt_domain}" > "${app}\letsencrypt\Logs\le-new.log"
 
     pushd "${letsencrypt_root_dir}\${letsencrypt_main_domain}"
         $ssl_cert = (Resolve-Path -Path (Get-Item "${letsencrypt_root_dir}\${letsencrypt_main_domain}\fullchain.pem").Target).ToString().Replace('\', '/')
