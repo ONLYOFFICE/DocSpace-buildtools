@@ -26,7 +26,7 @@ APP_PORT="80"
 ELK_SHEME="http"
 ELK_HOST="localhost"
 ELK_PORT="9200"
-OPENSEARCH_INDEX="${PACKAGE_SYSNAME}-${PRODUCT}-logs"
+OPENSEARCH_INDEX="${PACKAGE_SYSNAME}-fluent-bit"
 
 RABBITMQ_HOST="localhost"
 RABBITMQ_USER="guest"
@@ -548,10 +548,12 @@ setup_openresty(){
 			done
 		fi
 
-		if rpm -q "firewalld"; then
-			firewall-cmd --permanent --zone=public --add-service=http
-			firewall-cmd --permanent --zone=public --add-service=https
-			systemctl restart firewalld.service
+		if $PACKAGE_MANAGER firewalld >/dev/null 2>&1; then
+			if [ $(systemctl is-active firewalld.service) == active ]; then
+				firewall-cmd --permanent --zone=public --add-service=http
+				firewall-cmd --permanent --zone=public --add-service=https
+				systemctl restart firewalld.service
+			fi
 		fi
 	elif [ "$DIST" = "Debian" ]; then
 		if ! id "nginx" &>/dev/null; then

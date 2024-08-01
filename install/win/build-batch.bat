@@ -59,15 +59,20 @@ REM echo ######## SSL configs ########
 %sed% -i "s/proxy_x_forwarded_port/server_port/g" buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf.tmpl
 %sed% -i "s/proxy_x_forwarded_proto/scheme/g" buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf.tmpl buildtools\install\win\Files\nginx\conf\onlyoffice-proxy-ssl.conf.tmpl
 %sed% -i "s/ssl_dhparam \/etc\/ssl\/certs\/dhparam.pem;/#ssl_dhparam \/etc\/ssl\/certs\/dhparam.pem;/" buildtools\install\win\Files\nginx\conf\onlyoffice-proxy-ssl.conf.tmpl
+%sed% -i "/quic\|alt-svc/Id" buildtools\install\win\Files\nginx\conf\onlyoffice-proxy-ssl.conf.tmpl
 %sed% -i "s_\(.*root\).*;_\1 \"{APPDIR}letsencrypt\";_g" -i buildtools\install\win\Files\nginx\conf\includes\letsencrypt.conf
+%sed% -i "s#/var/log/nginx/#logs/#g" buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf.tmpl buildtools\install\win\Files\nginx\conf\onlyoffice-proxy-ssl.conf.tmpl
 %sed% -i "s#/etc/nginx/html#conf/html#g" buildtools\install\win\Files\nginx\conf\onlyoffice.conf
 %sed% -i "s/\/etc\/nginx\/\.htpasswd_dashboards/\.htpasswd_dashboards/g" buildtools\install\win\Files\nginx\conf\onlyoffice.conf
 
 REM echo ######## Configure fluent-bit config for windows ########
-%sed% -i "s/forward/tail/" buildtools\install\win\Files\config\fluent-bit.conf
-%sed% -i "s/Port/Path/" buildtools\install\win\Files\config\fluent-bit.conf
-%sed% -i "s/24224/{APPDIR}Logs\*.log/" buildtools\install\win\Files\config\fluent-bit.conf
-%sed% -i "/Listen\s*127\.0\.0\.1/d" buildtools\install\win\Files\config\fluent-bit.conf
+%sed% -i -e "s|/var/log/onlyoffice/|{APPDIR}Logs\\|g" -e "s|\*\*/|\*\*\\|g" -e "s#DocSpace\Logs\**\#DocumentServer\Log\#g" buildtools\install\win\Files\config\fluent-bit.conf
+%sed% -i "/^\[OUTPUT\]/i\[INPUT]" buildtools\install\win\Files\config\fluent-bit.conf
+%sed% -i "/^\[OUTPUT\]/i\    Name                exec" buildtools\install\win\Files\config\fluent-bit.conf
+%sed% -i "/^\[OUTPUT\]/i\    Interval_Sec        86400" buildtools\install\win\Files\config\fluent-bit.conf
+%sed% -i "/^\[OUTPUT\]/i\    Command             curl -s -X POST OPENSEARCH_SCHEME://OPENSEARCH_HOST:OPENSEARCH_PORT/OPENSEARCH_INDEX/_delete_by_query -H 'Content-Type: application/json' -d '{\"query\": {\"range\": {\"@timestamp\": {\"lt\": \"now-30d\"}}}}'" buildtools\install\win\Files\config\fluent-bit.conf
+%sed% -i -e "s/\"/\\\\\"/g" -e "s/'/\"/g" buildtools\install\win\Files\config\fluent-bit.conf
+%sed% -i "/\[OUTPUT\]/i\\n" buildtools\install\win\Files\config\fluent-bit.conf
 
 REM echo ######## Delete test and dev configs ########
 del /f /q buildtools\install\win\Files\config\*.test.json

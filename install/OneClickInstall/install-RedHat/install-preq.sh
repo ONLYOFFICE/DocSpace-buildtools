@@ -37,12 +37,9 @@ fi
 rpm -ivh https://rpms.remirepo.net/$REMI_DISTR_NAME/remi-release-$REV.rpm || true
 yum localinstall -y --nogpgcheck https://download1.rpmfusion.org/free/$RPMFUSION_DISTR_NAME/rpmfusion-free-release-$REV.noarch.rpm
 
-[ "$REV" = "9" ] && update-crypto-policies --set DEFAULT:SHA1
-if [ "$DIST" == "centos" ]; then
-	[ "$REV" = "9" ] && TESTING_REPO="--enablerepo=crb" || POWERTOOLS_REPO="--enablerepo=powertools"
-elif [ "$DIST" == "redhat" ]; then
-	/usr/bin/crb enable
-fi
+[ "$REV" = "9" ] && update-crypto-policies --set DEFAULT:SHA1 && ${package_manager} -y install xorg-x11-font-utils
+[ "$DIST" = "centos" ] && TESTING_REPO="--enablerepo=$( [ "$REV" = "9" ] && echo "crb" || echo "powertools" )"
+[ "$DIST" = "redhat" ] && /usr/bin/crb enable
 
 #add rabbitmq & erlang repo
 curl -s https://packagecloud.io/install/repositories/rabbitmq/rabbitmq-server/script.rpm.sh | bash

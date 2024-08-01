@@ -10,6 +10,8 @@ cat<<EOF
 
 EOF
 
+hold_package_version
+
 if [ "$DIST" = "debian" ] && [ $(apt-cache search ttf-mscorefonts-installer | wc -l) -eq 0 ]; then
 		echo "deb http://ftp.uk.debian.org/debian/ $DISTRIB_CODENAME main contrib" >> /etc/apt/sources.list
 		echo "deb-src http://ftp.uk.debian.org/debian/ $DISTRIB_CODENAME main contrib" >> /etc/apt/sources.list
@@ -33,13 +35,13 @@ locale-gen en_US.UTF-8
 
 # add opensearch repo
 curl -o- https://artifacts.opensearch.org/publickeys/opensearch.pgp | gpg --dearmor --batch --yes -o /usr/share/keyrings/opensearch-keyring
-echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch/2.x/apt stable main" >> /etc/apt/sources.list.d/opensearch-2.x.list
+echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch/2.x/apt stable main" > /etc/apt/sources.list.d/opensearch-2.x.list
 ELASTIC_VERSION="2.11.1"
 
 #add opensearch dashboards repo
 if [ ${INSTALL_FLUENT_BIT} == "true" ]; then
 	curl -o- https://artifacts.opensearch.org/publickeys/opensearch.pgp | gpg --dearmor --batch --yes -o /usr/share/keyrings/opensearch-keyring
-	echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/2.x/apt stable main" >> /etc/apt/sources.list.d/opensearch-dashboards-2.x.list
+	echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/2.x/apt stable main" > /etc/apt/sources.list.d/opensearch-dashboards-2.x.list
 	DASHBOARDS_VERSION="2.11.1"
 fi
 
@@ -48,10 +50,12 @@ NODE_VERSION="18"
 curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
 
 #add dotnet repo
-if [[ "$DISTRIB_CODENAME" != noble ]]; then
+if [ "$DIST" = "debian" ] || [ "$DISTRIB_CODENAME" = "focal" ]; then
 	curl https://packages.microsoft.com/config/$DIST/$REV/packages-microsoft-prod.deb -O
 	echo -e "Package: *\nPin: origin \"packages.microsoft.com\"\nPin-Priority: 1002" | tee /etc/apt/preferences.d/99microsoft-prod.pref
 	dpkg -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
+elif dpkg -l | grep -q packages-microsoft-prod; then
+    apt-get purge -y packages-microsoft-prod
 fi
 
 MYSQL_REPO_VERSION="$(curl https://repo.mysql.com | grep -oP 'mysql-apt-config_\K.*' | grep -o '^[^_]*' | sort --version-sort --field-separator=. | tail -n1)"

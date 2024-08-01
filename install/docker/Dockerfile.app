@@ -253,8 +253,8 @@ ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
 WORKDIR ${BUILD_PATH}/products/ASC.Files/service/
 
 RUN  echo "deb http://security.ubuntu.com/ubuntu focal-security main" | tee /etc/apt/sources.list && \
-     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3B4FE6ACC0B21F32 && \
-     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 871920D1991BC93C && \
+     apt-key adv --keyserver keys.gnupg.net --recv-keys 3B4FE6ACC0B21F32 && \
+     apt-key adv --keyserver keys.gnupg.net --recv-keys 871920D1991BC93C && \
      apt-get -y update && \
      apt-get install -yq libssl1.1 && \
      rm -rf /var/lib/apt/lists/*
