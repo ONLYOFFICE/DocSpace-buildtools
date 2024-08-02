@@ -1187,6 +1187,10 @@ set_installation_type_data () {
 download_files () {
 	if ! command_exists docker-compose; then
 		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker_compose || { echo "docker-compose not installed"; exit 1; }
+	else
+		if [ "$(docker-compose --version | grep -oP '(?<=v)\d+\.\d+'| sed 's/\.//')" -lt "21" ]; then
+			[ "$OFFLINE_INSTALLATION" = "false" ] && install_docker_compose || { echo "docker-compose version is outdated"; exit 1; }
+		fi
 	fi
 
 	# Fixes issues with variables when upgrading to v1.1.3
