@@ -5,9 +5,10 @@ on:
     types: [opened, reopened, synchronize]
     paths:
       - '.github/workflows/ci-oci-install.yml'
-      - 'install/OneClickInstall/**'
-      - '!install/OneClickInstall/install-Docker.sh'
-      - '!install/OneClickInstall/docspace-install.sh'
+      - 'install/OneClickInstall/install-Debian/**'
+      - 'install/OneClickInstall/install-RedHat/**'
+      - 'install/OneClickInstall/install-Debian.sh'
+      - 'install/OneClickInstall/install-RedHat.sh'
 
   schedule:
     - cron: '00 20 * * 6'  # At 23:00 on Saturday.
@@ -57,6 +58,19 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
+      - name: Checkout code
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine affected distributions
+        id: determine-distros
+        if: github.event_name == 'pull_request'
+        run: |
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
+          echo "debian_changed=$(echo "$CHANGED_FILES" | grep -q 'install-Debian' && echo true || echo false)" >> $GITHUB_ENV
+          echo "redhat_changed=$(echo "$CHANGED_FILES" | grep -q 'install-RedHat' && echo true || echo false)" >> $GITHUB_ENV 
 
       - name: Set matrix names
         id: set-matrix
@@ -69,11 +83,19 @@ jobs:
               {"execute": '${{ github.event.inputs.debian12 || true }}', "name": "Debian12", "os": "debian12", "distr": "generic"},
               {"execute": '${{ github.event.inputs.ubuntu2004 || true }}', "name": "Ubuntu20.04", "os": "ubuntu2004", "distr": "generic"},
               {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu22.04", "os": "ubuntu2204", "distr": "generic"},
-              {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu24.04", "os": "ubuntu-24.04", "distr": "bento"},            
+              {"execute": '${{ github.event.inputs.ubuntu2404 || true }}', "name": "Ubuntu24.04", "os": "ubuntu-24.04", "distr": "bento"},
               {"execute": '${{ github.event.inputs.fedora39 || true }}', "name": "Fedora39", "os": "39-cloud-base", "distr": "fedora"},
               {"execute": '${{ github.event.inputs.fedora40 || true }}', "name": "Fedora40", "os": "fedora-40", "distr": "bento"}
             ]
-          }' | jq -c '{include: [.include[] | select(.execute == true)]}')
+          }' | jq -c '.include')
+
+          matrix=$(jq -c --arg REDHAT_CHANGED "${{ env.redhat_changed }}" --arg DEBIAN_CHANGED "${{ env.debian_changed }}" '
+            if   $REDHAT_CHANGED == "true" and $DEBIAN_CHANGED == "true"      then {include: .}
+            elif $REDHAT_CHANGED == "true"                                    then {include: [.[] | select(.name | test("CentOS|Fedora"))]}
+            elif $DEBIAN_CHANGED == "true"                                    then {include: [.[] | select(.name | test("Debian|Ubuntu"))]}
+            else                                                              {include: [.[] | select(.execute == true)]}
+            end' <<< "$matrix")
+
           echo "matrix=${matrix}" >> $GITHUB_OUTPUT
 
   vagrant-up:
