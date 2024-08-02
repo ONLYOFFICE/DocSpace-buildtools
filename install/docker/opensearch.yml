@@ -25,6 +25,12 @@ services:
       - "9600" # required for Performance Analyzer
     ports:
       - 127.0.0.1:9200:9200
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health?pretty"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 10s
   
 networks:
   default:

@@ -6,6 +6,13 @@ services:
     expose:
       - "5672"
       - "80"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "status"]
+      interval: 10s
+      retries: 3
+      start_period: 10s
+      timeout: 10s
+
 networks:
   default:
     name: ${NETWORK_NAME}
