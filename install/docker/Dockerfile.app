@@ -150,7 +150,8 @@ RUN apt-get -y update && \
     chown -R onlyoffice:onlyoffice /etc/nginx/ && \
     chown -R onlyoffice:onlyoffice /var/ && \
     chown -R onlyoffice:onlyoffice /usr/ && \
-    chown -R onlyoffice:onlyoffice /run/
+    chown -R onlyoffice:onlyoffice /run/ && \
+    chown -R onlyoffice:onlyoffice /var/log/nginx/
 
 # copy static services files and config values
 COPY --from=base --chown=onlyoffice:onlyoffice /etc/nginx/conf.d /etc/nginx/conf.d
