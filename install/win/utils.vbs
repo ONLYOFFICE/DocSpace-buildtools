@@ -202,8 +202,8 @@ Function MySQLConfigure
 	    
 	If Err.Number <> 0 Then
         Err.Clear
-        installDir = shell.RegRead("HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MySQL AB\MySQL Server 8.0\Location")
- 	    dataDir = shell.RegRead("HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MySQL AB\MySQL Server 8.0\DataLocation") 
+        installDir = shell.RegRead("HKEY_LOCAL_MACHINE\SOFTWARE\MySQL AB\MySQL Server 8.0\Location")
+        dataDir = shell.RegRead("HKEY_LOCAL_MACHINE\SOFTWARE\MySQL AB\MySQL Server 8.0\DataLocation")
     End If
 
     Call WriteToLog("MySQLConfigure: installDir " & installDir)

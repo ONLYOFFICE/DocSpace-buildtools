@@ -1,5 +1,5 @@
-x-healthcheck:
-  &x-healthcheck
+version: "3.8"
+x-healthcheck: &x-healthcheck
   test: curl --fail http://127.0.0.1 || exit 1
   interval: 60s
   retries: 5
@@ -53,6 +53,7 @@ x-service: &x-service-base
     CERTIFICATE_PATH: ${CERTIFICATE_PATH}
   volumes:
     #- /app/onlyoffice/CommunityServer/data:/app/onlyoffice/data
+    - log_data:/var/log/onlyoffice
     - app_data:/app/onlyoffice/data
     - files_data:/var/www/products/ASC.Files/server/
     - people_data:/var/www/products/ASC.People/server/
@@ -64,8 +65,8 @@ services:
     container_name: ${BACKUP_BACKGRUOND_TASKS_HOST}
     user: "${UID}:${GID}"
     healthcheck:
-     <<: *x-healthcheck
-     test: curl --fail http://${SERVICE_BACKUP_BACKGRUOND_TASKS}/health/ || exit 1
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_BACKUP_BACKGRUOND_TASKS}/health/ || exit 1
 
   onlyoffice-backup:
     <<: *x-service-base
@@ -73,8 +74,8 @@ services:
     container_name: ${BACKUP_HOST}
     user: "${UID}:${GID}"
     healthcheck:
-     <<: *x-healthcheck
-     test: curl --fail http://${SERVICE_BACKUP}/health/ || exit 1
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_BACKUP}/health/ || exit 1
 
   onlyoffice-clear-events:
     <<: *x-service-base
@@ -82,8 +83,8 @@ services:
     container_name: ${CLEAR_EVENTS_HOST}
     user: "${UID}:${GID}"
     healthcheck:
-     <<: *x-healthcheck
-     test: curl --fail http://${SERVICE_CLEAR_EVENTS}/health/ || exit 1
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_CLEAR_EVENTS}/health/ || exit 1
 
   onlyoffice-files:
     <<: *x-service-base
@@ -91,8 +92,8 @@ services:
     container_name: ${FILES_HOST}
     user: "${UID}:${GID}"
     healthcheck:
-     <<: *x-healthcheck
-     test: curl --fail http://${SERVICE_FILES}/health/ || exit 1
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_FILES}/health/ || exit 1
 
   onlyoffice-files-services:
     <<: *x-service-base
@@ -100,8 +101,8 @@ services:
     container_name: ${FILES_SERVICES_HOST}
     user: "${UID}:${GID}"
     healthcheck:
-     <<: *x-healthcheck
-     test: curl --fail http://${SERVICE_FILES_SERVICES}/health/ || exit 1
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_FILES_SERVICES}/health/ || exit 1
 
   onlyoffice-people-server:
     <<: *x-service-base
@@ -109,8 +110,8 @@ services:
     container_name: ${PEOPLE_SERVER_HOST}
     user: "${UID}:${GID}"
     healthcheck:
-     <<: *x-healthcheck
-     test: curl --fail http://${SERVICE_PEOPLE_SERVER}/health/ || exit 1
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_PEOPLE_SERVER}/health/ || exit 1
 
   onlyoffice-socket:
     <<: *x-service-base
@@ -126,8 +127,8 @@ services:
     container_name: ${STUDIO_NOTIFY_HOST}
     user: "${UID}:${GID}"
     healthcheck:
-     <<: *x-healthcheck
-     test: curl --fail http://${SERVICE_STUDIO_NOTIFY}/health/ || exit 1
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_STUDIO_NOTIFY}/health/ || exit 1
 
   onlyoffice-api:
     <<: *x-service-base
@@ -135,8 +136,8 @@ services:
     container_name: ${API_HOST}
     user: "${UID}:${GID}"
     healthcheck:
-     <<: *x-healthcheck
-     test: curl --fail http://${SERVICE_API}/health/ || exit 1
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_API}/health/ || exit 1
 
   onlyoffice-api-system:
     <<: *x-service-base
@@ -144,8 +145,8 @@ services:
     container_name: ${API_SYSTEM_HOST}
     user: "${UID}:${GID}"
     healthcheck:
-     <<: *x-healthcheck
-     test: curl --fail http://${SERVICE_API_SYSTEM}/health/ || exit 1
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_API_SYSTEM}/health/ || exit 1
 
   onlyoffice-studio:
     <<: *x-service-base
@@ -153,8 +154,8 @@ services:
     container_name: ${STUDIO_HOST}
     user: "${UID}:${GID}"
     healthcheck:
-     <<: *x-healthcheck
-     test: curl --fail http://${SERVICE_STUDIO}/health/ || exit 1
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_STUDIO}/health/ || exit 1
 
   onlyoffice-ssoauth:
     <<: *x-service-base
@@ -173,8 +174,8 @@ services:
     expose:
       - "5013"
     healthcheck:
-     <<: *x-healthcheck
-     test: curl --fail http://${SERVICE_DOCEDITOR}/health || exit 1
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_DOCEDITOR}/doceditor/health || exit 1
 
   onlyoffice-login:
     <<: *x-service-base
@@ -184,8 +185,8 @@ services:
     expose:
       - "5011"
     healthcheck:
-     <<: *x-healthcheck
-     test: curl --fail http://${SERVICE_LOGIN}/health || exit 1
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_LOGIN}/login/health || exit 1
 
   onlyoffice-router:
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-router:${DOCKER_TAG}"
@@ -193,8 +194,8 @@ services:
     user: "${UID}:${GID}"
     restart: always
     healthcheck:
-     <<: *x-healthcheck
-     test: nginx -t || exit 1
+      <<: *x-healthcheck
+      test: nginx -t || exit 1
     expose:
       - "8081"
       - "8099"
@@ -222,6 +223,8 @@ services:
       - SERVICE_NOTIFY=${SERVICE_NOTIFY}
       - SERVICE_PEOPLE_SERVER=${SERVICE_PEOPLE_SERVER}
       - SERVICE_SOCKET=${SERVICE_SOCKET}
+      - SERVICE_IDENTITY_API=${SERVICE_IDENTITY_API}
+      - SERVICE_IDENTITY=${SERVICE_IDENTITY}
       - SERVICE_STUDIO_NOTIFY=${SERVICE_STUDIO_NOTIFY}
       - SERVICE_API=${SERVICE_API}
       - SERVICE_API_SYSTEM=${SERVICE_API_SYSTEM}
@@ -242,7 +245,7 @@ services:
       - DASHBOARDS_USERNAME=${DASHBOARDS_USERNAME}
       - DASHBOARDS_PASSWORD=${DASHBOARDS_PASSWORD}
     volumes:
-      - router_log:/var/log/nginx
+      - log_data:/var/log/nginx
 
 networks:
   default:
@@ -250,7 +253,7 @@ networks:
     external: true
 
 volumes:
-  router_log:
+  log_data:
   app_data:
   files_data:
   people_data:

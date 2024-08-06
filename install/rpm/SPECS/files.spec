@@ -34,7 +34,6 @@
 %exclude %{_sysconfdir}/onlyoffice/%{product}/openresty
 %exclude %{_sysconfdir}/onlyoffice/%{product}/nginx
 %{_docdir}/%{name}-%{version}-%{release}/
-%config %{_sysconfdir}/logrotate.d/%{product}-common
 %{_var}/log/onlyoffice/%{product}/
 %dir %{_sysconfdir}/onlyoffice/
 %dir %{_sysconfdir}/onlyoffice/%{product}/

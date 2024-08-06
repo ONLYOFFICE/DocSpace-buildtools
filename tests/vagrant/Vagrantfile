@@ -15,6 +15,7 @@ Vagrant.configure("2") do |config|
        config.vm.provision "file", source: "../../../DocSpace-buildtools/install/OneClickInstall/.", destination: "/tmp/docspace/"
     end
 
+    config.vm.provision "file", source: "../../../DocSpace-buildtools/install/common/systemd/build.sh", destination: "/tmp/docspace/build.sh"
     config.vm.provision "shell", path: './install.sh', :args => "#{ENV['DOWNLOAD_SCRIPT']} #{ENV['TEST_REPO']} #{ENV['ARGUMENTS']}"
 
     # Prevent SharedFoldersEnableSymlinksCreate errors

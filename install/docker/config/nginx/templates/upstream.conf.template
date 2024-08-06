@@ -54,6 +54,18 @@ map $SERVICE_API $service_api {
     default $SERVICE_API;
 }
 
+map $SERVICE_IDENTITY_API $service_identity_api {
+    volatile;
+    "" 127.0.0.1:9090;
+    default $SERVICE_IDENTITY_API;
+}
+
+map $SERVICE_IDENTITY $service_identity {
+    volatile;
+    "" 127.0.0.1:8080;
+    default $SERVICE_IDENTITY;
+}
+
 map $SERVICE_STUDIO $service_studio {
     volatile;
     "" 127.0.0.1:5003;

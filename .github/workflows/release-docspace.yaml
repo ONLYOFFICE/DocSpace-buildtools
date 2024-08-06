@@ -1,0 +1,31 @@
+name: Release DocSpace
+
+run-name: "Release Docker-DocSpace ${{ github.event.inputs.release_version }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: 'hub.docker repo owner (ex. onlyoffice)'
+        type: string
+        required: true
+        default: 'onlyoffice'
+      release_version:
+        type: string
+        description: 'Tag for stable release (ex. 2.5.1.1)'
+        required: true
+      source_version:
+        type: string
+        description: '4testing tag from which the release will be created (ex. 2.5.1.2678)'
+        required: true
+   
+jobs:
+  docker-release:
+    uses: ONLYOFFICE/DocSpace-buildtools/.github/workflows/reusable-docspace-release.yaml@master
+    with:
+      repo: ${{ github.event.inputs.repo }}
+      release_version: ${{ github.event.inputs.release_version }}
+      source_version: ${{ github.event.inputs.source_version }}
+    secrets:
+      docker-username: ${{ secrets.DOCKERHUB_USERNAME }}
+      docker-usertoken: ${{ secrets.DOCKERHUB_TOKEN }}

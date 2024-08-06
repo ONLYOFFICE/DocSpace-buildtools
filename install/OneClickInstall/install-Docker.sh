@@ -675,8 +675,8 @@ get_os_info () {
 			fi
 		fi
 
-		DIST=$(trim $DIST);
 		REV=$(trim $REV);
+		DIST=$(trim "$DIST")
 	fi
 }
 
@@ -863,13 +863,22 @@ install_docker () {
 		systemctl start docker
 		systemctl enable docker
 
-	elif [ "${DIST}" == "Red Hat Enterprise Linux Server" ]; then
+	elif [[ "${DIST}" == Red\ Hat\ Enterprise\ Linux* ]]; then
 
-		echo ""
-		echo "Your operating system does not allow Docker CE installation."
-		echo "You can install Docker EE using the manual here - https://docs.docker.com/engine/installation/linux/rhel/"
-		echo ""
-		exit 1;
+		if [[ "${REV}" -gt "7" ]]; then
+			yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine podman runc > null
+			yum install -y yum-utils
+			yum-config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+			yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin
+			systemctl start docker
+			systemctl enable docker
+		else
+			echo ""
+			echo "Your operating system does not allow Docker CE installation."
+			echo "You can install Docker EE using the manual here - https://docs.docker.com/engine/installation/linux/rhel/"
+			echo ""
+			exit 1;
+		fi
 
 	elif [ "${DIST}" == "SuSe" ]; then
 
@@ -1315,33 +1324,32 @@ install_elasticsearch () {
 
 install_fluent_bit () {
 	if [ "$INSTALL_FLUENT_BIT" == "true" ]; then
-		curl https://raw.githubusercontent.com/fluent/fluent-bit/master/install.sh | sh
-
-		if systemctl list-unit-files --type=service | grep -q "fluent-bit.service"; then
-			sed -i "s/OPENSEARCH_SCHEME/$(get_env_parameter "ELK_SHEME")/g" "${BASE_DIR}/config/fluent-bit.conf"
-			sed -i "s/OPENSEARCH_HOST/${ELK_HOST:-127.0.0.1}/g" "${BASE_DIR}/config/fluent-bit.conf"
-			sed -i "s/OPENSEARCH_PORT/$(get_env_parameter "ELK_PORT")/g" ${BASE_DIR}/config/fluent-bit.conf
-			sed -i "s/OPENSEARCH_INDEX/${OPENSEARCH_INDEX:-"${PACKAGE_SYSNAME}-fluent-bit"}/g" ${BASE_DIR}/config/fluent-bit.conf
-			[ ! -z "${ELK_HOST}" ] && sed -i "s/ELK_CONTAINER_NAME/ELK_HOST/g" ${BASE_DIR}/dashboards.yml
-			cp -rf ${BASE_DIR}/config/fluent-bit.conf /etc/fluent-bit/fluent-bit.conf
-			systemctl restart fluent-bit
-
-			DOCKER_DAEMON_FILE="/etc/docker/daemon.json"
-			if [[ ! -f "${DOCKER_DAEMON_FILE}" ]]; then
-				echo "{\"log-driver\": \"fluentd\", \"log-opts\": { \"fluentd-address\": \"127.0.0.1:24224\" }}" > "${DOCKER_DAEMON_FILE}"
-				systemctl restart docker
-			elif ! grep -q "log-driver" ${DOCKER_DAEMON_FILE}; then
-				sed -i 's!{!& "log-driver": "fluentd", "log-opts": { "fluentd-address": "127.0.0.1:24224" },!' "${DOCKER_DAEMON_FILE}"
-				systemctl restart docker
+		if ! command_exists crontab; then
+			if command_exists apt-get; then
+				install_service crontab cron
+			elif command_exists yum; then
+				install_service crontab cronie
 			fi
-
-			reconfigure DASHBOARDS_USERNAME "${DASHBOARDS_USERNAME:-"onlyoffice"}"
-			reconfigure DASHBOARDS_PASSWORD "${DASHBOARDS_PASSWORD:-$(get_random_str 20)}"
-
-			docker-compose -f ${BASE_DIR}/dashboards.yml up -d
-		else
-			echo "The installation of the fluent-bit service was unsuccessful."
 		fi
+
+		[ ! -z "$ELK_HOST" ] && sed -i "s/ELK_CONTAINER_NAME/ELK_HOST/g" $BASE_DIR/fluent.yml ${BASE_DIR}/dashboards.yml
+
+		OPENSEARCH_INDEX="${OPENSEARCH_INDEX:-"${PACKAGE_SYSNAME}-fluent-bit"}"
+		if crontab -l | grep -q "${OPENSEARCH_INDEX}"; then
+			crontab < <(crontab -l | grep -v "${OPENSEARCH_INDEX}")
+		fi
+		(crontab -l 2>/dev/null; echo "0 0 */1 * * curl -s -X POST "$(get_env_parameter 'ELK_SHEME')"://${ELK_HOST:-127.0.0.1}:$(get_env_parameter 'ELK_PORT')/${OPENSEARCH_INDEX}/_delete_by_query -H 'Content-Type: application/json' -d '{\"query\": {\"range\": {\"@timestamp\": {\"lt\": \"now-30d\"}}}}'") | crontab -		
+
+		sed -i "s/OPENSEARCH_HOST/${ELK_HOST:-"${PACKAGE_SYSNAME}-opensearch"}/g" "${BASE_DIR}/config/fluent-bit.conf" 
+		sed -i "s/OPENSEARCH_PORT/$(get_env_parameter "ELK_PORT")/g" ${BASE_DIR}/config/fluent-bit.conf
+		sed -i "s/OPENSEARCH_INDEX/${OPENSEARCH_INDEX}/g" ${BASE_DIR}/config/fluent-bit.conf
+
+		reconfigure DASHBOARDS_USERNAME "${DASHBOARDS_USERNAME:-"${PACKAGE_SYSNAME}"}"
+		reconfigure DASHBOARDS_PASSWORD "${DASHBOARDS_PASSWORD:-$(get_random_str 20)}"
+
+		docker-compose -f ${BASE_DIR}/fluent.yml -f ${BASE_DIR}/dashboards.yml up -d
+	elif [ "$INSTALL_FLUENT_BIT" == "pull" ]; then
+		docker-compose -f ${BASE_DIR}/fluent.yml -f ${BASE_DIR}/dashboards.yml pull
 	fi
 }
 
@@ -1363,14 +1371,20 @@ install_product () {
 		reconfigure APP_URL_PORTAL "${APP_URL_PORTAL:-"http://${PACKAGE_SYSNAME}-router:8092"}"
 		reconfigure EXTERNAL_PORT ${EXTERNAL_PORT}
 
+		if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ]; then
+			echo -n "Waiting for MySQL container to become healthy..."
+			(timeout 30 bash -c "while ! docker inspect --format '{{json .State.Health.Status }}' ${PACKAGE_SYSNAME}-mysql-server | grep -q 'healthy'; do sleep 1; done") && echo "OK" || (echo "FAILED")
+		fi
+
 		docker-compose -f $BASE_DIR/migration-runner.yml up -d
-		docker wait ${PACKAGE_SYSNAME}-migration-runner
+		echo -n "Waiting for database migration to complete..." && docker wait ${PACKAGE_SYSNAME}-migration-runner && echo "OK"
 		docker-compose -f $BASE_DIR/${PRODUCT}.yml up -d
 		docker-compose -f ${PROXY_YML} up -d
 		docker-compose -f $BASE_DIR/notify.yml up -d
 		docker-compose -f $BASE_DIR/healthchecks.yml up -d
 
 		if [[ -n "${PREVIOUS_ELK_VERSION}" && "$(get_env_parameter "ELK_VERSION")" != "${PREVIOUS_ELK_VERSION}" ]]; then
+			docker ps -q -f name=${PACKAGE_SYSNAME}-elasticsearch | xargs -r docker stop
 			MYSQL_TAG=$(docker images --format "{{.Tag}}" mysql | head -n1)
 			MYSQL_CONTAINER_NAME=$(get_env_parameter "MYSQL_CONTAINER_NAME" | sed "s/\${CONTAINER_PREFIX}/${PACKAGE_SYSNAME}-/g")
 			docker run --rm --network="$(get_env_parameter "NETWORK_NAME")" mysql:${MYSQL_TAG:-latest} mysql -h "${MYSQL_HOST:-${MYSQL_CONTAINER_NAME}}" -P "${MYSQL_PORT:-3306}" -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DATABASE}" -e "TRUNCATE webstudio_index;"
