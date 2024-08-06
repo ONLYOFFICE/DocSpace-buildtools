@@ -30,9 +30,11 @@ def fetchCommits(url, type):
         print("Error folder does not exists", path)
         return
     
+    branch_env = f"{type.upper()}_BRANCH"
+    branch = os.environ.get(branch_env)
     repo = Repo(path)
 
-    info = f"| [DocSpace-{type}]({url})  | [{repo.active_branch.name}]({url}/tree/{repo.active_branch.name})  | [{repo.head.commit}]({url}/commit/{repo.head.commit}) |{os.linesep}"
+    info = f"| [DocSpace-{type}]({url}) | [{branch}]({url}/tree/{branch}) | [{repo.head.commit}]({url}/commit/{repo.head.commit}) |{os.linesep}"
 
     commits_str = repo.git.log(f"--pretty=format: {format}", "--no-merges", f"--since={LIMIT_DAYS}.days")
     #print(commits_str)
