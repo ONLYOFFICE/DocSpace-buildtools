@@ -8,6 +8,7 @@ x-healthcheck: &x-healthcheck
 
 x-service: &x-service-base
   container_name: base
+  user: "${UID}:${GID}"
   restart: always
   expose:
     - ${SERVICE_PORT}
