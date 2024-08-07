@@ -39,7 +39,7 @@ yum localinstall -y --nogpgcheck https://download1.rpmfusion.org/free/$RPMFUSION
 
 [ "$REV" = "9" ] && update-crypto-policies --set DEFAULT:SHA1 && ${package_manager} -y install xorg-x11-font-utils
 [ "$DIST" = "centos" ] && TESTING_REPO="--enablerepo=$( [ "$REV" = "9" ] && echo "crb" || echo "powertools" )"
-[ "$DIST" = "redhat" ] && /usr/bin/crb enable
+[ "$DIST" = "redhat" ] && { /usr/bin/crb enable && yum repolist enabled | grep -qi -e crb -e codeready || echo "Failed to enable or verify CRB repository."; exit 1; }
 
 #add rabbitmq & erlang repo
 curl -s https://packagecloud.io/install/repositories/rabbitmq/rabbitmq-server/script.rpm.sh | bash
