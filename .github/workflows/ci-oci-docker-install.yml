@@ -82,7 +82,7 @@ jobs:
           sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\).*"$~\1true"~' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
 
           echo "Creating offline self-extracting archive..."
-          docker save $(docker images --format "{{.Repository}}:{{.Tag}}") | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docker_images.tar.xz
+          docker save onlyoffice/docspace-api | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docker_images.tar.xz
           cd ${INSTALL_PATH}/docker && tar -czvf ${INSTALL_PATH}/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
           
           tar -cvf ${INSTALL_PATH}/offline-docspace.tar \
@@ -91,11 +91,12 @@ jobs:
           -C "${INSTALL_PATH}" docker.tar.gz
           rm -rf ${INSTALL_PATH}/docker_images.tar.xz ${INSTALL_PATH}/docker.tar.gz
 
-          echo "ARTIFACT_NAME=${STATUS}offline-docspace-installation.sh" >> $GITHUB_ENV
+          echo "ARTIFACT_NAME=${ARTIFACT_NAME:=${STATUS}offline-docspace-installation.sh}" >> $GITHUB_ENV
           [ "${{ env.BRANCH_NAME }}" = "master" ] && echo "ARTIFACT_VERSION_NAME=${STATUS}offline-docspace-$(docker images onlyoffice/docspace-api --format "{{.Tag}}")-installation.sh" >> $GITHUB_ENV
           
-          cat ${INSTALL_PATH}/common/self-extracting.sh ${INSTALL_PATH}/offline-docspace.tar > ${INSTALL_PATH}/${{ env.ARTIFACT_NAME }}
-          chmod +x ${INSTALL_PATH}/${{ env.ARTIFACT_NAME }}
+          cat ${INSTALL_PATH}/common/self-extracting.sh ${INSTALL_PATH}/offline-docspace.tar > ${INSTALL_PATH}/${ARTIFACT_NAME}
+          chmod +x ${INSTALL_PATH}/${ARTIFACT_NAME} 
+
 
       - name: Configure AWS Credentials
         if: ${{ github.event.inputs.offline == 'true' }}
