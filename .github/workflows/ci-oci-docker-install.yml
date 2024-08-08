@@ -68,7 +68,7 @@ jobs:
         if: ${{ github.event.inputs.offline == 'true' }}
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.BRANCH_NAME }}
+          ref: feature/oci-offline
 
       - name: Creating offline self-extracting archive
         if: ${{ github.event.inputs.offline == 'true' }}
