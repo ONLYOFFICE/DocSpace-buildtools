@@ -27,8 +27,8 @@ jobs:
 
       - name: Creating an enterprise script
         run: |
-          cp ${{ env.SCRIPT_DIR }}/$(${{ env.PRODUCT }})-install.sh ${{ env.SCRIPT_DIR }}/$(${{ env.PRODUCT }})-enterprise-install.sh
-          sed -i 's/\(PARAMETERS -it\).*";/\1 ENTERPRISE";/' ${{ env.SCRIPT_DIR }}/$(${{ env.PRODUCT }})-enterprise-install.sh
+          cp ${{ env.SCRIPT_DIR }}/${{ env.PRODUCT }}-install.sh ${{ env.SCRIPT_DIR }}/${{ env.PRODUCT }}-enterprise-install.sh
+          sed -i 's/\(PARAMETERS -it\).*";/\1 ENTERPRISE";/' ${{ env.SCRIPT_DIR }}/${{ env.PRODUCT }}-enterprise-install.sh
 
       - name: Create Docker Tarball
         run: |
@@ -51,8 +51,8 @@ jobs:
             --content-type application/x-sh \
             --metadata-directive REPLACE \
             --exclude '*' \
-            --include="$(${{ env.PRODUCT }})-install.sh" \
-            --include="$(${{ env.PRODUCT }})-enterprise-install.sh" \
+            --include="${{ env.PRODUCT }}-install.sh" \
+            --include="${{ env.PRODUCT }}-enterprise-install.sh" \
             --include="install-RedHat.sh" \
             --include="install-RedHat/*" \
             --include="install-Debian.sh" \
@@ -65,11 +65,11 @@ jobs:
           aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.AWS_DISTRIBUTION_ID_OCI }} \
             --paths \
-            "/$(${{ env.PRODUCT }})/$(${{ env.PRODUCT }})-install.sh" \
-            "/$(${{ env.PRODUCT }})/$(${{ env.PRODUCT }})-enterprise-install.sh" \
-            "/$(${{ env.PRODUCT }})/install-RedHat.sh" \
-            "/$(${{ env.PRODUCT }})/install-RedHat/*" \
-            "/$(${{ env.PRODUCT }})/install-Debian.sh" \
-            "/$(${{ env.PRODUCT }})/install-Debian/*" \
-            "/$(${{ env.PRODUCT }})/install-Docker.sh" \
-            "/$(${{ env.PRODUCT }})/docker.tar.gz"
+            "/${{ env.PRODUCT }}/${{ env.PRODUCT }}-install.sh" \
+            "/${{ env.PRODUCT }}/${{ env.PRODUCT }}-enterprise-install.sh" \
+            "/${{ env.PRODUCT }}/install-RedHat.sh" \
+            "/${{ env.PRODUCT }}/install-RedHat/*" \
+            "/${{ env.PRODUCT }}/install-Debian.sh" \
+            "/${{ env.PRODUCT }}/install-Debian/*" \
+            "/${{ env.PRODUCT }}/install-Docker.sh" \
+            "/${{ env.PRODUCT }}/docker.tar.gz"
