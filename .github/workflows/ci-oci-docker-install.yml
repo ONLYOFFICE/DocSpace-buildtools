@@ -114,6 +114,9 @@ jobs:
             --acl public-read \
             --content-type application/x-shellscript \
             --metadata-directive REPLACE 
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.AWS_DISTRIBUTION_ID_OCI }} \
+            --paths "/docspace/${{ env.ARTIFACT_NAME }}"
       
       - name: Upload offline self-extracting archive with version
         if: ${{ env.ARTIFACT_VERSION_NAME != '' }}
@@ -121,11 +124,6 @@ jobs:
           aws s3 sync ${{ secrets.AWS_BUCKET_URL_OCI }}/${{ env.ARTIFACT_NAME }}\
             ${{ secrets.AWS_BUCKET_URL_OCI }}/${{ env.ARTIFACT_VERSION_NAME }} \
             --exact-timestamps
-
-      - name: Invalidate AWS CloudFront cache
-        if: ${{ github.event.inputs.offline == 'true' }}
-        run: |
           aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.AWS_DISTRIBUTION_ID_OCI }} \
-            --paths "/docspace/${{ env.ARTIFACT_NAME }}"
             --paths "/docspace/${{ env.ARTIFACT_VERSION_NAME }}"
