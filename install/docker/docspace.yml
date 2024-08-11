@@ -178,6 +178,7 @@ services:
   onlyoffice-router:
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-router:${DOCKER_TAG}"
     container_name: ${ROUTER_HOST}
+    user: "${UID}:${GID}"
     restart: always
     healthcheck:
       <<: *x-healthcheck
