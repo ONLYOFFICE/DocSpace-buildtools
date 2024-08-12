@@ -149,8 +149,13 @@ services:
   onlyoffice-studio:
     <<: *x-profiles-local
     image: ${Baseimage_Dotnet_Run}
-    working_dir: ${BUILD_PATH}/studio/ASC.Web.Studio/
-    command: ["ASC.Web.Studio.dll", "ASC.Web.Studio"]
+    working_dir: ${BUILD_PATH}/studio/ASC.Web.Studio/    
+    command:
+     [
+       "ASC.Web.Studio.dll",
+       "ASC.Web.Studio",
+       "core:eventBus:subscriptionClientName=asc_event_bus_webstudio_queue",
+     ]
     volumes:
       - ${SRC_PATH}/ASC.Web.Studio/service:${BUILD_PATH}/studio/ASC.Web.Studio/
       - ${SRC_PATH}/ASC.Files/service/:${BUILD_PATH}/products/ASC.Files/server/

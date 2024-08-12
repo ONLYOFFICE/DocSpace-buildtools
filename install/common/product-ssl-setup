@@ -94,8 +94,8 @@ case $1 in
       echo "Generating Let's Encrypt SSL Certificates..."
 
       # Request and generate Let's Encrypt SSL certificate
-      echo certbot certonly --expand --webroot -w ${WEBROOT_PATH} --cert-name ${PRODUCT} --noninteractive --agree-tos --email ${MAIL} -d ${DOMAINS[@]} > /var/log/le-start.log
-      certbot certonly --expand --webroot -w ${WEBROOT_PATH} --cert-name ${PRODUCT} --noninteractive --agree-tos --email ${MAIL} -d ${DOMAINS[@]} > /var/log/le-new.log
+      echo certbot certonly --expand --webroot -w ${WEBROOT_PATH} --key-type rsa --cert-name ${PRODUCT} --noninteractive --agree-tos --email ${MAIL} -d ${DOMAINS[@]} > /var/log/le-start.log
+      certbot certonly --expand --webroot -w ${WEBROOT_PATH} --key-type rsa --cert-name ${PRODUCT} --noninteractive --agree-tos --email ${MAIL} -d ${DOMAINS[@]} > /var/log/le-new.log
     else
       help
     fi
