@@ -5,7 +5,7 @@ set -e
 make_swap () {
 	DISK_REQUIREMENTS=6144; #6Gb free space
 	MEMORY_REQUIREMENTS=12000; #RAM ~12Gb
-	SWAPFILE="/${PRODUCT}_swapfile";
+	SWAPFILE="/${product}_swapfile";
 
 	AVAILABLE_DISK_SPACE=$(df -m /  | tail -1 | awk '{ print $4 }');
 	TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1);
@@ -26,14 +26,23 @@ command_exists () {
 
 # Function to prevent package auto-update
 hold_package_version() {
-    for package in "$@"; do
-        if command -v apt-mark >/dev/null 2>&1 && 
-            dpkg -s "$package" >/dev/null 2>&1 && 
-            ! apt-mark showhold | grep -q "$package" >/dev/null 2>&1
-        then
-            apt-mark hold "$package"
-        fi
-    done
+	packages=("dotnet-*" "aspnetcore-*" opensearch redis-server rabbitmq-server opensearch-dashboards fluent-bit)
+	for package in "${packages[@]}"; do 
+		command -v apt-mark >/dev/null 2>&1 && apt-mark showhold | grep -q "^$package" && apt-mark unhold "$package"
+	done
+
+	UNATTENDED_UPGRADES_FILE="/etc/apt/apt.conf.d/50unattended-upgrades"
+	if [ -f ${UNATTENDED_UPGRADES_FILE} ] && grep -q "Package-Blacklist" ${UNATTENDED_UPGRADES_FILE}; then
+		for package in "${packages[@]}"; do 
+			if ! grep -q "$package" ${UNATTENDED_UPGRADES_FILE}; then
+				sed -i "/Package-Blacklist/a \\\t\"$package\";" ${UNATTENDED_UPGRADES_FILE}
+			fi
+		done
+		
+		if systemctl list-units --type=service --state=running | grep -q "unattended-upgrades"; then
+			systemctl restart unattended-upgrades
+		fi
+	fi
 }
 
 check_hardware () {

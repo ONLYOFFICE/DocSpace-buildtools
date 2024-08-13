@@ -72,12 +72,9 @@ case $1 in
     fi
 
     if grep -q '${CERTIFICATE_PATH}:' ${DOCKERCOMPOSE}/docspace.yml; then
-      sed -i '/${CERTIFICATE_PATH}:/d' ${DOCKERCOMPOSE}/docspace.yml
-      docker-compose -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-doceditor onlyoffice-login onlyoffice-socket onlyoffice-ssoauth
-    fi
-
-    if grep -q 'USE_UNAUTHORIZED_STORAGE' ${DOCKERCOMPOSE}/ds.yml; then
       sed -i '/USE_UNAUTHORIZED_STORAGE/d' ${DOCKERCOMPOSE}/ds.yml
+      sed -i '/${CERTIFICATE_PATH}:/d' ${DOCKERCOMPOSE}/docspace.yml ${DOCKERCOMPOSE}/ds.yml
+      docker-compose -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-doceditor onlyoffice-login onlyoffice-socket onlyoffice-ssoauth
       docker-compose -f ${DOCKERCOMPOSE}/ds.yml up --force-recreate -d
     fi
 
@@ -112,7 +109,7 @@ case $1 in
       -v /var/log:/var/log \
       -v onlyoffice_webroot_path:${WEBROOT_PATH} \
       certbot/certbot certonly \
-      --expand --webroot -w ${WEBROOT_PATH} \
+      --expand --webroot -w ${WEBROOT_PATH} --key-type rsa \
       --cert-name ${PRODUCT} --non-interactive --agree-tos --email ${MAIL} -d ${DOMAINS[@]}
     else
       help
@@ -148,14 +145,14 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
         echo -e "@weekly root ${DIR}/${PRODUCT}-renew-letsencrypt" | tee /etc/cron.d/${PRODUCT}-letsencrypt
       fi
     else
-      CERTIFICATE_SUBJECT=$(openssl x509 -subject -noout -in "${CERTIFICATE_FILE}" | sed 's/subject=//')
-      CERTIFICATE_ISSUER=$(openssl x509 -issuer -noout -in "${CERTIFICATE_FILE}" | sed 's/issuer=//')
+      CERTIFICATE_SUBJECT=$(openssl x509 -subject -noout -in "${CERTIFICATE_FILE}" | sed -n 's/^.*CN *= *\([^,]*\).*$/\1/p' | awk -F. '{print $(NF-1)"."$NF}')
+      CERTIFICATE_ISSUER=$(openssl x509 -issuer -noout -in "${CERTIFICATE_FILE}" | sed -n 's/^.*CN *= *\([^,]*\).*$/\1/p' | awk -F. '{print $(NF-1)"."$NF}')
       
       #Checking whether the certificate is self-signed
       if [[ -n "$CERTIFICATE_SUBJECT" && -n "$CERTIFICATE_ISSUER" && "$CERTIFICATE_SUBJECT" == "$CERTIFICATE_ISSUER" ]]; then
         sed -i '/app_data:\/.*/a \    - ${CERTIFICATE_PATH}:${CERTIFICATE_PATH}' ${DOCKERCOMPOSE}/docspace.yml
         docker-compose -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-doceditor onlyoffice-login onlyoffice-socket onlyoffice-ssoauth
-        sed -i '/environment:/a \      - USE_UNAUTHORIZED_STORAGE=true' ${DOCKERCOMPOSE}/ds.yml
+        sed -i '/app_data:\/.*/a \      - ${CERTIFICATE_PATH}:/var/www/onlyoffice/Data/certs/extra-ca-certs.pem' ${DOCKERCOMPOSE}/ds.yml
         docker-compose -f ${DOCKERCOMPOSE}/ds.yml up --force-recreate -d
       fi
     fi

@@ -5,17 +5,22 @@ set -e
 function make_swap () {
 	local DISK_REQUIREMENTS=6144; #6Gb free space
 	local MEMORY_REQUIREMENTS=12000; #RAM ~12Gb
-	SWAPFILE="/${PRODUCT}_swapfile";
+	SWAPFILE="/${product}_swapfile";
 
 	local AVAILABLE_DISK_SPACE=$(df -m /  | tail -1 | awk '{ print $4 }');
 	local TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1);
 	local EXIST=$(swapon -s | awk '{ print $1 }' | { grep -x ${SWAPFILE} || true; });
 
 	if [[ -z $EXIST ]] && [ ${TOTAL_MEMORY} -lt ${MEMORY_REQUIREMENTS} ] && [ ${AVAILABLE_DISK_SPACE} -gt ${DISK_REQUIREMENTS} ]; then
-		dd if=/dev/zero of=${SWAPFILE} count=6144 bs=1MiB
-		chmod 600 ${SWAPFILE}
-		mkswap ${SWAPFILE}
-		swapon ${SWAPFILE}
+		touch "$SWAPFILE"
+		# No Copy-on-Write - no compression
+		[[ "$DIST" == "fedora" ]] && chattr +C "$SWAPFILE"
+		# Allocate 6 GB, much faster than: dd if=/dev/zero of=${SWAPFILE} count=6144 bs=1MiB
+		fallocate -l 6G "$SWAPFILE"
+		chmod 600 "$SWAPFILE"
+		mkswap "$SWAPFILE"
+		# Activate, enable upon system boot
+		swapon "$SWAPFILE"
 		echo "$SWAPFILE none swap sw 0 0" >> /etc/fstab
 	fi
 }
@@ -66,8 +71,9 @@ read_unsupported_installation () {
 	esac
 }
 
-DIST=$(rpm -q --queryformat '%{NAME}' centos-release redhat-release fedora-release | awk -F'[- ]|package' '{print tolower($1)}' | tr -cd '[:alpha:]')
-[ -z $DIST ] && DIST=$(cat /etc/redhat-release | awk -F 'Linux|release| ' '{print tolower($1)}')
+DIST=$(rpm -qa --queryformat '%{NAME}\n' | grep -E 'centos-release|redhat-release|fedora-release' | awk -F '-' '{print $1}' | head -n 1)
+DIST=${DIST:-$(awk -F= '/^ID=/ {gsub(/"/, "", $2); print tolower($2)}' /etc/os-release)}; 
+[[ "$DIST" =~ ^(centos|redhat|fedora)$ ]] || DIST="centos"
 REV=$(sed -n 's/.*release\ \([0-9]*\).*/\1/p' /etc/redhat-release)
 REV=${REV:-"7"}
 

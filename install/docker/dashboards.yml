@@ -1,4 +1,3 @@
-version: "3"
 services:
   onlyoffice-opensearch-dashboards:
     image: opensearchproject/opensearch-dashboards:${DASHBOARDS_VERSION}

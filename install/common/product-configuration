@@ -26,7 +26,7 @@ APP_PORT="80"
 ELK_SHEME="http"
 ELK_HOST="localhost"
 ELK_PORT="9200"
-OPENSEARCH_INDEX="${PACKAGE_SYSNAME}-${PRODUCT}-logs"
+OPENSEARCH_INDEX="${PACKAGE_SYSNAME}-fluent-bit"
 
 RABBITMQ_HOST="localhost"
 RABBITMQ_USER="guest"
@@ -249,9 +249,9 @@ set_core_machinekey () {
 	fi
 
 	save_undefined_param "${USER_CONF}" "core.machinekey" "${CORE_MACHINEKEY}"
-	save_undefined_param "${USER_CONF}" "core['base-domain']" "${APP_HOST}"
+	save_undefined_param "${USER_CONF}" "core['base-domain']" "${APP_HOST}" "rewrite"
 	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core.machinekey" "${CORE_MACHINEKEY}"
-	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core['base-domain']" "${APP_HOST}"
+	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core['base-domain']" "${APP_HOST}" "rewrite"
 
 	sed "s^\(machine_key\)\s*=.*^\1 = ${CORE_MACHINEKEY}^g" -i $APP_DIR/radicale.config
 }
@@ -295,7 +295,7 @@ restart_services() {
 
 	echo -n "Restarting services... "
 	for SVC in login api socket studio-notify notify \
-	people-server files files-services studio backup \
+	people-server files files-services studio backup api-system \
 	clear-events backup-background ssoauth doceditor healthchecks
 	do
 		systemctl enable ${PRODUCT}-$SVC >/dev/null 2>&1
@@ -346,7 +346,7 @@ establish_mysql_conn(){
 	$MYSQL -e ";" >/dev/null 2>&1
 	ERRCODE=$?
 	if [ $ERRCODE -ne 0 ]; then
-		systemctl ${MYSQL_PACKAGE} start >/dev/null 2>&1
+		systemctl start ${MYSQL_PACKAGE} >/dev/null 2>&1
 		$MYSQL -e ";" >/dev/null 2>&1 || { echo "FAILURE"; exit 1; }
 	fi
 
@@ -446,14 +446,9 @@ change_mysql_config(){
 	else
 		sed "s/collation_server.*/collation_server = utf8_general_ci/" -i ${CNF_PATH} || true # ignore errors
 	fi
-	
-	MYSQL_AUTHENTICATION_PLUGIN=$($MYSQL -e "SHOW VARIABLES LIKE 'default_authentication_plugin';" -s | awk '{print $2}' >/dev/null 2>&1)
-	MYSQL_AUTHENTICATION_PLUGIN=${MYSQL_AUTHENTICATION_PLUGIN:-caching_sha2_password}
 
-	if ! grep -q "^default-authentication-plugin"  ${CNF_PATH}; then
-		sed "/\[mysqld\]/a default-authentication-plugin = ${MYSQL_AUTHENTICATION_PLUGIN}" -i ${CNF_PATH}
-	else
-		sed "s/default-authentication-plugin.*/default-authentication-plugin = ${MYSQL_AUTHENTICATION_PLUGIN}/" -i ${CNF_PATH} || true # ignore errors
+	if grep -q "^default-authentication-plugin"  ${CNF_PATH}; then
+		sed "/^default-authentication-plugin/d" -i "${CNF_PATH}" || true # ignore errors
 	fi
 
 	if [ -e ${CNF_SERVICE_PATH} ]; then
@@ -553,10 +548,12 @@ setup_openresty(){
 			done
 		fi
 
-		if rpm -q "firewalld"; then
-			firewall-cmd --permanent --zone=public --add-service=http
-			firewall-cmd --permanent --zone=public --add-service=https
-			systemctl restart firewalld.service
+		if $PACKAGE_MANAGER firewalld >/dev/null 2>&1; then
+			if [ $(systemctl is-active firewalld.service) == active ]; then
+				firewall-cmd --permanent --zone=public --add-service=http
+				firewall-cmd --permanent --zone=public --add-service=https
+				systemctl restart firewalld.service
+			fi
 		fi
 	elif [ "$DIST" = "Debian" ]; then
 		if ! id "nginx" &>/dev/null; then
@@ -625,13 +622,10 @@ setup_enterprise() {
 change_elasticsearch_config(){
 
 	systemctl stop opensearch
-	systemctl is-active --quiet elasticsearch && systemctl stop elasticsearch
-
-	ELASTIC_VERSION=$(awk '/build:/{f=1} f&&/version:/{gsub(/"/,"",$2);print $2; exit}' /usr/share/opensearch/manifest.yml 2>/dev/null || echo "2.11.1")
-	[[ -f "$APP_DIR/.private/opensearch-version" && $(cat $APP_DIR/.private/opensearch-version) != *$ELASTIC_VERSION* ]] && $MYSQL "$DB_NAME" -e "TRUNCATE webstudio_index";
-
-	echo "$ELASTIC_VERSION" > $APP_DIR/.private/opensearch-version
-	chmod o-rwx $APP_DIR/.private/opensearch-version
+	if $PACKAGE_MANAGER elasticsearch >/dev/null 2>&1; then
+		systemctl disable elasticsearch >/dev/null 2>&1
+		systemctl stop elasticsearch >/dev/null 2>&1
+	fi
 
 	sed -i '/^plugins\.security/d' /etc/opensearch/opensearch.yml
 	sed -i '/CN=kirk,OU=client,O=client,L=test, C=de/d' /etc/opensearch/opensearch.yml
@@ -727,8 +721,18 @@ setup_dashboards() {
 
 	DASHBOARDS_CONF_PATH="/etc/opensearch-dashboards/opensearch_dashboards.yml"
 
+	if [[ -n ${DASHBOARDS_PASSWORD} ]]; then
+		echo "${DASHBOARDS_PASSWORD}" > ${APP_DIR}/.private/dashboards-password
+	elif [[ -f ${APP_DIR}/.private/dashboards-password ]]; then
+		DASHBOARDS_PASSWORD=$(cat ${APP_DIR}/.private/dashboards-password);
+	else
+		DASHBOARDS_PASSWORD=$(echo "$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 20)" | tee ${APP_DIR}/.private/dashboards-password)
+	fi
+
+	chmod o-rwx $APP_DIR/.private/dashboards-password
+
 	# configure login&pass for Dashboards, used by Nginx HTTP Basic Authentication
-	echo "${DASHBOARDS_USERNAME:-"onlyoffice"}:$(openssl passwd -6 -stdin <<< "${DASHBOARDS_PASSWORD:-"onlyoffice"}")" > /etc/openresty/.htpasswd_dashboards
+	echo "${DASHBOARDS_USERNAME:-"onlyoffice"}:$(openssl passwd -6 -stdin <<< "${DASHBOARDS_PASSWORD}")" > /etc/openresty/.htpasswd_dashboards
 	chown nginx:nginx /etc/openresty/.htpasswd_dashboards
 
 	# enable connection with opensearch
@@ -741,6 +745,7 @@ setup_dashboards() {
 	# set basePath variable to get access to Dashboards from a remote host
 	sed 's_.*\(server.basePath:\).*_\1 "/dashboards"_' -i ${DASHBOARDS_CONF_PATH}
 
+	systemctl enable opensearch-dashboards
 	systemctl restart opensearch-dashboards
 	echo "OK"
 }
@@ -752,6 +757,7 @@ setup_fluentbit() {
 	sed -i "s/OPENSEARCH_HOST/$ELK_HOST/g; s/OPENSEARCH_PORT/$ELK_PORT/g; s/OPENSEARCH_INDEX/$OPENSEARCH_INDEX/g; s/OPENSEARCH_SCHEME/$ELK_SHEME/g" ${APP_DIR}/fluent-bit.conf
 	cp -f ${APP_DIR}/fluent-bit.conf /etc/fluent-bit/fluent-bit.conf
 
+	systemctl enable fluent-bit
 	systemctl restart fluent-bit
 	echo "OK"
 }
@@ -895,3 +901,11 @@ elif $PACKAGE_MANAGER rabbitmq-server >/dev/null 2>&1; then
 fi
 
 restart_services
+
+# Truncate MySQL DB to make opensearch work with updated app. Strictly after restart_services ()
+if $PACKAGE_MANAGER opensearch >/dev/null 2>&1; then
+	ELASTIC_VERSION=$(awk '/build:/{f=1} f&&/version:/{gsub(/"/,"",$2);print $2; exit}' /usr/share/opensearch/manifest.yml 2>/dev/null || echo "2.11.1")
+	[[ ! -f "$APP_DIR/.private/opensearch-version" || $(cat "$APP_DIR/.private/opensearch-version") != *"$ELASTIC_VERSION"* ]] && $MYSQL "$DB_NAME" -e "TRUNCATE webstudio_index";
+	echo "$ELASTIC_VERSION" > $APP_DIR/.private/opensearch-version
+	chmod o-rwx $APP_DIR/.private/opensearch-version
+fi
