@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       offline:
-        description: 'Publish offline self-extracting archive'
+        description: 'Publish 4testing offline archive'
         required: true
         default: false
         type: boolean
@@ -30,7 +30,7 @@ jobs:
 
           wget https://download.onlyoffice.com/docspace/docspace-enterprise-install.sh
           sed '/bash install-Docker.sh/i sed -i "1i set -x" install-Docker.sh' -i docspace-enterprise-install.sh
-          sudo bash docspace-enterprise-install.sh docker -skiphc true -noni true $([ ${{ env.BRANCH_NAME }} != "master" ] && echo "-gb ${{ env.BRANCH_NAME }} -s 4testing-") || exit $?
+          sudo bash docspace-enterprise-install.sh docker -docsi onlyoffice/documentserver-ee -skiphc true -noni true $([ ${{ env.BRANCH_NAME }} != "master" ] && echo "-gb ${{ env.BRANCH_NAME }} -s 4testing-") || exit $?
           
           echo -n "Waiting for all containers to start..."
           timeout 300 bash -c 'while docker ps | grep -q "starting"; do sleep 5; done' && echo "OK" || echo "container_status=timeout" >> $GITHUB_ENV
@@ -70,7 +70,7 @@ jobs:
         with:
           ref: ${{ env.BRANCH_NAME }}
 
-      - name: Creating offline self-extracting archive
+      - name: Creating 4testing offline self-extracting archive
         if: ${{ github.event.inputs.offline == 'true' }}
         run: |
           INSTALL_PATH=${{ github.workspace }}/install
@@ -78,7 +78,11 @@ jobs:
           docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q) && docker volume rm $(docker volume ls -q)
           sudo rm -rf /usr/local/lib/android /opt/ghc
 
-          [ "${{ env.BRANCH_NAME }}" != "master" ] && STATUS="4testing-" && sed -i "s~\(STATUS=\"\).*\"$~\14testing-\"~" "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
+          docker images --format "{{.Repository}}:{{.Tag}}" | grep "4testing-" | xargs -I{} bash -c '
+            docker tag "$1" $(echo "${1/4testing-/}" | sed -E "s/([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+/\1/")
+            docker rmi "$1"
+          ' _ {}
+
           sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\).*"$~\1true"~' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
 
           echo "Creating offline self-extracting archive..."
@@ -91,12 +95,9 @@ jobs:
           -C "${INSTALL_PATH}" docker.tar.gz
           rm -rf ${INSTALL_PATH}/docker_images.tar.xz ${INSTALL_PATH}/docker.tar.gz
 
-          echo "ARTIFACT_NAME=${ARTIFACT_NAME:=${STATUS}offline-docspace-installation.sh}" >> $GITHUB_ENV
-          [ "${{ env.BRANCH_NAME }}" = "master" ] && echo "ARTIFACT_VERSION_NAME=${STATUS}offline-docspace-$(docker images onlyoffice/docspace-api --format "{{.Tag}}")-installation.sh" >> $GITHUB_ENV
-          
+          echo "ARTIFACT_NAME=${ARTIFACT_NAME:=4testing-offline-docspace-installation.sh}" >> $GITHUB_ENV
           cat ${INSTALL_PATH}/common/self-extracting.sh ${INSTALL_PATH}/offline-docspace.tar > ${INSTALL_PATH}/${ARTIFACT_NAME}
           chmod +x ${INSTALL_PATH}/${ARTIFACT_NAME} 
-
 
       - name: Configure AWS Credentials
         if: ${{ github.event.inputs.offline == 'true' }}
@@ -106,7 +107,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_OCI }}
           aws-region: us-east-1
       
-      - name: Upload offline self-extracting archive
+      - name: Upload 4testing offline self-extracting archive
         if: ${{ github.event.inputs.offline == 'true' }}
         run: |
           aws s3 cp ${{ github.workspace }}/install/${{ env.ARTIFACT_NAME }} \
@@ -117,14 +118,3 @@ jobs:
           aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.AWS_DISTRIBUTION_ID_OCI }} \
             --paths "/docspace/${{ env.ARTIFACT_NAME }}"
-      
-      - name: Upload offline self-extracting archive with version
-        if: ${{ env.ARTIFACT_VERSION_NAME != '' }}
-        run: |
-          aws s3 cp ${{ secrets.AWS_BUCKET_URL_OCI }}/${{ env.ARTIFACT_NAME }} \
-            ${{ secrets.AWS_BUCKET_URL_OCI }}/${{ env.ARTIFACT_VERSION_NAME }} \
-            --acl public-read \
-            --metadata-directive REPLACE
-          aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.AWS_DISTRIBUTION_ID_OCI }} \
-            --paths "/docspace/${{ env.ARTIFACT_VERSION_NAME }}"
