@@ -1047,7 +1047,7 @@ get_env_parameter () {
 	echo ${VALUE//\"}
 }
 
-retrieving_tag_from_hub () {
+get_tag_from_hub () {
 	if ! command_exists curl ; then
 		install_service curl
 	fi
@@ -1088,7 +1088,7 @@ retrieving_tag_from_hub () {
 }
 
 get_available_version () {
-	[ "${OFFLINE_INSTALLATION}" = "false" ] && retrieving_tag_from_hub ${1} || TAGS_RESP=$(docker images --format "{{.Tag}}" ${1})
+	[ "${OFFLINE_INSTALLATION}" = "false" ] && get_tag_from_hub ${1} || TAGS_RESP=$(docker images --format "{{.Tag}}" ${1})
 
 	VERSION_REGEX='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
 	[ ${#TAGS_RESP[@]} -eq 1 ] && LATEST_TAG="${TAGS_RESP[0]}" || LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$VERSION_REGEX" | sort -V | tail -n 1)
@@ -1456,7 +1456,7 @@ offline_check_docker_image() {
 }
 
 check_hub_connection() {
-	retrieving_tag_from_hub ${IMAGE_NAME}
+	get_tag_from_hub ${IMAGE_NAME}
 	[ -z "$TAGS_RESP" ] && { echo -e "Unable to download tags from ${HUB:-hub.docker.com}.\nTry specifying another dockerhub name using -hub"; exit 1; } || true
 }
 
