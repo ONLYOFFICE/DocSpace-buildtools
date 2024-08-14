@@ -748,21 +748,19 @@ check_hardware () {
 }
 
 install_package () {
-	local COMMAND_NAME=$1
-	local PACKAGE_NAME=$2
+	if ! is_command_exists $1; then
+		local COMMAND_NAME=$1
+		local PACKAGE_NAME=${2:-"$COMMAND_NAME"}
+		local PACKAGE_NAME_APT=${PACKAGE_NAME%%|*}
+		local PACKAGE_NAME_YUM=${PACKAGE_NAME##*|}
 
-	PACKAGE_NAME=${PACKAGE_NAME:-"$COMMAND_NAME"}
+		if is_command_exists apt-get; then
+			apt-get -y -q install ${PACKAGE_NAME_APT:-$PACKAGE_NAME}
+		elif is_command_exists yum; then
+			yum -y install ${PACKAGE_NAME_YUM:-$PACKAGE_NAME}
+		fi
 
-	if is_command_exists apt-get; then
-		apt-get -y update -qq
-		apt-get -y -q install $PACKAGE_NAME
-	elif is_command_exists yum; then
-		yum -y install $PACKAGE_NAME
-	fi
-
-	if ! is_command_exists $COMMAND_NAME; then
-		echo "Command $COMMAND_NAME not found"
-		exit 1;
+		is_command_exists $COMMAND_NAME || { echo "Command $COMMAND_NAME not found"; exit 1; }
 	fi
 }
 
@@ -1381,7 +1379,6 @@ make_swap () {
 offline_check_docker_image() {
 	if [ "${OFFLINE_INSTALLATION}" != "false" ]; then
 		[ ! -f "$1" ] && { echo "Error: File '$1' does not exist."; exit 1; }
-
 		docker-compose -f "$1" config | grep -oP 'image:\s*\K\S+' | while IFS= read -r IMAGE_TAG; do
 			docker images "${IMAGE_TAG}" | grep -q "${IMAGE_TAG%%:*}" || { echo "Error: The image '${IMAGE_TAG}' is not found in the local Docker registry."; kill -s TERM $PID; }
 		done
@@ -1393,43 +1390,34 @@ check_hub_connection() {
 	[ -z "$TAGS_RESP" ] && { echo -e "Unable to download tags from ${HUB:-hub.docker.com}.\nTry specifying another dockerhub name using -hub"; exit 1; } || true
 }
 
-install_epel_release() {
-	
-}
-
 dependency_installation() {
-	! is_command_exists netstat && install_package netstat net-tools
-	! is_command_exists curl    && install_package curl
-	! is_command_exists tar     && install_package tar
+	is_command_exists apt-get && apt-get -y update -qq
+
+	install_package tar
+	install_package curl
+	install_package netstat net-tools
 
 	if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
-		! is_command_exists dig  && { is_command_exists apt-get && install_package dig dnsutils      || (is_command_exists yum && install_package dig bind-utils); }
-		! is_command_exists ping && { is_command_exists apt-get && install_package ping iputils-ping || (is_command_exists yum && install_package ping iputils); }
-		! is_command_exists ip   && { is_command_exists apt-get && install_package ip iproute2       || (is_command_exists yum && install_package ip iproute); }
+		install_package dig  "dnsutils|bind-utils"
+		install_package ping "iputils-ping|iputils"
+		install_package ip   "iproute2|iproute"
 	fi
 
-	if [ "$INSTALL_FLUENT_BIT" == "true" ]; then
-		! is_command_exists crontab && { is_command_exists apt-get && install_package crontab cron   || (is_command_exists yum && install_package crontab cronie); }
+	[ "$INSTALL_FLUENT_BIT" = "true" ] && install_package crontab "cron|cronie"
+
+	if ! is_command_exists jq ; then
+		if is_command_exists yum && ! rpm -q epel-release > /dev/null 2>&1; then
+			[ "${OFFLINE_INSTALLATION}" = "false" ] && rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-${REV}.noarch.rpm
+		fi
+		install_package jq
 	fi
 
-	if is_command_exists docker ; then
-		check_docker_version
-		service docker start
-	else
-		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker || { echo "docker not installed"; exit 1; }
-	fi
+	is_command_exists docker && { check_docker_version; service docker start; } || { [ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker || { echo "docker not installed"; exit 1; }; }
 
 	if ! is_command_exists docker-compose; then
 		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker_compose || { echo "docker-compose not installed"; exit 1; }
 	elif [ "$(docker-compose --version | grep -oP '(?<=v)\d+\.\d+'| sed 's/\.//')" -lt "21" ]; then
 		[ "$OFFLINE_INSTALLATION" = "false" ]   && install_docker_compose || { echo "docker-compose version is outdated"; exit 1; }
-	fi
-
-	if ! is_command_exists jq ; then
-		if is_command_exists yum && ! rpm -q epel-release > /dev/null 2>&1 then
-			[ "${OFFLINE_INSTALLATION}" = "false" ] && rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-$REV.noarch.rpm
-		fi
-		install_package jq
 	fi
 }
 
