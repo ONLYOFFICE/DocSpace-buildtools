@@ -1163,11 +1163,6 @@ download_files () {
 	fi
 
 	echo "OK"
-
-	reconfigure HUB "${HUB%/}${HUB:+/}"
-	reconfigure STATUS ${STATUS}
-	reconfigure INSTALLATION_TYPE ${INSTALLATION_TYPE}
-	reconfigure NETWORK_NAME ${NETWORK_NAME}
 }
 
 reconfigure () {
@@ -1185,10 +1180,8 @@ install_mysql_server () {
 	reconfigure MYSQL_USER ${MYSQL_USER}
 	reconfigure MYSQL_PASSWORD ${MYSQL_PASSWORD}
 	reconfigure MYSQL_ROOT_PASSWORD ${MYSQL_ROOT_PASSWORD}
-	reconfigure MYSQL_VERSION ${MYSQL_VERSION}
 
 	if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ]; then
-		offline_check_docker_image ${BASE_DIR}/db.yml
 		docker-compose -f $BASE_DIR/db.yml up -d
 	elif [ "$INSTALL_MYSQL_SERVER" == "pull" ]; then
 		docker-compose -f $BASE_DIR/db.yml pull
@@ -1202,7 +1195,6 @@ install_mysql_server () {
 install_document_server () {
 	reconfigure DOCUMENT_SERVER_JWT_HEADER ${DOCUMENT_SERVER_JWT_HEADER}
 	reconfigure DOCUMENT_SERVER_JWT_SECRET ${DOCUMENT_SERVER_JWT_SECRET}
-	reconfigure DOCUMENT_SERVER_IMAGE_NAME "${HUB%/}${HUB:+/}${DOCUMENT_SERVER_IMAGE_NAME}:${DOCUMENT_SERVER_VERSION:-$(get_available_version "$DOCUMENT_SERVER_IMAGE_NAME")}"
 	if [[ -z ${DOCUMENT_SERVER_HOST} ]] && [ "$INSTALL_DOCUMENT_SERVER" == "true" ]; then
 		docker-compose -f $BASE_DIR/ds.yml up -d
 	elif [ "$INSTALL_DOCUMENT_SERVER" == "pull" ]; then
@@ -1217,7 +1209,6 @@ install_document_server () {
 
 install_rabbitmq () {
 	if [[ -z ${RABBIT_HOST} ]] && [ "$INSTALL_RABBITMQ" == "true" ]; then
-		offline_check_docker_image ${BASE_DIR}/rabbitmq.yml
 		docker-compose -f $BASE_DIR/rabbitmq.yml up -d
 	elif [ "$INSTALL_RABBITMQ" == "pull" ]; then
 		docker-compose -f $BASE_DIR/rabbitmq.yml pull
@@ -1233,7 +1224,6 @@ install_rabbitmq () {
 
 install_redis () {
 	if [[ -z ${REDIS_HOST} ]] && [ "$INSTALL_REDIS" == "true" ]; then
-		offline_check_docker_image ${BASE_DIR}/redis.yml
 		docker-compose -f $BASE_DIR/redis.yml up -d
 	elif [ "$INSTALL_REDIS" == "pull" ]; then
 		docker-compose -f $BASE_DIR/redis.yml pull
@@ -1247,14 +1237,12 @@ install_redis () {
 }
 
 install_elasticsearch () {
-	reconfigure ELK_VERSION ${ELK_VERSION}
 	if [[ -z ${ELK_HOST} ]] && [ "$INSTALL_ELASTICSEARCH" == "true" ]; then
 		if [ $(free --mega | grep -oP '\d+' | head -n 1) -gt "12000" ]; then #RAM ~12Gb
 			sed -i 's/Xms[0-9]g/Xms4g/g; s/Xmx[0-9]g/Xmx4g/g' $BASE_DIR/opensearch.yml
 		else
 			sed -i 's/Xms[0-9]g/Xms1g/g; s/Xmx[0-9]g/Xmx1g/g' $BASE_DIR/opensearch.yml
 		fi
-		offline_check_docker_image ${BASE_DIR}/opensearch.yml
 		docker-compose -f $BASE_DIR/opensearch.yml up -d
 	elif [ "$INSTALL_ELASTICSEARCH" == "pull" ]; then
 		docker-compose -f $BASE_DIR/opensearch.yml pull
@@ -1282,9 +1270,6 @@ install_fluent_bit () {
 
 		reconfigure DASHBOARDS_USERNAME "${DASHBOARDS_USERNAME:-"${PACKAGE_SYSNAME}"}"
 		reconfigure DASHBOARDS_PASSWORD "${DASHBOARDS_PASSWORD:-$(get_random_str 20)}"
-
-		offline_check_docker_image ${BASE_DIR}/fluent.yml
-		offline_check_docker_image ${BASE_DIR}/dashboards.yml
 		
 		docker-compose -f ${BASE_DIR}/fluent.yml -f ${BASE_DIR}/dashboards.yml up -d
 	elif [ "$INSTALL_FLUENT_BIT" == "pull" ]; then
@@ -1293,8 +1278,6 @@ install_fluent_bit () {
 }
 
 install_product () {
-	DOCKER_TAG="${DOCKER_TAG:-$(get_available_version ${IMAGE_NAME})}"
-	reconfigure DOCKER_TAG ${DOCKER_TAG}
 	if [ "$INSTALL_PRODUCT" == "true" ]; then
 		[ "${UPDATE}" = "true" ] && LOCAL_CONTAINER_TAG="$(docker inspect --format='{{index .Config.Image}}' ${CONTAINER_NAME} | awk -F':' '{print $2}')"
 
@@ -1314,12 +1297,6 @@ install_product () {
 			echo -n "Waiting for MySQL container to become healthy..."
 			(timeout 30 bash -c "while ! docker inspect --format '{{json .State.Health.Status }}' ${PACKAGE_SYSNAME}-mysql-server | grep -q 'healthy'; do sleep 1; done") && echo "OK" || (echo "FAILED")
 		fi
-
-		offline_check_docker_image ${BASE_DIR}/migration-runner.yml
-		offline_check_docker_image ${BASE_DIR}/${PRODUCT}.yml
-		offline_check_docker_image ${PROXY_YML}
-		offline_check_docker_image ${BASE_DIR}/notify.yml
-		offline_check_docker_image ${BASE_DIR}/healthchecks.yml
 		
 		docker-compose -f $BASE_DIR/migration-runner.yml up -d
 		if [[ -n $(docker ps -q --filter "name=${PACKAGE_SYSNAME}-migration-runner") ]]; then
@@ -1377,12 +1354,10 @@ make_swap () {
 }
 
 offline_check_docker_image() {
-	if [ "${OFFLINE_INSTALLATION}" != "false" ]; then
-		[ ! -f "$1" ] && { echo "Error: File '$1' does not exist."; exit 1; }
-		docker-compose -f "$1" config | grep -oP 'image:\s*\K\S+' | while IFS= read -r IMAGE_TAG; do
-			docker images "${IMAGE_TAG}" | grep -q "${IMAGE_TAG%%:*}" || { echo "Error: The image '${IMAGE_TAG}' is not found in the local Docker registry."; kill -s TERM $PID; }
-		done
-	fi
+	[ ! -f "$1" ] && { echo "Error: File '$1' does not exist."; exit 1; }
+	docker-compose -f "$1" config | grep -oP 'image:\s*\K\S+' | while IFS= read -r IMAGE_TAG; do
+		docker images "${IMAGE_TAG}" | grep -q "${IMAGE_TAG%%:*}" || { echo "Error: The image '${IMAGE_TAG}' is not found in the local Docker registry."; kill -s TERM $PID; }
+	done
 }
 
 check_hub_connection() {
@@ -1418,6 +1393,38 @@ dependency_installation() {
 		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker_compose || { echo "docker-compose not installed"; exit 1; }
 	elif [ "$(docker-compose --version | grep -oP '(?<=v)\d+\.\d+'| sed 's/\.//')" -lt "21" ]; then
 		[ "$OFFLINE_INSTALLATION" = "false" ]   && install_docker_compose || { echo "docker-compose version is outdated"; exit 1; }
+	fi
+}
+
+check_docker_image () {
+	reconfigure HUB "${HUB%/}${HUB:+/}"
+	reconfigure STATUS ${STATUS}
+	reconfigure INSTALLATION_TYPE ${INSTALLATION_TYPE}
+	reconfigure NETWORK_NAME ${NETWORK_NAME}
+	
+	reconfigure MYSQL_VERSION ${MYSQL_VERSION}
+	reconfigure ELK_VERSION ${ELK_VERSION}
+	reconfigure DOCUMENT_SERVER_IMAGE_NAME "${DOCUMENT_SERVER_IMAGE_NAME}:\${DOCUMENT_SERVER_VERSION}"
+	reconfigure DOCUMENT_SERVER_VERSION ${DOCUMENT_SERVER_VERSION:-$(get_available_version "$DOCUMENT_SERVER_IMAGE_NAME")}
+
+	DOCKER_TAG="${DOCKER_TAG:-$(get_available_version ${IMAGE_NAME})}"
+	reconfigure DOCKER_TAG ${DOCKER_TAG}
+	if [ "${OFFLINE_INSTALLATION}" != "false" ]; then
+		[ "$INSTALL_RABBITMQ" == "true" ]           && offline_check_docker_image ${BASE_DIR}/db.yml
+		[ "$INSTALL_RABBITMQ" == "true" ]           && offline_check_docker_image ${BASE_DIR}/rabbitmq.yml
+		[ "$INSTALL_REDIS" == "true" ]              && offline_check_docker_image ${BASE_DIR}/redis.yml
+		[ "$INSTALL_FLUENT_BIT" == "true" ]         && offline_check_docker_image ${BASE_DIR}/fluent.yml
+		[ "$INSTALL_FLUENT_BIT" == "true" ]         && offline_check_docker_image ${BASE_DIR}/dashboards.yml
+		[ "$INSTALL_ELASTICSEARCH" == "true" ]      && offline_check_docker_image ${BASE_DIR}/opensearch.yml
+		[ "$INSTALL_DOCUMENT_SERVER" == "true" ]    && offline_check_docker_image ${BASE_DIR}/ds.yml
+
+		if [ "$INSTALL_PRODUCT" == "true" ]; then
+			offline_check_docker_image ${BASE_DIR}/migration-runner.yml
+			offline_check_docker_image ${BASE_DIR}/${PRODUCT}.yml
+			offline_check_docker_image ${BASE_DIR}/notify.yml
+			offline_check_docker_image ${BASE_DIR}/healthchecks.yml
+			offline_check_docker_image ${PROXY_YML}
+		fi
 	fi
 }
 
@@ -1465,6 +1472,8 @@ start_installation () {
 	set_mysql_params
 
 	download_files
+
+	check_docker_image
 
 	install_elasticsearch
 
