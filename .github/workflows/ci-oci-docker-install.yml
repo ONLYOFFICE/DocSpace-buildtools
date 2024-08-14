@@ -1,0 +1,120 @@
+name: Install OneClickInstall Docker
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    paths:
+      - '.github/workflows/ci-oci-docker-install.yml'
+      - 'install/OneClickInstall/install-Docker.sh'
+  workflow_dispatch:
+    inputs:
+      offline:
+        description: 'Publish 4testing offline archive'
+        required: true
+        default: false
+        type: boolean
+
+jobs:
+  Install-OneClickInstall-Docker:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Determine Branch Name
+        id: set-branch-name
+        run: |
+          BRANCH_NAME=$([ "${{ github.event_name }}" = "pull_request" ] && echo "${{ github.event.pull_request.head.ref }}" || echo "${GITHUB_REF#refs/heads/}")
+          echo "BRANCH_NAME=${BRANCH_NAME:-master}" >> $GITHUB_ENV
+
+      - name: Test OCI docker scripts
+        run: |
+          sudo docker image prune --all --force
+
+          wget https://download.onlyoffice.com/docspace/docspace-enterprise-install.sh
+          sed '/bash install-Docker.sh/i sed -i "1i set -x" install-Docker.sh' -i docspace-enterprise-install.sh
+          sudo bash docspace-enterprise-install.sh docker -docsi onlyoffice/documentserver-ee -skiphc true -noni true $([ ${{ env.BRANCH_NAME }} != "master" ] && echo "-gb ${{ env.BRANCH_NAME }} -s 4testing-") || exit $?
+          
+          echo -n "Waiting for all containers to start..."
+          timeout 300 bash -c 'while docker ps | grep -q "starting"; do sleep 5; done' && echo "OK" || echo "container_status=timeout" >> $GITHUB_ENV
+
+      - name: Check container status
+        run: |
+          docker ps --all --format "{{.Names}}" | xargs -I {} sh -c '
+              status=$(docker inspect --format="{{if .State.Health}}{{.State.Health.Status}}{{else}}no healthcheck{{end}}" {});
+              case "$status" in
+                healthy) color="\033[0;32m" ;;                                        # green
+                "no healthcheck") color="\033[0;33m" ;;                               # yellow
+                *) color="\033[0;31m"; echo "container_status=red" >> $GITHUB_ENV ;;  # red
+              esac;
+              printf "%-50s ${color}%s\033[0m\n" "{}:" "$status";
+          '
+      
+      - name: Print logs for crashed container
+        run: |
+          docker ps --all --format "{{.Names}}" | xargs -I {} sh -c '
+              status=$(docker inspect --format="{{if .State.Health}}{{.State.Health.Status}}{{else}}no healthcheck{{end}}" {});
+              case "$status" in
+                healthy | "no healthcheck") ;;
+                *)
+                  echo "Logs for container {}:";
+                  docker logs --tail 30 {} | sed "s/^/\t/g";
+                  ;;
+              esac;
+          '
+          case "${{ env.container_status }}" in
+              timeout) echo "Timeout reached. Not all containers are running."; exit 1 ;;
+              red) echo "One or more containers have status 'red'. Job will fail."; exit 1 ;;
+          esac
+
+      - name: Checkout repository
+        if: ${{ github.event.inputs.offline == 'true' }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BRANCH_NAME }}
+
+      - name: Creating 4testing offline self-extracting archive
+        if: ${{ github.event.inputs.offline == 'true' }}
+        run: |
+          INSTALL_PATH=${{ github.workspace }}/install
+
+          docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q) && docker volume rm $(docker volume ls -q)
+          sudo rm -rf /usr/local/lib/android /opt/ghc
+
+          docker images --format "{{.Repository}}:{{.Tag}}" | grep "4testing-" | xargs -I{} bash -c '
+            docker tag "$1" $(echo "${1/4testing-/}" | sed -E "s/([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+/\1/")
+            docker rmi "$1"
+          ' _ {}
+
+          sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\).*"$~\1true"~' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
+
+          echo "Creating offline self-extracting archive..."
+          docker save $(docker images --format "{{.Repository}}:{{.Tag}}") | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docker_images.tar.xz
+          cd ${INSTALL_PATH}/docker && tar -czvf ${INSTALL_PATH}/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
+          
+          tar -cvf ${INSTALL_PATH}/offline-docspace.tar \
+          -C "${INSTALL_PATH}/OneClickInstall" install-Docker.sh \
+          -C "${INSTALL_PATH}" docker_images.tar.xz \
+          -C "${INSTALL_PATH}" docker.tar.gz
+          rm -rf ${INSTALL_PATH}/docker_images.tar.xz ${INSTALL_PATH}/docker.tar.gz
+
+          echo "ARTIFACT_NAME=${ARTIFACT_NAME:=4testing-offline-docspace-installation.sh}" >> $GITHUB_ENV
+          cat ${INSTALL_PATH}/common/self-extracting.sh ${INSTALL_PATH}/offline-docspace.tar > ${INSTALL_PATH}/${ARTIFACT_NAME}
+          chmod +x ${INSTALL_PATH}/${ARTIFACT_NAME} 
+
+      - name: Configure AWS Credentials
+        if: ${{ github.event.inputs.offline == 'true' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_OCI }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_OCI }}
+          aws-region: us-east-1
+      
+      - name: Upload 4testing offline self-extracting archive
+        if: ${{ github.event.inputs.offline == 'true' }}
+        run: |
+          aws s3 cp ${{ github.workspace }}/install/${{ env.ARTIFACT_NAME }} \
+            ${{ secrets.AWS_BUCKET_URL_OCI }}/${{ env.ARTIFACT_NAME }} \
+            --acl public-read \
+            --content-type application/x-xz \
+            --metadata-directive REPLACE 
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.AWS_DISTRIBUTION_ID_OCI }} \
+            --paths "/docspace/${{ env.ARTIFACT_NAME }}"
