@@ -1383,7 +1383,7 @@ install_product () {
 		reconfigure APP_URL_PORTAL "${APP_URL_PORTAL:-"http://${PACKAGE_SYSNAME}-router:8092"}"
 		reconfigure EXTERNAL_PORT ${EXTERNAL_PORT}
 
-		if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ]; then
+		if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ] && [[ -n $(docker ps -q --filter "name=${PACKAGE_SYSNAME}-mysql-server") ]]; then
 			echo -n "Waiting for MySQL container to become healthy..."
 			(timeout 30 bash -c "while ! docker inspect --format '{{json .State.Health.Status }}' ${PACKAGE_SYSNAME}-mysql-server | grep -q 'healthy'; do sleep 1; done") && echo "OK" || (echo "FAILED")
 		fi
@@ -1395,7 +1395,11 @@ install_product () {
 		offline_check_docker_image ${BASE_DIR}/healthchecks.yml
 		
 		docker-compose -f $BASE_DIR/migration-runner.yml up -d
-		echo -n "Waiting for database migration to complete..." && docker wait ${PACKAGE_SYSNAME}-migration-runner && echo "OK"
+		if [[ -n $(docker ps -q --filter "name=${PACKAGE_SYSNAME}-migration-runner") ]]; then
+			echo -n "Waiting for database migration to complete..."
+			timeout 30 bash -c "while [ $(docker wait ${PACKAGE_SYSNAME}-migration-runner) -ne 0 ]; do sleep 1; done;" && echo "OK" || echo "FAILED"
+		fi
+	
 		docker-compose -f $BASE_DIR/${PRODUCT}.yml up -d
 		docker-compose -f ${PROXY_YML} up -d
 		docker-compose -f $BASE_DIR/notify.yml up -d
