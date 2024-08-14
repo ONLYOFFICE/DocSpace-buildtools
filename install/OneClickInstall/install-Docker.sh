@@ -850,21 +850,11 @@ check_docker_version () {
 	done
 }
 
-install_docker_using_script () {
-	if ! command_exists curl ; then
-		install_service curl
-	fi
-
-	curl -fsSL https://get.docker.com -o get-docker.sh
-	sh get-docker.sh
-	rm get-docker.sh
-}
-
 install_docker () {
 
 	if [ "${DIST}" == "Ubuntu" ] || [ "${DIST}" == "Debian" ] || [[ "${DIST}" == CentOS* ]] || [ "${DIST}" == "Fedora" ]; then
 
-		install_docker_using_script
+		curl -fsSL https://get.docker.com | bash
 		systemctl start docker
 		systemctl enable docker
 
