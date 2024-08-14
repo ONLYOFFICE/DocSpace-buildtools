@@ -747,7 +747,7 @@ check_hardware () {
 	fi
 }
 
-install_service () {
+install_package () {
 	local COMMAND_NAME=$1
 	local PACKAGE_NAME=$2
 
@@ -775,10 +775,6 @@ check_ports () {
 	RESERVED_PORTS=();
 	ARRAY_PORTS=();
 	USED_PORTS="";
-
-	if ! command_exists netstat; then
-		install_service netstat net-tools
-	fi
 
 	if [ "${EXTERNAL_PORT//[0-9]}" = "" ]; then
 		for RESERVED_PORT in "${RESERVED_PORTS[@]}"
@@ -957,30 +953,6 @@ read_continue_installation () {
 }
 
 domain_check () {
-	if ! command_exists dig; then
-		if command_exists apt-get; then
-			install_service dig dnsutils
-		elif command_exists yum; then
-			install_service dig bind-utils
-		fi
-	fi
-
-	if ! command_exists ping; then
-		if command_exists apt-get; then
-			install_service ping iputils-ping
-		elif command_exists yum; then
-			install_service ping iputils
-		fi
-	fi
-
-	if ! command_exists ip; then
-		if command_exists apt-get; then
-			install_service ip iproute2
-		elif command_exists yum; then
-			install_service ip iproute
-		fi
-	fi
-
 	APP_DOMAIN_PORTAL=${LETS_ENCRYPT_DOMAIN:-${APP_URL_PORTAL:-$(get_env_parameter "APP_URL_PORTAL" "${PACKAGE_SYSNAME}-files" | awk -F[/:] '{if ($1 == "https") print $4; else print ""}')}}
 
 	while IFS= read -r DOMAIN; do
@@ -1048,19 +1020,6 @@ get_env_parameter () {
 }
 
 get_tag_from_hub () {
-	if ! command_exists curl ; then
-		install_service curl
-	fi
-
-	if ! command_exists jq ; then
-		if command_exists yum; then 
-			if ! rpm -q epel-release > /dev/null 2>&1; then
-				[ "${OFFLINE_INSTALLATION}" = "false" ] && rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-$REV.noarch.rpm
-			fi
-		fi
-		install_service jq
-	fi
-
 	if [[ -n ${HUB} ]]; then
 		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
 			CREDENTIALS=$(echo -n "$USERNAME:$PASSWORD" | base64)
@@ -1185,24 +1144,12 @@ set_installation_type_data () {
 }
 
 download_files () {
-	if ! command_exists docker-compose; then
-		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker_compose || { echo "docker-compose not installed"; exit 1; }
-	else
-		if [ "$(docker-compose --version | grep -oP '(?<=v)\d+\.\d+'| sed 's/\.//')" -lt "21" ]; then
-			[ "$OFFLINE_INSTALLATION" = "false" ] && install_docker_compose || { echo "docker-compose version is outdated"; exit 1; }
-		fi
-	fi
-
 	# Fixes issues with variables when upgrading to v1.1.3
 	HOSTS=("ELK_HOST" "REDIS_HOST" "RABBIT_HOST" "MYSQL_HOST"); 
 	for HOST in "${HOSTS[@]}"; do [[ "${!HOST}" == *CONTAINER_PREFIX* || "${!HOST}" == *$PACKAGE_SYSNAME* ]] && export "$HOST="; done
 	[[ "${APP_URL_PORTAL}" == *${PACKAGE_SYSNAME}-proxy* ]] && APP_URL_PORTAL=""
 
 	[ "${OFFLINE_INSTALLATION}" = "false" ] && echo -n "Downloading configuration files to ${BASE_DIR}..." || echo "Unzip docker.tar.gz to ${BASE_DIR}..."
-
-	if ! command_exists tar; then
-		install_service tar
-	fi
 
 	[ -d "${BASE_DIR}" ] && rm -rf "${BASE_DIR}"
 	mkdir -p ${BASE_DIR}
@@ -1333,14 +1280,6 @@ install_elasticsearch () {
 
 install_fluent_bit () {
 	if [ "$INSTALL_FLUENT_BIT" == "true" ]; then
-		if ! command_exists crontab; then
-			if command_exists apt-get; then
-				install_service crontab cron
-			elif command_exists yum; then
-				install_service crontab cronie
-			fi
-		fi
-
 		[ ! -z "$ELK_HOST" ] && sed -i "s/ELK_CONTAINER_NAME/ELK_HOST/g" $BASE_DIR/fluent.yml ${BASE_DIR}/dashboards.yml
 
 		OPENSEARCH_INDEX="${OPENSEARCH_INDEX:-"${PACKAGE_SYSNAME}-fluent-bit"}"
@@ -1464,6 +1403,46 @@ check_hub_connection() {
 	[ -z "$TAGS_RESP" ] && { echo -e "Unable to download tags from ${HUB:-hub.docker.com}.\nTry specifying another dockerhub name using -hub"; exit 1; } || true
 }
 
+install_epel_release() {
+	
+}
+
+dependency_installation() {
+	! command_exists netstat && install_package netstat net-tools
+	! command_exists curl    && install_package curl
+	! command_exists tar     && install_package tar
+
+	if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
+		! command_exists dig  && { command_exists apt-get && install_package dig dnsutils      || (command_exists yum && install_package dig bind-utils); }
+		! command_exists ping && { command_exists apt-get && install_package ping iputils-ping || (command_exists yum && install_package ping iputils); }
+		! command_exists ip   && { command_exists apt-get && install_package ip iproute2       || (command_exists yum && install_package ip iproute); }
+	fi
+
+	if [ "$INSTALL_FLUENT_BIT" == "true" ]; then
+		! command_exists crontab && { command_exists apt-get && install_package crontab cron   || (command_exists yum && install_package crontab cronie); }
+	fi
+
+	if command_exists docker ; then
+		check_docker_version
+		service docker start
+	else
+		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker || { echo "docker not installed"; exit 1; }
+	fi
+
+	if ! command_exists docker-compose; then
+		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker_compose || { echo "docker-compose not installed"; exit 1; }
+	elif [ "$(docker-compose --version | grep -oP '(?<=v)\d+\.\d+'| sed 's/\.//')" -lt "21" ]; then
+		[ "$OFFLINE_INSTALLATION" = "false" ]   && install_docker_compose || { echo "docker-compose version is outdated"; exit 1; }
+	fi
+
+	if ! command_exists jq ; then
+		if command_exists yum && ! rpm -q epel-release > /dev/null 2>&1 then
+			[ "${OFFLINE_INSTALLATION}" = "false" ] && rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-$REV.noarch.rpm
+		fi
+		install_package jq
+	fi
+}
+
 start_installation () {
 	root_checking
 
@@ -1472,6 +1451,8 @@ start_installation () {
 	get_os_info
 	check_os_info
 	check_kernel
+
+	dependency_installation
 
 	if [ "$UPDATE" != "true" ]; then
 		check_ports
@@ -1483,13 +1464,6 @@ start_installation () {
 
 	if [ "$MAKESWAP" == "true" ]; then
 		make_swap
-	fi
-
-	if command_exists docker ; then
-		check_docker_version
-		service docker start
-	else
-		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker || { echo "docker not installed"; exit 1; }
 	fi
 
 	docker_login
