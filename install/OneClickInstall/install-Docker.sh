@@ -592,7 +592,7 @@ root_checking () {
 	fi
 }
 
-command_exists () {
+is_command_exists () {
     type "$1" &> /dev/null;
 }
 
@@ -753,14 +753,14 @@ install_package () {
 
 	PACKAGE_NAME=${PACKAGE_NAME:-"$COMMAND_NAME"}
 
-	if command_exists apt-get; then
+	if is_command_exists apt-get; then
 		apt-get -y update -qq
 		apt-get -y -q install $PACKAGE_NAME
-	elif command_exists yum; then
+	elif is_command_exists yum; then
 		yum -y install $PACKAGE_NAME
 	fi
 
-	if ! command_exists $COMMAND_NAME; then
+	if ! is_command_exists $COMMAND_NAME; then
 		echo "Command $COMMAND_NAME not found"
 		exit 1;
 	fi
@@ -900,7 +900,7 @@ install_docker () {
 
 	fi
 
-	if ! command_exists docker ; then
+	if ! is_command_exists docker ; then
 		echo "error while installing docker"
 		exit 1;
 	fi
@@ -994,7 +994,7 @@ get_env_parameter () {
 		exit 1;
 	fi
 
-	if command_exists docker ; then
+	if is_command_exists docker ; then
 		[ -n "$CONTAINER_NAME" ] && CONTAINER_EXIST=$(docker ps -aqf "name=$CONTAINER_NAME");
 
 		if [[ -n ${CONTAINER_EXIST} ]]; then
@@ -1398,35 +1398,35 @@ install_epel_release() {
 }
 
 dependency_installation() {
-	! command_exists netstat && install_package netstat net-tools
-	! command_exists curl    && install_package curl
-	! command_exists tar     && install_package tar
+	! is_command_exists netstat && install_package netstat net-tools
+	! is_command_exists curl    && install_package curl
+	! is_command_exists tar     && install_package tar
 
 	if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
-		! command_exists dig  && { command_exists apt-get && install_package dig dnsutils      || (command_exists yum && install_package dig bind-utils); }
-		! command_exists ping && { command_exists apt-get && install_package ping iputils-ping || (command_exists yum && install_package ping iputils); }
-		! command_exists ip   && { command_exists apt-get && install_package ip iproute2       || (command_exists yum && install_package ip iproute); }
+		! is_command_exists dig  && { is_command_exists apt-get && install_package dig dnsutils      || (is_command_exists yum && install_package dig bind-utils); }
+		! is_command_exists ping && { is_command_exists apt-get && install_package ping iputils-ping || (is_command_exists yum && install_package ping iputils); }
+		! is_command_exists ip   && { is_command_exists apt-get && install_package ip iproute2       || (is_command_exists yum && install_package ip iproute); }
 	fi
 
 	if [ "$INSTALL_FLUENT_BIT" == "true" ]; then
-		! command_exists crontab && { command_exists apt-get && install_package crontab cron   || (command_exists yum && install_package crontab cronie); }
+		! is_command_exists crontab && { is_command_exists apt-get && install_package crontab cron   || (is_command_exists yum && install_package crontab cronie); }
 	fi
 
-	if command_exists docker ; then
+	if is_command_exists docker ; then
 		check_docker_version
 		service docker start
 	else
 		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker || { echo "docker not installed"; exit 1; }
 	fi
 
-	if ! command_exists docker-compose; then
+	if ! is_command_exists docker-compose; then
 		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker_compose || { echo "docker-compose not installed"; exit 1; }
 	elif [ "$(docker-compose --version | grep -oP '(?<=v)\d+\.\d+'| sed 's/\.//')" -lt "21" ]; then
 		[ "$OFFLINE_INSTALLATION" = "false" ]   && install_docker_compose || { echo "docker-compose version is outdated"; exit 1; }
 	fi
 
-	if ! command_exists jq ; then
-		if command_exists yum && ! rpm -q epel-release > /dev/null 2>&1 then
+	if ! is_command_exists jq ; then
+		if is_command_exists yum && ! rpm -q epel-release > /dev/null 2>&1 then
 			[ "${OFFLINE_INSTALLATION}" = "false" ] && rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-$REV.noarch.rpm
 		fi
 		install_package jq
