@@ -1038,69 +1038,51 @@ get_env_parameter () {
 	echo ${VALUE//\"}
 }
 
-get_available_version () {
-	if [[ -z "$1" ]]; then
-		echo "image name is empty";
-		exit 1;
-	fi
-
+get_tag_from_hub () {
 	if ! command_exists curl ; then
-		install_curl;
+		install_service curl
 	fi
 
-	CREDENTIALS="";
-	AUTH_HEADER="";
-	TAGS_RESP="";
-
-	if [[ -n ${HUB} ]]; then
-		DOCKER_CONFIG="$HOME/.docker/config.json";
-
-		if [[ -f "$DOCKER_CONFIG" ]]; then
-			CREDENTIALS=$(jq -r '.auths."'$HUB'".auth' < "$DOCKER_CONFIG");
-			if [ "$CREDENTIALS" == "null" ]; then
-				CREDENTIALS="";
+	if ! command_exists jq ; then
+		if command_exists yum; then 
+			if ! rpm -q epel-release > /dev/null 2>&1; then
+				rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-$REV.noarch.rpm
 			fi
 		fi
+		install_service jq
+	fi
 
-		if [[ -z ${CREDENTIALS} && -n ${USERNAME} && -n ${PASSWORD} ]]; then
-			CREDENTIALS=$(echo -n "$USERNAME:$PASSWORD" | base64);
+	if [[ -n ${HUB} ]]; then
+		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
+			CREDENTIALS=$(echo -n "$USERNAME:$PASSWORD" | base64)
+		elif [[ -f "$HOME/.docker/config.json" ]]; then
+			CREDENTIALS=$(jq -r --arg hub "${HUB}" '.auths | to_entries[] | select(.key | contains($hub)).value.auth // empty' "$HOME/.docker/config.json")
 		fi
 
-		if [[ -n ${CREDENTIALS} ]]; then
-			AUTH_HEADER="Authorization: Basic $CREDENTIALS";
-		fi
+		[[ -n ${CREDENTIALS} ]] && AUTH_HEADER="Authorization: Basic $CREDENTIALS"
 
-		REPO=$(echo $1 | sed "s/$HUB\///g");
-		TAGS_RESP=$(curl -s -H "$AUTH_HEADER" -X GET https://$HUB/v2/$REPO/tags/list);
-		TAGS_RESP=$(echo $TAGS_RESP | jq -r '.tags')
+		HUB_URL="https://${HUB}/v2/${1/#$HUB\//}/tags/list"
+		JQ_FILTER='.tags | join("\n")'
 	else
 		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
-			CREDENTIALS="{\"username\":\"$USERNAME\",\"password\":\"$PASSWORD\"}";
-		fi
-
-		if [[ -n ${CREDENTIALS} ]]; then
-			LOGIN_RESP=$(curl -s -H "Content-Type: application/json" -X POST -d "$CREDENTIALS" https://hub.docker.com/v2/users/login/);
-			TOKEN=$(echo $LOGIN_RESP | jq -r '.token');
-			AUTH_HEADER="Authorization: JWT $TOKEN";
+			CREDENTIALS="{\"username\":\"$USERNAME\",\"password\":\"$PASSWORD\"}"
+			TOKEN=$(curl -s -H "Content-Type: application/json" -X POST -d "$CREDENTIALS" https://hub.docker.com/v2/users/login/ | jq -r '.token');
+			AUTH_HEADER="Authorization: JWT $TOKEN"
 			sleep 1;
 		fi
 
-		TAGS_RESP=$(curl -s -H "$AUTH_HEADER" -X GET https://hub.docker.com/v2/repositories/$1/tags/);
-		TAGS_RESP=$(echo $TAGS_RESP | jq -r '.results[].name')
+		HUB_URL="https://hub.docker.com/v2/repositories/${1}/tags/"
+		JQ_FILTER='.results[].name // empty'
 	fi
 
-	VERSION_REGEX="[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$"
-	
-	TAG_LIST=""
+	TAGS_RESP=($(curl -s -H "${AUTH_HEADER}" -X GET "${HUB_URL}" | jq -r "${JQ_FILTER}"))
+}
 
-	for item in $TAGS_RESP
-	do
-		if [[ $item =~ $VERSION_REGEX ]]; then
-			TAG_LIST="$item,$TAG_LIST"
-		fi
-	done
+get_available_version () {
+	get_tag_from_hub ${1}
 
-	LATEST_TAG=$(echo $TAG_LIST | tr ',' '\n' | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n | awk '/./{line=$0} END{print line}');
+	VERSION_REGEX='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
+	[ ${#TAGS_RESP[@]} -eq 1 ] && LATEST_TAG="${TAGS_RESP[0]}" || LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$VERSION_REGEX" | sort -V | tail -n 1)
 
 	if [ ! -z "${LATEST_TAG}" ]; then
 		echo "${LATEST_TAG}" | sed "s/\"//g"
@@ -1151,6 +1133,8 @@ set_mysql_params () {
 }
 
 set_docspace_params() {
+	HUB=${HUB:-$(get_env_parameter "HUB")};
+
 	ENV_EXTENSION=${ENV_EXTENSION:-$(get_env_parameter "ENV_EXTENSION" "${CONTAINER_NAME}")};
 	APP_CORE_BASE_DOMAIN=${APP_CORE_BASE_DOMAIN:-$(get_env_parameter "APP_CORE_BASE_DOMAIN" "${CONTAINER_NAME}")};
 	EXTERNAL_PORT=${EXTERNAL_PORT:-$(get_env_parameter "EXTERNAL_PORT" "${CONTAINER_NAME}")};
@@ -1188,13 +1172,6 @@ set_installation_type_data () {
 }
 
 download_files () {
-	if ! command_exists jq ; then
-		if command_exists yum; then 
-			rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-$REV.noarch.rpm
-		fi
-		install_service jq
-	fi
-
 	if ! command_exists docker-compose; then
 		install_docker_compose
 	fi
@@ -1225,6 +1202,7 @@ download_files () {
 
 	echo "OK"
 
+	reconfigure HUB "${HUB%/}${HUB:+/}"
 	reconfigure STATUS ${STATUS}
 	reconfigure INSTALLATION_TYPE ${INSTALLATION_TYPE}
 	reconfigure NETWORK_NAME ${NETWORK_NAME}
@@ -1261,7 +1239,7 @@ install_mysql_server () {
 install_document_server () {
 	reconfigure DOCUMENT_SERVER_JWT_HEADER ${DOCUMENT_SERVER_JWT_HEADER}
 	reconfigure DOCUMENT_SERVER_JWT_SECRET ${DOCUMENT_SERVER_JWT_SECRET}
-	reconfigure DOCUMENT_SERVER_IMAGE_NAME "${DOCUMENT_SERVER_IMAGE_NAME}:${DOCUMENT_SERVER_VERSION:-$(get_available_version "$DOCUMENT_SERVER_IMAGE_NAME")}"
+	reconfigure DOCUMENT_SERVER_IMAGE_NAME "${HUB%/}${HUB:+/}${DOCUMENT_SERVER_IMAGE_NAME}:${DOCUMENT_SERVER_VERSION:-$(get_available_version "$DOCUMENT_SERVER_IMAGE_NAME")}"
 	if [[ -z ${DOCUMENT_SERVER_HOST} ]] && [ "$INSTALL_DOCUMENT_SERVER" == "true" ]; then
 		docker-compose -f $BASE_DIR/ds.yml up -d
 	elif [ "$INSTALL_DOCUMENT_SERVER" == "pull" ]; then
@@ -1427,6 +1405,10 @@ make_swap () {
 	fi
 }
 
+check_hub_connection() {
+	get_tag_from_hub ${IMAGE_NAME}
+	[ -z "$TAGS_RESP" ] && { echo -e "Unable to download tags from ${HUB:-hub.docker.com}.\nTry specifying another dockerhub name using -hub"; exit 1; } || true
+}
 
 start_installation () {
 	root_checking
@@ -1457,6 +1439,8 @@ start_installation () {
 	fi
 
 	docker_login
+
+	check_hub_connection
 
 	create_network
 

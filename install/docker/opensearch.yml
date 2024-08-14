@@ -1,6 +1,6 @@
 services:
   onlyoffice-opensearch:
-    image: onlyoffice/opensearch:${ELK_VERSION}
+    image: ${HUB}${ELK_IMAGE_NAME}
     container_name: ${ELK_CONTAINER_NAME}
     restart: always
     environment:
