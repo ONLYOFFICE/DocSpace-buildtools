@@ -592,7 +592,7 @@ root_checking () {
 	fi
 }
 
-command_exists () {
+is_command_exists () {
     type "$1" &> /dev/null;
 }
 
@@ -747,22 +747,20 @@ check_hardware () {
 	fi
 }
 
-install_service () {
-	local COMMAND_NAME=$1
-	local PACKAGE_NAME=$2
+install_package () {
+	if ! is_command_exists $1; then
+		local COMMAND_NAME=$1
+		local PACKAGE_NAME=${2:-"$COMMAND_NAME"}
+		local PACKAGE_NAME_APT=${PACKAGE_NAME%%|*}
+		local PACKAGE_NAME_YUM=${PACKAGE_NAME##*|}
 
-	PACKAGE_NAME=${PACKAGE_NAME:-"$COMMAND_NAME"}
+		if is_command_exists apt-get; then
+			apt-get -y -q install ${PACKAGE_NAME_APT:-$PACKAGE_NAME}
+		elif is_command_exists yum; then
+			yum -y install ${PACKAGE_NAME_YUM:-$PACKAGE_NAME}
+		fi
 
-	if command_exists apt-get; then
-		apt-get -y update -qq
-		apt-get -y -q install $PACKAGE_NAME
-	elif command_exists yum; then
-		yum -y install $PACKAGE_NAME
-	fi
-
-	if ! command_exists $COMMAND_NAME; then
-		echo "Command $COMMAND_NAME not found"
-		exit 1;
+		is_command_exists $COMMAND_NAME || { echo "Command $COMMAND_NAME not found"; exit 1; }
 	fi
 }
 
@@ -775,10 +773,6 @@ check_ports () {
 	RESERVED_PORTS=();
 	ARRAY_PORTS=();
 	USED_PORTS="";
-
-	if ! command_exists netstat; then
-		install_service netstat net-tools
-	fi
 
 	if [ "${EXTERNAL_PORT//[0-9]}" = "" ]; then
 		for RESERVED_PORT in "${RESERVED_PORTS[@]}"
@@ -854,21 +848,11 @@ check_docker_version () {
 	done
 }
 
-install_docker_using_script () {
-	if ! command_exists curl ; then
-		install_service curl
-	fi
-
-	curl -fsSL https://get.docker.com -o get-docker.sh
-	sh get-docker.sh
-	rm get-docker.sh
-}
-
 install_docker () {
 
 	if [ "${DIST}" == "Ubuntu" ] || [ "${DIST}" == "Debian" ] || [[ "${DIST}" == CentOS* ]] || [ "${DIST}" == "Fedora" ]; then
 
-		install_docker_using_script
+		curl -fsSL https://get.docker.com | bash
 		systemctl start docker
 		systemctl enable docker
 
@@ -914,7 +898,7 @@ install_docker () {
 
 	fi
 
-	if ! command_exists docker ; then
+	if ! is_command_exists docker ; then
 		echo "error while installing docker"
 		exit 1;
 	fi
@@ -957,30 +941,6 @@ read_continue_installation () {
 }
 
 domain_check () {
-	if ! command_exists dig; then
-		if command_exists apt-get; then
-			install_service dig dnsutils
-		elif command_exists yum; then
-			install_service dig bind-utils
-		fi
-	fi
-
-	if ! command_exists ping; then
-		if command_exists apt-get; then
-			install_service ping iputils-ping
-		elif command_exists yum; then
-			install_service ping iputils
-		fi
-	fi
-
-	if ! command_exists ip; then
-		if command_exists apt-get; then
-			install_service ip iproute2
-		elif command_exists yum; then
-			install_service ip iproute
-		fi
-	fi
-
 	APP_DOMAIN_PORTAL=${LETS_ENCRYPT_DOMAIN:-${APP_URL_PORTAL:-$(get_env_parameter "APP_URL_PORTAL" "${PACKAGE_SYSNAME}-files" | awk -F[/:] '{if ($1 == "https") print $4; else print ""}')}}
 
 	while IFS= read -r DOMAIN; do
@@ -1032,7 +992,7 @@ get_env_parameter () {
 		exit 1;
 	fi
 
-	if command_exists docker ; then
+	if is_command_exists docker ; then
 		[ -n "$CONTAINER_NAME" ] && CONTAINER_EXIST=$(docker ps -aqf "name=$CONTAINER_NAME");
 
 		if [[ -n ${CONTAINER_EXIST} ]]; then
@@ -1048,19 +1008,6 @@ get_env_parameter () {
 }
 
 get_tag_from_hub () {
-	if ! command_exists curl ; then
-		install_service curl
-	fi
-
-	if ! command_exists jq ; then
-		if command_exists yum; then 
-			if ! rpm -q epel-release > /dev/null 2>&1; then
-				[ "${OFFLINE_INSTALLATION}" = "false" ] && rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-$REV.noarch.rpm
-			fi
-		fi
-		install_service jq
-	fi
-
 	if [[ -n ${HUB} ]]; then
 		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
 			CREDENTIALS=$(echo -n "$USERNAME:$PASSWORD" | base64)
@@ -1185,24 +1132,12 @@ set_installation_type_data () {
 }
 
 download_files () {
-	if ! command_exists docker-compose; then
-		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker_compose || { echo "docker-compose not installed"; exit 1; }
-	else
-		if [ "$(docker-compose --version | grep -oP '(?<=v)\d+\.\d+'| sed 's/\.//')" -lt "21" ]; then
-			[ "$OFFLINE_INSTALLATION" = "false" ] && install_docker_compose || { echo "docker-compose version is outdated"; exit 1; }
-		fi
-	fi
-
 	# Fixes issues with variables when upgrading to v1.1.3
 	HOSTS=("ELK_HOST" "REDIS_HOST" "RABBIT_HOST" "MYSQL_HOST"); 
 	for HOST in "${HOSTS[@]}"; do [[ "${!HOST}" == *CONTAINER_PREFIX* || "${!HOST}" == *$PACKAGE_SYSNAME* ]] && export "$HOST="; done
 	[[ "${APP_URL_PORTAL}" == *${PACKAGE_SYSNAME}-proxy* ]] && APP_URL_PORTAL=""
 
 	[ "${OFFLINE_INSTALLATION}" = "false" ] && echo -n "Downloading configuration files to ${BASE_DIR}..." || echo "Unzip docker.tar.gz to ${BASE_DIR}..."
-
-	if ! command_exists tar; then
-		install_service tar
-	fi
 
 	[ -d "${BASE_DIR}" ] && rm -rf "${BASE_DIR}"
 	mkdir -p ${BASE_DIR}
@@ -1228,11 +1163,6 @@ download_files () {
 	fi
 
 	echo "OK"
-
-	reconfigure HUB "${HUB%/}${HUB:+/}"
-	reconfigure STATUS ${STATUS}
-	reconfigure INSTALLATION_TYPE ${INSTALLATION_TYPE}
-	reconfigure NETWORK_NAME ${NETWORK_NAME}
 }
 
 reconfigure () {
@@ -1250,10 +1180,8 @@ install_mysql_server () {
 	reconfigure MYSQL_USER ${MYSQL_USER}
 	reconfigure MYSQL_PASSWORD ${MYSQL_PASSWORD}
 	reconfigure MYSQL_ROOT_PASSWORD ${MYSQL_ROOT_PASSWORD}
-	reconfigure MYSQL_VERSION ${MYSQL_VERSION}
 
 	if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ]; then
-		offline_check_docker_image ${BASE_DIR}/db.yml
 		docker-compose -f $BASE_DIR/db.yml up -d
 	elif [ "$INSTALL_MYSQL_SERVER" == "pull" ]; then
 		docker-compose -f $BASE_DIR/db.yml pull
@@ -1267,7 +1195,6 @@ install_mysql_server () {
 install_document_server () {
 	reconfigure DOCUMENT_SERVER_JWT_HEADER ${DOCUMENT_SERVER_JWT_HEADER}
 	reconfigure DOCUMENT_SERVER_JWT_SECRET ${DOCUMENT_SERVER_JWT_SECRET}
-	reconfigure DOCUMENT_SERVER_IMAGE_NAME "${HUB%/}${HUB:+/}${DOCUMENT_SERVER_IMAGE_NAME}:${DOCUMENT_SERVER_VERSION:-$(get_available_version "$DOCUMENT_SERVER_IMAGE_NAME")}"
 	if [[ -z ${DOCUMENT_SERVER_HOST} ]] && [ "$INSTALL_DOCUMENT_SERVER" == "true" ]; then
 		docker-compose -f $BASE_DIR/ds.yml up -d
 	elif [ "$INSTALL_DOCUMENT_SERVER" == "pull" ]; then
@@ -1282,7 +1209,6 @@ install_document_server () {
 
 install_rabbitmq () {
 	if [[ -z ${RABBIT_HOST} ]] && [ "$INSTALL_RABBITMQ" == "true" ]; then
-		offline_check_docker_image ${BASE_DIR}/rabbitmq.yml
 		docker-compose -f $BASE_DIR/rabbitmq.yml up -d
 	elif [ "$INSTALL_RABBITMQ" == "pull" ]; then
 		docker-compose -f $BASE_DIR/rabbitmq.yml pull
@@ -1298,7 +1224,6 @@ install_rabbitmq () {
 
 install_redis () {
 	if [[ -z ${REDIS_HOST} ]] && [ "$INSTALL_REDIS" == "true" ]; then
-		offline_check_docker_image ${BASE_DIR}/redis.yml
 		docker-compose -f $BASE_DIR/redis.yml up -d
 	elif [ "$INSTALL_REDIS" == "pull" ]; then
 		docker-compose -f $BASE_DIR/redis.yml pull
@@ -1312,14 +1237,12 @@ install_redis () {
 }
 
 install_elasticsearch () {
-	reconfigure ELK_VERSION ${ELK_VERSION}
 	if [[ -z ${ELK_HOST} ]] && [ "$INSTALL_ELASTICSEARCH" == "true" ]; then
 		if [ $(free --mega | grep -oP '\d+' | head -n 1) -gt "12000" ]; then #RAM ~12Gb
 			sed -i 's/Xms[0-9]g/Xms4g/g; s/Xmx[0-9]g/Xmx4g/g' $BASE_DIR/opensearch.yml
 		else
 			sed -i 's/Xms[0-9]g/Xms1g/g; s/Xmx[0-9]g/Xmx1g/g' $BASE_DIR/opensearch.yml
 		fi
-		offline_check_docker_image ${BASE_DIR}/opensearch.yml
 		docker-compose -f $BASE_DIR/opensearch.yml up -d
 	elif [ "$INSTALL_ELASTICSEARCH" == "pull" ]; then
 		docker-compose -f $BASE_DIR/opensearch.yml pull
@@ -1333,14 +1256,6 @@ install_elasticsearch () {
 
 install_fluent_bit () {
 	if [ "$INSTALL_FLUENT_BIT" == "true" ]; then
-		if ! command_exists crontab; then
-			if command_exists apt-get; then
-				install_service crontab cron
-			elif command_exists yum; then
-				install_service crontab cronie
-			fi
-		fi
-
 		[ ! -z "$ELK_HOST" ] && sed -i "s/ELK_CONTAINER_NAME/ELK_HOST/g" $BASE_DIR/fluent.yml ${BASE_DIR}/dashboards.yml
 
 		OPENSEARCH_INDEX="${OPENSEARCH_INDEX:-"${PACKAGE_SYSNAME}-fluent-bit"}"
@@ -1355,9 +1270,6 @@ install_fluent_bit () {
 
 		reconfigure DASHBOARDS_USERNAME "${DASHBOARDS_USERNAME:-"${PACKAGE_SYSNAME}"}"
 		reconfigure DASHBOARDS_PASSWORD "${DASHBOARDS_PASSWORD:-$(get_random_str 20)}"
-
-		offline_check_docker_image ${BASE_DIR}/fluent.yml
-		offline_check_docker_image ${BASE_DIR}/dashboards.yml
 		
 		docker-compose -f ${BASE_DIR}/fluent.yml -f ${BASE_DIR}/dashboards.yml up -d
 	elif [ "$INSTALL_FLUENT_BIT" == "pull" ]; then
@@ -1366,8 +1278,6 @@ install_fluent_bit () {
 }
 
 install_product () {
-	DOCKER_TAG="${DOCKER_TAG:-$(get_available_version ${IMAGE_NAME})}"
-	reconfigure DOCKER_TAG ${DOCKER_TAG}
 	if [ "$INSTALL_PRODUCT" == "true" ]; then
 		[ "${UPDATE}" = "true" ] && LOCAL_CONTAINER_TAG="$(docker inspect --format='{{index .Config.Image}}' ${CONTAINER_NAME} | awk -F':' '{print $2}')"
 
@@ -1387,12 +1297,6 @@ install_product () {
 			echo -n "Waiting for MySQL container to become healthy..."
 			(timeout 30 bash -c "while ! docker inspect --format '{{json .State.Health.Status }}' ${PACKAGE_SYSNAME}-mysql-server | grep -q 'healthy'; do sleep 1; done") && echo "OK" || (echo "FAILED")
 		fi
-
-		offline_check_docker_image ${BASE_DIR}/migration-runner.yml
-		offline_check_docker_image ${BASE_DIR}/${PRODUCT}.yml
-		offline_check_docker_image ${PROXY_YML}
-		offline_check_docker_image ${BASE_DIR}/notify.yml
-		offline_check_docker_image ${BASE_DIR}/healthchecks.yml
 		
 		docker-compose -f $BASE_DIR/migration-runner.yml up -d
 		if [[ -n $(docker ps -q --filter "name=${PACKAGE_SYSNAME}-migration-runner") ]]; then
@@ -1450,18 +1354,78 @@ make_swap () {
 }
 
 offline_check_docker_image() {
-	if [ "${OFFLINE_INSTALLATION}" != "false" ]; then
-		[ ! -f "$1" ] && { echo "Error: File '$1' does not exist."; exit 1; }
-
-		docker-compose -f "$1" config | grep -oP 'image:\s*\K\S+' | while IFS= read -r IMAGE_TAG; do
-			docker images "${IMAGE_TAG}" | grep -q "${IMAGE_TAG%%:*}" || { echo "Error: The image '${IMAGE_TAG}' is not found in the local Docker registry."; kill -s TERM $PID; }
-		done
-	fi
+	[ ! -f "$1" ] && { echo "Error: File '$1' does not exist."; exit 1; }
+	docker-compose -f "$1" config | grep -oP 'image:\s*\K\S+' | while IFS= read -r IMAGE_TAG; do
+		docker images "${IMAGE_TAG}" | grep -q "${IMAGE_TAG%%:*}" || { echo "Error: The image '${IMAGE_TAG}' is not found in the local Docker registry."; kill -s TERM $PID; }
+	done
 }
 
 check_hub_connection() {
 	get_tag_from_hub ${IMAGE_NAME}
 	[ -z "$TAGS_RESP" ] && { echo -e "Unable to download tags from ${HUB:-hub.docker.com}.\nTry specifying another dockerhub name using -hub"; exit 1; } || true
+}
+
+dependency_installation() {
+	is_command_exists apt-get && apt-get -y update -qq
+
+	install_package tar
+	install_package curl
+	install_package netstat net-tools
+
+	if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
+		install_package dig  "dnsutils|bind-utils"
+		install_package ping "iputils-ping|iputils"
+		install_package ip   "iproute2|iproute"
+	fi
+
+	[ "$INSTALL_FLUENT_BIT" = "true" ] && install_package crontab "cron|cronie"
+
+	if ! is_command_exists jq ; then
+		if is_command_exists yum && ! rpm -q epel-release > /dev/null 2>&1; then
+			[ "${OFFLINE_INSTALLATION}" = "false" ] && rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-${REV}.noarch.rpm
+		fi
+		install_package jq
+	fi
+
+	is_command_exists docker && { check_docker_version; service docker start; } || { [ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker || { echo "docker not installed"; exit 1; }; }
+
+	if ! is_command_exists docker-compose; then
+		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker_compose || { echo "docker-compose not installed"; exit 1; }
+	elif [ "$(docker-compose --version | grep -oP '(?<=v)\d+\.\d+'| sed 's/\.//')" -lt "21" ]; then
+		[ "$OFFLINE_INSTALLATION" = "false" ]   && install_docker_compose || { echo "docker-compose version is outdated"; exit 1; }
+	fi
+}
+
+check_docker_image () {
+	reconfigure HUB "${HUB%/}${HUB:+/}"
+	reconfigure STATUS ${STATUS}
+	reconfigure INSTALLATION_TYPE ${INSTALLATION_TYPE}
+	reconfigure NETWORK_NAME ${NETWORK_NAME}
+	
+	reconfigure MYSQL_VERSION ${MYSQL_VERSION}
+	reconfigure ELK_VERSION ${ELK_VERSION}
+	reconfigure DOCUMENT_SERVER_IMAGE_NAME "${DOCUMENT_SERVER_IMAGE_NAME}:\${DOCUMENT_SERVER_VERSION}"
+	reconfigure DOCUMENT_SERVER_VERSION ${DOCUMENT_SERVER_VERSION:-$(get_available_version "$DOCUMENT_SERVER_IMAGE_NAME")}
+
+	DOCKER_TAG="${DOCKER_TAG:-$(get_available_version ${IMAGE_NAME})}"
+	reconfigure DOCKER_TAG ${DOCKER_TAG}
+	if [ "${OFFLINE_INSTALLATION}" != "false" ]; then
+		[ "$INSTALL_RABBITMQ" == "true" ]           && offline_check_docker_image ${BASE_DIR}/db.yml
+		[ "$INSTALL_RABBITMQ" == "true" ]           && offline_check_docker_image ${BASE_DIR}/rabbitmq.yml
+		[ "$INSTALL_REDIS" == "true" ]              && offline_check_docker_image ${BASE_DIR}/redis.yml
+		[ "$INSTALL_FLUENT_BIT" == "true" ]         && offline_check_docker_image ${BASE_DIR}/fluent.yml
+		[ "$INSTALL_FLUENT_BIT" == "true" ]         && offline_check_docker_image ${BASE_DIR}/dashboards.yml
+		[ "$INSTALL_ELASTICSEARCH" == "true" ]      && offline_check_docker_image ${BASE_DIR}/opensearch.yml
+		[ "$INSTALL_DOCUMENT_SERVER" == "true" ]    && offline_check_docker_image ${BASE_DIR}/ds.yml
+
+		if [ "$INSTALL_PRODUCT" == "true" ]; then
+			offline_check_docker_image ${BASE_DIR}/migration-runner.yml
+			offline_check_docker_image ${BASE_DIR}/${PRODUCT}.yml
+			offline_check_docker_image ${BASE_DIR}/notify.yml
+			offline_check_docker_image ${BASE_DIR}/healthchecks.yml
+			offline_check_docker_image ${PROXY_YML}
+		fi
+	fi
 }
 
 start_installation () {
@@ -1473,6 +1437,8 @@ start_installation () {
 	check_os_info
 	check_kernel
 
+	dependency_installation
+
 	if [ "$UPDATE" != "true" ]; then
 		check_ports
 	fi
@@ -1483,13 +1449,6 @@ start_installation () {
 
 	if [ "$MAKESWAP" == "true" ]; then
 		make_swap
-	fi
-
-	if command_exists docker ; then
-		check_docker_version
-		service docker start
-	else
-		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker || { echo "docker not installed"; exit 1; }
 	fi
 
 	docker_login
@@ -1513,6 +1472,8 @@ start_installation () {
 	set_mysql_params
 
 	download_files
+
+	check_docker_image
 
 	install_elasticsearch
 
