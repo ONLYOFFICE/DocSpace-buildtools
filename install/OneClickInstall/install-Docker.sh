@@ -1267,6 +1267,7 @@ install_fluent_bit () {
 		sed -i "s/OPENSEARCH_HOST/${ELK_HOST:-"${PACKAGE_SYSNAME}-opensearch"}/g" "${BASE_DIR}/config/fluent-bit.conf" 
 		sed -i "s/OPENSEARCH_PORT/$(get_env_parameter "ELK_PORT")/g" ${BASE_DIR}/config/fluent-bit.conf
 		sed -i "s/OPENSEARCH_INDEX/${OPENSEARCH_INDEX}/g" ${BASE_DIR}/config/fluent-bit.conf
+		[ "$ELK_SCHEME" = "https" ] && sed -i '/tls/s/^#//' ${BASE_DIR}/config/fluent-bit.conf
 
 		reconfigure DASHBOARDS_USERNAME "${DASHBOARDS_USERNAME:-"${PACKAGE_SYSNAME}"}"
 		reconfigure DASHBOARDS_PASSWORD "${DASHBOARDS_PASSWORD:-$(get_random_str 20)}"
