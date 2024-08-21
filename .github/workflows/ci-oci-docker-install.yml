@@ -19,15 +19,16 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Determine Branch Name
-        id: set-branch-name
         run: |
           BRANCH_NAME=$([ "${{ github.event_name }}" = "pull_request" ] && echo "${{ github.event.pull_request.head.ref }}" || echo "${GITHUB_REF#refs/heads/}")
           echo "BRANCH_NAME=${BRANCH_NAME:-master}" >> $GITHUB_ENV
 
-      - name: Test OCI docker scripts
+      - name: Free Disk Space
         run: |
           sudo docker image prune --all --force
 
+      - name: Test OCI docker scripts
+        run: |
           wget https://download.onlyoffice.com/docspace/docspace-enterprise-install.sh
           sed '/bash install-Docker.sh/i sed -i "1i set -x" install-Docker.sh' -i docspace-enterprise-install.sh
           sudo bash docspace-enterprise-install.sh docker -docsi onlyoffice/documentserver-ee -skiphc true -noni true $([ ${{ env.BRANCH_NAME }} != "master" ] && echo "-gb ${{ env.BRANCH_NAME }} -s 4testing-") || exit $?
@@ -70,13 +71,16 @@ jobs:
         with:
           ref: ${{ env.BRANCH_NAME }}
 
+      - name: Free Disk Space
+        if: ${{ github.event.inputs.offline == 'true' }}
+        run: |
+          docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q) && docker volume rm $(docker volume ls -q)
+          sudo rm -rf /usr/local/lib/android /opt/ghc
+
       - name: Creating 4testing offline self-extracting archive
         if: ${{ github.event.inputs.offline == 'true' }}
         run: |
           INSTALL_PATH=${{ github.workspace }}/install
-
-          docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q) && docker volume rm $(docker volume ls -q)
-          sudo rm -rf /usr/local/lib/android /opt/ghc
 
           docker images --format "{{.Repository}}:{{.Tag}}" | grep "4testing-" | xargs -I{} bash -c '
             docker tag "$1" $(echo "${1/4testing-/}" | sed -E "s/([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+/\1/")
