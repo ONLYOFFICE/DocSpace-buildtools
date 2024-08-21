@@ -31,6 +31,7 @@ jobs:
         run: |
           wget https://download.onlyoffice.com/docspace/docspace-enterprise-install.sh
           sed '/bash install-Docker.sh/i sed -i "1i set -x" install-Docker.sh' -i docspace-enterprise-install.sh
+          sed '/bash install-Docker.sh/i sed -i "/docker-compose.*up -d/ s/$/ --quiet-pull/" install-Docker.sh' -i docspace-enterprise-install.sh
           sudo bash docspace-enterprise-install.sh docker -docsi onlyoffice/documentserver-ee -skiphc true -noni true $([ ${{ env.BRANCH_NAME }} != "master" ] && echo "-gb ${{ env.BRANCH_NAME }} -s 4testing-") || exit $?
           
           echo -n "Waiting for all containers to start..."
