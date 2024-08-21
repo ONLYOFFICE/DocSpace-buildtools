@@ -531,39 +531,6 @@
 	  }
     },
 	{
-      "type": "ASC.Core.Common.Configuration.DataStoreConsumer, ASC.Core.Common",
-      "services": [
-        {
-          "type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
-        }, 
-		{
-		  "type": "ASC.Core.Common.Configuration.DataStoreConsumer, ASC.Core.Common"
-		}, 
-		{
-		  "key": "selectel",
-		  "type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
-		}, 
-		{
-		  "key": "selectel",
-		  "type": "ASC.Core.Common.Configuration.DataStoreConsumer, ASC.Core.Common"
-		}
-      ],
-	  "instanceScope": "perlifetimescope",
-	  "parameters": {
-		  "name": "selectel",
-		  "order": "23",
-		  "props": {
-			"authUser": "",
-			"authPwd": ""
-		  },
-		  "additional": {
-			"handlerType" : "ASC.Data.Storage.Selectel.SelectelStorage, ASC.Data.Storage",
-			"public_container" : "",
-			"private_container" : ""
-		  }
-	  }
-    },
-	{
 		"type": "ASC.FederatedLogin.LoginProviders.ZoomLoginProvider, ASC.FederatedLogin",
 		"services": [
 		  {
