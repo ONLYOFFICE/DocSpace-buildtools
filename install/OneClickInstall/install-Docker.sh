@@ -87,6 +87,7 @@ REDIS_PORT=""
 REDIS_USER_NAME=""
 REDIS_PASSWORD=""
 
+RABBIT_PROTOCOL=""
 RABBIT_HOST=""
 RABBIT_PORT=""
 RABBIT_USER_NAME=""
@@ -409,6 +410,13 @@ while [ "$1" != "" ]; do
 			fi
 		;;
 
+		-rbpr | --rabbitmqprotocol )
+			if [ "$2" != "" ]; then
+				RABBIT_PROTOCOL=$2
+				shift
+			fi
+		;;
+
 		-rbth | --rabbitmqhost )
 			if [ "$2" != "" ]; then
 				RABBIT_HOST=$2
@@ -536,6 +544,7 @@ while [ "$1" != "" ]; do
 			echo "      -rdsp, --redisport                redis server port number (default value 6379)"
 			echo "      -rdsu, --redisusername            redis user name"
 			echo "      -rdspass, --redispassword         password set for redis account"
+			echo "      -rbpr, --rabbitmqprotocol         the protocol for the connection to rabbitmq server (default value amqp)"
 			echo "      -rbth, --rabbitmqhost             the IP address or hostname of the rabbitmq server"
 			echo "      -rbtp, --rabbitmqport             rabbitmq server port number (default value 5672)"
 			echo "      -rbtu, --rabbitmqusername         username for rabbitmq server account"
@@ -1409,6 +1418,7 @@ services_check_connection () {
 	}
 	[[ ! -z "$RABBIT_HOST" ]] && {
 		establish_conn ${RABBIT_HOST} "${RABBIT_PORT:-5672}" "RabbitMQ"
+		reconfigure RABBIT_PROTOCOL ${RABBIT_PROTOCOL:-amqp}
 		reconfigure RABBIT_HOST ${RABBIT_HOST}
 		reconfigure RABBIT_PORT "${RABBIT_PORT:-5672}"
 		reconfigure RABBIT_USER_NAME ${RABBIT_USER_NAME}
