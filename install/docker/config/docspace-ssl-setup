@@ -103,7 +103,7 @@ case $1 in
       echo "Generating Let's Encrypt SSL Certificates..."
 
       # Request and generate Let's Encrypt SSL certificate
-      docker run -it --rm \
+      docker run --rm \
       -v /etc/letsencrypt:/etc/letsencrypt \
       -v /var/lib/letsencrypt:/var/lib/letsencrypt \
       -v /var/log:/var/log \
@@ -132,7 +132,7 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
       # Create and set permissions for docspace-renew-letsencrypt
       echo '#!/bin/bash' > ${DIR}/${PRODUCT}-renew-letsencrypt
       echo "docker-compose -f ${DOCKERCOMPOSE}/proxy-ssl.yml down" >> ${DIR}/${PRODUCT}-renew-letsencrypt
-      echo 'docker run -it --rm \' >> ${DIR}/${PRODUCT}-renew-letsencrypt
+      echo 'docker run --rm \' >> ${DIR}/${PRODUCT}-renew-letsencrypt
       echo '    -v /etc/letsencrypt:/etc/letsencrypt \' >> ${DIR}/${PRODUCT}-renew-letsencrypt
       echo '    -v /var/lib/letsencrypt:/var/lib/letsencrypt \' >> ${DIR}/${PRODUCT}-renew-letsencrypt
       echo '    certbot/certbot renew' >> ${DIR}/${PRODUCT}-renew-letsencrypt
