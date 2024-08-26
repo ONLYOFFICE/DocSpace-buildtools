@@ -972,15 +972,8 @@ domain_check () {
 
 establish_conn() {
 	echo -n "Trying to establish $3 connection... "
-  
-	exec {FD}<> /dev/tcp/$1/$2 && exec {FD}>&-
 
-	if [ "$?" != 0 ]; then
-		echo "FAILURE";
-		exit 1;
-	fi
-
-	echo "OK"
+	exec {FD}<> /dev/tcp/${1}/${2} && { exec {FD}>&-; echo "OK"; } || { echo "FAILURE"; exit 1; }
 }
 
 get_env_parameter () {
@@ -1057,6 +1050,7 @@ set_docs_url_external () {
 
 	if [[ ! -z ${DOCUMENT_SERVER_URL_EXTERNAL} ]] && [[ $DOCUMENT_SERVER_URL_EXTERNAL =~ ^(https?://)?([^:/]+)(:([0-9]+))?(/.*)?$ ]]; then
 		[[ -z ${BASH_REMATCH[1]} ]] && DOCUMENT_SERVER_URL_EXTERNAL="http://$DOCUMENT_SERVER_URL_EXTERNAL"
+		DOCUMENT_SERVER_PROTOCOL="${BASH_REMATCH[1]}"
 		DOCUMENT_SERVER_HOST="${BASH_REMATCH[2]}"
 		DOCUMENT_SERVER_PORT="${BASH_REMATCH[4]:-"80"}"
 	fi
@@ -1132,11 +1126,6 @@ set_installation_type_data () {
 }
 
 download_files () {
-	# Fixes issues with variables when upgrading to v1.1.3
-	HOSTS=("ELK_HOST" "REDIS_HOST" "RABBIT_HOST" "MYSQL_HOST"); 
-	for HOST in "${HOSTS[@]}"; do [[ "${!HOST}" == *CONTAINER_PREFIX* || "${!HOST}" == *$PACKAGE_SYSNAME* ]] && export "$HOST="; done
-	[[ "${APP_URL_PORTAL}" == *${PACKAGE_SYSNAME}-proxy* ]] && APP_URL_PORTAL=""
-
 	[ "${OFFLINE_INSTALLATION}" = "false" ] && echo -n "Downloading configuration files to ${BASE_DIR}..." || echo "Unzip docker.tar.gz to ${BASE_DIR}..."
 
 	[ -d "${BASE_DIR}" ] && rm -rf "${BASE_DIR}"
@@ -1185,10 +1174,6 @@ install_mysql_server () {
 		docker-compose -f $BASE_DIR/db.yml up -d
 	elif [ "$INSTALL_MYSQL_SERVER" == "pull" ]; then
 		docker-compose -f $BASE_DIR/db.yml pull
-	elif [ ! -z "$MYSQL_HOST" ]; then
-		establish_conn ${MYSQL_HOST} "${MYSQL_PORT:-"3306"}" "MySQL"
-		reconfigure MYSQL_HOST ${MYSQL_HOST}
-		reconfigure MYSQL_PORT "${MYSQL_PORT:-"3306"}"
 	fi
 }
 
@@ -1199,11 +1184,6 @@ install_document_server () {
 		docker-compose -f $BASE_DIR/ds.yml up -d
 	elif [ "$INSTALL_DOCUMENT_SERVER" == "pull" ]; then
 		docker-compose -f $BASE_DIR/ds.yml pull
-	elif [ ! -z "$DOCUMENT_SERVER_HOST" ]; then
-		APP_URL_PORTAL=${APP_URL_PORTAL:-"http://$(curl -s ifconfig.me):${EXTERNAL_PORT}"}  
-		establish_conn ${DOCUMENT_SERVER_HOST} ${DOCUMENT_SERVER_PORT} "${PACKAGE_SYSNAME^^} Docs"
-		reconfigure DOCUMENT_SERVER_URL_EXTERNAL ${DOCUMENT_SERVER_URL_EXTERNAL}
-		reconfigure DOCUMENT_SERVER_URL_PUBLIC ${DOCUMENT_SERVER_URL_EXTERNAL}
 	fi
 }
 
@@ -1212,13 +1192,6 @@ install_rabbitmq () {
 		docker-compose -f $BASE_DIR/rabbitmq.yml up -d
 	elif [ "$INSTALL_RABBITMQ" == "pull" ]; then
 		docker-compose -f $BASE_DIR/rabbitmq.yml pull
-	elif [ ! -z "$RABBIT_HOST" ]; then
-		establish_conn ${RABBIT_HOST} "${RABBIT_PORT:-"5672"}" "RabbitMQ"
-		reconfigure RABBIT_HOST ${RABBIT_HOST}
-		reconfigure RABBIT_PORT "${RABBIT_PORT:-"5672"}"
-		reconfigure RABBIT_USER_NAME ${RABBIT_USER_NAME}
-		reconfigure RABBIT_PASSWORD ${RABBIT_PASSWORD}
-		reconfigure RABBIT_VIRTUAL_HOST "${RABBIT_VIRTUAL_HOST:-"/"}"
 	fi
 }
 
@@ -1227,12 +1200,6 @@ install_redis () {
 		docker-compose -f $BASE_DIR/redis.yml up -d
 	elif [ "$INSTALL_REDIS" == "pull" ]; then
 		docker-compose -f $BASE_DIR/redis.yml pull
-	elif [ ! -z "$REDIS_HOST" ]; then
-		establish_conn ${REDIS_HOST} "${REDIS_PORT:-"6379"}" "Redis"
-		reconfigure REDIS_HOST ${REDIS_HOST}
-		reconfigure REDIS_PORT "${REDIS_PORT:-"6379"}"
-		reconfigure REDIS_USER_NAME ${REDIS_USER_NAME}
-		reconfigure REDIS_PASSWORD ${REDIS_PASSWORD}
 	fi
 }
 
@@ -1246,11 +1213,6 @@ install_elasticsearch () {
 		docker-compose -f $BASE_DIR/opensearch.yml up -d
 	elif [ "$INSTALL_ELASTICSEARCH" == "pull" ]; then
 		docker-compose -f $BASE_DIR/opensearch.yml pull
-	elif [ ! -z "$ELK_HOST" ]; then
-		establish_conn ${ELK_HOST} "${ELK_PORT:-"9200"}" "search engine"
-		reconfigure ELK_SHEME "${ELK_SHEME:-"http"}"	
-		reconfigure ELK_HOST ${ELK_HOST}
-		reconfigure ELK_PORT "${ELK_PORT:-"9200"}"	
 	fi
 }
 
@@ -1428,6 +1390,46 @@ check_docker_image () {
 	fi
 }
 
+services_check_connection () {
+	# Fixes issues with variables when upgrading to v1.1.3
+	HOSTS=("ELK_HOST" "REDIS_HOST" "RABBIT_HOST" "MYSQL_HOST"); 
+	for HOST in "${HOSTS[@]}"; do [[ "${!HOST}" == *CONTAINER_PREFIX* || "${!HOST}" == *$PACKAGE_SYSNAME* ]] && export "$HOST="; done
+	[[ "${APP_URL_PORTAL}" == *${PACKAGE_SYSNAME}-proxy* ]] && APP_URL_PORTAL=""
+
+	[[ ! -z "$MYSQL_HOST" ]] && {
+		establish_conn ${MYSQL_HOST} "${MYSQL_PORT:-3306}" "MySQL"
+		reconfigure MYSQL_HOST ${MYSQL_HOST}
+		reconfigure MYSQL_PORT "${MYSQL_PORT:-3306}"
+	}
+	[[ ! -z "$DOCUMENT_SERVER_HOST" ]] && {
+		APP_URL_PORTAL=${APP_URL_PORTAL:-"http://$(curl -s ifconfig.me):${EXTERNAL_PORT}"}
+		establish_conn ${DOCUMENT_SERVER_HOST} ${DOCUMENT_SERVER_PORT} "${PACKAGE_SYSNAME^^} Docs"
+		reconfigure DOCUMENT_SERVER_URL_EXTERNAL ${DOCUMENT_SERVER_URL_EXTERNAL}
+		reconfigure DOCUMENT_SERVER_URL_PUBLIC ${DOCUMENT_SERVER_URL_EXTERNAL}
+	}
+	[[ ! -z "$RABBIT_HOST" ]] && {
+		establish_conn ${RABBIT_HOST} "${RABBIT_PORT:-5672}" "RabbitMQ"
+		reconfigure RABBIT_HOST ${RABBIT_HOST}
+		reconfigure RABBIT_PORT "${RABBIT_PORT:-5672}"
+		reconfigure RABBIT_USER_NAME ${RABBIT_USER_NAME}
+		reconfigure RABBIT_PASSWORD ${RABBIT_PASSWORD}
+		reconfigure RABBIT_VIRTUAL_HOST "${RABBIT_VIRTUAL_HOST:-/}"
+	}
+	[[ ! -z "$REDIS_HOST" ]] && {
+		establish_conn ${REDIS_HOST} "${REDIS_PORT:-6379}" "Redis"
+		reconfigure REDIS_HOST ${REDIS_HOST}
+		reconfigure REDIS_PORT "${REDIS_PORT:-6379}"
+		reconfigure REDIS_USER_NAME ${REDIS_USER_NAME}
+		reconfigure REDIS_PASSWORD ${REDIS_PASSWORD}
+	}
+	[[ ! -z "$ELK_HOST" ]] && {
+		establish_conn ${ELK_HOST} "${ELK_PORT:-9200}" "search engine"
+		reconfigure ELK_SHEME "${ELK_SHEME:-http}"
+		reconfigure ELK_HOST ${ELK_HOST}
+		reconfigure ELK_PORT "${ELK_PORT:-9200}"
+	}
+}
+
 start_installation () {
 	root_checking
 
@@ -1474,6 +1476,8 @@ start_installation () {
 	download_files
 
 	check_docker_image
+
+	services_check_connection
 
 	install_elasticsearch
 
