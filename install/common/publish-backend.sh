@@ -102,10 +102,14 @@ services_name_backend_nodejs=()
 services_name_backend_nodejs+=(ASC.Socket.IO)
 services_name_backend_nodejs+=(ASC.SsoAuth)
 
-# Publish backend services (Nodejs) 
-for i in ${!services_name_backend_nodejs[@]}; do
-  echo "== Publish ${services_name_backend_nodejs[$i]} project =="
-  SERVICE_DIR="$(find ${SRC_PATH} -type d -name ${services_name_backend_nodejs[$i]})"
-  cd ${SERVICE_DIR}
-  mkdir -p ${BUILD_PATH}/services/${services_name_backend_nodejs[$i]}/service/ && cp -arfv ./* ${BUILD_PATH}/services/${services_name_backend_nodejs[$i]}/service/
+services_name_backend_java+=(ASC.Identity.Authorization)
+services_name_backend_java+=(ASC.Identity.Registration)
+services_name_backend_java+=(ASC.Identity.Migration)
+
+# Publish backend services (Nodejs/Java) 
+for SERVICE in "${services_name_backend_nodejs[@]}" "${services_name_backend_java[@]}"; do
+  echo "== Publish ${SERVICE} project =="
+  SERVICE_DIR="$(find ${SRC_PATH} -type d -name ${SERVICE})"
+  mkdir -p ${BUILD_PATH}/services/${SERVICE}/service/
+  cp -arfv ${SERVICE_DIR}/* ${BUILD_PATH}/services/${SERVICE}/service/
 done
