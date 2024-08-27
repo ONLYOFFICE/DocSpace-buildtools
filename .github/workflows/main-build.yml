@@ -15,7 +15,7 @@ on:
       - server-trigger-action
 
 env:
-  DOCKER_PATH: "/install/docker"
+  DOCKER_PATH: "/buildtools/install/docker"
   REPO: "onlyoffice"
   DOCKER_IMAGE_PREFIX: "4testing-docspace"
   DOCKERFILE: "Dockerfile.app"
@@ -32,6 +32,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
+          path: buildtools
+          ref: ${{ matrix.branch }}
+      - name: Checkout-server
+        uses: actions/checkout@v3
+        with:
+          repository: ONLYOFFICE/DocSpace-server
+          path: server
           ref: ${{ matrix.branch }}
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -62,6 +69,11 @@ jobs:
             DOCKER_TAG=${PRODUCT_VERSION}.${{github.run_number}}
           fi
           export DOCKER_TAG
+          if [ "${{ matrix.branch }}" = "develop" ]; then
+            docker buildx bake -f identity.yml \
+            --set *.platform=linux/amd64 \
+            --push
+          fi
           docker buildx bake -f build.yml \
           --set *.args.GIT_BRANCH=${{ matrix.branch }} \
           --set *.args.PRODUCT_VERSION=${PRODUCT_VERSION} \
