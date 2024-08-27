@@ -69,7 +69,7 @@ RUN cd ${SRC_PATH} && \
   
 COPY config/mysql/conf.d/mysql.cnf /etc/mysql/conf.d/mysql.cnf
 
-FROM $DOTNET_RUN as dotnetrun
+FROM $DOTNET_RUN AS dotnetrun
 ARG BUILD_PATH
 ARG SRC_PATH
 ENV BUILD_PATH=${BUILD_PATH}
@@ -100,7 +100,7 @@ COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onl
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
 
-FROM node:20-slim as noderun
+FROM node:20-slim AS noderun
 ARG BUILD_PATH
 ARG SRC_PATH 
 ENV BUILD_PATH=${BUILD_PATH}
@@ -185,7 +185,7 @@ ENTRYPOINT  [ "/docker-entrypoint.sh" ]
 CMD ["/usr/local/openresty/bin/openresty", "-g", "daemon off;"]
 
 ## Doceditor ##
-FROM noderun as doceditor
+FROM noderun AS doceditor
 WORKDIR ${BUILD_PATH}/products/ASC.Editors/editor
 
 COPY --chown=onlyoffice:onlyoffice docker-entrypoint.py ./docker-entrypoint.py
@@ -194,7 +194,7 @@ COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/editor/ .
 CMD ["server.js", "ASC.Editors"]
 
 ## Login ##
-FROM noderun as login
+FROM noderun AS login
 WORKDIR ${BUILD_PATH}/products/ASC.Login/login
 
 COPY --chown=onlyoffice:onlyoffice docker-entrypoint.py ./docker-entrypoint.py
