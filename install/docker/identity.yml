@@ -1,4 +1,10 @@
-x-common-environment: &common-environment
+x-healthcheck: &x-healthcheck
+  interval: 60s
+  retries: 5
+  start_period: 20s
+  timeout: 10s
+
+x-common-environment: &x-common-environment
   JDBC_PASSWORD: ${JDBC_PASSWORD}
   JDBC_URL: ${JDBC_URL}
   JDBC_USER_NAME: ${JDBC_USER_NAME}
@@ -14,10 +20,13 @@ services:
     ports:
       - "${IDENTITY_AUTHORIZATION_SERVER_PORT}:${IDENTITY_AUTHORIZATION_SERVER_PORT}"
     environment:
-      <<: *common-environment
+      <<: *x-common-environment
       SPRING_PROFILES_ACTIVE: ${IDENTITY_PROFILE}
       SPRING_APPLICATION_NAME: ASC.Identity.Authorization
       SERVER_PORT: ${IDENTITY_AUTHORIZATION_SERVER_PORT}
+    healthcheck:
+      <<: *x-healthcheck
+      test: curl --fail ${IDENTITY_AUTHORIZATION_CONTAINER_NAME}:${IDENTITY_AUTHORIZATION_SERVER_PORT}/health/ || exit 1
     depends_on:
       - onlyoffice-identity-migration
 
@@ -27,10 +36,13 @@ services:
     ports:
       - "${IDENTITY_API_SERVER_PORT}:${IDENTITY_API_SERVER_PORT}"
     environment:
-      <<: *common-environment
+      <<: *x-common-environment
       SPRING_PROFILES_ACTIVE: ${IDENTITY_PROFILE}
       SPRING_APPLICATION_NAME: ASC.Identity.Registration
       SERVER_PORT: ${IDENTITY_API_SERVER_PORT}
+    healthcheck:
+      <<: *x-healthcheck
+      test: curl --fail ${IDENTITY_API_CONTAINER_NAME}:${IDENTITY_API_SERVER_PORT}/health/ || exit 1
     depends_on:
       - onlyoffice-identity-migration
 
@@ -41,7 +53,7 @@ services:
     ports:
       - "${IDENTITY_MIGRATION_SERVER_PORT}:${IDENTITY_MIGRATION_SERVER_PORT}"
     environment:
-      <<: *common-environment
+      <<: *x-common-environment
 
 networks:
   default:
