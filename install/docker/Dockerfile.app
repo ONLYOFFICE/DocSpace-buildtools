@@ -131,27 +131,18 @@ USER onlyoffice
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
 
-FROM openjdk:21-slim AS javarun
+FROM eclipse-temurin:21-jre-alpine AS javarun
 ARG BUILD_PATH
-ARG SRC_PATH 
 ENV BUILD_PATH=${BUILD_PATH}
-ENV SRC_PATH=${SRC_PATH}
 
 RUN mkdir -p /var/log/onlyoffice && \
-    mkdir -p /app/onlyoffice/data && \
-    addgroup --system --gid 107 onlyoffice && \
-    adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
-    chown onlyoffice:onlyoffice /app/onlyoffice -R && \
+    mkdir -p /var/www/onlyoffice && \
+    addgroup -S -g 107 onlyoffice && \
+    adduser -S -u 104 -h /var/www/onlyoffice -G onlyoffice onlyoffice && \
     chown onlyoffice:onlyoffice /var/log -R  && \
     chown onlyoffice:onlyoffice /var/www -R && \
-    apt-get -y update && \
-    apt-get install -yq \ 
-    sudo \
-    nano \
-    curl \
-    vim
+    apk add --no-cache curl
 
-COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
 USER onlyoffice
 
 ## Nginx image ##
