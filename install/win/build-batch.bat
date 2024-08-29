@@ -158,3 +158,6 @@ copy "buildtools\install\win\Resources\License_Enterprise.rtf" "buildtools\insta
 copy "buildtools\install\win\Resources\License_Enterprise_Redist.rtf" "buildtools\install\win\Resources\License_Redist.rtf" /y
 
 %AdvancedInstaller% /rebuild buildtools\install\win\DocSpace.aip -buildslist DOCSPACE_ENTERPRISE
+
+:: Build DocSpace Developer
+%AdvancedInstaller% /rebuild buildtools\install\win\DocSpace.aip -buildslist DOCSPACE_DEVELOPER
