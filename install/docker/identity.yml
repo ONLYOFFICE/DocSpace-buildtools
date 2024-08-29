@@ -5,12 +5,12 @@ x-healthcheck: &x-healthcheck
   timeout: 10s
 
 x-common-environment: &x-common-environment
-  JDBC_PASSWORD: ${JDBC_PASSWORD}
-  JDBC_URL: ${JDBC_URL}
-  JDBC_USER_NAME: ${JDBC_USER_NAME}
-  JDBC_DATABASE: ${JDBC_DATABASE}
-  RABBIT_HOST: ${RABBIT_CONTAINER_NAME}
-  REDIS_HOST: ${REDIS_CONTAINER_NAME}
+  JDBC_PASSWORD: ${MYSQL_PASSWORD}
+  JDBC_URL: ${MYSQL_HOST}
+  JDBC_USER_NAME: ${MYSQL_USER}
+  JDBC_DATABASE: ${MYSQL_DATABASE}
+  RABBIT_HOST: ${RABBIT_HOST}
+  REDIS_HOST: ${REDIS_HOST}
 
 services:
   onlyoffice-identity-authorization:
@@ -26,7 +26,7 @@ services:
       SERVER_PORT: ${IDENTITY_AUTHORIZATION_SERVER_PORT}
     healthcheck:
       <<: *x-healthcheck
-      test: curl --fail ${IDENTITY_AUTHORIZATION_CONTAINER_NAME}:${IDENTITY_AUTHORIZATION_SERVER_PORT}/health/ || exit 1
+      test: curl --fail ${SERVICE_IDENTITY}/health/ || exit 1
     depends_on:
       - onlyoffice-identity-migration
 
@@ -35,6 +35,7 @@ services:
     container_name: ${IDENTITY_API_CONTAINER_NAME}
     ports:
       - "${IDENTITY_API_SERVER_PORT}:${IDENTITY_API_SERVER_PORT}"
+    restart: always
     environment:
       <<: *x-common-environment
       SPRING_PROFILES_ACTIVE: ${IDENTITY_PROFILE}
@@ -42,7 +43,7 @@ services:
       SERVER_PORT: ${IDENTITY_API_SERVER_PORT}
     healthcheck:
       <<: *x-healthcheck
-      test: curl --fail ${IDENTITY_API_CONTAINER_NAME}:${IDENTITY_API_SERVER_PORT}/health/ || exit 1
+      test: curl --fail ${SERVICE_IDENTITY_API}/health/ || exit 1
     depends_on:
       - onlyoffice-identity-migration
 
