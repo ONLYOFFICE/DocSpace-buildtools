@@ -33,9 +33,9 @@ services:
   onlyoffice-identity-api:
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-api:${DOCKER_TAG}"
     container_name: ${IDENTITY_API_CONTAINER_NAME}
-    ports:
-      - "${IDENTITY_API_SERVER_PORT}:${IDENTITY_API_SERVER_PORT}"
     restart: always
+    expose:
+      - "${IDENTITY_API_SERVER_PORT}"
     environment:
       <<: *x-common-environment
       SPRING_PROFILES_ACTIVE: ${IDENTITY_PROFILE}
@@ -51,8 +51,8 @@ services:
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-migration:${DOCKER_TAG}"
     container_name: ${IDENTITY_MIGRATION_CONTAINER_NAME}
     restart: on-failure
-    ports:
-      - "${IDENTITY_MIGRATION_SERVER_PORT}:${IDENTITY_MIGRATION_SERVER_PORT}"
+    expose:
+      - "${IDENTITY_MIGRATION_SERVER_PORT}"
     environment:
       <<: *x-common-environment
 
