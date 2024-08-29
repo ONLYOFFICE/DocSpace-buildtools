@@ -66,33 +66,6 @@
 	  }
     }, 
 	{
-      "type": "ASC.Web.Core.Sms.ClickatellProvider, ASC.Web.Core",
-      "services": [
-        {
-          "type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
-        }, 
-		{
-		  "type": "ASC.Web.Core.Sms.ClickatellProvider, ASC.Web.Core"
-		}, 
-		{
-		  "key": "clickatell",
-		  "type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
-		}, 
-		{
-		  "key": "clickatell",
-		  "type": "ASC.Web.Core.Sms.ClickatellProvider, ASC.Web.Core"
-		}
-      ],
-	  "instanceScope": "perlifetimescope",
-	  "parameters": {
-		  "name": "clickatell",
-		  "order": "10",
-		  "props": {
-			"clickatellapiKey": ""
-		  }
-	  }
-    },
-	{
       "type": "ASC.FederatedLogin.LoginProviders.DropboxLoginProvider, ASC.FederatedLogin",
       "services": [
         {
