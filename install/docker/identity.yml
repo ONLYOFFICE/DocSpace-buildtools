@@ -5,12 +5,15 @@ x-healthcheck: &x-healthcheck
   timeout: 10s
 
 x-common-environment: &x-common-environment
-  JDBC_PASSWORD: ${MYSQL_PASSWORD}
-  JDBC_URL: ${MYSQL_HOST}
-  JDBC_USER_NAME: ${MYSQL_USER}
-  JDBC_DATABASE: ${MYSQL_DATABASE}
+  MYSQL_HOST: ${MYSQL_HOST}
+  MYSQL_DATABASE: ${MYSQL_DATABASE}
+  MYSQL_USER: ${MYSQL_USER}
+  MYSQL_PASSWORD: ${MYSQL_PASSWORD}
   RABBIT_HOST: ${RABBIT_HOST}
   REDIS_HOST: ${REDIS_HOST}
+  MYSQL_CONTAINER_NAME: ${MYSQL_CONTAINER_NAME}
+  REDIS_CONTAINER_NAME: ${REDIS_CONTAINER_NAME}
+  RABBIT_CONTAINER_NAME: ${RABBIT_CONTAINER_NAME}
 
 services:
   onlyoffice-identity-authorization:
@@ -22,7 +25,6 @@ services:
     environment:
       <<: *x-common-environment
       SPRING_PROFILES_ACTIVE: ${IDENTITY_PROFILE}
-      SPRING_APPLICATION_NAME: ASC.Identity.Authorization
       SERVER_PORT: ${IDENTITY_AUTHORIZATION_SERVER_PORT}
     healthcheck:
       <<: *x-healthcheck
@@ -39,7 +41,6 @@ services:
     environment:
       <<: *x-common-environment
       SPRING_PROFILES_ACTIVE: ${IDENTITY_PROFILE}
-      SPRING_APPLICATION_NAME: ASC.Identity.Registration
       SERVER_PORT: ${IDENTITY_API_SERVER_PORT}
     healthcheck:
       <<: *x-healthcheck

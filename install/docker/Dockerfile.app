@@ -141,9 +141,11 @@ RUN mkdir -p /var/log/onlyoffice && \
     adduser -S -u 104 -h /var/www/onlyoffice -G onlyoffice onlyoffice && \
     chown onlyoffice:onlyoffice /var/log -R  && \
     chown onlyoffice:onlyoffice /var/www -R && \
-    apk add --no-cache curl
+    apk add --no-cache sudo bash nano curl 
 
+COPY ./docker-identity-entrypoint.sh /usr/bin/docker-identity-entrypoint.sh
 USER onlyoffice
+ENTRYPOINT ["bash", "/usr/bin/docker-identity-entrypoint.sh"]
 
 ## Nginx image ##
 FROM openresty/openresty:focal AS router
@@ -383,19 +385,19 @@ ENTRYPOINT ["./docker-migration-entrypoint.sh"]
 FROM javarun AS identity-authorization
 WORKDIR ${BUILD_PATH}/services/ASC.Identity.Authorization/
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Identity.Authorization/service/ .
-CMD  ["java", "-jar", "app.jar"]
+CMD ["ASC.Identity.Authorization"]
 
 ## ASC.Identity.Registration ##
 FROM javarun AS identity-api
 WORKDIR ${BUILD_PATH}/services/ASC.Identity.Registration/
 COPY --from=base --chown=onlyoffice:onlyoffice  ${BUILD_PATH}/services/ASC.Identity.Registration/service/ .
-CMD ["java", "-jar", "app.jar"]
+CMD ["ASC.Identity.Registration"]
 
 ## ASC.Identity.Migration ##
 FROM javarun AS identity-migration
 WORKDIR ${BUILD_PATH}/services/ASC.Identity.Migration/
 COPY --from=base --chown=onlyoffice:onlyoffice  ${BUILD_PATH}/services/ASC.Identity.Migration/service/ .
-CMD ["java", "-jar", "app.jar"]
+CMD ["ASC.Identity.Migration"]
 
 ## image for k8s bin-share ##
 FROM busybox:latest AS bin_share
