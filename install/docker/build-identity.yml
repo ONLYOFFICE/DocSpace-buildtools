@@ -1,3 +1,7 @@
+x-build: &x-build
+  context: ../../../server/common/ASC.Identity
+  dockerfile: Dockerfile
+  
 x-common-environment: &x-common-environment
   JDBC_PASSWORD: ${MYSQL_ROOT_PASSWORD}
   JDBC_URL: ${MYSQL_HOST}
@@ -8,11 +12,11 @@ x-common-environment: &x-common-environment
 
 services:
   onlyoffice-identity-authorization:
-    build:
-      context: ../../../server/common/ASC.Identity
-      dockerfile: ${IDENTITY_DOCKERFILE}
+    build: 
+      <<: *x-build
       args: 
         - MODULE=authorization/authorization-container
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-authorization:${DOCKER_TAG}"
     container_name: ${IDENTITY_AUTHORIZATION_CONTAINER_NAME}
     restart: always
     ports:
@@ -27,10 +31,10 @@ services:
 
   onlyoffice-identity-api:
     build:
-      context: ../../../server/common/ASC.Identity
-      dockerfile: ${IDENTITY_DOCKERFILE}
+      <<: *x-build
       args: 
         - MODULE=registration/registration-container
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-api:${DOCKER_TAG}"
     container_name: ${IDENTITY_API_CONTAINER_NAME}
     ports:
       - "${IDENTITY_API_SERVER_PORT}:${IDENTITY_API_SERVER_PORT}"
@@ -44,10 +48,10 @@ services:
 
   onlyoffice-identity-migration:
     build:
-      context: ../../../server/common/ASC.Identity
-      dockerfile: ${IDENTITY_DOCKERFILE}
+      <<: *x-build
       args: 
         - MODULE=infrastructure/infrastructure-migration-runner
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-migration:${DOCKER_TAG}"
     container_name: ${IDENTITY_MIGRATION_CONTAINER_NAME} 
     restart: "no"
     ports:
