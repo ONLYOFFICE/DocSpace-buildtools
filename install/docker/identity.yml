@@ -27,6 +27,7 @@ services:
   onlyoffice-identity-authorization:
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-authorization:${DOCKER_TAG}"
     container_name: ${IDENTITY_AUTHORIZATION_CONTAINER_NAME}
+    user: "${UID}:${GID}"
     restart: always
     ports:
       - "${IDENTITY_AUTHORIZATION_SERVER_PORT}:${IDENTITY_AUTHORIZATION_SERVER_PORT}"
@@ -36,12 +37,15 @@ services:
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail ${SERVICE_IDENTITY}/health/ || exit 1
+    volumes:
+      - log_data:/var/log/onlyoffice
     depends_on:
       - onlyoffice-identity-migration
 
   onlyoffice-identity-api:
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-api:${DOCKER_TAG}"
     container_name: ${IDENTITY_API_CONTAINER_NAME}
+    user: "${UID}:${GID}"
     restart: always
     expose:
       - "${IDENTITY_API_SERVER_PORT}"
@@ -51,12 +55,15 @@ services:
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail ${SERVICE_IDENTITY_API}/health/ || exit 1
+    volumes:
+      - log_data:/var/log/onlyoffice
     depends_on:
       - onlyoffice-identity-migration
 
   onlyoffice-identity-migration:
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-migration:${DOCKER_TAG}"
     container_name: ${IDENTITY_MIGRATION_CONTAINER_NAME}
+    user: "${UID}:${GID}"
     restart: on-failure
     expose:
       - "${IDENTITY_MIGRATION_SERVER_PORT}"
@@ -67,3 +74,6 @@ networks:
   default:
     name: ${NETWORK_NAME}
     external: true
+
+volumes:
+  log_data:
