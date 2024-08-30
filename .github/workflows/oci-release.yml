@@ -33,7 +33,13 @@ jobs:
       - name: Create Docker Tarball
         run: |
           cd ${{ env.DOCKER_DIR }}
-          tar -czvf ${{ env.SCRIPT_DIR }}/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
+          tar -czvf ${{ env.SCRIPT_DIR }}/docker.tar.gz \
+            --exclude='config/supervisor*' \
+            --exclude='config/mysql*' \
+            --exclude='config/nginx/docker-entrypoint*' \
+            --exclude='config/createdb.sql' \
+            --exclude='build-*' \
+            *.yml .env config
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1

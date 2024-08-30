@@ -69,13 +69,18 @@ REDIS_PASSWORD = {"Password": os.environ["REDIS_PASSWORD"]} if environ.get("REDI
 REDIS_CONNECTION_HOST = REDIS_HOST if REDIS_HOST else REDIS_CONTAINER_NAME
 
 RABBIT_CONTAINER_NAME = os.environ["RABBIT_CONTAINER_NAME"] if environ.get("RABBIT_CONTAINER_NAME") else "onlyoffice-rabbitmq"
+RABBIT_PROTOCOL = os.environ["RABBIT_PROTOCOL"] if environ.get("RABBIT_PROTOCOL") else "amqp"
 RABBIT_HOST = os.environ["RABBIT_HOST"] if environ.get("RABBIT_HOST") else None
 RABBIT_USER_NAME = os.environ["RABBIT_USER_NAME"] if environ.get("RABBIT_USER_NAME") else "guest"
 RABBIT_PASSWORD = os.environ["RABBIT_PASSWORD"] if environ.get("RABBIT_PASSWORD") else "guest"
 RABBIT_PORT =  os.environ["RABBIT_PORT"] if environ.get("RABBIT_PORT") else "5672"
 RABBIT_VIRTUAL_HOST = os.environ["RABBIT_VIRTUAL_HOST"] if environ.get("RABBIT_VIRTUAL_HOST") else "/"
-RABBIT_URI = {"Uri": os.environ["RABBIT_URI"]} if environ.get("RABBIT_URI") else None
 RABBIT_CONNECTION_HOST = RABBIT_HOST if RABBIT_HOST else RABBIT_CONTAINER_NAME
+RABBIT_URI = (
+    {"Uri": os.environ["RABBIT_URI"]} if os.environ.get("RABBIT_URI")
+    else {"Uri": f"{RABBIT_PROTOCOL}://{RABBIT_USER_NAME}:{RABBIT_PASSWORD}@{RABBIT_HOST}:{RABBIT_PORT}{RABBIT_VIRTUAL_HOST}"}
+    if RABBIT_PROTOCOL == "amqps" and RABBIT_HOST else None
+)
 
 class RunServices:
     def __init__(self, SERVICE_PORT, PATH_TO_CONF):

@@ -8,6 +8,7 @@ services:
       args: 
         - MODULE=authorization/authorization-container
     container_name: ${IDENTITY_AUTHORIZATION_CONTAINER_NAME}
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-identity-authorization:${DOCKER_TAG}"
     restart: always
     ports:
       - 8080:8080
@@ -31,6 +32,7 @@ services:
       args: 
         - MODULE=registration/registration-container
     container_name: ${IDENTITY_API_CONTAINER_NAME}
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-identity-api:${DOCKER_TAG}"
     ports:
       - 9090:9090
     environment:
@@ -53,6 +55,7 @@ services:
       args: 
         - MODULE=infrastructure/infrastructure-migration-runner
     container_name: ${IDENTITY_MIGRATION_CONTAINER_NAME} 
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-identity-migration:${DOCKER_TAG}"
     restart: "no"
     ports:
       - 8081:8081
