@@ -1276,9 +1276,9 @@ install_product () {
 			timeout 30 bash -c "while [ $(docker wait ${PACKAGE_SYSNAME}-migration-runner) -ne 0 ]; do sleep 1; done;" && echo "OK" || echo "FAILED"
 		fi
 	
+		docker-compose -f $BASE_DIR/identity.yml up -d
 		docker-compose -f $BASE_DIR/${PRODUCT}.yml up -d
 		docker-compose -f ${PROXY_YML} up -d
-		docker-compose -f $BASE_DIR/identity.yml up -d
 		docker-compose -f $BASE_DIR/notify.yml up -d
 		docker-compose -f $BASE_DIR/healthchecks.yml up -d
 
