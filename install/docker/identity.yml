@@ -5,6 +5,7 @@ x-healthcheck: &x-healthcheck
   timeout: 10s
 
 x-common-environment: &x-common-environment
+  SPRING_PROFILES_ACTIVE: ${IDENTITY_PROFILE}
   MYSQL_CONTAINER_NAME: ${MYSQL_CONTAINER_NAME}
   MYSQL_HOST: ${MYSQL_HOST}
   MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -31,7 +32,6 @@ services:
       - "${IDENTITY_AUTHORIZATION_SERVER_PORT}:${IDENTITY_AUTHORIZATION_SERVER_PORT}"
     environment:
       <<: *x-common-environment
-      SPRING_PROFILES_ACTIVE: ${IDENTITY_PROFILE}
       SERVER_PORT: ${IDENTITY_AUTHORIZATION_SERVER_PORT}
     healthcheck:
       <<: *x-healthcheck
@@ -47,7 +47,6 @@ services:
       - "${IDENTITY_API_SERVER_PORT}"
     environment:
       <<: *x-common-environment
-      SPRING_PROFILES_ACTIVE: ${IDENTITY_PROFILE}
       SERVER_PORT: ${IDENTITY_API_SERVER_PORT}
     healthcheck:
       <<: *x-healthcheck
