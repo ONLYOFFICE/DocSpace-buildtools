@@ -58,3 +58,22 @@ for i in ${!services_name_backend_nodejs[@]}; do
   cd ${SRC_PATH}/server/common/${services_name_backend_nodejs[$i]}
   yarn install --frozen-lockfile
 done
+
+# Array of names identity services
+IDENTITY_NAMES+=("ASC.Identity.Authorization")
+IDENTITY_NAMES+=("ASC.Identity.Registration")
+IDENTITY_NAMES+=("ASC.Identity.Migration")
+
+IDENTITY_MODULES+=("authorization/authorization-container")
+IDENTITY_MODULES+=("registration/registration-container")
+IDENTITY_MODULES+=("infrastructure/infrastructure-migration-runner")
+
+cd ${SRC_PATH}/server/common/ASC.Identity/
+
+# Build and publish identity services
+mvn dependency:go-offline
+for i in "${!IDENTITY_NAMES[@]}"; do
+  echo "== Build ${IDENTITY_NAMES[$i]} project =="
+  mvn clean package -DskipTests -pl "${IDENTITY_MODULES[$i]}" -am
+  mkdir -p ${IDENTITY_NAMES[$i]} && cp -rf "${IDENTITY_MODULES[$i]}/target/"*.jar "${IDENTITY_NAMES[$i]}/app.jar"
+done

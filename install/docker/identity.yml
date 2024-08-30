@@ -1,72 +1,79 @@
-version: "3.8"
+x-healthcheck: &x-healthcheck
+  interval: 60s
+  retries: 5
+  start_period: 20s
+  timeout: 10s
+
+x-common-environment: &x-common-environment
+  SPRING_PROFILES_ACTIVE: ${IDENTITY_PROFILE}
+  MYSQL_CONTAINER_NAME: ${MYSQL_CONTAINER_NAME}
+  MYSQL_HOST: ${MYSQL_HOST}
+  MYSQL_DATABASE: ${MYSQL_DATABASE}
+  MYSQL_USER: ${MYSQL_USER}
+  MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+  RABBIT_CONTAINER_NAME: ${RABBIT_CONTAINER_NAME}
+  RABBIT_PROTOCOL: ${RABBIT_PROTOCOL}
+  RABBIT_HOST: ${RABBIT_HOST}
+  RABBIT_USER_NAME: ${RABBIT_USER_NAME}
+  RABBIT_PASSWORD: ${RABBIT_PASSWORD}
+  RABBIT_VIRTUAL_HOST: ${RABBIT_VIRTUAL_HOST}
+  REDIS_HOST: ${REDIS_HOST}
+  REDIS_PORT: ${REDIS_PORT}
+  REDIS_USERNAME: ${REDIS_USER_NAME}
+  REDIS_PASSWORD: ${REDIS_PASSWORD}
+  REDIS_CONTAINER_NAME: ${REDIS_CONTAINER_NAME}
 
 services:
   onlyoffice-identity-authorization:
-    build:
-      context: ../../../server/common/ASC.Identity
-      dockerfile: ${IDENTITY_DOCKERFILE}
-      args: 
-        - MODULE=authorization/authorization-container
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-authorization:${DOCKER_TAG}"
     container_name: ${IDENTITY_AUTHORIZATION_CONTAINER_NAME}
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-identity-authorization:${DOCKER_TAG}"
+    user: "${UID}:${GID}"
     restart: always
     ports:
-      - 8080:8080
+      - "${IDENTITY_AUTHORIZATION_SERVER_PORT}:${IDENTITY_AUTHORIZATION_SERVER_PORT}"
     environment:
-      - SPRING_PROFILES_ACTIVE=${IDENTITY_PROFILE}
-      - SPRING_APPLICATION_NAME=ASC.Identity.Authorization
-      - SERVER_PORT=${IDENTITY_AUTHORIZATION_SERVER_PORT}
-      - JDBC_PASSWORD=${JDBC_PASSWORD}
-      - JDBC_URL=${JDBC_URL}
-      - JDBC_USER_NAME=${JDBC_USER_NAME}
-      - JDBC_DATABASE=${JDBC_DATABASE}
-      - RABBIT_HOST=onlyoffice-rabbitmq
-      - REDIS_HOST=onlyoffice-redis
+      <<: *x-common-environment
+      SERVER_PORT: ${IDENTITY_AUTHORIZATION_SERVER_PORT}
+    healthcheck:
+      <<: *x-healthcheck
+      test: curl --fail ${SERVICE_IDENTITY}/health/ || exit 1
+    volumes:
+      - log_data:/var/log/onlyoffice
     depends_on:
       - onlyoffice-identity-migration
 
   onlyoffice-identity-api:
-    build:
-      context: ../../../server/common/ASC.Identity
-      dockerfile: ${IDENTITY_DOCKERFILE}
-      args: 
-        - MODULE=registration/registration-container
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-api:${DOCKER_TAG}"
     container_name: ${IDENTITY_API_CONTAINER_NAME}
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-identity-api:${DOCKER_TAG}"
-    ports:
-      - 9090:9090
+    user: "${UID}:${GID}"
+    restart: always
+    expose:
+      - "${IDENTITY_API_SERVER_PORT}"
     environment:
-      - SPRING_PROFILES_ACTIVE=${PROFILE}
-      - SPRING_APPLICATION_NAME=ASC.Identity.Registration
-       - SERVER_PORT=${IDENTITY_API_SERVER_PORT}
-      - JDBC_PASSWORD=${JDBC_PASSWORD}
-      - JDBC_URL=${JDBC_URL}
-      - JDBC_USER_NAME=${JDBC_USER_NAME}
-      - JDBC_DATABASE=${JDBC_DATABASE}
-      - RABBIT_HOST=onlyoffice-rabbitmq
-      - REDIS_HOST=onlyoffice-redis
+      <<: *x-common-environment
+      SERVER_PORT: ${IDENTITY_API_SERVER_PORT}
+    healthcheck:
+      <<: *x-healthcheck
+      test: curl --fail ${SERVICE_IDENTITY_API}/health/ || exit 1
+    volumes:
+      - log_data:/var/log/onlyoffice
     depends_on:
       - onlyoffice-identity-migration
 
   onlyoffice-identity-migration:
-    build:
-      context: ../../../server/common/ASC.Identity
-      dockerfile: ${IDENTITY_DOCKERFILE}
-      args: 
-        - MODULE=infrastructure/infrastructure-migration-runner
-    container_name: ${IDENTITY_MIGRATION_CONTAINER_NAME} 
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-identity-migration:${DOCKER_TAG}"
-    restart: "no"
-    ports:
-      - 8081:8081
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-migration:${DOCKER_TAG}"
+    container_name: ${IDENTITY_MIGRATION_CONTAINER_NAME}
+    user: "${UID}:${GID}"
+    restart: on-failure
+    expose:
+      - "${IDENTITY_MIGRATION_SERVER_PORT}"
     environment:
-      - JDBC_PASSWORD=${JDBC_PASSWORD}
-      - JDBC_URL=${JDBC_URL}
-      - JDBC_USER_NAME=${JDBC_USER_NAME}
-      - JDBC_DATABASE=${JDBC_DATABASE}
-      - RABBIT_HOST=onlyoffice-rabbitmq
-      - REDIS_HOST=onlyoffice-redis
+      <<: *x-common-environment
+
 networks:
   default:
     name: ${NETWORK_NAME}
     external: true
+
+volumes:
+  log_data:
