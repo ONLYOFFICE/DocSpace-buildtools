@@ -202,7 +202,7 @@ subprocess.run(["docker", "compose", "-f", os.path.join(dockerDir, "docspace.pro
 
 if identity:
     print("Run identity")
-    subprocess.run(["docker-compose", "-f",os.path.join(dockerDir, "identity.yml"), "up", "-d" ])
+    subprocess.run(["docker-compose", "-f",os.path.join(dockerDir, "build-identity.yml"), "up", "-d" ])
 
 print()
 print("Run script directory:", dir)

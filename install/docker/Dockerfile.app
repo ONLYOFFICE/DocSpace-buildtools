@@ -29,9 +29,12 @@ RUN apt-get -y update && \
     locales \
     git \
     python3-pip \
+    maven \
     npm  && \
     locale-gen en_US.UTF-8 && \
     npm install --global yarn && \
+    wget -O openjdk-21-jdk.deb https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.deb && \
+    dpkg -i openjdk-21-jdk.deb && apt-get install -f && \
     echo "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list && \
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/nodesource.gpg --import && \
     chmod 644 /usr/share/keyrings/nodesource.gpg && \
@@ -127,6 +130,22 @@ COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onl
 USER onlyoffice
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
+
+FROM eclipse-temurin:21-jre-alpine AS javarun
+ARG BUILD_PATH
+ENV BUILD_PATH=${BUILD_PATH}
+
+RUN mkdir -p /var/log/onlyoffice && \
+    mkdir -p /var/www/onlyoffice && \
+    addgroup -S -g 107 onlyoffice && \
+    adduser -S -u 104 -h /var/www/onlyoffice -G onlyoffice onlyoffice && \
+    chown onlyoffice:onlyoffice /var/log -R  && \
+    chown onlyoffice:onlyoffice /var/www -R && \
+    apk add --no-cache sudo bash nano curl 
+
+COPY ./docker-identity-entrypoint.sh /usr/bin/docker-identity-entrypoint.sh
+USER onlyoffice
+ENTRYPOINT ["bash", "/usr/bin/docker-identity-entrypoint.sh"]
 
 ## Nginx image ##
 FROM openresty/openresty:focal AS router
@@ -361,6 +380,24 @@ COPY  ./docker-migration-entrypoint.sh ./docker-migration-entrypoint.sh
 COPY --from=base ${SRC_PATH}/server/ASC.Migration.Runner/service/ .
 
 ENTRYPOINT ["./docker-migration-entrypoint.sh"]
+
+## ASC.Identity.Authorization ##
+FROM javarun AS identity-authorization
+WORKDIR ${BUILD_PATH}/services/ASC.Identity.Authorization/
+COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Identity.Authorization/service/ .
+CMD ["ASC.Identity.Authorization"]
+
+## ASC.Identity.Registration ##
+FROM javarun AS identity-api
+WORKDIR ${BUILD_PATH}/services/ASC.Identity.Registration/
+COPY --from=base --chown=onlyoffice:onlyoffice  ${BUILD_PATH}/services/ASC.Identity.Registration/service/ .
+CMD ["ASC.Identity.Registration"]
+
+## ASC.Identity.Migration ##
+FROM javarun AS identity-migration
+WORKDIR ${BUILD_PATH}/services/ASC.Identity.Migration/
+COPY --from=base --chown=onlyoffice:onlyoffice  ${BUILD_PATH}/services/ASC.Identity.Migration/service/ .
+CMD ["ASC.Identity.Migration"]
 
 ## image for k8s bin-share ##
 FROM busybox:latest AS bin_share

@@ -1,0 +1,65 @@
+x-build: &x-build
+  context: ../../../server/common/ASC.Identity
+  dockerfile: Dockerfile
+  
+x-common-environment: &x-common-environment
+  JDBC_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+  JDBC_URL: ${MYSQL_HOST}
+  JDBC_USER_NAME: root
+  JDBC_DATABASE: ${MYSQL_DATABASE}
+  RABBIT_HOST: ${RABBIT_CONTAINER_NAME}
+  REDIS_HOST: ${REDIS_CONTAINER_NAME}
+
+services:
+  onlyoffice-identity-authorization:
+    build: 
+      <<: *x-build
+      args: 
+        - MODULE=authorization/authorization-container
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-authorization:${DOCKER_TAG}"
+    container_name: ${IDENTITY_AUTHORIZATION_CONTAINER_NAME}
+    restart: always
+    ports:
+      - "${IDENTITY_AUTHORIZATION_SERVER_PORT}:${IDENTITY_AUTHORIZATION_SERVER_PORT}"
+    environment:
+      <<: *x-common-environment
+      SPRING_PROFILES_ACTIVE: ${IDENTITY_PROFILE}
+      SPRING_APPLICATION_NAME: ASC.Identity.Authorization
+      SERVER_PORT: ${IDENTITY_AUTHORIZATION_SERVER_PORT}
+    depends_on:
+      - onlyoffice-identity-migration
+
+  onlyoffice-identity-api:
+    build:
+      <<: *x-build
+      args: 
+        - MODULE=registration/registration-container
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-api:${DOCKER_TAG}"
+    container_name: ${IDENTITY_API_CONTAINER_NAME}
+    ports:
+      - "${IDENTITY_API_SERVER_PORT}:${IDENTITY_API_SERVER_PORT}"
+    environment:
+      <<: *x-common-environment
+      SPRING_PROFILES_ACTIVE: ${IDENTITY_PROFILE}
+      SPRING_APPLICATION_NAME: ASC.Identity.Registration
+      SERVER_PORT: ${IDENTITY_API_SERVER_PORT}
+    depends_on:
+      - onlyoffice-identity-migration
+
+  onlyoffice-identity-migration:
+    build:
+      <<: *x-build
+      args: 
+        - MODULE=infrastructure/infrastructure-migration-runner
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-migration:${DOCKER_TAG}"
+    container_name: ${IDENTITY_MIGRATION_CONTAINER_NAME} 
+    restart: "no"
+    ports:
+      - "${IDENTITY_MIGRATION_SERVER_PORT}:${IDENTITY_MIGRATION_SERVER_PORT}"
+    environment:
+      <<: *x-common-environment
+
+networks:
+  default:
+    name: ${NETWORK_NAME}
+    external: true
