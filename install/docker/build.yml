@@ -138,3 +138,24 @@ services:
       dockerfile: "${DOCKERFILE}"
       target: healthchecks
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-healthchecks:${DOCKER_TAG}"
+
+  onlyoffice-identity-authorization:
+    build:
+      context:  ./
+      dockerfile: "${DOCKERFILE}"
+      target: identity-authorization
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-identity-authorization:${DOCKER_TAG}"
+
+  onlyoffice-identity-api:
+    build:
+      context:  ./
+      dockerfile: "${DOCKERFILE}"
+      target: identity-api
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-identity-api:${DOCKER_TAG}"
+
+  onlyoffice-identity-migration:
+    build:
+      context:  ./
+      dockerfile: "${DOCKERFILE}"
+      target: identity-migration
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-identity-migration:${DOCKER_TAG}"

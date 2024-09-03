@@ -1,6 +1,6 @@
 services:
   onlyoffice-opensearch-dashboards:
-    image: opensearchproject/opensearch-dashboards:${DASHBOARDS_VERSION}
+    image: ${HUB}${DASHBOARDS_IMAGE_NAME}
     container_name: ${DASHBOARDS_CONTAINER_NAME}
     restart: always
     environment:
@@ -9,6 +9,12 @@ services:
       - "SERVER_BASEPATH=/dashboards"
     expose:
       - "5601"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5601/api/status"]
+      interval: 10s
+      retries: 3
+      start_period: 10s
+      timeout: 10s
 
 networks:
   default:
