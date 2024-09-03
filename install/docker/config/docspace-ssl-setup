@@ -151,14 +151,13 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
       #Checking whether the certificate is self-signed
       if [[ -n "$CERTIFICATE_SUBJECT" && -n "$CERTIFICATE_ISSUER" && "$CERTIFICATE_SUBJECT" == "$CERTIFICATE_ISSUER" ]]; then
         sed -i '/app_data:\/.*/a \    - ${CERTIFICATE_PATH}:${CERTIFICATE_PATH}' ${DOCKERCOMPOSE}/docspace.yml
-        docker-compose -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-doceditor onlyoffice-login onlyoffice-socket onlyoffice-ssoauth
         sed -i '/app_data:\/.*/a \      - ${CERTIFICATE_PATH}:/var/www/onlyoffice/Data/certs/extra-ca-certs.pem' ${DOCKERCOMPOSE}/ds.yml
         docker-compose -f ${DOCKERCOMPOSE}/ds.yml up --force-recreate -d
       fi
     fi
 
     docker-compose -f ${DOCKERCOMPOSE}/proxy-ssl.yml up --force-recreate -d
-    docker-compose -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-files
+    docker-compose -f ${DOCKERCOMPOSE}/docspace.yml -f ${DOCKERCOMPOSE}/notify.yml up --force-recreate -d
 
     echo "OK"
   else
