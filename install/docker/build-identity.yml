@@ -7,8 +7,8 @@ x-common-environment: &x-common-environment
   JDBC_URL: ${MYSQL_HOST}
   JDBC_USER_NAME: root
   JDBC_DATABASE: ${MYSQL_DATABASE}
-  RABBIT_HOST: ${RABBIT_CONTAINER_NAME}
   REDIS_HOST: ${REDIS_CONTAINER_NAME}
+  RABBIT_URI: ${RABBIT_PROTOCOL}://amqp:${RABBIT_PASSWORD}@${RABBIT_CONTAINER_NAME}${RABBIT_VIRTUAL_HOST}
 
 services:
   onlyoffice-identity-authorization:
