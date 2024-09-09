@@ -55,6 +55,13 @@ $path_prereq = "${pwd}\buildtools\install\win\"
 $opensearch_version = '2.11.1'
 
 $prerequisites = @(
+  
+  @{  
+    download_allways = $false; 
+    name = "nuget.exe"; 
+    link = "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe";
+  }
+
   @{
     download_allways = $false;
     name = "opensearch-${opensearch_version}.zip";
@@ -100,15 +107,6 @@ $prerequisites = @(
   }
 )
 
-$path_nuget_packages = "${pwd}\server\.nuget\packages\"
-
-$nuget_packages = @(
-  @{  
-    download_allways = $false; 
-    name = "rabbitmq.client.3.6.5.nupkg"; 
-    link = "https://www.nuget.org/api/v2/package/RabbitMQ.Client/3.6.5";
-  }
-)
 
 $path_enterprise_prereq = "${pwd}\buildtools\install\win\redist\"
 
@@ -217,7 +215,5 @@ $enterprise_prerequisites = @(
 )
 
 DownloadComponents $prerequisites $path_prereq
-
-DownloadComponents $nuget_packages $path_nuget_packages
 
 DownloadComponents $enterprise_prerequisites $path_enterprise_prereq
