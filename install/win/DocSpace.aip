@@ -15,6 +15,7 @@
     <ROW Property="ALLUSERS" Value="1"/>
     <ROW Property="AMQP_HOST" Value="localhost" ValueLocId="-"/>
     <ROW Property="AMQP_PORT" Value="5672" ValueLocId="-"/>
+    <ROW Property="AMQP_PROTOCOL" Value="amqp" ValueLocId="-"/>
     <ROW Property="AMQP_PWD" Value="guest" ValueLocId="-"/>
     <ROW Property="AMQP_USER" Value="guest" ValueLocId="-"/>
     <ROW Property="AMQP_VHOST" Value="/" ValueLocId="-"/>
@@ -395,6 +396,7 @@
     <ROW JsonProperty="Root_9" Name="Root" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="Scheme" Parent="elastic" Name="Scheme" Condition="1" Order="1" Flags="57" Value="[OPENSEARCH_SCHEME]"/>
     <ROW JsonProperty="TeamlabsiteProviders" Parent="options" Name="TeamlabsiteProviders" Condition="1" Order="1" Flags="61"/>
+    <ROW JsonProperty="Uri" Parent="RabbitMQ" Name="Uri" Condition="1" Order="6" Flags="57" Value="[AMQP_PROTOCOL]://[AMQP_USER]:[AMQP_PWD]@[AMQP_HOST]:[AMQP_PORT][AMQP_VHOST]"/>
     <ROW JsonProperty="UserName" Parent="RabbitMQ" Name="UserName" Condition="1" Order="1" Flags="57" Value="[AMQP_USER]"/>
     <ROW JsonProperty="VirtualHost" Parent="RabbitMQ" Name="VirtualHost" Condition="1" Order="4" Flags="57" Value="[AMQP_VHOST]"/>
     <ROW JsonProperty="_" Parent="Hosts" Name="0" Condition="1" Order="0" Flags="60"/>
@@ -739,16 +741,18 @@
     <ROW Dialog_="RabbitMQConnectionDlg" Control="BottomLine" Type="Line" X="5" Y="234" Width="368" Height="0" Attributes="1" Order="600"/>
     <ROW Dialog_="RabbitMQConnectionDlg" Control="Description" Type="Text" X="25" Y="23" Width="280" Height="20" Attributes="196611" Text="Configure RabbitMQ Connection..." Order="700"/>
     <ROW Dialog_="RabbitMQConnectionDlg" Control="Text_1" Type="Text" X="15" Y="6" Width="289" Height="15" Attributes="196611" Text="RabbitMQ connection settings" TextStyle="[DlgTitleFont]" Order="800"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="ServerLabel" Type="Text" X="25" Y="65" Width="65" Height="11" Attributes="65539" Text="Server:" Order="900" TextLocId="Control.Text.SQLConnectionDlg#ServerLabel"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="PortLabel" Type="Text" X="25" Y="92" Width="65" Height="11" Attributes="65539" Text="Port:" Order="1000" TextLocId="Control.Text.SQLConnectionDlg#PortLabel"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="DatabaseLabel" Type="Text" X="25" Y="119" Width="65" Height="11" Attributes="65539" Text="Virtual Host:" Order="1100"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="UsernameLabel" Type="Text" X="25" Y="148" Width="65" Height="11" Attributes="65539" Text="Username:" Order="1200" TextLocId="Control.Text.SQLConnectionDlg#UsernameLabel"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="PasswordLabel" Type="Text" X="25" Y="176" Width="73" Height="11" Attributes="65539" Text="Password:" Order="1300" TextLocId="Control.Text.SQLConnectionDlg#PasswordLabel"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="Edit_1" Type="Edit" X="98" Y="63" Width="253" Height="18" Attributes="3" Property="AMQP_HOST" Text="{260}" Order="1400"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="PortEdit" Type="Edit" X="98" Y="89" Width="253" Height="18" Attributes="19" Property="AMQP_PORT" Text="{5}" Order="1500"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="DatabaseEdit" Type="Edit" X="98" Y="116" Width="253" Height="18" Attributes="3" Property="AMQP_VHOST" Text="{255}" Order="1600"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="UsernameEdit" Type="Edit" X="98" Y="143" Width="253" Height="18" Attributes="3" Property="AMQP_USER" Text="[LogonUser]" Order="1700"/>
-    <ROW Dialog_="RabbitMQConnectionDlg" Control="PasswordEdit" Type="Edit" X="98" Y="171" Width="253" Height="18" Attributes="2097155" Property="AMQP_PWD" Text="{255}" Order="1800"/>
+    <ROW Dialog_="RabbitMQConnectionDlg" Control="ServerLabel" Type="Text" X="24" Y="85" Width="65" Height="11" Attributes="65539" Text="Server:" Order="900" TextLocId="Control.Text.SQLConnectionDlg#ServerLabel"/>
+    <ROW Dialog_="RabbitMQConnectionDlg" Control="PortLabel" Type="Text" X="24" Y="112" Width="65" Height="11" Attributes="65539" Text="Port:" Order="1000" TextLocId="Control.Text.SQLConnectionDlg#PortLabel"/>
+    <ROW Dialog_="RabbitMQConnectionDlg" Control="DatabaseLabel" Type="Text" X="24" Y="139" Width="65" Height="11" Attributes="65539" Text="Virtual Host:" Order="1100"/>
+    <ROW Dialog_="RabbitMQConnectionDlg" Control="UsernameLabel" Type="Text" X="24" Y="167" Width="65" Height="11" Attributes="65539" Text="Username:" Order="1200" TextLocId="Control.Text.SQLConnectionDlg#UsernameLabel"/>
+    <ROW Dialog_="RabbitMQConnectionDlg" Control="PasswordLabel" Type="Text" X="24" Y="196" Width="73" Height="11" Attributes="65539" Text="Password:" Order="1300" TextLocId="Control.Text.SQLConnectionDlg#PasswordLabel"/>
+    <ROW Dialog_="RabbitMQConnectionDlg" Control="Edit_1" Type="Edit" X="97" Y="83" Width="253" Height="18" Attributes="3" Property="AMQP_HOST" Text="{260}" Order="1400"/>
+    <ROW Dialog_="RabbitMQConnectionDlg" Control="PortEdit" Type="Edit" X="97" Y="109" Width="253" Height="18" Attributes="19" Property="AMQP_PORT" Text="{5}" Order="1500"/>
+    <ROW Dialog_="RabbitMQConnectionDlg" Control="DatabaseEdit" Type="Edit" X="97" Y="136" Width="253" Height="18" Attributes="3" Property="AMQP_VHOST" Text="{255}" Order="1600"/>
+    <ROW Dialog_="RabbitMQConnectionDlg" Control="UsernameEdit" Type="Edit" X="97" Y="163" Width="253" Height="18" Attributes="3" Property="AMQP_USER" Text="[LogonUser]" Order="1700"/>
+    <ROW Dialog_="RabbitMQConnectionDlg" Control="PasswordEdit" Type="Edit" X="97" Y="191" Width="253" Height="18" Attributes="2097155" Property="AMQP_PWD" Text="{255}" Order="1800"/>
+    <ROW Dialog_="RabbitMQConnectionDlg" Control="ProtocolLabel" Type="Text" X="24" Y="61" Width="75" Height="9" Attributes="65539" Property="TEXT_2_PROP" Text="Protocol:" Order="1900"/>
+    <ROW Dialog_="RabbitMQConnectionDlg" Control="ProtocolEdit" Type="Edit" X="97" Y="56" Width="253" Height="18" Attributes="3" Property="AMQP_PROTOCOL" Text="{260}" Order="2000"/>
     <ROW Dialog_="RedisServerConnectionDlg" Control="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Attributes="3" Text="[ButtonText_Next]" Order="100" Options="1"/>
     <ROW Dialog_="RedisServerConnectionDlg" Control="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Attributes="3" Text="[ButtonText_Cancel]" Order="200" Options="1"/>
     <ROW Dialog_="RedisServerConnectionDlg" Control="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Attributes="3" Text="[ButtonText_Back]" Order="300" Options="1"/>
