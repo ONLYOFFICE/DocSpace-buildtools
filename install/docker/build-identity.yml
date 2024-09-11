@@ -3,11 +3,11 @@ x-build: &x-build
   dockerfile: Dockerfile
 
 x-common-environment: &x-common-environment
-  JDBC_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-  JDBC_URL: ${MYSQL_HOST}
+  JDBC_PASSWORD: my-secret-pw
+  JDBC_URL: onlyoffice-mysql-server
   JDBC_USER_NAME: root
-  JDBC_DATABASE: ${MYSQL_DATABASE}
-  REDIS_HOST: ${REDIS_CONTAINER_NAME}
+  JDBC_DATABASE: docspace
+  REDIS_HOST: onlyoffice-redis
   RABBIT_URI: amqp://guest:guest@onlyoffice-rabbitmq
 
 services:
@@ -20,12 +20,12 @@ services:
     container_name: ${IDENTITY_AUTHORIZATION_CONTAINER_NAME}
     restart: always
     ports:
-      - "${IDENTITY_AUTHORIZATION_SERVER_PORT}:${IDENTITY_AUTHORIZATION_SERVER_PORT}"
+      - 8080:8080
     environment:
       <<: *x-common-environment
-      SPRING_PROFILES_ACTIVE: ${IDENTITY_PROFILE}
+      SPRING_PROFILES_ACTIVE: dev
       SPRING_APPLICATION_NAME: ASC.Identity.Authorization
-      SERVER_PORT: ${IDENTITY_AUTHORIZATION_SERVER_PORT}
+      SERVER_PORT: 8080
     depends_on:
       - onlyoffice-identity-migration
 
@@ -37,12 +37,12 @@ services:
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-api:${DOCKER_TAG}"
     container_name: ${IDENTITY_API_CONTAINER_NAME}
     ports:
-      - "${IDENTITY_API_SERVER_PORT}:${IDENTITY_API_SERVER_PORT}"
+      - 9090:9090
     environment:
       <<: *x-common-environment
-      SPRING_PROFILES_ACTIVE: ${IDENTITY_PROFILE}
+      SPRING_PROFILES_ACTIVE: dev
       SPRING_APPLICATION_NAME: ASC.Identity.Registration
-      SERVER_PORT: ${IDENTITY_API_SERVER_PORT}
+      SERVER_PORT: 9090
     depends_on:
       - onlyoffice-identity-migration
 
@@ -55,7 +55,7 @@ services:
     container_name: ${IDENTITY_MIGRATION_CONTAINER_NAME}
     restart: "no"
     ports:
-      - "${IDENTITY_MIGRATION_SERVER_PORT}:${IDENTITY_MIGRATION_SERVER_PORT}"
+      - 8081:8081
     environment:
       <<: *x-common-environment
 
