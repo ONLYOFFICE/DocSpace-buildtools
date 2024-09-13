@@ -950,7 +950,8 @@ read_continue_installation () {
 }
 
 domain_check () {
-	APP_DOMAIN_PORTAL=${LETS_ENCRYPT_DOMAIN:-${APP_URL_PORTAL:-$(get_env_parameter "APP_URL_PORTAL" "${PACKAGE_SYSNAME}-files" | awk -F[/:] '{if ($1 == "https") print $4; else print ""}')}}
+	APP_DOMAIN_PORTAL=$(cut -d ',' -f 1 <<< "$LETS_ENCRYPT_DOMAIN")
+	APP_DOMAIN_PORTAL=${APP_DOMAIN_PORTAL:-${APP_URL_PORTAL:-$(get_env_parameter "APP_URL_PORTAL" "${PACKAGE_SYSNAME}-files" | awk -F[/:] '{if ($1 == "https") print $4; else print ""}')}}
 
 	while IFS= read -r DOMAIN; do
 		IP_ADDRESS=$(ping -c 1 -W 1 $DOMAIN | grep -oP '(\d+\.\d+\.\d+\.\d+)' | head -n 1)
