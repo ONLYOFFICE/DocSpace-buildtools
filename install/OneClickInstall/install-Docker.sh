@@ -39,7 +39,7 @@ PROXY_YML="${BASE_DIR}/proxy.yml"
 STATUS=""
 DOCKER_TAG=""
 INSTALLATION_TYPE="ENTERPRISE"
-IMAGE_NAME="${PACKAGE_SYSNAME}/${PRODUCT}-api"
+IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-api"
 CONTAINER_NAME="${PACKAGE_SYSNAME}-api"
 
 NETWORK_NAME=${PACKAGE_SYSNAME}
@@ -87,6 +87,7 @@ REDIS_PORT=""
 REDIS_USER_NAME=""
 REDIS_PASSWORD=""
 
+RABBIT_PROTOCOL=""
 RABBIT_HOST=""
 RABBIT_PORT=""
 RABBIT_USER_NAME=""
@@ -105,8 +106,9 @@ LETS_ENCRYPT_DOMAIN=""
 LETS_ENCRYPT_MAIL=""
 
 HELP_TARGET="install-Docker.sh";
+OFFLINE_INSTALLATION="false"
 
-SKIP_HARDWARE_CHECK="false";
+SKIP_HARDWARE_CHECK="false"
 
 EXTERNAL_PORT="80"
 
@@ -408,6 +410,13 @@ while [ "$1" != "" ]; do
 			fi
 		;;
 
+		-rbpr | --rabbitmqprotocol )
+			if [ "$2" != "" ]; then
+				RABBIT_PROTOCOL=$2
+				shift
+			fi
+		;;
+
 		-rbth | --rabbitmqhost )
 			if [ "$2" != "" ]; then
 				RABBIT_HOST=$2
@@ -491,6 +500,13 @@ while [ "$1" != "" ]; do
 				shift
 			fi
 		;;
+		
+		-off | --offline )
+			if [ "$2" != "" ]; then
+				OFFLINE_INSTALLATION=$2
+				shift
+			fi
+		;;
 
 		-? | -h | --help )
 			echo "  Usage: bash $HELP_TARGET [PARAMETER] [[PARAMETER], ...]"
@@ -528,6 +544,7 @@ while [ "$1" != "" ]; do
 			echo "      -rdsp, --redisport                redis server port number (default value 6379)"
 			echo "      -rdsu, --redisusername            redis user name"
 			echo "      -rdspass, --redispassword         password set for redis account"
+			echo "      -rbpr, --rabbitmqprotocol         the protocol for the connection to rabbitmq server (default value amqp)"
 			echo "      -rbth, --rabbitmqhost             the IP address or hostname of the rabbitmq server"
 			echo "      -rbtp, --rabbitmqport             rabbitmq server port number (default value 5672)"
 			echo "      -rbtu, --rabbitmqusername         username for rabbitmq server account"
@@ -543,6 +560,7 @@ while [ "$1" != "" ]; do
 			echo "      -lem, --letsencryptmail           defines the domain administator mail address for Let's Encrypt certificate"
 			echo "      -cf, --certfile                   path to the certificate file for the domain"
 			echo "      -ckf, --certkeyfile               path to the private key file for the certificate"
+			echo "      -off, --offline                   set the script for offline installation (true|false)"
 			echo "      -noni, --noninteractive           auto confirm all questions (true|false)"
 			echo "      -dbm, --databasemigration         database migration (true|false)"
 			echo "      -ms, --makeswap                   make swap file (true|false)"
@@ -583,7 +601,7 @@ root_checking () {
 	fi
 }
 
-command_exists () {
+is_command_exists () {
     type "$1" &> /dev/null;
 }
 
@@ -738,22 +756,20 @@ check_hardware () {
 	fi
 }
 
-install_service () {
-	local COMMAND_NAME=$1
-	local PACKAGE_NAME=$2
+install_package () {
+	if ! is_command_exists $1; then
+		local COMMAND_NAME=$1
+		local PACKAGE_NAME=${2:-"$COMMAND_NAME"}
+		local PACKAGE_NAME_APT=${PACKAGE_NAME%%|*}
+		local PACKAGE_NAME_YUM=${PACKAGE_NAME##*|}
 
-	PACKAGE_NAME=${PACKAGE_NAME:-"$COMMAND_NAME"}
+		if is_command_exists apt-get; then
+			apt-get -y -q install ${PACKAGE_NAME_APT:-$PACKAGE_NAME}
+		elif is_command_exists yum; then
+			yum -y install ${PACKAGE_NAME_YUM:-$PACKAGE_NAME}
+		fi
 
-	if command_exists apt-get; then
-		apt-get -y update -qq
-		apt-get -y -q install $PACKAGE_NAME
-	elif command_exists yum; then
-		yum -y install $PACKAGE_NAME
-	fi
-
-	if ! command_exists $COMMAND_NAME; then
-		echo "Command $COMMAND_NAME not found"
-		exit 1;
+		is_command_exists $COMMAND_NAME || { echo "Command $COMMAND_NAME not found"; exit 1; }
 	fi
 }
 
@@ -766,10 +782,6 @@ check_ports () {
 	RESERVED_PORTS=();
 	ARRAY_PORTS=();
 	USED_PORTS="";
-
-	if ! command_exists netstat; then
-		install_service netstat net-tools
-	fi
 
 	if [ "${EXTERNAL_PORT//[0-9]}" = "" ]; then
 		for RESERVED_PORT in "${RESERVED_PORTS[@]}"
@@ -845,21 +857,11 @@ check_docker_version () {
 	done
 }
 
-install_docker_using_script () {
-	if ! command_exists curl ; then
-		install_service curl
-	fi
-
-	curl -fsSL https://get.docker.com -o get-docker.sh
-	sh get-docker.sh
-	rm get-docker.sh
-}
-
 install_docker () {
 
 	if [ "${DIST}" == "Ubuntu" ] || [ "${DIST}" == "Debian" ] || [[ "${DIST}" == CentOS* ]] || [ "${DIST}" == "Fedora" ]; then
 
-		install_docker_using_script
+		curl -fsSL https://get.docker.com | bash
 		systemctl start docker
 		systemctl enable docker
 
@@ -905,7 +907,7 @@ install_docker () {
 
 	fi
 
-	if ! command_exists docker ; then
+	if ! is_command_exists docker ; then
 		echo "error while installing docker"
 		exit 1;
 	fi
@@ -948,30 +950,6 @@ read_continue_installation () {
 }
 
 domain_check () {
-	if ! command_exists dig; then
-		if command_exists apt-get; then
-			install_service dig dnsutils
-		elif command_exists yum; then
-			install_service dig bind-utils
-		fi
-	fi
-
-	if ! command_exists ping; then
-		if command_exists apt-get; then
-			install_service ping iputils-ping
-		elif command_exists yum; then
-			install_service ping iputils
-		fi
-	fi
-
-	if ! command_exists ip; then
-		if command_exists apt-get; then
-			install_service ip iproute2
-		elif command_exists yum; then
-			install_service ip iproute
-		fi
-	fi
-
 	APP_DOMAIN_PORTAL=${LETS_ENCRYPT_DOMAIN:-${APP_URL_PORTAL:-$(get_env_parameter "APP_URL_PORTAL" "${PACKAGE_SYSNAME}-files" | awk -F[/:] '{if ($1 == "https") print $4; else print ""}')}}
 
 	while IFS= read -r DOMAIN; do
@@ -1003,15 +981,8 @@ domain_check () {
 
 establish_conn() {
 	echo -n "Trying to establish $3 connection... "
-  
-	exec {FD}<> /dev/tcp/$1/$2 && exec {FD}>&-
 
-	if [ "$?" != 0 ]; then
-		echo "FAILURE";
-		exit 1;
-	fi
-
-	echo "OK"
+	exec {FD}<> /dev/tcp/${1}/${2} && { exec {FD}>&-; echo "OK"; } || { echo "FAILURE"; exit 1; }
 }
 
 get_env_parameter () {
@@ -1023,7 +994,7 @@ get_env_parameter () {
 		exit 1;
 	fi
 
-	if command_exists docker ; then
+	if is_command_exists docker ; then
 		[ -n "$CONTAINER_NAME" ] && CONTAINER_EXIST=$(docker ps -aqf "name=$CONTAINER_NAME");
 
 		if [[ -n ${CONTAINER_EXIST} ]]; then
@@ -1038,74 +1009,47 @@ get_env_parameter () {
 	echo ${VALUE//\"}
 }
 
-get_available_version () {
-	if [[ -z "$1" ]]; then
-		echo "image name is empty";
-		exit 1;
-	fi
-
-	if ! command_exists curl ; then
-		install_curl;
-	fi
-
-	CREDENTIALS="";
-	AUTH_HEADER="";
-	TAGS_RESP="";
-
+get_tag_from_hub () {
 	if [[ -n ${HUB} ]]; then
-		DOCKER_CONFIG="$HOME/.docker/config.json";
-
-		if [[ -f "$DOCKER_CONFIG" ]]; then
-			CREDENTIALS=$(jq -r '.auths."'$HUB'".auth' < "$DOCKER_CONFIG");
-			if [ "$CREDENTIALS" == "null" ]; then
-				CREDENTIALS="";
-			fi
+		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
+			CREDENTIALS=$(echo -n "$USERNAME:$PASSWORD" | base64)
+		elif [[ -f "$HOME/.docker/config.json" ]]; then
+			CREDENTIALS=$(jq -r --arg hub "${HUB}" '.auths | to_entries[] | select(.key | contains($hub)).value.auth // empty' "$HOME/.docker/config.json")
 		fi
 
-		if [[ -z ${CREDENTIALS} && -n ${USERNAME} && -n ${PASSWORD} ]]; then
-			CREDENTIALS=$(echo -n "$USERNAME:$PASSWORD" | base64);
-		fi
+		[[ -n ${CREDENTIALS} ]] && AUTH_HEADER="Authorization: Basic $CREDENTIALS"
 
-		if [[ -n ${CREDENTIALS} ]]; then
-			AUTH_HEADER="Authorization: Basic $CREDENTIALS";
-		fi
-
-		REPO=$(echo $1 | sed "s/$HUB\///g");
-		TAGS_RESP=$(curl -s -H "$AUTH_HEADER" -X GET https://$HUB/v2/$REPO/tags/list);
-		TAGS_RESP=$(echo $TAGS_RESP | jq -r '.tags')
+		HUB_URL="https://${HUB}/v2/${1/#$HUB\//}/tags/list"
+		JQ_FILTER='.tags | join("\n")'
 	else
 		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
-			CREDENTIALS="{\"username\":\"$USERNAME\",\"password\":\"$PASSWORD\"}";
-		fi
-
-		if [[ -n ${CREDENTIALS} ]]; then
-			LOGIN_RESP=$(curl -s -H "Content-Type: application/json" -X POST -d "$CREDENTIALS" https://hub.docker.com/v2/users/login/);
-			TOKEN=$(echo $LOGIN_RESP | jq -r '.token');
-			AUTH_HEADER="Authorization: JWT $TOKEN";
+			CREDENTIALS="{\"username\":\"$USERNAME\",\"password\":\"$PASSWORD\"}"
+			TOKEN=$(curl -s -H "Content-Type: application/json" -X POST -d "$CREDENTIALS" https://hub.docker.com/v2/users/login/ | jq -r '.token');
+			AUTH_HEADER="Authorization: JWT $TOKEN"
 			sleep 1;
 		fi
 
-		TAGS_RESP=$(curl -s -H "$AUTH_HEADER" -X GET https://hub.docker.com/v2/repositories/$1/tags/);
-		TAGS_RESP=$(echo $TAGS_RESP | jq -r '.results[].name')
+		HUB_URL="https://hub.docker.com/v2/repositories/${1}/tags/"
+		JQ_FILTER='.results[].name // empty'
 	fi
 
-	VERSION_REGEX="[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$"
-	
-	TAG_LIST=""
+	TAGS_RESP=($(curl -s -H "${AUTH_HEADER}" -X GET "${HUB_URL}" | jq -r "${JQ_FILTER}"))
+}
 
-	for item in $TAGS_RESP
-	do
-		if [[ $item =~ $VERSION_REGEX ]]; then
-			TAG_LIST="$item,$TAG_LIST"
-		fi
-	done
+get_available_version () {
+	[ "${OFFLINE_INSTALLATION}" = "false" ] && get_tag_from_hub ${1} || TAGS_RESP=$(docker images --format "{{.Tag}}" ${1})
 
-	LATEST_TAG=$(echo $TAG_LIST | tr ',' '\n' | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n | awk '/./{line=$0} END{print line}');
+	VERSION_REGEX='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
+	[ ${#TAGS_RESP[@]} -eq 1 ] && LATEST_TAG="${TAGS_RESP[0]}" || LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$VERSION_REGEX" | sort -V | tail -n 1)
 
 	if [ ! -z "${LATEST_TAG}" ]; then
 		echo "${LATEST_TAG}" | sed "s/\"//g"
 	else
-		echo "Unable to retrieve tag from ${1} repository" >&2
+		if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
+			echo "Unable to retrieve tag from ${1} repository" >&2
+		else
+			echo "Error: The image '${1}' is not found in the local Docker registry." >&2
+		fi
 		kill -s TERM $PID
 	fi
 }
@@ -1115,6 +1059,7 @@ set_docs_url_external () {
 
 	if [[ ! -z ${DOCUMENT_SERVER_URL_EXTERNAL} ]] && [[ $DOCUMENT_SERVER_URL_EXTERNAL =~ ^(https?://)?([^:/]+)(:([0-9]+))?(/.*)?$ ]]; then
 		[[ -z ${BASH_REMATCH[1]} ]] && DOCUMENT_SERVER_URL_EXTERNAL="http://$DOCUMENT_SERVER_URL_EXTERNAL"
+		DOCUMENT_SERVER_PROTOCOL="${BASH_REMATCH[1]}"
 		DOCUMENT_SERVER_HOST="${BASH_REMATCH[2]}"
 		DOCUMENT_SERVER_PORT="${BASH_REMATCH[4]:-"80"}"
 	fi
@@ -1151,6 +1096,8 @@ set_mysql_params () {
 }
 
 set_docspace_params() {
+	HUB=${HUB:-$(get_env_parameter "HUB")};
+
 	ENV_EXTENSION=${ENV_EXTENSION:-$(get_env_parameter "ENV_EXTENSION" "${CONTAINER_NAME}")};
 	APP_CORE_BASE_DOMAIN=${APP_CORE_BASE_DOMAIN:-$(get_env_parameter "APP_CORE_BASE_DOMAIN" "${CONTAINER_NAME}")};
 	EXTERNAL_PORT=${EXTERNAL_PORT:-$(get_env_parameter "EXTERNAL_PORT" "${CONTAINER_NAME}")};
@@ -1188,46 +1135,32 @@ set_installation_type_data () {
 }
 
 download_files () {
-	if ! command_exists jq ; then
-		if command_exists yum; then 
-			rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-$REV.noarch.rpm
-		fi
-		install_service jq
-	fi
-
-	if ! command_exists docker-compose; then
-		install_docker_compose
-	fi
-
-	# Fixes issues with variables when upgrading to v1.1.3
-	HOSTS=("ELK_HOST" "REDIS_HOST" "RABBIT_HOST" "MYSQL_HOST"); 
-	for HOST in "${HOSTS[@]}"; do [[ "${!HOST}" == *CONTAINER_PREFIX* || "${!HOST}" == *$PACKAGE_SYSNAME* ]] && export "$HOST="; done
-	[[ "${APP_URL_PORTAL}" == *${PACKAGE_SYSNAME}-proxy* ]] && APP_URL_PORTAL=""
-
-	echo -n "Downloading configuration files to the ${BASE_DIR} directory..."
-
-	if ! command_exists tar; then
-		install_service tar
-	fi
+	[ "${OFFLINE_INSTALLATION}" = "false" ] && echo -n "Downloading configuration files to ${BASE_DIR}..." || echo "Unzip docker.tar.gz to ${BASE_DIR}..."
 
 	[ -d "${BASE_DIR}" ] && rm -rf "${BASE_DIR}"
 	mkdir -p ${BASE_DIR}
 
-	if [ -z "${GIT_BRANCH}" ]; then
-		curl -sL -o docker.tar.gz "https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/docker.tar.gz"
-		tar -xf docker.tar.gz -C ${BASE_DIR}
-	else
-		curl -sL -o docker.tar.gz "https://github.com/${PACKAGE_SYSNAME}/${PRODUCT}-buildtools/archive/${GIT_BRANCH}.tar.gz"
-		tar -xf docker.tar.gz --strip-components=3 -C ${BASE_DIR} --wildcards '*/install/docker/*'
-	fi
 	
-	rm -rf docker.tar.gz
+	if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
+		if [ -z "${GIT_BRANCH}" ]; then
+			DOWNLOAD_URL="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/docker.tar.gz"
+		else
+			DOWNLOAD_URL="https://github.com/${PACKAGE_SYSNAME}/${PRODUCT}-buildtools/archive/${GIT_BRANCH}.tar.gz"
+			STRIP_COMPONENTS="--strip-components=3 --wildcards */install/docker/*"
+		fi
+
+		curl -sL "${DOWNLOAD_URL}" | tar -xzf - -C "${BASE_DIR}" ${STRIP_COMPONENTS}
+	else
+		if [ -f "$(dirname "$0")/docker.tar.gz" ]; then
+			tar -xf $(dirname "$0")/docker.tar.gz -C "${BASE_DIR}"
+		else
+			echo "Error: docker.tar.gz not found in the same directory as the script."
+			echo "You need to download the docker.tar.gz file from https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/docker.tar.gz"
+			exit 1
+		fi
+	fi
 
 	echo "OK"
-
-	reconfigure STATUS ${STATUS}
-	reconfigure INSTALLATION_TYPE ${INSTALLATION_TYPE}
-	reconfigure NETWORK_NAME ${NETWORK_NAME}
 }
 
 reconfigure () {
@@ -1245,32 +1178,21 @@ install_mysql_server () {
 	reconfigure MYSQL_USER ${MYSQL_USER}
 	reconfigure MYSQL_PASSWORD ${MYSQL_PASSWORD}
 	reconfigure MYSQL_ROOT_PASSWORD ${MYSQL_ROOT_PASSWORD}
-	reconfigure MYSQL_VERSION ${MYSQL_VERSION}
 
 	if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ]; then
 		docker-compose -f $BASE_DIR/db.yml up -d
 	elif [ "$INSTALL_MYSQL_SERVER" == "pull" ]; then
 		docker-compose -f $BASE_DIR/db.yml pull
-	elif [ ! -z "$MYSQL_HOST" ]; then
-		establish_conn ${MYSQL_HOST} "${MYSQL_PORT:-"3306"}" "MySQL"
-		reconfigure MYSQL_HOST ${MYSQL_HOST}
-		reconfigure MYSQL_PORT "${MYSQL_PORT:-"3306"}"
 	fi
 }
 
 install_document_server () {
 	reconfigure DOCUMENT_SERVER_JWT_HEADER ${DOCUMENT_SERVER_JWT_HEADER}
 	reconfigure DOCUMENT_SERVER_JWT_SECRET ${DOCUMENT_SERVER_JWT_SECRET}
-	reconfigure DOCUMENT_SERVER_IMAGE_NAME "${DOCUMENT_SERVER_IMAGE_NAME}:${DOCUMENT_SERVER_VERSION:-$(get_available_version "$DOCUMENT_SERVER_IMAGE_NAME")}"
 	if [[ -z ${DOCUMENT_SERVER_HOST} ]] && [ "$INSTALL_DOCUMENT_SERVER" == "true" ]; then
 		docker-compose -f $BASE_DIR/ds.yml up -d
 	elif [ "$INSTALL_DOCUMENT_SERVER" == "pull" ]; then
 		docker-compose -f $BASE_DIR/ds.yml pull
-	elif [ ! -z "$DOCUMENT_SERVER_HOST" ]; then
-		APP_URL_PORTAL=${APP_URL_PORTAL:-"http://$(curl -s ifconfig.me):${EXTERNAL_PORT}"}  
-		establish_conn ${DOCUMENT_SERVER_HOST} ${DOCUMENT_SERVER_PORT} "${PACKAGE_SYSNAME^^} Docs"
-		reconfigure DOCUMENT_SERVER_URL_EXTERNAL ${DOCUMENT_SERVER_URL_EXTERNAL}
-		reconfigure DOCUMENT_SERVER_URL_PUBLIC ${DOCUMENT_SERVER_URL_EXTERNAL}
 	fi
 }
 
@@ -1279,13 +1201,6 @@ install_rabbitmq () {
 		docker-compose -f $BASE_DIR/rabbitmq.yml up -d
 	elif [ "$INSTALL_RABBITMQ" == "pull" ]; then
 		docker-compose -f $BASE_DIR/rabbitmq.yml pull
-	elif [ ! -z "$RABBIT_HOST" ]; then
-		establish_conn ${RABBIT_HOST} "${RABBIT_PORT:-"5672"}" "RabbitMQ"
-		reconfigure RABBIT_HOST ${RABBIT_HOST}
-		reconfigure RABBIT_PORT "${RABBIT_PORT:-"5672"}"
-		reconfigure RABBIT_USER_NAME ${RABBIT_USER_NAME}
-		reconfigure RABBIT_PASSWORD ${RABBIT_PASSWORD}
-		reconfigure RABBIT_VIRTUAL_HOST "${RABBIT_VIRTUAL_HOST:-"/"}"
 	fi
 }
 
@@ -1294,17 +1209,10 @@ install_redis () {
 		docker-compose -f $BASE_DIR/redis.yml up -d
 	elif [ "$INSTALL_REDIS" == "pull" ]; then
 		docker-compose -f $BASE_DIR/redis.yml pull
-	elif [ ! -z "$REDIS_HOST" ]; then
-		establish_conn ${REDIS_HOST} "${REDIS_PORT:-"6379"}" "Redis"
-		reconfigure REDIS_HOST ${REDIS_HOST}
-		reconfigure REDIS_PORT "${REDIS_PORT:-"6379"}"
-		reconfigure REDIS_USER_NAME ${REDIS_USER_NAME}
-		reconfigure REDIS_PASSWORD ${REDIS_PASSWORD}
 	fi
 }
 
 install_elasticsearch () {
-	reconfigure ELK_VERSION ${ELK_VERSION}
 	if [[ -z ${ELK_HOST} ]] && [ "$INSTALL_ELASTICSEARCH" == "true" ]; then
 		if [ $(free --mega | grep -oP '\d+' | head -n 1) -gt "12000" ]; then #RAM ~12Gb
 			sed -i 's/Xms[0-9]g/Xms4g/g; s/Xmx[0-9]g/Xmx4g/g' $BASE_DIR/opensearch.yml
@@ -1314,24 +1222,11 @@ install_elasticsearch () {
 		docker-compose -f $BASE_DIR/opensearch.yml up -d
 	elif [ "$INSTALL_ELASTICSEARCH" == "pull" ]; then
 		docker-compose -f $BASE_DIR/opensearch.yml pull
-	elif [ ! -z "$ELK_HOST" ]; then
-		establish_conn ${ELK_HOST} "${ELK_PORT:-"9200"}" "search engine"
-		reconfigure ELK_SHEME "${ELK_SHEME:-"http"}"	
-		reconfigure ELK_HOST ${ELK_HOST}
-		reconfigure ELK_PORT "${ELK_PORT:-"9200"}"	
 	fi
 }
 
 install_fluent_bit () {
 	if [ "$INSTALL_FLUENT_BIT" == "true" ]; then
-		if ! command_exists crontab; then
-			if command_exists apt-get; then
-				install_service crontab cron
-			elif command_exists yum; then
-				install_service crontab cronie
-			fi
-		fi
-
 		[ ! -z "$ELK_HOST" ] && sed -i "s/ELK_CONTAINER_NAME/ELK_HOST/g" $BASE_DIR/fluent.yml ${BASE_DIR}/dashboards.yml
 
 		OPENSEARCH_INDEX="${OPENSEARCH_INDEX:-"${PACKAGE_SYSNAME}-fluent-bit"}"
@@ -1346,7 +1241,7 @@ install_fluent_bit () {
 
 		reconfigure DASHBOARDS_USERNAME "${DASHBOARDS_USERNAME:-"${PACKAGE_SYSNAME}"}"
 		reconfigure DASHBOARDS_PASSWORD "${DASHBOARDS_PASSWORD:-$(get_random_str 20)}"
-
+		
 		docker-compose -f ${BASE_DIR}/fluent.yml -f ${BASE_DIR}/dashboards.yml up -d
 	elif [ "$INSTALL_FLUENT_BIT" == "pull" ]; then
 		docker-compose -f ${BASE_DIR}/fluent.yml -f ${BASE_DIR}/dashboards.yml pull
@@ -1354,8 +1249,6 @@ install_fluent_bit () {
 }
 
 install_product () {
-	DOCKER_TAG="${DOCKER_TAG:-$(get_available_version ${IMAGE_NAME})}"
-	reconfigure DOCKER_TAG ${DOCKER_TAG}
 	if [ "$INSTALL_PRODUCT" == "true" ]; then
 		[ "${UPDATE}" = "true" ] && LOCAL_CONTAINER_TAG="$(docker inspect --format='{{index .Config.Image}}' ${CONTAINER_NAME} | awk -F':' '{print $2}')"
 
@@ -1371,13 +1264,17 @@ install_product () {
 		reconfigure APP_URL_PORTAL "${APP_URL_PORTAL:-"http://${PACKAGE_SYSNAME}-router:8092"}"
 		reconfigure EXTERNAL_PORT ${EXTERNAL_PORT}
 
-		if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ]; then
+		if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ] && [[ -n $(docker ps -q --filter "name=${PACKAGE_SYSNAME}-mysql-server") ]]; then
 			echo -n "Waiting for MySQL container to become healthy..."
 			(timeout 30 bash -c "while ! docker inspect --format '{{json .State.Health.Status }}' ${PACKAGE_SYSNAME}-mysql-server | grep -q 'healthy'; do sleep 1; done") && echo "OK" || (echo "FAILED")
 		fi
-
+		
 		docker-compose -f $BASE_DIR/migration-runner.yml up -d
-		echo -n "Waiting for database migration to complete..." && docker wait ${PACKAGE_SYSNAME}-migration-runner && echo "OK"
+		if [[ -n $(docker ps -q --filter "name=${PACKAGE_SYSNAME}-migration-runner") ]]; then
+			echo -n "Waiting for database migration to complete..."
+			timeout 30 bash -c "while [ $(docker wait ${PACKAGE_SYSNAME}-migration-runner) -ne 0 ]; do sleep 1; done;" && echo "OK" || echo "FAILED"
+		fi
+	
 		docker-compose -f $BASE_DIR/${PRODUCT}.yml up -d
 		docker-compose -f ${PROXY_YML} up -d
 		docker-compose -f $BASE_DIR/notify.yml up -d
@@ -1427,6 +1324,121 @@ make_swap () {
 	fi
 }
 
+offline_check_docker_image() {
+	[ ! -f "$1" ] && { echo "Error: File '$1' does not exist."; exit 1; }
+	docker-compose -f "$1" config | grep -oP 'image:\s*\K\S+' | while IFS= read -r IMAGE_TAG; do
+		docker images "${IMAGE_TAG}" | grep -q "${IMAGE_TAG%%:*}" || { echo "Error: The image '${IMAGE_TAG}' is not found in the local Docker registry."; kill -s TERM $PID; }
+	done
+}
+
+check_hub_connection() {
+	get_tag_from_hub ${IMAGE_NAME}
+	[ -z "$TAGS_RESP" ] && { echo -e "Unable to download tags from ${HUB:-hub.docker.com}.\nTry specifying another dockerhub name using -hub"; exit 1; } || true
+}
+
+dependency_installation() {
+	is_command_exists apt-get && apt-get -y update -qq
+
+	install_package tar
+	install_package curl
+	install_package netstat net-tools
+
+	if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
+		install_package dig  "dnsutils|bind-utils"
+		install_package ping "iputils-ping|iputils"
+		install_package ip   "iproute2|iproute"
+	fi
+
+	[ "$INSTALL_FLUENT_BIT" = "true" ] && install_package crontab "cron|cronie"
+
+	if ! is_command_exists jq ; then
+		if is_command_exists yum && ! rpm -q epel-release > /dev/null 2>&1; then
+			[ "${OFFLINE_INSTALLATION}" = "false" ] && rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-${REV}.noarch.rpm
+		fi
+		install_package jq
+	fi
+
+	is_command_exists docker && { check_docker_version; service docker start; } || { [ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker || { echo "docker not installed"; exit 1; }; }
+
+	if ! is_command_exists docker-compose; then
+		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker_compose || { echo "docker-compose not installed"; exit 1; }
+	elif [ "$(docker-compose --version | grep -oP '(?<=v)\d+\.\d+'| sed 's/\.//')" -lt "21" ]; then
+		[ "$OFFLINE_INSTALLATION" = "false" ]   && install_docker_compose || { echo "docker-compose version is outdated"; exit 1; }
+	fi
+}
+
+check_docker_image () {
+	reconfigure HUB "${HUB%/}${HUB:+/}"
+	reconfigure STATUS ${STATUS}
+	reconfigure INSTALLATION_TYPE ${INSTALLATION_TYPE}
+	reconfigure NETWORK_NAME ${NETWORK_NAME}
+	
+	reconfigure MYSQL_VERSION ${MYSQL_VERSION}
+	reconfigure ELK_VERSION ${ELK_VERSION}
+	reconfigure DOCUMENT_SERVER_IMAGE_NAME "${DOCUMENT_SERVER_IMAGE_NAME}:\${DOCUMENT_SERVER_VERSION}"
+	reconfigure DOCUMENT_SERVER_VERSION ${DOCUMENT_SERVER_VERSION:-$(get_available_version "$DOCUMENT_SERVER_IMAGE_NAME")}
+
+	DOCKER_TAG="${DOCKER_TAG:-$(get_available_version ${IMAGE_NAME})}"
+	reconfigure DOCKER_TAG ${DOCKER_TAG}
+	if [ "${OFFLINE_INSTALLATION}" != "false" ]; then
+		[ "$INSTALL_RABBITMQ" == "true" ]           && offline_check_docker_image ${BASE_DIR}/db.yml
+		[ "$INSTALL_RABBITMQ" == "true" ]           && offline_check_docker_image ${BASE_DIR}/rabbitmq.yml
+		[ "$INSTALL_REDIS" == "true" ]              && offline_check_docker_image ${BASE_DIR}/redis.yml
+		[ "$INSTALL_FLUENT_BIT" == "true" ]         && offline_check_docker_image ${BASE_DIR}/fluent.yml
+		[ "$INSTALL_FLUENT_BIT" == "true" ]         && offline_check_docker_image ${BASE_DIR}/dashboards.yml
+		[ "$INSTALL_ELASTICSEARCH" == "true" ]      && offline_check_docker_image ${BASE_DIR}/opensearch.yml
+		[ "$INSTALL_DOCUMENT_SERVER" == "true" ]    && offline_check_docker_image ${BASE_DIR}/ds.yml
+
+		if [ "$INSTALL_PRODUCT" == "true" ]; then
+			offline_check_docker_image ${BASE_DIR}/migration-runner.yml
+			offline_check_docker_image ${BASE_DIR}/${PRODUCT}.yml
+			offline_check_docker_image ${BASE_DIR}/notify.yml
+			offline_check_docker_image ${BASE_DIR}/healthchecks.yml
+			offline_check_docker_image ${PROXY_YML}
+		fi
+	fi
+}
+
+services_check_connection () {
+	# Fixes issues with variables when upgrading to v1.1.3
+	HOSTS=("ELK_HOST" "REDIS_HOST" "RABBIT_HOST" "MYSQL_HOST"); 
+	for HOST in "${HOSTS[@]}"; do [[ "${!HOST}" == *CONTAINER_PREFIX* || "${!HOST}" == *$PACKAGE_SYSNAME* ]] && export "$HOST="; done
+	[[ "${APP_URL_PORTAL}" == *${PACKAGE_SYSNAME}-proxy* ]] && APP_URL_PORTAL=""
+
+	[[ ! -z "$MYSQL_HOST" ]] && {
+		establish_conn ${MYSQL_HOST} "${MYSQL_PORT:-3306}" "MySQL"
+		reconfigure MYSQL_HOST ${MYSQL_HOST}
+		reconfigure MYSQL_PORT "${MYSQL_PORT:-3306}"
+	}
+	[[ ! -z "$DOCUMENT_SERVER_HOST" ]] && {
+		APP_URL_PORTAL=${APP_URL_PORTAL:-"http://$(curl -s ifconfig.me):${EXTERNAL_PORT}"}
+		establish_conn ${DOCUMENT_SERVER_HOST} ${DOCUMENT_SERVER_PORT} "${PACKAGE_SYSNAME^^} Docs"
+		reconfigure DOCUMENT_SERVER_URL_EXTERNAL ${DOCUMENT_SERVER_URL_EXTERNAL}
+		reconfigure DOCUMENT_SERVER_URL_PUBLIC ${DOCUMENT_SERVER_URL_EXTERNAL}
+	}
+	[[ ! -z "$RABBIT_HOST" ]] && {
+		establish_conn ${RABBIT_HOST} "${RABBIT_PORT:-5672}" "RabbitMQ"
+		reconfigure RABBIT_PROTOCOL ${RABBIT_PROTOCOL:-amqp}
+		reconfigure RABBIT_HOST ${RABBIT_HOST}
+		reconfigure RABBIT_PORT "${RABBIT_PORT:-5672}"
+		reconfigure RABBIT_USER_NAME ${RABBIT_USER_NAME}
+		reconfigure RABBIT_PASSWORD ${RABBIT_PASSWORD}
+		reconfigure RABBIT_VIRTUAL_HOST "${RABBIT_VIRTUAL_HOST:-/}"
+	}
+	[[ ! -z "$REDIS_HOST" ]] && {
+		establish_conn ${REDIS_HOST} "${REDIS_PORT:-6379}" "Redis"
+		reconfigure REDIS_HOST ${REDIS_HOST}
+		reconfigure REDIS_PORT "${REDIS_PORT:-6379}"
+		reconfigure REDIS_USER_NAME ${REDIS_USER_NAME}
+		reconfigure REDIS_PASSWORD ${REDIS_PASSWORD}
+	}
+	[[ ! -z "$ELK_HOST" ]] && {
+		establish_conn ${ELK_HOST} "${ELK_PORT:-9200}" "search engine"
+		reconfigure ELK_SHEME "${ELK_SHEME:-http}"
+		reconfigure ELK_HOST ${ELK_HOST}
+		reconfigure ELK_PORT "${ELK_PORT:-9200}"
+	}
+}
 
 start_installation () {
 	root_checking
@@ -1436,6 +1448,8 @@ start_installation () {
 	get_os_info
 	check_os_info
 	check_kernel
+
+	dependency_installation
 
 	if [ "$UPDATE" != "true" ]; then
 		check_ports
@@ -1449,18 +1463,13 @@ start_installation () {
 		make_swap
 	fi
 
-	if command_exists docker ; then
-		check_docker_version
-		service docker start
-	else
-		install_docker
-	fi
-
 	docker_login
+
+	[ "${OFFLINE_INSTALLATION}" = "false" ] && check_hub_connection
 
 	create_network
 
-	domain_check
+	[ "${OFFLINE_INSTALLATION}" = "false" ] && domain_check
 
 	if [ "$UPDATE" = "true" ]; then
 		set_docspace_params
@@ -1475,6 +1484,10 @@ start_installation () {
 	set_mysql_params
 
 	download_files
+
+	check_docker_image
+
+	services_check_connection
 
 	install_elasticsearch
 
