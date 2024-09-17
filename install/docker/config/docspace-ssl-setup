@@ -103,7 +103,7 @@ case $1 in
       echo "Generating Let's Encrypt SSL Certificates..."
 
       # Request and generate Let's Encrypt SSL certificate
-      docker run -it --rm \
+      docker run --rm \
       -v /etc/letsencrypt:/etc/letsencrypt \
       -v /var/lib/letsencrypt:/var/lib/letsencrypt \
       -v /var/log:/var/log \
@@ -132,7 +132,7 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
       # Create and set permissions for docspace-renew-letsencrypt
       echo '#!/bin/bash' > ${DIR}/${PRODUCT}-renew-letsencrypt
       echo "docker-compose -f ${DOCKERCOMPOSE}/proxy-ssl.yml down" >> ${DIR}/${PRODUCT}-renew-letsencrypt
-      echo 'docker run -it --rm \' >> ${DIR}/${PRODUCT}-renew-letsencrypt
+      echo 'docker run --rm \' >> ${DIR}/${PRODUCT}-renew-letsencrypt
       echo '    -v /etc/letsencrypt:/etc/letsencrypt \' >> ${DIR}/${PRODUCT}-renew-letsencrypt
       echo '    -v /var/lib/letsencrypt:/var/lib/letsencrypt \' >> ${DIR}/${PRODUCT}-renew-letsencrypt
       echo '    certbot/certbot renew' >> ${DIR}/${PRODUCT}-renew-letsencrypt
@@ -151,14 +151,13 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
       #Checking whether the certificate is self-signed
       if [[ -n "$CERTIFICATE_SUBJECT" && -n "$CERTIFICATE_ISSUER" && "$CERTIFICATE_SUBJECT" == "$CERTIFICATE_ISSUER" ]]; then
         sed -i '/app_data:\/.*/a \    - ${CERTIFICATE_PATH}:${CERTIFICATE_PATH}' ${DOCKERCOMPOSE}/docspace.yml
-        docker-compose -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-doceditor onlyoffice-login onlyoffice-socket onlyoffice-ssoauth
         sed -i '/app_data:\/.*/a \      - ${CERTIFICATE_PATH}:/var/www/onlyoffice/Data/certs/extra-ca-certs.pem' ${DOCKERCOMPOSE}/ds.yml
         docker-compose -f ${DOCKERCOMPOSE}/ds.yml up --force-recreate -d
       fi
     fi
 
     docker-compose -f ${DOCKERCOMPOSE}/proxy-ssl.yml up --force-recreate -d
-    docker-compose -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-files
+    docker-compose -f ${DOCKERCOMPOSE}/docspace.yml -f ${DOCKERCOMPOSE}/notify.yml up --force-recreate -d
 
     echo "OK"
   else

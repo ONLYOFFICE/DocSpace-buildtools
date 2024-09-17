@@ -42,6 +42,7 @@ x-service: &x-service-base
     REDIS_USER_NAME: ${REDIS_USER_NAME}
     REDIS_PASSWORD: ${REDIS_PASSWORD}
     RABBIT_CONTAINER_NAME: ${RABBIT_CONTAINER_NAME}
+    RABBIT_PROTOCOL: ${RABBIT_PROTOCOL}
     RABBIT_HOST: ${RABBIT_HOST}
     RABBIT_PORT: ${RABBIT_PORT}
     RABBIT_VIRTUAL_HOST: ${RABBIT_VIRTUAL_HOST}
@@ -61,7 +62,7 @@ x-service: &x-service-base
 services:
   onlyoffice-backup-background-tasks:
     <<: *x-service-base
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-backup-background:${DOCKER_TAG}"
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-backup-background:${DOCKER_TAG}"
     container_name: ${BACKUP_BACKGRUOND_TASKS_HOST}
     healthcheck:
      <<: *x-healthcheck
@@ -69,7 +70,7 @@ services:
 
   onlyoffice-backup:
     <<: *x-service-base
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-backup:${DOCKER_TAG}"
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-backup:${DOCKER_TAG}"
     container_name: ${BACKUP_HOST}
     healthcheck:
      <<: *x-healthcheck
@@ -77,7 +78,7 @@ services:
 
   onlyoffice-clear-events:
     <<: *x-service-base
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-clear-events:${DOCKER_TAG}"
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-clear-events:${DOCKER_TAG}"
     container_name: ${CLEAR_EVENTS_HOST}
     healthcheck:
      <<: *x-healthcheck
@@ -85,7 +86,7 @@ services:
 
   onlyoffice-files:
     <<: *x-service-base
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-files:${DOCKER_TAG}"
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-files:${DOCKER_TAG}"
     container_name: ${FILES_HOST}
     healthcheck:
      <<: *x-healthcheck
@@ -93,7 +94,7 @@ services:
 
   onlyoffice-files-services:
     <<: *x-service-base
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-files-services:${DOCKER_TAG}"
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-files-services:${DOCKER_TAG}"
     container_name: ${FILES_SERVICES_HOST}
     healthcheck:
      <<: *x-healthcheck
@@ -101,7 +102,7 @@ services:
 
   onlyoffice-people-server:
     <<: *x-service-base
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-people-server:${DOCKER_TAG}"
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-people-server:${DOCKER_TAG}"
     container_name: ${PEOPLE_SERVER_HOST}
     healthcheck:
      <<: *x-healthcheck
@@ -109,14 +110,14 @@ services:
 
   onlyoffice-socket:
     <<: *x-service-base
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-socket:${DOCKER_TAG}"
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-socket:${DOCKER_TAG}"
     container_name: ${SOCKET_HOST}
     expose:
       - ${SERVICE_PORT}
 
   onlyoffice-studio-notify:
     <<: *x-service-base
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-studio-notify:${DOCKER_TAG}"
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-studio-notify:${DOCKER_TAG}"
     container_name: ${STUDIO_NOTIFY_HOST}
     healthcheck:
      <<: *x-healthcheck
@@ -124,7 +125,7 @@ services:
 
   onlyoffice-api:
     <<: *x-service-base
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-api:${DOCKER_TAG}"
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-api:${DOCKER_TAG}"
     container_name: ${API_HOST}
     healthcheck:
      <<: *x-healthcheck
@@ -132,7 +133,7 @@ services:
 
   onlyoffice-api-system:
     <<: *x-service-base
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-api-system:${DOCKER_TAG}"
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-api-system:${DOCKER_TAG}"
     container_name: ${API_SYSTEM_HOST}
     healthcheck:
      <<: *x-healthcheck
@@ -140,7 +141,7 @@ services:
 
   onlyoffice-studio:
     <<: *x-service-base
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-studio:${DOCKER_TAG}"
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-studio:${DOCKER_TAG}"
     container_name: ${STUDIO_HOST}
     healthcheck:
      <<: *x-healthcheck
@@ -148,7 +149,7 @@ services:
 
   onlyoffice-ssoauth:
     <<: *x-service-base
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-ssoauth:${DOCKER_TAG}"
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-ssoauth:${DOCKER_TAG}"
     container_name: ${SSOAUTH_HOST}
     expose:
       - ${SERVICE_PORT}
@@ -156,7 +157,7 @@ services:
 
   onlyoffice-doceditor:
     <<: *x-service-base
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-doceditor:${DOCKER_TAG}"
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-doceditor:${DOCKER_TAG}"
     container_name: ${DOCEDITOR_HOST}
     expose:
       - "5013"
@@ -166,7 +167,7 @@ services:
 
   onlyoffice-login:
     <<: *x-service-base
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-login:${DOCKER_TAG}"
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-login:${DOCKER_TAG}"
     container_name: ${LOGIN_HOST}
     expose:
       - "5011"
@@ -175,7 +176,7 @@ services:
      test: curl --fail http://${SERVICE_LOGIN}/login/health || exit 1
 
   onlyoffice-router:
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-router:${DOCKER_TAG}"
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-router:${DOCKER_TAG}"
     container_name: ${ROUTER_HOST}
     restart: always
     healthcheck:

@@ -1,8 +1,8 @@
 services:
   onlyoffice-migration-runner:
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-migration-runner:${DOCKER_TAG}"
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-migration-runner:${DOCKER_TAG}"
     container_name: ${MIGRATION_RUNNER_HOST}
-    restart: "no"
+    restart: "on-failure"
     environment:
       MYSQL_CONTAINER_NAME: ${MYSQL_CONTAINER_NAME}
       MYSQL_HOST: ${MYSQL_HOST}

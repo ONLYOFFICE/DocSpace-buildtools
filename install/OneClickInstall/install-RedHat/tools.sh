@@ -71,8 +71,9 @@ read_unsupported_installation () {
 	esac
 }
 
-DIST=$(rpm -q --queryformat '%{NAME}' centos-release redhat-release fedora-release | awk -F'[- ]|package' '{print tolower($1)}' | tr -cd '[:alpha:]')
-[ -z $DIST ] && DIST=$(cat /etc/redhat-release | awk -F 'Linux|release| ' '{print tolower($1)}')
+DIST=$(rpm -qa --queryformat '%{NAME}\n' | grep -E 'centos-release|redhat-release|fedora-release' | awk -F '-' '{print $1}' | head -n 1)
+DIST=${DIST:-$(awk -F= '/^ID=/ {gsub(/"/, "", $2); print tolower($2)}' /etc/os-release)}; 
+[[ "$DIST" =~ ^(centos|redhat|fedora)$ ]] || DIST="centos"
 REV=$(sed -n 's/.*release\ \([0-9]*\).*/\1/p' /etc/redhat-release)
 REV=${REV:-"7"}
 

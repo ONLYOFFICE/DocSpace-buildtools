@@ -33,33 +33,6 @@
 			"appleIdRedirectUrl" : "https://service.teamlab.info/oauth2.aspx"
 		  }
 	  }
-    },    
-    {
-      "type": "ASC.FederatedLogin.LoginProviders.BitlyLoginProvider, ASC.FederatedLogin",
-      "services": [
-        {
-          "type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
-        }, 
-		{
-		  "type": "ASC.FederatedLogin.LoginProviders.BitlyLoginProvider, ASC.FederatedLogin"
-		}, 
-		{
-		  "key": "bitly",
-		  "type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
-		}, 
-		{
-		  "key": "bitly",
-		  "type": "ASC.FederatedLogin.LoginProviders.BitlyLoginProvider, ASC.FederatedLogin"
-		}
-      ],
-	  "instanceScope": "perlifetimescope",
-	  "parameters": {
-		  "name": "bitly",
-		  "order": "13",
-		  "props": {
-			"bitlyToken": ""
-		  }
-	  }
     },
 	{
       "type": "ASC.FederatedLogin.LoginProviders.BoxLoginProvider, ASC.FederatedLogin",
@@ -92,33 +65,6 @@
 		  }
 	  }
     }, 
-	{
-      "type": "ASC.Web.Core.Sms.ClickatellProvider, ASC.Web.Core",
-      "services": [
-        {
-          "type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
-        }, 
-		{
-		  "type": "ASC.Web.Core.Sms.ClickatellProvider, ASC.Web.Core"
-		}, 
-		{
-		  "key": "clickatell",
-		  "type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
-		}, 
-		{
-		  "key": "clickatell",
-		  "type": "ASC.Web.Core.Sms.ClickatellProvider, ASC.Web.Core"
-		}
-      ],
-	  "instanceScope": "perlifetimescope",
-	  "parameters": {
-		  "name": "clickatell",
-		  "order": "10",
-		  "props": {
-			"clickatellapiKey": ""
-		  }
-	  }
-    },
 	{
       "type": "ASC.FederatedLogin.LoginProviders.DropboxLoginProvider, ASC.FederatedLogin",
       "services": [
@@ -396,37 +342,6 @@
 	  }
     },
 	{
-      "type": "ASC.FederatedLogin.LoginProviders.WordpressLoginProvider, ASC.FederatedLogin",
-      "services": [
-        {
-          "type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
-        }, 
-		{
-		  "type": "ASC.FederatedLogin.LoginProviders.WordpressLoginProvider, ASC.FederatedLogin"
-		}, 
-		{
-		  "key": "wordpress",
-		  "type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
-		}, 
-		{
-		  "key": "wordpress",
-		  "type": "ASC.FederatedLogin.LoginProviders.WordpressLoginProvider, ASC.FederatedLogin"
-		}
-      ],
-	  "instanceScope": "perlifetimescope",
-	  "parameters": {
-		  "name": "wordpress",
-		  "order": "15",
-		  "props": {
-			"wpClientId": "",
-			"wpClientSecret": ""
-		  },
-		  "additional": {
-			"wpRedirectUrl" : "https://service.teamlab.info/oauth2.aspx"
-		  }
-	  }
-    },
-	{
       "type": "ASC.Core.Common.Configuration.DataStoreConsumer, ASC.Core.Common",
       "services": [
         {
@@ -527,39 +442,6 @@
 			"public_container" : "",
 			"private_container" : "",
 			"region" : ""
-		  }
-	  }
-    },
-	{
-      "type": "ASC.Core.Common.Configuration.DataStoreConsumer, ASC.Core.Common",
-      "services": [
-        {
-          "type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
-        }, 
-		{
-		  "type": "ASC.Core.Common.Configuration.DataStoreConsumer, ASC.Core.Common"
-		}, 
-		{
-		  "key": "selectel",
-		  "type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
-		}, 
-		{
-		  "key": "selectel",
-		  "type": "ASC.Core.Common.Configuration.DataStoreConsumer, ASC.Core.Common"
-		}
-      ],
-	  "instanceScope": "perlifetimescope",
-	  "parameters": {
-		  "name": "selectel",
-		  "order": "23",
-		  "props": {
-			"authUser": "",
-			"authPwd": ""
-		  },
-		  "additional": {
-			"handlerType" : "ASC.Data.Storage.Selectel.SelectelStorage, ASC.Data.Storage",
-			"public_container" : "",
-			"private_container" : ""
 		  }
 	  }
     },

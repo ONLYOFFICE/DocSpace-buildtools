@@ -1,11 +1,18 @@
 services:
   onlyoffice-rabbitmq:
-    image: rabbitmq:3
+    image: ${HUB}${RABBITMQ_IMAGE_NAME}
     container_name: ${RABBIT_CONTAINER_NAME}
     restart: always
     expose:
       - "5672"
       - "80"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "status"]
+      interval: 10s
+      retries: 3
+      start_period: 10s
+      timeout: 10s
+
 networks:
   default:
     name: ${NETWORK_NAME}
