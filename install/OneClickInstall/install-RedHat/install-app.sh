@@ -31,7 +31,7 @@ if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ]; then
 
 	if [ -n $ds_pkg_name ]; then
 		if ! rpm -qi ${ds_pkg_name} &> /dev/null; then
-			${package_manager} -y remove ${ds_pkg_installed_name}
+			${package_manager} -y remove ${ds_pkg_installed_name} --setopt=clean_requirements_on_remove=false
 
 			DOCUMENT_SERVER_INSTALLED="false"
 			RECONFIGURE_PRODUCT="true"
