@@ -1256,7 +1256,7 @@ install_product () {
 		if [ "${UPDATE}" = "true" ] && [ "${LOCAL_CONTAINER_TAG}" != "${DOCKER_TAG}" ]; then
 			docker-compose -f $BASE_DIR/build.yml pull
 			docker-compose -f $BASE_DIR/migration-runner.yml -f $BASE_DIR/identity.yml -f $BASE_DIR/notify.yml -f $BASE_DIR/healthchecks.yml -f ${PROXY_YML} down
-			docker-compose -f $BASE_DIR/${PRODUCT}.yml down --volumes
+			docker-compose -f $BASE_DIR/${PRODUCT}.yml down
 		fi
 
 		reconfigure ENV_EXTENSION ${ENV_EXTENSION}
