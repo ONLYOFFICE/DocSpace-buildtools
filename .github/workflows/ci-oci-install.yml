@@ -1,17 +1,17 @@
 name: Install OneClickInstall DocSpace
 
 on:
-  # pull_request:
-  #   types: [opened, reopened, synchronize]
-  #   paths:
-  #     - '.github/workflows/ci-oci-install.yml'
-  #     - 'install/OneClickInstall/install-Debian/**'
-  #     - 'install/OneClickInstall/install-RedHat/**'
-  #     - 'install/OneClickInstall/install-Debian.sh'
-  #     - 'install/OneClickInstall/install-RedHat.sh'
+  pull_request:
+    types: [opened, reopened, synchronize]
+    paths:
+      - '.github/workflows/ci-oci-install.yml'
+      - 'install/OneClickInstall/install-Debian/**'
+      - 'install/OneClickInstall/install-RedHat/**'
+      - 'install/OneClickInstall/install-Debian.sh'
+      - 'install/OneClickInstall/install-RedHat.sh'
 
-  # schedule:
-  #   - cron: '00 20 * * 6'  # At 23:00 on Saturday.
+  schedule:
+    - cron: '00 20 * * 6'  # At 23:00 on Saturday.
 
   workflow_dispatch:
     inputs:
@@ -128,7 +128,7 @@ jobs:
           sudo docker image prune --all --force
 
       - name: "Test production scripts with ${{matrix.name}}"
-        if: ${{ github.event_name == 'schedule'|| github.event_name == 'workflow_dispatch' }}
+        if: ${{ github.event_name == 'schedule' }}
         uses: nick-fields/retry@v3
         with:
           max_attempts: 2
