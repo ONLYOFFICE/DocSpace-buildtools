@@ -1,14 +1,14 @@
 name: 4testing multiarch-config-build
 
 on:
-  push:
-    branches:
-      - 'hotfix/v*'
-      - 'release/v*'
-      - 'develop'
-    paths:
-      - 'config/**'
-      - 'install/docker/Dockerfile.app'
+  # push:
+  #   branches:
+  #     - 'hotfix/v*'
+  #     - 'release/v*'
+  #     - 'develop'
+  #   paths:
+  #     - 'config/**'
+  #     - 'install/docker/Dockerfile.app'
   workflow_dispatch:
 
 jobs:

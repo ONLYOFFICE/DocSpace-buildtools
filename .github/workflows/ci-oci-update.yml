@@ -4,8 +4,8 @@ run-name: >
   Update DocSpace from older versions
 
 on:
-  schedule:
-    - cron: '00 20 * * 6'  # At 23:00 on Saturday.
+  # schedule:
+  #   - cron: '00 20 * * 6'  # At 23:00 on Saturday.
 
   workflow_dispatch:
     inputs:

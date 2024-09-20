@@ -1,14 +1,14 @@
 name: Upload OneСlickInstall scripts on S3
 
 on:
-  push:
-    branches:
-      - master
-    paths:
-      - 'install/docker/*.yml'
-      - 'install/docker/*.env'
-      - 'install/docker/config/**'
-      - 'install/OneClickInstall/**'
+  # push:
+  #   branches:
+  #     - master
+  #   paths:
+  #     - 'install/docker/*.yml'
+  #     - 'install/docker/*.env'
+  #     - 'install/docker/config/**'
+  #     - 'install/OneClickInstall/**'
   workflow_dispatch:
 
 env:
