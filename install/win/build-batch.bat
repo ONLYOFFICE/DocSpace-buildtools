@@ -45,6 +45,10 @@ copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\OpenSearch\to
 copy buildtools\install\win\tools\OpenSearch.xml "buildtools\install\win\OpenSearch\tools\OpenSearch.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\OpenSearchStack\tools\OpenSearchDashboards.exe" /y
 copy buildtools\install\win\tools\OpenSearchDashboards.xml "buildtools\install\win\OpenSearchStack\tools\OpenSearchDashboards.xml" /y
+copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\Identity.Authorization.exe" /y
+copy buildtools\install\win\tools\Identity.Authorization.xml "buildtools\install\win\Files\tools\Identity.Authorization.xml" /y
+copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\Identity.Registration.exe" /y
+copy buildtools\install\win\tools\Identity.Registration.xml "buildtools\install\win\Files\tools\Identity.Registration.xml" /y
 copy "buildtools\install\win\nginx.conf" "buildtools\install\win\Files\nginx\conf\nginx.conf" /y
 copy "buildtools\install\docker\config\nginx\onlyoffice-proxy.conf" "buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf" /y
 copy "buildtools\install\docker\config\nginx\onlyoffice-proxy.conf" "buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf.tmpl" /y

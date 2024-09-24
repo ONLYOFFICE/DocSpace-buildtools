@@ -86,6 +86,8 @@
     <ROW Property="ServiceName_DocEditor" Value="DocSpace.DocEditor"/>
     <ROW Property="ServiceName_FileServer" Value="DocSpace.FileServer"/>
     <ROW Property="ServiceName_FileService" Value="DocSpace.FileService"/>
+    <ROW Property="ServiceName_Identity.Authorization" Value="DocSpace.Identity.Authorization"/>
+    <ROW Property="ServiceName_Identity.Registration" Value="DocSpace.Identity.Registration"/>
     <ROW Property="ServiceName_WebHealthChecksUI" Value="DocSpace.Web.HealthChecks.UI"/>
     <ROW Property="ServiceName_Login" Value="DocSpace.Login"/>
     <ROW Property="ServiceName_MigrationRunner" Value="DocSpace.MigrationRunner"/>
@@ -215,6 +217,8 @@
     <ROW Component="DocEditor.exe" ComponentId="{FBE9155F-9ACD-4A1A-9198-891ED73BA90C}" Directory_="tools_Dir" Attributes="0" KeyPath="DocEditor.exe"/>
     <ROW Component="DocumentServer" ComponentId="{9F6BB24B-F2F9-4FE5-8431-A46F38A301AD}" Directory_="APPDIR" Attributes="260" KeyPath="DocumentServer" Options="2"/>
     <ROW Component="DocumentServer.EE" ComponentId="{F1FEAEA5-AE4B-4C94-A699-0410A6C6D1B0}" Directory_="APPDIR" Attributes="4" KeyPath="DocumentServer.EE" Options="2"/>
+    <ROW Component="Identity.Authorization.exe" ComponentId="{751E3F35-D9BE-4C73-BC3A-5653B860C9E2}" Directory_="tools_Dir" Attributes="0" KeyPath="Identity.Authorization.exe"/>
+    <ROW Component="Identity.Registration.exe" ComponentId="{A831909E-FD1D-49B5-8884-C9A8540E8828}" Directory_="tools_Dir" Attributes="0" KeyPath="Identity.Registration.exe"/>
     <ROW Component="Login.exe" ComponentId="{FBE9155F-9ACD-4A1A-9198-891ED73BA202}" Directory_="tools_Dir" Attributes="0" KeyPath="Login.exe"/>
     <ROW Component="Logs" ComponentId="{6C28AF1C-0190-4DE3-A753-430496711F3C}" Directory_="Logs_Dir" Attributes="0"/>
     <ROW Component="MACHINE_KEY" ComponentId="{61A271B4-4D82-4664-B2D2-2EB120D15DA6}" Directory_="APPDIR" Attributes="20" KeyPath="MACHINE_KEY"/>
@@ -309,6 +313,8 @@
     <ROW File="Login.exe" Component_="Login.exe" FileName="LOGIN~1.EXE|Login.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\Login.exe" SelfReg="false" DigSign="true"/>
     <ROW File="icon.ico" Component_="icon.ico" FileName="icon.ico" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Resources\icon.ico" SelfReg="false"/>
     <ROW File="ASC.Web.HealthChecks.UI.exe" Component_="ASC.Web.HealthChecks.UI.exe" FileName="ASCWEB~1.EXE|ASC.Web.HealthChecks.UI.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.Web.HealthChecks.UI\service\ASC.Web.HealthChecks.UI.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="Identity.Authorization.exe" Component_="Identity.Authorization.exe" FileName="IDENTI~1.EXE|Identity.Authorization.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\Identity.Authorization.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="Identity.Registration.exe" Component_="Identity.Registration.exe" FileName="IDENTI~3.EXE|Identity.Registration.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\Identity.Registration.exe" SelfReg="false" DigSign="true"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.BootstrOptComponent">
     <ROW BootstrOptKey="GlobalOptions" DownloadFolder="[AppDataFolder][|Manufacturer]\[|ProductName]\prerequisites" Options="2"/>
@@ -1057,6 +1063,7 @@
     <ROW Action="Set_DS_JWT_SECRET" Type="51" Source="DOCUMENT_SERVER_JWT_SECRET" Target="[JWT_SECRET]"/>
     <ROW Action="Set_LICENSE_PATH" Type="51" Source="LICENSE_PATH" Target="[APPDIR]\Data\license.lic"/>
     <ROW Action="StartFluentBitService" Type="1" Source="aicustact.dll" Target="StartWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_30"/>
+    <ROW Action="StartIdentityMigration" Type="3074" Source="viewer.exe" Target="/EnforcedRunAsAdmin /RunAsAdmin /HideWindow /dir &quot;[APPDIR]services\ASC.Identity.Migration\service&quot; java -jar &quot;[APPDIR]services\ASC.Identity.Migration\service\app.jar&quot; JDBC_URL=[DB_HOST] JDBC_PASSWORD=[DB_PWD] JDBC_USER_NAME=[DB_USER] JDBC_DATABASE=[DB_NAME] RABBIT_HOST=[AMQP_HOST] REDIS_HOST=[REDIS_HOST]" Options="1"/>
     <ROW Action="StartMigrationRunner" Type="3074" Source="viewer.exe" Target="/EnforcedRunAsAdmin /RunAsAdmin /HideWindow /dir &quot;[APPDIR]services\ASC.Migration.Runner\service&quot; &quot;[APPDIR]services\ASC.Migration.Runner\service\ASC.Migration.Runner.exe&quot; standalone=true" Options="1"/>
     <ROW Action="StartMySQLService" Type="1" Source="aicustact.dll" Target="StartWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_11"/>
     <ROW Action="StartOpenResty" Type="1" Source="aicustact.dll" Target="StartWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_24"/>
@@ -1175,6 +1182,8 @@
     <ROW Feature_="MainFeature" Component_="icon.ico"/>
     <ROW Feature_="DocumentServer.EE" Component_="DocumentServer.EE"/>
     <ROW Feature_="MainFeature" Component_="MACHINE_KEY"/>
+    <ROW Feature_="MainFeature" Component_="Identity.Authorization.exe"/>
+    <ROW Feature_="MainFeature" Component_="Identity.Registration.exe"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
     <ROW Name="icon.exe" SourcePath="Resources\icon.ico" Index="0"/>
@@ -1226,6 +1235,7 @@
     <ROW Action="AI_GetArpIconPath" Sequence="1401"/>
     <ROW Action="StartMySQLService" Condition="( NOT Installed AND NOT OLDPRODUCTS ) AND ( AI_PROCESS_STATE &lt;&gt; &quot;Not Found&quot; )" Sequence="1613"/>
     <ROW Action="AI_DATA_SETTER_11" Condition="( NOT Installed AND NOT OLDPRODUCTS ) AND ( AI_PROCESS_STATE &lt;&gt; &quot;Not Found&quot; )" Sequence="1612"/>
+    <ROW Action="StartIdentityMigration" Condition="( NOT Installed )" Sequence="5827"/>
     <ROW Action="StartMigrationRunner" Condition="( NOT Installed )" Sequence="5826"/>
     <ROW Action="AI_DETECT_MODERNWIN" Condition="(VersionNT &gt;= 603)" Sequence="55" MsiKey="AI_DETECT_MODERNWIN"/>
     <ROW Action="AI_ResolveLocalizedCredentials" Sequence="51"/>
@@ -1422,6 +1432,8 @@
     <ROW MsiServiceConfig="ServiceName_DocEditor" Name="[ServiceName_DocEditor]" Event="1" ConfigType="3" Argument="1" Component_="DocEditor.exe"/>
     <ROW MsiServiceConfig="ServiceName_FileServer" Name="[ServiceName_FileServer]" Event="1" ConfigType="3" Argument="1" Component_="ASC.Files.exe"/>
     <ROW MsiServiceConfig="ServiceName_FileService" Name="[ServiceName_FileService]" Event="1" ConfigType="3" Argument="1" Component_="ASC.Files.Service.exe"/>
+    <ROW MsiServiceConfig="ServiceName_Identity.Authorization" Name="[ServiceName_Identity.Authorization]" Event="1" ConfigType="3" Argument="1" Component_="Identity.Authorization.exe"/>
+    <ROW MsiServiceConfig="ServiceName_Identity.Registration" Name="[ServiceName_Identity.Registration]" Event="1" ConfigType="3" Argument="1" Component_="Identity.Registration.exe"/>
     <ROW MsiServiceConfig="ServiceName_Login" Name="[ServiceName_Login]" Event="1" ConfigType="3" Argument="1" Component_="Login.exe"/>
     <ROW MsiServiceConfig="ServiceName_NotifyService" Name="[ServiceName_NotifyService]" Event="1" ConfigType="3" Argument="1" Component_="ASC.Notify.exe"/>
     <ROW MsiServiceConfig="ServiceName_PeopleServer" Name="[ServiceName_PeopleServer]" Event="1" ConfigType="3" Argument="1" Component_="ASC.People.exe"/>
@@ -1440,6 +1452,8 @@
     <ROW MsiServiceConfigFailureActions="ServiceName_DocEditor" Name="[ServiceName_DocEditor]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="DocEditor.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_FileServer" Name="[ServiceName_FileServer]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.Files.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_FileService" Name="[ServiceName_FileService]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.Files.Service.exe"/>
+    <ROW MsiServiceConfigFailureActions="ServiceName_Identity.Authorization" Name="[ServiceName_Identity.Authorization]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="Identity.Authorization.exe"/>
+    <ROW MsiServiceConfigFailureActions="ServiceName_Identity.Registration" Name="[ServiceName_Identity.Registration]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="Identity.Registration.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_Login" Name="[ServiceName_Login]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="Login.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_NotifyService" Name="[ServiceName_NotifyService]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.Notify.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_PeopleServer" Name="[ServiceName_PeopleServer]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.People.exe"/>
@@ -1458,6 +1472,8 @@
     <ROW ServiceControl="ServiceName_DocEditor" Name="[ServiceName_DocEditor]" Event="161" Wait="0" Component_="DocEditor.exe"/>
     <ROW ServiceControl="ServiceName_FileServer" Name="[ServiceName_FileServer]" Event="161" Wait="0" Component_="ASC.Files.exe"/>
     <ROW ServiceControl="ServiceName_FileService" Name="[ServiceName_FileService]" Event="161" Wait="0" Component_="ASC.Files.Service.exe"/>
+    <ROW ServiceControl="ServiceName_Identity.Authorization" Name="[ServiceName_Identity.Authorization]" Event="161" Wait="0" Component_="Identity.Authorization.exe"/>
+    <ROW ServiceControl="ServiceName_Identity.Registration" Name="[ServiceName_Identity.Registration]" Event="161" Wait="0" Component_="Identity.Registration.exe"/>
     <ROW ServiceControl="ServiceName_Login" Name="[ServiceName_Login]" Event="161" Wait="0" Component_="Login.exe"/>
     <ROW ServiceControl="ServiceName_NotifyService" Name="[ServiceName_NotifyService]" Event="161" Wait="0" Component_="ASC.Notify.exe"/>
     <ROW ServiceControl="ServiceName_PeopleServer" Name="[ServiceName_PeopleServer]" Event="161" Wait="0" Component_="ASC.People.exe"/>
@@ -1476,6 +1492,8 @@
     <ROW ServiceInstall="ServiceName_DocEditor" Name="[ServiceName_DocEditor]" DisplayName="[ShortProductName] DocEditor" ServiceType="16" StartType="2" ErrorControl="1" Component_="DocEditor.exe" Description="[ShortProductName] DocEditor"/>
     <ROW ServiceInstall="ServiceName_FileServer" Name="[ServiceName_FileServer]" DisplayName="[ShortProductName] FileServer" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5007 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_FileServer] [SUBFOLDER_SERVER]" Component_="ASC.Files.exe" Description="[ShortProductName] FileServer"/>
     <ROW ServiceInstall="ServiceName_FileService" Name="[ServiceName_FileService]" DisplayName="[ShortProductName] FileService" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5009 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_FileService] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER] --core:eventBus:subscriptionClientName=asc_event_bus_files_service_queue" Component_="ASC.Files.Service.exe" Description="[ShortProductName] FileService"/>
+    <ROW ServiceInstall="ServiceName_Identity.Authorization" Name="[ServiceName_Identity.Authorization]" DisplayName="[ShortProductName] Identity.Authorization" ServiceType="16" StartType="2" ErrorControl="1" Component_="Identity.Authorization.exe" Description="[ShortProductName] Identity.Authorization"/>
+    <ROW ServiceInstall="ServiceName_Identity.Registration" Name="[ServiceName_Identity.Registration]" DisplayName="[ShortProductName] Identity.Registration" ServiceType="16" StartType="2" ErrorControl="1" Component_="Identity.Registration.exe" Description="[ShortProductName] Identity.Registration"/>
     <ROW ServiceInstall="ServiceName_Login" Name="[ServiceName_Login]" DisplayName="[ShortProductName] Login" ServiceType="16" StartType="2" ErrorControl="1" Component_="Login.exe" Description="[ShortProductName] Login"/>
     <ROW ServiceInstall="ServiceName_NotifyService" Name="[ServiceName_NotifyService]" DisplayName="[ShortProductName] NotifyService" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5005 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_NotifyService] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER] --core:eventBus:subscriptionClientName=asc_event_bus_notify_queue" Component_="ASC.Notify.exe" Description="[ShortProductName] NotifyService"/>
     <ROW ServiceInstall="ServiceName_PeopleServer" Name="[ServiceName_PeopleServer]" DisplayName="[ShortProductName] PeopleServer" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5004 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_PeopleServer] [SUBFOLDER_SERVER]" Component_="ASC.People.exe" Description="[ShortProductName] PeopleServer"/>
@@ -1600,6 +1618,12 @@
     <ROW Name="ReplaceScheme" TxtUpdateSet="fluentbit.conf" FindPattern="OPENSEARCH_SCHEME" ReplacePattern="[OPENSEARCH_SCHEME]" Options="2" Order="3" FileEncoding="-1"/>
     <ROW Name="ReplaceIndex" TxtUpdateSet="fluentbit.conf" FindPattern="OPENSEARCH_INDEX" ReplacePattern="[OPENSEARCH_INDEX]" Options="2" Order="4" FileEncoding="-1"/>
     <ROW Name="Append/Create" TxtUpdateSet="htpasswd_dashboards" FindPattern="onlyoffice:[DASHBOARDS_PWD]" Options="160" Order="0" FileEncoding="0"/>
+    <ROW Name="ReplaceDbHost" TxtUpdateSet="xml" FindPattern="{DB_HOST}" ReplacePattern="[DB_HOST]" Options="2" Order="2" FileEncoding="-1"/>
+    <ROW Name="ReplaceDbPwd" TxtUpdateSet="xml" FindPattern="{DB_PWD}" ReplacePattern="[DB_PWD]" Options="2" Order="3" FileEncoding="-1"/>
+    <ROW Name="ReplaceDbUser" TxtUpdateSet="xml" FindPattern="{DB_USER}" ReplacePattern="[DB_USER]" Options="2" Order="4" FileEncoding="-1"/>
+    <ROW Name="ReplaceDbName" TxtUpdateSet="xml" FindPattern="{DB_NAME}" ReplacePattern="[DB_NAME]" Options="2" Order="5" FileEncoding="-1"/>
+    <ROW Name="ReplaceRedisHost" TxtUpdateSet="xml" FindPattern="{REDIS_HOST}" ReplacePattern="[REDIS_HOST]" Options="2" Order="6" FileEncoding="-1"/>
+    <ROW Name="ReplaceAmqpHost" TxtUpdateSet="xml" FindPattern="{AMQP_HOST}" ReplacePattern="[AMQP_HOST]" Options="2" Order="7" FileEncoding="-1"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.TxtUpdateSetComponent">
     <ROW Key="YourFile.txt" Component="conf" FileName="onlyoffice.conf" Directory="conf_Dir" Options="17"/>

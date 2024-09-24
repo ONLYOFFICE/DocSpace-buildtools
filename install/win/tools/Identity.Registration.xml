@@ -1,0 +1,27 @@
+<service>
+	<id>DocSpace.Identity.Registration</id>
+	<name>ONLYOFFICE DocSpace Identity.Registration</name>
+	<description>ONLYOFFICE DocSpace Identity.Registration</description>
+	<priority>RealTime</priority>
+	<startmode>Automatic</startmode>
+	<autoRefresh>false</autoRefresh>
+	<logpath>{APPDIR}logs</logpath>
+	<onfailure action="restart" delay="10 sec"/>
+   	<workingdirectory>{APPDIR}services\ASC.Identity.Registration\service</workingdirectory>
+	<executable>java</executable>
+	<env name="JDBC_URL" value="{DB_HOST}" />
+	<env name="JDBC_PASSWORD" value="{DB_PWD}" />
+	<env name="JDBC_USER_NAME" value="{DB_USER}" />
+	<env name="JDBC_DATABASE" value="{DB_NAME}" />
+	<env name="RABBIT_HOST" value="{AMQP_HOST}" />
+	<env name="REDIS_HOST" value="{REDIS_HOST}" />
+	<env name="LOG_FILE_PATH" value="{APPDIR}logs\ASC.Identity.Registration.log" />
+	<env name="SPRING_PROFILES_ACTIVE" value="prod" />
+	<env name="SPRING_APPLICATION_NAME" value="ASC.Identity.Registration" />
+	<env name="SERVER_PORT" value="9090" />
+	<arguments>-jar "{APPDIR}services\ASC.Identity.Registration\service\app.jar"</arguments>
+	<log mode="roll-by-size">
+  		<sizeThreshold>10240</sizeThreshold>
+  		<keepFiles>8</keepFiles>
+	</log>
+</service>
