@@ -40,13 +40,15 @@ while [ "$1" != "" ]; do
   shift
 done
 
+PACKAGE_SYSNAME="onlyoffice"
 PRODUCT="docspace"
 BASE_DIR="/var/www/${PRODUCT}"
-PATH_TO_CONF="/etc/onlyoffice/${PRODUCT}"
-STORAGE_ROOT="/var/www/onlyoffice/Data"
-LOG_DIR="/var/log/onlyoffice/${PRODUCT}"
+PATH_TO_CONF="/etc/${PACKAGE_SYSNAME}/${PRODUCT}"
+STORAGE_ROOT="/var/www/${PACKAGE_SYSNAME}/Data"
+LOG_DIR="/var/log/${PACKAGE_SYSNAME}/${PRODUCT}"
 DOTNET_RUN="/usr/bin/dotnet"
 NODE_RUN="/usr/bin/node"
+JAVA_RUN="/usr/bin/java -jar"
 APP_URLS="http://127.0.0.1"
 ENVIRONMENT=" --ENVIRONMENT=production"
 CORE=" --core:products:folder=${BASE_DIR}/products --core:products:subfolder=server"
@@ -195,7 +197,12 @@ reassign_values (){
   if [[ "${EXEC_FILE}" == *".js" ]]; then
 	SERVICE_TYPE="simple"
 	RESTART="always"
-	EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE} --app.port=${SERVICE_PORT} --app.appsettings=${PATH_TO_CONF} --app.environment=${ENVIRONMENT}"
+	EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE} --app.port=${SERVICE_PORT} --app.appsettings=${	} --app.environment=${ENVIRONMENT}"
+  elif [[ "${EXEC_FILE}" == *".jar" ]]; then
+	ENVIRONMENT_FILE="$PATH_TO_CONF/.private/identity-environment"
+	SERVICE_TYPE="simple"	
+	RESTART="always"
+	EXEC_START="${JAVA_RUN} ${WORK_DIR}${EXEC_FILE} "
   elif [[ "${SERVICE_NAME}" = "migration-runner" ]]; then
 	SERVICE_TYPE="simple"
 	RESTART="no"
@@ -212,7 +219,7 @@ reassign_values (){
 write_to_file () {
   [[ -n ${DEPENDENCY_LIST} ]] && sed -e "s_\(After=.*\)_\1 ${DEPENDENCY_LIST}_" -e "/After=/a Wants=${DEPENDENCY_LIST}" -i $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
   sed -i -e 's#${SERVICE_NAME}#'$SERVICE_NAME'#g' -e 's#${WORK_DIR}#'$WORK_DIR'#g' -e "s#\${RESTART}#$RESTART#g" \
-  -e "s#\${EXEC_START}#$EXEC_START#g" -e "s#\${SERVICE_TYPE}#$SERVICE_TYPE#g"  $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
+  -e "s#\${EXEC_START}#$EXEC_START#g" -e "s#\${SERVICE_TYPE}#$SERVICE_TYPE#g" -e 's#${ENVIRONMENT}#'$ENVIRONMENT'#g' $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
 }
 
 mkdir -p $BUILD_PATH

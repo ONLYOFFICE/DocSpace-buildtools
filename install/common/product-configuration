@@ -844,6 +844,31 @@ check_connection_external_services() {
 	return $HOST_RESPONCE
 }
 
+# Function below creates ENV file for identity .service
+create_environments_identity() {
+	cat <<EOL > "$APP_DIR/.private/identity-environment"
+# Environment Variables for Identity services
+
+
+JDBC_URL="${DB_HOST}"
+JDBC_DATABASE="${DB_NAME}"
+JDBC_USER_NAME="${DB_USER}"
+JDBC_PASSWORD="${DB_PWD}"
+
+REDIS_HOST="${REDIS_HOST}"
+REDIS_PORT="${REDIS_PORT}"
+
+RABBIT_PROTOCOL=${RABBIT_PROTOCOL:-"amqp"}
+RABBIT_HOST=${RABBIT_HOST:-${RABBIT_CONTAINER_NAME}}
+RABBIT_USER_NAME=${RABBIT_USER_NAME:-"guest"}
+RABBIT_PASSWORD=${RABBIT_PASSWORD:-"guest"}
+RABBIT_VIRTUAL_HOST=${RABBIT_VIRTUAL_HOST:-"/"}
+RABBIT_URI="${RABBIT_PROTOCOL}://${RABBIT_USER_NAME}:${RABBIT_PASSWORD}@${RABBIT_HOST}${RABBIT_VIRTUAL_HOST}"
+
+LOG_FILE_PATH="${LOG_DIR:-"/var/log/${PACKAGE_SYSNAME}"}/${SPRING_APPLICATION_NAME}.log"
+EOL
+}
+
 if command -v yum >/dev/null 2>&1; then
 	DIST="RedHat"
 	PACKAGE_MANAGER="rpm -q"
@@ -860,6 +885,7 @@ fi
 
 install_json
 product_configuration
+create_environments_identity
 
 if $PACKAGE_MANAGER mysql-client >/dev/null 2>&1 || $PACKAGE_MANAGER mysql-community-client >/dev/null 2>&1; then
     input_db_params
