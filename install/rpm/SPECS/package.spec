@@ -157,6 +157,36 @@ The service responsible for enabling and configuring
 SAML-based single sign-on (SSO) authentication to provide a more quick, 
 easy and secure way to access DocSpace for users
 
+%package        identity-migration
+Packager:       %{packager}
+Summary:        Identity-Migration
+Group:          Applications/Internet
+Requires:       %name-common  = %version-%release
+Requires:       java-21-openjdk-headless | temurin-21-jre | jdk-21 | jdk-21-headless | zulu21-jre-headless | java-21-amazon-corretto-headless
+AutoReqProv:    no
+BuildArch:      noarch
+%description    identity-migration
+
+%package        identity-authorization
+Packager:       %{packager}
+Summary:        Identity-Authorization
+Group:          Applications/Internet
+Requires:       %name-common  = %version-%release
+Requires:       java-21-openjdk-headless | temurin-21-jre | jdk-21 | jdk-21-headless | zulu21-jre-headless | java-21-amazon-corretto-headless
+AutoReqProv:    no
+BuildArch:      noarch
+%description    identity-authorization
+
+%package        identity-api
+Packager:       %{packager}
+Summary:        Identity-Api
+Group:          Applications/Internet
+Requires:       %name-common  = %version-%release
+Requires:       java-21-openjdk-headless | temurin-21-jre | jdk-21 | jdk-21-headless | zulu21-jre-headless | java-21-amazon-corretto-headless
+AutoReqProv:    no
+BuildArch:      noarch
+%description    identity-api
+
 %package        clear-events
 Packager:       %{packager}
 Summary:        Clear-events

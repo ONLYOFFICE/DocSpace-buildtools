@@ -2,7 +2,8 @@ Source: {{product}}
 Section: web
 Priority: optional
 Maintainer: Ascensio System SIA <support@onlyoffice.com>
-Build-Depends: debhelper (>= 10), po-debconf, nodejs (>=18), dotnet-sdk-8.0, yarn
+Build-Depends: debhelper (>= 10), po-debconf, nodejs (>=18), dotnet-sdk-8.0, yarn, maven,
+	openjdk-21-jdk-headless | temurin-21-jdk | jdk-21 | jdk-21-headless | zulu21-jdk-headless | java-21-amazon-corretto-jdk
 Standards-Version: {{package_header_tag_version}}
 Homepage: https://www.onlyoffice.com/
 Architecture: all 
@@ -31,7 +32,10 @@ Depends: debconf, openssl,
          {{product}}-socket (= {{package_header_tag_version}}),
          {{product}}-ssoauth (= {{package_header_tag_version}}),
          {{product}}-studio (= {{package_header_tag_version}}),
-         {{product}}-studio-notify (= {{package_header_tag_version}})
+         {{product}}-studio-notify (= {{package_header_tag_version}}),
+         {{product}}-identity-api (= {{package_header_tag_version}}),
+         {{product}}-identity-migration (= {{package_header_tag_version}}),
+         {{product}}-identity-authorization (= {{package_header_tag_version}})
 Description: {{product}}
 	ONLYOFFICE {{product}} is a new way to collaborate on documents with teams, 
 	clients, partners, etc., based on the concept of rooms - special spaces with 
@@ -150,6 +154,30 @@ Description: {{product}}-ssoauth
 	The service responsible for enabling and configuring 
 	SAML-based single sign-on (SSO) authentication to provide a more quick, 
 	easy and secure way to access DocSpace for users
+
+Package: {{product}}-identity-api
+Architecture: all
+Multi-Arch: foreign
+Depends: {{product}}-common (= {{package_header_tag_version}}), ${misc:Depends}, ${shlibs:Depends},
+	openjdk-21-jre-headless | temurin-21-jre | jdk-21 | jdk-21-headless | zulu21-jre-headless | java-21-amazon-corretto-jdk
+Description: {{product}}-identity-api
+  ASC.Identity.Registration
+
+Package: {{product}}-identity-migration
+Architecture: all
+Multi-Arch: foreign
+Depends: {{product}}-common (= {{package_header_tag_version}}), ${misc:Depends}, ${shlibs:Depends},
+	openjdk-21-jre-headless | temurin-21-jre | jdk-21 | jdk-21-headless | zulu21-jre-headless | java-21-amazon-corretto-jdk
+Description: {{product}}-identity-migration
+  ASC.Identity.Migration
+
+Package: {{product}}-identity-authorization
+Architecture: all
+Multi-Arch: foreign
+Depends: {{product}}-common (= {{package_header_tag_version}}), ${misc:Depends}, ${shlibs:Depends},
+	openjdk-21-jre-headless | temurin-21-jre | jdk-21 | jdk-21-headless | zulu21-jre-headless | java-21-amazon-corretto-jdk
+Description: {{product}}-identity-authorization
+  ASC.Identity.Authorization
 
 Package: {{product}}-backup-background
 Architecture: all
