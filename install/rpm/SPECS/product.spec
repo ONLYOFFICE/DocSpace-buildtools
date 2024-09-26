@@ -31,6 +31,8 @@ Source6:        %{product}.rpmlintrc
 BuildRequires:  nodejs >= 18.0
 BuildRequires:  yarn
 BuildRequires:  dotnet-sdk-8.0
+BuildRequires:  java-21-openjdk-headless
+BuildRequires:  maven
 
 BuildRoot:      %_tmppath/%name-%version-%release.%arch
 
@@ -51,6 +53,9 @@ Requires:       %name-proxy = %version-%release
 Requires:       %name-radicale = %version-%release
 Requires:       %name-socket = %version-%release
 Requires:       %name-ssoauth = %version-%release
+Requires:       %name-identity-migration = %version-%release
+Requires:       %name-identity-authorization = %version-%release
+Requires:       %name-identity-api = %version-%release
 Requires:       %name-studio = %version-%release
 Requires:       %name-studio-notify = %version-%release
 Requires:       openssl
