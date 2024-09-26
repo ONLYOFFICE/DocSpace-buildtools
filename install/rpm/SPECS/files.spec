@@ -131,6 +131,24 @@
 /usr/lib/systemd/system/%{product}-ssoauth.service
 %dir %{buildpath}/services/
 
+%files identity-api
+%defattr(-, onlyoffice, onlyoffice, -)
+%{buildpath}/services/ASC.Identity.Registration
+/usr/lib/systemd/system/%{product}-identity-api.service
+%dir %{buildpath}/services/
+
+%files identity-migration
+%defattr(-, onlyoffice, onlyoffice, -)
+%{buildpath}/services/ASC.Identity.Migration
+/usr/lib/systemd/system/%{product}-identity-migration.service
+%dir %{buildpath}/services/
+
+%files identity-authorization
+%defattr(-, onlyoffice, onlyoffice, -)
+%{buildpath}/services/ASC.Identity.Authorization
+/usr/lib/systemd/system/%{product}-identity-authorization.service
+%dir %{buildpath}/services/
+
 %files clear-events
 %defattr(-, onlyoffice, onlyoffice, -)
 %{buildpath}/services/ASC.ClearEvents/

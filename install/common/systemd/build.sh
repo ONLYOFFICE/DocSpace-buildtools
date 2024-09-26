@@ -40,13 +40,15 @@ while [ "$1" != "" ]; do
   shift
 done
 
+PACKAGE_SYSNAME="onlyoffice"
 PRODUCT="docspace"
 BASE_DIR="/var/www/${PRODUCT}"
-PATH_TO_CONF="/etc/onlyoffice/${PRODUCT}"
-STORAGE_ROOT="/var/www/onlyoffice/Data"
-LOG_DIR="/var/log/onlyoffice/${PRODUCT}"
+PATH_TO_CONF="/etc/${PACKAGE_SYSNAME}/${PRODUCT}"
+STORAGE_ROOT="/var/www/${PACKAGE_SYSNAME}/Data"
+LOG_DIR="/var/log/${PACKAGE_SYSNAME}/${PRODUCT}"
 DOTNET_RUN="/usr/bin/dotnet"
 NODE_RUN="/usr/bin/node"
+JAVA_RUN="/usr/bin/java -jar"
 APP_URLS="http://127.0.0.1"
 ENVIRONMENT=" --ENVIRONMENT=production"
 CORE=" --core:products:folder=${BASE_DIR}/products --core:products:subfolder=server"
@@ -63,6 +65,9 @@ SERVICE_NAME=(
 	studio
 	backup
 	ssoauth
+	identity-authorization
+	identity-migration
+	identity-api
 	clear-events
 	backup-background
 	doceditor
@@ -139,6 +144,24 @@ reassign_values (){
 		EXEC_FILE="app.js"
 		DEPENDENCY_LIST=""
 	;;
+	identity-api )
+		SERVICE_PORT="9090"
+		SPRING_APPLICATION_NAME="ASC.Identity.Registration"
+		WORK_DIR="${BASE_DIR}/services/${SPRING_APPLICATION_NAME}/"
+		EXEC_FILE="app.jar"
+	;;
+	identity-authorization )
+		SERVICE_PORT="8080"
+		SPRING_APPLICATION_NAME="ASC.Identity.Authorization"
+		WORK_DIR="${BASE_DIR}/services/${SPRING_APPLICATION_NAME}/"
+		EXEC_FILE="app.jar"
+	;;
+	identity-migration )
+		SERVICE_PORT="8081"
+		SPRING_APPLICATION_NAME="ASC.Identity.Migration"
+		WORK_DIR="${BASE_DIR}/services/${SPRING_APPLICATION_NAME}/"
+		EXEC_FILE="app.jar"
+	;;
 	clear-events )
 		SERVICE_PORT="5027"
 		WORK_DIR="${BASE_DIR}/services/ASC.ClearEvents/"
@@ -174,17 +197,26 @@ reassign_values (){
 	;;
   esac
   SERVICE_NAME="$1"
+  RESTART="always"
+  unset SYSTEMD_ENVIRONMENT
+  unset SYSTEMD_ENVIRONMENT_FILE
   if [[ "${EXEC_FILE}" == *".js" ]]; then
 	SERVICE_TYPE="simple"
-	RESTART="always"
 	EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE} --app.port=${SERVICE_PORT} --app.appsettings=${PATH_TO_CONF} --app.environment=${ENVIRONMENT}"
+  elif [[ "${EXEC_FILE}" == *".jar" ]]; then
+	SYSTEMD_ENVIRONMENT_FILE="${PATH_TO_CONF}/identity.env"
+	SYSTEMD_ENVIRONMENT="SPRING_APPLICATION_NAME=${SPRING_APPLICATION_NAME} SERVER_PORT=${SERVICE_PORT} LOG_FILE_PATH=${LOG_DIR}/${SERVICE_NAME}.log"
+	SERVICE_TYPE="notify"
+	EXEC_START="${JAVA_RUN} ${WORK_DIR}${EXEC_FILE}"
+	if [[ "${SERVICE_NAME}" = "identity-migration" ]]; then
+		RESTART="on-failure" && SERVICE_TYPE="simple"
+	fi
   elif [[ "${SERVICE_NAME}" = "migration-runner" ]]; then
 	SERVICE_TYPE="simple"
-	RESTART="no"
+	RESTART="on-failure"
 	EXEC_START="${DOTNET_RUN} ${WORK_DIR}${EXEC_FILE} standalone=true"
   else
-	SERVICE_TYPE="notify"	
-	RESTART="always"
+	SERVICE_TYPE="notify"
 	EXEC_START="${DOTNET_RUN} ${WORK_DIR}${EXEC_FILE} --urls=${APP_URLS}:${SERVICE_PORT} --pathToConf=${PATH_TO_CONF} \
 --\$STORAGE_ROOT=${STORAGE_ROOT} --log:dir=${LOG_DIR} --log:name=${SERVICE_NAME}${CORE}${CORE_EVENT_BUS}${ENVIRONMENT}"
 	unset CORE_EVENT_BUS
@@ -192,6 +224,8 @@ reassign_values (){
 }
 
 write_to_file () {
+  [[ -n ${SYSTEMD_ENVIRONMENT} ]] && sed "/^ExecStart=/a Environment=${SYSTEMD_ENVIRONMENT}" -i $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
+  [[ -n ${SYSTEMD_ENVIRONMENT_FILE} ]] && sed "/^ExecStart=/a EnvironmentFile=${SYSTEMD_ENVIRONMENT_FILE}" -i $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
   [[ -n ${DEPENDENCY_LIST} ]] && sed -e "s_\(After=.*\)_\1 ${DEPENDENCY_LIST}_" -e "/After=/a Wants=${DEPENDENCY_LIST}" -i $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
   sed -i -e 's#${SERVICE_NAME}#'$SERVICE_NAME'#g' -e 's#${WORK_DIR}#'$WORK_DIR'#g' -e "s#\${RESTART}#$RESTART#g" \
   -e "s#\${EXEC_START}#$EXEC_START#g" -e "s#\${SERVICE_TYPE}#$SERVICE_TYPE#g"  $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
