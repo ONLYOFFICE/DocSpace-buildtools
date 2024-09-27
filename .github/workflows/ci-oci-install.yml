@@ -91,10 +91,9 @@ jobs:
 
           matrix=$(jq -c --arg REDHAT_CHANGED "${{ env.redhat_changed }}" --arg DEBIAN_CHANGED "${{ env.debian_changed }}" '
             { include: [.[] | select(
-                ($REDHAT_CHANGED == "true" and $DEBIAN_CHANGED == "true" and .execute == true) or
+                ($REDHAT_CHANGED == $DEBIAN_CHANGED and .execute == true) or
                 ($REDHAT_CHANGED == "true" and (.name | test("CentOS|Fedora"))) or
-                ($DEBIAN_CHANGED == "true" and (.name | test("Debian|Ubuntu"))) or
-                ($REDHAT_CHANGED == "false" and $DEBIAN_CHANGED == "false" and .execute == true))]
+                ($DEBIAN_CHANGED == "true" and (.name | test("Debian|Ubuntu"))))]
             }' <<< "$matrix")
 
           echo "matrix=${matrix}" >> $GITHUB_OUTPUT
