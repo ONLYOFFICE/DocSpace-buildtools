@@ -198,17 +198,22 @@ reassign_values (){
   esac
   SERVICE_NAME="$1"
   RESTART="always"
+  unset SYSTEMD_ENVIRONMENT
+  unset SYSTEMD_ENVIRONMENT_FILE
   if [[ "${EXEC_FILE}" == *".js" ]]; then
 	SERVICE_TYPE="simple"
 	EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE} --app.port=${SERVICE_PORT} --app.appsettings=${PATH_TO_CONF} --app.environment=${ENVIRONMENT}"
   elif [[ "${EXEC_FILE}" == *".jar" ]]; then
-	ENVIRONMENT_FILE="${PATH_TO_CONF}/identity.env"
-	SERVICE_TYPE="simple"
-	EXEC_START="${JAVA_RUN} ${WORK_DIR}${EXEC_FILE} -DLOG_FILE_PATH=${LOG_DIR}/${SPRING_APPLICATION_NAME}.log \
--DSPRING_APPLICATION_NAME=${SPRING_APPLICATION_NAME} -DSERVER_PORT=${SERVICE_PORT}"
+	SYSTEMD_ENVIRONMENT_FILE="${PATH_TO_CONF}/identity.env"
+	SYSTEMD_ENVIRONMENT="SPRING_APPLICATION_NAME=${SPRING_APPLICATION_NAME} SERVER_PORT=${SERVICE_PORT} LOG_FILE_PATH=${LOG_DIR}/${SERVICE_NAME}.log"
+	SERVICE_TYPE="notify"
+	EXEC_START="${JAVA_RUN} ${WORK_DIR}${EXEC_FILE}"
+	if [[ "${SERVICE_NAME}" = "identity-migration" ]]; then
+		RESTART="on-failure" && SERVICE_TYPE="simple"
+	fi
   elif [[ "${SERVICE_NAME}" = "migration-runner" ]]; then
 	SERVICE_TYPE="simple"
-	RESTART="no"
+	RESTART="on-failure"
 	EXEC_START="${DOTNET_RUN} ${WORK_DIR}${EXEC_FILE} standalone=true"
   else
 	SERVICE_TYPE="notify"
@@ -219,10 +224,11 @@ reassign_values (){
 }
 
 write_to_file () {
+  [[ -n ${SYSTEMD_ENVIRONMENT} ]] && sed "/^ExecStart=/a Environment=${SYSTEMD_ENVIRONMENT}" -i $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
+  [[ -n ${SYSTEMD_ENVIRONMENT_FILE} ]] && sed "/^ExecStart=/a EnvironmentFile=${SYSTEMD_ENVIRONMENT_FILE}" -i $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
   [[ -n ${DEPENDENCY_LIST} ]] && sed -e "s_\(After=.*\)_\1 ${DEPENDENCY_LIST}_" -e "/After=/a Wants=${DEPENDENCY_LIST}" -i $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
   sed -i -e 's#${SERVICE_NAME}#'$SERVICE_NAME'#g' -e 's#${WORK_DIR}#'$WORK_DIR'#g' -e "s#\${RESTART}#$RESTART#g" \
-  -e "s#\${EXEC_START}#$EXEC_START#g" -e "s#\${SERVICE_TYPE}#$SERVICE_TYPE#g" -e 's#${ENVIRONMENT}#'$ENVIRONMENT'#g' $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
-  [ -n "${ENVIRONMENT_FILE}" ]] && sed -i "/ExecStart=/a EnvironmentFile=${ENVIRONMENT_FILE}" $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
+  -e "s#\${EXEC_START}#$EXEC_START#g" -e "s#\${SERVICE_TYPE}#$SERVICE_TYPE#g"  $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
 }
 
 mkdir -p $BUILD_PATH
