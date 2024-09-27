@@ -3,21 +3,18 @@
 set -e
 
 make_swap () {
-	DISK_REQUIREMENTS=6144; #6Gb free space
-	MEMORY_REQUIREMENTS=12000; #RAM ~12Gb
-	SWAPFILE="/${product}_swapfile";
+	local DISK_REQUIREMENTS=6144 MEMORY_REQUIREMENTS=12000 SWAPFILE="/${product}_swapfile"
+	local AVAILABLE_DISK_SPACE=$(df -m / | awk 'END {print $4}')
+	local TOTAL_MEMORY=$(free --mega | awk '/Mem:/ {print $2}')
+	local EXIST=$(swapon -s | awk '{print $1}' | grep -x "$SWAPFILE" || true)
 
-	AVAILABLE_DISK_SPACE=$(df -m /  | tail -1 | awk '{ print $4 }');
-	TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1);
-	EXIST=$(swapon -s | awk '{ print $1 }' | { grep -x ${SWAPFILE} || true; });
-
-	if [[ -z $EXIST ]] && [ ${TOTAL_MEMORY} -lt ${MEMORY_REQUIREMENTS} ] && [ ${AVAILABLE_DISK_SPACE} -gt ${DISK_REQUIREMENTS} ]; then
+	if [[ -z $EXIST && $TOTAL_MEMORY -lt $MEMORY_REQUIREMENTS && $AVAILABLE_DISK_SPACE -gt $DISK_REQUIREMENTS ]]; then
 		touch "${SWAPFILE}"
 		[[ "$(df -T / | awk 'NR==2{print $2}')" = "btrfs" ]] && chattr +C "${SWAPFILE}"
-		fallocate -l 6G ${SWAPFILE}
-		chmod 600 ${SWAPFILE}
-		mkswap ${SWAPFILE}
-		swapon ${SWAPFILE}
+		fallocate -l 6G "$SWAPFILE"
+		chmod 600 "$SWAPFILE"
+		mkswap "$SWAPFILE"
+		swapon "$SWAPFILE"
 		echo "$SWAPFILE none swap sw 0 0" >> /etc/fstab
 	fi
 }
@@ -47,62 +44,35 @@ hold_package_version() {
 	fi
 }
 
-check_hardware () {
-    DISK_REQUIREMENTS=40960;
-    MEMORY_REQUIREMENTS=8000;
-    CORE_REQUIREMENTS=4;
-
-	AVAILABLE_DISK_SPACE=$(df -m /  | tail -1 | awk '{ print $4 }');
-
-	if [ ${AVAILABLE_DISK_SPACE} -lt ${DISK_REQUIREMENTS} ]; then
-		echo "Minimal requirements are not met: need at least $DISK_REQUIREMENTS MB of free HDD space"
-		exit 1;
-	fi
-
-	TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1);
-
-	if [ ${TOTAL_MEMORY} -lt ${MEMORY_REQUIREMENTS} ]; then
-		echo "Minimal requirements are not met: need at least $MEMORY_REQUIREMENTS MB of RAM"
-		exit 1;
-	fi
-
-	CPU_CORES_NUMBER=$(cat /proc/cpuinfo | grep processor | wc -l);
-
-	if [ ${CPU_CORES_NUMBER} -lt ${CORE_REQUIREMENTS} ]; then
-		echo "The system does not meet the minimal hardware requirements. CPU with at least $CORE_REQUIREMENTS cores is required"
-		exit 1;
-	fi
-}
-
 if [ "$SKIP_HARDWARE_CHECK" != "true" ]; then
-	check_hardware
+	DISK_REQUIREMENTS=40960
+	MEMORY_REQUIREMENTS=8000
+	CORE_REQUIREMENTS=4
+
+	AVAILABLE_DISK_SPACE=$(df -m / | awk 'END {print $4}')
+	[ $AVAILABLE_DISK_SPACE -lt $DISK_REQUIREMENTS ] && { echo "Need at least $DISK_REQUIREMENTS MB of free HDD space"; exit 1; }
+
+	TOTAL_MEMORY=$(free --mega | awk '/Mem:/ {print $2}')
+	[ $TOTAL_MEMORY -lt $MEMORY_REQUIREMENTS ] && { echo "Need at least $MEMORY_REQUIREMENTS MB of RAM"; exit 1; }
+
+	CPU_CORES_NUMBER=$(grep -c processor /proc/cpuinfo)
+	[ $CPU_CORES_NUMBER -lt $CORE_REQUIREMENTS ] && { echo "CPU with at least $CORE_REQUIREMENTS cores is required"; exit 1; }
 fi
 
-ARCH="$(dpkg --print-architecture)"
-if [ "$ARCH" != "amd64" ]; then
-    echo "ONLYOFFICE ${product^^} doesn't support architecture '$ARCH'"
-    exit;
+[ "$(dpkg --print-architecture)" != "amd64" ] && { echo "ONLYOFFICE ${product^^} doesn't support architecture '$(dpkg --print-architecture)'"; exit; }
+
+if command -v lsb_release >/dev/null; then
+    DIST=$(lsb_release -si | xargs)
+    DISTRIB_CODENAME=$(lsb_release -sc | xargs)
+    REV=$(lsb_release -sr | xargs)
+elif [ -f /etc/os-release ]; then
+    DIST=$(grep -Po '(?<=^ID=)"?\K[^"]+' /etc/os-release)
+    DISTRIB_CODENAME=$(grep -Po '(?<=VERSION_CODENAME=)"?\K[^"]+' /etc/os-release)
+    REV=$(grep -Po '(?<=VERSION_ID=)"?\K[^"]+' /etc/os-release)
 fi
 
-REV=`cat /etc/debian_version`
-DIST='Debian'
-if [ -f /etc/lsb-release ] ; then
-        DIST=`cat /etc/lsb-release | grep '^DISTRIB_ID' | awk -F=  '{ print $2 }'`
-        REV=`cat /etc/lsb-release | grep '^DISTRIB_RELEASE' | awk -F=  '{ print $2 }'`
-        DISTRIB_CODENAME=`cat /etc/lsb-release | grep '^DISTRIB_CODENAME' | awk -F=  '{ print $2 }'`
-        DISTRIB_RELEASE=`cat /etc/lsb-release | grep '^DISTRIB_RELEASE' | awk -F=  '{ print $2 }'`
-elif [ -f /etc/lsb_release ] || [ -f /usr/bin/lsb_release ] ; then
-        DIST=`lsb_release -a 2>&1 | grep 'Distributor ID:' | awk -F ":" '{print $2 }' | tr -d '[:space:]'`
-        REV=`lsb_release -a 2>&1 | grep 'Release:' | awk -F ":" '{print $2 }' | tr -d '[:space:]'`
-        DISTRIB_CODENAME=`lsb_release -a 2>&1 | grep 'Codename:' | awk -F ":" '{print $2 }' | tr -d '[:space:]'`
-        DISTRIB_RELEASE=`lsb_release -a 2>&1 | grep 'Release:' | awk -F ":" '{print $2 }' | tr -d '[:space:]'`
-elif [ -f /etc/os-release ] ; then
-        DISTRIB_CODENAME=$(grep "VERSION=" /etc/os-release |awk -F= {' print $2'}|sed s/\"//g |sed s/[0-9]//g | sed s/\)$//g |sed s/\(//g | tr -d '[:space:]')
-        DISTRIB_RELEASE=$(grep "VERSION_ID=" /etc/os-release |awk -F= {' print $2'}|sed s/\"//g |sed s/[0-9]//g | sed s/\)$//g |sed s/\(//g | tr -d '[:space:]')
-fi
-
-DIST=`echo "$DIST" | tr '[:upper:]' '[:lower:]' | xargs`;
-DISTRIB_CODENAME=`echo "$DISTRIB_CODENAME" | tr '[:upper:]' '[:lower:]' | xargs`;
+DIST=${DIST,,} 
+DISTRIB_CODENAME=${DISTRIB_CODENAME,,}
 
 # Check if it's Ubuntu less than 20 or Debian less than 11
 if [[ ( "${DIST}" == "ubuntu" && "${REV%.*}" -lt 20 ) || ( "${DIST}" == "debian" && "${REV%.*}" -lt 11 ) ]]; then

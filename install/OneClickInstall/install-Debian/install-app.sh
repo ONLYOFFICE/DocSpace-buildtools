@@ -22,13 +22,10 @@ if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ]; then
 
 	if [ -n $ds_pkg_name ]; then
 		if ! dpkg -l ${ds_pkg_name} &> /dev/null; then
-			
 			debconf-get-selections | grep ^${ds_pkg_installed_name} | sed s/${ds_pkg_installed_name}/${ds_pkg_name}/g | debconf-set-selections
 						
 			DEBIAN_FRONTEND=noninteractive apt-get purge -yq ${ds_pkg_installed_name}
-			
 			apt-get install -yq ${ds_pkg_name}
-			
 			RECONFIGURE_PRODUCT="true"
 		else
 			apt-get install -y --only-upgrade ${ds_pkg_name};	

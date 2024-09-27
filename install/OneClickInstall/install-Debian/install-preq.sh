@@ -19,30 +19,21 @@ fi
 
 apt-get -y update
 
-if ! command -v locale-gen &> /dev/null; then
-	apt-get install -yq locales
-fi
-
-if ! dpkg -l | grep -q "apt-transport-https"; then
-	apt-get install -yq apt-transport-https
-fi
-
-if ! dpkg -l | grep -q "software-properties-common"; then
-	apt-get install -yq software-properties-common
-fi
-
-locale-gen en_US.UTF-8
-
 # add opensearch repo
 curl -o- https://artifacts.opensearch.org/publickeys/opensearch.pgp | gpg --dearmor --batch --yes -o /usr/share/keyrings/opensearch-keyring
 echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch/2.x/apt stable main" > /etc/apt/sources.list.d/opensearch-2.x.list
 ELASTIC_VERSION="2.11.1"
 
-#add opensearch dashboards repo
 if [ ${INSTALL_FLUENT_BIT} == "true" ]; then
+	#add opensearch dashboards repo
 	curl -o- https://artifacts.opensearch.org/publickeys/opensearch.pgp | gpg --dearmor --batch --yes -o /usr/share/keyrings/opensearch-keyring
 	echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/2.x/apt stable main" > /etc/apt/sources.list.d/opensearch-dashboards-2.x.list
-	DASHBOARDS_VERSION="2.11.1"
+	DASHBOARDS_PACKAGE="opensearch-dashboards=${ELASTIC_VERSION}"
+
+	#add fluent-bit repo
+	curl https://packages.fluentbit.io/fluentbit.key | gpg --dearmor > /usr/share/keyrings/fluentbit-keyring.gpg
+	echo "deb [signed-by=/usr/share/keyrings/fluentbit-keyring.gpg] https://packages.fluentbit.io/$DIST/$DISTRIB_CODENAME $DISTRIB_CODENAME main" | tee /etc/apt/sources.list.d/fluent-bit.list
+	FLUENT_BIT_PACKAGE="fluent-bit"
 fi
 
 #add rabbitmq & erlang repo
@@ -68,8 +59,8 @@ if [[ "${DISTRIB_CODENAME}" =~ ^(focal|bullseye)$ ]]; then
 fi
 
 # add nodejs repo
-NODE_VERSION="18"
 curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
+NODE_VERSION="18"
 
 #add dotnet repo
 if [ "$DIST" = "debian" ] || [ "$DISTRIB_CODENAME" = "focal" ]; then
@@ -109,11 +100,10 @@ elif dpkg -l | grep -q "mysql-apt-config" && [ "$(apt-cache policy mysql-apt-con
 	rm -f ${MYSQL_PACKAGE_NAME}
 fi
 
-# add redis repo  --- temporary fix for complete installation on Ubuntu 24.04. REDIS_DIST_CODENAME change to DISTRIB_CODENAME
+# add redis repo
 if [ "$DIST" = "ubuntu" ]; then	
-	[[ "$DISTRIB_CODENAME" =~ noble ]] && REDIS_DIST_CODENAME="jammy" || REDIS_DIST_CODENAME="${DISTRIB_CODENAME}"
 	curl -fsSL https://packages.redis.io/gpg | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/redis.gpg --import
-	echo "deb [signed-by=/usr/share/keyrings/redis.gpg] https://packages.redis.io/deb $REDIS_DIST_CODENAME main" | tee /etc/apt/sources.list.d/redis.list
+	echo "deb [signed-by=/usr/share/keyrings/redis.gpg] https://packages.redis.io/deb ${DISTRIB_CODENAME} main" | tee /etc/apt/sources.list.d/redis.list
 	chmod 644 /usr/share/keyrings/redis.gpg
 fi
 
@@ -122,14 +112,13 @@ if [[ "$DISTRIB_CODENAME" != noble ]]; then
 	curl -s http://nginx.org/keys/nginx_signing.key | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/nginx.gpg --import
 	echo "deb [signed-by=/usr/share/keyrings/nginx.gpg] http://nginx.org/packages/$DIST/ $DISTRIB_CODENAME nginx" | tee /etc/apt/sources.list.d/nginx.list
 	chmod 644 /usr/share/keyrings/nginx.gpg
+	# Fix for missing nginx repository for debian bookworm
+	[ "$DISTRIB_CODENAME" = "bookworm" ] && sed -i "s/$DISTRIB_CODENAME/buster/g" /etc/apt/sources.list.d/nginx.list
 fi
-# Fix for missing nginx repository for debian bookworm
-[ "$DISTRIB_CODENAME" = "bookworm" ] && sed -i "s/$DISTRIB_CODENAME/buster/g" /etc/apt/sources.list.d/nginx.list
 
-#add openresty repo --- temporary fix for complete installation on Ubuntu 24.04: OPENRESTY_DIST_CODENAME change to DISTRIB_CODENAME
-[[ "$DISTRIB_CODENAME" =~ noble ]] && OPENRESTY_DIST_CODENAME="jammy" || OPENRESTY_DIST_CODENAME="${DISTRIB_CODENAME}"
+#add openresty repo
 curl -fsSL https://openresty.org/package/pubkey.gpg | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/openresty.gpg --import
-echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/$DIST $OPENRESTY_DIST_CODENAME $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
+echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/$DIST $DISTRIB_CODENAME $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
 chmod 644 /usr/share/keyrings/openresty.gpg
 
 #add java repo
@@ -155,12 +144,14 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 				postgresql \
 				redis-server \
 				rabbitmq-server \
+				$FLUENT_BIT_PACKAGE \
 				temurin-${JAVA_VERSION}-jre \
 				ffmpeg 
 
 if ! dpkg -l | grep -q "opensearch"; then
-	apt-get install -yq opensearch=${ELASTIC_VERSION}
+	apt-get install -yq opensearch=${ELASTIC_VERSION} ${DASHBOARDS_PACKAGE}
 fi
+
 # Set Java ${JAVA_VERSION} as the default version
 JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*temurin-${JAVA_VERSION}*" | head -1)
 update-alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && update-alternatives --set java "$JAVA_PATH"
