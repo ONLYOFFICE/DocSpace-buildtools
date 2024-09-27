@@ -162,7 +162,7 @@ Packager:       %{packager}
 Summary:        Identity-Migration
 Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
-Requires:       java-21-openjdk-headless | temurin-21-jre | jdk-21 | jdk-21-headless | zulu21-jre-headless | java-21-amazon-corretto-headless
+Requires:       java-21-openjdk-headless
 AutoReqProv:    no
 BuildArch:      noarch
 %description    identity-migration
@@ -172,7 +172,7 @@ Packager:       %{packager}
 Summary:        Identity-Authorization
 Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
-Requires:       java-21-openjdk-headless | temurin-21-jre | jdk-21 | jdk-21-headless | zulu21-jre-headless | java-21-amazon-corretto-headless
+Requires:       java-21-openjdk-headless
 AutoReqProv:    no
 BuildArch:      noarch
 %description    identity-authorization
@@ -182,7 +182,7 @@ Packager:       %{packager}
 Summary:        Identity-Api
 Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
-Requires:       java-21-openjdk-headless | temurin-21-jre | jdk-21 | jdk-21-headless | zulu21-jre-headless | java-21-amazon-corretto-headless
+Requires:       java-21-openjdk-headless
 AutoReqProv:    no
 BuildArch:      noarch
 %description    identity-api

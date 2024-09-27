@@ -32,7 +32,7 @@ BuildRequires:  nodejs >= 18.0
 BuildRequires:  yarn
 BuildRequires:  dotnet-sdk-8.0
 BuildRequires:  unzip
-BuildRequires:  java-21-openjdk-headless | temurin-21-jdk | jdk-21 | jdk-21-headless | zulu21-jdk | java-21-amazon-corretto-headless
+BuildRequires:  java-21-openjdk-headless
 BuildRequires:  maven
 
 BuildRoot:      %_tmppath/%name-%version-%release.%arch
