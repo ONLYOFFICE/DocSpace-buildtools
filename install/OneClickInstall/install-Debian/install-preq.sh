@@ -110,6 +110,11 @@ curl -fsSL https://openresty.org/package/pubkey.gpg | gpg --no-default-keyring -
 echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/$DIST $OPENRESTY_DIST_CODENAME $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
 chmod 644 /usr/share/keyrings/openresty.gpg
 
+#add java repo
+curl -fsSL https://packages.adoptium.net/artifactory/api/gpg/key/public | gpg --dearmor | tee /usr/share/keyrings/adoptium.gpg > /dev/null
+echo "deb [signed-by=/usr/share/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb $DISTRIB_CODENAME main" | tee /etc/apt/sources.list.d/adoptium.list
+JAVA_VERSION="21"
+
 # setup msttcorefonts
 echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
 
@@ -127,11 +132,15 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 				postgresql \
 				redis-server \
 				rabbitmq-server \
+				temurin-${JAVA_VERSION}-jre \
 				ffmpeg 
 
 if ! dpkg -l | grep -q "opensearch"; then
 	apt-get install -yq opensearch=${ELASTIC_VERSION}
 fi
+# Set Java ${JAVA_VERSION} as the default version
+JAVA_BIN=$(find /usr/lib/jvm/ -name "java" -path "*temurin-${JAVA_VERSION}-jre*" | head -1)
+update-alternatives --install /usr/bin/java java "$JAVA_BIN" 100 && update-alternatives --set java "$JAVA_BIN"
 
 if [ ${INSTALL_FLUENT_BIT} == "true" ]; then
 	[[ "$DISTRIB_CODENAME" =~ noble ]] && FLUENTBIT_DIST_CODENAME="jammy" || FLUENTBIT_DIST_CODENAME="${DISTRIB_CODENAME}"
