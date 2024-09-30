@@ -113,6 +113,7 @@ chmod 644 /usr/share/keyrings/openresty.gpg
 #add java repo
 curl -fsSL https://packages.adoptium.net/artifactory/api/gpg/key/public | gpg --dearmor | tee /usr/share/keyrings/adoptium.gpg > /dev/null
 echo "deb [signed-by=/usr/share/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb $DISTRIB_CODENAME main" | tee /etc/apt/sources.list.d/adoptium.list
+chmod 644 /usr/share/keyrings/adoptium.gpg
 JAVA_VERSION="21"
 
 # setup msttcorefonts
@@ -139,8 +140,8 @@ if ! dpkg -l | grep -q "opensearch"; then
 	apt-get install -yq opensearch=${ELASTIC_VERSION}
 fi
 # Set Java ${JAVA_VERSION} as the default version
-JAVA_BIN=$(find /usr/lib/jvm/ -name "java" -path "*temurin-${JAVA_VERSION}-jre*" | head -1)
-update-alternatives --install /usr/bin/java java "$JAVA_BIN" 100 && update-alternatives --set java "$JAVA_BIN"
+JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*temurin-${JAVA_VERSION}*" | head -1)
+update-alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && update-alternatives --set java "$JAVA_PATH"
 
 if [ ${INSTALL_FLUENT_BIT} == "true" ]; then
 	[[ "$DISTRIB_CODENAME" =~ noble ]] && FLUENTBIT_DIST_CODENAME="jammy" || FLUENTBIT_DIST_CODENAME="${DISTRIB_CODENAME}"

@@ -103,8 +103,8 @@ ${package_manager} -y install $([ $DIST != "fedora" ] && echo "epel-release") \
 			ffmpeg $TESTING_REPO
 
 # Set Java ${JAVA_VERSION} as the default version
-JAVA_BIN=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}-openjdk*" | head -1)
-alternatives --install /usr/bin/java java "$JAVA_BIN" 100 && alternatives --set java "$JAVA_BIN"
+JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | head -1)
+alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && alternatives --set java "$JAVA_PATH"
 
 #add repo, install fluent-bit
 if [ ${INSTALL_FLUENT_BIT} == "true" ]; then 
