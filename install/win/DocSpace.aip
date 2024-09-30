@@ -86,6 +86,8 @@
     <ROW Property="ServiceName_DocEditor" Value="DocSpace.DocEditor"/>
     <ROW Property="ServiceName_FileServer" Value="DocSpace.FileServer"/>
     <ROW Property="ServiceName_FileService" Value="DocSpace.FileService"/>
+    <ROW Property="ServiceName_Identity.Authorization" Value="DocSpace.Identity.Authorization"/>
+    <ROW Property="ServiceName_Identity.Registration" Value="DocSpace.Identity.Registration"/>
     <ROW Property="ServiceName_WebHealthChecksUI" Value="DocSpace.Web.HealthChecks.UI"/>
     <ROW Property="ServiceName_Login" Value="DocSpace.Login"/>
     <ROW Property="ServiceName_MigrationRunner" Value="DocSpace.MigrationRunner"/>
@@ -215,6 +217,8 @@
     <ROW Component="DocEditor.exe" ComponentId="{FBE9155F-9ACD-4A1A-9198-891ED73BA90C}" Directory_="tools_Dir" Attributes="0" KeyPath="DocEditor.exe"/>
     <ROW Component="DocumentServer" ComponentId="{9F6BB24B-F2F9-4FE5-8431-A46F38A301AD}" Directory_="APPDIR" Attributes="260" KeyPath="DocumentServer" Options="2"/>
     <ROW Component="DocumentServer.EE" ComponentId="{F1FEAEA5-AE4B-4C94-A699-0410A6C6D1B0}" Directory_="APPDIR" Attributes="4" KeyPath="DocumentServer.EE" Options="2"/>
+    <ROW Component="Identity.Authorization.exe" ComponentId="{751E3F35-D9BE-4C73-BC3A-5653B860C9E2}" Directory_="tools_Dir" Attributes="0" KeyPath="Identity.Authorization.exe"/>
+    <ROW Component="Identity.Registration.exe" ComponentId="{A831909E-FD1D-49B5-8884-C9A8540E8828}" Directory_="tools_Dir" Attributes="0" KeyPath="Identity.Registration.exe"/>
     <ROW Component="Login.exe" ComponentId="{FBE9155F-9ACD-4A1A-9198-891ED73BA202}" Directory_="tools_Dir" Attributes="0" KeyPath="Login.exe"/>
     <ROW Component="Logs" ComponentId="{6C28AF1C-0190-4DE3-A753-430496711F3C}" Directory_="Logs_Dir" Attributes="0"/>
     <ROW Component="MACHINE_KEY" ComponentId="{61A271B4-4D82-4664-B2D2-2EB120D15DA6}" Directory_="APPDIR" Attributes="20" KeyPath="MACHINE_KEY"/>
@@ -309,6 +313,8 @@
     <ROW File="Login.exe" Component_="Login.exe" FileName="LOGIN~1.EXE|Login.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\Login.exe" SelfReg="false" DigSign="true"/>
     <ROW File="icon.ico" Component_="icon.ico" FileName="icon.ico" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Resources\icon.ico" SelfReg="false"/>
     <ROW File="ASC.Web.HealthChecks.UI.exe" Component_="ASC.Web.HealthChecks.UI.exe" FileName="ASCWEB~1.EXE|ASC.Web.HealthChecks.UI.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.Web.HealthChecks.UI\service\ASC.Web.HealthChecks.UI.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="Identity.Authorization.exe" Component_="Identity.Authorization.exe" FileName="IDENTI~1.EXE|Identity.Authorization.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\Identity.Authorization.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="Identity.Registration.exe" Component_="Identity.Registration.exe" FileName="IDENTI~3.EXE|Identity.Registration.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\Identity.Registration.exe" SelfReg="false" DigSign="true"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.BootstrOptComponent">
     <ROW BootstrOptKey="GlobalOptions" DownloadFolder="[AppDataFolder][|Manufacturer]\[|ProductName]\prerequisites" Options="2"/>
@@ -1057,6 +1063,7 @@
     <ROW Action="Set_DS_JWT_SECRET" Type="51" Source="DOCUMENT_SERVER_JWT_SECRET" Target="[JWT_SECRET]"/>
     <ROW Action="Set_LICENSE_PATH" Type="51" Source="LICENSE_PATH" Target="[APPDIR]\Data\license.lic"/>
     <ROW Action="StartFluentBitService" Type="1" Source="aicustact.dll" Target="StartWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_30"/>
+    <ROW Action="StartIdentityMigration" Type="3074" Source="viewer.exe" Target="/EnforcedRunAsAdmin /RunAsAdmin /HideWindow /dir &quot;[APPDIR]services\ASC.Identity.Migration\service&quot; java -jar -DJDBC_URL=[DB_HOST] -DJDBC_PASSWORD=[DB_PWD] -DJDBC_USER_NAME=[DB_USER] -DJDBC_DATABASE=[DB_NAME] -DRABBIT_PROTOCOL=[AMQP_PROTOCOL] -DRABBIT_HOST=[AMQP_HOST] -DRABBIT_USER_NAME=[AMQP_USER] -DRABBIT_PASSWORD=[AMQP_PWD] -DRABBIT_VIRTUAL_HOST=[AMQP_VHOST] -DRABBIT_URI=[AMQP_PROTOCOL]://[AMQP_USER]:[AMQP_PWD]@[AMQP_HOST]:[AMQP_PORT][AMQP_VHOST] -DREDIS_HOST=[REDIS_HOST] -DREDIS_PORT=[REDIS_PORT] &quot;[APPDIR]services\ASC.Identity.Migration\service\app.jar&quot;" Options="1"/>
     <ROW Action="StartMigrationRunner" Type="3074" Source="viewer.exe" Target="/EnforcedRunAsAdmin /RunAsAdmin /HideWindow /dir &quot;[APPDIR]services\ASC.Migration.Runner\service&quot; &quot;[APPDIR]services\ASC.Migration.Runner\service\ASC.Migration.Runner.exe&quot; standalone=true" Options="1"/>
     <ROW Action="StartMySQLService" Type="1" Source="aicustact.dll" Target="StartWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_11"/>
     <ROW Action="StartOpenResty" Type="1" Source="aicustact.dll" Target="StartWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_24"/>
@@ -1175,6 +1182,8 @@
     <ROW Feature_="MainFeature" Component_="icon.ico"/>
     <ROW Feature_="DocumentServer.EE" Component_="DocumentServer.EE"/>
     <ROW Feature_="MainFeature" Component_="MACHINE_KEY"/>
+    <ROW Feature_="MainFeature" Component_="Identity.Authorization.exe"/>
+    <ROW Feature_="MainFeature" Component_="Identity.Registration.exe"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
     <ROW Name="icon.exe" SourcePath="Resources\icon.ico" Index="0"/>
@@ -1226,6 +1235,7 @@
     <ROW Action="AI_GetArpIconPath" Sequence="1401"/>
     <ROW Action="StartMySQLService" Condition="( NOT Installed AND NOT OLDPRODUCTS ) AND ( AI_PROCESS_STATE &lt;&gt; &quot;Not Found&quot; )" Sequence="1613"/>
     <ROW Action="AI_DATA_SETTER_11" Condition="( NOT Installed AND NOT OLDPRODUCTS ) AND ( AI_PROCESS_STATE &lt;&gt; &quot;Not Found&quot; )" Sequence="1612"/>
+    <ROW Action="StartIdentityMigration" Condition="( NOT Installed )" Sequence="5827"/>
     <ROW Action="StartMigrationRunner" Condition="( NOT Installed )" Sequence="5826"/>
     <ROW Action="AI_DETECT_MODERNWIN" Condition="(VersionNT &gt;= 603)" Sequence="55" MsiKey="AI_DETECT_MODERNWIN"/>
     <ROW Action="AI_ResolveLocalizedCredentials" Sequence="51"/>
@@ -1422,6 +1432,8 @@
     <ROW MsiServiceConfig="ServiceName_DocEditor" Name="[ServiceName_DocEditor]" Event="1" ConfigType="3" Argument="1" Component_="DocEditor.exe"/>
     <ROW MsiServiceConfig="ServiceName_FileServer" Name="[ServiceName_FileServer]" Event="1" ConfigType="3" Argument="1" Component_="ASC.Files.exe"/>
     <ROW MsiServiceConfig="ServiceName_FileService" Name="[ServiceName_FileService]" Event="1" ConfigType="3" Argument="1" Component_="ASC.Files.Service.exe"/>
+    <ROW MsiServiceConfig="ServiceName_Identity.Authorization" Name="[ServiceName_Identity.Authorization]" Event="1" ConfigType="3" Argument="1" Component_="Identity.Authorization.exe"/>
+    <ROW MsiServiceConfig="ServiceName_Identity.Registration" Name="[ServiceName_Identity.Registration]" Event="1" ConfigType="3" Argument="1" Component_="Identity.Registration.exe"/>
     <ROW MsiServiceConfig="ServiceName_Login" Name="[ServiceName_Login]" Event="1" ConfigType="3" Argument="1" Component_="Login.exe"/>
     <ROW MsiServiceConfig="ServiceName_NotifyService" Name="[ServiceName_NotifyService]" Event="1" ConfigType="3" Argument="1" Component_="ASC.Notify.exe"/>
     <ROW MsiServiceConfig="ServiceName_PeopleServer" Name="[ServiceName_PeopleServer]" Event="1" ConfigType="3" Argument="1" Component_="ASC.People.exe"/>
@@ -1440,6 +1452,8 @@
     <ROW MsiServiceConfigFailureActions="ServiceName_DocEditor" Name="[ServiceName_DocEditor]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="DocEditor.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_FileServer" Name="[ServiceName_FileServer]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.Files.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_FileService" Name="[ServiceName_FileService]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.Files.Service.exe"/>
+    <ROW MsiServiceConfigFailureActions="ServiceName_Identity.Authorization" Name="[ServiceName_Identity.Authorization]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="Identity.Authorization.exe"/>
+    <ROW MsiServiceConfigFailureActions="ServiceName_Identity.Registration" Name="[ServiceName_Identity.Registration]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="Identity.Registration.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_Login" Name="[ServiceName_Login]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="Login.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_NotifyService" Name="[ServiceName_NotifyService]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.Notify.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_PeopleServer" Name="[ServiceName_PeopleServer]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.People.exe"/>
@@ -1458,6 +1472,8 @@
     <ROW ServiceControl="ServiceName_DocEditor" Name="[ServiceName_DocEditor]" Event="161" Wait="0" Component_="DocEditor.exe"/>
     <ROW ServiceControl="ServiceName_FileServer" Name="[ServiceName_FileServer]" Event="161" Wait="0" Component_="ASC.Files.exe"/>
     <ROW ServiceControl="ServiceName_FileService" Name="[ServiceName_FileService]" Event="161" Wait="0" Component_="ASC.Files.Service.exe"/>
+    <ROW ServiceControl="ServiceName_Identity.Authorization" Name="[ServiceName_Identity.Authorization]" Event="161" Wait="0" Component_="Identity.Authorization.exe"/>
+    <ROW ServiceControl="ServiceName_Identity.Registration" Name="[ServiceName_Identity.Registration]" Event="161" Wait="0" Component_="Identity.Registration.exe"/>
     <ROW ServiceControl="ServiceName_Login" Name="[ServiceName_Login]" Event="161" Wait="0" Component_="Login.exe"/>
     <ROW ServiceControl="ServiceName_NotifyService" Name="[ServiceName_NotifyService]" Event="161" Wait="0" Component_="ASC.Notify.exe"/>
     <ROW ServiceControl="ServiceName_PeopleServer" Name="[ServiceName_PeopleServer]" Event="161" Wait="0" Component_="ASC.People.exe"/>
@@ -1476,6 +1492,8 @@
     <ROW ServiceInstall="ServiceName_DocEditor" Name="[ServiceName_DocEditor]" DisplayName="[ShortProductName] DocEditor" ServiceType="16" StartType="2" ErrorControl="1" Component_="DocEditor.exe" Description="[ShortProductName] DocEditor"/>
     <ROW ServiceInstall="ServiceName_FileServer" Name="[ServiceName_FileServer]" DisplayName="[ShortProductName] FileServer" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5007 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_FileServer] [SUBFOLDER_SERVER]" Component_="ASC.Files.exe" Description="[ShortProductName] FileServer"/>
     <ROW ServiceInstall="ServiceName_FileService" Name="[ServiceName_FileService]" DisplayName="[ShortProductName] FileService" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5009 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_FileService] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER] --core:eventBus:subscriptionClientName=asc_event_bus_files_service_queue" Component_="ASC.Files.Service.exe" Description="[ShortProductName] FileService"/>
+    <ROW ServiceInstall="ServiceName_Identity.Authorization" Name="[ServiceName_Identity.Authorization]" DisplayName="[ShortProductName] Identity.Authorization" ServiceType="16" StartType="2" ErrorControl="1" Component_="Identity.Authorization.exe" Description="[ShortProductName] Identity.Authorization"/>
+    <ROW ServiceInstall="ServiceName_Identity.Registration" Name="[ServiceName_Identity.Registration]" DisplayName="[ShortProductName] Identity.Registration" ServiceType="16" StartType="2" ErrorControl="1" Component_="Identity.Registration.exe" Description="[ShortProductName] Identity.Registration"/>
     <ROW ServiceInstall="ServiceName_Login" Name="[ServiceName_Login]" DisplayName="[ShortProductName] Login" ServiceType="16" StartType="2" ErrorControl="1" Component_="Login.exe" Description="[ShortProductName] Login"/>
     <ROW ServiceInstall="ServiceName_NotifyService" Name="[ServiceName_NotifyService]" DisplayName="[ShortProductName] NotifyService" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5005 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_NotifyService] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER] --core:eventBus:subscriptionClientName=asc_event_bus_notify_queue" Component_="ASC.Notify.exe" Description="[ShortProductName] NotifyService"/>
     <ROW ServiceInstall="ServiceName_PeopleServer" Name="[ServiceName_PeopleServer]" DisplayName="[ShortProductName] PeopleServer" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5004 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_PeopleServer] [SUBFOLDER_SERVER]" Component_="ASC.People.exe" Description="[ShortProductName] PeopleServer"/>
@@ -1516,6 +1534,7 @@
     <ROW PrereqKey="MySQLInstallerCo" DisplayName="MySQL Installer Community 8.0.37 x86" VersionMin="1.6.6.0" SetupFileUrl="redist\mysql-installer-community-8.0.37.0.msi" Location="0" ExactSize="0" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="y" TargetName="MySQL Installer - Community\mysql-installer-community-8.0.37.0.msi" Builds="ExeBuild"/>
     <ROW PrereqKey="MySQLInstallerRunn" DisplayName="MySQL Installer Community 8.0.37 x86 Runner" SetupFileUrl="MySQL Installer Runner.exe" Location="0" ExactSize="0" Operator="1" ComLine="/VERYSILENT /DB_PWD=&quot;root&quot; /MYSQL_VERSION=&quot;8.0.37&quot;" BasicUiComLine="/VERYSILENT /DB_PWD=&quot;root&quot; /MYSQL_VERSION=&quot;8.0.37&quot;" NoUiComLine="/VERYSILENT /DB_PWD=&quot;root&quot; /MYSQL_VERSION=&quot;8.0.37&quot;" Options="yx" TargetName="MySQL Installer Runner                                      \MySQL Installer Runner.exe" ParentPrereq="RequiredApplication_2"/>
     <ROW PrereqKey="Node.js" DisplayName="Node.js 20.11.1" VersionMin="20.11.1" SetupFileUrl="redist\node-v20.11.1-x64.msi" Location="0" ExactSize="0" Operator="0" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="ym" TargetName="Node.js\node-v20.11.1-x64.msi" Builds="ExeBuild"/>
+    <ROW PrereqKey="OpenJDK_Java_Development" DisplayName="OpenJDK Java Development Kit 21" VersionMin="21.0" SetupFileUrl="https://download.oracle.com/java/21/latest/jdk-21_windows-x64_bin.msi" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/qn" BasicUiComLine="/qn" NoUiComLine="/qn" Options="ymx" TargetName="OpenJDK_Java_Development"/>
     <ROW PrereqKey="OpenResty" DisplayName="OpenResty v1.21.4" VersionMin="1.21.4.2" SetupFileUrl="publish\OpenResty.msi" Location="0" ExactSize="0" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="yxm" TargetName="OpenResty\OpenResty.msi"/>
     <ROW PrereqKey="OpenSearch2.11.1" DisplayName="OpenSearch v2.11.1 x64" VersionMin="2.11.1" SetupFileUrl="publish\OpenSearch-2.11.1.exe" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/exenoui /qn" BasicUiComLine="/exenoui /qn" NoUiComLine="/exenoui /qn" Options="y" TargetName="OpenSearch 2.11.1\OpenSearch-2.11.1.exe"/>
     <ROW PrereqKey="OpenSearchStack" DisplayName="OpenSearchStack v1.0.0 x64" VersionMin="1.0.0" SetupFileUrl="publish\OpenSearchStack.msi" Location="0" ExactSize="0" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="y" TargetName="OpenSearchStack\OpenSearchStack.msi"/>
@@ -1529,7 +1548,7 @@
     <ROW PrereqKey="RequiredApplication_3" DisplayName="Certbot v2.6.0" VersionMin="2.6.0" SetupFileUrl="redist\certbot-2.6.0.exe" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/S" BasicUiComLine="/S" NoUiComLine="/S" Options="yxm" TargetName="Required Application\certbot-2.6.0.exe" Builds="ExeBuild"/>
     <ROW PrereqKey="RequiredApplication_5" DisplayName="RabbitMQ v3.12.1 x64" VersionMin="3.12" SetupFileUrl="https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.12.1/rabbitmq-server-3.12.1.exe" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/S" BasicUiComLine="/S" NoUiComLine="/S" Options="yx" TargetName="RabbitMQ v3.12.1 x64" Builds="DefaultBuild"/>
     <ROW PrereqKey="RequiredApplication_6" DisplayName="Redis 5.0.10 x64" VersionMin="5.0" SetupFileUrl="http://download.onlyoffice.com/install/windows/redist/Redis-x64-5.0.10.msi" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet ADD_INSTALLFOLDER_TO_PATH=1" BasicUiComLine="/quiet ADD_INSTALLFOLDER_TO_PATH=1" NoUiComLine="/quiet ADD_INSTALLFOLDER_TO_PATH=1" Options="yx" TargetName="Redis 5.0.10 x64" Builds="DefaultBuild"/>
-    <ATTRIBUTE name="PrereqsOrder" value="B96F93FA27E74B02866727AAE83982D0 Microsoft.NETFrame F3520F64DA5998338D97129FAD2 Microsoft.NETRunti EA5B60A5CAD4115A8386D017CC889B9 MicrosoftASP.NETCo CA62D813A4E74FA2AAE86A7D7B7B1493 MicrosoftVisualC A918597FE054CCCB65ABDBA0AD8F63C MicrosoftVisualC_1 C4FE6FD5B7C4D07B3A313E754A9A6A8 MicrosoftVisualC_2 RequiredApplication MySQLConnectorODBC RequiredApplication_2 MySQLInstallerCo MySQLInstallerRunn RequiredApplication_1 Node.js OpenSearch2.11.1 Erlangv26.0x64 ErlangOTP RequiredApplication_5 RabbitMQServer RequiredApplication_6 RedisonWindows FFmpegx64 FFmpegEssentials Certbot RequiredApplication_3 PostgreSQL_ODBC PostgresSQL OpenResty OpenSearchStack DocumentServer DocumentServer.EE"/>
+    <ATTRIBUTE name="PrereqsOrder" value="B96F93FA27E74B02866727AAE83982D0 Microsoft.NETFrame F3520F64DA5998338D97129FAD2 Microsoft.NETRunti EA5B60A5CAD4115A8386D017CC889B9 MicrosoftASP.NETCo CA62D813A4E74FA2AAE86A7D7B7B1493 MicrosoftVisualC A918597FE054CCCB65ABDBA0AD8F63C MicrosoftVisualC_1 C4FE6FD5B7C4D07B3A313E754A9A6A8 MicrosoftVisualC_2 RequiredApplication MySQLConnectorODBC RequiredApplication_2 MySQLInstallerCo MySQLInstallerRunn RequiredApplication_1 Node.js OpenJDK_Java_Development OpenSearch2.11.1 Erlangv26.0x64 ErlangOTP RequiredApplication_5 RabbitMQServer RequiredApplication_6 RedisonWindows FFmpegx64 FFmpegEssentials Certbot RequiredApplication_3 PostgreSQL_ODBC PostgresSQL OpenResty OpenSearchStack DocumentServer DocumentServer.EE"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.PreReqSearchComponent">
     <ROW SearchKey="A918597FE054CCCB65ABDBA0AD8F63CSyst" Prereq="A918597FE054CCCB65ABDBA0AD8F63C" SearchType="0" SearchString="[SystemFolder]vcruntime140.dll" VerMin="14.26.28720" Order="2" Property="PreReqSearch_A918597FE054CCCB65ABDB"/>
@@ -1549,6 +1568,7 @@
     <ROW SearchKey="SystemFolderfile.dll_12" Prereq="RabbitMQServer" SearchType="2" SearchString="HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\RabbitMQ\DisplayVersion" VerMin="3.12.1" Order="1" Property="PreReqSearch_25"/>
     <ROW SearchKey="SystemFolderfile.dll_13" Prereq="RequiredApplication_3" SearchType="2" SearchString="HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Certbot\DisplayVersion" VerMin="2.6.0" Order="1" Property="PreReqSearch_28"/>
     <ROW SearchKey="SystemFolderfile.dll_14" Prereq="DocumentServer.EE" SearchType="0" SearchString="HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1" Order="1" Property="PreReqSearch_30" Platform="1"/>
+    <ROW SearchKey="SystemFolderfile.dll_15" Prereq="OpenJDK_Java_Development" SearchType="1" SearchString="HKLM\SOFTWARE\JavaSoft\JDK" VerMin="21.0" Order="1" Property="PreReqSearch_32"/>
     <ROW SearchKey="SystemFolderfile.dll_2" Prereq="RequiredApplication_2" SearchType="4" SearchString="{18B94B70-06F1-4AC0-B308-37280DB868C2}" VerMin="1.6.6.0" Order="1" Property="PreReqSearch_2"/>
     <ROW SearchKey="SystemFolderfile.dll_3" Prereq="OpenResty" SearchType="4" SearchString="{264FA774-91E5-4854-8010-4AB58CA830BD}" VerMin="1.21.4.2" Order="1" Property="PreReqSearch_8"/>
     <ROW SearchKey="SystemFolderfile.dll_4" Prereq="Certbot" SearchType="2" SearchString="HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Certbot\DisplayVersion" VerMin="2.6.0" Order="1" Property="PreReqSearch_10"/>
@@ -1600,6 +1620,17 @@
     <ROW Name="ReplaceScheme" TxtUpdateSet="fluentbit.conf" FindPattern="OPENSEARCH_SCHEME" ReplacePattern="[OPENSEARCH_SCHEME]" Options="2" Order="3" FileEncoding="-1"/>
     <ROW Name="ReplaceIndex" TxtUpdateSet="fluentbit.conf" FindPattern="OPENSEARCH_INDEX" ReplacePattern="[OPENSEARCH_INDEX]" Options="2" Order="4" FileEncoding="-1"/>
     <ROW Name="Append/Create" TxtUpdateSet="htpasswd_dashboards" FindPattern="onlyoffice:[DASHBOARDS_PWD]" Options="160" Order="0" FileEncoding="0"/>
+    <ROW Name="ReplaceAmqpProtocol" TxtUpdateSet="xml" FindPattern="{AMQP_PROTOCOL}" ReplacePattern="[AMQP_PROTOCOL]" Options="2" Order="2" FileEncoding="-1"/>
+    <ROW Name="ReplaceAmqpHost" TxtUpdateSet="xml" FindPattern="{AMQP_HOST}" ReplacePattern="[AMQP_HOST]" Options="2" Order="3" FileEncoding="-1"/>
+    <ROW Name="ReplaceAmqpUser" TxtUpdateSet="xml" FindPattern="{AMQP_USER}" ReplacePattern="[AMQP_USER]" Options="2" Order="4" FileEncoding="-1"/>
+    <ROW Name="ReplaceAmqpPwd" TxtUpdateSet="xml" FindPattern="{AMQP_PWD}" ReplacePattern="[AMQP_PWD]" Options="2" Order="5" FileEncoding="-1"/>
+    <ROW Name="ReplaceAmqpVhost" TxtUpdateSet="xml" FindPattern="{AMQP_VHOST}" ReplacePattern="[AMQP_VHOST]" Options="2" Order="6" FileEncoding="-1"/>
+    <ROW Name="ReplaceDbHost" TxtUpdateSet="xml" FindPattern="{DB_HOST}" ReplacePattern="[DB_HOST]" Options="2" Order="7" FileEncoding="-1"/>
+    <ROW Name="ReplaceDbPwd" TxtUpdateSet="xml" FindPattern="{DB_PWD}" ReplacePattern="[DB_PWD]" Options="2" Order="8" FileEncoding="-1"/>
+    <ROW Name="ReplaceDbUser" TxtUpdateSet="xml" FindPattern="{DB_USER}" ReplacePattern="[DB_USER]" Options="2" Order="9" FileEncoding="-1"/>
+    <ROW Name="ReplaceDbName" TxtUpdateSet="xml" FindPattern="{DB_NAME}" ReplacePattern="[DB_NAME]" Options="2" Order="10" FileEncoding="-1"/>
+    <ROW Name="ReplaceRedisHost" TxtUpdateSet="xml" FindPattern="{REDIS_HOST}" ReplacePattern="[REDIS_HOST]" Options="2" Order="11" FileEncoding="-1"/>
+    <ROW Name="ReplaceRedisHost" TxtUpdateSet="xml" FindPattern="{REDIS_PORT}" ReplacePattern="[REDIS_PORT]" Options="2" Order="12" FileEncoding="-1"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.TxtUpdateSetComponent">
     <ROW Key="YourFile.txt" Component="conf" FileName="onlyoffice.conf" Directory="conf_Dir" Options="17"/>

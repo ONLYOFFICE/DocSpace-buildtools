@@ -212,6 +212,12 @@ $enterprise_prerequisites = @(
     name = "certbot-2.6.0.exe";
     link = "https://github.com/certbot/certbot/releases/download/v2.6.0/certbot-beta-installer-win_amd64_signed.exe"
   }
+
+  @{
+    download_allways = $false;
+    name = "jdk-21_windows-x64_bin.msi";
+    link = "https://download.oracle.com/java/21/latest/jdk-21_windows-x64_bin.msi"
+  }
 )
 
 DownloadComponents $prerequisites $path_prereq
