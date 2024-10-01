@@ -157,7 +157,7 @@ function install_docspace() {
 #############################################################################################
 function healthcheck_systemd_services() {
   for service in ${SERVICES_SYSTEMD[@]}; do
-    [[ "$service" == "docspace-migration-runner.service" ]] && continue;
+    [[ "$service" == *migration* ]] && continue;
     if systemctl is-active --quiet ${service}; then
       echo "${COLOR_GREEN}☑ OK: Service ${service} is running${COLOR_RESET}"
     else
