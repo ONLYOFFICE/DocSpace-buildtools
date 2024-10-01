@@ -166,6 +166,7 @@ Requires:       java-21-openjdk-headless
 AutoReqProv:    no
 BuildArch:      noarch
 %description    identity-migration
+Identity-Migration
 
 %package        identity-authorization
 Packager:       %{packager}
@@ -176,6 +177,7 @@ Requires:       java-21-openjdk-headless
 AutoReqProv:    no
 BuildArch:      noarch
 %description    identity-authorization
+Identity-Authorization
 
 %package        identity-api
 Packager:       %{packager}
@@ -186,6 +188,7 @@ Requires:       java-21-openjdk-headless
 AutoReqProv:    no
 BuildArch:      noarch
 %description    identity-api
+Identity-Api
 
 %package        clear-events
 Packager:       %{packager}
