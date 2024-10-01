@@ -285,25 +285,27 @@ save_undefined_param() {
 restart_services() {
 	chown -R ${PACKAGE_SYSNAME}:${PACKAGE_SYSNAME} $APP_DIR $PRODUCT_DIR $LOG_DIR /var/www/$PACKAGE_SYSNAME/Data
 
-	sed "s_\(ENVIRONMENT=\).*_\1${ENVIRONMENT}_i" -i ${SYSTEMD_DIR}/${PRODUCT}*.service >/dev/null 2>&1
+	sed "s_\(--ENVIRONMENT=\).*_\1${ENVIRONMENT}_i" -i ${SYSTEMD_DIR}/${PRODUCT}*.service >/dev/null 2>&1
 	systemctl daemon-reload
 
 	echo -n "Updating database... "
-	systemctl start ${PRODUCT}-migration-runner >/dev/null 2>&1 || true
-	while systemctl is-active ${PRODUCT}-migration-runner &>/dev/null; do
-		sleep 5
+	for SERVICE in "${PRODUCT}-migration-runner" "${PRODUCT}-identity-migration"; do
+		systemctl start "$SERVICE" >/dev/null 2>&1 || true
+		while systemctl is-active "$SERVICE" &>/dev/null; do
+			sleep 5
+		done
 	done
 	echo "OK"
 
 	echo -n "Restarting services... "
-	for SVC in login api socket studio-notify notify \
+	SERVICES=(login api socket studio-notify notify \
 	people-server files files-services studio backup api-system \
 	clear-events backup-background ssoauth doceditor healthchecks \
-	identity-authorization identity-api identity-migration
-	do
-		systemctl enable ${PRODUCT}-$SVC >/dev/null 2>&1
-		systemctl restart ${PRODUCT}-$SVC
-	done
+	identity-authorization identity-api)
+	SERVICES_LIST=("${SERVICES[@]/#/${PRODUCT}-}")
+
+	systemctl enable "${SERVICES_LIST[@]}" >/dev/null 2>&1
+	systemctl restart "${SERVICES_LIST[@]}"
 	echo "OK"
 }
 
@@ -365,7 +367,7 @@ Character Set=utf8; AutoEnlist=false; SSL Mode=none;AllowPublicKeyRetrieval=true
 	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "ConnectionStrings.default.connectionString" "${CONNECTION_STRING}"
 
 	sed "s&\(\"ConnectionString\":\).*&\1 \"$(printf "%q" "${CONNECTION_STRING}")\"&" -i $PRODUCT_DIR/services/ASC.Migration.Runner/appsettings.runner.json
-	echo -e "JDBC_URL=${DB_HOST}:${$DB_PORT}\nJDBC_DATABASE=${DB_NAME}\nJDBC_USER_NAME=${DB_USER}\nJDBC_PASSWORD=${DB_PWD}" >> "${APP_DIR}/identity.env"
+	echo -e "JDBC_URL=${DB_HOST}:${DB_PORT}\nJDBC_DATABASE=${DB_NAME}\nJDBC_USER_NAME=${DB_USER}\nJDBC_PASSWORD=${DB_PWD}" >> "${APP_DIR}/identity.env"
 
 	#Enable database migration
 	save_undefined_param "${USER_CONF}" "migration.enabled" "true"
@@ -830,7 +832,8 @@ product_configuration(){
 		fi
 	done
 
-	> "$APP_DIR/identity.env" && chmod o-rwx "$APP_DIR/identity.env"
+	echo "SPRING_PROFILES_ACTIVE=prod" > "$APP_DIR/identity.env"
+	chmod o-rwx "$APP_DIR/identity.env"
 
 	set_core_machinekey
 
@@ -866,7 +869,6 @@ fi
 
 install_json
 product_configuration
-create_environments_identity
 
 if $PACKAGE_MANAGER mysql-client >/dev/null 2>&1 || $PACKAGE_MANAGER mysql-community-client >/dev/null 2>&1; then
     input_db_params
