@@ -1625,10 +1625,11 @@
     <ROW Name="ReplaceAmqpUser" TxtUpdateSet="xml" FindPattern="{AMQP_USER}" ReplacePattern="[AMQP_USER]" Options="2" Order="4" FileEncoding="-1"/>
     <ROW Name="ReplaceAmqpPwd" TxtUpdateSet="xml" FindPattern="{AMQP_PWD}" ReplacePattern="[AMQP_PWD]" Options="2" Order="5" FileEncoding="-1"/>
     <ROW Name="ReplaceAmqpVhost" TxtUpdateSet="xml" FindPattern="{AMQP_VHOST}" ReplacePattern="[AMQP_VHOST]" Options="2" Order="6" FileEncoding="-1"/>
-    <ROW Name="ReplaceDbHost" TxtUpdateSet="xml" FindPattern="{DB_HOST}" ReplacePattern="[DB_HOST]" Options="2" Order="7" FileEncoding="-1"/>
-    <ROW Name="ReplaceDbPwd" TxtUpdateSet="xml" FindPattern="{DB_PWD}" ReplacePattern="[DB_PWD]" Options="2" Order="8" FileEncoding="-1"/>
-    <ROW Name="ReplaceDbUser" TxtUpdateSet="xml" FindPattern="{DB_USER}" ReplacePattern="[DB_USER]" Options="2" Order="9" FileEncoding="-1"/>
-    <ROW Name="ReplaceDbName" TxtUpdateSet="xml" FindPattern="{DB_NAME}" ReplacePattern="[DB_NAME]" Options="2" Order="10" FileEncoding="-1"/>
+    <ROW Name="ReplaceAmqpPort" TxtUpdateSet="xml" FindPattern="{AMQP_PORT}" ReplacePattern="[AMQP_PORT]" Options="2" Order="7" FileEncoding="-1"/>
+    <ROW Name="ReplaceDbHost" TxtUpdateSet="xml" FindPattern="{DB_HOST}" ReplacePattern="[DB_HOST]" Options="2" Order="8" FileEncoding="-1"/>
+    <ROW Name="ReplaceDbPwd" TxtUpdateSet="xml" FindPattern="{DB_PWD}" ReplacePattern="[DB_PWD]" Options="2" Order="9" FileEncoding="-1"/>
+    <ROW Name="ReplaceDbUser" TxtUpdateSet="xml" FindPattern="{DB_USER}" ReplacePattern="[DB_USER]" Options="2" Order="10" FileEncoding="-1"/>
+    <ROW Name="ReplaceDbName" TxtUpdateSet="xml" FindPattern="{DB_NAME}" ReplacePattern="[DB_NAME]" Options="2" Order="11" FileEncoding="-1"/>
     <ROW Name="ReplaceRedisHost" TxtUpdateSet="xml" FindPattern="{REDIS_HOST}" ReplacePattern="[REDIS_HOST]" Options="2" Order="11" FileEncoding="-1"/>
     <ROW Name="ReplaceRedisHost" TxtUpdateSet="xml" FindPattern="{REDIS_PORT}" ReplacePattern="[REDIS_PORT]" Options="2" Order="12" FileEncoding="-1"/>
   </COMPONENT>
