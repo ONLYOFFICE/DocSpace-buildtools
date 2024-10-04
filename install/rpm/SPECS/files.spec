@@ -160,11 +160,6 @@
 /usr/lib/systemd/system/%{product}-backup-background.service
 %dir %{buildpath}/services/
 
-%files radicale
-%defattr(-, onlyoffice, onlyoffice, -)
-%{buildpath}/Tools/radicale/
-%dir %{buildpath}/Tools/
-
 %files doceditor
 %defattr(-, onlyoffice, onlyoffice, -)
 %{buildpath}/products/ASC.Files/editor/
