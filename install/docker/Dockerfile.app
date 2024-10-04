@@ -16,12 +16,26 @@ ARG DEPLOY_ARGS="deploy"
 ARG DEBUG_INFO="true"
 ARG PUBLISH_CNF="Release"
 
+ARG GIT_BRANCH_BUILDTOOLS=""
+ARG GIT_BRANCH_SERVER=""
+ARG GIT_BRANCH_CLIENT=""
+ARG GIT_BRANCH_CAMPAIGNS=""
+ARG BUILDTOOLS_COMMIT=""
+ARG SERVER_COMMIT=""
+ARG CLIENT_COMMIT=""
+ARG CAMPAIGNS_COMMIT=""
+
 LABEL onlyoffice.appserver.release-date="${RELEASE_DATE}" \
     maintainer="Ascensio System SIA <support@onlyoffice.com>"
 
 ENV LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
     LC_ALL=en_US.UTF-8
+
+ARG GIT_BRANCH_BUILDTOOLS=${GIT_BRANCH_BUILDTOOLS:-$GIT_BRANCH}
+ARG GIT_BRANCH_SERVER=${GIT_BRANCH_SERVER:-$GIT_BRANCH}
+ARG GIT_BRANCH_CLIENT=${GIT_BRANCH_CLIENT:-$GIT_BRANCH}
+ARG GIT_BRANCH_CAMPAIGNS=${GIT_BRANCH_CAMPAIGNS:-$GIT_BRANCH}
 
 RUN apt-get -y update && \
     apt-get install -yq \
@@ -42,11 +56,15 @@ RUN apt-get -y update && \
     apt-get install -y nodejs && \
     rm -rf /var/lib/apt/lists/*
 
-ADD https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/git/refs/heads/${GIT_BRANCH} version.json
-RUN git clone -b ${GIT_BRANCH} https://github.com/ONLYOFFICE/DocSpace-buildtools.git ${SRC_PATH}/buildtools && \
-    git clone --recurse-submodules -b ${GIT_BRANCH} https://github.com/ONLYOFFICE/DocSpace-Server.git ${SRC_PATH}/server && \
-    git clone -b ${GIT_BRANCH} https://github.com/ONLYOFFICE/DocSpace-Client.git ${SRC_PATH}/client && \
-    git clone -b "master" --depth 1 https://github.com/ONLYOFFICE/ASC.Web.Campaigns.git ${SRC_PATH}/campaigns
+ADD https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/git/refs/heads/${GIT_BRANCH_BUILDTOOLS} version.json
+RUN git clone -b ${GIT_BRANCH_BUILDTOOLS} https://github.com/ONLYOFFICE/DocSpace-buildtools.git ${SRC_PATH}/buildtools && \
+    if [ -n "${BUILDTOOLS_COMMIT}" ]; then git -C ${SRC_PATH}/buildtools checkout ${BUILDTOOLS_COMMIT}; fi && \
+    git clone --recurse-submodules -b ${SERVER_BRANCH} https://github.com/ONLYOFFICE/DocSpace-Server.git ${SRC_PATH}/server && \
+    if [ -n "${SERVER_COMMIT}" ]; then git -C ${SRC_PATH}/server checkout ${SERVER_COMMIT}; fi && \
+    git clone -b ${GIT_BRANCH_CLIENT} https://github.com/ONLYOFFICE/DocSpace-Client.git ${SRC_PATH}/client && \
+    if [ -n "${CLIENT_COMMIT}" ]; then git -C ${SRC_PATH}/client checkout ${CLIENT_COMMIT}; fi && \
+    git clone -b master --depth 1 https://github.com/ONLYOFFICE/ASC.Web.Campaigns.git ${SRC_PATH}/campaigns && \
+    if [ -n "${CAMPAIGNS_COMMIT}" ]; then git -C ${SRC_PATH}/campaigns checkout ${CAMPAIGNS_COMMIT}; fi
 
 RUN cd ${SRC_PATH} && \
     mkdir -p /app/onlyoffice/config/ && \
