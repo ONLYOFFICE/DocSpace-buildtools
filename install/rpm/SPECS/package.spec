@@ -218,22 +218,6 @@ The service which launches additional services related to backup creation:
  - BackupCleanerService - removes outdated backup files;
  - BackupSchedulerService - runs backup according to a schedule;
 
-%package        radicale
-Packager:       %{packager}
-Summary:        Radicale
-Group:          Applications/Internet
-Requires:       %name-common  = %version-%release
-Requires:       python3 >= 3.6
-Requires:       python3-pip
-Requires:       python3-requests
-Requires:       python3-setuptools
-AutoReqProv:    no
-BuildArch:      noarch
-%description    radicale
-Radicale is a server designed to support the CalDav and CardDav protocols.
-It operates either as a standalone package using its own internal HTTP server
-or can be integrated with an existing web server
-
 %package        doceditor
 Packager:       %{packager}
 Summary:        Doceditor

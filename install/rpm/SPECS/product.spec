@@ -52,7 +52,6 @@ Requires:       %name-notify = %version-%release
 Requires:       %name-people-server = %version-%release
 Requires:       %name-proxy = %version-%release
 Requires:       %name-plugins = %version-%release
-Requires:       %name-radicale = %version-%release
 Requires:       %name-socket = %version-%release
 Requires:       %name-ssoauth = %version-%release
 Requires:       %name-identity-migration = %version-%release
@@ -114,16 +113,3 @@ rm -rf %{_builddir} %{buildroot}
 %changelog
 *Mon Jan 16 2023 %{packager} - %{version}-%{release}
 - Initial build.
-
-%triggerin radicale -- python3, python36
-
-if ! which python3; then
-   if rpm -q python36; then
-      update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.6 1
-   fi
-fi
-
-python3 -m pip install --upgrade radicale
-python3 -m pip install --upgrade %{buildpath}/Tools/radicale/plugins/app_auth_plugin/.
-python3 -m pip install --upgrade %{buildpath}/Tools/radicale/plugins/app_store_plugin/.
-python3 -m pip install --upgrade %{buildpath}/Tools/radicale/plugins/app_rights_plugin/.

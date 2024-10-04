@@ -29,7 +29,6 @@ Depends: debconf, openssl,
          {{product}}-people-server (= {{package_header_tag_version}}),
          {{product}}-proxy (= {{package_header_tag_version}}),
          {{product}}-plugins (= {{package_header_tag_version}}),
-         {{product}}-radicale (= {{package_header_tag_version}}),
          {{product}}-socket (= {{package_header_tag_version}}),
          {{product}}-ssoauth (= {{package_header_tag_version}}),
          {{product}}-studio (= {{package_header_tag_version}}),
@@ -208,15 +207,6 @@ Description: {{product}}-migration-runner
 	The service responsible for the database creation.
 	A database connection is transferred to the service and
 	the service creates tables and populates them with values
-
-Package: {{product}}-radicale
-Architecture: all
-Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), python3-pip, python3-requests, python3-setuptools, ${misc:Depends}, ${shlibs:Depends}
-Description: {{product}}-radicale
-	Radicale is a server designed to support the CalDav and CardDav protocols.
-	It operates either as a standalone package using its own internal http server
-	or can be integrated with an existing webserver
 
 Package: {{product}}-doceditor
 Architecture: all

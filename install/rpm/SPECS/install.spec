@@ -1,7 +1,6 @@
 %install
 rm -rf %{buildroot}
 mkdir -p "%{buildroot}/usr/lib/systemd/system/"
-mkdir -p "%{buildroot}%{buildpath}/Tools/radicale/plugins/"
 mkdir -p "%{buildroot}%{buildpath}/studio/ASC.Web.Studio/"
 mkdir -p "%{buildroot}%{buildpath}/studio/ASC.Web.Api/"
 mkdir -p "%{buildroot}%{buildpath}/services/ASC.Web.HealthChecks.UI/"
@@ -70,7 +69,6 @@ cp -rf %{_builddir}/server/publish/products/ASC.People/server/* "%{buildroot}%{b
 cp -rf %{_builddir}/server/publish/products/ASC.Files/server/* "%{buildroot}%{buildpath}/products/ASC.Files/server/"
 cp -rf %{_builddir}/server/LICENSE "%{buildroot}%{_docdir}/%{name}-%{version}-%{release}/"
 cp -rf %{_builddir}/server/ASC.Migration.Runner/service/* "%{buildroot}%{buildpath}/services/ASC.Migration.Runner/"
-cp -rf %{_builddir}/buildtools/install/RadicalePlugins/* "%{buildroot}%{buildpath}/Tools/radicale/plugins/"
 cp -rf %{_builddir}/buildtools/install/docker/config/nginx/templates/nginx.conf.template "%{buildroot}%{_sysconfdir}/onlyoffice/%{product}/openresty/nginx.conf.template"
 cp -rf %{_builddir}/buildtools/install/docker/config/nginx/onlyoffice-proxy.conf "%{buildroot}%{_sysconfdir}/openresty/conf.d/onlyoffice-proxy.conf"
 cp -rf %{_builddir}/buildtools/install/docker/config/nginx/onlyoffice-proxy.conf "%{buildroot}%{_sysconfdir}/openresty/conf.d/onlyoffice-proxy.conf.template"
