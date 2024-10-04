@@ -148,10 +148,13 @@ IF "%SignBuild%"=="true" (
 
 REM echo ######## Build DocSpace package ########
 %AdvancedInstaller% /edit buildtools\install\win\DocSpace.aip /SetVersion %BUILD_VERSION%.%BUILD_NUMBER%
+%AdvancedInstaller% /edit buildtools\install\win\DocSpace.Prerequisites.aip /SetVersion %BUILD_VERSION%.%BUILD_NUMBER%
 
 IF "%SignBuild%"=="true" (
 %AdvancedInstaller% /edit buildtools\install\win\DocSpace.aip /SetSig
 %AdvancedInstaller% /edit buildtools\install\win\DocSpace.aip /SetDigitalCertificateFile -file %onlyoffice_codesign_path% -password "%onlyoffice_codesign_password%"
+%AdvancedInstaller% /edit buildtools\install\win\DocSpace.Prerequisites.aip /SetSig
+%AdvancedInstaller% /edit buildtools\install\win\DocSpace.Prerequisites.aip /SetDigitalCertificateFile -file %onlyoffice_codesign_path% -password "%onlyoffice_codesign_password%"
 )
 
 :: Build DocSpace Community
@@ -162,3 +165,8 @@ copy "buildtools\install\win\Resources\License_Enterprise.rtf" "buildtools\insta
 copy "buildtools\install\win\Resources\License_Enterprise_Redist.rtf" "buildtools\install\win\Resources\License_Redist.rtf" /y
 
 %AdvancedInstaller% /rebuild buildtools\install\win\DocSpace.aip -buildslist DOCSPACE_ENTERPRISE
+
+:: Build DocSpace Prerequisites
+copy "buildtools\install\win\Resources\License_Enterprise_Redist.rtf" "buildtools\install\win\Resources\License_Redist.rtf" /y
+
+%AdvancedInstaller% /rebuild buildtools\install\win\DocSpace.Prerequisites.aip -buildslist DefaultBuild
