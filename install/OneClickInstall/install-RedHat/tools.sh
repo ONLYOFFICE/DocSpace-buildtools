@@ -95,7 +95,9 @@ if [ "$DIST" == "fedora" ]; then
 fi
 
 # Check if it's Centos less than 8 or Fedora release is out of service
-if [ "${REV}" -lt 8 ] || [ "$SUPPORTED_FEDORA_FLAG" == "false" ]; then
+if { [[ "${DIST}" == "centos" && "${REV}" -lt 9 ]] || \
+     [[ "${DIST}" == "redhat" && "${REV}" -lt 8 ]] || \
+     [[ "$SUPPORTED_FEDORA_FLAG" == "false" ]]; }; then
     echo "Your ${DIST} ${REV} operating system has reached the end of its service life."
     echo "Please consider upgrading your operating system or using a Docker installation."
     exit 1
