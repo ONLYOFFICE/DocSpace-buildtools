@@ -15,10 +15,6 @@ on:
 
   workflow_dispatch:
     inputs:
-      centos8s:
-         type: boolean
-         description: 'CentOS 8 Stream'
-         default: true
       centos9s:
          type: boolean
          description: 'CentOS 9 Stream'
@@ -77,7 +73,6 @@ jobs:
         run: |
           matrix=$(echo '{
             "include": [
-              {"execute": '${{ github.event.inputs.centos8s || true }}', "name": "CentOS8S", "os": "centos8s", "distr": "generic"},
               {"execute": '${{ github.event.inputs.centos9s || true }}', "name": "CentOS9S", "os": "centos9s", "distr": "generic"},
               {"execute": '${{ github.event.inputs.debian11 || true }}', "name": "Debian11", "os": "debian11", "distr": "generic"},
               {"execute": '${{ github.event.inputs.debian12 || true }}', "name": "Debian12", "os": "debian12", "distr": "generic"},
