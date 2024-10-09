@@ -11,8 +11,8 @@ WEBROOT_PATH="/letsencrypt"
 
 # Check if configuration files are present
 if [ -f "/app/onlyoffice/.env" -a -f "/app/onlyoffice/proxy.yml" -a -f "/app/onlyoffice/proxy-ssl.yml" ]; then
+  DIR="/app"
   DOCKERCOMPOSE="/app/onlyoffice"
-  DIR="/app/onlyoffice/config"
 elif [ -f "${DOCKERCOMPOSE}/.env" -a -f "${DOCKERCOMPOSE}/proxy.yml" -a -f "${DOCKERCOMPOSE}/proxy-ssl.yml" ]; then
   :
 else
