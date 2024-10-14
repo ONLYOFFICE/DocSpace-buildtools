@@ -620,7 +620,7 @@ setup_enterprise() {
 	fi
 
 	save_undefined_param "${USER_CONF}" "license.file.path" "${LICENCE_PATH}" "rewrite"
-	[[ -n ${LICENCE_URL} ]] && save_undefined_param "${APP_DIR}/appsettings.json" "web.license-url" "${LICENCE_URL}" "rewrite"
+	save_undefined_param "${APP_DIR}/appsettings.json" "web['license-url']" "${LICENCE_URL}" "rewrite"
 }
 
 change_elasticsearch_config(){
