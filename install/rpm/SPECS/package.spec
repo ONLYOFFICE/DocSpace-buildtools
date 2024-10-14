@@ -279,3 +279,13 @@ AutoReqProv:    no
 BuildArch:      noarch
 %description    healthchecks
 The service which displays launched services
+
+%package        plugins
+Packager:       %{packager}
+Summary:        Plugins
+Group:          Applications/Internet
+Requires:       %name-common  = %version-%release
+AutoReqProv:    no
+BuildArch:      noarch
+%description    plugins
+This package includes plugins that extend DocSpace functionality

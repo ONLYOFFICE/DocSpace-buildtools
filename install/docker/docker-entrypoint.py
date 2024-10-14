@@ -267,5 +267,15 @@ if LOG_LEVEL:
     with open(filePath, 'w') as f:
         f.write(configData)
 
+PLUGINS_DIR = "/var/www/studio/plugins/"
+DATA_PLUGINS_DIR = "/app/onlyoffice/data/Studio/webplugins/"
+if os.path.exists(PLUGINS_DIR) and not os.path.exists(DATA_PLUGINS_DIR):
+    os.makedirs(DATA_PLUGINS_DIR, exist_ok=True)
+    import shutil
+    for item in os.listdir(PLUGINS_DIR):
+        pd_item = os.path.join(PLUGINS_DIR, item)
+        dpd_item = os.path.join(DATA_PLUGINS_DIR, item)
+        shutil.copytree(pd_item, dpd_item) if os.path.isdir(pd_item) else shutil.copy2(pd_item, dpd_item)
+
 run = RunServices(SERVICE_PORT, PATH_TO_CONF)
 run.RunService(RUN_FILE, ENV_EXTENSION, LOG_FILE)
