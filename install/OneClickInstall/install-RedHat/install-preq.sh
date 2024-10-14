@@ -86,6 +86,7 @@ OPENRESTY_REPO_FILE=$( [[ "$REV" -ge 9 && "$DIST" != "fedora" ]] && echo "openre
 curl -o /etc/yum.repos.d/openresty.repo "https://openresty.org/package/${OPENRESTY_DISTR_NAME}/${OPENRESTY_REPO_FILE}"
 [ "$DIST" == "fedora" ] && sed -i "s/\$releasever/$OPENRESTY_REV/g" /etc/yum.repos.d/openresty.repo
 
+JAVA_VERSION=21
 ${package_manager} -y install $([ $DIST != "fedora" ] && echo "epel-release") \
 			python3 \
 			nodejs ${NODEJS_OPTION} \
@@ -98,7 +99,12 @@ ${package_manager} -y install $([ $DIST != "fedora" ] && echo "epel-release") \
 			redis --enablerepo=remi \
 			SDL2 $POWERTOOLS_REPO \
 			expect \
+			java-${JAVA_VERSION}-openjdk-headless \
 			ffmpeg $TESTING_REPO
+
+# Set Java ${JAVA_VERSION} as the default version
+JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | head -1)
+alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && alternatives --set java "$JAVA_PATH"
 
 #add repo, install fluent-bit
 if [ ${INSTALL_FLUENT_BIT} == "true" ]; then 
