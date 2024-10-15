@@ -54,7 +54,7 @@ $path_prereq = "${pwd}\buildtools\install\win\"
 
 $opensearch_version = '2.11.1'
 
-$openresty_version = '1.21.4.2'
+$openresty_version = '1.25.3.2'
 
 $prerequisites = @(
   

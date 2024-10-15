@@ -3,7 +3,7 @@ set "publisher="Ascensio System SIA""
 set "nuget="%cd%\buildtools\install\win\nuget.exe""
 set "environment=production"
 set "opensearch_version=2.11.1"
-set "openresty_version=1.21.4.2"
+set "openresty_version=1.25.3.2"
 
 REM echo ######## Extracting and preparing files to build ########
 %sevenzip% x buildtools\install\win\opensearch-%opensearch_version%.zip -o"buildtools\install\win" -y
