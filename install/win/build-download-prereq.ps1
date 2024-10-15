@@ -54,6 +54,8 @@ $path_prereq = "${pwd}\buildtools\install\win\"
 
 $opensearch_version = '2.11.1'
 
+$openresty_version = '1.21.4.2'
+
 $prerequisites = @(
   
   @{  
@@ -66,6 +68,12 @@ $prerequisites = @(
     download_allways = $false;
     name = "opensearch-${opensearch_version}.zip";
     link = "https://artifacts.opensearch.org/releases/bundle/opensearch/${opensearch_version}/opensearch-${opensearch_version}-windows-x64.zip";
+  }
+  
+  @{
+    download_allways = $false;
+    name = "openresty-${openresty_version}.zip";
+    link = "https://openresty.org/download/openresty-${openresty_version}-win64.zip";
   }
 
   @{

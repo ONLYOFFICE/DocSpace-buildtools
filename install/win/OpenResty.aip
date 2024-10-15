@@ -53,12 +53,6 @@
     <ROW Path="&lt;AI_DICTS&gt;ui.ail"/>
     <ROW Path="&lt;AI_DICTS&gt;ui_en.ail"/>
   </COMPONENT>
-  <COMPONENT cid="caphyon.advinst.msicomp.ExpandArchiveComponent">
-    <ROW ExpandArchive="ExpandArchive" DestFolder="APPDIR" SourcePath="[APPDIR]openresty.zip" Flags="57"/>
-  </COMPONENT>
-  <COMPONENT cid="caphyon.advinst.msicomp.FileDownloadComponent">
-    <ROW FileDownload="nginx.zip" FileName="OPENRE~1.ZIP|openresty.zip" DirProperty="APPDIR" Source="https://openresty.org/download/openresty-1.21.4.2-win64.zip" Flags="25"/>
-  </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.FragmentComponent">
     <ROW Fragment="CommonUI.aip" Path="&lt;AI_FRAGS&gt;CommonUI.aip"/>
     <ROW Fragment="FolderDlg.aip" Path="&lt;AI_THEMES&gt;classic\fragments\FolderDlg.aip"/>
@@ -75,23 +69,12 @@
     <ROW Fragment="WelcomeDlg.aip" Path="&lt;AI_THEMES&gt;classic\fragments\WelcomeDlg.aip"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiActionTextComponent">
-    <ROW Action="AI_ExpandArchConfig" Description="Extracting archives" DescriptionLocId="ActionText.Description.AI_ExpandArchConfig" Template="Extracting archive: &quot;[1]&quot;" TemplateLocId="ActionText.Template.AI_ExpandArchConfig"/>
-    <ROW Action="AI_ExpandArchInstall" Description="Generating actions for extracting archives" DescriptionLocId="ActionText.Description.AI_ExpandArchInstall"/>
-    <ROW Action="AI_ExpandArchRemove" Description="Cleanup extracted files" DescriptionLocId="ActionText.Description.AI_ExpandArchRemove" Template="Removing contents of extracted archive: &quot;[1]&quot;" TemplateLocId="ActionText.Template.AI_ExpandArchRemove"/>
-    <ROW Action="AI_ExpandArchRollback" Description="Rolling back extracted files" DescriptionLocId="ActionText.Description.AI_ExpandArchRollback" Template="Rolling back contents of extracted archive: &quot;[1]&quot;" TemplateLocId="ActionText.Template.AI_ExpandArchRollback"/>
-    <ROW Action="AI_ExpandArchUninstall" Description="Generating actions for extracting archives" DescriptionLocId="ActionText.Description.AI_ExpandArchUninstall"/>
-    <ROW Action="AI_FdConfig" Description="Downloading files" DescriptionLocId="ActionText.Description.AI_FdConfig" Template="Downloading file: &quot;[1]&quot;" TemplateLocId="ActionText.Template.AI_FdConfig"/>
-    <ROW Action="AI_FdInstall" Description="Generating actions for file download operations" DescriptionLocId="ActionText.Description.AI_FdInstall"/>
-    <ROW Action="AI_FdRemove" Description="Cleanup downloaded files" DescriptionLocId="ActionText.Description.AI_FdRemove" Template="Removing downloaded file: &quot;[1]&quot;" TemplateLocId="ActionText.Template.AI_FdRemove"/>
-    <ROW Action="AI_FdRollback" Description="Rolling back downloaded files" DescriptionLocId="ActionText.Description.AI_FdRollback" Template="Rolling back downloaded file: &quot;[1]&quot;" TemplateLocId="ActionText.Template.AI_FdRollback"/>
-    <ROW Action="AI_FdUninstall" Description="Generating actions for file download operations" DescriptionLocId="ActionText.Description.AI_FdUninstall"/>
     <ROW Action="AI_TxtUpdaterCommit" Description="Commit text file changes. " DescriptionLocId="ActionText.Description.AI_TxtUpdaterCommit" Template="Commit text file changes." TemplateLocId="ActionText.Template.AI_TxtUpdaterCommit"/>
     <ROW Action="AI_TxtUpdaterConfig" Description="Executing text file updates" DescriptionLocId="ActionText.Description.AI_TxtUpdaterConfig" Template="Updating text file: &quot;[1]&quot;" TemplateLocId="ActionText.Template.AI_TxtUpdaterConfig"/>
     <ROW Action="AI_TxtUpdaterInstall" Description="Generating actions to configure text files updates" DescriptionLocId="ActionText.Description.AI_TxtUpdaterInstall"/>
     <ROW Action="AI_TxtUpdaterRollback" Description="Rolling back text file changes. " DescriptionLocId="ActionText.Description.AI_TxtUpdaterRollback" Template="Rolling back text file changes." TemplateLocId="ActionText.Template.AI_TxtUpdaterRollback"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiBinaryComponent">
-    <ROW Name="FileOperations.dll" SourcePath="&lt;AI_CUSTACTS&gt;FileOperations.dll"/>
     <ROW Name="TxtUpdater.dll" SourcePath="&lt;AI_CUSTACTS&gt;TxtUpdater.dll"/>
     <ROW Name="aicustact.dll" SourcePath="&lt;AI_CUSTACTS&gt;aicustact.dll"/>
     <ROW Name="utils.vbs" SourcePath="utils.vbs"/>
@@ -130,16 +113,6 @@
     <ROW Action="AI_DOWNGRADE" Type="19" Target="4010"/>
     <ROW Action="AI_DpiContentScale" Type="1" Source="aicustact.dll" Target="DpiContentScale"/>
     <ROW Action="AI_EnableDebugLog" Type="321" Source="aicustact.dll" Target="EnableDebugLog"/>
-    <ROW Action="AI_ExpandArchConfig" Type="11265" Source="FileOperations.dll" Target="OnExpandArchConfig" WithoutSeq="true"/>
-    <ROW Action="AI_ExpandArchInstall" Type="1" Source="FileOperations.dll" Target="OnExpandArchInstall"/>
-    <ROW Action="AI_ExpandArchRemove" Type="11265" Source="FileOperations.dll" Target="OnExpandArchRemove" WithoutSeq="true"/>
-    <ROW Action="AI_ExpandArchRollback" Type="11521" Source="FileOperations.dll" Target="OnExpandArchRollback" WithoutSeq="true"/>
-    <ROW Action="AI_ExpandArchUninstall" Type="1" Source="FileOperations.dll" Target="OnExpandArchUninstall"/>
-    <ROW Action="AI_FdConfig" Type="11265" Source="FileOperations.dll" Target="OnFdConfig" WithoutSeq="true"/>
-    <ROW Action="AI_FdInstall" Type="1" Source="FileOperations.dll" Target="OnFdInstall"/>
-    <ROW Action="AI_FdRemove" Type="11265" Source="FileOperations.dll" Target="OnFdRemove" WithoutSeq="true"/>
-    <ROW Action="AI_FdRollback" Type="11521" Source="FileOperations.dll" Target="OnFdRollback" WithoutSeq="true"/>
-    <ROW Action="AI_FdUninstall" Type="1" Source="FileOperations.dll" Target="OnFdUninstall"/>
     <ROW Action="AI_InstallModeCheck" Type="1" Source="aicustact.dll" Target="UpdateInstallMode" WithoutSeq="true"/>
     <ROW Action="AI_PREPARE_UPGRADE" Type="65" Source="aicustact.dll" Target="PrepareUpgrade"/>
     <ROW Action="AI_PRESERVE_INSTALL_TYPE" Type="65" Source="aicustact.dll" Target="PreserveInstallType"/>
@@ -172,10 +145,6 @@
     <ROW Action="AI_PREPARE_UPGRADE" Condition="AI_UPGRADE=&quot;No&quot; AND (Not Installed)" Sequence="1397"/>
     <ROW Action="AI_ResolveKnownFolders" Sequence="52"/>
     <ROW Action="AI_EnableDebugLog" Sequence="51"/>
-    <ROW Action="AI_FdInstall" Condition="(VersionNT &gt;= 501) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5799"/>
-    <ROW Action="AI_FdUninstall" Condition="(VersionNT &gt;= 501) AND (REMOVE=&quot;ALL&quot;)" Sequence="1702"/>
-    <ROW Action="AI_ExpandArchInstall" Condition="(VersionNT &gt;= 501) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5851"/>
-    <ROW Action="AI_ExpandArchUninstall" Condition="(VersionNT &gt;= 501) AND (REMOVE=&quot;ALL&quot;)" Sequence="1701"/>
     <ROW Action="AI_TxtUpdaterInstall" Sequence="5101"/>
     <ROW Action="OpenRestySetup" Condition="( NOT Installed )" Sequence="6601"/>
     <ROW Action="StartOpenResty" Condition="( NOT Installed )" Sequence="6603"/>

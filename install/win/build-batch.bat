@@ -3,6 +3,7 @@ set "publisher="Ascensio System SIA""
 set "nuget="%cd%\buildtools\install\win\nuget.exe""
 set "environment=production"
 set "opensearch_version=2.11.1"
+set "openresty_version=1.21.4.2"
 
 REM echo ######## Extracting and preparing files to build ########
 %sevenzip% x buildtools\install\win\opensearch-%opensearch_version%.zip -o"buildtools\install\win" -y
@@ -13,8 +14,12 @@ xcopy "buildtools\install\win\opensearch-%opensearch_version%\plugins\opensearch
 rmdir buildtools\install\win\opensearch-%opensearch_version%\plugins /s /q
 xcopy "buildtools\install\win\opensearch-%opensearch_version%" "buildtools\install\win\OpenSearch" /s /y /b /i
 rmdir buildtools\install\win\opensearch-%opensearch_version% /s /q
+%sevenzip% x buildtools\install\win\openresty-%openresty_version%.zip -o"buildtools\install\win" -y
+xcopy "buildtools\install\win\openresty-%openresty_version%-win64" "buildtools\install\win\OpenResty" /s /y /b /i
+rmdir buildtools\install\win\openresty-%openresty_version%-win64 /s /q
 md buildtools\install\win\OpenSearch\tools
 md buildtools\install\win\OpenResty\tools
+md buildtools\install\win\OpenResty\logs
 md buildtools\install\win\OpenSearchStack\tools
 md buildtools\install\win\Files\tools
 md buildtools\install\win\Files\Logs
@@ -126,6 +131,7 @@ REM echo ######## Build MySQL Server Installer ########
 iscc /Qp /S"byparam="signtool" sign /a /n "%publisher%" /t http://timestamp.digicert.com $f" "buildtools\install\win\MySQL Server Installer Runner.iss"
 
 REM echo ######## Build OpenResty ########
+%AdvancedInstaller% /edit buildtools\install\win\OpenResty.aip /SetVersion %openresty_version%
 IF "%SignBuild%"=="true" (
 %AdvancedInstaller% /edit buildtools\install\win\OpenResty.aip /SetSig
 %AdvancedInstaller% /edit buildtools\install\win\OpenResty.aip /SetDigitalCertificateFile -file %onlyoffice_codesign_path% -password "%onlyoffice_codesign_password%"
