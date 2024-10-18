@@ -31,6 +31,7 @@ md buildtools\install\win\Files\services\ASC.ClearEvents\service\temp
 md buildtools\install\win\Files\services\ASC.Web.Api\service\temp
 md buildtools\install\win\Files\services\ASC.Web.Studio\service\temp
 md buildtools\install\win\Files\services\ASC.Web.HealthChecks.UI\service\temp
+md buildtools\install\win\Files\nginx\conf\includes
 copy buildtools\install\win\WinSW.NET4.exe "buildtools\install\win\OpenResty\tools\OpenResty.exe" /y
 copy buildtools\install\win\tools\OpenResty.xml "buildtools\install\win\OpenResty\tools\OpenResty.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\Socket.IO.exe" /y
@@ -52,6 +53,8 @@ copy "buildtools\install\docker\config\nginx\onlyoffice-proxy-ssl.conf" "buildto
 copy "buildtools\install\docker\config\nginx\letsencrypt.conf" "buildtools\install\win\Files\nginx\conf\includes\letsencrypt.conf" /y
 copy "buildtools\install\win\sbin\docspace-ssl-setup.ps1" "buildtools\install\win\Files\sbin\docspace-ssl-setup.ps1" /y
 copy "buildtools\install\docker\config\fluent-bit.conf" "buildtools\install\win\Files\config\fluent-bit.conf" /y
+copy "buildtools\config\nginx\includes\server-dashboards.conf" "buildtools\install\win\Files\nginx\conf\includes\server-dashboards.conf" /y
+copy "buildtools\config\nginx\onlyoffice.conf" "buildtools\install\win\Files\nginx\conf\onlyoffice.conf" /y
 rmdir buildtools\install\win\publish /s /q
 
 REM echo ######## SSL configs ########
