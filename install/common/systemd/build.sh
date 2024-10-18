@@ -206,7 +206,7 @@ reassign_values (){
   elif [[ "${EXEC_FILE}" == *".jar" ]]; then
 	SYSTEMD_ENVIRONMENT_FILE="${PATH_TO_CONF}/identity.env"
 	SYSTEMD_ENVIRONMENT="SPRING_APPLICATION_NAME=${SPRING_APPLICATION_NAME} SERVER_PORT=${SERVICE_PORT} LOG_FILE_PATH=${LOG_DIR}/${SERVICE_NAME}.log"
-	SERVICE_TYPE="notify"
+	SERVICE_TYPE="simple"
 	EXEC_START="${JAVA_RUN} ${WORK_DIR}${EXEC_FILE}"
 	if [[ "${SERVICE_NAME}" = "identity-migration" ]]; then
 		RESTART="on-failure" && SERVICE_TYPE="simple"
