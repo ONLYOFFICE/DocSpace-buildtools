@@ -1591,6 +1591,7 @@
     <ROW Name="ReplaceScheme" TxtUpdateSet="fluentbit.conf" FindPattern="OPENSEARCH_SCHEME" ReplacePattern="[OPENSEARCH_SCHEME]" Options="2" Order="3" FileEncoding="-1"/>
     <ROW Name="ReplaceIndex" TxtUpdateSet="fluentbit.conf" FindPattern="OPENSEARCH_INDEX" ReplacePattern="[OPENSEARCH_INDEX]" Options="2" Order="4" FileEncoding="-1"/>
     <ROW Name="Append/Create" TxtUpdateSet="htpasswd_dashboards" FindPattern="onlyoffice:[DASHBOARDS_PWD]" Options="160" Order="0" FileEncoding="0"/>
+    <ROW Name="Replace" TxtUpdateSet="serverdashboards.conf" FindPattern="/etc/nginx/" Options="2" Order="0" FileEncoding="-1"/>
     <ROW Name="ReplaceAmqpProtocol" TxtUpdateSet="xml" FindPattern="{AMQP_PROTOCOL}" ReplacePattern="[AMQP_PROTOCOL]" Options="2" Order="2" FileEncoding="-1"/>
     <ROW Name="ReplaceAmqpHost" TxtUpdateSet="xml" FindPattern="{AMQP_HOST}" ReplacePattern="[AMQP_HOST]" Options="2" Order="3" FileEncoding="-1"/>
     <ROW Name="ReplaceAmqpUser" TxtUpdateSet="xml" FindPattern="{AMQP_USER}" ReplacePattern="[AMQP_USER]" Options="2" Order="4" FileEncoding="-1"/>
@@ -1613,6 +1614,7 @@
     <ROW Key="YourFile.txt_6" Component="conf" FileName="onlyoffice-management.conf" Directory="conf_Dir" Options="17"/>
     <ROW Key="fluentbit.conf" Component="config" FileName="fluent-bit.conf" Directory="config_Dir" Options="17"/>
     <ROW Key="htpasswd_dashboards" Component="conf" FileName=".htpasswd_dashboards" Directory="conf_Dir" Options="17"/>
+    <ROW Key="serverdashboards.conf" Component="includes" FileName="server-dashboards.conf" Directory="includes_Dir" Options="17"/>
     <ROW Key="xml" Component="tools" FileName="*.xml" Directory="tools_Dir" Options="17"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.XmlAttributeComponent">
