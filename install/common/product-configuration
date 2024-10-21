@@ -616,9 +616,11 @@ setup_docs() {
 setup_enterprise() {
 	if $PACKAGE_MANAGER ${PACKAGE_SYSNAME}-documentserver-ee >/dev/null 2>&1; then
 		LICENCE_PATH="/var/www/$PACKAGE_SYSNAME/Data/license.lic"
+		LICENCE_URL="https://help.onlyoffice.co/Products/Files/DocEditor.aspx?fileid=8516433&doc=U0U1QUs2VEtIVmtYclFTNzVXSWkxUEN6aVlWTzdOWFFsWGdibG80Mnhacz0_IntcImVudHJ5XCI6XCI4NTE2NDMzXCIsXCJsaW5rXCI6XCI5Y2ZiMWNkMS0wMmMxLTRlNmEtYThhOC1iNjFlYTk2ZTYzNDZcIn0i0"
 	fi
 
 	save_undefined_param "${USER_CONF}" "license.file.path" "${LICENCE_PATH}" "rewrite"
+	save_undefined_param "${APP_DIR}/appsettings.json" "web['license-url']" "${LICENCE_URL}" "rewrite"
 }
 
 change_elasticsearch_config(){

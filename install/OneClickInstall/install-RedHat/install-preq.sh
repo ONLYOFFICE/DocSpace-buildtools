@@ -103,6 +103,7 @@ ${package_manager} -y install $([ $DIST != "fedora" ] && echo "epel-release") \
 #add repo, install fluent-bit
 if [ ${INSTALL_FLUENT_BIT} == "true" ]; then 
 	curl https://raw.githubusercontent.com/fluent/fluent-bit/master/install.sh | bash
+	[ "$DIST" = "fedora" ] && rm -f /etc/yum.repos.d/fluent-bit.repo
 	${package_manager} -y install opensearch-dashboards-${DASHBOARDS_VERSION} --enablerepo=opensearch-dashboards-2.x
 fi
 

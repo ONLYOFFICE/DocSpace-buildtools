@@ -73,7 +73,7 @@ cp -rf %{_builddir}/buildtools/install/common/systemd/modules/* "%{buildroot}/us
 cp -rf %{_builddir}/buildtools/install/common/%{product}-ssl-setup "%{buildroot}%{_bindir}/%{product}-ssl-setup"
 cp -rf %{_builddir}/buildtools/install/common/%{product}-configuration "%{buildroot}%{_bindir}/%{product}-configuration"
 cp -rf %{_builddir}/buildtools/config/nginx/onlyoffice*.conf "%{buildroot}%{_sysconfdir}/openresty/conf.d/"
-cp -rf %{_builddir}/buildtools/config/nginx/includes/onlyoffice*.conf "%{buildroot}%{_sysconfdir}/openresty/includes/"
+cp -rf %{_builddir}/buildtools/config/nginx/includes/*.conf "%{buildroot}%{_sysconfdir}/openresty/includes/"
 cp -rf %{_builddir}/buildtools/config/nginx/html/*.html "%{buildroot}%{_sysconfdir}/openresty/html/"
 cp -rf %{_builddir}/buildtools/config/* "%{buildroot}%{_sysconfdir}/onlyoffice/%{product}/"
 cp -rf %{_builddir}/buildtools/install/docker/config/fluent-bit.conf "%{buildroot}%{_sysconfdir}/onlyoffice/%{product}/"
