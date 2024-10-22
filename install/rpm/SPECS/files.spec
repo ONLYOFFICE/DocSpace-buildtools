@@ -6,10 +6,6 @@
 %{buildpath}/studio/ASC.Web.Api/
 /usr/lib/systemd/system/%{product}-api.service
 %dir %{buildpath}/studio/
-%dir %{buildpath}/products/ASC.People/
-%dir %{buildpath}/products/ASC.People/server/
-%dir %{buildpath}/products/ASC.Files/
-%dir %{buildpath}/products/ASC.Files/server/
 
 %files api-system
 %defattr(-, onlyoffice, onlyoffice, -)
@@ -22,11 +18,6 @@
 %{buildpath}/services/ASC.Data.Backup/
 /usr/lib/systemd/system/%{product}-backup.service
 %dir %{buildpath}/services/
-%dir %{buildpath}/products/
-%dir %{buildpath}/products/ASC.People/
-%dir %{buildpath}/products/ASC.People/server/
-%dir %{buildpath}/products/ASC.Files/
-%dir %{buildpath}/products/ASC.Files/server/
 
 %files common
 %defattr(-, onlyoffice, onlyoffice, -)
@@ -45,21 +36,13 @@
 %{buildpath}/products/ASC.Files/service/
 /usr/lib/systemd/system/%{product}-files-services.service
 %dir %{buildpath}/products/
-%dir %{buildpath}/products/ASC.People/
-%dir %{buildpath}/products/ASC.People/server
 %dir %{buildpath}/products/ASC.Files/
-%dir %{buildpath}/products/ASC.Files/server/
 
 %files notify
 %defattr(-, onlyoffice, onlyoffice, -)
 %{buildpath}/services/ASC.Notify/
 /usr/lib/systemd/system/%{product}-notify.service
 %dir %{buildpath}/services/
-%dir %{buildpath}/products/
-%dir %{buildpath}/products/ASC.People/
-%dir %{buildpath}/products/ASC.People/server/
-%dir %{buildpath}/products/ASC.Files/
-%dir %{buildpath}/products/ASC.Files/server/
 
 %files files
 %defattr(-, onlyoffice, onlyoffice, -)
@@ -67,8 +50,6 @@
 /usr/lib/systemd/system/%{product}-files.service
 %dir %{buildpath}/products/
 %dir %{buildpath}/products/ASC.Files/
-%dir %{buildpath}/products/ASC.People/
-%dir %{buildpath}/products/ASC.People/server/
 
 %files proxy
 %defattr(-, onlyoffice, onlyoffice, -)
@@ -89,11 +70,6 @@
 %{buildpath}/services/ASC.Studio.Notify/
 /usr/lib/systemd/system/%{product}-studio-notify.service
 %dir %{buildpath}/services/
-%dir %{buildpath}/products/
-%dir %{buildpath}/products/ASC.People/
-%dir %{buildpath}/products/ASC.People/server/
-%dir %{buildpath}/products/ASC.Files/
-%dir %{buildpath}/products/ASC.Files/server/
 
 %files people-server
 %defattr(-, onlyoffice, onlyoffice, -)
@@ -101,28 +77,18 @@
 /usr/lib/systemd/system/%{product}-people-server.service
 %dir %{buildpath}/products/
 %dir %{buildpath}/products/ASC.People/
-%dir %{buildpath}/products/ASC.Files/
-%dir %{buildpath}/products/ASC.Files/server/
 
 %files socket
 %defattr(-, onlyoffice, onlyoffice, -)
 %{buildpath}/services/ASC.Socket.IO/
 /usr/lib/systemd/system/%{product}-socket.service
 %dir %{buildpath}/services/
-%dir %{buildpath}/products/
-%dir %{buildpath}/products/ASC.Files/
-%dir %{buildpath}/products/ASC.People/
 
 %files studio
 %defattr(-, onlyoffice, onlyoffice, -)
 %{buildpath}/studio/ASC.Web.Studio/
 /usr/lib/systemd/system/%{product}-studio.service
 %dir %{buildpath}/studio/
-%dir %{buildpath}/products/
-%dir %{buildpath}/products/ASC.People/
-%dir %{buildpath}/products/ASC.People/server/
-%dir %{buildpath}/products/ASC.Files/
-%dir %{buildpath}/products/ASC.Files/server/
 
 %files ssoauth
 %defattr(-, onlyoffice, onlyoffice, -)
