@@ -7,8 +7,6 @@ x-service:
     volumes:
     #- /app/onlyoffice/CommunityServer/data:/app/onlyoffice/data
     - app_data:/app/onlyoffice/data
-    - files_data:/var/www/products/ASC.Files/server/
-    - people_data:/var/www/products/ASC.People/server/
 
 services:
   onlyoffice-health-checks-ui:
@@ -23,6 +21,4 @@ networks:
 
 volumes:
   app_data:
-  files_data:
-  people_data:
   

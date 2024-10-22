@@ -60,8 +60,6 @@ x-service: &x-service-base
   volumes:
     - ${ROOT_DIR}/data:/app/onlyoffice/data
     - ${ROOT_DIR}/logs:/var/log/onlyoffice
-    - files_data:/var/www/products/ASC.Files/server/
-    - people_data:/var/www/products/ASC.People/server/
 
 services:
   onlyoffice-opensearch:
@@ -308,5 +306,3 @@ volumes:
   os_data:
   router_log:
   app_data:
-  files_data:
-  people_data:
