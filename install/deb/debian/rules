@@ -111,6 +111,8 @@ override_dh_shlibdeps:
 
 override_dh_builddeb:
 	dh_builddeb -- -Zxz
+	@echo "Removing files after package creation..."
+	rm -rf ${BUILD_PATH}
 
 override_dh_installinit:
 # don't do anything, silences lintian warnings "init.d-script-not-included-in-package"
