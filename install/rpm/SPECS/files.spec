@@ -38,7 +38,6 @@
 %dir %{_sysconfdir}/onlyoffice/
 %dir %{_sysconfdir}/onlyoffice/%{product}/
 %dir %{_sysconfdir}/onlyoffice/%{product}/.private/
-%dir %{_var}/www/onlyoffice/Data
 %dir %{_var}/log/onlyoffice/
 
 %files files-services
@@ -191,3 +190,9 @@
 %{buildpath}/services/ASC.Web.HealthChecks.UI
 /usr/lib/systemd/system/%{product}-healthchecks.service
 %dir %{buildpath}/services/
+
+%files plugins
+%defattr(-, onlyoffice, onlyoffice, -)
+%{_var}/www/onlyoffice/Data/Studio/webplugins/
+%dir %{_var}/www/onlyoffice/Data/
+%dir %{_var}/www/onlyoffice/Data/Studio/
