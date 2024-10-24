@@ -13,13 +13,10 @@ function make_swap () {
 
 	if [[ -z $EXIST ]] && [ ${TOTAL_MEMORY} -lt ${MEMORY_REQUIREMENTS} ] && [ ${AVAILABLE_DISK_SPACE} -gt ${DISK_REQUIREMENTS} ]; then
 		touch "$SWAPFILE"
-		# No Copy-on-Write - no compression
-		[[ "$DIST" == "fedora" ]] && chattr +C "$SWAPFILE"
-		# Allocate 6 GB, much faster than: dd if=/dev/zero of=${SWAPFILE} count=6144 bs=1MiB
+		[[ "$(df -T / | awk 'NR==2{print $2}')" = "btrfs" ]] && chattr +C "$SWAPFILE"
 		fallocate -l 6G "$SWAPFILE"
 		chmod 600 "$SWAPFILE"
 		mkswap "$SWAPFILE"
-		# Activate, enable upon system boot
 		swapon "$SWAPFILE"
 		echo "$SWAPFILE none swap sw 0 0" >> /etc/fstab
 	fi

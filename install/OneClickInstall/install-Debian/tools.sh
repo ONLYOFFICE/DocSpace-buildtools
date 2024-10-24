@@ -12,6 +12,8 @@ make_swap () {
 	EXIST=$(swapon -s | awk '{ print $1 }' | { grep -x ${SWAPFILE} || true; });
 
 	if [[ -z $EXIST ]] && [ ${TOTAL_MEMORY} -lt ${MEMORY_REQUIREMENTS} ] && [ ${AVAILABLE_DISK_SPACE} -gt ${DISK_REQUIREMENTS} ]; then
+		touch "${SWAPFILE}"
+		[[ "$(df -T / | awk 'NR==2{print $2}')" = "btrfs" ]] && chattr +C "${SWAPFILE}"
 		fallocate -l 6G ${SWAPFILE}
 		chmod 600 ${SWAPFILE}
 		mkswap ${SWAPFILE}
