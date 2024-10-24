@@ -58,8 +58,6 @@ x-service: &x-service-base
     #- /app/onlyoffice/CommunityServer/data:/app/onlyoffice/data
     - log_data:/var/log/onlyoffice
     - app_data:/app/onlyoffice/data
-    - files_data:/var/www/products/ASC.Files/server/
-    - people_data:/var/www/products/ASC.People/server/
 
 services:
   onlyoffice-backup-background-tasks:
@@ -244,5 +242,3 @@ networks:
 volumes:
   log_data:
   app_data:
-  files_data:
-  people_data:

@@ -44,7 +44,7 @@ echo "== BACK-END-BUILD =="
 
 cd ${SRC_PATH}/server
 dotnet build ASC.Web.slnf ${ARGS}
-dotnet build ASC.Migrations.sln -o ${SRC_PATH}/server/ASC.Migration.Runner/service/
+dotnet build ASC.Migrations.sln --property:OutputPath=${SRC_PATH}/server/ASC.Migration.Runner/service/
 
 cd ${SRC_PATH}/client
 # Array of names backend services in directory common (Nodejs)
@@ -71,9 +71,9 @@ IDENTITY_MODULES+=("infrastructure/infrastructure-migration-runner")
 cd ${SRC_PATH}/server/common/ASC.Identity/
 
 # Build and publish identity services
-mvn dependency:go-offline
+mvn -B dependency:go-offline
 for i in "${!IDENTITY_NAMES[@]}"; do
   echo "== Build ${IDENTITY_NAMES[$i]} project =="
-  mvn clean package -DskipTests -pl "${IDENTITY_MODULES[$i]}" -am
+  mvn clean package -B -DskipTests -pl "${IDENTITY_MODULES[$i]}" -am
   mkdir -p ${IDENTITY_NAMES[$i]} && cp -rf "${IDENTITY_MODULES[$i]}/target/"*.jar "${IDENTITY_NAMES[$i]}/app.jar"
 done

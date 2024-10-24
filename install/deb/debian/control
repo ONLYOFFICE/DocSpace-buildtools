@@ -2,7 +2,8 @@ Source: {{product}}
 Section: web
 Priority: optional
 Maintainer: Ascensio System SIA <support@onlyoffice.com>
-Build-Depends: debhelper (>= 10), po-debconf, nodejs (>=18), dotnet-sdk-8.0, yarn
+Build-Depends: debhelper (>= 10), po-debconf, nodejs (>=18), dotnet-sdk-8.0 (>=8.0.402), yarn, unzip, maven, 
+	openjdk-21-jdk-headless | temurin-21-jdk | jdk-21 | jdk-21-headless | zulu21-jdk-headless | java-21-amazon-corretto-jdk
 Standards-Version: {{package_header_tag_version}}
 Homepage: https://www.onlyoffice.com/
 Architecture: all 
@@ -27,11 +28,14 @@ Depends: debconf, openssl,
          {{product}}-notify (= {{package_header_tag_version}}),
          {{product}}-people-server (= {{package_header_tag_version}}),
          {{product}}-proxy (= {{package_header_tag_version}}),
-         {{product}}-radicale (= {{package_header_tag_version}}),
+         {{product}}-plugins (= {{package_header_tag_version}}),
          {{product}}-socket (= {{package_header_tag_version}}),
          {{product}}-ssoauth (= {{package_header_tag_version}}),
          {{product}}-studio (= {{package_header_tag_version}}),
-         {{product}}-studio-notify (= {{package_header_tag_version}})
+         {{product}}-studio-notify (= {{package_header_tag_version}}),
+         {{product}}-identity-api (= {{package_header_tag_version}}),
+         {{product}}-identity-migration (= {{package_header_tag_version}}),
+         {{product}}-identity-authorization (= {{package_header_tag_version}})
 Description: {{product}}
 	ONLYOFFICE {{product}} is a new way to collaborate on documents with teams, 
 	clients, partners, etc., based on the concept of rooms - special spaces with 
@@ -151,6 +155,30 @@ Description: {{product}}-ssoauth
 	SAML-based single sign-on (SSO) authentication to provide a more quick, 
 	easy and secure way to access DocSpace for users
 
+Package: {{product}}-identity-api
+Architecture: all
+Multi-Arch: foreign
+Depends: {{product}}-common (= {{package_header_tag_version}}), ${misc:Depends}, ${shlibs:Depends},
+	openjdk-21-jre-headless | temurin-21-jre | jdk-21 | jdk-21-headless | zulu21-jre-headless | java-21-amazon-corretto-jdk
+Description: {{product}}-identity-api
+  ASC.Identity.Registration
+
+Package: {{product}}-identity-migration
+Architecture: all
+Multi-Arch: foreign
+Depends: {{product}}-common (= {{package_header_tag_version}}), ${misc:Depends}, ${shlibs:Depends},
+	openjdk-21-jre-headless | temurin-21-jre | jdk-21 | jdk-21-headless | zulu21-jre-headless | java-21-amazon-corretto-jdk
+Description: {{product}}-identity-migration
+  ASC.Identity.Migration
+
+Package: {{product}}-identity-authorization
+Architecture: all
+Multi-Arch: foreign
+Depends: {{product}}-common (= {{package_header_tag_version}}), ${misc:Depends}, ${shlibs:Depends},
+	openjdk-21-jre-headless | temurin-21-jre | jdk-21 | jdk-21-headless | zulu21-jre-headless | java-21-amazon-corretto-jdk
+Description: {{product}}-identity-authorization
+  ASC.Identity.Authorization
+
 Package: {{product}}-backup-background
 Architecture: all
 Multi-Arch: foreign
@@ -180,15 +208,6 @@ Description: {{product}}-migration-runner
 	A database connection is transferred to the service and
 	the service creates tables and populates them with values
 
-Package: {{product}}-radicale
-Architecture: all
-Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), python3-pip, python3-requests, python3-setuptools, ${misc:Depends}, ${shlibs:Depends}
-Description: {{product}}-radicale
-	Radicale is a server designed to support the CalDav and CardDav protocols.
-	It operates either as a standalone package using its own internal http server
-	or can be integrated with an existing webserver
-
 Package: {{product}}-doceditor
 Architecture: all
 Multi-Arch: foreign
@@ -209,3 +228,10 @@ Multi-Arch: foreign
 Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-8.0, ${misc:Depends}, ${shlibs:Depends}
 Description: {{product}}-healthchecks
 	The service which displays launched services
+
+Package: {{product}}-plugins
+Architecture: all
+Multi-Arch: foreign
+Depends: {{product}}-common (= {{package_header_tag_version}}), ${misc:Depends}, ${shlibs:Depends}
+Description: {{product}}-plugins
+	This package includes plugins that extend DocSpace functionality

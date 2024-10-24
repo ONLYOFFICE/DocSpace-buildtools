@@ -1294,6 +1294,9 @@ install_product () {
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -f "${APP_DOMAIN_PORTAL}" "${CERTIFICATE_PATH}" "${CERTIFICATE_KEY_PATH}"
 		elif [ ! -z "${LETS_ENCRYPT_DOMAIN}" ] && [ ! -z "${LETS_ENCRYPT_MAIL}" ]; then
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup "${LETS_ENCRYPT_MAIL}" "${LETS_ENCRYPT_DOMAIN}"
+		#Fix for bug 70537 to ensure proper migration to version 3.0.0
+		elif [ "${UPDATE}" = "true" ] && [ -f "/etc/cron.d/${PRODUCT}-letsencrypt" ]; then
+			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -r
 		fi
 	elif [ "$INSTALL_PRODUCT" == "pull" ]; then
 		docker-compose -f $BASE_DIR/identity.yml pull

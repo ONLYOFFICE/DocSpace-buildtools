@@ -83,6 +83,63 @@ END
 }
 
 #############################################################################################
+# Resize Fedora disk. Execute only for 40th version. 
+# Globals:
+#   None
+# Arguments:
+#   None
+# Outputs:
+#   None
+#############################################################################################
+function resize_fedora_disk() {
+  # Print current disk layout
+  echo "Current disk layout:"
+  lsblk
+
+  # Install required tools if they are not available
+  if ! command -v parted &> /dev/null; then
+    echo "parted not found, installing..."
+    sudo dnf install -y parted
+  fi
+
+  if ! command -v growpart &> /dev/null; then
+    echo "growpart not found, installing..."
+    sudo dnf install -y cloud-utils-growpart
+  fi
+
+  # Fix GPT table to use all available space if needed
+  echo "Fixing GPT to use all available space..."
+  echo -e "fix\n" | sudo parted /dev/sda
+
+  # Use growpart to resize the partition /dev/sda2
+  echo "Resizing partition /dev/sda2 using growpart..."
+  sudo growpart /dev/sda 2
+
+  # Check the filesystem type before resizing
+  FSTYPE=$(df -T | grep '/$' | awk '{print $2}')
+
+  # Resize the filesystem based on the filesystem type (xfs or ext4)
+  if [ "$FSTYPE" == "xfs" ]; then
+    echo "Resizing XFS filesystem on /dev/sda2..."
+    sudo xfs_growfs /
+  elif [ "$FSTYPE" == "ext4" ]; then
+    echo "Resizing ext4 filesystem on /dev/sda2..."
+   sudo resize2fs /dev/sda2
+  else
+   echo "Unsupported filesystem type: $FSTYPE"
+    exit 1
+  fi
+
+  # Print the new disk layout
+  echo "Disk layout after resizing:"
+  lsblk
+
+  # Verify new available space
+  echo "Filesystem after resizing:"
+  df -h /
+}
+
+#############################################################################################
 # Prepare vagrant boxes like: set hostname/remove postfix for DEB distributions
 # Globals:
 #   None
@@ -107,6 +164,7 @@ function prepare_vm() {
 
       fedora)
           [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-rpm
+          [ $(hostnamectl | grep "Operating System" | awk '{print $5}') == "40" ] && resize_fedora_disk
           ;;
 
       centos)
@@ -157,7 +215,7 @@ function install_docspace() {
 #############################################################################################
 function healthcheck_systemd_services() {
   for service in ${SERVICES_SYSTEMD[@]}; do
-    [[ "$service" == "docspace-migration-runner.service" ]] && continue;
+    [[ "$service" == *migration* ]] && continue;
     if systemctl is-active --quiet ${service}; then
       echo "${COLOR_GREEN}☑ OK: Service ${service} is running${COLOR_RESET}"
     else

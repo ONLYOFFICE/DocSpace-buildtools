@@ -134,7 +134,7 @@ while [ "$1" != "" ]; do
 		-rbh | --rabbitmqhost )
 			if [ "$2" != "" ]; then
 				RABBITMQ_HOST=$2
-				check_localhost "$REDIS_HOST" && EXTERNAL_RABBITMQ_FLAG="true"
+				check_localhost "$RABBITMQ_HOST" && EXTERNAL_RABBITMQ_FLAG="true"
 				shift
 			fi
 		;;
@@ -254,8 +254,6 @@ set_core_machinekey () {
 	save_undefined_param "${USER_CONF}" "core['base-domain']" "${APP_HOST}" "rewrite"
 	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core.machinekey" "${CORE_MACHINEKEY}"
 	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core['base-domain']" "${APP_HOST}" "rewrite"
-
-	sed "s^\(machine_key\)\s*=.*^\1 = ${CORE_MACHINEKEY}^g" -i $APP_DIR/radicale.config
 }
 
 install_json() {
@@ -285,24 +283,27 @@ save_undefined_param() {
 restart_services() {
 	chown -R ${PACKAGE_SYSNAME}:${PACKAGE_SYSNAME} $APP_DIR $PRODUCT_DIR $LOG_DIR /var/www/$PACKAGE_SYSNAME/Data
 
-	sed "s_\(ENVIRONMENT=\).*_\1${ENVIRONMENT}_i" -i ${SYSTEMD_DIR}/${PRODUCT}*.service >/dev/null 2>&1
+	sed "s_\(--ENVIRONMENT=\).*_\1${ENVIRONMENT}_i" -i ${SYSTEMD_DIR}/${PRODUCT}*.service >/dev/null 2>&1
 	systemctl daemon-reload
 
 	echo -n "Updating database... "
-	systemctl start ${PRODUCT}-migration-runner >/dev/null 2>&1 || true
-	while systemctl is-active ${PRODUCT}-migration-runner &>/dev/null; do
-		sleep 5
+	for SERVICE in "${PRODUCT}-migration-runner" "${PRODUCT}-identity-migration"; do
+		systemctl start "$SERVICE" >/dev/null 2>&1 || true
+		while systemctl is-active "$SERVICE" &>/dev/null; do
+			sleep 5
+		done
 	done
 	echo "OK"
 
 	echo -n "Restarting services... "
-	for SVC in login api socket studio-notify notify \
+	SERVICES=(login api socket studio-notify notify \
 	people-server files files-services studio backup api-system \
-	clear-events backup-background ssoauth doceditor healthchecks
-	do
-		systemctl enable ${PRODUCT}-$SVC >/dev/null 2>&1
-		systemctl restart ${PRODUCT}-$SVC
-	done
+	clear-events backup-background ssoauth doceditor healthchecks \
+	identity-authorization identity-api)
+	SERVICES_LIST=("${SERVICES[@]/#/${PRODUCT}-}")
+
+	systemctl enable "${SERVICES_LIST[@]}" >/dev/null 2>&1
+	systemctl restart "${SERVICES_LIST[@]}"
 	echo "OK"
 }
 
@@ -364,6 +365,7 @@ Character Set=utf8; AutoEnlist=false; SSL Mode=none;AllowPublicKeyRetrieval=true
 	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "ConnectionStrings.default.connectionString" "${CONNECTION_STRING}"
 
 	sed "s&\(\"ConnectionString\":\).*&\1 \"$(printf "%q" "${CONNECTION_STRING}")\"&" -i $PRODUCT_DIR/services/ASC.Migration.Runner/appsettings.runner.json
+	echo -e "JDBC_URL=${DB_HOST}:${DB_PORT}\nJDBC_DATABASE=${DB_NAME}\nJDBC_USER_NAME=${DB_USER}\nJDBC_PASSWORD=${DB_PWD}" >> "${APP_DIR}/identity.env"
 
 	#Enable database migration
 	save_undefined_param "${USER_CONF}" "migration.enabled" "true"
@@ -533,7 +535,9 @@ setup_openresty(){
 					PORTS+=('5032') #ASC.Data.Backup.BackgroundTasks
 					PORTS+=('5033') #ASC.Web.HealthChecks
 					PORTS+=('5100') #ASC.ApiCache
-					PORTS+=('8081') #Storybook
+					PORTS+=('8080') #ASC.Identity.Authorization
+					PORTS+=('8081') #ASC.Identity.Migration
+					PORTS+=('9090') #ASC.Identity.API
 					PORTS+=('9834') #ASC.SsoAuth
 					PORTS+=('9899') #ASC.Socket.IO
 					setsebool -P httpd_can_network_connect on
@@ -749,7 +753,7 @@ setup_dashboards() {
 	# set basePath variable to get access to Dashboards from a remote host
 	sed 's_.*\(server.basePath:\).*_\1 "/dashboards"_' -i ${DASHBOARDS_CONF_PATH}
 
-	systemctl enable opensearch-dashboards
+	systemctl enable opensearch-dashboards >/dev/null 2>&1
 	systemctl restart opensearch-dashboards
 	echo "OK"
 }
@@ -761,7 +765,7 @@ setup_fluentbit() {
 	sed -i "s/OPENSEARCH_HOST/$ELK_HOST/g; s/OPENSEARCH_PORT/$ELK_PORT/g; s/OPENSEARCH_INDEX/$OPENSEARCH_INDEX/g; s/OPENSEARCH_SCHEME/$ELK_SHEME/g" ${APP_DIR}/fluent-bit.conf
 	cp -f ${APP_DIR}/fluent-bit.conf /etc/fluent-bit/fluent-bit.conf
 
-	systemctl enable fluent-bit
+	systemctl enable fluent-bit >/dev/null 2>&1
 	systemctl restart fluent-bit
 	echo "OK"
 }
@@ -770,6 +774,7 @@ setup_redis() {
 	echo -n "Configuring redis... "
 
 	$JSON $APP_DIR/redis.$ENVIRONMENT.json -e "this.Redis={'Hosts': [ { Host: \"${REDIS_HOST}\", Port: \"${REDIS_PORT}\" } ] }" >/dev/null 2>&1
+	echo -e "REDIS_HOST=${REDIS_HOST}\nREDIS_PORT=${REDIS_PORT}" >> "${APP_DIR}/identity.env"
 
 	sed -i "s~\(redis_host =\).*~\1 \"$REDIS_HOST\"~" "${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}.conf"
 	sed -i "s~\(redis_port =\).*~\1 $REDIS_PORT~" "${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}.conf"
@@ -804,6 +809,8 @@ setup_rabbitmq() {
 		save_undefined_param "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" "RabbitMQ.Uri" "${RABBITMQ_PROTOCOL}://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/"
 	fi
 
+	echo -e "RABBIT_URI=${RABBITMQ_PROTOCOL}://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/" >> "${APP_DIR}/identity.env"
+
 	if [ $1 == "LOCAL_RABBITMQ_SERVER" ]; then
 		systemctl enable rabbitmq-server >/dev/null 2>&1
 		systemctl restart rabbitmq-server
@@ -824,6 +831,9 @@ product_configuration(){
 			chmod o-rwx "$APP_DIR/${enviromentFiles[$i]}"
 		fi
 	done
+
+	echo "SPRING_PROFILES_ACTIVE=prod" > "$APP_DIR/identity.env"
+	chmod o-rwx "$APP_DIR/identity.env"
 
 	set_core_machinekey
 
