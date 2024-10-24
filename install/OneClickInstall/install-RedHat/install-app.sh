@@ -147,14 +147,18 @@ expect << EOF
 EOF
 fi
 
+if [ "$MAKESWAP" == "true" ]; then
+	make_swap
+fi
+
 { ${package_manager} check-update ${product}; PRODUCT_CHECK_UPDATE=$?; } || true
 if [ "$PRODUCT_INSTALLED" = "false" ]; then
 	${package_manager} install -y ${product}
-	${product}-configuration \
+	echo "${product}-configuration \
 		-mysqlh ${MYSQL_SERVER_HOST} \
 		-mysqld ${MYSQL_SERVER_DB_NAME} \
 		-mysqlu ${MYSQL_SERVER_USER} \
-		-mysqlp ${MYSQL_ROOT_PASS}
+		-mysqlp ${MYSQL_ROOT_PASS}"
 elif [[ "${PRODUCT_CHECK_UPDATE}" -eq "${UPDATE_AVAILABLE_CODE}" || "${RECONFIGURE_PRODUCT}" = "true" ]]; then
 	ENVIRONMENT=$(grep -oP 'ENVIRONMENT=\K.*' /usr/lib/systemd/system/${product}-api.service)
 	CONNECTION_STRING=$(json -f /etc/${package_sysname}/${product}/appsettings.$ENVIRONMENT.json ConnectionStrings.default.connectionString)
@@ -165,10 +169,6 @@ elif [[ "${PRODUCT_CHECK_UPDATE}" -eq "${UPDATE_AVAILABLE_CODE}" || "${RECONFIGU
 		-mysqld $(grep -oP 'Database=\K[^;]*' <<< "$CONNECTION_STRING") \
 		-mysqlu $(grep -oP 'User ID=\K[^;]*' <<< "$CONNECTION_STRING") \
 		-mysqlp $(grep -oP 'Password=\K[^;]*' <<< "$CONNECTION_STRING")
-fi
-
-if [ "$MAKESWAP" == "true" ]; then
-	make_swap
 fi
 
 echo ""
