@@ -2,7 +2,7 @@
 
 export SPRING_APPLICATION_NAME="${1}"
 
-export JDBC_URL=${MYSQL_HOST:-${MYSQL_CONTAINER_NAME}}
+export JDBC_URL="${MYSQL_HOST:-$MYSQL_CONTAINER_NAME}${MYSQL_HOST:+:$MYSQL_PORT}"
 export JDBC_DATABASE=${MYSQL_DATABASE:-"onlyoffice"}
 export JDBC_USER_NAME=${MYSQL_USER:-"onlyoffice_user"}
 export JDBC_PASSWORD=${MYSQL_PASSWORD:-"onlyoffice_pass"}
