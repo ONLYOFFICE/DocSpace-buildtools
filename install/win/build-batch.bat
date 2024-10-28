@@ -36,6 +36,7 @@ md buildtools\install\win\Files\services\ASC.ClearEvents\service\temp
 md buildtools\install\win\Files\services\ASC.Web.Api\service\temp
 md buildtools\install\win\Files\services\ASC.Web.Studio\service\temp
 md buildtools\install\win\Files\services\ASC.Web.HealthChecks.UI\service\temp
+xcopy "plugins\publish\*" "buildtools\install\win\Files\Data\Studio\webplugins" /s /e /y /i
 copy buildtools\install\win\WinSW.NET4.exe "buildtools\install\win\OpenResty\tools\OpenResty.exe" /y
 copy buildtools\install\win\tools\OpenResty.xml "buildtools\install\win\OpenResty\tools\OpenResty.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\Socket.IO.exe" /y
