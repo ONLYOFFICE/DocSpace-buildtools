@@ -193,8 +193,8 @@ $enterprise_prerequisites = @(
 
   @{  
     download_allways = $false; 
-    name = "Redis-x64-5.0.10.msi"; 
-    link = "http://download.onlyoffice.com/install/windows/redist/Redis-x64-5.0.10.msi";
+    name = "Redis-7.4.0-Windows-x64.msi"; 
+    link = "https://github.com/ONLYOFFICE/redis-windows/releases/download/7.4.0/Redis-7.4.0-Windows-x64.msi";
   }
 
   @{  
