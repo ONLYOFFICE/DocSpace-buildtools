@@ -175,7 +175,7 @@ updateJsonData(jsonData,"$.files.docservice.secret.value", DOCUMENT_SERVER_JWT_S
 updateJsonData(jsonData,"$.files.docservice.secret.header", DOCUMENT_SERVER_JWT_HEADER)
 updateJsonData(jsonData,"$.debug-info.enabled", DEBUG_INFO)
 updateJsonData(jsonData,"$.web.samesite", SAMESITE)
-if INSTALLATION_TYPE == "ENTERPRISE":
+if INSTALLATION_TYPE in ["ENTERPRISE", "DEVELOPER"]:
     updateJsonData(jsonData, "$.license.file.path", "/app/onlyoffice/data/license.lic")
     updateJsonData(jsonData, "$.web.license-url", "https://help.onlyoffice.co/Products/Files/DocEditor.aspx?fileid=8516433&doc=U0U1QUs2VEtIVmtYclFTNzVXSWkxUEN6aVlWTzdOWFFsWGdibG80Mnhacz0_IntcImVudHJ5XCI6XCI4NTE2NDMzXCIsXCJsaW5rXCI6XCI5Y2ZiMWNkMS0wMmMxLTRlNmEtYThhOC1iNjFlYTk2ZTYzNDZcIn0i0")
 

@@ -3,13 +3,11 @@
 set -e
 
 PRODUCT="docspace"
-ENVIRONMENT="production"
 PACKAGE_SYSNAME="onlyoffice"
 
 APP_DIR="/etc/${PACKAGE_SYSNAME}/${PRODUCT}"
 PRODUCT_DIR="/var/www/${PRODUCT}"
 LOG_DIR="/var/log/${PACKAGE_SYSNAME}/${PRODUCT}"
-USER_CONF="$APP_DIR/appsettings.$ENVIRONMENT.json"
 
 OPENRESTY_CONF="/usr/local/openresty/nginx/conf/nginx.conf"
 OPENRESTY_DIR="/etc/openresty"
@@ -225,7 +223,7 @@ while [ "$1" != "" ]; do
 			echo "      -js, --jwtsecret                    defines the secret key to validate the JWT in the request"
 			echo "      -jh. --jwtheader                    defines the http header that will be used to send the JWT"
 			echo "      -mk, --machinekey                   setting for core.machinekey"
-			echo "      -e, --environment                   environment (default 'production')"
+			echo "      -e, --environment                   environment"
 			echo "      -?, -h, --help                      this help"
 			echo
 			exit 0
@@ -282,9 +280,6 @@ save_undefined_param() {
 
 restart_services() {
 	chown -R ${PACKAGE_SYSNAME}:${PACKAGE_SYSNAME} $APP_DIR $PRODUCT_DIR $LOG_DIR /var/www/$PACKAGE_SYSNAME/Data
-
-	sed "s_\(--ENVIRONMENT=\).*_\1${ENVIRONMENT}_i" -i ${SYSTEMD_DIR}/${PRODUCT}*.service >/dev/null 2>&1
-	systemctl daemon-reload
 
 	echo -n "Updating database... "
 	for SERVICE in "${PRODUCT}-migration-runner" "${PRODUCT}-identity-migration"; do
@@ -365,7 +360,7 @@ Character Set=utf8; AutoEnlist=false; SSL Mode=none;AllowPublicKeyRetrieval=true
 	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "ConnectionStrings.default.connectionString" "${CONNECTION_STRING}"
 
 	sed "s&\(\"ConnectionString\":\).*&\1 \"$(printf "%q" "${CONNECTION_STRING}")\"&" -i $PRODUCT_DIR/services/ASC.Migration.Runner/appsettings.runner.json
-	echo -e "JDBC_URL=${DB_HOST}:${DB_PORT}\nJDBC_DATABASE=${DB_NAME}\nJDBC_USER_NAME=${DB_USER}\nJDBC_PASSWORD=${DB_PWD}" >> "${APP_DIR}/identity.env"
+	echo -e "JDBC_URL=${DB_HOST}:${DB_PORT}\nJDBC_DATABASE=${DB_NAME}\nJDBC_USER_NAME=${DB_USER}\nJDBC_PASSWORD=${DB_PWD}" >> "${APP_DIR}/systemd.env"
 
 	#Enable database migration
 	save_undefined_param "${USER_CONF}" "migration.enabled" "true"
@@ -617,16 +612,6 @@ setup_docs() {
 	echo "OK"
 }
 
-setup_enterprise() {
-	if $PACKAGE_MANAGER ${PACKAGE_SYSNAME}-documentserver-ee >/dev/null 2>&1; then
-		LICENCE_PATH="/var/www/$PACKAGE_SYSNAME/Data/license.lic"
-		LICENCE_URL="https://help.onlyoffice.co/Products/Files/DocEditor.aspx?fileid=8516433&doc=U0U1QUs2VEtIVmtYclFTNzVXSWkxUEN6aVlWTzdOWFFsWGdibG80Mnhacz0_IntcImVudHJ5XCI6XCI4NTE2NDMzXCIsXCJsaW5rXCI6XCI5Y2ZiMWNkMS0wMmMxLTRlNmEtYThhOC1iNjFlYTk2ZTYzNDZcIn0i0"
-	fi
-
-	save_undefined_param "${USER_CONF}" "license.file.path" "${LICENCE_PATH}" "rewrite"
-	save_undefined_param "${APP_DIR}/appsettings.json" "web['license-url']" "${LICENCE_URL}" "rewrite"
-}
-
 change_elasticsearch_config(){
 
 	systemctl stop opensearch
@@ -774,7 +759,7 @@ setup_redis() {
 	echo -n "Configuring redis... "
 
 	$JSON $APP_DIR/redis.$ENVIRONMENT.json -e "this.Redis={'Hosts': [ { Host: \"${REDIS_HOST}\", Port: \"${REDIS_PORT}\" } ] }" >/dev/null 2>&1
-	echo -e "REDIS_HOST=${REDIS_HOST}\nREDIS_PORT=${REDIS_PORT}" >> "${APP_DIR}/identity.env"
+	echo -e "REDIS_HOST=${REDIS_HOST}\nREDIS_PORT=${REDIS_PORT}" >> "${APP_DIR}/systemd.env"
 
 	sed -i "s~\(redis_host =\).*~\1 \"$REDIS_HOST\"~" "${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}.conf"
 	sed -i "s~\(redis_port =\).*~\1 $REDIS_PORT~" "${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}.conf"
@@ -809,7 +794,7 @@ setup_rabbitmq() {
 		save_undefined_param "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" "RabbitMQ.Uri" "${RABBITMQ_PROTOCOL}://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/"
 	fi
 
-	echo -e "RABBIT_URI=${RABBITMQ_PROTOCOL}://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/" >> "${APP_DIR}/identity.env"
+	echo -e "RABBIT_URI=${RABBITMQ_PROTOCOL}://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/" >> "${APP_DIR}/systemd.env"
 
 	if [ $1 == "LOCAL_RABBITMQ_SERVER" ]; then
 		systemctl enable rabbitmq-server >/dev/null 2>&1
@@ -822,18 +807,25 @@ setup_rabbitmq() {
 product_configuration(){
 	echo -n "Configuring ${PRODUCT}... "
 
-	#Creating environment configuration files 
-	enviromentFiles=("appsettings.$ENVIRONMENT.json" "apisystem.$ENVIRONMENT.json" "elastic.$ENVIRONMENT.json" "rabbitmq.$ENVIRONMENT.json" "redis.$ENVIRONMENT.json")
+	${PACKAGE_MANAGER} ${PACKAGE_SYSNAME}-documentserver-ee >/dev/null 2>&1 && ENVIRONMENT=${ENVIRONMENT:-"enterprise"} ||
+	${PACKAGE_MANAGER} ${PACKAGE_SYSNAME}-documentserver-de >/dev/null 2>&1 && ENVIRONMENT=${ENVIRONMENT:-"developer"} ||
+	ENVIRONMENT=${ENVIRONMENT:-"community"}
 
-	for i in "${!enviromentFiles[@]}"; do
-		if [ ! -e "$APP_DIR/${enviromentFiles[$i]}" ]; then
-			echo "{}" > "$APP_DIR/${enviromentFiles[$i]}"
-			chmod o-rwx "$APP_DIR/${enviromentFiles[$i]}"
+	USER_CONF="$APP_DIR/appsettings.$ENVIRONMENT.json"
+
+	#Creating environment configuration files 
+	environmentFiles=("appsettings.$ENVIRONMENT.json" "apisystem.$ENVIRONMENT.json" "elastic.$ENVIRONMENT.json" "rabbitmq.$ENVIRONMENT.json" "redis.$ENVIRONMENT.json")
+
+	for FILE in "${environmentFiles[@]}"; do
+		if [ ! -e "$APP_DIR/${FILE}" ]; then
+			cp -f "$APP_DIR/${FILE}.template" "$APP_DIR/${FILE}" 2>/dev/null || echo "{}" > "$APP_DIR/${FILE}"
+			chmod o-rwx "$APP_DIR/${FILE}"
 		fi
 	done
 
-	echo "SPRING_PROFILES_ACTIVE=prod" > "$APP_DIR/identity.env"
-	chmod o-rwx "$APP_DIR/identity.env"
+	echo "ENVIRONMENT=${ENVIRONMENT}" > "$APP_DIR/systemd.env"
+	echo "SPRING_PROFILES_ACTIVE=prod" >> "$APP_DIR/systemd.env"
+	chmod o-rwx "$APP_DIR/systemd.env"
 
 	set_core_machinekey
 
@@ -881,7 +873,6 @@ if [[ ! -z $DOCUMENT_SERVER_URL_EXTERNAL ]]; then
     setup_docs "EXTERNAL_DOCS_SERVER"
 elif $PACKAGE_MANAGER ${PACKAGE_SYSNAME}-documentserver >/dev/null 2>&1 || $PACKAGE_MANAGER ${PACKAGE_SYSNAME}-documentserver-de >/dev/null 2>&1 || $PACKAGE_MANAGER ${PACKAGE_SYSNAME}-documentserver-ee >/dev/null 2>&1; then
     setup_docs "LOCAL_DOCS_SERVER"
-    setup_enterprise
 fi
 
 if $PACKAGE_MANAGER openresty >/dev/null 2>&1; then

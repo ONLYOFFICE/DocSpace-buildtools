@@ -21,13 +21,11 @@ done
 if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ]; then
 	ds_pkg_installed_name=$(rpm -qa --qf '%{NAME}\n' | grep ${package_sysname}-documentserver);
 
-	if [ "$INSTALLATION_TYPE" = "COMMUNITY" ]; then
-		ds_pkg_name="${package_sysname}-documentserver";
-	fi
-
-	if [ "$INSTALLATION_TYPE" = "ENTERPRISE" ]; then
-		ds_pkg_name="${package_sysname}-documentserver-ee";
-	fi
+	ds_pkg_name="${package_sysname}-documentserver"
+	case "${INSTALLATION_TYPE}" in
+		"DEVELOPER") ds_pkg_name+="-de" ;;
+		"ENTERPRISE") ds_pkg_name+="-ee" ;;
+	esac
 
 	if [ -n $ds_pkg_name ]; then
 		if ! rpm -qi ${ds_pkg_name} &> /dev/null; then

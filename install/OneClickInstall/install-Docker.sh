@@ -515,7 +515,7 @@ while [ "$1" != "" ]; do
 			echo "      -hub, --hub                       dockerhub name"
 			echo "      -un, --username                   dockerhub username"
 			echo "      -p, --password                    dockerhub password"
-			echo "      -it, --installation_type          installation type (community|enterprise)"
+			echo "      -it, --installation_type          installation type (community|developer|enterprise)"
 			echo "      -skiphc, --skiphardwarecheck      skip hardware check (true|false)"
 			echo "      -u, --update                      use to update existing components (true|false)"
 			echo "      -ids, --installdocspace           install or update $PRODUCT (true|false)"
@@ -1128,10 +1128,12 @@ set_docspace_params() {
 }
 
 set_installation_type_data () {
-	if [ "$INSTALLATION_TYPE" == "COMMUNITY" ]; then
-		DOCUMENT_SERVER_IMAGE_NAME=${DOCUMENT_SERVER_IMAGE_NAME:-"${PACKAGE_SYSNAME}/${STATUS}documentserver"}
-	elif [ "$INSTALLATION_TYPE" == "ENTERPRISE" ]; then
-		DOCUMENT_SERVER_IMAGE_NAME=${DOCUMENT_SERVER_IMAGE_NAME:-"${PACKAGE_SYSNAME}/${STATUS}documentserver-ee"}
+	if [ -z "${DOCUMENT_SERVER_IMAGE_NAME}" ]; then
+		DOCUMENT_SERVER_IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}documentserver"
+		case "${INSTALLATION_TYPE}" in
+			"DEVELOPER") DOCUMENT_SERVER_IMAGE_NAME+="-de" ;;
+			"ENTERPRISE") DOCUMENT_SERVER_IMAGE_NAME+="-ee" ;;
+		esac
 	fi
 }
 
