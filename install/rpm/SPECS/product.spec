@@ -61,6 +61,8 @@ Requires:       %name-studio = %version-%release
 Requires:       %name-studio-notify = %version-%release
 Requires:       openssl
 
+Conflicts:      %name-radicale
+
 %description
 ONLYOFFICE DocSpace is a new way to collaborate on documents with teams, 
 clients, partners, etc., based on the concept of rooms - special spaces with 

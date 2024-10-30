@@ -149,7 +149,7 @@ fi
 
 { ${package_manager} check-update ${product}; PRODUCT_CHECK_UPDATE=$?; } || true
 if [ "$PRODUCT_INSTALLED" = "false" ]; then
-	${package_manager} install -y ${product}
+	${package_manager} install -y ${product} --allowerasing
 	${product}-configuration \
 		-mysqlh ${MYSQL_SERVER_HOST} \
 		-mysqld ${MYSQL_SERVER_DB_NAME} \
