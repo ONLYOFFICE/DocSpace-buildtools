@@ -69,3 +69,12 @@ unstripped-binary-or-object
 
 # The systemctl call is used to manage MySQL and ensure that it is configured correctly
 maintainer-script-calls-systemctl
+
+# JAR files are standalone executables
+jar-not-in-usr-share
+
+# Set permissions to 0750 due to sensitive data
+non-standard-dir-perm
+
+# Suppressing warnings about class version due to Java version mismatch
+unknown-java-class-version
