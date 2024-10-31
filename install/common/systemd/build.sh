@@ -66,7 +66,6 @@ SERVICE_NAME=(
 	backup
 	ssoauth
 	identity-authorization
-	identity-migration
 	identity-api
 	clear-events
 	backup-background
@@ -156,12 +155,6 @@ reassign_values (){
 		WORK_DIR="${BASE_DIR}/services/${SPRING_APPLICATION_NAME}/"
 		EXEC_FILE="app.jar"
 	;;
-	identity-migration )
-		SERVICE_PORT="8081"
-		SPRING_APPLICATION_NAME="ASC.Identity.Migration"
-		WORK_DIR="${BASE_DIR}/services/${SPRING_APPLICATION_NAME}/"
-		EXEC_FILE="app.jar"
-	;;
 	clear-events )
 		SERVICE_PORT="5027"
 		WORK_DIR="${BASE_DIR}/services/ASC.ClearEvents/"
@@ -206,9 +199,6 @@ reassign_values (){
 	SYSTEMD_ENVIRONMENT="SPRING_APPLICATION_NAME=${SPRING_APPLICATION_NAME} SERVER_PORT=${SERVICE_PORT} LOG_FILE_PATH=${LOG_DIR}/${SERVICE_NAME}.log"
 	SERVICE_TYPE="notify"
 	EXEC_START="${JAVA_RUN} ${WORK_DIR}${EXEC_FILE}"
-	if [[ "${SERVICE_NAME}" = "identity-migration" ]]; then
-		RESTART="on-failure" && SERVICE_TYPE="simple"
-	fi
   elif [[ "${SERVICE_NAME}" = "migration-runner" ]]; then
 	SERVICE_TYPE="simple"
 	RESTART="on-failure"

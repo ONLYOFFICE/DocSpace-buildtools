@@ -54,7 +54,6 @@ Requires:       %name-proxy = %version-%release
 Requires:       %name-plugins = %version-%release
 Requires:       %name-socket = %version-%release
 Requires:       %name-ssoauth = %version-%release
-Requires:       %name-identity-migration = %version-%release
 Requires:       %name-identity-authorization = %version-%release
 Requires:       %name-identity-api = %version-%release
 Requires:       %name-studio = %version-%release

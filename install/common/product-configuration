@@ -282,13 +282,8 @@ restart_services() {
 	chown -R ${PACKAGE_SYSNAME}:${PACKAGE_SYSNAME} $APP_DIR $PRODUCT_DIR $LOG_DIR /var/www/$PACKAGE_SYSNAME/Data
 
 	echo -n "Updating database... "
-	for SERVICE in "${PRODUCT}-migration-runner" "${PRODUCT}-identity-migration"; do
-		systemctl start "$SERVICE" >/dev/null 2>&1 || true
-		while systemctl is-active "$SERVICE" &>/dev/null; do
-			sleep 5
-		done
-	done
-	echo "OK"
+	systemctl start "${PRODUCT}-migration-runner" >/dev/null 2>&1 || true
+	timeout 60 bash -c "while systemctl is-active "${PRODUCT}-migration-runner" &>/dev/null; do sleep 5; done" && echo "OK" || echo "Timeout reached"
 
 	echo -n "Restarting services... "
 	SERVICES=(login api socket studio-notify notify \
@@ -531,7 +526,6 @@ setup_openresty(){
 					PORTS+=('5033') #ASC.Web.HealthChecks
 					PORTS+=('5100') #ASC.ApiCache
 					PORTS+=('8080') #ASC.Identity.Authorization
-					PORTS+=('8081') #ASC.Identity.Migration
 					PORTS+=('9090') #ASC.Identity.API
 					PORTS+=('9834') #ASC.SsoAuth
 					PORTS+=('9899') #ASC.Socket.IO
