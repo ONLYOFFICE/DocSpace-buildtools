@@ -53,5 +53,3 @@ for %%f in ("%PathToRepository%\common\ASC.Identity\authorization\authorization-
 mkdir "%PathToAppFolder%\services\ASC.Identity.Registration\service"
 for %%f in ("%PathToRepository%\common\ASC.Identity\registration\registration-container\target\*.jar") do copy "%%f" "%PathToAppFolder%\services\ASC.Identity.Registration\service\app.jar" /y
 
-mkdir "%PathToAppFolder%\services\ASC.Identity.Migration\service"
-for %%f in ("%PathToRepository%\common\ASC.Identity\infrastructure\infrastructure-migration-runner\target\*.jar") do copy "%%f" "%PathToAppFolder%\services\ASC.Identity.Migration\service\app.jar" /y

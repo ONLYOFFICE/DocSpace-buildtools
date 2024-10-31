@@ -1064,7 +1064,6 @@
     <ROW Action="Set_DS_JWT_SECRET" Type="51" Source="DOCUMENT_SERVER_JWT_SECRET" Target="[JWT_SECRET]"/>
     <ROW Action="Set_LICENSE_PATH" Type="51" Source="LICENSE_PATH" Target="[APPDIR]\Data\license.lic"/>
     <ROW Action="StartFluentBitService" Type="1" Source="aicustact.dll" Target="StartWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_30"/>
-    <ROW Action="StartIdentityMigration" Type="3074" Source="viewer.exe" Target="/EnforcedRunAsAdmin /RunAsAdmin /HideWindow /dir &quot;[APPDIR]services\ASC.Identity.Migration\service&quot; java -jar -DJDBC_URL=[DB_HOST] -DJDBC_PASSWORD=[DB_PWD] -DJDBC_USER_NAME=[DB_USER] -DJDBC_DATABASE=[DB_NAME] -DRABBIT_PROTOCOL=[AMQP_PROTOCOL] -DRABBIT_HOST=[AMQP_HOST] -DRABBIT_USER_NAME=[AMQP_USER] -DRABBIT_PASSWORD=[AMQP_PWD] -DRABBIT_VIRTUAL_HOST=[AMQP_VHOST] -DRABBIT_PORT=[AMQP_PORT] -DRABBIT_URI=[AMQP_PROTOCOL]://[AMQP_USER]:[AMQP_PWD]@[AMQP_HOST]:[AMQP_PORT][AMQP_VHOST] -DREDIS_HOST=[REDIS_HOST] -DREDIS_PORT=[REDIS_PORT] &quot;[APPDIR]services\ASC.Identity.Migration\service\app.jar&quot;" Options="1"/>
     <ROW Action="StartMigrationRunner" Type="3074" Source="viewer.exe" Target="/EnforcedRunAsAdmin /RunAsAdmin /HideWindow /dir &quot;[APPDIR]services\ASC.Migration.Runner\service&quot; &quot;[APPDIR]services\ASC.Migration.Runner\service\ASC.Migration.Runner.exe&quot; standalone=true" Options="1"/>
     <ROW Action="StartMySQLService" Type="1" Source="aicustact.dll" Target="StartWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_11"/>
     <ROW Action="StartOpenResty" Type="1" Source="aicustact.dll" Target="StartWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_24"/>
@@ -1236,7 +1235,6 @@
     <ROW Action="AI_GetArpIconPath" Sequence="1401"/>
     <ROW Action="StartMySQLService" Condition="( NOT Installed AND NOT OLDPRODUCTS ) AND ( AI_PROCESS_STATE &lt;&gt; &quot;Not Found&quot; )" Sequence="1613"/>
     <ROW Action="AI_DATA_SETTER_11" Condition="( NOT Installed AND NOT OLDPRODUCTS ) AND ( AI_PROCESS_STATE &lt;&gt; &quot;Not Found&quot; )" Sequence="1612"/>
-    <ROW Action="StartIdentityMigration" Condition="( NOT Installed )" Sequence="5827"/>
     <ROW Action="StartMigrationRunner" Condition="( NOT Installed )" Sequence="5826"/>
     <ROW Action="AI_DETECT_MODERNWIN" Condition="(VersionNT &gt;= 603)" Sequence="55" MsiKey="AI_DETECT_MODERNWIN"/>
     <ROW Action="AI_ResolveLocalizedCredentials" Sequence="51"/>

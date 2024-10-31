@@ -30,9 +30,6 @@ pushd %~1
     echo "== Build ASC.Identity.Registration =="
     call mvn clean package -DskipTests -pl registration/registration-container -am
 
-    echo "== Build ASC.Identity.Migration =="
-    call mvn clean package -DskipTests -pl infrastructure/infrastructure-migration-runner -am
-
   popd
 
 popd
