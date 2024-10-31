@@ -63,6 +63,7 @@ INSTALL_ELASTICSEARCH="true";
 INSTALL_FLUENT_BIT="true";
 INSTALL_PRODUCT="true";
 UPDATE="false";
+UNINSTALL="false"
 
 HUB="";
 USERNAME="";
@@ -149,6 +150,13 @@ while [ "$1" != "" ]; do
 				shift
 			fi
 		;;
+
+		-rm | --removing-docspace )
+            if [ "$2" == "true" ] || [ "$2" == "false" ]; then
+                UNINSTALL=$2
+                shift
+            fi
+        ;;
 
 		-idocs | --installdocs )
 			if [ "$2" != "" ]; then
@@ -519,6 +527,7 @@ while [ "$1" != "" ]; do
 			echo "      -skiphc, --skiphardwarecheck      skip hardware check (true|false)"
 			echo "      -u, --update                      use to update existing components (true|false)"
 			echo "      -ids, --installdocspace           install or update $PRODUCT (true|false)"
+			echo "      -rm, --removing-docspace          removing $PRODUCT (true|false)"
 			echo "      -dsv, --docspaceversion           select the $PRODUCT version"
 			echo "      -dsh, --docspacehost              $PRODUCT host"
 			echo "      -env, --environment               $PRODUCT environment"
@@ -1513,3 +1522,30 @@ start_installation () {
 }
 
 start_installation
+
+removing_docspace() {
+    echo "Stopping all OnlyOffice DocSpace containers..."
+    docker container stop $(docker container ls -q --filter name=onlyoffice-*) 2>/dev/null
+
+    echo "Removing all OnlyOffice DocSpace containers..."
+    docker rm $(docker ps -aq --filter name=onlyoffice-*) 2>/dev/null
+
+    echo "Removing all OnlyOffice volumes..."
+    cd /var/lib/docker/volumes/ || exit
+    rm -rvf onlyoffice* 2>/dev/null
+    cd -
+
+    echo "Removing OnlyOffice images..."
+    docker rmi $(docker images | grep 'onlyoffice*' | awk '{print $3}') 2>/dev/null
+
+    echo "Pruning unused Docker networks..."
+    docker network prune -f 2>/dev/null
+
+    echo "DocSpace removal complete."
+    exit 0
+}
+
+# Call the uninstall function if the flag is set to true
+if [ "$UNINSTALL" == "true" ]; then
+    removing_docspace
+fi
