@@ -1521,8 +1521,6 @@ start_installation () {
 	exit 0;
 }
 
-start_installation
-
 removing_docspace() {
     echo "Stopping all OnlyOffice DocSpace containers..."
     docker container stop $(docker container ls -q --filter name=onlyoffice-*) 2>/dev/null
@@ -1545,7 +1543,8 @@ removing_docspace() {
     exit 0
 }
 
-# Call the uninstall function if the flag is set to true
 if [ "$UNINSTALL" == "true" ]; then
     removing_docspace
+else
+    start_installation
 fi
