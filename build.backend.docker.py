@@ -3,9 +3,11 @@
 import os
 import socket
 import subprocess
-import sys, getopt
+import sys
+import getopt
 import shutil
 import platform
+
 
 def help():
     # Display Help
@@ -25,15 +27,15 @@ def help():
 rd = os.path.dirname(os.path.abspath(__file__))
 dir = os.path.abspath(os.path.join(rd, ".."))
 dockerDir = os.path.join(dir, "buildtools", "install", "docker")
-networks = socket.gethostbyname_ex(socket.gethostname())
-local_ip = networks[-1][-1]
+# networks = socket.gethostbyname_ex(socket.gethostname())
+local_ip = "host.docker.internal"  # networks[-1][-1]
 
-if local_ip == "127.0.0.1":
-    local_ip = networks[-1][0]
+# if local_ip == "127.0.0.1":
+#     local_ip = networks[-1][0]
 
-if local_ip == "127.0.0.1":
-    print("Error: Local IP is 127.0.0.1", networks)
-    sys.exit(1)
+# if local_ip == "127.0.0.1":
+#     print("Error: Local IP is 127.0.0.1", networks)
+#     sys.exit(1)
 
 doceditor = f"{local_ip}:5013"
 login = f"{local_ip}:5011"
@@ -49,7 +51,7 @@ standalone = True
 community = False
 identity = False
 
-migration_type = "STANDALONE" # SAAS
+migration_type = "STANDALONE"  # SAAS
 installation_type = "ENTERPRISE"
 document_server_image_name = "onlyoffice/documentserver-de:latest"
 
@@ -81,7 +83,13 @@ print()
 print(f"SERVICE_DOCEDITOR: {doceditor}")
 print(f"SERVICE_LOGIN: {login}")
 print(f"SERVICE_CLIENT: {client}")
-print(f"DOCSPACE_APP_URL: {portal_url}")
+print(f"SERVICE_MANAGEMENT: {management}")
+
+if identity == True:
+    print(f"SERVICE_IDENTITY: {identity_auth}")
+    print(f"SERVICE_IDENTITY_API: {identity_api}")
+
+# print(f"DOCSPACE_APP_URL: {portal_url}")
 
 print()
 print("FORCE REBUILD BASE IMAGES:", force)
@@ -102,7 +110,8 @@ print("DS image:", document_server_image_name)
 print()
 
 # Stop all backend services
-subprocess.run(["python", os.path.join(dir, "buildtools", "start", "stop.backend.docker.py")])
+subprocess.run(["python", os.path.join(
+    dir, "buildtools", "start", "stop.backend.docker.py")])
 
 print("Run MySQL")
 
@@ -110,19 +119,23 @@ arch_name = platform.uname().machine
 
 print(f"PLATFORM {arch_name}")
 
-existsnetwork = subprocess.check_output(["docker", "network", "ls"]).decode("utf-8").splitlines()
+existsnetwork = subprocess.check_output(
+    ["docker", "network", "ls"]).decode("utf-8").splitlines()
 existsnetwork = [line.split()[1] for line in existsnetwork]
 
 if "onlyoffice" not in existsnetwork:
-    subprocess.run(["docker", "network", "create", "--driver", "bridge", "onlyoffice"])
+    subprocess.run(["docker", "network", "create",
+                   "--driver", "bridge", "onlyoffice"])
 
 if arch_name == "x86_64" or arch_name == "AMD64":
     print("CPU Type: x86_64 -> run db.yml")
-    subprocess.run(["docker", "compose", "-f", os.path.join(dockerDir, "db.yml"), "up", "-d"])
+    subprocess.run(["docker", "compose", "-f",
+                   os.path.join(dockerDir, "db.yml"), "up", "-d"])
 elif arch_name == "arm64":
     print("CPU Type: arm64 -> run db.yml with arm64v8 image")
     os.environ["MYSQL_IMAGE"] = "arm64v8/mysql:8.3.0-oracle"
-    subprocess.run(["docker", "compose", "-f", os.path.join(dockerDir, "db.yml"), "up", "-d"])
+    subprocess.run(["docker", "compose", "-f",
+                   os.path.join(dockerDir, "db.yml"), "up", "-d"])
 else:
     print("Error: Unknown CPU Type:", arch_name)
     sys.exit(1)
@@ -130,16 +143,20 @@ else:
 if dns == True:
     print("Run local dns server")
     os.environ["ROOT_DIR"] = dir
-    subprocess.run(["docker", "compose", "-f", os.path.join(dockerDir, "dnsmasq.yml"), "up", "-d"])
+    subprocess.run(["docker", "compose", "-f",
+                   os.path.join(dockerDir, "dnsmasq.yml"), "up", "-d"])
 
 print("Clear publish folder")
 shutil.rmtree(os.path.join(dir, "publish/services"), True)
 
 print("Build backend services (to 'publish/' folder)")
-subprocess.run(["python", os.path.join(dir, "buildtools", "install", "common", "build-services.py")])
+subprocess.run(["python", os.path.join(dir, "buildtools",
+               "install", "common", "build-services.py")])
+
 
 def check_image(image_name):
     return subprocess.check_output(["docker", "images", "--format", "'{{.Repository}}:{{.Tag}}'"], shell=True, text=True).__contains__(image_name)
+
 
 dotnet_image_name = "onlyoffice/4testing-docspace-dotnet-runtime"
 dotnet_version = "dev"
@@ -149,7 +166,8 @@ exists = check_image(dotnet_image)
 
 if not exists or force == True:
     print("Build dotnet base image from source (apply new dotnet config)")
-    subprocess.run(["docker", "build", "-t", dotnet_image, "-f", os.path.join(dockerDir, "Dockerfile.runtime"), "--target", "dotnetrun", "."])
+    subprocess.run(["docker", "build", "-t", dotnet_image, "-f",
+                   os.path.join(dockerDir, "Dockerfile.runtime"), "--target", "dotnetrun", "."])
 else:
     print(f"SKIP build {dotnet_image} (already exists)")
 
@@ -161,7 +179,8 @@ exists = check_image(node_image)
 
 if not exists or force == True:
     print("Build nodejs base image from source")
-    subprocess.run(["docker", "build", "-t", node_image, "-f", os.path.join(dockerDir, "Dockerfile.runtime"), "--target", "noderun", "."])
+    subprocess.run(["docker", "build", "-t", node_image, "-f",
+                   os.path.join(dockerDir, "Dockerfile.runtime"), "--target", "noderun", "."])
 else:
     print(f"SKIP build {node_image} (already exists)")
 
@@ -173,7 +192,8 @@ exists = check_image(proxy_image)
 
 if not exists or force == True:
     print("Build proxy base image from source (apply new nginx config)")
-    subprocess.run(["docker", "build", "-t", proxy_image, "-f", os.path.join(dockerDir, "Dockerfile.runtime"), "--target", "router", "."])
+    subprocess.run(["docker", "build", "-t", proxy_image, "-f",
+                   os.path.join(dockerDir, "Dockerfile.runtime"), "--target", "router", "."])
 else:
     print(f"SKIP build {proxy_image} (already exists)")
 
@@ -202,7 +222,8 @@ subprocess.run(["docker", "compose", "-f", os.path.join(dockerDir, "docspace.pro
 
 if identity:
     print("Run identity")
-    subprocess.run(["docker-compose", "-f",os.path.join(dockerDir, "build-identity.yml"), "up", "-d" ])
+    subprocess.run(["docker-compose", "-f",
+                   os.path.join(dockerDir, "build-identity.yml"), "up", "-d"])
 
 print()
 print("Run script directory:", dir)
@@ -212,16 +233,33 @@ print("Docker files root directory:", dockerDir)
 print()
 print(f"SERVICE_DOCEDITOR: {doceditor}")
 print(f"SERVICE_LOGIN: {login}")
-print(f"SERVICE_MANAGEMENT: {management}")
 print(f"SERVICE_CLIENT: {client}")
-print(f"DOCSPACE_APP_URL: {portal_url}")
+print(f"SERVICE_MANAGEMENT: {management}")
+
+if identity == True:
+    print(f"SERVICE_IDENTITY: {identity_auth}")
+    print(f"SERVICE_IDENTITY_API: {identity_api}")
 
 print()
 print("FORCE REBUILD BASE IMAGES:", force)
-print("Run dnsmasq:", dns)
+print("DNSMASQ ENABLED:", dns)
 
 print()
 print("MIGRATION TYPE:", migration_type)
 print("INSTALLATION TYPE:", installation_type)
 print("DS image:", document_server_image_name)
 print()
+
+if dns == True and standalone == False:
+    print(f"DOCSPACE_URL: http://localhost.docspace.site")
+    print()
+    print("!!!DO NOT FORGET TO CONFIGURE DNSMASQ!!!")
+    print()
+    print("1. Enable DNSMASQ as a local DNS server")
+    print("2. Edit configuration: buildtools/config/dnsmasq.conf")
+    print("3. Replace: server=/site/[your_local_ipv4]")
+    print("4. Replace: address=/docspace.site/[your_local_ipv4]")
+    print("5. Restart dnsmasq service")
+else:
+    hostname = socket.gethostname()
+    print(f"DOCSPACE_URL: http://{hostname} or http://[your_local_ipv4]")
