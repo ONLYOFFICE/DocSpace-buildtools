@@ -9,6 +9,22 @@ import shutil
 import platform
 
 
+def file_contains_string(file_path, search_string):
+    try:
+        with open(file_path, 'r') as file:
+            # Read the file line by line
+            for line in file:
+                if search_string in line:
+                    return True
+        return False
+    except FileNotFoundError:
+        print(f"The file {file_path} does not exist.")
+        return False
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return False
+
+
 def help():
     # Display Help
     print("Build and run backend and working environment. (Use 'yarn start' to run client -> https://github.com/ONLYOFFICE/DocSpace-client)")
@@ -27,6 +43,9 @@ def help():
 rd = os.path.dirname(os.path.abspath(__file__))
 dir = os.path.abspath(os.path.join(rd, ".."))
 dockerDir = os.path.join(dir, "buildtools", "install", "docker")
+devAppSettings = os.path.join(
+    dir, "buildtools", "config", "appsettings.dev.json")
+dnsmasqConf = os.path.join(dir, "buildtools", "config", "dnsmasq.conf")
 # networks = socket.gethostbyname_ex(socket.gethostname())
 local_ip = "host.docker.internal"  # networks[-1][-1]
 
@@ -107,6 +126,19 @@ print()
 print("MIGRATION TYPE:", migration_type)
 print("INSTALLATION TYPE:", installation_type)
 print("DS image:", document_server_image_name)
+
+if standalone == False and file_contains_string(devAppSettings, "docspace.site") == False:
+    print()
+    print(f"!!!DO NOT FORGET TO CONFIGURE appsettings.dev.json!!!")
+    print()
+    print(f"1. open file in any text editor {devAppSettings}")
+    print(
+        '2. Replace content to { "core": {"base-domain": "docspace.site"} }')
+    print("3. Run this script again")
+    print()
+    sys.exit(1)
+
+
 print()
 
 # Stop all backend services
@@ -256,10 +288,11 @@ if dns == True and standalone == False:
     print("!!!DO NOT FORGET TO CONFIGURE DNSMASQ!!!")
     print()
     print("1. Enable DNSMASQ as a local DNS server")
-    print("2. Edit configuration: buildtools/config/dnsmasq.conf")
+    print(f"2. Edit configuration: {dnsmasqConf}")
     print("3. Replace: server=/site/[your_local_ipv4]")
     print("4. Replace: address=/docspace.site/[your_local_ipv4]")
     print("5. Restart dnsmasq service")
+    print("6. Run in terminal: ping docspace.site")
 else:
     hostname = socket.gethostname()
     print(f"DOCSPACE_URL: http://{hostname} or http://[your_local_ipv4]")
