@@ -1,7 +1,6 @@
 REM echo ######## Set variables ########
 set "publisher="Ascensio System SIA""
 set "nuget="%cd%\buildtools\install\win\nuget.exe""
-set "environment=production"
 set "opensearch_version=2.11.1"
 set "openresty_version=1.25.3.2"
 
@@ -102,9 +101,6 @@ del /f /q buildtools\install\win\Files\config\*.dev.json
 REM echo ######## Remove AWSTarget from nlog.config ########
 %sed% -i "/<target type=\"AWSTarget\" name=\"aws\"/,/<\/target>/d; /<target type=\"AWSTarget\" name=\"aws_sql\"/,/<\/target>/d" buildtools\install\win\Files\config\nlog.config
 
-::edit environment
-%sed% -i "s/\(\W\)PRODUCT.ENVIRONMENT.SUB\(\W\)/\1%environment%\2/g" buildtools\install\win\DocSpace.aip
-
 ::delete nginx configs
 del /f /q buildtools\install\win\Files\nginx\conf\onlyoffice-login.conf
 del /f /q buildtools\install\win\Files\nginx\conf\onlyoffice-story.conf
@@ -172,6 +168,12 @@ copy "buildtools\install\win\Resources\License_Enterprise.rtf" "buildtools\insta
 copy "buildtools\install\win\Resources\License_Enterprise_Redist.rtf" "buildtools\install\win\Resources\License_Redist.rtf" /y
 
 %AdvancedInstaller% /rebuild buildtools\install\win\DocSpace.aip -buildslist DOCSPACE_ENTERPRISE
+
+:: Build DocSpace Developer
+copy "buildtools\install\win\Resources\License_Developer.rtf" "buildtools\install\win\Resources\License.rtf" /y
+copy "buildtools\install\win\Resources\License_Developer_Redist.rtf" "buildtools\install\win\Resources\License_Redist.rtf" /y
+
+%AdvancedInstaller% /rebuild buildtools\install\win\DocSpace.aip -buildslist DOCSPACE_DEVELOPER
 
 :: Build DocSpace Prerequisites
 %AdvancedInstaller% /rebuild buildtools\install\win\DocSpace.Prerequisites.aip -buildslist DefaultBuild

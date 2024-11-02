@@ -48,6 +48,12 @@ switch ( $env:DOCUMENT_SERVER_VERSION_CE )
   custom { $DOCUMENT_SERVER_CE_LINK = $env:DOCUMENT_SERVER_CE_CUSTOM_LINK.Replace(",", "") }
 }
 
+switch ( $env:DOCUMENT_SERVER_VERSION_DE )
+{
+  latest { $DOCUMENT_SERVER_DE_LINK = "https://download.onlyoffice.com/install/documentserver/windows/onlyoffice-documentserver-de.exe" }
+  custom { $DOCUMENT_SERVER_DE_LINK = $env:DOCUMENT_SERVER_DE_CUSTOM_LINK.Replace(",", "") }
+}
+
 $psql_version = '14.0'
 
 $path_prereq = "${pwd}\buildtools\install\win\"
@@ -100,6 +106,13 @@ $prerequisites = @(
     download_allways = $true; 
     name = "onlyoffice-documentserver.exe"; 
     link = $DOCUMENT_SERVER_CE_LINK
+  }
+   
+   @{  
+    # Downloading onlyoffice-documentserver-de for DocSpace Developer
+    download_allways = $true; 
+    name = "onlyoffice-documentserver-de.exe"; 
+    link = $DOCUMENT_SERVER_DE_LINK
   }
    
   @{  
