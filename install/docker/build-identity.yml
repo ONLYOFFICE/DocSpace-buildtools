@@ -26,8 +26,6 @@ services:
       SPRING_PROFILES_ACTIVE: dev
       SPRING_APPLICATION_NAME: ASC.Identity.Authorization
       SERVER_PORT: 8080
-    depends_on:
-      - onlyoffice-identity-migration
 
   onlyoffice-identity-api:
     build:
@@ -43,21 +41,6 @@ services:
       SPRING_PROFILES_ACTIVE: dev
       SPRING_APPLICATION_NAME: ASC.Identity.Registration
       SERVER_PORT: 9090
-    depends_on:
-      - onlyoffice-identity-migration
-
-  onlyoffice-identity-migration:
-    build:
-      <<: *x-build
-      args:
-        - MODULE=infrastructure/infrastructure-migration-runner
-    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-migration:${DOCKER_TAG}"
-    container_name: ${IDENTITY_MIGRATION_CONTAINER_NAME}
-    restart: "no"
-    ports:
-      - 8081:8081
-    environment:
-      <<: *x-common-environment
 
 networks:
   default:

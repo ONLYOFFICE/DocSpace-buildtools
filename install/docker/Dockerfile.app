@@ -396,12 +396,6 @@ WORKDIR ${BUILD_PATH}/services/ASC.Identity.Registration/
 COPY --from=base --chown=onlyoffice:onlyoffice  ${BUILD_PATH}/services/ASC.Identity.Registration/service/ .
 CMD ["ASC.Identity.Registration"]
 
-## ASC.Identity.Migration ##
-FROM javarun AS identity-migration
-WORKDIR ${BUILD_PATH}/services/ASC.Identity.Migration/
-COPY --from=base --chown=onlyoffice:onlyoffice  ${BUILD_PATH}/services/ASC.Identity.Migration/service/ .
-CMD ["ASC.Identity.Migration"]
-
 ## image for k8s bin-share ##
 FROM busybox:latest AS bin_share
 RUN mkdir -p /app/ASC.Files/server && \

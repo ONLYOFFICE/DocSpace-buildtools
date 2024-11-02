@@ -40,8 +40,6 @@ services:
       test: curl --fail ${SERVICE_IDENTITY}/health/ || exit 1
     volumes:
       - log_data:/var/log/onlyoffice
-    depends_on:
-      - onlyoffice-identity-migration
 
   onlyoffice-identity-api:
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-api:${DOCKER_TAG}"
@@ -58,18 +56,6 @@ services:
       test: curl --fail ${SERVICE_IDENTITY_API}/health/ || exit 1
     volumes:
       - log_data:/var/log/onlyoffice
-    depends_on:
-      - onlyoffice-identity-migration
-
-  onlyoffice-identity-migration:
-    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-migration:${DOCKER_TAG}"
-    container_name: ${IDENTITY_MIGRATION_CONTAINER_NAME}
-    user: "${UID}:${GID}"
-    restart: on-failure
-    expose:
-      - "${IDENTITY_MIGRATION_SERVER_PORT}"
-    environment:
-      <<: *x-common-environment
 
 networks:
   default:
