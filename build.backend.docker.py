@@ -9,35 +9,24 @@ import shutil
 import platform
 
 
-def file_contains_string(file_path, search_string):
-    try:
-        with open(file_path, 'r') as file:
-            # Read the file line by line
-            for line in file:
-                if search_string in line:
-                    return True
-        return False
-    except FileNotFoundError:
-        print(f"The file {file_path} does not exist.")
-        return False
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        return False
-
-
 def help():
     # Display Help
     print("Build and run backend and working environment. (Use 'yarn start' to run client -> https://github.com/ONLYOFFICE/DocSpace-client)")
     print()
-    print("Syntax: available params [-h|f|s|c|d|i")
+    print("Syntax: available params [-h|f|s|e=|d|i")
     print("options:")
     print("h     Print this Help.")
     print("f     Force rebuild base images.")
     print("s     Run as SAAS otherwise as STANDALONE.")
-    print("c     Run as COMMUNITY otherwise ENTERPRISE.")
+    print("e     Run in mode (COMMUNITY (default), ENTERPRISE, DEVELOPER).")
     print("d     Run dnsmasq.")
     print("i     Run identity (oauth2).")
+    print("n     Run without stop and build (re-run in different mode).")
     print()
+
+
+def check_image(image_name):
+    return subprocess.check_output(["docker", "images", "--format", "'{{.Repository}}:{{.Tag}}'"], shell=True, text=True).__contains__(image_name)
 
 
 rd = os.path.dirname(os.path.abspath(__file__))
@@ -67,15 +56,38 @@ portal_url = f"http://{local_ip}"
 force = False
 dns = False
 standalone = True
-community = False
 identity = False
+skip_build = False
 
 migration_type = "STANDALONE"  # SAAS
-installation_type = "ENTERPRISE"
-document_server_image_name = "onlyoffice/documentserver-de:latest"
+# installation_type = "ENTERPRISE"
+env_extension = ""
+document_server_image_name = "onlyoffice/documentserver:latest"
+base_domain = "localhost"
+mysql_database = "docspace"
+node_version = "dev"
+node_image_name = "onlyoffice/4testing-docspace-nodejs-runtime"
+proxy_version = "dev"
+proxy_image_name = "onlyoffice/4testing-docspace-proxy-runtime"
+dotnet_version = "dev"
+dotnet_image_name = "onlyoffice/4testing-docspace-dotnet-runtime"
 
 # Get the options
-opts, args = getopt.getopt(sys.argv[1:], "hfscdi")
+argv = sys.argv[1:]
+
+try:
+    opts, args = getopt.getopt(argv, "hfse:din",
+                               ["help",
+                                "force",
+                                "standalone",
+                                "env=",
+                                "dns",
+                                "identity",
+                                "nobuild"
+                                ])
+except:
+    print("Error of parsing arguments")
+
 for opt, arg in opts:
     if opt == "-h":
         help()
@@ -84,12 +96,14 @@ for opt, arg in opts:
         force = arg if arg else True
     elif opt == "-s":
         standalone = arg if arg else False
-    elif opt == "-c":
-        community = arg if arg else True
+    elif opt == "-e":
+        env_extension = arg if arg else ""
     elif opt == "-d":
         dns = arg if arg else True
     elif opt == "-i":
         identity = arg if arg else True
+    elif opt == "-n":
+        skip_build = arg if arg else True
     else:
         print("Error: Invalid '-" + opt + "' option")
         sys.exit()
@@ -114,36 +128,42 @@ print()
 print("FORCE REBUILD BASE IMAGES:", force)
 print("Run dnsmasq:", dns)
 print("Run identity:", identity)
+print("Skip stop and build:", skip_build)
 
 if standalone == False:
     migration_type = "SAAS"
+    base_domain = "docspace.site"
+    mysql_database = "docspace"  # "docspace_saas"
 
-if community == True:
-    installation_type = "COMMUNITY"
+if env_extension == "enterprise":
+    # installation_type = "ENTERPRISE"
+    document_server_image_name = "onlyoffice/documentserver-ee:latest"
+    mysql_database = "docspace"  # "docspace_enterprise"
+elif env_extension == "developer":
+    # installation_type = "DEVELOPER"
+    document_server_image_name = "onlyoffice/documentserver-de:latest"
+    mysql_database = "docspace"  # "docspace_developer"
+else:
+    env_extension = ""
+    # installation_type = "COMMUNITY"
     document_server_image_name = "onlyoffice/documentserver:latest"
+    mysql_database = "docspace"  # "docspace_community"
 
 print()
 print("MIGRATION TYPE:", migration_type)
-print("INSTALLATION TYPE:", installation_type)
+# print("INSTALLATION TYPE:", installation_type)
+print("ENV_EXTENSION:", env_extension)
+print("BASE DOMAIN:", base_domain)
+print("MYSQL DATABASE:", mysql_database)
 print("DS image:", document_server_image_name)
-
-if standalone == False and file_contains_string(devAppSettings, "docspace.site") == False:
-    print()
-    print(f"!!!DO NOT FORGET TO CONFIGURE appsettings.dev.json!!!")
-    print()
-    print(f"1. open file in any text editor {devAppSettings}")
-    print(
-        '2. Replace content to { "core": {"base-domain": "docspace.site"} }')
-    print("3. Run this script again")
-    print()
-    sys.exit(1)
-
 
 print()
 
-# Stop all backend services
-subprocess.run(["python", os.path.join(
-    dir, "buildtools", "start", "stop.backend.docker.py")])
+if skip_build == False:
+    # Stop all backend services
+    print("Stop all backend services (containers)")
+    subprocess.run(["python", os.path.join(
+        dir, "buildtools", "start", "stop.backend.docker.py")])
 
 print("Run MySQL")
 
@@ -161,11 +181,13 @@ if "onlyoffice" not in existsnetwork:
 
 if arch_name == "x86_64" or arch_name == "AMD64":
     print("CPU Type: x86_64 -> run db.yml")
+    os.environ["MYSQL_DATABASE"] = mysql_database
     subprocess.run(["docker", "compose", "-f",
                    os.path.join(dockerDir, "db.yml"), "up", "-d"])
 elif arch_name == "arm64":
     print("CPU Type: arm64 -> run db.yml with arm64v8 image")
     os.environ["MYSQL_IMAGE"] = "arm64v8/mysql:8.3.0-oracle"
+    os.environ["MYSQL_DATABASE"] = mysql_database
     subprocess.run(["docker", "compose", "-f",
                    os.path.join(dockerDir, "db.yml"), "up", "-d"])
 else:
@@ -178,22 +200,16 @@ if dns == True:
     subprocess.run(["docker", "compose", "-f",
                    os.path.join(dockerDir, "dnsmasq.yml"), "up", "-d"])
 
-print("Clear publish folder")
-shutil.rmtree(os.path.join(dir, "publish/services"), True)
+if skip_build == False:
+    print("Clear publish folder")
+    shutil.rmtree(os.path.join(dir, "publish/services"), True)
 
-print("Build backend services (to 'publish/' folder)")
-subprocess.run(["python", os.path.join(dir, "buildtools",
-               "install", "common", "build-services.py")])
-
-
-def check_image(image_name):
-    return subprocess.check_output(["docker", "images", "--format", "'{{.Repository}}:{{.Tag}}'"], shell=True, text=True).__contains__(image_name)
+    print("Build backend services (to 'publish/' folder)")
+    subprocess.run(["python", os.path.join(dir, "buildtools",
+                                           "install", "common", "build-services.py")])
 
 
-dotnet_image_name = "onlyoffice/4testing-docspace-dotnet-runtime"
-dotnet_version = "dev"
 dotnet_image = f"{dotnet_image_name}:{dotnet_version}"
-
 exists = check_image(dotnet_image)
 
 if not exists or force == True:
@@ -203,10 +219,8 @@ if not exists or force == True:
 else:
     print(f"SKIP build {dotnet_image} (already exists)")
 
-node_image_name = "onlyoffice/4testing-docspace-nodejs-runtime"
-node_version = "dev"
-node_image = f"{node_image_name}:{node_version}"
 
+node_image = f"{node_image_name}:{node_version}"
 exists = check_image(node_image)
 
 if not exists or force == True:
@@ -216,10 +230,7 @@ if not exists or force == True:
 else:
     print(f"SKIP build {node_image} (already exists)")
 
-proxy_image_name = "onlyoffice/4testing-docspace-proxy-runtime"
-proxy_version = "dev"
 proxy_image = f"{proxy_image_name}:{proxy_version}"
-
 exists = check_image(proxy_image)
 
 if not exists or force == True:
@@ -231,8 +242,9 @@ else:
 
 print("Run migration and services")
 
-os.environ["ENV_EXTENSION"] = "dev"
-os.environ["INSTALLATION_TYPE"] = installation_type
+os.environ["ENV_EXTENSION"] = env_extension
+os.environ["APP_CORE_BASE_DOMAIN"] = base_domain
+# os.environ["INSTALLATION_TYPE"] = installation_type
 os.environ["Baseimage_Dotnet_Run"] = "onlyoffice/4testing-docspace-dotnet-runtime:" + dotnet_version
 os.environ["Baseimage_Nodejs_Run"] = "onlyoffice/4testing-docspace-nodejs-runtime:" + node_version
 os.environ["Baseimage_Proxy_Run"] = "onlyoffice/4testing-docspace-proxy-runtime:" + proxy_version
@@ -249,6 +261,7 @@ os.environ["SRC_PATH"] = os.path.join(dir, "publish/services")
 os.environ["DATA_DIR"] = os.path.join(dir, "data")
 os.environ["APP_URL_PORTAL"] = portal_url
 os.environ["MIGRATION_TYPE"] = migration_type
+os.environ["MYSQL_DATABASE"] = mysql_database
 subprocess.run(["docker", "compose", "-f", os.path.join(dockerDir, "docspace.profiles.yml"), "-f", os.path.join(
     dockerDir, "docspace.overcome.yml"), "--profile", "migration-runner", "--profile", "backend-local", "up", "-d"])
 
@@ -278,7 +291,10 @@ print("DNSMASQ ENABLED:", dns)
 
 print()
 print("MIGRATION TYPE:", migration_type)
-print("INSTALLATION TYPE:", installation_type)
+# print("INSTALLATION TYPE:", installation_type)
+print("ENV_EXTENSION:", env_extension)
+print("BASE DOMAIN:", base_domain)
+print("MYSQL DATABASE:", mysql_database)
 print("DS image:", document_server_image_name)
 print()
 
