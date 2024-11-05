@@ -1,45 +1,47 @@
+# ONLYOFFICE DocSpace Installation Guide 
 
-##  Install ONLYOFFICE DocSpace using OneClickInstall script
+## Step 1: Download the Installation Script
+Download the appropriate OneClickInstall script based on the version you want to install:
 
-### Enterprise version
-#### Get the installation script:
+- **Enterprise**:
+    ```bash
+    wget https://download.onlyoffice.com/docspace/docspace-enterprise-install.sh
+    ```
+- **Developer**:
+    ```bash
+    wget https://download.onlyoffice.com/docspace/docspace-developer-install.sh
+    ```
+- **Community**:
+    ```bash
+    wget https://download.onlyoffice.com/docspace/docspace-install.sh
+    ```
 
-        wget https://download.onlyoffice.com/docspace/docspace-enterprise-install.sh
+## Step 2: Run the Installation
+Use the downloaded script to install ONLYOFFICE DocSpace with either the RPM/DEB package or Docker.
 
-####  Install ONLYOFFICE DocSpace RPM\DEB using script:
+- **Install as RPM/DEB Package**:
+    ```bash
+    bash <script-name> package
+    ```
 
-        bash docspace-enterprise-install.sh package
+- **Install as Docker**:
+    ```bash
+    bash <script-name> docker
+    ```
 
-####  Install ONLYOFFICE DocSpace Docker using script:
+Replace `<script-name>` with the name of the downloaded script (e.g., `docspace-enterprise-install.sh`).
 
-        bash docspace-enterprise-install.sh docker
+## Step 3: Display Available Parameters (Optional)
+Each script provides optional parameters for advanced configuration. Use the following commands to view them:
 
-####  Display available script RPM\DEB parameters:
+- **Display RPM/DEB Parameters**:
+    ```bash
+    bash <script-name> package -h
+    ```
 
-        bash docspace-enterprise-install.sh package -h
+- **Display Docker Parameters**:
+    ```bash
+    bash <script-name> docker -h
+    ```
 
-####  Display available script Docker parameters:
-
-        bash docspace-enterprise-install.sh docker -h
-
-
-### Community version
-#### Get the installation script:
-
-        wget https://download.onlyoffice.com/docspace/docspace-install.sh
-
-####  Install ONLYOFFICE DocSpace RPM\DEB using script:
-
-        bash docspace-install.sh package 
-
-####  Install ONLYOFFICE DocSpace Docker using script:
-
-        bash docspace-install.sh docker 
-
-####  Display available script RPM\DEB parameters:
-
-        bash docspace-install.sh package -h
-
-####  Display available script Docker parameters:
-
-        bash docspace-install.sh docker -h
+Replace `<script-name>` with the appropriate script file as used in Step 2.
