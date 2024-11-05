@@ -176,6 +176,9 @@ COPY --from=base --chown=onlyoffice:onlyoffice /etc/nginx/conf.d /etc/nginx/conf
 COPY --from=base --chown=onlyoffice:onlyoffice /etc/nginx/includes /etc/nginx/includes
 COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/client ${BUILD_PATH}/client
 COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/public ${BUILD_PATH}/public
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/editor/.next/static/chunks ${BUILD_PATH}/build/doceditor/static/chunks
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/editor/.next/static/css ${BUILD_PATH}/build/doceditor/static/css
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/editor/.next/static/media ${BUILD_PATH}/build/doceditor/static/media
 COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/campaigns/src/campaigns ${BUILD_PATH}/public/campaigns
 COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management ${BUILD_PATH}/management
 COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/docker-entrypoint.d /docker-entrypoint.d
