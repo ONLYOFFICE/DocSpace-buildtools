@@ -8,6 +8,7 @@ import sys
 import getopt
 import shutil
 import platform
+import time
 
 
 def help():
@@ -109,6 +110,8 @@ for opt, arg in opts:
     else:
         print("Error: Invalid '-" + opt + "' option")
         sys.exit()
+
+start = time.time()
 
 print("Run script directory:", dir)
 print("Root directory:", dir)
@@ -375,3 +378,12 @@ if dns == True and standalone == False:
 else:
     hostname = socket.gethostname()
     print(f"DOCSPACE_URL: http://{hostname} or http://[your_local_ipv4]")
+
+end = time.time()
+
+delta = end - start
+
+print()
+print(f"Time Elapsed {time.strftime(
+    '%H:%M:%S', time.gmtime(delta))}")
+print()
