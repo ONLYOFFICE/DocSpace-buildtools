@@ -777,7 +777,7 @@ install_package () {
 }
 
 install_docker_compose () {
-	curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/bin/docker-compose
+	curl -L "https://github.com/docker/compose/releases/download/v2.30.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/bin/docker-compose
 	chmod +x /usr/bin/docker-compose
 }
 
