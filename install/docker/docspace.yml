@@ -5,13 +5,7 @@ x-healthcheck: &x-healthcheck
   start_period: 20s
   timeout: 10s
 
-x-service: &x-service-base
-  container_name: base
-  user: "${UID}:${GID}"
-  restart: always
-  expose:
-    - ${SERVICE_PORT}
-  environment:
+x-service-environment: &x-service-environment
     MYSQL_CONTAINER_NAME: ${MYSQL_CONTAINER_NAME}
     MYSQL_HOST: ${MYSQL_HOST}
     MYSQL_PORT: ${MYSQL_PORT}
@@ -54,111 +48,205 @@ x-service: &x-service-base
     DEBUG_INFO: ${DEBUG_INFO}
     CERTIFICATE_PATH: ${CERTIFICATE_PATH}
     NODE_OPTIONS: ${NODE_OPTIONS}
-  volumes:
-    #- /app/onlyoffice/CommunityServer/data:/app/onlyoffice/data
-    - log_data:/var/log/onlyoffice
-    - app_data:/app/onlyoffice/data
 
 services:
   onlyoffice-backup-background-tasks:
-    <<: *x-service-base
+    environment:
+      <<: *x-service-environment
+    user: "${UID}:${GID}"
+    restart: always
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-backup-background:${DOCKER_TAG}"
     container_name: ${BACKUP_BACKGRUOND_TASKS_HOST}
+    volumes:
+      - log_data:/var/log/onlyoffice
+      - app_data:/app/onlyoffice/data
+    expose:
+      - ${SERVICE_PORT}
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_BACKUP_BACKGRUOND_TASKS}/health/ || exit 1
 
   onlyoffice-backup:
-    <<: *x-service-base
+    environment:
+      <<: *x-service-environment
+    user: "${UID}:${GID}"
+    restart: always
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-backup:${DOCKER_TAG}"
     container_name: ${BACKUP_HOST}
+    volumes:
+      - log_data:/var/log/onlyoffice
+      - app_data:/app/onlyoffice/data
+    expose:
+      - ${SERVICE_PORT}
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_BACKUP}/health/ || exit 1
 
   onlyoffice-clear-events:
-    <<: *x-service-base
+    environment:
+      <<: *x-service-environment
+    user: "${UID}:${GID}"
+    restart: always
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-clear-events:${DOCKER_TAG}"
     container_name: ${CLEAR_EVENTS_HOST}
+    volumes:
+      - log_data:/var/log/onlyoffice
+      - app_data:/app/onlyoffice/data
+    expose:
+      - ${SERVICE_PORT}
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_CLEAR_EVENTS}/health/ || exit 1
 
   onlyoffice-files:
-    <<: *x-service-base
+    environment:
+      <<: *x-service-environment
+    user: "${UID}:${GID}"
+    restart: always
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-files:${DOCKER_TAG}"
     container_name: ${FILES_HOST}
+    volumes:
+      - log_data:/var/log/onlyoffice
+      - app_data:/app/onlyoffice/data
+    expose:
+      - ${SERVICE_PORT}
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_FILES}/health/ || exit 1
 
   onlyoffice-files-services:
-    <<: *x-service-base
+    environment:
+      <<: *x-service-environment
+    user: "${UID}:${GID}"
+    restart: always
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-files-services:${DOCKER_TAG}"
     container_name: ${FILES_SERVICES_HOST}
+    volumes:
+      - log_data:/var/log/onlyoffice
+      - app_data:/app/onlyoffice/data
+    expose:
+      - ${SERVICE_PORT}
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_FILES_SERVICES}/health/ || exit 1
 
   onlyoffice-people-server:
-    <<: *x-service-base
+    environment:
+      <<: *x-service-environment
+    user: "${UID}:${GID}"
+    restart: always
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-people-server:${DOCKER_TAG}"
     container_name: ${PEOPLE_SERVER_HOST}
+    volumes:
+      - log_data:/var/log/onlyoffice
+      - app_data:/app/onlyoffice/data
+    expose:
+      - ${SERVICE_PORT}
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_PEOPLE_SERVER}/health/ || exit 1
 
   onlyoffice-socket:
-    <<: *x-service-base
+    environment:
+      <<: *x-service-environment
+    user: "${UID}:${GID}"
+    restart: always
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-socket:${DOCKER_TAG}"
     container_name: ${SOCKET_HOST}
+    volumes:
+      - log_data:/var/log/onlyoffice
+      - app_data:/app/onlyoffice/data
     expose:
       - ${SERVICE_PORT}
 
   onlyoffice-studio-notify:
-    <<: *x-service-base
+    environment:
+      <<: *x-service-environment
+    user: "${UID}:${GID}"
+    restart: always
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-studio-notify:${DOCKER_TAG}"
     container_name: ${STUDIO_NOTIFY_HOST}
+    volumes:
+      - log_data:/var/log/onlyoffice
+      - app_data:/app/onlyoffice/data
+    expose:
+      - ${SERVICE_PORT}
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_STUDIO_NOTIFY}/health/ || exit 1
 
   onlyoffice-api:
-    <<: *x-service-base
+    environment:
+      <<: *x-service-environment
+    user: "${UID}:${GID}"
+    restart: always
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-api:${DOCKER_TAG}"
     container_name: ${API_HOST}
+    volumes:
+      - log_data:/var/log/onlyoffice
+      - app_data:/app/onlyoffice/data
+    expose:
+      - ${SERVICE_PORT}
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_API}/health/ || exit 1
 
   onlyoffice-api-system:
-    <<: *x-service-base
+    environment:
+      <<: *x-service-environment
+    user: "${UID}:${GID}"
+    restart: always
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-api-system:${DOCKER_TAG}"
     container_name: ${API_SYSTEM_HOST}
+    volumes:
+      - log_data:/var/log/onlyoffice
+      - app_data:/app/onlyoffice/data
+    expose:
+      - ${SERVICE_PORT}
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_API_SYSTEM}/health/ || exit 1
 
   onlyoffice-studio:
-    <<: *x-service-base
+    environment:
+      <<: *x-service-environment
+    user: "${UID}:${GID}"
+    restart: always
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-studio:${DOCKER_TAG}"
     container_name: ${STUDIO_HOST}
+    volumes:
+      - log_data:/var/log/onlyoffice
+      - app_data:/app/onlyoffice/data
+    expose:
+      - ${SERVICE_PORT}
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_STUDIO}/health/ || exit 1
 
   onlyoffice-ssoauth:
-    <<: *x-service-base
+    environment:
+      <<: *x-service-environment
+    user: "${UID}:${GID}"
+    restart: always
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-ssoauth:${DOCKER_TAG}"
     container_name: ${SSOAUTH_HOST}
+    volumes:
+      - log_data:/var/log/onlyoffice
+      - app_data:/app/onlyoffice/data
     expose:
       - ${SERVICE_PORT}
       - "9834"
 
   onlyoffice-doceditor:
-    <<: *x-service-base
+    environment:
+      <<: *x-service-environment
+    user: "${UID}:${GID}"
+    restart: always
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-doceditor:${DOCKER_TAG}"
     container_name: ${DOCEDITOR_HOST}
+    volumes:
+      - log_data:/var/log/onlyoffice
+      - app_data:/app/onlyoffice/data
     expose:
       - "5013"
     healthcheck:
@@ -166,9 +254,15 @@ services:
       test: curl --fail http://${SERVICE_DOCEDITOR}/doceditor/health || exit 1
 
   onlyoffice-login:
-    <<: *x-service-base
+    environment:
+      <<: *x-service-environment
+    user: "${UID}:${GID}"
+    restart: always
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-login:${DOCKER_TAG}"
     container_name: ${LOGIN_HOST}
+    volumes:
+      - log_data:/var/log/onlyoffice
+      - app_data:/app/onlyoffice/data
     expose:
       - "5011"
     healthcheck:
