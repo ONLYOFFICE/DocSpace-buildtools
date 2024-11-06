@@ -223,7 +223,7 @@ if skip_build == False:
     for service in BACKEND_NODEJS_SERVICES:
         # print(f"== Build {service} project ==")
         src = os.path.join(dir, "server", "common", service)
-        subprocess.run(["yarn", "install"], cwd=src, shell=False)
+        subprocess.run(["yarn", "install"], cwd=src, shell=True)
         print(f"== Add docker-entrypoint.py to {service}")
         shutil.copyfile(DOCKER_ENTRYPOINT_PATH,
                         os.path.join(src, DOCKER_ENTRYPOINT))
