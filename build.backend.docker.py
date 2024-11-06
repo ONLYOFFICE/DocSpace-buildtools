@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import os
+import stat
 import socket
 import subprocess
 import sys
@@ -71,6 +72,7 @@ proxy_version = "dev"
 proxy_image_name = "onlyoffice/4testing-docspace-proxy-runtime"
 dotnet_version = "dev"
 dotnet_image_name = "onlyoffice/4testing-docspace-dotnet-runtime"
+bin_dir = "bin/Debug"
 
 # Get the options
 argv = sys.argv[1:]
@@ -161,7 +163,6 @@ print()
 
 if skip_build == False:
     # Stop all backend services
-    print("Stop all backend services (containers)")
     subprocess.run(["python", os.path.join(
         dir, "buildtools", "start", "stop.backend.docker.py")])
 
@@ -201,13 +202,74 @@ if dns == True:
                    os.path.join(dockerDir, "dnsmasq.yml"), "up", "-d"])
 
 if skip_build == False:
-    print("Clear publish folder")
-    shutil.rmtree(os.path.join(dir, "publish/services"), True)
+    # print("Clear publish folder")
+    # shutil.rmtree(os.path.join(dir, "publish/services"), True)
 
-    print("Build backend services (to 'publish/' folder)")
-    subprocess.run(["python", os.path.join(dir, "buildtools",
-                                           "install", "common", "build-services.py")])
+    # print("Build backend services (to 'publish/' folder)")
+    # subprocess.run(["python", os.path.join(dir, "buildtools", "install", "common", "build-services.py")])
+    print("== Build ASC.Web.slnf ==")
+    subprocess.run(["dotnet", "build", os.path.join(
+        dir, "server", "ASC.Web.slnf")])
 
+    print("== Build ASC.Migrations.sln ==")
+    subprocess.run(["dotnet", "build", os.path.join(
+        dir, "server", "ASC.Migrations.sln")])
+
+    DOCKER_ENTRYPOINT = "docker-entrypoint.py"
+    DOCKER_ENTRYPOINT_PATH = os.path.join(
+        dir, "buildtools", "install", "docker", DOCKER_ENTRYPOINT)
+
+    BACKEND_NODEJS_SERVICES = ["ASC.Socket.IO", "ASC.SsoAuth"]
+    for service in BACKEND_NODEJS_SERVICES:
+        # print(f"== Build {service} project ==")
+        src = os.path.join(dir, "server", "common", service)
+        subprocess.run(["yarn", "install"], cwd=src, shell=False)
+        print(f"== Add docker-entrypoint.py to {service}")
+        shutil.copyfile(DOCKER_ENTRYPOINT_PATH,
+                        os.path.join(src, DOCKER_ENTRYPOINT))
+
+    BACKEND_DOTNETCORE_SERVICES = [
+        "web/ASC.Web.Api",
+        "web/ASC.Web.Studio",
+        "web/ASC.Web.HealthChecks.UI",
+        "products/ASC.Files/Server",
+        "products/ASC.Files/Service",
+        "products/ASC.People/Server",
+        "common/services/ASC.Data.Backup",
+        "common/services/ASC.Notify",
+        "common/services/ASC.Studio.Notify",
+        "common/services/ASC.Data.Backup.BackgroundTasks",
+        "common/services/ASC.ClearEvents",
+        "common/services/ASC.ApiSystem",
+    ]
+
+    for service in BACKEND_DOTNETCORE_SERVICES:
+        print(f"== Add {DOCKER_ENTRYPOINT} to {service}")
+        dst = os.path.join(dir, "server", service, bin_dir)
+        shutil.copyfile(DOCKER_ENTRYPOINT_PATH,
+                        os.path.join(dst, DOCKER_ENTRYPOINT))
+
+    print("== Add docker-migration-entrypoint.sh to ASC.Migration.Runner ==")
+    file_path = os.path.join(dir, "server", "common", "Tools", "ASC.Migration.Runner",
+                             bin_dir, "docker-migration-entrypoint.sh")
+    src_file_path = os.path.join(
+        dir, "buildtools", "install", "docker", "docker-migration-entrypoint.sh")
+
+    WINDOWS_LINE_ENDING = b'\r\n'
+    UNIX_LINE_ENDING = b'\n'
+
+    with open(src_file_path, 'rb') as open_file:
+        content = open_file.read()
+
+    content = content.replace(WINDOWS_LINE_ENDING, UNIX_LINE_ENDING)
+
+    with open(file_path, 'wb') as open_file:
+        open_file.write(content)
+
+    st = os.stat(file_path)
+    os.chmod(file_path, st.st_mode | stat.S_IEXEC)
+
+# sys.exit()
 
 dotnet_image = f"{dotnet_image_name}:{dotnet_version}"
 exists = check_image(dotnet_image)
@@ -262,6 +324,7 @@ os.environ["DATA_DIR"] = os.path.join(dir, "data")
 os.environ["APP_URL_PORTAL"] = portal_url
 os.environ["MIGRATION_TYPE"] = migration_type
 os.environ["MYSQL_DATABASE"] = mysql_database
+os.environ["BIN_DIR"] = bin_dir
 subprocess.run(["docker", "compose", "-f", os.path.join(dockerDir, "docspace.profiles.yml"), "-f", os.path.join(
     dockerDir, "docspace.overcome.yml"), "--profile", "migration-runner", "--profile", "backend-local", "up", "-d"])
 

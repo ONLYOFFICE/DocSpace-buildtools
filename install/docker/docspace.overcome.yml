@@ -3,6 +3,7 @@ x-profiles-local: &x-profiles-local
   environment:
     BUILD_PATH: "/var/www"
     SRC_PATH: "/app/services"
+    BIN_DIR: ${BIN_DIR}
     ROOT_DIR: ${ROOT_DIR}
     ENV_EXTENSION: ${ENV_EXTENSION}
     MODE: "${ENV_EXTENSION:+.${ENV_EXTENSION}}"
@@ -19,9 +20,9 @@ services:
         "core:eventBus:subscriptionClientName=asc_event_bus_backup_queue",
       ]
     volumes:
-      - ${SRC_PATH}/ASC.Data.Backup.BackgroundTasks/service:${BUILD_PATH}/services/ASC.Data.Backup.BackgroundTasks/
-      - ${SRC_PATH}/ASC.Files/service/:${BUILD_PATH}/products/ASC.Files/server/
-      - ${SRC_PATH}/ASC.People/service/:${BUILD_PATH}/products/ASC.People/server/
+      - ${ROOT_DIR}/server/common/services/ASC.Data.Backup.BackgroundTasks/${BIN_DIR}:${BUILD_PATH}/services/ASC.Data.Backup.BackgroundTasks/
+      - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
       - ${ROOT_DIR}/buildtools/config/appsettings${MODE}.json:/app/onlyoffice/config/appsettings${MODE}.json
     depends_on:
       onlyoffice-migration-runner:
@@ -33,9 +34,9 @@ services:
     working_dir: ${BUILD_PATH}/services/ASC.Data.Backup/service/
     command: ["ASC.Data.Backup.dll", "ASC.Data.Backup"]
     volumes:
-      - ${SRC_PATH}/ASC.Data.Backup/service:${BUILD_PATH}/services/ASC.Data.Backup/service/
-      - ${SRC_PATH}/ASC.Files/service/:${BUILD_PATH}/products/ASC.Files/server/
-      - ${SRC_PATH}/ASC.People/service/:${BUILD_PATH}/products/ASC.People/server/
+      - ${ROOT_DIR}/server/common/services/ASC.Data.Backup/${BIN_DIR}:${BUILD_PATH}/services/ASC.Data.Backup/service/
+      - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
       - ${ROOT_DIR}/buildtools/config/appsettings${MODE}.json:/app/onlyoffice/config/appsettings${MODE}.json
     depends_on:
       onlyoffice-migration-runner:
@@ -47,8 +48,8 @@ services:
     working_dir: ${BUILD_PATH}/products/ASC.Files/server/
     command: ["ASC.Files.dll", "ASC.Files"]
     volumes:
-      - ${SRC_PATH}/ASC.Files/service:${BUILD_PATH}/products/ASC.Files/server/
-      - ${SRC_PATH}/ASC.People/service/:${BUILD_PATH}/products/ASC.People/server/
+      - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
       - ${ROOT_DIR}/buildtools/config/appsettings${MODE}.json:/app/onlyoffice/config/appsettings${MODE}.json
     depends_on:
       onlyoffice-migration-runner:
@@ -65,9 +66,9 @@ services:
         "core:eventBus:subscriptionClientName=asc_event_bus_files_service_queue",
       ]
     volumes:
-      - ${SRC_PATH}/ASC.Files.Service/service:${BUILD_PATH}/products/ASC.Files/service/
-      - ${SRC_PATH}/ASC.Files/service/:${BUILD_PATH}/products/ASC.Files/server/
-      - ${SRC_PATH}/ASC.People/service/:${BUILD_PATH}/products/ASC.People/server/
+      - ${ROOT_DIR}/server/products/ASC.Files/Service/${BIN_DIR}:${BUILD_PATH}/products/ASC.Files/service/
+      - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
       - ${ROOT_DIR}/buildtools/config/appsettings${MODE}.json:/app/onlyoffice/config/appsettings${MODE}.json
     depends_on:
       onlyoffice-migration-runner:
@@ -79,8 +80,8 @@ services:
     working_dir: ${BUILD_PATH}/products/ASC.People/server/
     command: ["ASC.People.dll", "ASC.People"]
     volumes:
-      - ${SRC_PATH}/ASC.People/service:${BUILD_PATH}/products/ASC.People/server/
-      - ${SRC_PATH}/ASC.Files/service/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
       - ${ROOT_DIR}/buildtools/config/appsettings${MODE}.json:/app/onlyoffice/config/appsettings${MODE}.json
     depends_on:
       onlyoffice-migration-runner:
@@ -92,7 +93,7 @@ services:
     working_dir: ${BUILD_PATH}/services/ASC.Socket.IO/
     command: ["server.js", "ASC.Socket.IO"]
     volumes:
-      - ${SRC_PATH}/ASC.Socket.IO/service:${BUILD_PATH}/services/ASC.Socket.IO/
+      - ${ROOT_DIR}/server/common/ASC.Socket.IO/:${BUILD_PATH}/services/ASC.Socket.IO/
     depends_on:
       onlyoffice-migration-runner:
         condition: service_completed_successfully
@@ -103,9 +104,9 @@ services:
     working_dir: ${BUILD_PATH}/services/ASC.Studio.Notify/service/
     command: ["ASC.Studio.Notify.dll", "ASC.Studio.Notify"]
     volumes:
-      - ${SRC_PATH}/ASC.Studio.Notify/service:${BUILD_PATH}/services/ASC.Studio.Notify/service/
-      - ${SRC_PATH}/ASC.Files/service/:${BUILD_PATH}/products/ASC.Files/server/
-      - ${SRC_PATH}/ASC.People/service/:${BUILD_PATH}/products/ASC.People/server/
+      - ${ROOT_DIR}/server/common/services/ASC.Studio.Notify/${BIN_DIR}:${BUILD_PATH}/services/ASC.Studio.Notify/service/
+      - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
       - ${ROOT_DIR}/buildtools/config/appsettings${MODE}.json:/app/onlyoffice/config/appsettings${MODE}.json
     depends_on:
       onlyoffice-migration-runner:
@@ -117,9 +118,9 @@ services:
     working_dir: ${BUILD_PATH}/studio/ASC.Web.Api/
     command: ["ASC.Web.Api.dll", "ASC.Web.Api"]
     volumes:
-      - ${SRC_PATH}/ASC.Web.Api/service:${BUILD_PATH}/studio/ASC.Web.Api/
-      - ${SRC_PATH}/ASC.Files/service/:${BUILD_PATH}/products/ASC.Files/server/
-      - ${SRC_PATH}/ASC.People/service/:${BUILD_PATH}/products/ASC.People/server/
+      - ${ROOT_DIR}/server/web/ASC.Web.Api/${BIN_DIR}:${BUILD_PATH}/studio/ASC.Web.Api/
+      - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
       - ${ROOT_DIR}/buildtools/config/appsettings${MODE}.json:/app/onlyoffice/config/appsettings${MODE}.json
     depends_on:
       onlyoffice-migration-runner:
@@ -131,9 +132,9 @@ services:
     working_dir: ${BUILD_PATH}/services/ASC.ApiSystem/service/
     command: ["ASC.ApiSystem.dll", "ASC.ApiSystem"]
     volumes:
-      - ${SRC_PATH}/ASC.ApiSystem/service:${BUILD_PATH}/services/ASC.ApiSystem/service/
-      - ${SRC_PATH}/ASC.Files/service/:${BUILD_PATH}/products/ASC.Files/server/
-      - ${SRC_PATH}/ASC.People/service/:${BUILD_PATH}/products/ASC.People/server/
+      - ${ROOT_DIR}/server/common/services/ASC.ApiSystem/${BIN_DIR}:${BUILD_PATH}/services/ASC.ApiSystem/service/
+      - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
       - ${ROOT_DIR}/buildtools/config/appsettings${MODE}.json:/app/onlyoffice/config/appsettings${MODE}.json
     depends_on:
       onlyoffice-migration-runner:
@@ -150,9 +151,9 @@ services:
         "core:eventBus:subscriptionClientName=asc_event_bus_webstudio_queue",
       ]
     volumes:
-      - ${SRC_PATH}/ASC.Web.Studio/service:${BUILD_PATH}/studio/ASC.Web.Studio/
-      - ${SRC_PATH}/ASC.Files/service/:${BUILD_PATH}/products/ASC.Files/server/
-      - ${SRC_PATH}/ASC.People/service/:${BUILD_PATH}/products/ASC.People/server/
+      - ${ROOT_DIR}/server/web/ASC.Web.Studio/${BIN_DIR}:${BUILD_PATH}/studio/ASC.Web.Studio/
+      - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
       - ${ROOT_DIR}/buildtools/config/appsettings${MODE}.json:/app/onlyoffice/config/appsettings${MODE}.json
     depends_on:
       onlyoffice-migration-runner:
@@ -164,7 +165,7 @@ services:
     working_dir: ${BUILD_PATH}/services/ASC.SsoAuth/
     command: ["app.js", "ASC.SsoAuth"]
     volumes:
-      - ${SRC_PATH}/ASC.SsoAuth/service:${BUILD_PATH}/services/ASC.SsoAuth/
+      - ${ROOT_DIR}/server/common/ASC.SsoAuth/:${BUILD_PATH}/services/ASC.SsoAuth/
     depends_on:
       onlyoffice-migration-runner:
         condition: service_completed_successfully
@@ -174,7 +175,7 @@ services:
     entrypoint: ${BUILD_PATH}/services/ASC.Migration.Runner/docker-migration-entrypoint.sh
     working_dir: ${BUILD_PATH}/services/ASC.Migration.Runner/
     volumes:
-      - ${SRC_PATH}/ASC.Migration.Runner/service:${BUILD_PATH}/services/ASC.Migration.Runner/
+      - ${ROOT_DIR}/server/common/Tools/ASC.Migration.Runner/${BIN_DIR}:${BUILD_PATH}/services/ASC.Migration.Runner/
 
   onlyoffice-router:
     <<: *x-profiles-local
