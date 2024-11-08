@@ -49,5 +49,12 @@
 	"quota": {
 		"id": -3
 	},
-	"max-attempts-count" : 10
+	"max-attempts-count" : 10,
+	"openApi": {
+        "enable": true,
+        "enableUI": true,
+        "endpoints": {
+            "asc.apisystem": "/openapi/asc.apisystem/common.yaml"
+        }
+	}
 }
