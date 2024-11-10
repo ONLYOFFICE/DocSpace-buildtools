@@ -687,6 +687,9 @@ get_os_info () {
 					DIST=`lsb_release -a 2>&1 | grep 'Distributor ID:' | awk -F ":" '{print $2 }'`
 					REV=`lsb_release -a 2>&1 | grep 'Release:' | awk -F ":" '{print $2 }'`
 				fi
+			elif [ -f /etc/VERSION ]; then
+				DIST=$(grep -oP 'os_name="\K[^"]+' /etc/VERSION)
+				REV=$(grep -oP 'majorversion="\K[^"]+' /etc/VERSION)
 			elif [ -f /etc/os-release ] ; then
 				DIST=`cat /etc/os-release | grep -sw 'ID' | awk -F=  '{ print $2 }' | sed -e 's/^"//' -e 's/"$//'`
 				REV=`cat /etc/os-release | grep -sw 'VERSION_ID' | awk -F=  '{ print $2 }' | sed -e 's/^"//' -e 's/"$//'`
@@ -896,6 +899,11 @@ install_docker () {
 		chkconfig docker on
 		service docker start
 		systemctl enable docker
+
+	elif [ "${DIST}" == "DSM" ]; then
+
+		synopkg install_from_server ContainerManager
+		synopkg start ContainerManager
 
 	else
 
@@ -1234,7 +1242,7 @@ install_fluent_bit () {
 
 		OPENSEARCH_INDEX="${OPENSEARCH_INDEX:-"${PACKAGE_SYSNAME}-fluent-bit"}"
 		if crontab -l | grep -q "${OPENSEARCH_INDEX}"; then
-			crontab < <(crontab -l | grep -v "${OPENSEARCH_INDEX}")
+			crontab -l | grep -v "${OPENSEARCH_INDEX}" | crontab -
 		fi
 		(crontab -l 2>/dev/null; echo "0 0 */1 * * curl -s -X POST "$(get_env_parameter 'ELK_SHEME')"://${ELK_HOST:-127.0.0.1}:$(get_env_parameter 'ELK_PORT')/${OPENSEARCH_INDEX}/_delete_by_query -H 'Content-Type: application/json' -d '{\"query\": {\"range\": {\"@timestamp\": {\"lt\": \"now-30d\"}}}}'") | crontab -		
 
@@ -1367,7 +1375,7 @@ dependency_installation() {
 		install_package jq
 	fi
 
-	is_command_exists docker && { check_docker_version; service docker start; } || { [ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker || { echo "docker not installed"; exit 1; }; }
+	is_command_exists docker && { check_docker_version; systemctl start docker; } || { [ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker || { echo "docker not installed"; exit 1; }; }
 
 	if ! is_command_exists docker-compose; then
 		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker_compose || { echo "docker-compose not installed"; exit 1; }
