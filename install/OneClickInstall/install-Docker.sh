@@ -962,7 +962,7 @@ domain_check () {
 	APP_DOMAIN_PORTAL=${APP_DOMAIN_PORTAL:-${APP_URL_PORTAL:-$(get_env_parameter "APP_URL_PORTAL" "${PACKAGE_SYSNAME}-files" | awk -F[/:] '{if ($1 == "https") print $4; else print ""}')}}
 
 	while IFS= read -r DOMAIN; do
-		IP_ADDRESS=$(ping -c 1 -W 1 $DOMAIN | grep -oP '(\d+\.\d+\.\d+\.\d+)' | head -n 1)
+		IP_ADDRESS=$( [ -n "${DOMAIN}" ] && ping -c 1 -W 1 ${DOMAIN} | grep -oP '(\d+\.\d+\.\d+\.\d+)' | head -n 1 )
 		if [[ -n "$IP_ADDRESS" && "$IP_ADDRESS" =~ ^(10\.|127\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.) ]]; then
 			LOCAL_RESOLVED_DOMAINS+="$DOMAIN"
 		fi
