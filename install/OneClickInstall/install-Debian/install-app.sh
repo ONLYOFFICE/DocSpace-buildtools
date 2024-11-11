@@ -21,7 +21,7 @@ if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ]; then
 	ds_pkg_installed_name=$(dpkg -l | grep ${package_sysname}-documentserver | tail -n1 | awk '{print $2}');
 	if [ -n "${ds_pkg_installed_name}" ] && [ "${ds_pkg_installed_name}" != "${ds_pkg_name}" ]; then
 		debconf-get-selections | grep ^${ds_pkg_installed_name} | sed s/${ds_pkg_installed_name}/${ds_pkg_name}/g | debconf-set-selections
-		DEBIAN_FRONTEND=noninteractive apt-get remove -yq ${ds_pkg_installed_name}
+		DEBIAN_FRONTEND=noninteractive apt-get purge -yq ${ds_pkg_installed_name}
 		apt-get install -yq ${ds_pkg_name}
 		RECONFIGURE_PRODUCT="true"
 	else
