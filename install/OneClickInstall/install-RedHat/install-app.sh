@@ -27,7 +27,7 @@ esac
 if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ]; then
 	ds_pkg_installed_name=$(rpm -qa --qf '%{NAME}\n' | grep ${package_sysname}-documentserver);
 	if [ -n "${ds_pkg_installed_name}" ] && [ "${ds_pkg_installed_name}" != "${ds_pkg_name}" ]; then
-		${package_manager} -y purge ${ds_pkg_installed_name} --setopt=clean_requirements_on_remove=false
+		${package_manager} -y remove ${ds_pkg_installed_name} --setopt=clean_requirements_on_remove=false
 		DOCUMENT_SERVER_INSTALLED="false" RECONFIGURE_PRODUCT="true"
 	else
 		${package_manager} -y update ${ds_pkg_installed_name}
