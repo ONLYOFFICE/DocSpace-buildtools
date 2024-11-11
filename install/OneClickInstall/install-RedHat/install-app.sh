@@ -147,7 +147,7 @@ if [ "$PRODUCT_INSTALLED" = "false" ]; then
 elif [[ "${PRODUCT_CHECK_UPDATE}" -eq "${UPDATE_AVAILABLE_CODE}" || "${RECONFIGURE_PRODUCT}" = "true" ]]; then
 	ENVIRONMENT=$(grep -oP 'ENVIRONMENT=\K.*' /etc/${package_sysname}/${product}/systemd.env || grep -oP 'ENVIRONMENT=\K.*' /usr/lib/systemd/system/${product}-api.service)
 	CONNECTION_STRING=$(json -f /etc/${package_sysname}/${product}/appsettings.$ENVIRONMENT.json ConnectionStrings.default.connectionString)
-	${package_manager} -y update ${product}
+	${package_manager} -y update ${product} --allowerasing
 	${product}-configuration \
 		-mysqlh $(grep -oP 'Server=\K[^;]*' <<< "$CONNECTION_STRING") \
 		-mysqld $(grep -oP 'Database=\K[^;]*' <<< "$CONNECTION_STRING") \
