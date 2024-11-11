@@ -21,13 +21,11 @@ done
 if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ]; then
 	ds_pkg_installed_name=$(rpm -qa --qf '%{NAME}\n' | grep ${package_sysname}-documentserver);
 
-	if [ "$INSTALLATION_TYPE" = "COMMUNITY" ]; then
-		ds_pkg_name="${package_sysname}-documentserver";
-	fi
-
-	if [ "$INSTALLATION_TYPE" = "ENTERPRISE" ]; then
-		ds_pkg_name="${package_sysname}-documentserver-ee";
-	fi
+	ds_pkg_name="${package_sysname}-documentserver"
+	case "${INSTALLATION_TYPE}" in
+		"DEVELOPER") ds_pkg_name+="-de" ;;
+		"ENTERPRISE") ds_pkg_name+="-ee" ;;
+	esac
 
 	if [ -n $ds_pkg_name ]; then
 		if ! rpm -qi ${ds_pkg_name} &> /dev/null; then
@@ -149,14 +147,14 @@ fi
 
 { ${package_manager} check-update ${product}; PRODUCT_CHECK_UPDATE=$?; } || true
 if [ "$PRODUCT_INSTALLED" = "false" ]; then
-	${package_manager} install -y ${product}
+	${package_manager} install -y ${product} --allowerasing
 	${product}-configuration \
 		-mysqlh ${MYSQL_SERVER_HOST} \
 		-mysqld ${MYSQL_SERVER_DB_NAME} \
 		-mysqlu ${MYSQL_SERVER_USER} \
 		-mysqlp ${MYSQL_ROOT_PASS}
 elif [[ "${PRODUCT_CHECK_UPDATE}" -eq "${UPDATE_AVAILABLE_CODE}" || "${RECONFIGURE_PRODUCT}" = "true" ]]; then
-	ENVIRONMENT=$(grep -oP 'ENVIRONMENT=\K.*' /usr/lib/systemd/system/${product}-api.service)
+	ENVIRONMENT=$(grep -oP 'ENVIRONMENT=\K.*' /etc/${package_sysname}/${product}/systemd.env || grep -oP 'ENVIRONMENT=\K.*' /usr/lib/systemd/system/${product}-api.service)
 	CONNECTION_STRING=$(json -f /etc/${package_sysname}/${product}/appsettings.$ENVIRONMENT.json ConnectionStrings.default.connectionString)
 	${package_manager} -y update ${product}
 	${product}-configuration \

@@ -515,7 +515,7 @@ while [ "$1" != "" ]; do
 			echo "      -hub, --hub                       dockerhub name"
 			echo "      -un, --username                   dockerhub username"
 			echo "      -p, --password                    dockerhub password"
-			echo "      -it, --installation_type          installation type (community|enterprise)"
+			echo "      -it, --installation_type          installation type (community|developer|enterprise)"
 			echo "      -skiphc, --skiphardwarecheck      skip hardware check (true|false)"
 			echo "      -u, --update                      use to update existing components (true|false)"
 			echo "      -ids, --installdocspace           install or update $PRODUCT (true|false)"
@@ -687,6 +687,9 @@ get_os_info () {
 					DIST=`lsb_release -a 2>&1 | grep 'Distributor ID:' | awk -F ":" '{print $2 }'`
 					REV=`lsb_release -a 2>&1 | grep 'Release:' | awk -F ":" '{print $2 }'`
 				fi
+			elif [ -f /etc/VERSION ]; then
+				DIST=$(grep -oP 'os_name="\K[^"]+' /etc/VERSION)
+				REV=$(grep -oP 'majorversion="\K[^"]+' /etc/VERSION)
 			elif [ -f /etc/os-release ] ; then
 				DIST=`cat /etc/os-release | grep -sw 'ID' | awk -F=  '{ print $2 }' | sed -e 's/^"//' -e 's/"$//'`
 				REV=`cat /etc/os-release | grep -sw 'VERSION_ID' | awk -F=  '{ print $2 }' | sed -e 's/^"//' -e 's/"$//'`
@@ -897,6 +900,11 @@ install_docker () {
 		service docker start
 		systemctl enable docker
 
+	elif [ "${DIST}" == "DSM" ]; then
+
+		synopkg install_from_server ContainerManager
+		synopkg start ContainerManager
+
 	else
 
 		echo ""
@@ -954,7 +962,7 @@ domain_check () {
 	APP_DOMAIN_PORTAL=${APP_DOMAIN_PORTAL:-${APP_URL_PORTAL:-$(get_env_parameter "APP_URL_PORTAL" "${PACKAGE_SYSNAME}-files" | awk -F[/:] '{if ($1 == "https") print $4; else print ""}')}}
 
 	while IFS= read -r DOMAIN; do
-		IP_ADDRESS=$(ping -c 1 -W 1 $DOMAIN | grep -oP '(\d+\.\d+\.\d+\.\d+)' | head -n 1)
+		IP_ADDRESS=$( [ -n "${DOMAIN}" ] && ping -c 1 -W 1 ${DOMAIN} | grep -oP '(\d+\.\d+\.\d+\.\d+)' | head -n 1 )
 		if [[ -n "$IP_ADDRESS" && "$IP_ADDRESS" =~ ^(10\.|127\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.) ]]; then
 			LOCAL_RESOLVED_DOMAINS+="$DOMAIN"
 		fi
@@ -1128,10 +1136,12 @@ set_docspace_params() {
 }
 
 set_installation_type_data () {
-	if [ "$INSTALLATION_TYPE" == "COMMUNITY" ]; then
-		DOCUMENT_SERVER_IMAGE_NAME=${DOCUMENT_SERVER_IMAGE_NAME:-"${PACKAGE_SYSNAME}/${STATUS}documentserver"}
-	elif [ "$INSTALLATION_TYPE" == "ENTERPRISE" ]; then
-		DOCUMENT_SERVER_IMAGE_NAME=${DOCUMENT_SERVER_IMAGE_NAME:-"${PACKAGE_SYSNAME}/${STATUS}documentserver-ee"}
+	if [ -z "${DOCUMENT_SERVER_IMAGE_NAME}" ]; then
+		DOCUMENT_SERVER_IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}documentserver"
+		case "${INSTALLATION_TYPE}" in
+			"DEVELOPER") DOCUMENT_SERVER_IMAGE_NAME+="-de" ;;
+			"ENTERPRISE") DOCUMENT_SERVER_IMAGE_NAME+="-ee" ;;
+		esac
 	fi
 }
 
@@ -1232,7 +1242,7 @@ install_fluent_bit () {
 
 		OPENSEARCH_INDEX="${OPENSEARCH_INDEX:-"${PACKAGE_SYSNAME}-fluent-bit"}"
 		if crontab -l | grep -q "${OPENSEARCH_INDEX}"; then
-			crontab < <(crontab -l | grep -v "${OPENSEARCH_INDEX}")
+			crontab -l | grep -v "${OPENSEARCH_INDEX}" | crontab -
 		fi
 		(crontab -l 2>/dev/null; echo "0 0 */1 * * curl -s -X POST "$(get_env_parameter 'ELK_SHEME')"://${ELK_HOST:-127.0.0.1}:$(get_env_parameter 'ELK_PORT')/${OPENSEARCH_INDEX}/_delete_by_query -H 'Content-Type: application/json' -d '{\"query\": {\"range\": {\"@timestamp\": {\"lt\": \"now-30d\"}}}}'") | crontab -		
 
@@ -1365,7 +1375,7 @@ dependency_installation() {
 		install_package jq
 	fi
 
-	is_command_exists docker && { check_docker_version; service docker start; } || { [ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker || { echo "docker not installed"; exit 1; }; }
+	is_command_exists docker && { check_docker_version; systemctl start docker; } || { [ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker || { echo "docker not installed"; exit 1; }; }
 
 	if ! is_command_exists docker-compose; then
 		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker_compose || { echo "docker-compose not installed"; exit 1; }

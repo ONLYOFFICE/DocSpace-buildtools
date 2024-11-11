@@ -12,7 +12,7 @@ bash install/common/plugins-build.sh %{_builddir}/plugins
 rename -f -v "s/product([^\/]*)$/%{product}\$1/g" install/common/*
 
 rm -f config/nginx/onlyoffice-login.conf
-find config/ -type f -regex '.*\.\(test\|dev\).*' -delete
+find config/ -type f -regex '.*\.\(test\|dev\)\..*' -delete
 
 if ! grep -q 'var/www/%{product}' config/nginx/*.conf; then find config/nginx/ -name "*.conf" -exec sed -i "s@\(var/www/\)@\1%{product}/@" {} +; fi
 
@@ -37,6 +37,9 @@ sed -i '/^\[OUTPUT\]/i\    Name                exec' install/docker/config/fluen
 sed -i '/^\[OUTPUT\]/i\    Interval_Sec        86400' install/docker/config/fluent-bit.conf
 sed -i '/^\[OUTPUT\]/i\    Command             curl -s -X POST OPENSEARCH_SCHEME://OPENSEARCH_HOST:OPENSEARCH_PORT/OPENSEARCH_INDEX/_delete_by_query -H '\''Content-Type: application/json'\'' -d '\''{"query": {"range": {"@timestamp": {"lt": "now-30d"}}}}'\''' install/docker/config/fluent-bit.conf 
 sed -i '/^\[OUTPUT\]/i\\' install/docker/config/fluent-bit.conf
+
+rename -f -v 's/(.*\.(community|enterprise|developer))\.json$/$1.json.template/' config/*.json
+sed -i 's_app/onlyoffice/data_var/www/onlyoffice/Data_g' config/*.json.template
 
 find %{_builddir}/server/publish/ \
      %{_builddir}/server/ASC.Migration.Runner \

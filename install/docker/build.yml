@@ -153,9 +153,3 @@ services:
       target: identity-api
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-identity-api:${DOCKER_TAG}"
 
-  onlyoffice-identity-migration:
-    build:
-      context:  ./
-      dockerfile: "${DOCKERFILE}"
-      target: identity-migration
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-identity-migration:${DOCKER_TAG}"

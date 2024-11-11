@@ -104,7 +104,6 @@ services_name_backend_nodejs+=(ASC.SsoAuth)
 
 services_name_backend_java+=(ASC.Identity.Authorization)
 services_name_backend_java+=(ASC.Identity.Registration)
-services_name_backend_java+=(ASC.Identity.Migration)
 
 # Publish backend services (Nodejs/Java) 
 for SERVICE in "${services_name_backend_nodejs[@]}" "${services_name_backend_java[@]}"; do

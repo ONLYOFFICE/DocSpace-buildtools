@@ -52,7 +52,7 @@ RUN git clone -b ${GIT_BRANCH} https://github.com/ONLYOFFICE/DocSpace-buildtools
 RUN cd ${SRC_PATH} && \
     mkdir -p /app/onlyoffice/config/ && \
     cd buildtools/config && \
-    ls | grep -v test | grep -v dev | grep -v nginx | xargs cp -t /app/onlyoffice/config/ && \
+    ls | grep -v "test" | grep -v "\.dev\." | grep -v "nginx" | xargs cp -t /app/onlyoffice/config/ && \
     cd ${SRC_PATH} && \
     cp buildtools/config/*.config /app/onlyoffice/config/ && \
     mkdir -p /etc/nginx/conf.d && cp -f buildtools/config/nginx/onlyoffice*.conf /etc/nginx/conf.d/ && \
@@ -176,6 +176,9 @@ COPY --from=base --chown=onlyoffice:onlyoffice /etc/nginx/conf.d /etc/nginx/conf
 COPY --from=base --chown=onlyoffice:onlyoffice /etc/nginx/includes /etc/nginx/includes
 COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/client ${BUILD_PATH}/client
 COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/public ${BUILD_PATH}/public
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/editor/.next/static/chunks ${BUILD_PATH}/build/doceditor/static/chunks
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/editor/.next/static/css ${BUILD_PATH}/build/doceditor/static/css
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/editor/.next/static/media ${BUILD_PATH}/build/doceditor/static/media
 COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/campaigns/src/campaigns ${BUILD_PATH}/public/campaigns
 COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management ${BUILD_PATH}/management
 COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/docker-entrypoint.d /docker-entrypoint.d
@@ -395,12 +398,6 @@ FROM javarun AS identity-api
 WORKDIR ${BUILD_PATH}/services/ASC.Identity.Registration/
 COPY --from=base --chown=onlyoffice:onlyoffice  ${BUILD_PATH}/services/ASC.Identity.Registration/service/ .
 CMD ["ASC.Identity.Registration"]
-
-## ASC.Identity.Migration ##
-FROM javarun AS identity-migration
-WORKDIR ${BUILD_PATH}/services/ASC.Identity.Migration/
-COPY --from=base --chown=onlyoffice:onlyoffice  ${BUILD_PATH}/services/ASC.Identity.Migration/service/ .
-CMD ["ASC.Identity.Migration"]
 
 ## image for k8s bin-share ##
 FROM busybox:latest AS bin_share

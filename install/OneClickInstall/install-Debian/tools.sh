@@ -109,4 +109,9 @@ if [[ ( "${DIST}" == "ubuntu" && "${REV%.*}" -lt 20 ) || ( "${DIST}" == "debian"
     echo "Your ${DIST} ${REV} operating system has reached the end of its service life."
     echo "Please consider upgrading your operating system or using a Docker installation."
     exit 1
+elif [[ "${DIST}" == "ubuntu" && ( $(( ${REV%.*} % 2 )) -ne 0 || "${REV#*.}" -ne 04 ) ]]; then
+    echo "Only LTS versions of Ubuntu are supported." 
+    echo "You are using ${DIST} ${REV}, which is not an LTS version."
+    echo "Please consider upgrading to a LTS version or using a Docker installation."
+    exit 1
 fi

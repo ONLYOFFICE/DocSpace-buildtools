@@ -157,17 +157,6 @@ The service responsible for enabling and configuring
 SAML-based single sign-on (SSO) authentication to provide a more quick, 
 easy and secure way to access DocSpace for users
 
-%package        identity-migration
-Packager:       %{packager}
-Summary:        Identity-Migration
-Group:          Applications/Internet
-Requires:       %name-common  = %version-%release
-Requires:       java-21-openjdk-headless
-AutoReqProv:    no
-BuildArch:      noarch
-%description    identity-migration
-Identity-Migration
-
 %package        identity-authorization
 Packager:       %{packager}
 Summary:        Identity-Authorization

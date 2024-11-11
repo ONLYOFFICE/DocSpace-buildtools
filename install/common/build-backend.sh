@@ -62,11 +62,8 @@ done
 # Array of names identity services
 IDENTITY_NAMES+=("ASC.Identity.Authorization")
 IDENTITY_NAMES+=("ASC.Identity.Registration")
-IDENTITY_NAMES+=("ASC.Identity.Migration")
-
 IDENTITY_MODULES+=("authorization/authorization-container")
 IDENTITY_MODULES+=("registration/registration-container")
-IDENTITY_MODULES+=("infrastructure/infrastructure-migration-runner")
 
 cd ${SRC_PATH}/server/common/ASC.Identity/
 

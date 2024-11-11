@@ -34,7 +34,6 @@ Depends: debconf, openssl,
          {{product}}-studio (= {{package_header_tag_version}}),
          {{product}}-studio-notify (= {{package_header_tag_version}}),
          {{product}}-identity-api (= {{package_header_tag_version}}),
-         {{product}}-identity-migration (= {{package_header_tag_version}}),
          {{product}}-identity-authorization (= {{package_header_tag_version}})
 Description: {{product}}
 	ONLYOFFICE {{product}} is a new way to collaborate on documents with teams, 
@@ -161,15 +160,7 @@ Multi-Arch: foreign
 Depends: {{product}}-common (= {{package_header_tag_version}}), ${misc:Depends}, ${shlibs:Depends},
 	openjdk-21-jre-headless | temurin-21-jre | jdk-21 | jdk-21-headless | zulu21-jre-headless | java-21-amazon-corretto-jdk
 Description: {{product}}-identity-api
-  ASC.Identity.Registration
-
-Package: {{product}}-identity-migration
-Architecture: all
-Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), ${misc:Depends}, ${shlibs:Depends},
-	openjdk-21-jre-headless | temurin-21-jre | jdk-21 | jdk-21-headless | zulu21-jre-headless | java-21-amazon-corretto-jdk
-Description: {{product}}-identity-migration
-  ASC.Identity.Migration
+	ASC.Identity.Registration
 
 Package: {{product}}-identity-authorization
 Architecture: all
@@ -177,7 +168,7 @@ Multi-Arch: foreign
 Depends: {{product}}-common (= {{package_header_tag_version}}), ${misc:Depends}, ${shlibs:Depends},
 	openjdk-21-jre-headless | temurin-21-jre | jdk-21 | jdk-21-headless | zulu21-jre-headless | java-21-amazon-corretto-jdk
 Description: {{product}}-identity-authorization
-  ASC.Identity.Authorization
+	ASC.Identity.Authorization
 
 Package: {{product}}-backup-background
 Architecture: all

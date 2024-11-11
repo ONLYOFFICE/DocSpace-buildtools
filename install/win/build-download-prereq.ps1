@@ -1,4 +1,7 @@
-$AllProtocols = [System.Net.SecurityProtocolType]'Ssl3,Tls,Tls11,Tls12,Tls13'
+$AllProtocols = [System.Net.SecurityProtocolType]::Tls -bor `
+                [System.Net.SecurityProtocolType]::Tls11 -bor `
+                [System.Net.SecurityProtocolType]::Tls12
+
 [System.Net.ServicePointManager]::SecurityProtocol = $AllProtocols
 
 # Function 'DownloadComponents' downloads some components that need on build satge
@@ -46,6 +49,12 @@ switch ( $env:DOCUMENT_SERVER_VERSION_CE )
 {
   latest { $DOCUMENT_SERVER_CE_LINK = "https://download.onlyoffice.com/install/documentserver/windows/onlyoffice-documentserver.exe" }
   custom { $DOCUMENT_SERVER_CE_LINK = $env:DOCUMENT_SERVER_CE_CUSTOM_LINK.Replace(",", "") }
+}
+
+switch ( $env:DOCUMENT_SERVER_VERSION_DE )
+{
+  latest { $DOCUMENT_SERVER_DE_LINK = "https://download.onlyoffice.com/install/documentserver/windows/onlyoffice-documentserver-de.exe" }
+  custom { $DOCUMENT_SERVER_DE_LINK = $env:DOCUMENT_SERVER_DE_CUSTOM_LINK.Replace(",", "") }
 }
 
 $psql_version = '14.0'
@@ -100,6 +109,13 @@ $prerequisites = @(
     download_allways = $true; 
     name = "onlyoffice-documentserver.exe"; 
     link = $DOCUMENT_SERVER_CE_LINK
+  }
+   
+   @{  
+    # Downloading onlyoffice-documentserver-de for DocSpace Developer
+    download_allways = $true; 
+    name = "onlyoffice-documentserver-de.exe"; 
+    link = $DOCUMENT_SERVER_DE_LINK
   }
    
   @{  
@@ -193,8 +209,8 @@ $enterprise_prerequisites = @(
 
   @{  
     download_allways = $false; 
-    name = "Redis-x64-5.0.10.msi"; 
-    link = "http://download.onlyoffice.com/install/windows/redist/Redis-x64-5.0.10.msi";
+    name = "Redis-7.4.0-Windows-x64.msi"; 
+    link = "https://github.com/ONLYOFFICE/redis-windows/releases/download/7.4.0/Redis-7.4.0-Windows-x64.msi";
   }
 
   @{  

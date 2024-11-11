@@ -102,12 +102,6 @@
 /usr/lib/systemd/system/%{product}-identity-api.service
 %dir %{buildpath}/services/
 
-%files identity-migration
-%defattr(-, onlyoffice, onlyoffice, -)
-%{buildpath}/services/ASC.Identity.Migration
-/usr/lib/systemd/system/%{product}-identity-migration.service
-%dir %{buildpath}/services/
-
 %files identity-authorization
 %defattr(-, onlyoffice, onlyoffice, -)
 %{buildpath}/services/ASC.Identity.Authorization

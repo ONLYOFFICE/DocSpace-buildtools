@@ -10,7 +10,7 @@ jsonValue = None
 
 PRODUCT = os.environ["PRODUCT"] if environ.get("PRODUCT") else "onlyoffice"
 BASE_DIR =  os.environ["BASE_DIR"] if environ.get("BASE_DIR") else  "/app/" + PRODUCT
-ENV_EXTENSION = os.environ["ENV_EXTENSION"] if environ.get("ENV_EXTENSION") else "none"
+ENV_EXTENSION = os.environ.get("ENV_EXTENSION", os.environ.get("INSTALLATION_TYPE", "none")).lower()
 PROXY_HOST = os.environ["PROXY_HOST"] if environ.get("PROXY_HOST") else "onlyoffice-proxy"
 SERVICE_PORT = os.environ["SERVICE_PORT"] if environ.get("SERVICE_PORT") else "5050"
 URLS = os.environ["URLS"] if environ.get("URLS") else "http://0.0.0.0:"
@@ -29,7 +29,6 @@ MYSQL_CONNECTION_HOST = MYSQL_HOST if MYSQL_HOST else MYSQL_CONTAINER_NAME
 
 APP_CORE_BASE_DOMAIN = os.environ["APP_CORE_BASE_DOMAIN"] if environ.get("APP_CORE_BASE_DOMAIN") is not None else "localhost"
 APP_CORE_MACHINEKEY = os.environ["APP_CORE_MACHINEKEY"] if environ.get("APP_CORE_MACHINEKEY") else "your_core_machinekey"
-INSTALLATION_TYPE = os.environ["INSTALLATION_TYPE"].upper() if environ.get("INSTALLATION_TYPE") else "COMMUNITY"
 APP_URL_PORTAL = os.environ["APP_URL_PORTAL"] if environ.get("APP_URL_PORTAL") else "http://" + ROUTER_HOST + ":8092"
 OAUTH_REDIRECT_URL = os.environ["OAUTH_REDIRECT_URL"] if environ.get("OAUTH_REDIRECT_URL") else None
 APP_STORAGE_ROOT = os.environ["APP_STORAGE_ROOT"] if environ.get("APP_STORAGE_ROOT") else BASE_DIR + "/data/"
@@ -175,9 +174,6 @@ updateJsonData(jsonData,"$.files.docservice.secret.value", DOCUMENT_SERVER_JWT_S
 updateJsonData(jsonData,"$.files.docservice.secret.header", DOCUMENT_SERVER_JWT_HEADER)
 updateJsonData(jsonData,"$.debug-info.enabled", DEBUG_INFO)
 updateJsonData(jsonData,"$.web.samesite", SAMESITE)
-if INSTALLATION_TYPE == "ENTERPRISE":
-    updateJsonData(jsonData, "$.license.file.path", "/app/onlyoffice/data/license.lic")
-    updateJsonData(jsonData, "$.web.license-url", "https://help.onlyoffice.co/Products/Files/DocEditor.aspx?fileid=8516433&doc=U0U1QUs2VEtIVmtYclFTNzVXSWkxUEN6aVlWTzdOWFFsWGdibG80Mnhacz0_IntcImVudHJ5XCI6XCI4NTE2NDMzXCIsXCJsaW5rXCI6XCI5Y2ZiMWNkMS0wMmMxLTRlNmEtYThhOC1iNjFlYTk2ZTYzNDZcIn0i0")
 
 ip_address = netifaces.ifaddresses('eth0').get(netifaces.AF_INET)[0].get('addr')
 netmask = netifaces.ifaddresses('eth0').get(netifaces.AF_INET)[0].get('netmask')
