@@ -27,7 +27,7 @@ for /D %%d in ("%PathToRepository%\*") do (
         
         popd
         
-        set "folderName=%%~nd"
+        set "folderName=%%~nxd"
         set "distDir=%%d\dist"
         set "targetDir=%PathToAppFolder%\!folderName!"
         echo !distDir!
