@@ -161,7 +161,6 @@ else
 	DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall/install-RedHat"
 fi
 
-
 # Run uninstall if requested
 if [ "${UNINSTALL}" == "true" ]; then
     if [ "${LOCAL_SCRIPTS}" == "true" ]; then
