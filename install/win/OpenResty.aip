@@ -9,10 +9,10 @@
     <ROW Property="ARPCOMMENTS" Value="This installer database contains the logic and data required to install [|ProductName]." ValueLocId="*"/>
     <ROW Property="Manufacturer" Value="Ascensio System SIA"/>
     <ROW Property="MsiLogging" MultiBuildValue="DefaultBuild:vp"/>
-    <ROW Property="ProductCode" Value="1033:{370538A5-A067-4361-8D87-5E32C6D99A35} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{0869C804-E45C-4F1A-9902-E0DB83FB9716} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="OpenResty"/>
-    <ROW Property="ProductVersion" Value="1.0.0.0" Options="32"/>
+    <ROW Property="ProductVersion" Value="1.25.3.2" Options="32"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND"/>
     <ROW Property="UpgradeCode" Value="{264FA774-91E5-4854-8010-4AB58CA830BD}"/>
     <ROW Property="WindowsType9X" MultiBuildValue="DefaultBuild:Windows 9x/ME" ValueLocId="-"/>
