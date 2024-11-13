@@ -107,6 +107,10 @@ fi
 
 %postun
 
+if [ "$1" -eq 0 ]; then
+    rm -rf %{buildpath}
+fi
+
 %clean
 
 rm -rf %{_builddir} %{buildroot} 

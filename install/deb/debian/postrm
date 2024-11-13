@@ -24,8 +24,7 @@ fi
 
 case "$1" in
 	purge)
-		rm -rf /var/www/{{product}} 
-		rm -rf /etc/onlyoffice/{{product}}
+		rm -rf /var/www/{{product}}
 	;;
 
 	remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
