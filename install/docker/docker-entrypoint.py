@@ -66,7 +66,7 @@ REDIS_PORT = os.environ["REDIS_PORT"] if environ.get("REDIS_PORT") else "6379"
 REDIS_USER_NAME = {"User": os.environ["REDIS_USER_NAME"]} if environ.get("REDIS_USER_NAME") else None
 REDIS_PASSWORD = {"Password": os.environ["REDIS_PASSWORD"]} if environ.get("REDIS_PASSWORD") else None
 REDIS_CONNECTION_HOST = REDIS_HOST if REDIS_HOST else REDIS_CONTAINER_NAME
-REDIS_DB = os.environ["REDIS_DB"] if environ.get("REDIS_DB") else "0"
+REDIS_DB = os.environ["REDIS_DB"] if environ.get("REDIS_DB") else 0
 
 RABBIT_CONTAINER_NAME = os.environ["RABBIT_CONTAINER_NAME"] if environ.get("RABBIT_CONTAINER_NAME") else "onlyoffice-rabbitmq"
 RABBIT_PROTOCOL = os.environ["RABBIT_PROTOCOL"] if environ.get("RABBIT_PROTOCOL") else "amqp"
