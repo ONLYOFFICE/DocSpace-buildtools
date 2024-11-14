@@ -252,7 +252,7 @@ filePath = "/app/onlyoffice/config/redis.json"
 jsonData = openJsonFile(filePath)
 updateJsonData(jsonData,"$.Redis.Hosts.[0].Host", REDIS_CONNECTION_HOST)
 updateJsonData(jsonData,"$.Redis.Hosts.[0].Port", REDIS_PORT)
-updateJsonData(jsonData,"$.Redis.Hosts.[0].Database", REDIS_DB)
+updateJsonData(jsonData,"$.Redis.Database", REDIS_DB)
 jsonData["Redis"].update(REDIS_USER_NAME) if REDIS_USER_NAME is not None else None
 jsonData["Redis"].update(REDIS_PASSWORD) if REDIS_PASSWORD is not None else None
 writeJsonFile(filePath, jsonData)
