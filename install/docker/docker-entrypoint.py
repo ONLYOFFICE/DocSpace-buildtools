@@ -10,7 +10,7 @@ jsonValue = None
 
 PRODUCT = os.environ["PRODUCT"] if environ.get("PRODUCT") else "onlyoffice"
 BASE_DIR =  os.environ["BASE_DIR"] if environ.get("BASE_DIR") else  "/app/" + PRODUCT
-ENV_EXTENSION = os.environ.get("ENV_EXTENSION", os.environ.get("INSTALLATION_TYPE", "none")).lower()
+ENV_EXTENSION = (os.environ.get("ENV_EXTENSION") or os.environ.get("INSTALLATION_TYPE")).lower() or "none"
 PROXY_HOST = os.environ["PROXY_HOST"] if environ.get("PROXY_HOST") else "onlyoffice-proxy"
 SERVICE_PORT = os.environ["SERVICE_PORT"] if environ.get("SERVICE_PORT") else "5050"
 URLS = os.environ["URLS"] if environ.get("URLS") else "http://0.0.0.0:"
