@@ -759,7 +759,7 @@ setup_redis() {
 	sed -i "s~\(redis_port =\).*~\1 $REDIS_PORT~" "${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}.conf"
 
 	if [ $1 == "LOCAL_REDIS_SERVER" ]; then
-		REDIS_CONF=$(find /etc/${REDIS_PACKAGE}/${REDIS_PACKAGE}.conf /etc/${REDIS_PACKAGE}.conf -type f 2>/dev/null | head -n 1)
+		REDIS_CONF=$(find /etc/redis/redis.conf /etc/redis.conf /etc/valkey/valkey.conf -type f 2>/dev/null | head -n 1)
 		
 		sed "s_\(^bind\).*_\1 ${REDIS_HOST}_" -i ${REDIS_CONF}
 		sed -r "/^save\s[0-9]+/d" -i ${REDIS_CONF}
