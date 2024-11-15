@@ -91,16 +91,17 @@ ${package_manager} -y install $([ $DIST != "fedora" ] && echo "epel-release") \
 			python3 \
 			nodejs ${NODEJS_OPTION} \
 			dotnet-sdk-8.0 \
-			opensearch-${ELASTIC_VERSION} --enablerepo=opensearch-2.x \
+			opensearch-${ELASTIC_VERSION} \
 			mysql-community-server \
 			postgresql \
 			postgresql-server \
 			rabbitmq-server$rabbitmq_version \
-			redis --enablerepo=remi \
-			SDL2 $POWERTOOLS_REPO \
+			redis \
+			SDL2 \
 			expect \
 			java-${JAVA_VERSION}-openjdk-headless \
-			ffmpeg $TESTING_REPO
+			ffmpeg  \
+			--enablerepo=opensearch-2.x --enablerepo=remi $TESTING_REPO
 
 # Set Java ${JAVA_VERSION} as the default version
 JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | head -1)
