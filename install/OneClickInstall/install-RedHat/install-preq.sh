@@ -127,4 +127,4 @@ fi
 semanage permissive -a httpd_t
 
 package_services="rabbitmq-server postgresql redis mysqld"
-rpm -q valkey &>/dev/null && package_services="${package_services//redis/valkey}" # https://fedoraproject.org/wiki/Changes/Replace_Redis_With_Valkey 
+rpm -q valkey &>/dev/null && package_services="${package_services//redis/valkey}" || true # https://fedoraproject.org/wiki/Changes/Replace_Redis_With_Valkey 
