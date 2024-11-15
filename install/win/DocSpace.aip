@@ -48,7 +48,7 @@
     <ROW Property="Editor_Port" Value="5013"/>
     <ROW Property="INSTALL_ROOT_FOLDER_NAME" Value="[|Manufacturer]"/>
     <ROW Property="JWT_ENABLED" Value="true"/>
-    <ROW Property="JWT_HEADER" Value="Authorization"/>
+    <ROW Property="JWT_HEADER" Value="AuthorizationJwt"/>
     <ROW Property="LICENSE_PATH" Value=" "/>
     <ROW Property="Login_Port" Value="5011"/>
     <ROW Property="MACHINE_KEY" Value=" "/>
