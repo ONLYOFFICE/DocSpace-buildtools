@@ -138,7 +138,7 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
       
       #Checking whether the certificate is self-signed
       if [[ -n "$CERTIFICATE_SUBJECT" && -n "$CERTIFICATE_ISSUER" && "$CERTIFICATE_SUBJECT" == "$CERTIFICATE_ISSUER" ]]; then
-        chmod o+rw $(dirname "$CERTIFICATE_FILE")
+        chmod o+rx $(dirname "$CERTIFICATE_FILE")
         chmod 644 ${CERTIFICATE_FILE} ${PRIVATEKEY_FILE}
         grep -q "NODE_EXTRA_CA_CERTS" ${CONFIG_DIR}/systemd.env && \
           sed -i "s!\(NODE_EXTRA_CA_CERTS=\).*!\1${CERTIFICATE_FILE}!" ${CONFIG_DIR}/systemd.env || \
