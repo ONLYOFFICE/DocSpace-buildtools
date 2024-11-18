@@ -69,7 +69,7 @@ case $1 in
       systemctl daemon-reload
       { grep -l "ExecStart=/usr/bin/node" ${SYSTEMD_DIR}/${PRODUCT}-*.service 2>/dev/null
         find ${SYSTEMD_DIR} -name "ds-*.service" ! -name "ds-example.service" 2>/dev/null
-      } | xargs -0 -I % systemctl restart $(basename %)
+      } | xargs -I % basename % | xargs systemctl restart
     fi
 
     echo "OK"
@@ -146,7 +146,7 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
         systemctl daemon-reload
         { grep -l "ExecStart=/usr/bin/node" ${SYSTEMD_DIR}/${PRODUCT}-*.service 2>/dev/null
           find ${SYSTEMD_DIR} -name "ds-*.service" ! -name "ds-example.service" 2>/dev/null
-        } | xargs -0 -I % systemctl restart $(basename %)
+        } | xargs -I % basename % | xargs systemctl restart
       fi
     fi
 
