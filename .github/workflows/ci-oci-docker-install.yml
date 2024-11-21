@@ -28,9 +28,17 @@ jobs:
     steps:
       - name: Determine Branch Name
         run: |
-          BRANCH_NAME=$([ "${{ github.event_name }}" = "pull_request" ] && echo "${{ github.event.pull_request.head.ref }}" || \
-               [ "${{ github.event_name }}" = "repository_dispatch" ] && echo "${{ github.event.client_payload.branch }}" || \
-               echo "${GITHUB_REF#refs/heads/}")
+          case "${{ github.event_name }}" in
+            "pull_request")
+              BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
+              ;;
+            "repository_dispatch")
+              BRANCH_NAME="${{ github.event.client_payload.branch }}"
+              ;;
+            *)
+              BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+              ;;
+          esac
           echo "BRANCH_NAME=${BRANCH_NAME:-master}" >> $GITHUB_ENV
 
       - name: Free Disk Space
