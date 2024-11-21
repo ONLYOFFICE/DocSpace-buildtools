@@ -8,9 +8,9 @@ on:
       - 'install/OneClickInstall/install-Docker.sh'
   push:
     branches:
-      - develop
-      - 'release/**'
       - 'hotfix/**'
+      - 'release/**'
+      - 'develop'
   workflow_dispatch:
     inputs:
       offline:
