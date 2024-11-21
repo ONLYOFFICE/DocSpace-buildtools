@@ -13,6 +13,7 @@ on:
       - config-trigger-action
       - client-trigger-action
       - server-trigger-action
+
 env:
   DOCKER_PATH: "/install/docker"
   REPO: "onlyoffice"
@@ -96,6 +97,5 @@ jobs:
           -X POST \
           -u "${{ secrets.USERNAME}}:${{secrets.TOKEN}}" \
           -H "Accept: application/vnd.github.v3+json" \
-          https://api.github.com/repos/ONLYOFFICE/DocSpace/actions/workflows/ci-oci-docker-install.yml/dispatches \
-          -d '{"ref": "'"${{ matrix.branch }}"'", "inputs": {"offline": "false"}}'
-        shell: bash
+          https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/dispatches \
+          -d '{"event_type": "oci-docker-install-trigger", "client_payload": {"branch": "'"${{ matrix.branch }}"'"}}'

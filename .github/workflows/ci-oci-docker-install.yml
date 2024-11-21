@@ -18,15 +18,19 @@ on:
         required: true
         default: false
         type: boolean
+  repository_dispatch:
+    types:
+      - oci-docker-install-trigger
 
 jobs:
   Install-OneClickInstall-Docker:
     runs-on: ubuntu-22.04
+    env:
+      BRANCH_NAME: ${{ github.event.client_payload.branch || 'master' }}
     steps:
       - name: Determine Branch Name
         run: |
-          BRANCH_NAME=$([ "${{ github.event_name }}" = "pull_request" ] && echo "${{ github.event.pull_request.head.ref }}" || echo "${GITHUB_REF#refs/heads/}")
-          echo "BRANCH_NAME=${BRANCH_NAME:-master}" >> $GITHUB_ENV
+          echo "BRANCH_NAME=${{ env.BRANCH_NAME }}" >> $GITHUB_ENV
 
       - name: Free Disk Space
         run: |

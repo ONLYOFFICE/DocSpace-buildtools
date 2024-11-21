@@ -11,7 +11,7 @@ on:
       - 'config/**'
       - 'install/docker/Dockerfile.app'
       - 'install/docker/*entrypoint*.*'
-      - '.github/workflows/config-build.yml'
+      - '.github/workflows/ci-oci-docker-install.yml'
   workflow_dispatch:
 
 jobs:
