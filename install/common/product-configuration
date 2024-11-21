@@ -759,11 +759,7 @@ setup_redis() {
 	sed -i "s~\(redis_port =\).*~\1 $REDIS_PORT~" "${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}.conf"
 
 	if [ $1 == "LOCAL_REDIS_SERVER" ]; then
-		if [ -f "/etc/redis/redis.conf" ]; then
-			REDIS_CONF="/etc/redis/redis.conf"
-		elif [ -f "/etc/redis.conf" ]; then
-			REDIS_CONF="/etc/redis.conf"
-		fi
+		REDIS_CONF=$(find /etc/redis/redis.conf /etc/redis.conf /etc/valkey/valkey.conf -type f 2>/dev/null | head -n 1)
 		
 		sed "s_\(^bind\).*_\1 ${REDIS_HOST}_" -i ${REDIS_CONF}
 		sed -r "/^save\s[0-9]+/d" -i ${REDIS_CONF}
@@ -845,6 +841,7 @@ if command -v yum >/dev/null 2>&1; then
 	MYSQL_PACKAGE="mysqld"
 	REDIS_PACKAGE="redis"
 	SYSTEMD_DIR="/usr/lib/systemd/system"
+	${PACKAGE_MANAGER} valkey &>/dev/null && REDIS_PACKAGE="valkey" || true
 elif command -v apt >/dev/null 2>&1; then
 	DIST="Debian"
 	PACKAGE_MANAGER="dpkg -s"

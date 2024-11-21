@@ -24,7 +24,7 @@
 	<env name="SPRING_PROFILES_ACTIVE" value="prod" />
 	<env name="SPRING_APPLICATION_NAME" value="ASC.Identity.Authorization" />
 	<env name="SERVER_PORT" value="8080" />
-	<arguments>-jar "{APPDIR}services\ASC.Identity.Authorization\service\app.jar"</arguments>
+	<arguments>-Xrs -jar "{APPDIR}services\ASC.Identity.Authorization\service\app.jar"</arguments>
 	<log mode="roll-by-size">
   		<sizeThreshold>10240</sizeThreshold>
   		<keepFiles>8</keepFiles>

@@ -48,7 +48,7 @@
     <ROW Property="Editor_Port" Value="5013"/>
     <ROW Property="INSTALL_ROOT_FOLDER_NAME" Value="[|Manufacturer]"/>
     <ROW Property="JWT_ENABLED" Value="true"/>
-    <ROW Property="JWT_HEADER" Value="Authorization"/>
+    <ROW Property="JWT_HEADER" Value="AuthorizationJwt"/>
     <ROW Property="LICENSE_PATH" Value=" "/>
     <ROW Property="Login_Port" Value="5011"/>
     <ROW Property="MACHINE_KEY" Value=" "/>
@@ -140,6 +140,7 @@
     <ROW Directory="NewFolder_1_Dir" Directory_Parent="service_1_Dir" DefaultDir="config" DirectoryOptions="15"/>
     <ROW Directory="TARGETDIR" DefaultDir="SourceDir"/>
     <ROW Directory="conf_Dir" Directory_Parent="nginx_Dir" DefaultDir="conf" DirectoryOptions="15"/>
+    <ROW Directory="config_1_Dir" Directory_Parent="editor_Dir" DefaultDir="config" DirectoryOptions="15"/>
     <ROW Directory="config_2_Dir" Directory_Parent="service_5_Dir" DefaultDir="config" DirectoryOptions="15"/>
     <ROW Directory="config_Dir" Directory_Parent="APPDIR" DefaultDir="config" DirectoryOptions="15"/>
     <ROW Directory="editor_Dir" Directory_Parent="ASC.Files_Dir" DefaultDir="editor" DirectoryOptions="15"/>
@@ -367,7 +368,7 @@
     <ROW JsonFile="appsettings.env.json" FileName="APPSET~1.JSO|appsettings.[|ENVIRONMENT].json" DirProperty="config_Dir" Component="config" RootProperty="Root_1" Flags="6" IndentUnits="2"/>
     <ROW JsonFile="appsettings.json_ASC.Migration.Runner" FileName="APPSET~2.JSO|appsettings.runner.json" DirProperty="service_6_Dir" Component="ASC.Migration.Runner.exe" RootProperty="Root_11" Flags="6" IndentUnits="2"/>
     <ROW JsonFile="appsettings.services.json" FileName="APPSET~2.JSO|appsettings.services.json" DirProperty="config_Dir" Component="config" RootProperty="Root_4" Flags="6" IndentUnits="2"/>
-    <ROW JsonFile="config.json_config_editor" FileName="CONFIG~1.JSO|config.json" DirProperty="editor_Dir" Component="editor" RootProperty="Root_10" Flags="6" IndentUnits="2"/>
+    <ROW JsonFile="config.json_config_editor" FileName="CONFIG~1.JSO|config.json" DirProperty="config_1_Dir" Component="editor" RootProperty="Root_10" Flags="6" IndentUnits="2"/>
     <ROW JsonFile="config.json_config_login" FileName="CONFIG~1.JSO|config.json" DirProperty="login_Dir" Component="login" RootProperty="Root_9" Flags="6" IndentUnits="2"/>
     <ROW JsonFile="config.json_config_socketio" FileName="CONFIG~1.JSO|config.json" DirProperty="NewFolder_1_Dir" Component="config_socketio" RootProperty="Root_6" Flags="6" IndentUnits="2"/>
     <ROW JsonFile="config.json_config_ssoauth" FileName="CONFIG~1.JSO|config.json" DirProperty="config_2_Dir" Component="config_ssoauth" RootProperty="Root_7" Flags="6" IndentUnits="2"/>
@@ -435,7 +436,6 @@
     <ROW JsonProperty="environment" Parent="app" Name="environment" Condition="1" Order="2" Flags="57" Value="[ENVIRONMENT]"/>
     <ROW JsonProperty="environment_1" Parent="app_1" Name="environment" Condition="1" Order="2" Flags="57" Value="[ENVIRONMENT]"/>
     <ROW JsonProperty="environment_2" Parent="app_3" Name="environment" Condition="1" Order="1" Flags="57" Value="[ENVIRONMENT]"/>
-    <ROW JsonProperty="environment_3" Parent="app_4" Name="environment" Condition="1" Order="1" Flags="57" Value="[ENVIRONMENT]"/>
     <ROW JsonProperty="file" Parent="license" Name="file" Condition="ProductName = &quot;ONLYOFFICE DocSpace Enterprise&quot; OR ProductName = &quot;ONLYOFFICE DocSpace Developer&quot;" Order="0" Flags="60"/>
     <ROW JsonProperty="files" Parent="Root_1" Name="files" Condition="1" Order="3" Flags="60"/>
     <ROW JsonProperty="folder" Parent="products" Name="folder" Condition="1" Order="0" Flags="57" Value="[APPDIR_FORWARD_SLASH]products"/>

@@ -18,24 +18,19 @@ for SVC in $package_services; do
 		systemctl enable $SVC
 done
 
+ds_pkg_name="${package_sysname}-documentserver"
+case "${INSTALLATION_TYPE}" in
+	"DEVELOPER") ds_pkg_name+="-de" ;;
+	"ENTERPRISE") ds_pkg_name+="-ee" ;;
+esac
+
 if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ]; then
 	ds_pkg_installed_name=$(rpm -qa --qf '%{NAME}\n' | grep ${package_sysname}-documentserver);
-
-	ds_pkg_name="${package_sysname}-documentserver"
-	case "${INSTALLATION_TYPE}" in
-		"DEVELOPER") ds_pkg_name+="-de" ;;
-		"ENTERPRISE") ds_pkg_name+="-ee" ;;
-	esac
-
-	if [ -n $ds_pkg_name ]; then
-		if ! rpm -qi ${ds_pkg_name} &> /dev/null; then
-			${package_manager} -y remove ${ds_pkg_installed_name} --setopt=clean_requirements_on_remove=false
-
-			DOCUMENT_SERVER_INSTALLED="false"
-			RECONFIGURE_PRODUCT="true"
-		else
-			${package_manager} -y update ${ds_pkg_name}	
-		fi				
+	if [ -n "${ds_pkg_installed_name}" ] && [ "${ds_pkg_installed_name}" != "${ds_pkg_name}" ]; then
+		${package_manager} -y remove ${ds_pkg_installed_name} --setopt=clean_requirements_on_remove=false
+		DOCUMENT_SERVER_INSTALLED="false" RECONFIGURE_PRODUCT="true"
+	else
+		${package_manager} -y update ${ds_pkg_installed_name}
 	fi
 fi
 
@@ -98,11 +93,7 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
 		su - postgres -s /bin/bash -c "psql -c \"CREATE DATABASE ${DS_DB_NAME} OWNER ${DS_DB_USER};\""
 	fi
 	
-	if [ "$INSTALLATION_TYPE" = "COMMUNITY" ]; then	
-		${package_manager} -y install ${package_sysname}-documentserver
-	else
-		${package_manager} -y install ${package_sysname}-documentserver-ee
-	fi
+	${package_manager} -y install ${ds_pkg_name}
 	
 expect << EOF
 	
@@ -125,7 +116,7 @@ expect << EOF
 	expect -re "Password"
 	send "\025$DS_DB_PWD\r"
 	
-	if { "${INSTALLATION_TYPE}" == "ENTERPRISE" } {
+	if { "${INSTALLATION_TYPE}" == "ENTERPRISE" || "${INSTALLATION_TYPE}" == "DEVELOPER" } {
 		expect "Configuring redis access..."
 		send "\025$DS_REDIS_HOST\r"
 	}
@@ -156,9 +147,8 @@ if [ "$PRODUCT_INSTALLED" = "false" ]; then
 elif [[ "${PRODUCT_CHECK_UPDATE}" -eq "${UPDATE_AVAILABLE_CODE}" || "${RECONFIGURE_PRODUCT}" = "true" ]]; then
 	ENVIRONMENT=$(grep -oP 'ENVIRONMENT=\K.*' /etc/${package_sysname}/${product}/systemd.env || grep -oP 'ENVIRONMENT=\K.*' /usr/lib/systemd/system/${product}-api.service)
 	CONNECTION_STRING=$(json -f /etc/${package_sysname}/${product}/appsettings.$ENVIRONMENT.json ConnectionStrings.default.connectionString)
-	${package_manager} -y update ${product}
+	${package_manager} -y update ${product} --allowerasing
 	${product}-configuration \
-		-e $ENVIRONMENT \
 		-mysqlh $(grep -oP 'Server=\K[^;]*' <<< "$CONNECTION_STRING") \
 		-mysqld $(grep -oP 'Database=\K[^;]*' <<< "$CONNECTION_STRING") \
 		-mysqlu $(grep -oP 'User ID=\K[^;]*' <<< "$CONNECTION_STRING") \

@@ -10,7 +10,7 @@ jsonValue = None
 
 PRODUCT = os.environ["PRODUCT"] if environ.get("PRODUCT") else "onlyoffice"
 BASE_DIR =  os.environ["BASE_DIR"] if environ.get("BASE_DIR") else  "/app/" + PRODUCT
-ENV_EXTENSION = os.environ.get("ENV_EXTENSION", os.environ.get("INSTALLATION_TYPE", "none")).lower()
+ENV_EXTENSION = (os.environ.get("ENV_EXTENSION") or os.environ.get("INSTALLATION_TYPE")).lower() or "none"
 PROXY_HOST = os.environ["PROXY_HOST"] if environ.get("PROXY_HOST") else "onlyoffice-proxy"
 SERVICE_PORT = os.environ["SERVICE_PORT"] if environ.get("SERVICE_PORT") else "5050"
 URLS = os.environ["URLS"] if environ.get("URLS") else "http://0.0.0.0:"
@@ -37,6 +37,7 @@ APP_KNOWN_NETWORKS = os.environ["APP_KNOWN_NETWORKS"]
 LOG_LEVEL = os.environ["LOG_LEVEL"].lower() if environ.get("LOG_LEVEL") else None
 DEBUG_INFO = os.environ["DEBUG_INFO"] if environ.get("DEBUG_INFO") else "false"
 SAMESITE = os.environ["SAMESITE"] if environ.get("SAMESITE") else "None"
+DISABLE_VALIDATE_TOKEN = os.environ["DISABLE_VALIDATE_TOKEN"] if environ.get("DISABLE_VALIDATE_TOKEN") else "false"
 
 CERTIFICATE_PATH = os.environ.get("CERTIFICATE_PATH")
 CERTIFICATE_PARAM = "NODE_EXTRA_CA_CERTS=" + CERTIFICATE_PATH + " " if CERTIFICATE_PATH and os.path.exists(CERTIFICATE_PATH) else ""
@@ -172,6 +173,8 @@ updateJsonData(jsonData,"$.files.docservice.url.public", DOCUMENT_SERVER_URL_PUB
 updateJsonData(jsonData,"$.files.docservice.url.internal", DOCUMENT_SERVER_CONNECTION_HOST)
 updateJsonData(jsonData,"$.files.docservice.secret.value", DOCUMENT_SERVER_JWT_SECRET)
 updateJsonData(jsonData,"$.files.docservice.secret.header", DOCUMENT_SERVER_JWT_HEADER)
+updateJsonData(jsonData,"$.core.oidc.disableValidateToken", DISABLE_VALIDATE_TOKEN)
+updateJsonData(jsonData,"$.core.oidc.showPII", DEBUG_INFO)
 updateJsonData(jsonData,"$.debug-info.enabled", DEBUG_INFO)
 updateJsonData(jsonData,"$.web.samesite", SAMESITE)
 

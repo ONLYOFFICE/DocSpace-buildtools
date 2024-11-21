@@ -57,9 +57,8 @@ if [[ "${DISTRIB_CODENAME}" =~ ^(focal|bullseye)$ ]]; then
 		echo "If you use the database only in the ONLYOFFICE configuration, then the update will be safe for you."
 		echo "Select 'Y' to install the new version of RabbitMQ. Select 'N' to abort the installation."
 		read -r -p "Please, enter Y or N: " CHOICE_INSTALLATION
-		if [ "${CHOICE_INSTALLATION}" =~ ^[Yy]$ ]]; then
-			rm -rf /var/lib/rabbitmq/mnesia/$(rabbitmqctl eval "node().")
-			apt-get remove -y rabbitmq-server erlang*
+		if [[ "${CHOICE_INSTALLATION,,}" =~ ^(y|yes)$ ]]; then
+			apt-get purge -y rabbitmq-server $(dpkg -l | awk '/erlang/ {print $2}')
 		else
 			rm -f /etc/apt/sources.list.d/rabbitmq.list
 			exit 1

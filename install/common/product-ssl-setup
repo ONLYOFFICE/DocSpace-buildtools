@@ -69,7 +69,7 @@ case $1 in
       systemctl daemon-reload
       { grep -l "ExecStart=/usr/bin/node" ${SYSTEMD_DIR}/${PRODUCT}-*.service 2>/dev/null
         find ${SYSTEMD_DIR} -name "ds-*.service" ! -name "ds-example.service" 2>/dev/null
-      } | xargs -0 -I % systemctl restart $(basename %)
+      } | xargs -I % basename % | xargs systemctl restart
     fi
 
     echo "OK"
@@ -138,15 +138,21 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
       
       #Checking whether the certificate is self-signed
       if [[ -n "$CERTIFICATE_SUBJECT" && -n "$CERTIFICATE_ISSUER" && "$CERTIFICATE_SUBJECT" == "$CERTIFICATE_ISSUER" ]]; then
-        grep -q "NODE_EXTRA_CA_CERTS" ${CONFIG_DIR}/systemd.env || echo "NODE_EXTRA_CA_CERTS=${CERTIFICATE_FILE}" >> ${CONFIG_DIR}/systemd.env
+        chmod o+rx $(dirname "$CERTIFICATE_FILE")
+        chmod 644 ${CERTIFICATE_FILE} ${PRIVATEKEY_FILE}
+        grep -q "NODE_EXTRA_CA_CERTS" ${CONFIG_DIR}/systemd.env && \
+          sed -i "s!\(NODE_EXTRA_CA_CERTS=\).*!\1${CERTIFICATE_FILE}!" ${CONFIG_DIR}/systemd.env || \
+          echo "NODE_EXTRA_CA_CERTS=${CERTIFICATE_FILE}" >> ${CONFIG_DIR}/systemd.env
         for SYSTEMD_NODE_FILE in ${SYSTEMD_DIR}/ds-*.service; do
           [[ ${SYSTEMD_NODE_FILE} == *"ds-example"* || ! -f ${SYSTEMD_NODE_FILE} ]] && continue
-          grep -q "NODE_EXTRA_CA_CERTS" "${SYSTEMD_NODE_FILE}" || sed -i "/ExecStart=/i Environment=NODE_EXTRA_CA_CERTS=${CERTIFICATE_FILE}" "${SYSTEMD_NODE_FILE}"
+          grep -q "NODE_EXTRA_CA_CERTS" ${SYSTEMD_NODE_FILE} && \
+            sed -i "s!\(NODE_EXTRA_CA_CERTS=\).*!\1${CERTIFICATE_FILE}!" ${SYSTEMD_NODE_FILE} || \
+            sed -i "/ExecStart=/i Environment=NODE_EXTRA_CA_CERTS=${CERTIFICATE_FILE}" ${SYSTEMD_NODE_FILE}
         done
         systemctl daemon-reload
         { grep -l "ExecStart=/usr/bin/node" ${SYSTEMD_DIR}/${PRODUCT}-*.service 2>/dev/null
           find ${SYSTEMD_DIR} -name "ds-*.service" ! -name "ds-example.service" 2>/dev/null
-        } | xargs -0 -I % systemctl restart $(basename %)
+        } | xargs -I % basename % | xargs systemctl restart
       fi
     fi
 
