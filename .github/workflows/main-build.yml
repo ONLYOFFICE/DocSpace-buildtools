@@ -91,7 +91,7 @@ jobs:
 
       - name: Dispatch Action
         run: |
-          echo "Triggering ci-oci-docker-install on branch ${{ matrix.branch }}"
+          echo "OCI docker test on branch ${{ matrix.branch }}"
 
           curl \
           -X POST \
