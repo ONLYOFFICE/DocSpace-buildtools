@@ -1,0 +1,165 @@
+name: Build and Package DocSpace for Windows
+
+on:
+  workflow_dispatch:
+    inputs:
+      server_repo_branch:
+        description: "Branch for DocSpace-server repository"
+        default: "master"
+        required: true
+      client_repo_branch:
+        description: "Branch for DocSpace-client repository"
+        default: "master"
+        required: true
+      build_version:
+        description: "Build version"
+        required: false
+        default: "3.0"
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build-docspace:
+    runs-on: windows-2019
+
+    steps:
+      - name: Checkout Main Repository (DocSpace-buildtools)
+        uses: actions/checkout@v4
+        with:
+          submodules: 'true'
+          path: buildtools
+
+      - name: Checkout DocSpace Server Repository
+        uses: actions/checkout@v4
+        with:
+          repository: nasrullonurullaev/DocSpace-server
+          submodules: 'true'
+          path: server
+          ref: ${{ github.event.inputs.server_repo_branch }}
+
+      - name: Checkout DocSpace Client Repository
+        uses: actions/checkout@v4
+        with:
+          repository: nasrullonurullaev/DocSpace-client
+          submodules: 'true'
+          path: client
+          ref: ${{ github.event.inputs.client_repo_branch }}
+
+      - name: Checkout ASC.Web.Campaigns Repository
+        uses: actions/checkout@v4
+        with:
+          repository: nasrullonurullaev/ASC.Web.Campaigns
+          path: campaigns
+          ref: master
+
+      - name: Checkout DocSpace Plugins Repository
+        uses: actions/checkout@v4
+        with:
+          repository: nasrullonurullaev/docspace-plugins
+          path: plugins
+          ref: master
+
+      - name: Set Build Version
+        id: set_build_version
+        shell: bash
+        run: |
+          echo "BUILD_VERSION=${{ github.event.inputs.build_version || github.ref_name }}" >> $GITHUB_ENV
+
+      - name: Install Global Dependencies
+        run: |
+          npm install --global yarn
+          choco install innosetup -y
+          choco install 7zip -y
+          choco install sed -y
+
+      - name: Install Advanced Installer
+        uses: caphyon/advinst-github-action@v2.0
+        with:
+          advinst-version: '20.7.1'
+          advinst-license: ${{ secrets.ADVINST_LICENSE_KEY }}
+
+      - name: Install Maven
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Install .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build Frontend
+        run: .\buildtools\install\win\frontend-build.bat %cd%\client false
+
+      - name: Build Backend
+        run: .\buildtools\install\win\backend-build.bat %cd%\server %cd%\buildtools\install\win\Files
+
+      - name: Build Plugins
+        env:
+          sevenzip: 7z
+        run: .\buildtools\install\win\plugins-build.bat %cd%\plugins
+
+      - name: Run Publish Script
+        run: .\buildtools\install\win\publish-script.bat %cd%\server %cd%\buildtools\install\win\Files
+
+      - name: Copy Frontend Files
+        run: .\buildtools\install\win\frontend-copy.bat %cd% %cd%\buildtools\install\win\Files
+
+      - name: Cache Prerequisites and Zip Files
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}\buildtools\install\win\redist
+            ${{ github.workspace }}\buildtools\install\win\*.zip
+          key: prerequisites-and-zipfiles-${{ runner.os }}-${{ hashFiles('**/buildtools/install/win/redist/*', '**/buildtools/install/win/*.zip') }}
+          restore-keys: |
+            prerequisites-and-zipfiles-${{ runner.os }}-
+
+      - name: Download Prerequisites
+        shell: pwsh
+        run: |
+          $env:DOCUMENT_SERVER_VERSION_CE = 'latest'
+          $env:DOCUMENT_SERVER_VERSION_EE = 'latest'
+          $env:DOCUMENT_SERVER_VERSION_DE = 'latest'
+          & "${{ github.workspace }}\buildtools\install\win\build-download-prereq.ps1"
+
+      - name: Run Build Batch
+        env:
+          sevenzip: 7z
+          sed: sed
+          msbuild: msbuild
+          AdvancedInstaller: advinst
+          BUILD_VERSION: ${{ env.BUILD_VERSION }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: .\buildtools\install\win\build-batch.bat
+
+      - name: Publish Community Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ONLYOFFICE_DocSpace_Community_Win-install.v${{ env.BUILD_VERSION }}.${{ github.run_number }}
+          path: ${{ github.workspace }}\buildtools\install\win\publish\ONLYOFFICE_DocSpace_Community*.exe
+
+      - name: Publish Enterprise Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ONLYOFFICE_DocSpace_Enterprise_Win-install.v${{ env.BUILD_VERSION }}.${{ github.run_number }}
+          path: ${{ github.workspace }}\buildtools\install\win\publish\ONLYOFFICE_DocSpace_Enterprise*.exe
+
+      - name: Publish Developer Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ONLYOFFICE_DocSpace_Developer_Win-install.v${{ env.BUILD_VERSION }}.${{ github.run_number }}
+          path: ${{ github.workspace }}\buildtools\install\win\publish\ONLYOFFICE_DocSpace_Developer*.exe
+
+      - name: Publish Prerequisites Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ONLYOFFICE_DocSpace_Prerequisites_Win-install.v${{ env.BUILD_VERSION }}.${{ github.run_number }}
+          path: ${{ github.workspace }}\buildtools\install\win\publish\ONLYOFFICE_DocSpace_Prerequisites*.exe
+          
