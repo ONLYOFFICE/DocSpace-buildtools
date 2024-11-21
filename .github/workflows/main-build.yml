@@ -74,6 +74,17 @@ jobs:
           echo "version=${DOCKER_TAG}" >> "$GITHUB_OUTPUT"
         shell: bash
 
+      - name: Test OCI docker scripts
+        run: |
+          wget https://download.onlyoffice.com/docspace/docspace-enterprise-install.sh
+          sed '/bash install-Docker.sh/i sed -i "1i set -x" install-Docker.sh' -i docspace-enterprise-install.sh
+          sed '/bash install-Docker.sh/i sed -i "/docker-compose.*up -d/ s/$/ --quiet-pull/" install-Docker.sh' -i docspace-enterprise-install.sh
+          sudo bash docspace-enterprise-install.sh docker -docsi onlyoffice/documentserver-ee -skiphc true -noni true $([ ${{ matrix.branch }} != "master" ] && echo "-gb ${{ matrix.branch }} -s 4testing-") || exit $?
+
+          echo -n "Waiting for all containers to start..."
+          timeout 300 bash -c 'while docker ps | grep -q "starting"; do sleep 5; done' && echo "OK" || echo "container_status=timeout" >> $GITHUB_ENV
+        shell: bash
+
       - name: Run zap action if needed
         if: ${{ github.event.action == 'cron-trigger-action' || github.event_name == 'workflow_dispatch' }}
         env:
