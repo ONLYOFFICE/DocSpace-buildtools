@@ -13,7 +13,10 @@ on:
       - config-trigger-action
       - client-trigger-action
       - server-trigger-action
-
+  push:
+    branches:
+      - feature/oci-install-docker 
+      
 env:
   DOCKER_PATH: "/install/docker"
   REPO: "onlyoffice"
