@@ -88,3 +88,15 @@ jobs:
                  -f branch=${{ matrix.branch }} \
                  -f version=${VERSION}
            fi
+
+      - name: Dispatch Action
+        run: |
+          echo "Triggering ci-oci-docker-install on branch ${{ matrix.branch }}"
+
+          curl \
+          -X POST \
+          -u "${{ secrets.USERNAME}}:${{secrets.TOKEN}}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/repos/ONLYOFFICE/DocSpace/actions/workflows/ci-oci-docker-install.yml/dispatches \
+          -d '{"ref": "'"${{ matrix.branch }}"'", "inputs": {"offline": "false"}}'
+        shell: bash
