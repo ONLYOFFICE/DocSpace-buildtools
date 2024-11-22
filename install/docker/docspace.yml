@@ -14,6 +14,7 @@ x-service: &x-service-base
   environment:
     MYSQL_CONTAINER_NAME: ${MYSQL_CONTAINER_NAME}
     MYSQL_HOST: ${MYSQL_HOST}
+    MYSQL_PORT: ${MYSQL_PORT}
     MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     MYSQL_DATABASE: ${MYSQL_DATABASE}
     MYSQL_USER: ${MYSQL_USER}
@@ -52,12 +53,11 @@ x-service: &x-service-base
     LOG_LEVEL: ${LOG_LEVEL}
     DEBUG_INFO: ${DEBUG_INFO}
     CERTIFICATE_PATH: ${CERTIFICATE_PATH}
+    NODE_OPTIONS: ${NODE_OPTIONS}
   volumes:
     #- /app/onlyoffice/CommunityServer/data:/app/onlyoffice/data
     - log_data:/var/log/onlyoffice
     - app_data:/app/onlyoffice/data
-    - files_data:/var/www/products/ASC.Files/server/
-    - people_data:/var/www/products/ASC.People/server/
 
 services:
   onlyoffice-backup-background-tasks:
@@ -112,6 +112,9 @@ services:
     <<: *x-service-base
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-socket:${DOCKER_TAG}"
     container_name: ${SOCKET_HOST}
+    healthcheck:
+     <<: *x-healthcheck
+     test: curl --fail http://${SERVICE_SOCKET}/health/ || exit 1
     expose:
       - ${SERVICE_PORT}
 
@@ -151,6 +154,9 @@ services:
     <<: *x-service-base
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-ssoauth:${DOCKER_TAG}"
     container_name: ${SSOAUTH_HOST}
+    healthcheck:
+     <<: *x-healthcheck
+     test: curl --fail http://${SERVICE_SSOAUTH}/health/ || exit 1
     expose:
       - ${SERVICE_PORT}
       - "9834"
@@ -242,5 +248,3 @@ networks:
 volumes:
   log_data:
   app_data:
-  files_data:
-  people_data:

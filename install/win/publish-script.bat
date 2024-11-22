@@ -45,3 +45,11 @@ xcopy "%PathToRepository%\..\publish\web\login" "%PathToAppFolder%\products\ASC.
 
 mkdir "%PathToAppFolder%\products\ASC.Files\editor"
 xcopy "%PathToRepository%\..\publish\web\editor" "%PathToAppFolder%\products\ASC.Files\editor" /s /y /b /i
+
+rem backend services (Java) in directory 'services'
+mkdir "%PathToAppFolder%\services\ASC.Identity.Authorization\service"
+for %%f in ("%PathToRepository%\common\ASC.Identity\authorization\authorization-container\target\*.jar") do copy "%%f" "%PathToAppFolder%\services\ASC.Identity.Authorization\service\app.jar" /y
+
+mkdir "%PathToAppFolder%\services\ASC.Identity.Registration\service"
+for %%f in ("%PathToRepository%\common\ASC.Identity\registration\registration-container\target\*.jar") do copy "%%f" "%PathToAppFolder%\services\ASC.Identity.Registration\service\app.jar" /y
+

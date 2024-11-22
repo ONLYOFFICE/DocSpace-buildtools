@@ -25,10 +25,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Creating an enterprise script
+      - name: Creating additional scripts
         run: |
-          cp ${{ env.SCRIPT_DIR }}/${{ env.PRODUCT }}-install.sh ${{ env.SCRIPT_DIR }}/${{ env.PRODUCT }}-enterprise-install.sh
-          sed -i 's/\(PARAMETERS -it\).*";/\1 ENTERPRISE";/' ${{ env.SCRIPT_DIR }}/${{ env.PRODUCT }}-enterprise-install.sh
+          for EDITION in ENTERPRISE DEVELOPER; do
+            cp "${{ env.SCRIPT_DIR }}/${{ env.PRODUCT }}-install.sh" "${{ env.SCRIPT_DIR }}/${{ env.PRODUCT }}-${EDITION,,}-install.sh"
+            sed -i "s/\(PARAMETERS -it\).*\";/\1 ${EDITION}\";/" "${{ env.SCRIPT_DIR }}/${{ env.PRODUCT }}-${EDITION,,}-install.sh"
+          done
 
       - name: Create Docker Tarball
         run: |

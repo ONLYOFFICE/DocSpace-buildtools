@@ -88,3 +88,14 @@ jobs:
                  -f branch=${{ matrix.branch }} \
                  -f version=${VERSION}
            fi
+
+      - name: Dispatch Action
+        run: |
+          echo "OCI docker test on branch ${{ matrix.branch }}"
+
+          curl \
+          -X POST \
+          -u "${{ secrets.USERNAME}}:${{secrets.TOKEN}}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/dispatches \
+          -d '{"event_type": "oci-docker-install-trigger", "client_payload": {"branch": "'"${{ matrix.branch }}"'"}}'

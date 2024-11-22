@@ -67,21 +67,25 @@ namespace Utils
         [CustomAction]
         public static ActionResult TestRabbitMQConnection(Session session)
         {
-            ConnectionFactory factory = new ConnectionFactory();
-
-            factory.HostName = session["AMQP_HOST"];
-            factory.Port = Convert.ToInt32(session["AMQP_PORT"]);
-            factory.VirtualHost = session["AMQP_VHOST"];
-            factory.UserName = session["AMQP_USER"];
-            factory.Password = session["AMQP_PWD"];
-
             try
             {
+                ConnectionFactory factory = new ConnectionFactory();
+
+                var uri = new Uri(string.Format("{0}://{1}:{2}@{3}:{4}{5}",
+                 session["AMQP_PROTOCOL"],
+                 session["AMQP_USER"],
+                 session["AMQP_PWD"],
+                 session["AMQP_HOST"],
+                 session["AMQP_PORT"],
+                 session["AMQP_VHOST"]
+                 ));
+                factory.Uri = uri;
+
                 using (IConnection conn = factory.CreateConnection())
                 {
                     session.Log("RabbitMQ Status: IsConnected is {0}", conn.IsOpen);
-
-                    session["RabbitMQServerConnectionError"] = conn.IsOpen ? "" : String.Format("Connection Refused HOST:{0}, PORT:{1}, VirtualHost:{2}, UserName:{3}, PASS:{4}",
+                    session["RabbitMQServerConnectionError"] = conn.IsOpen ? "" : String.Format("Connection Refused PROTOCOL:{0}, HOST:{1}, PORT:{2}, VirtualHost:{3}, UserName:{4}, PASS:{5}",
+                        session["AMQP_PROTOCOL"],
                         session["AMQP_HOST"],
                         session["AMQP_PORT"],
                         session["AMQP_VHOST"],
@@ -94,7 +98,8 @@ namespace Utils
             {
 
                 session.Log("RabbitMQ.Client.Exceptions.BrokerUnreachableException {0}", ex.Message);
-                session["RabbitMQServerConnectionError"] = String.Format("Connection Refused HOST:{0}, PORT:{1}, VirtualHost:{2}, UserName:{3}, PASS:{4}",
+                session["RabbitMQServerConnectionError"] = String.Format("Connection Refused PROTOCOL:{0}, HOST:{1}, PORT:{2}, VirtualHost:{3}, UserName:{4}, PASS:{5}",
+                        session["AMQP_PROTOCOL"],
                         session["AMQP_HOST"],
                         session["AMQP_PORT"],
                         session["AMQP_VHOST"],

@@ -4,7 +4,6 @@ set -e
 
 . /usr/share/debconf/confmodule
 
-db_input low {{product}}/environment || true
 db_input low {{product}}/host || true
 db_input low {{product}}/port || true
 

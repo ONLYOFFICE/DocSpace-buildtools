@@ -21,4 +21,15 @@ pushd %~1
     call yarn install --frozen-lockfile
   popd
 
+  echo "== Build ASC.Identity =="
+  pushd common\ASC.Identity
+
+    echo "== Build ASC.Identity.Authorization =="
+    call mvn clean package -DskipTests -pl authorization/authorization-container -am
+
+    echo "== Build ASC.Identity.Registration =="
+    call mvn clean package -DskipTests -pl registration/registration-container -am
+
+  popd
+
 popd

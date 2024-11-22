@@ -1,0 +1,32 @@
+<service>
+	<id>DocSpace.Identity.Authorization</id>
+	<name>ONLYOFFICE DocSpace Identity.Authorization</name>
+	<description>ONLYOFFICE DocSpace Identity.Authorization</description>
+	<priority>RealTime</priority>
+	<startmode>Automatic</startmode>
+	<autoRefresh>false</autoRefresh>
+	<logpath>{APPDIR}logs</logpath>
+	<onfailure action="restart" delay="10 sec"/>
+	<executable>java</executable>
+	<env name="JDBC_URL" value="{DB_HOST}" />
+	<env name="JDBC_PASSWORD" value="{DB_PWD}" />
+	<env name="JDBC_USER_NAME" value="{DB_USER}" />
+	<env name="JDBC_DATABASE" value="{DB_NAME}" />
+	<env name="RABBIT_PROTOCOL" value="{AMQP_PROTOCOL}" />
+	<env name="RABBIT_HOST" value="{AMQP_HOST}" />
+	<env name="RABBIT_USER_NAME" value="{AMQP_USER}" />
+	<env name="RABBIT_PASSWORD" value="{AMQP_PWD}" />
+	<env name="RABBIT_VIRTUAL_HOST" value="{AMQP_VHOST}" />
+	<env name="RABBIT_URI" value="{AMQP_PROTOCOL}://{AMQP_USER}:{AMQP_PWD}@{AMQP_HOST}:{AMQP_PORT}{AMQP_VHOST}" />
+	<env name="REDIS_HOST" value="{REDIS_HOST}" />
+        <env name="REDIS_PORT" value="{REDIS_PORT}" />
+	<env name="LOG_FILE_PATH" value="{APPDIR}logs\ASC.Identity.Authorization.log" />
+	<env name="SPRING_PROFILES_ACTIVE" value="prod" />
+	<env name="SPRING_APPLICATION_NAME" value="ASC.Identity.Authorization" />
+	<env name="SERVER_PORT" value="8080" />
+	<arguments>-Xrs -jar "{APPDIR}services\ASC.Identity.Authorization\service\app.jar"</arguments>
+	<log mode="roll-by-size">
+  		<sizeThreshold>10240</sizeThreshold>
+  		<keepFiles>8</keepFiles>
+	</log>
+</service>

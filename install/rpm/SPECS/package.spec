@@ -157,6 +157,28 @@ The service responsible for enabling and configuring
 SAML-based single sign-on (SSO) authentication to provide a more quick, 
 easy and secure way to access DocSpace for users
 
+%package        identity-authorization
+Packager:       %{packager}
+Summary:        Identity-Authorization
+Group:          Applications/Internet
+Requires:       %name-common  = %version-%release
+Requires:       java-21-openjdk-headless
+AutoReqProv:    no
+BuildArch:      noarch
+%description    identity-authorization
+Identity-Authorization
+
+%package        identity-api
+Packager:       %{packager}
+Summary:        Identity-Api
+Group:          Applications/Internet
+Requires:       %name-common  = %version-%release
+Requires:       java-21-openjdk-headless
+AutoReqProv:    no
+BuildArch:      noarch
+%description    identity-api
+Identity-Api
+
 %package        clear-events
 Packager:       %{packager}
 Summary:        Clear-events
@@ -184,22 +206,6 @@ The service which launches additional services related to backup creation:
  - BackupCleanerTempFileService - removes temporary backup files;
  - BackupCleanerService - removes outdated backup files;
  - BackupSchedulerService - runs backup according to a schedule;
-
-%package        radicale
-Packager:       %{packager}
-Summary:        Radicale
-Group:          Applications/Internet
-Requires:       %name-common  = %version-%release
-Requires:       python3 >= 3.6
-Requires:       python3-pip
-Requires:       python3-requests
-Requires:       python3-setuptools
-AutoReqProv:    no
-BuildArch:      noarch
-%description    radicale
-Radicale is a server designed to support the CalDav and CardDav protocols.
-It operates either as a standalone package using its own internal HTTP server
-or can be integrated with an existing web server
 
 %package        doceditor
 Packager:       %{packager}
@@ -246,3 +252,13 @@ AutoReqProv:    no
 BuildArch:      noarch
 %description    healthchecks
 The service which displays launched services
+
+%package        plugins
+Packager:       %{packager}
+Summary:        Plugins
+Group:          Applications/Internet
+Requires:       %name-common  = %version-%release
+AutoReqProv:    no
+BuildArch:      noarch
+%description    plugins
+This package includes plugins that extend DocSpace functionality

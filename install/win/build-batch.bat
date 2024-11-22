@@ -1,8 +1,8 @@
 REM echo ######## Set variables ########
 set "publisher="Ascensio System SIA""
-set "nuget="%cd%\server\thirdparty\SimpleRestServices\src\.nuget\NuGet.exe""
-set "environment=production"
+set "nuget="%cd%\buildtools\install\win\nuget.exe""
 set "opensearch_version=2.11.1"
+set "openresty_version=1.25.3.2"
 
 REM echo ######## Extracting and preparing files to build ########
 %sevenzip% x buildtools\install\win\opensearch-%opensearch_version%.zip -o"buildtools\install\win" -y
@@ -13,8 +13,12 @@ xcopy "buildtools\install\win\opensearch-%opensearch_version%\plugins\opensearch
 rmdir buildtools\install\win\opensearch-%opensearch_version%\plugins /s /q
 xcopy "buildtools\install\win\opensearch-%opensearch_version%" "buildtools\install\win\OpenSearch" /s /y /b /i
 rmdir buildtools\install\win\opensearch-%opensearch_version% /s /q
+%sevenzip% x buildtools\install\win\openresty-%openresty_version%.zip -o"buildtools\install\win" -y
+xcopy "buildtools\install\win\openresty-%openresty_version%-win64" "buildtools\install\win\OpenResty" /s /y /b /i
+rmdir buildtools\install\win\openresty-%openresty_version%-win64 /s /q
 md buildtools\install\win\OpenSearch\tools
 md buildtools\install\win\OpenResty\tools
+md buildtools\install\win\OpenResty\logs
 md buildtools\install\win\OpenSearchStack\tools
 md buildtools\install\win\Files\tools
 md buildtools\install\win\Files\Logs
@@ -31,6 +35,7 @@ md buildtools\install\win\Files\services\ASC.ClearEvents\service\temp
 md buildtools\install\win\Files\services\ASC.Web.Api\service\temp
 md buildtools\install\win\Files\services\ASC.Web.Studio\service\temp
 md buildtools\install\win\Files\services\ASC.Web.HealthChecks.UI\service\temp
+xcopy "plugins\publish\*" "buildtools\install\win\Files\Data\Studio\webplugins" /s /e /y /i
 copy buildtools\install\win\WinSW.NET4.exe "buildtools\install\win\OpenResty\tools\OpenResty.exe" /y
 copy buildtools\install\win\tools\OpenResty.xml "buildtools\install\win\OpenResty\tools\OpenResty.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\Socket.IO.exe" /y
@@ -45,6 +50,10 @@ copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\OpenSearch\to
 copy buildtools\install\win\tools\OpenSearch.xml "buildtools\install\win\OpenSearch\tools\OpenSearch.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\OpenSearchStack\tools\OpenSearchDashboards.exe" /y
 copy buildtools\install\win\tools\OpenSearchDashboards.xml "buildtools\install\win\OpenSearchStack\tools\OpenSearchDashboards.xml" /y
+copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\Identity.Authorization.exe" /y
+copy buildtools\install\win\tools\Identity.Authorization.xml "buildtools\install\win\Files\tools\Identity.Authorization.xml" /y
+copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\Identity.Registration.exe" /y
+copy buildtools\install\win\tools\Identity.Registration.xml "buildtools\install\win\Files\tools\Identity.Registration.xml" /y
 copy "buildtools\install\win\nginx.conf" "buildtools\install\win\Files\nginx\conf\nginx.conf" /y
 copy "buildtools\install\docker\config\nginx\onlyoffice-proxy.conf" "buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf" /y
 copy "buildtools\install\docker\config\nginx\onlyoffice-proxy.conf" "buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf.tmpl" /y
@@ -84,6 +93,8 @@ del /f /q buildtools\install\win\Files\config\*.dev.json
 %sed% "/\"debug-info\": {/,/}/ s/\(\"enabled\": \)\".*\"/\1\"false\"/" -i buildtools\install\win\Files\config\appsettings.json
 
 %sed% "s_\(\"samesite\":\).*,_\1 \"None\",_g" -i buildtools\install\win\Files\config\appsettings.json
+%sed% "s_\(\"disableValidateToken\":\).*,_\1 \"false\",_g" -i buildtools\install\win\Files\config\appsettings.json
+%sed% "s_\(\"showPII\":\).*_\1 \"false\"_g" -i buildtools\install\win\Files\config\appsettings.json
 
 ::redirectUrl value replacement
 %sed% "s/teamlab.info/onlyoffice.com/g" -i buildtools\install\win\Files\config\autofac.consumers.json
@@ -91,9 +102,6 @@ del /f /q buildtools\install\win\Files\config\*.dev.json
 
 REM echo ######## Remove AWSTarget from nlog.config ########
 %sed% -i "/<target type=\"AWSTarget\" name=\"aws\"/,/<\/target>/d; /<target type=\"AWSTarget\" name=\"aws_sql\"/,/<\/target>/d" buildtools\install\win\Files\config\nlog.config
-
-::edit environment
-%sed% -i "s/\(\W\)PRODUCT.ENVIRONMENT.SUB\(\W\)/\1%environment%\2/g" buildtools\install\win\DocSpace.aip
 
 ::delete nginx configs
 del /f /q buildtools\install\win\Files\nginx\conf\onlyoffice-login.conf
@@ -122,6 +130,7 @@ REM echo ######## Build MySQL Server Installer ########
 iscc /Qp /S"byparam="signtool" sign /a /n "%publisher%" /t http://timestamp.digicert.com $f" "buildtools\install\win\MySQL Server Installer Runner.iss"
 
 REM echo ######## Build OpenResty ########
+%AdvancedInstaller% /edit buildtools\install\win\OpenResty.aip /SetVersion %openresty_version%
 IF "%SignBuild%"=="true" (
 %AdvancedInstaller% /edit buildtools\install\win\OpenResty.aip /SetSig
 %AdvancedInstaller% /edit buildtools\install\win\OpenResty.aip /SetDigitalCertificateFile -file %onlyoffice_codesign_path% -password "%onlyoffice_codesign_password%"
@@ -144,10 +153,13 @@ IF "%SignBuild%"=="true" (
 
 REM echo ######## Build DocSpace package ########
 %AdvancedInstaller% /edit buildtools\install\win\DocSpace.aip /SetVersion %BUILD_VERSION%.%BUILD_NUMBER%
+%AdvancedInstaller% /edit buildtools\install\win\DocSpace.Prerequisites.aip /SetVersion %BUILD_VERSION%.%BUILD_NUMBER%
 
 IF "%SignBuild%"=="true" (
 %AdvancedInstaller% /edit buildtools\install\win\DocSpace.aip /SetSig
 %AdvancedInstaller% /edit buildtools\install\win\DocSpace.aip /SetDigitalCertificateFile -file %onlyoffice_codesign_path% -password "%onlyoffice_codesign_password%"
+%AdvancedInstaller% /edit buildtools\install\win\DocSpace.Prerequisites.aip /SetSig
+%AdvancedInstaller% /edit buildtools\install\win\DocSpace.Prerequisites.aip /SetDigitalCertificateFile -file %onlyoffice_codesign_path% -password "%onlyoffice_codesign_password%"
 )
 
 :: Build DocSpace Community
@@ -158,3 +170,12 @@ copy "buildtools\install\win\Resources\License_Enterprise.rtf" "buildtools\insta
 copy "buildtools\install\win\Resources\License_Enterprise_Redist.rtf" "buildtools\install\win\Resources\License_Redist.rtf" /y
 
 %AdvancedInstaller% /rebuild buildtools\install\win\DocSpace.aip -buildslist DOCSPACE_ENTERPRISE
+
+:: Build DocSpace Developer
+copy "buildtools\install\win\Resources\License_Developer.rtf" "buildtools\install\win\Resources\License.rtf" /y
+copy "buildtools\install\win\Resources\License_Developer_Redist.rtf" "buildtools\install\win\Resources\License_Redist.rtf" /y
+
+%AdvancedInstaller% /rebuild buildtools\install\win\DocSpace.aip -buildslist DOCSPACE_DEVELOPER
+
+:: Build DocSpace Prerequisites
+%AdvancedInstaller% /rebuild buildtools\install\win\DocSpace.Prerequisites.aip -buildslist DefaultBuild

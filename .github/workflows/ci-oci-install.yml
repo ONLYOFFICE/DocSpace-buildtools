@@ -15,10 +15,6 @@ on:
 
   workflow_dispatch:
     inputs:
-      centos8s:
-         type: boolean
-         description: 'CentOS 8 Stream'
-         default: true
       centos9s:
          type: boolean
          description: 'CentOS 9 Stream'
@@ -43,14 +39,14 @@ on:
           type: boolean
           description: 'Ubuntu 24.04'
           default: true
-      fedora39:
-         type: boolean
-         description: 'Fedora 39'
-         default: true
       fedora40:
          type: boolean
          description: 'Fedora 40'
          default: true
+      fedora41:
+        type: boolean
+        description: 'Fedora 41'
+        default: true
 
 jobs:
   prepare:
@@ -77,31 +73,29 @@ jobs:
         run: |
           matrix=$(echo '{
             "include": [
-              {"execute": '${{ github.event.inputs.centos8s || true }}', "name": "CentOS8S", "os": "centos8s", "distr": "generic"},
               {"execute": '${{ github.event.inputs.centos9s || true }}', "name": "CentOS9S", "os": "centos9s", "distr": "generic"},
               {"execute": '${{ github.event.inputs.debian11 || true }}', "name": "Debian11", "os": "debian11", "distr": "generic"},
               {"execute": '${{ github.event.inputs.debian12 || true }}', "name": "Debian12", "os": "debian12", "distr": "generic"},
               {"execute": '${{ github.event.inputs.ubuntu2004 || true }}', "name": "Ubuntu20.04", "os": "ubuntu2004", "distr": "generic"},
               {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu22.04", "os": "ubuntu2204", "distr": "generic"},
               {"execute": '${{ github.event.inputs.ubuntu2404 || true }}', "name": "Ubuntu24.04", "os": "ubuntu-24.04", "distr": "bento"},
-              {"execute": '${{ github.event.inputs.fedora39 || true }}', "name": "Fedora39", "os": "39-cloud-base", "distr": "fedora"},
-              {"execute": '${{ github.event.inputs.fedora40 || true }}', "name": "Fedora40", "os": "fedora-40", "distr": "bento"}
+              {"execute": '${{ github.event.inputs.fedora40 || true }}', "name": "Fedora40", "os": "fedora-40", "distr": "bento"},
+              {"execute": '${{ github.event.inputs.fedora41 || true }}', "name": "Fedora41", "os": "41-cloud-base", "distr": "fedora"}
             ]
           }' | jq -c '.include')
 
           matrix=$(jq -c --arg REDHAT_CHANGED "${{ env.redhat_changed }}" --arg DEBIAN_CHANGED "${{ env.debian_changed }}" '
             { include: [.[] | select(
-                ($REDHAT_CHANGED == "true" and $DEBIAN_CHANGED == "true" and .execute == true) or
+                ($REDHAT_CHANGED == $DEBIAN_CHANGED and .execute == true) or
                 ($REDHAT_CHANGED == "true" and (.name | test("CentOS|Fedora"))) or
-                ($DEBIAN_CHANGED == "true" and (.name | test("Debian|Ubuntu"))) or
-                ($REDHAT_CHANGED == "false" and $DEBIAN_CHANGED == "false" and .execute == true))]
+                ($DEBIAN_CHANGED == "true" and (.name | test("Debian|Ubuntu"))))]
             }' <<< "$matrix")
 
           echo "matrix=${matrix}" >> $GITHUB_OUTPUT
 
   vagrant-up:
     name: "Test DocSpace with ${{ matrix.name}}"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: prepare
     strategy:
       fail-fast: false
@@ -119,6 +113,8 @@ jobs:
       - name: Get update and install vagrant
         run: |
           set -eux
+          sudo wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          sudo echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
           sudo apt update -y
           sudo apt install vagrant virtualbox -y
 
@@ -141,7 +137,7 @@ jobs:
             DISTR='${{ matrix.distr }}' \
             OS='${{ matrix.os }}' \
             DOWNLOAD_SCRIPT='-ds true' \
-            RAM='5100' \
+            RAM='8192' \
             CPU='3' \
             ARGUMENTS="-arg '--skiphardwarecheck true'" \
             vagrant up
@@ -152,7 +148,7 @@ jobs:
             vagrant destroy --force
 
       - name: "Test Local scripts with ${{matrix.name}}"
-        if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
         uses: nick-fields/retry@v3
         with:
           max_attempts: 2
@@ -164,7 +160,7 @@ jobs:
             TEST_CASE='--local-install' \
             DISTR='${{ matrix.distr }}' \
             OS='${{matrix.os}}' \
-            RAM='5100' \
+            RAM='8192' \
             CPU='3' \
             DOWNLOAD_SCRIPT='-ds false' \
             TEST_REPO='-tr true' \
