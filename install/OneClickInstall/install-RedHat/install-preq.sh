@@ -32,10 +32,9 @@ if rpm -qa | grep mariadb.*config >/dev/null 2>&1; then
    echo $RES_MARIADB && exit 0
 fi
 
-#Add repositories: EPEL, REMI and RPMFUSION
+#Add repository EPEL and REMI
 [ "$DIST" != "fedora" ] && { rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-$REV.noarch.rpm || true; }
 rpm -ivh https://rpms.remirepo.net/$REMI_DISTR_NAME/remi-release-$REV.rpm || true
-yum install -y --nogpgcheck https://download1.rpmfusion.org/free/$RPMFUSION_DISTR_NAME/rpmfusion-free-release-$REV.noarch.rpm
 
 [ "$REV" = "9" ] && update-crypto-policies --set DEFAULT:SHA1 && ${package_manager} -y install xorg-x11-font-utils
 [ "$DIST" = "centos" ] && TESTING_REPO="--enablerepo=$( [ "$REV" = "9" ] && echo "crb" || echo "powertools" )"
@@ -100,7 +99,6 @@ ${package_manager} -y install $([ $DIST != "fedora" ] && echo "epel-release") \
 			SDL2 \
 			expect \
 			java-${JAVA_VERSION}-openjdk-headless \
-			ffmpeg  \
 			--enablerepo=opensearch-2.x --enablerepo=remi $TESTING_REPO
 
 # Set Java ${JAVA_VERSION} as the default version

@@ -23,7 +23,7 @@ Summary:        Files-services
 Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
 Requires:       dotnet-sdk-8.0
-Requires:       ffmpeg
+Requires:       ffmpeg-free
 AutoReqProv:    no
 BuildArch:      noarch
 %description    files-services
