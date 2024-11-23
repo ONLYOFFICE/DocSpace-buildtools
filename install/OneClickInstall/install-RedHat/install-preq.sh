@@ -18,16 +18,6 @@ ${package_manager} -y install yum-utils
 { yum check-update postgresql; PSQLExitCode=$?; } || true #Checking for postgresql update
 { yum check-update $DIST*-release; exitCode=$?; } || true #Checking for distribution update
 
-UPDATE_AVAILABLE_CODE=100
-if [[ $exitCode -eq $UPDATE_AVAILABLE_CODE ]]; then
-	res_unsupported_version
-	echo $RES_UNSPPORTED_VERSION
-	echo $RES_SELECT_INSTALLATION
-	echo $RES_ERROR_REMINDER
-	echo $RES_QUESTIONS
-	read_unsupported_installation
-fi
-
 if rpm -qa | grep mariadb.*config >/dev/null 2>&1; then
    echo $RES_MARIADB && exit 0
 fi
