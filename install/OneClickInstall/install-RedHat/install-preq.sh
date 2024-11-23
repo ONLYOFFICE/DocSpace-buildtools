@@ -32,10 +32,8 @@ if rpm -qa | grep mariadb.*config >/dev/null 2>&1; then
    echo $RES_MARIADB && exit 0
 fi
 
-#Add repository EPEL and REMI
+#Add repository EPEL
 [ "$DIST" != "fedora" ] && { rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-$REV.noarch.rpm || true; }
-rpm -ivh https://rpms.remirepo.net/$REMI_DISTR_NAME/remi-release-$REV.rpm || true
-
 [ "$REV" = "9" ] && update-crypto-policies --set DEFAULT:SHA1 && ${package_manager} -y install xorg-x11-font-utils
 [ "$DIST" = "centos" ] && TESTING_REPO="--enablerepo=$( [ "$REV" = "9" ] && echo "crb" || echo "powertools" )"
 [ "$DIST" = "redhat" ] && { /usr/bin/crb enable && yum repolist enabled | grep -qi -e crb -e codeready || echo "Failed to enable or verify CRB repository."; exit 1; }
@@ -99,7 +97,7 @@ ${package_manager} -y install $([ $DIST != "fedora" ] && echo "epel-release") \
 			SDL2 \
 			expect \
 			java-${JAVA_VERSION}-openjdk-headless \
-			--enablerepo=opensearch-2.x --enablerepo=remi $TESTING_REPO
+			--enablerepo=opensearch-2.x $TESTING_REPO
 
 # Set Java ${JAVA_VERSION} as the default version
 JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | head -1)
