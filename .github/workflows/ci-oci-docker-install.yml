@@ -91,7 +91,7 @@ jobs:
         if: ${{ github.event.inputs.offline == 'true' }}
         run: |
           docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q) && docker volume rm $(docker volume ls -q)
-          sudo rm -rf /usr/local/lib/android /opt/ghc
+          sudo rm -rf /usr/local/lib/android /opt/ghc /usr/share/swift /usr/share/miniconda /usr/share/az* /usr/share/glade* /usr/local/lib/node_modules /usr/local/share/chromium /usr/local/share/powershell
 
       - name: Creating 4testing offline self-extracting archive
         if: ${{ github.event.inputs.offline == 'true' }}
