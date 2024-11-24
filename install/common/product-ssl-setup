@@ -62,12 +62,14 @@ case $1 in
     sed "s!\(worker_connections\).*;!\1 $(ulimit -n);!" -i "${OPENRESTY}/onlyoffice-proxy.conf"
     [[ -f "${DIR}/${PRODUCT}-renew-letsencrypt" ]] && rm -rf "${DIR}/${PRODUCT}-renew-letsencrypt"
     [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ] && systemctl reload openresty || service openresty reload
-    sed -i "s/\(\"portal\":\).*/\1 \"http:\/\/localhost:80\"/" ${CONFIG_DIR}/appsettings.$(grep -oP 'ENVIRONMENT=\K.*' ${SYSTEMD_DIR}/${PRODUCT}-api.service).json
-    SYSTEMD_NODE_FILES=$(grep -l "NODE_EXTRA_CA_CERTS" ${SYSTEMD_DIR}/${PRODUCT}-*.service ${SYSTEMD_DIR}/ds-*.service || true)
-    if [ -n "$SYSTEMD_NODE_FILES" ]; then
-      sed -i '/NODE_EXTRA_CA_CERTS/d' ${SYSTEMD_NODE_FILES}
+    sed -i "s/\(\"portal\":\).*/\1 \"http:\/\/localhost:80\"/" ${CONFIG_DIR}/appsettings.$(grep -oP 'ENVIRONMENT=\K.*' ${CONFIG_DIR}/systemd.env).json
+    NODE_EXTRA_CA_CERTS_FILES=$(grep -l "NODE_EXTRA_CA_CERTS" ${CONFIG_DIR}/systemd.env ${SYSTEMD_DIR}/ds-*.service || true)
+    if [ -n "${NODE_EXTRA_CA_CERTS_FILES}" ]; then
+      sed -i '/NODE_EXTRA_CA_CERTS/d' ${NODE_EXTRA_CA_CERTS_FILES}
       systemctl daemon-reload
-      echo "${SYSTEMD_NODE_FILES[@]}" | xargs -I % basename % | xargs systemctl restart
+      { grep -l "ExecStart=/usr/bin/node" ${SYSTEMD_DIR}/${PRODUCT}-*.service 2>/dev/null
+        find ${SYSTEMD_DIR} -name "ds-*.service" ! -name "ds-example.service" 2>/dev/null
+      } | xargs -I % basename % | xargs systemctl restart
     fi
 
     echo "OK"
@@ -109,7 +111,7 @@ PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${PRODUCT}/privkey.pem"}"
 if [ -f "${CERTIFICATE_FILE}" ]; then 
   if [ -f "${PRIVATEKEY_FILE}" ]; then
     cp -f ${OPENRESTY}/onlyoffice-proxy-ssl.conf.template ${OPENRESTY}/onlyoffice-proxy.conf
-    sed -i "s/\(\"portal\":\).*/\1 \"https:\/\/${DOMAIN}\"/" ${CONFIG_DIR}/appsettings.$(grep -oP 'ENVIRONMENT=\K.*' ${SYSTEMD_DIR}/${PRODUCT}-api.service).json
+    sed -i "s/\(\"portal\":\).*/\1 \"https:\/\/${DOMAIN}\"/" ${CONFIG_DIR}/appsettings.$(grep -oP 'ENVIRONMENT=\K.*' ${CONFIG_DIR}/systemd.env).json
     sed -i "s~\(ssl_certificate \).*;~\1${CERTIFICATE_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
     sed -i "s~\(ssl_certificate_key \).*;~\1${PRIVATEKEY_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
     sed -i "s~\(ssl_dhparam \).*;~\1${DHPARAM_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
@@ -136,14 +138,21 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
       
       #Checking whether the certificate is self-signed
       if [[ -n "$CERTIFICATE_SUBJECT" && -n "$CERTIFICATE_ISSUER" && "$CERTIFICATE_SUBJECT" == "$CERTIFICATE_ISSUER" ]]; then
-        SYSTEMD_NODE_FILES=$(grep -l "ExecStart=/usr/bin/node" ${SYSTEMD_DIR}/${PRODUCT}-*.service; ls ${SYSTEMD_DIR}/ds-*.service 2>/dev/null | grep -v "ds-example" || true)
-        for SYSTEMD_NODE_FILE in ${SYSTEMD_NODE_FILES}; do
-          if ! grep -q "NODE_EXTRA_CA_CERTS" "${SYSTEMD_NODE_FILE}"; then
-             sed -i "/ExecStart=/i Environment=NODE_EXTRA_CA_CERTS=${CERTIFICATE_FILE}" "${SYSTEMD_NODE_FILE}"
-          fi
+        chmod o+rx $(dirname "$CERTIFICATE_FILE")
+        chmod 644 ${CERTIFICATE_FILE} ${PRIVATEKEY_FILE}
+        grep -q "NODE_EXTRA_CA_CERTS" ${CONFIG_DIR}/systemd.env && \
+          sed -i "s!\(NODE_EXTRA_CA_CERTS=\).*!\1${CERTIFICATE_FILE}!" ${CONFIG_DIR}/systemd.env || \
+          echo "NODE_EXTRA_CA_CERTS=${CERTIFICATE_FILE}" >> ${CONFIG_DIR}/systemd.env
+        for SYSTEMD_NODE_FILE in ${SYSTEMD_DIR}/ds-*.service; do
+          [[ ${SYSTEMD_NODE_FILE} == *"ds-example"* || ! -f ${SYSTEMD_NODE_FILE} ]] && continue
+          grep -q "NODE_EXTRA_CA_CERTS" ${SYSTEMD_NODE_FILE} && \
+            sed -i "s!\(NODE_EXTRA_CA_CERTS=\).*!\1${CERTIFICATE_FILE}!" ${SYSTEMD_NODE_FILE} || \
+            sed -i "/ExecStart=/i Environment=NODE_EXTRA_CA_CERTS=${CERTIFICATE_FILE}" ${SYSTEMD_NODE_FILE}
         done
         systemctl daemon-reload
-        echo "${SYSTEMD_NODE_FILES[@]}" | xargs -I % basename % | xargs systemctl restart
+        { grep -l "ExecStart=/usr/bin/node" ${SYSTEMD_DIR}/${PRODUCT}-*.service 2>/dev/null
+          find ${SYSTEMD_DIR} -name "ds-*.service" ! -name "ds-example.service" 2>/dev/null
+        } | xargs -I % basename % | xargs systemctl restart
       fi
     fi
 

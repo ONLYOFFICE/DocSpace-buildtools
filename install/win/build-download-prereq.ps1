@@ -1,4 +1,7 @@
-$AllProtocols = [System.Net.SecurityProtocolType]'Ssl3,Tls,Tls11,Tls12,Tls13'
+$AllProtocols = [System.Net.SecurityProtocolType]::Tls -bor `
+                [System.Net.SecurityProtocolType]::Tls11 -bor `
+                [System.Net.SecurityProtocolType]::Tls12
+
 [System.Net.ServicePointManager]::SecurityProtocol = $AllProtocols
 
 # Function 'DownloadComponents' downloads some components that need on build satge
@@ -48,17 +51,38 @@ switch ( $env:DOCUMENT_SERVER_VERSION_CE )
   custom { $DOCUMENT_SERVER_CE_LINK = $env:DOCUMENT_SERVER_CE_CUSTOM_LINK.Replace(",", "") }
 }
 
+switch ( $env:DOCUMENT_SERVER_VERSION_DE )
+{
+  latest { $DOCUMENT_SERVER_DE_LINK = "https://download.onlyoffice.com/install/documentserver/windows/onlyoffice-documentserver-de.exe" }
+  custom { $DOCUMENT_SERVER_DE_LINK = $env:DOCUMENT_SERVER_DE_CUSTOM_LINK.Replace(",", "") }
+}
+
 $psql_version = '14.0'
 
 $path_prereq = "${pwd}\buildtools\install\win\"
 
 $opensearch_version = '2.11.1'
 
+$openresty_version = '1.25.3.2'
+
 $prerequisites = @(
+  
+  @{  
+    download_allways = $false; 
+    name = "nuget.exe"; 
+    link = "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe";
+  }
+
   @{
     download_allways = $false;
     name = "opensearch-${opensearch_version}.zip";
     link = "https://artifacts.opensearch.org/releases/bundle/opensearch/${opensearch_version}/opensearch-${opensearch_version}-windows-x64.zip";
+  }
+  
+  @{
+    download_allways = $false;
+    name = "openresty-${openresty_version}.zip";
+    link = "https://openresty.org/download/openresty-${openresty_version}-win64.zip";
   }
 
   @{
@@ -87,6 +111,13 @@ $prerequisites = @(
     link = $DOCUMENT_SERVER_CE_LINK
   }
    
+   @{  
+    # Downloading onlyoffice-documentserver-de for DocSpace Developer
+    download_allways = $true; 
+    name = "onlyoffice-documentserver-de.exe"; 
+    link = $DOCUMENT_SERVER_DE_LINK
+  }
+   
   @{  
     download_allways = $false; 
     name = "psqlodbc_15_x64.msi";
@@ -100,15 +131,6 @@ $prerequisites = @(
   }
 )
 
-$path_nuget_packages = "${pwd}\server\.nuget\packages\"
-
-$nuget_packages = @(
-  @{  
-    download_allways = $false; 
-    name = "rabbitmq.client.3.6.5.nupkg"; 
-    link = "https://www.nuget.org/api/v2/package/RabbitMQ.Client/3.6.5";
-  }
-)
 
 $path_enterprise_prereq = "${pwd}\buildtools\install\win\redist\"
 
@@ -187,8 +209,8 @@ $enterprise_prerequisites = @(
 
   @{  
     download_allways = $false; 
-    name = "Redis-x64-5.0.10.msi"; 
-    link = "http://download.onlyoffice.com/install/windows/redist/Redis-x64-5.0.10.msi";
+    name = "Redis-7.4.0-Windows-x64.msi"; 
+    link = "https://github.com/ONLYOFFICE/redis-windows/releases/download/7.4.0/Redis-7.4.0-Windows-x64.msi";
   }
 
   @{  
@@ -214,10 +236,14 @@ $enterprise_prerequisites = @(
     name = "certbot-2.6.0.exe";
     link = "https://github.com/certbot/certbot/releases/download/v2.6.0/certbot-beta-installer-win_amd64_signed.exe"
   }
+
+  @{
+    download_allways = $false;
+    name = "jdk-21_windows-x64_bin.msi";
+    link = "https://download.oracle.com/java/21/latest/jdk-21_windows-x64_bin.msi"
+  }
 )
 
 DownloadComponents $prerequisites $path_prereq
-
-DownloadComponents $nuget_packages $path_nuget_packages
 
 DownloadComponents $enterprise_prerequisites $path_enterprise_prereq

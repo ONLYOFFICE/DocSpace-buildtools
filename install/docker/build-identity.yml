@@ -1,0 +1,48 @@
+x-build: &x-build
+  context: ../../../server/common/ASC.Identity
+  dockerfile: Dockerfile
+
+x-common-environment: &x-common-environment
+  JDBC_PASSWORD: my-secret-pw
+  JDBC_URL: onlyoffice-mysql-server
+  JDBC_USER_NAME: root
+  JDBC_DATABASE: docspace
+  REDIS_HOST: onlyoffice-redis
+  RABBIT_URI: amqp://guest:guest@onlyoffice-rabbitmq
+
+services:
+  onlyoffice-identity-authorization:
+    build:
+      <<: *x-build
+      args:
+        - MODULE=authorization/authorization-container
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-authorization:${DOCKER_TAG}"
+    container_name: ${IDENTITY_AUTHORIZATION_CONTAINER_NAME}
+    restart: always
+    ports:
+      - 8080:8080
+    environment:
+      <<: *x-common-environment
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_APPLICATION_NAME: ASC.Identity.Authorization
+      SERVER_PORT: 8080
+
+  onlyoffice-identity-api:
+    build:
+      <<: *x-build
+      args:
+        - MODULE=registration/registration-container
+    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-api:${DOCKER_TAG}"
+    container_name: ${IDENTITY_API_CONTAINER_NAME}
+    ports:
+      - 9090:9090
+    environment:
+      <<: *x-common-environment
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_APPLICATION_NAME: ASC.Identity.Registration
+      SERVER_PORT: 9090
+
+networks:
+  default:
+    name: ${NETWORK_NAME}
+    external: true

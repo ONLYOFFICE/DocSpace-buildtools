@@ -11,28 +11,21 @@ cat<<EOF
 EOF
 apt-get -y update
 
+ds_pkg_name="${package_sysname}-documentserver"
+case "${INSTALLATION_TYPE}" in
+	"DEVELOPER") ds_pkg_name+="-de" ;;
+	"ENTERPRISE") ds_pkg_name+="-ee" ;;
+esac
+
 if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ]; then
 	ds_pkg_installed_name=$(dpkg -l | grep ${package_sysname}-documentserver | tail -n1 | awk '{print $2}');
-
-	if [ "$INSTALLATION_TYPE" = "COMMUNITY" ]; then
-		ds_pkg_name="${package_sysname}-documentserver";
-	elif [ "$INSTALLATION_TYPE" = "ENTERPRISE" ]; then
-		ds_pkg_name="${package_sysname}-documentserver-ee";
-	fi
-
-	if [ -n $ds_pkg_name ]; then
-		if ! dpkg -l ${ds_pkg_name} &> /dev/null; then
-			
-			debconf-get-selections | grep ^${ds_pkg_installed_name} | sed s/${ds_pkg_installed_name}/${ds_pkg_name}/g | debconf-set-selections
-						
-			DEBIAN_FRONTEND=noninteractive apt-get purge -yq ${ds_pkg_installed_name}
-			
-			apt-get install -yq ${ds_pkg_name}
-			
-			RECONFIGURE_PRODUCT="true"
-		else
-			apt-get install -y --only-upgrade ${ds_pkg_name};	
-		fi				
+	if [ -n "${ds_pkg_installed_name}" ] && [ "${ds_pkg_installed_name}" != "${ds_pkg_name}" ]; then
+		debconf-get-selections | grep ^${ds_pkg_installed_name} | sed s/${ds_pkg_installed_name}/${ds_pkg_name}/g | debconf-set-selections
+		DEBIAN_FRONTEND=noninteractive apt-get purge -yq ${ds_pkg_installed_name}
+		apt-get install -yq ${ds_pkg_name}
+		RECONFIGURE_PRODUCT="true"
+	else
+		apt-get install -y --only-upgrade ${ds_pkg_name};	
 	fi
 fi
 
@@ -61,11 +54,7 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
 	echo ${package_sysname}-documentserver $DS_COMMON_NAME/jwt-secret select ${DS_JWT_SECRET} | sudo debconf-set-selections
 	echo ${package_sysname}-documentserver $DS_COMMON_NAME/jwt-header select ${DS_JWT_HEADER} | sudo debconf-set-selections
 	
-	if [ "$INSTALLATION_TYPE" = "COMMUNITY" ]; then
-		apt-get install -yq ${package_sysname}-documentserver
-	else
-		apt-get install -yq ${package_sysname}-documentserver-ee
-	fi
+	apt-get install -yq ${ds_pkg_name}
 fi
 
 if [ "$PRODUCT_INSTALLED" = "false" ]; then

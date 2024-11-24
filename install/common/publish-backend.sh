@@ -73,7 +73,7 @@ for i in ${!servers_products_name_backend[@]}; do
   echo "== Publish ${servers_products_name_backend[$i]}.csproj project =="
   SERVICE_DIR="$(dirname "$(find ${SRC_PATH} -type f -name "${servers_products_name_backend[$i]}".csproj)")"
   cd ${SERVICE_DIR}
-  dotnet publish -c ${PUBLISH_CNF} --self-contained ${SELF_CONTAINED} ${ARGS} -o ${BUILD_PATH}/products/${servers_products_name_backend[$i]}/server/
+  dotnet publish -c ${PUBLISH_CNF} --self-contained ${SELF_CONTAINED} ${ARGS} --property:PublishDir="${BUILD_PATH}/products/${servers_products_name_backend[$i]}/server/"
 done
 
 # Array of names backend services
@@ -94,7 +94,7 @@ for i in ${!services_name_backend[@]}; do
   echo "== Publish ${services_name_backend[$i]}.csproj project =="
   SERVICE_DIR="$(dirname "$(find ${SRC_PATH} -type f -name "${services_name_backend[$i]}".csproj)")"
   cd ${SERVICE_DIR}
-  dotnet publish -c ${PUBLISH_CNF} --self-contained ${SELF_CONTAINED} ${ARGS} -o ${BUILD_PATH}/services/${services_name_backend[$i]}/service/
+  dotnet publish -c ${PUBLISH_CNF} --self-contained ${SELF_CONTAINED} ${ARGS} --property:PublishDir="${BUILD_PATH}/services/${services_name_backend[$i]}/service/"
 done
 
 # Array of names backend services in directory common (Nodejs)
@@ -102,10 +102,13 @@ services_name_backend_nodejs=()
 services_name_backend_nodejs+=(ASC.Socket.IO)
 services_name_backend_nodejs+=(ASC.SsoAuth)
 
-# Publish backend services (Nodejs) 
-for i in ${!services_name_backend_nodejs[@]}; do
-  echo "== Publish ${services_name_backend_nodejs[$i]} project =="
-  SERVICE_DIR="$(find ${SRC_PATH} -type d -name ${services_name_backend_nodejs[$i]})"
-  cd ${SERVICE_DIR}
-  mkdir -p ${BUILD_PATH}/services/${services_name_backend_nodejs[$i]}/service/ && cp -arfv ./* ${BUILD_PATH}/services/${services_name_backend_nodejs[$i]}/service/
+services_name_backend_java+=(ASC.Identity.Authorization)
+services_name_backend_java+=(ASC.Identity.Registration)
+
+# Publish backend services (Nodejs/Java) 
+for SERVICE in "${services_name_backend_nodejs[@]}" "${services_name_backend_java[@]}"; do
+  echo "== Publish ${SERVICE} project =="
+  SERVICE_DIR="$(find ${SRC_PATH} -type d -name ${SERVICE})"
+  mkdir -p ${BUILD_PATH}/services/${SERVICE}/service/
+  [ -n "${SERVICE_DIR}" ] && cp -arfv ${SERVICE_DIR}/* ${BUILD_PATH}/services/${SERVICE}/service/
 done

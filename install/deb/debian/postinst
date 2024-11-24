@@ -6,8 +6,6 @@ set -e
 
 case "$1" in
 	configure)
-		db_get {{product}}/environment || true
-		ENVIRONMENT="$RET"
 		db_get {{product}}/host || true
 		APP_HOST="$RET"
 		db_get {{product}}/port || true
@@ -15,7 +13,7 @@ case "$1" in
 		db_get {{product}}/machinekey || true
 		CORE_MACHINEKEY="$RET"
 
-		args+=(-e "$ENVIRONMENT" -ash "$APP_HOST" -asp "$APP_PORT" );
+		args+=(-ash "$APP_HOST" -asp "$APP_PORT" );
 
 		[ -z "$CORE_MACHINEKEY" ] && CORE_MACHINEKEY=$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12) && db_set {{product}}/machinekey $CORE_MACHINEKEY
 		args+=(-mk "$CORE_MACHINEKEY" )

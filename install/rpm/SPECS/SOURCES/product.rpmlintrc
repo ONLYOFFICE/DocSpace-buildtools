@@ -69,3 +69,9 @@ addFilter(r'devel-file-in-non-devel-package')
 
 # Necessary to resolve a config conflict
 addFilter(r'dangerous-command-in-%pre')
+
+# Log rotation is handled by nlog
+addFilter(r'log-files-without-logrotate')
+
+# The JAR index (META-INF/INDEX.LIST) is ignored at run-time since JDK 18
+addFilter(r'jar-not-indexed')

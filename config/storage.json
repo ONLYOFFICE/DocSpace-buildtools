@@ -146,6 +146,7 @@
         "type": "disc",
         "path": "$STORAGE_ROOT\\Studio\\{0}\\userphotos",
         "virtualpath": "~/studio/{0}/userphotos",
+        "contentAsAttachment": true,
         "domain": [
           {
             "name": "temp",

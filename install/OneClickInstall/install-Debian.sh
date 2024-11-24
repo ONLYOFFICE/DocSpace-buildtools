@@ -106,7 +106,7 @@ while [ "$1" != "" ]; do
 		-? | -h | --help )
 			echo "  Usage $0 [PARAMETER] [[PARAMETER], ...]"
 			echo "    Parameters:"
-			echo "      -it, --installation_type          installation type (community|enterprise)"
+			echo "      -it, --installation_type          installation type (community|developer|enterprise)"
 			echo "      -u, --update                      use to update existing components (true|false)"
 			echo "      -je, --jwtenabled                 specifies the enabling the JWT validation (true|false)"
 			echo "      -jh, --jwtheader                  defines the http header that will be used to send the JWT"

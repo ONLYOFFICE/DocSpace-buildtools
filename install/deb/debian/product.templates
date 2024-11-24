@@ -1,8 +1,3 @@
-Template: {{product}}/environment
-Type: string
-Default: production
-_Description: Select environment for {{product}} configuration:
-
 Template: {{product}}/host
 Type: string
 Default: localhost

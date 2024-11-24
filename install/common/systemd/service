@@ -8,6 +8,7 @@ User=onlyoffice
 Group=onlyoffice
 WorkingDirectory=${WORK_DIR}
 ExecStart=${EXEC_START}
+EnvironmentFile=${SYSTEMD_ENVIRONMENT_FILE}
 TimeoutSec=600
 
 Restart=${RESTART}

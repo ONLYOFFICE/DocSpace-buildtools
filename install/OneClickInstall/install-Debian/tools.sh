@@ -12,6 +12,8 @@ make_swap () {
 	EXIST=$(swapon -s | awk '{ print $1 }' | { grep -x ${SWAPFILE} || true; });
 
 	if [[ -z $EXIST ]] && [ ${TOTAL_MEMORY} -lt ${MEMORY_REQUIREMENTS} ] && [ ${AVAILABLE_DISK_SPACE} -gt ${DISK_REQUIREMENTS} ]; then
+		touch "${SWAPFILE}"
+		[[ "$(df -T / | awk 'NR==2{print $2}')" = "btrfs" ]] && chattr +C "${SWAPFILE}"
 		fallocate -l 6G ${SWAPFILE}
 		chmod 600 ${SWAPFILE}
 		mkswap ${SWAPFILE}
@@ -106,5 +108,10 @@ DISTRIB_CODENAME=`echo "$DISTRIB_CODENAME" | tr '[:upper:]' '[:lower:]' | xargs`
 if [[ ( "${DIST}" == "ubuntu" && "${REV%.*}" -lt 20 ) || ( "${DIST}" == "debian" && "${REV%.*}" -lt 11 ) ]]; then
     echo "Your ${DIST} ${REV} operating system has reached the end of its service life."
     echo "Please consider upgrading your operating system or using a Docker installation."
+    exit 1
+elif [[ "${DIST}" == "ubuntu" && ( $(( ${REV%.*} % 2 )) -ne 0 || "${REV#*.}" -ne 04 ) ]]; then
+    echo "Only LTS versions of Ubuntu are supported." 
+    echo "You are using ${DIST} ${REV}, which is not an LTS version."
+    echo "Please consider upgrading to a LTS version or using a Docker installation."
     exit 1
 fi
