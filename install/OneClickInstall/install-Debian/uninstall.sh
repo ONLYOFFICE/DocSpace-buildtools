@@ -26,7 +26,7 @@ DEPENDENCIES=(
 )
 
 if [ "$UNINSTALL_DEPENDENCIES" = true ]; then
-    PACKAGES_TO_UNINSTALL+=("${DEPENDENCIES[@]}")
+    PACKAGES_TO_UNINSTALL+=("${DEPENDENCIES[@]}" $(dpkg-query -W -f='${Package}\n' | grep -E "^postgresql(-[0-9]+)?(-.*)?$"))
 fi
 
 # Uninstall packages and clean up
