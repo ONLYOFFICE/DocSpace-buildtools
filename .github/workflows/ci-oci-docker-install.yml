@@ -11,6 +11,9 @@ on:
       - 'hotfix/**'
       - 'release/**'
       - 'develop'
+    paths:
+      - 'install/OneClickInstall/install-Docker.sh'
+      - 'install/docker/*.yml'
   workflow_dispatch:
     inputs:
       offline:
