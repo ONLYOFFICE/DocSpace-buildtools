@@ -34,7 +34,7 @@ while [ "$1" != "" ]; do
 			fi
 		;;
 
-		-un | --uninstall )
+		-uni | --uninstall )
 			if [ "$2" != "" ]; then
 				UNINSTALL=$2
 				shift
@@ -124,7 +124,7 @@ while [ "$1" != "" ]; do
 			echo "    Parameters:"
 			echo "      -it, --installation_type          installation type (community|developer|enterprise)"
 			echo "      -u, --update                      use to update existing components (true|false)"
-			echo "      -un, --uninstall                  uninstall existing installation (true|false)"
+			echo "      -uni, --uninstall                  uninstall existing installation (true|false)"
 			echo "      -je, --jwtenabled                 specifies the enabling the JWT validation (true|false)"
 			echo "      -jh, --jwtheader                  defines the http header that will be used to send the JWT"
 			echo "      -js, --jwtsecret                  defines the secret key to validate the JWT in the request"
