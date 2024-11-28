@@ -479,8 +479,8 @@ setup_openresty(){
 	PROXY_CONF="${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}-proxy.conf"
 	if [ ! -z "${PROXY_CONF}" ]; then
 		DOMAIN=$(json -f ${USER_CONF} files.docservice.url.portal | awk -F[/:] '{print ($1 == "https") ? $4 : ""}')
-		CERTIFICATE_PATH=$(grep -oP 'ssl_certificate\s+\K\S+(?=;)' "${PROXY_CONF}")
-		CERTIFICATE_KEY_PATH=$(grep -oP 'ssl_certificate_key\s+\K\S+(?=;)' "${PROXY_CONF}")
+		CERTIFICATE_PATH=$(grep -oP 'ssl_certificate\s+\K\S+' "${PROXY_CONF}" | tr -d ';')
+		CERTIFICATE_KEY_PATH=$(grep -oP 'ssl_certificate_key\s+\K\S+' "${PROXY_CONF}" | tr -d ';')
 		
 		# (DS v3.0.0) Fix the problem related to environment change 
 		[[ -f "${APP_DIR}/appsettings.production.json" ]] && DOMAIN=${DOMAIN:-$(json -f "$APP_DIR/appsettings.production.json" files.docservice.url.portal | awk -F[/:] '{print ($1 == "https") ? $4 : ""}')}
