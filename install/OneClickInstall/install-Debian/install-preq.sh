@@ -71,12 +71,12 @@ NODE_VERSION="18"
 curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
 
 #add dotnet repo
-if [ "$DIST" = "debian" ] || [ "$DISTRIB_CODENAME" = "focal" ]; then
+if [ "$DIST" = "ubuntu" ]; then
+    add-apt-repository -y ppa:dotnet/backports
+elif [ "$DIST" = "debian" ]; then
 	curl https://packages.microsoft.com/config/$DIST/$REV/packages-microsoft-prod.deb -O
 	echo -e "Package: *\nPin: origin \"packages.microsoft.com\"\nPin-Priority: 1002" | tee /etc/apt/preferences.d/99microsoft-prod.pref
 	dpkg -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
-elif dpkg -l | grep -q packages-microsoft-prod; then
-    apt-get purge -y packages-microsoft-prod
 fi
 
 MYSQL_REPO_VERSION="$(curl https://repo.mysql.com | grep -oP 'mysql-apt-config_\K.*' | grep -o '^[^_]*' | sort --version-sort --field-separator=. | tail -n1)"
@@ -148,7 +148,7 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 				nodejs \
 				gcc \
 				make \
-				dotnet-sdk-8.0 \
+				dotnet-sdk-9.0 \
 				mysql-server \
 				mysql-client \
 				postgresql \

@@ -111,11 +111,10 @@ jobs:
           sudo chmod 644 /usr/share/keyrings/yarnkey.gpg
           echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian/ stable main" | \
           sudo tee /etc/apt/sources.list.d/yarn.list
-          wget https://packages.microsoft.com/config/$(lsb_release -is | \
-          tr [:upper:] [:lower:])/$(lsb_release -rs)/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
-          sudo dpkg -i packages-microsoft-prod.deb
+          sudo add-apt-repository -y ppa:dotnet/backports
+          sudo apt remove -y netstandard-targeting-pack-2.1
           curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
-          sudo apt install -y dotnet-sdk-8.0 yarn nodejs rename unzip maven openjdk-21-jdk-headless
+          sudo apt install -y dotnet-sdk-9.0 yarn nodejs rename unzip maven openjdk-21-jdk-headless
           JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | head -1)
           sudo update-alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && sudo update-alternatives --set java "$JAVA_PATH"
           echo "JAVA_HOME=$(dirname $(dirname "$JAVA_PATH"))" >> $GITHUB_ENV
