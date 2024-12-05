@@ -78,3 +78,7 @@ non-standard-dir-perm
 
 # Suppressing warnings about class version due to Java version mismatch
 unknown-java-class-version
+
+# Suppressing misplaced extra member warnings for _gpgbuilder
+misplaced-extra-member-in-deb _gpgbuilder (unexpected _member at position 3)
+

@@ -39,22 +39,49 @@ env:
   BRANCH_SERVER: ${{ github.event.inputs.branch-server != '' && github.event.inputs.branch-server || github.ref_name || 'develop' }}
 
 jobs:
+  prepare:
+    runs-on: ubuntu-22.04
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine changed
+        id: changes
+        run: |
+          git fetch --no-tags --prune --depth=2
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          echo "build_deb=$(echo "$CHANGED_FILES" | grep -qE '^install/common/|^install/deb/' && echo true || echo false)" >> $GITHUB_OUTPUT
+          echo "build_rpm=$(echo "$CHANGED_FILES" | grep -qE '^install/common/|^install/rpm/' && echo true || echo false)" >> $GITHUB_OUTPUT      
+      - name: Set matrix
+        id: set-matrix
+        run: |
+          package_types=()
+          [[ "${{ steps.changes.outputs.build_deb }}" == "true" ]] && package_types+=("deb")
+          [[ "${{ steps.changes.outputs.build_rpm }}" == "true" ]] && package_types+=("rpm")
+          [[ ${#package_types[@]} -eq 0 ]] && exit 0
+          matrix=$(printf '%s\n' "${package_types[@]}" | jq -R . | jq -sc '{include: map({packageType: .})}')
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT  
   build:
     name: Build Packages
+    needs: prepare
     runs-on: ubuntu-22.04
-    permissions:
-      contents: write
-
     strategy:
-      matrix:
-        packageType: [deb, rpm]
-
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Set product version
         run: |
           PRODUCT_VERSION=$(grep -oP '\d+\.\d+\.\d+' <<< "${BRANCH_BUILDTOOLS//\//} ${BRANCH_CLIENT//\//} \
-          ${BRANCH_SERVER//\//}" | head -n1 || echo "3.0.1")
-          echo "PRODUCT_VERSION=$PRODUCT_VERSION" >> $GITHUB_ENV
+          ${BRANCH_SERVER//\//}" | head -n1)
+          echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.0.1}" >> $GITHUB_ENV
 
       - name: Free Disk Space
         run: |
@@ -68,13 +95,8 @@ jobs:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PRIVATE_KEY_PASS }}
 
-      - name: Checkout ${{ env.PRODUCT }}-buildtools
-        uses: actions/checkout@v4
-        with:
-          repository: ONLYOFFICE/${{ env.PRODUCT }}-buildtools
-          ref: ${{ env.BRANCH_BUILDTOOLS }}
-
       - name: Prepare build
+        if: matrix.packageType == 'deb' || matrix.packageType == 'rpm'
         run: |
           wget -O - https://dl.yarnpkg.com/debian/pubkey.gpg | \
           sudo gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/yarnkey.gpg --import
@@ -111,7 +133,7 @@ jobs:
           rename -f -v "s/product([^\/]*)$/${PRODUCT_LOW}\$1/g" debian/*
           find debian/ -type f -exec sed -i "s/{{product}}/${PRODUCT_LOW}/g" {} ';'
           sed -i "s/{{package_header_tag_version}}/${PRODUCT_VERSION}.${BUILD_NUMBER}/g" debian/changelog debian/control
-          dpkg-buildpackage -uc -k${{ steps.gpg_step.outputs.fingerprint }} 
+          dpkg-buildpackage -uc -us
 
       - name: Build RPM Packages
         if: matrix.packageType == 'rpm'
@@ -130,37 +152,42 @@ jobs:
                    -D "version ${PRODUCT_VERSION}" \
                    -D "release ${BUILD_NUMBER}" -ba product.spec
 
+      - name: Sign DEB Packages
+        if: matrix.packageType == 'deb'
+        run: |
+          dpkg-sig --sign origin \
+            --gpg-options "--pinentry-mode loopback --passphrase ${{ secrets.GPG_PRIVATE_KEY_PASS }}" \
+            --batch ${PACKAGE_DIRECTORY}/install/*.deb
+
       - name: Sign RPM Packages
         if: matrix.packageType == 'rpm'
         run: |
-          cat << EOF >> $HOME/.rpmmacros
-          %_signature gpg
-          %_gpg_name ${{ secrets.GPG_KEY_NAME }}
-          %_gpg_path $HOME/.gnupg
-          %__gpg /usr/bin/gpg
-          EOF
-          gpg --export --armor --output onlyoffice-gpgkey.pub
-          rpm --import onlyoffice-gpgkey.pub
-          rpm --addsign ${PACKAGE_DIRECTORY}/install/rpm/SPECS/RPMS/noarch/*.rpm
+          gpg --export --armor > gpgkey.pub && rpm --import gpgkey.pub
+          rpm -D "__gpg /usr/bin/gpg" \
+              -D "_gpg_path $HOME/.gnupg" \
+              -D "_gpg_name ${{ secrets.GPG_KEY_NAME }}" \
+              -D "_gpg_sign_cmd_extra_args --pinentry-mode loopback --passphrase ${{ secrets.GPG_PRIVATE_KEY_PASS }}" \
+              --addsign ${PACKAGE_DIRECTORY}/install/rpm/SPECS/RPMS/noarch/*.rpm 
 
       - name: Upload DEB Packages
         if: matrix.packageType == 'deb'
         run: |
           for deb_package in ${PACKAGE_DIRECTORY}/install/*.deb; do
-            echo $deb_package
-            curl --verbose \
-                  --user "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" \
-                  -H "Content-Type: multipart/form-data" \
-                  --data-binary "@$deb_package" "${{ secrets.REPO_URL_4TESTING_DEB }}"
+            echo -n "Uploading $( basename $deb_package )... "
+            curl --user "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" \
+                 -H "Content-Type: multipart/form-data" \
+                 --data-binary "@$deb_package" "${{ secrets.REPO_URL_4TESTING_DEB }}" \
+              && echo "Success: $(basename "$deb_package") uploaded." || echo "Error: Failed to upload $(basename "$deb_package")"
           done
         
       - name: Upload RPM Packages
         if: matrix.packageType == 'rpm'
         run: |
           for rpm_package in ${PACKAGE_DIRECTORY}/install/rpm/SPECS/RPMS/noarch/*.rpm; do
-            curl --verbose \
-                  --user "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" \
-                  --upload-file "$rpm_package" "${{ secrets.REPO_URL_4TESTING_RPM }}"
+            echo -n "Uploading $( basename $rpm_package )... "
+            curl --user "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" \
+                 --upload-file "$rpm_package" "${{ secrets.REPO_URL_4TESTING_RPM }}" \
+              && echo "Success: $(basename "$rpm_package") uploaded." || echo "Error: Failed to upload $(basename "$rpm_package")"
           done
 
       - name: Checking the DEB package for errors
