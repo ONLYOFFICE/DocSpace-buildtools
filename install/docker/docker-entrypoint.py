@@ -51,7 +51,7 @@ DOCUMENT_SERVER_URL_PUBLIC = DOCUMENT_SERVER_URL_EXTERNAL if DOCUMENT_SERVER_URL
 DOCUMENT_SERVER_CONNECTION_HOST = DOCUMENT_SERVER_URL_EXTERNAL if DOCUMENT_SERVER_URL_EXTERNAL else DOCUMENT_SERVER_URL_INTERNAL
 
 ELK_CONTAINER_NAME = os.environ["ELK_CONTAINER_NAME"] if environ.get("ELK_CONTAINER_NAME") else "onlyoffice-opensearch"
-ELK_SHEME = os.environ["ELK_SHEME"] if environ.get("ELK_SHEME") else "http"
+ELK_SCHEME = os.environ["ELK_SCHEME"] if environ.get("ELK_SCHEME") else "http"
 ELK_HOST = os.environ["ELK_HOST"] if environ.get("ELK_HOST") else None
 ELK_PORT = os.environ["ELK_PORT"] if environ.get("ELK_PORT") else "9200"
 ELK_THREADS = os.environ["ELK_THREADS"] if environ.get("ELK_THREADS") else "1"
@@ -224,7 +224,7 @@ if OAUTH_REDIRECT_URL:
 if ENV_EXTENSION != "dev":
     filePath = "/app/onlyoffice/config/elastic.json"
     jsonData = openJsonFile(filePath)
-    jsonData["elastic"]["Scheme"] = ELK_SHEME
+    jsonData["elastic"]["Scheme"] = ELK_SCHEME
     jsonData["elastic"]["Host"] = ELK_CONNECTION_HOST
     jsonData["elastic"]["Port"] = ELK_PORT
     jsonData["elastic"]["Threads"] = ELK_THREADS
