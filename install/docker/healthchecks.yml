@@ -12,7 +12,7 @@ services:
   onlyoffice-health-checks-ui:
     <<: *x-service-base
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-healthchecks:${DOCKER_TAG}"
-    container_name: ${HELTHCHECKS_HOST}
+    container_name: ${HEALTHCHECKS_HOST}
 
 networks:
   default:
