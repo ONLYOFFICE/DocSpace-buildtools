@@ -2,7 +2,7 @@ Source: {{product}}
 Section: web
 Priority: optional
 Maintainer: Ascensio System SIA <support@onlyoffice.com>
-Build-Depends: debhelper (>= 10), po-debconf, nodejs (>=18), dotnet-sdk-8.0 (>=8.0.402), yarn, unzip, maven, 
+Build-Depends: debhelper (>= 10), po-debconf, nodejs (>=18), dotnet-sdk-9.0 (>=8.0.402), yarn, unzip, maven, 
 	openjdk-21-jdk-headless | temurin-21-jdk | jdk-21 | jdk-21-headless | zulu21-jdk-headless | java-21-amazon-corretto-jdk
 Standards-Version: {{package_header_tag_version}}
 Homepage: https://www.onlyoffice.com/
@@ -51,14 +51,14 @@ Description: {{product}}-common
 Package: {{product}}-backup
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-8.0, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-9.0, ${misc:Depends}, ${shlibs:Depends}
 Description: {{product}}-backup
 	The service which handles API requests related to backup
 
 Package: {{product}}-files
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-8.0, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-9.0, ${misc:Depends}, ${shlibs:Depends}
 Recommends: opensearch (= 2.11.1)
 Description: {{product}}-files
 	The service which handles API requests related to 
@@ -67,7 +67,7 @@ Description: {{product}}-files
 Package: {{product}}-files-services
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-8.0, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-9.0, ${misc:Depends}, ${shlibs:Depends}
 Recommends: ffmpeg, opensearch (= 2.11.1)
 Description: {{product}}-files-services
 	The service which launches additional services related to file management:
@@ -81,7 +81,7 @@ Description: {{product}}-files-services
 Package: {{product}}-notify
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-8.0, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-9.0, ${misc:Depends}, ${shlibs:Depends}
 Recommends: ffmpeg, opensearch (= 2.11.1)
 Description: {{product}}-notify
 	The service which launches additional services
@@ -92,7 +92,7 @@ Description: {{product}}-notify
 Package: {{product}}-people-server
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-8.0, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-9.0, ${misc:Depends}, ${shlibs:Depends}
 Description: {{product}}-people-server
 	The service which handles API requests related to the People module
 
@@ -107,7 +107,7 @@ Description: {{product}}-socket
 Package: {{product}}-studio-notify
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-8.0, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-9.0, ${misc:Depends}, ${shlibs:Depends}
 Description: {{product}}-studio-notify
 	The service responsible for creating notifications and 
 	sending them to other services, for example, TelegramService and NotifyService
@@ -115,7 +115,7 @@ Description: {{product}}-studio-notify
 Package: {{product}}-api
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-8.0, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-9.0, ${misc:Depends}, ${shlibs:Depends}
 Recommends: rabbitmq-server, apache-activemq, redis-server
 Description: {{product}}-api
 	The service which is used for working with a certain portal. This service
@@ -125,14 +125,14 @@ Description: {{product}}-api
 Package: {{product}}-api-system
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-8.0, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-9.0, ${misc:Depends}, ${shlibs:Depends}
 Description: {{product}}-api-system
 	The service which is used for working with portals (creating, removing, etc.)
 
 Package: {{product}}-studio
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-8.0, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-9.0, ${misc:Depends}, ${shlibs:Depends}
 Description: {{product}}-studio
 	The service which processes storage handlers and authorization pages
 
@@ -173,7 +173,7 @@ Description: {{product}}-identity-authorization
 Package: {{product}}-backup-background
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-8.0, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-9.0, ${misc:Depends}, ${shlibs:Depends}
 Description: {{product}}-backup-background
 	The service which launches additional services related to backup creation:
 	 - BackupWorkerService - launches WorkerService which runs backup/restore, etc;
@@ -185,7 +185,7 @@ Description: {{product}}-backup-background
 Package: {{product}}-clear-events
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-8.0, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-9.0, ${misc:Depends}, ${shlibs:Depends}
 Description: {{product}}-clear-events
 	The service responsible for clearing the login_events and audit_events tables 
 	by LoginHistoryLifeTime and AuditTrailLifeTime to log out users after a timeout
@@ -193,7 +193,7 @@ Description: {{product}}-clear-events
 Package: {{product}}-migration-runner
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-8.0, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-9.0, ${misc:Depends}, ${shlibs:Depends}
 Description: {{product}}-migration-runner
 	The service responsible for the database creation.
 	A database connection is transferred to the service and
@@ -216,7 +216,7 @@ Description: {{product}}-login
 Package: {{product}}-healthchecks
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-8.0, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-9.0, ${misc:Depends}, ${shlibs:Depends}
 Description: {{product}}-healthchecks
 	The service which displays launched services
 
