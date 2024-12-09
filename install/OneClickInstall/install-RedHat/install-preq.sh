@@ -87,7 +87,7 @@ ${package_manager} -y install $([ $DIST != "fedora" ] && echo "epel-release") \
 			SDL2 \
 			expect \
 			java-${JAVA_VERSION}-openjdk-headless \
-			--enablerepo=opensearch-2.x $TESTING_REPO
+			--enablerepo=opensearch-2.x
 
 # Set Java ${JAVA_VERSION} as the default version
 JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | head -1)
