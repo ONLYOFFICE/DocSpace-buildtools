@@ -43,6 +43,8 @@ jobs:
     runs-on: ubuntu-22.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      deb_built: ${{ steps.changes.outputs.build_deb }}
+      rpm_built: ${{ steps.changes.outputs.build_rpm }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -207,4 +209,20 @@ jobs:
           if grep -qE '(W:|E:)' RPM_LINT; then
             echo "::warning Noticerpm=rpmlint::$(cat RPM_LINT | awk '/W:/ { ws += 1 } /E:/ { es += 1 } END { print "Warnings:", ws, "Errors:", es }')"
           fi
+      
+      - name: Trigger CI-OCI-Install Workflow
+        if: ${{ success() }}
+        run: |
+          curl \
+            -X POST \
+            -u "${{ secrets.USERNAME}}:${{secrets.TOKEN}}" \
+            https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/actions/workflows/85067971/dispatches \
+            -H "Accept: application/vnd.github.everest-preview+json" \
+            --data '{
+              "ref": "'"${{ github.ref_name }}"'",
+              "inputs": {
+                "deb_built": "'"${{ needs.prepare.outputs.deb_built }}"'",
+                "rpm_built": "'"${{ needs.prepare.outputs.rpm_built }}"'"
+              }
+            }'
 

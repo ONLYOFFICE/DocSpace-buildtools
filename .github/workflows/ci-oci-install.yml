@@ -15,6 +15,14 @@ on:
 
   workflow_dispatch:
     inputs:
+      deb_built:
+        type: boolean
+        description: "DEB packages were built"
+        default: false
+      rpm_built:
+        type: boolean
+        description: "RPM packages were built"
+        default: false
       centos9s:
          type: boolean
          description: 'CentOS 9 Stream'
@@ -82,16 +90,26 @@ jobs:
               {"execute": '${{ github.event.inputs.fedora40 || true }}', "name": "Fedora40", "os": "fedora-40", "distr": "bento"},
               {"execute": '${{ github.event.inputs.fedora41 || true }}', "name": "Fedora41", "os": "41-cloud-base", "distr": "fedora"}
             ]
-          }' | jq -c '.include')
-
-          matrix=$(jq -c --arg REDHAT_CHANGED "${{ env.redhat_changed }}" --arg DEBIAN_CHANGED "${{ env.debian_changed }}" '
-            { include: [.[] | select(
-                ($REDHAT_CHANGED == $DEBIAN_CHANGED and .execute == true) or
-                ($REDHAT_CHANGED == "true" and (.name | test("CentOS|Fedora"))) or
-                ($DEBIAN_CHANGED == "true" and (.name | test("Debian|Ubuntu"))))]
-            }' <<< "$matrix")
-
-          echo "matrix=${matrix}" >> $GITHUB_OUTPUT
+          }')            
+        
+          matrix=$(echo "$matrix" | jq -c --argjson debuilt "${{ github.event.inputs.deb_built || false }}" --argjson rpmbuilt "${{ github.event.inputs.rpm_built || false }}" '
+            { include: [ .include[] | select(
+                  ($debuilt and (.name | test("Debian|Ubuntu"))) or
+                  ($rpmbuilt and (.name | test("CentOS|Fedora")))
+                )
+            ] }')
+        
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            matrix=$(echo "$matrix" | jq -c --arg REDHAT_CHANGED "${{ env.redhat_changed }}" --arg DEBIAN_CHANGED "${{ env.debian_changed }}" '
+              { include: [ .include[] | select(
+                    ($REDHAT_CHANGED == $DEBIAN_CHANGED and .execute == true) or
+                    ($REDHAT_CHANGED == "true" and (.name | test("CentOS|Fedora"))) or
+                    ($DEBIAN_CHANGED == "true" and (.name | test("Debian|Ubuntu")))
+                  )
+              ] }')
+          fi
+        
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
 
   vagrant-up:
     name: "Test DocSpace with ${{ matrix.name}}"
