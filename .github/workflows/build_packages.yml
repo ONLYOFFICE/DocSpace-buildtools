@@ -10,6 +10,7 @@ on:
       - 'install/common/**'
       - 'install/deb/**'
       - 'install/rpm/**'
+      - '.github/workflows/build_packages.yml'
   workflow_dispatch:
     inputs:
       branch-buildtools:
@@ -58,12 +59,17 @@ jobs:
           CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
           echo "build_deb=$(echo "$CHANGED_FILES" | grep -qE '^install/common/|^install/deb/' && echo true || echo false)" >> $GITHUB_OUTPUT
           echo "build_rpm=$(echo "$CHANGED_FILES" | grep -qE '^install/common/|^install/rpm/' && echo true || echo false)" >> $GITHUB_OUTPUT      
+          echo "build_all=$(echo "$CHANGED_FILES" | grep -qE '^.github/workflows/build_packages.yml' && echo true || echo false)" >> $GITHUB_OUTPUT
       - name: Set matrix
         id: set-matrix
         run: |
           package_types=()
-          [[ "${{ steps.changes.outputs.build_deb }}" == "true" ]] && package_types+=("deb")
-          [[ "${{ steps.changes.outputs.build_rpm }}" == "true" ]] && package_types+=("rpm")
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" || "${{ steps.changes.outputs.build_all }}" == "true" ]]; then
+            package_types+=("deb" "rpm")
+          else
+            [[ "${{ steps.changes.outputs.build_deb }}" == "true" ]] && package_types+=("deb")
+            [[ "${{ steps.changes.outputs.build_rpm }}" == "true" ]] && package_types+=("rpm")
+          fi
           [[ ${#package_types[@]} -eq 0 ]] && exit 0
           matrix=$(printf '%s\n' "${package_types[@]}" | jq -R . | jq -sc '{include: map({packageType: .})}')
           echo "matrix=$matrix" >> $GITHUB_OUTPUT  
