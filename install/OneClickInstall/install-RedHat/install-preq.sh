@@ -95,8 +95,7 @@ alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && alternatives --set
 
 #add repo, install fluent-bit
 if [ ${INSTALL_FLUENT_BIT} == "true" ]; then 
-	curl https://raw.githubusercontent.com/fluent/fluent-bit/master/install.sh | bash
-	[ "$DIST" = "fedora" ] && rm -f /etc/yum.repos.d/fluent-bit.repo
+	[ "$DIST" != "fedora" ] && curl https://raw.githubusercontent.com/fluent/fluent-bit/master/install.sh | bash || yum -y install fluent-bit
 	${package_manager} -y install opensearch-dashboards-${DASHBOARDS_VERSION} --enablerepo=opensearch-dashboards-2.x
 fi
 
