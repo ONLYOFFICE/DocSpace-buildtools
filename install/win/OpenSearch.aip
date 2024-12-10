@@ -85,6 +85,7 @@
     <ROW Property="AI_SETUPEXEPATH" Signature_="AI_EXE_PATH_CU" Builds="DefaultBuild"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiBinaryComponent">
+    <ROW Name="PowerShellScriptLauncher.dll" SourcePath="&lt;AI_CUSTACTS&gt;PowerShellScriptLauncher.dll"/>
     <ROW Name="Prereq.dll" SourcePath="&lt;AI_CUSTACTS&gt;Prereq.dll"/>
     <ROW Name="aicustact.dll" SourcePath="&lt;AI_CUSTACTS&gt;aicustact.dll"/>
     <ROW Name="lzmaextractor.dll" SourcePath="&lt;AI_CUSTACTS&gt;lzmaextractor.dll"/>
@@ -121,6 +122,7 @@
     <ROW Action="AI_ConfigFailActions" Type="11265" Source="aicustact.dll" Target="ConfigureServFailActions" WithoutSeq="true"/>
     <ROW Action="AI_DATA_SETTER" Type="51" Source="CustomActionData" Target="[~]"/>
     <ROW Action="AI_DATA_SETTER_1" Type="51" Source="CustomActionData" Target="[AI_SETUPEXEPATH]"/>
+    <ROW Action="AI_DATA_SETTER_2" Type="51" Source="CustomActionData" Target="AEQAaQBnAGkAdABhAGwAbAB5AFMAaQBnAG4AUwBjAHIAaQBwAHQAAgAxAAEARgBsAGEAZwBzAAIAMgABAEwAYQB1AG4AYwBoAEQAaQByAAIAAQBQAGEAcgBhAG0AcwACAAEAUwBjAHIAaQBwAHQAAgAjAFIAZQBxAHUAaQByAGUAcwAgAC0AdgBlAHIAcwBpAG8AbgAgADMADQAKAFAAYQByAGEAbQAoACkADQAKAA0ACgAkAHMAZQByAHYAaQBjAGUATgBhAG0AZQAgAD0AIAAiAEUAbABhAHMAdABpAGMAcwBlAGEAcgBjAGgAIgANAAoADQAKACQAcwBlAHIAdgBpAGMAZQAgAD0AIABHAGUAdAAtAFMAZQByAHYAaQBjAGUAIAAtAE4AYQBtAGUAIAAkAHMAZQByAHYAaQBjAGUATgBhAG0AZQAgAC0ARQByAHIAbwByAEEAYwB0AGkAbwBuACAAUwBpAGwAZQBuAHQAbAB5AEMAbwBuAHQAaQBuAHUAZQANAAoADQAKAGkAZgAgACgAJABzAGUAcgB2AGkAYwBlACkAIABbAFwAewBdAA0ACgAgACAAIAAgAFcAcgBpAHQAZQAtAEgAbwBzAHQAIAAiAFMAZQByAHYAaQBjAGUAIAAnACQAcwBlAHIAdgBpAGMAZQBOAGEAbQBlACcAIABmAG8AdQBuAGQALgAgAEMAdQByAHIAZQBuAHQAIABzAHQAYQB0AHUAcwA6ACAAJAAoACQAcwBlAHIAdgBpAGMAZQAuAFMAdABhAHQAdQBzACkAIgANAAoAIAAgACAAIAANAAoAIAAgACAAIABpAGYAIAAoACQAcwBlAHIAdgBpAGMAZQAuAFMAdABhAHQAdQBzACAALQBlAHEAIAAiAFIAdQBuAG4AaQBuAGcAIgApACAAWwBcAHsAXQANAAoAIAAgACAAIAAgACAAIAAgAFMAdABvAHAALQBTAGUAcgB2AGkAYwBlACAALQBOAGEAbQBlACAAJABzAGUAcgB2AGkAYwBlAE4AYQBtAGUAIAAtAEYAbwByAGMAZQAgAC0ARQByAHIAbwByAEEAYwB0AGkAbwBuACAAUwB0AG8AcAANAAoAIAAgACAAIABbAFwAfQBdAA0ACgANAAoAIAAgACAAIABTAGUAdAAtAFMAZQByAHYAaQBjAGUAIAAtAE4AYQBtAGUAIAAkAHMAZQByAHYAaQBjAGUATgBhAG0AZQAgAC0AUwB0AGEAcgB0AHUAcABUAHkAcABlACAARABpAHMAYQBiAGwAZQBkACAALQBFAHIAcgBvAHIAQQBjAHQAaQBvAG4AIABTAHQAbwBwAA0ACgBbAFwAfQBd"/>
     <ROW Action="AI_DOWNGRADE" Type="19" Target="4010"/>
     <ROW Action="AI_DeleteCadLzma" Type="51" Source="AI_DeleteLzma" Target="[AI_SETUPEXEPATH]"/>
     <ROW Action="AI_DeleteLzma" Type="1025" Source="lzmaextractor.dll" Target="DeleteLZMAFiles"/>
@@ -141,7 +143,7 @@
     <ROW Action="AI_ResolveKnownFolders" Type="1" Source="aicustact.dll" Target="AI_ResolveKnownFolders"/>
     <ROW Action="AI_SHOW_LOG" Type="65" Source="aicustact.dll" Target="LaunchLogFile" WithoutSeq="true"/>
     <ROW Action="AI_STORE_LOCATION" Type="51" Source="ARPINSTALLLOCATION" Target="[APPDIR]"/>
-    <ROW Action="DisableElasticsearch" Type="38" Target="Script Text" TargetUnformatted="Set objShell = CreateObject(&quot;WScript.Shell&quot;)&#13;&#10;Set objFSO = CreateObject(&quot;Scripting.FileSystemObject&quot;)&#13;&#10;&#13;&#10;tempFolderPath = objShell.ExpandEnvironmentStrings(&quot;%TEMP%&quot;)&#13;&#10;&#13;&#10;outputFilePath = tempFolderPath &amp; &quot;\ElasticsearchQueryOutput.txt&quot;&#13;&#10;objShell.Run &quot;cmd /c sc query Elasticsearch &gt; &quot; &amp; outputFilePath, 0, True&#13;&#10;&#13;&#10;strOutput = objFSO.OpenTextFile(outputFilePath).ReadAll()&#13;&#10;objFSO.DeleteFile(outputFilePath)&#13;&#10;&#13;&#10;If InStr(strOutput, &quot;SERVICE_NAME: Elasticsearch&quot;) &gt; 0 Then&#13;&#10;    objShell.Run &quot;cmd /c sc stop Elasticsearch&quot;, 0, True&#13;&#10;    objShell.Run &quot;cmd /c sc config Elasticsearch start=disabled&quot;, 0, True&#13;&#10;End If"/>
+    <ROW Action="DisableElasticsearch" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellScript" Options="1" AdditionalSeq="AI_DATA_SETTER_2"/>
     <ROW Action="SET_APPDIR" Type="307" Source="APPDIR" Target="[ProgramFilesFolder][Manufacturer]\[ProductName]" MultiBuildTarget="DefaultBuild:[WindowsVolume]\[ProductName]"/>
     <ROW Action="SET_SHORTCUTDIR" Type="307" Source="SHORTCUTDIR" Target="[ProgramMenuFolder][ProductName]"/>
     <ROW Action="SET_TARGETDIR_TO_APPDIR" Type="51" Source="TARGETDIR" Target="[APPDIR]"/>
@@ -162,7 +164,6 @@
     <ROW Action="AI_EnableDebugLog" Sequence="51"/>
     <ROW Action="AI_ProcessFailActions" Sequence="5848"/>
     <ROW Action="AI_DATA_SETTER" Sequence="5847"/>
-    <ROW Action="DisableElasticsearch" Condition="( NOT Installed AND NOT OLDPRODUCTS )" Sequence="6401"/>
     <ROW Action="AI_BACKUP_AI_SETUPEXEPATH" Sequence="99" Builds="DefaultBuild"/>
     <ROW Action="AI_RESTORE_AI_SETUPEXEPATH" Condition="AI_SETUPEXEPATH_ORIGINAL" Sequence="101" Builds="DefaultBuild"/>
     <ROW Action="AI_DeleteCadLzma" Condition="SETUPEXEDIR=&quot;&quot; AND Installed AND (REMOVE&lt;&gt;&quot;ALL&quot;) AND (AI_INSTALL_MODE&lt;&gt;&quot;Remove&quot;) AND (NOT PATCH)" Sequence="199" Builds="DefaultBuild"/>
@@ -174,6 +175,8 @@
     <ROW Action="AI_DeleteLzma" Condition="SETUPEXEDIR=&quot;&quot; AND Installed AND (REMOVE&lt;&gt;&quot;ALL&quot;) AND (AI_INSTALL_MODE&lt;&gt;&quot;Remove&quot;) AND (NOT PATCH)" Sequence="6599" Builds="DefaultBuild"/>
     <ROW Action="AI_ExtractFiles" Sequence="1399" Builds="DefaultBuild"/>
     <ROW Action="AI_DATA_SETTER_1" Sequence="1398"/>
+    <ROW Action="DisableElasticsearch" Condition="( NOT Installed AND NOT OLDPRODUCTS )" Sequence="6402"/>
+    <ROW Action="AI_DATA_SETTER_2" Condition="( NOT Installed AND NOT OLDPRODUCTS )" Sequence="6401"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstallUISequenceComponent">
     <ROW Action="AI_PRESERVE_INSTALL_TYPE" Sequence="199"/>
