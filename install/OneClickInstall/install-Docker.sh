@@ -63,7 +63,7 @@ INSTALL_ELASTICSEARCH="true";
 INSTALL_FLUENT_BIT="true";
 INSTALL_PRODUCT="true";
 UPDATE="false";
-
+UNINSTALL="false";
 HUB="";
 USERNAME="";
 PASSWORD="";
@@ -500,7 +500,15 @@ while [ "$1" != "" ]; do
 				shift
 			fi
 		;;
-		
+
+		-uni | --uninstall)
+			if [ "$2" != "" ]; then
+				UNINSTALL=$2
+            	shift
+			fi
+
+        ;;
+
 		-off | --offline )
 			if [ "$2" != "" ]; then
 				OFFLINE_INSTALLATION=$2
@@ -564,6 +572,7 @@ while [ "$1" != "" ]; do
 			echo "      -noni, --noninteractive           auto confirm all questions (true|false)"
 			echo "      -dbm, --databasemigration         database migration (true|false)"
 			echo "      -ms, --makeswap                   make swap file (true|false)"
+			echo "      -uni, --uninstall                 uninstall existing installation (true|false)"
 			echo "      -?, -h, --help                    this help"
 			echo
 			echo "    Install all the components without document server:"
@@ -592,6 +601,39 @@ while [ "$1" != "" ]; do
 	esac
 	shift
 done
+
+uninstall() {
+    read -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " REMOVE_DATA_SERVICES
+
+	if [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]]; then
+		SERVICES=("db" "rabbitmq" "redis" "opensearch" "dashboards" "fluent")
+	fi
+
+    SERVICES+=("${PRODUCT}" "ds" "identity" "proxy" "healthchecks" "notify" "migration-runner")
+
+    for SERVICE in "${SERVICES[@]}"; do
+        if [[ -f "$BASE_DIR/$SERVICE.yml" ]]; then
+            echo "Uninstallation of  $SERVICE and its volumes..."
+            docker-compose -f "$BASE_DIR/$SERVICE.yml" down -v || echo "Failed to remove $SERVICE."
+        fi
+    done
+
+	docker network rm "${NETWORK_NAME}" 2>/dev/null && NETWORK_REMOVED=true || echo "Failed to remove network ${NETWORK_NAME}."
+
+
+	read -p "Do you want to retain data (keep .env file)? (Y/n): " KEEP_DATA
+
+	if [[ "$NETWORK_REMOVED" == "true" && -d "$BASE_DIR" ]]; then
+		if [[ "${KEEP_DATA,,}" =~ ^(y|yes)?$ ]]; then
+			find "$BASE_DIR" -mindepth 1 ! -name ".env" -exec rm -rf {} +
+		else
+			rm -rf "$BASE_DIR" || echo "Failed to remove directory $BASE_DIR."
+		fi
+	fi
+
+	echo -e "Uninstallation of $PRODUCT_NAME" \
+		"$( [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]] && echo "and all dependencies" ) \e[32mcompleted.\e[0m"
+}
 
 root_checking () {
 	PID=$$
@@ -777,7 +819,7 @@ install_package () {
 }
 
 install_docker_compose () {
-	curl -L "https://github.com/docker/compose/releases/download/v2.30.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/bin/docker-compose
+	curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/bin/docker-compose
 	chmod +x /usr/bin/docker-compose
 }
 
@@ -1191,7 +1233,7 @@ install_mysql_server () {
 	reconfigure MYSQL_ROOT_PASSWORD ${MYSQL_ROOT_PASSWORD}
 
 	if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ]; then
-		docker-compose -f $BASE_DIR/db.yml up -d
+		docker-compose -f $BASE_DIR/db.yml up -d --force-recreate
 	elif [ "$INSTALL_MYSQL_SERVER" == "pull" ]; then
 		docker-compose -f $BASE_DIR/db.yml pull
 	fi
@@ -1528,4 +1570,4 @@ start_installation () {
 	exit 0;
 }
 
-start_installation
+[[ $UNINSTALL != true ]] && start_installation || uninstall

@@ -30,7 +30,7 @@ Source6:        %{product}.rpmlintrc
 
 BuildRequires:  nodejs >= 18.0
 BuildRequires:  yarn
-BuildRequires:  dotnet-sdk-8.0 >= 8.0.402
+BuildRequires:  dotnet-sdk-9.0
 BuildRequires:  unzip
 BuildRequires:  java-21-openjdk-headless
 BuildRequires:  maven

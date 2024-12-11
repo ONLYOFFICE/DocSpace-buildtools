@@ -1,0 +1,233 @@
+name: Build packages
+
+on:
+  push:
+    branches:
+      - 'release/**'
+      - 'hotfix/**'
+      - 'develop'
+    paths:
+      - 'install/common/**'
+      - 'install/deb/**'
+      - 'install/rpm/**'
+      - '.github/workflows/build_packages.yml'
+  workflow_dispatch:
+    inputs:
+      branch-buildtools:
+        description: 'Branch for buildtools repository'
+        required: true
+        default: 'develop'
+      branch-client:
+        description: 'Branch for client repository'
+        required: true
+        default: 'develop'
+      branch-server:
+        description: 'Branch for server repository'
+        required: true
+        default: 'develop'
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PRODUCT: "DocSpace"
+  PRODUCT_LOW: "docspace"
+  BUILD_NUMBER: ${{ github.run_number }}
+  PACKAGE_DIRECTORY: "/home/runner/work/${{ github.event.repository.name }}/${{ github.event.repository.name }}"
+  BRANCH_BUILDTOOLS: ${{ github.event.inputs.branch-buildtools != '' && github.event.inputs.branch-buildtools || github.ref_name || 'develop' }}
+  BRANCH_CLIENT: ${{ github.event.inputs.branch-client != '' && github.event.inputs.branch-client || github.ref_name || 'develop' }}
+  BRANCH_SERVER: ${{ github.event.inputs.branch-server != '' && github.event.inputs.branch-server || github.ref_name || 'develop' }}
+
+jobs:
+  prepare:
+    runs-on: ubuntu-22.04
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      deb_built: ${{ steps.changes.outputs.build_deb }}
+      rpm_built: ${{ steps.changes.outputs.build_rpm }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine changed
+        id: changes
+        run: |
+          git fetch --no-tags --prune --depth=2
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          echo "build_deb=$(echo "$CHANGED_FILES" | grep -qE '^install/common/|^install/deb/' && echo true || echo false)" >> $GITHUB_OUTPUT
+          echo "build_rpm=$(echo "$CHANGED_FILES" | grep -qE '^install/common/|^install/rpm/' && echo true || echo false)" >> $GITHUB_OUTPUT      
+          echo "build_all=$(echo "$CHANGED_FILES" | grep -qE '^.github/workflows/build_packages.yml' && echo true || echo false)" >> $GITHUB_OUTPUT
+      - name: Set matrix
+        id: set-matrix
+        run: |
+          package_types=()
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" || "${{ steps.changes.outputs.build_all }}" == "true" ]]; then
+            package_types+=("deb" "rpm")
+          else
+            [[ "${{ steps.changes.outputs.build_deb }}" == "true" ]] && package_types+=("deb")
+            [[ "${{ steps.changes.outputs.build_rpm }}" == "true" ]] && package_types+=("rpm")
+          fi
+          [[ ${#package_types[@]} -eq 0 ]] && exit 0
+          matrix=$(printf '%s\n' "${package_types[@]}" | jq -R . | jq -sc '{include: map({packageType: .})}')
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT  
+  build:
+    name: Build Packages
+    needs: prepare
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set product version
+        run: |
+          PRODUCT_VERSION=$(grep -oP '\d+\.\d+\.\d+' <<< "${BRANCH_BUILDTOOLS//\//} ${BRANCH_CLIENT//\//} \
+          ${BRANCH_SERVER//\//}" | head -n1)
+          echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.0.1}" >> $GITHUB_ENV
+
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/local/lib/android /opt/ghc
+          sudo docker image prune --all --force
+
+      - name: Import GPG
+        uses: crazy-max/ghaction-import-gpg@v6
+        id: gpg_step
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PRIVATE_KEY_PASS }}
+
+      - name: Prepare build
+        if: matrix.packageType == 'deb' || matrix.packageType == 'rpm'
+        run: |
+          wget -O - https://dl.yarnpkg.com/debian/pubkey.gpg | \
+          sudo gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/yarnkey.gpg --import
+          sudo chmod 644 /usr/share/keyrings/yarnkey.gpg
+          echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian/ stable main" | \
+          sudo tee /etc/apt/sources.list.d/yarn.list
+          sudo add-apt-repository -y ppa:dotnet/backports
+          sudo apt remove -y netstandard-targeting-pack-2.1
+          curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+          sudo apt install -y dotnet-sdk-9.0 yarn nodejs rename unzip maven openjdk-21-jdk-headless
+          JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | head -1)
+          sudo update-alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && sudo update-alternatives --set java "$JAVA_PATH"
+          echo "JAVA_HOME=$(dirname $(dirname "$JAVA_PATH"))" >> $GITHUB_ENV
+          sudo npm install -g json
+          if [[ "${{ matrix.packageType }}" == "rpm" ]]; then
+            sudo apt install -y python3-rpm python3-pip
+            sudo pip install rpmlint
+          else
+            sudo apt install -y dpkg-sig lintian dh-make
+          fi
+
+      - name: Build DEB Packages
+        if: matrix.packageType == 'deb'
+        run: |
+          cd install/deb/
+          wget -q -O ./debian/source/buildtools.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-buildtools/archive/${BRANCH_BUILDTOOLS}.tar.gz"
+          wget -q -O ./debian/source/client.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-client/archive/${BRANCH_CLIENT}.tar.gz"
+          wget -q -O ./debian/source/server.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-server/archive/${BRANCH_SERVER}.tar.gz"
+          wget -q -O ./debian/source/DocStore.tar.gz "https://github.com/ONLYOFFICE/document-templates/archive/main/community-server.tar.gz"
+          wget -q -O ./debian/source/campaigns.tar.gz "https://github.com/ONLYOFFICE/ASC.Web.Campaigns/archive/master.tar.gz"
+          wget -q -O ./debian/source/plugins.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-plugins/archive/master.tar.gz"
+
+          rename -f -v "s/product([^\/]*)$/${PRODUCT_LOW}\$1/g" debian/*
+          find debian/ -type f -exec sed -i "s/{{product}}/${PRODUCT_LOW}/g" {} ';'
+          sed -i "s/{{package_header_tag_version}}/${PRODUCT_VERSION}.${BUILD_NUMBER}/g" debian/changelog debian/control
+          dpkg-buildpackage -uc -us
+
+      - name: Build RPM Packages
+        if: matrix.packageType == 'rpm'
+        run: |
+          cd install/rpm/SPECS
+          wget -q -O ./SOURCES/buildtools.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-buildtools/archive/${BRANCH_BUILDTOOLS}.tar.gz"
+          wget -q -O ./SOURCES/client.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-client/archive/${BRANCH_CLIENT}.tar.gz"
+          wget -q -O ./SOURCES/server.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-server/archive/${BRANCH_SERVER}.tar.gz"
+          wget -q -O ./SOURCES/DocStore.tar.gz "https://github.com/ONLYOFFICE/document-templates/archive/main/community-server.tar.gz"
+          wget -q -O ./SOURCES/campaigns.tar.gz "https://github.com/ONLYOFFICE/ASC.Web.Campaigns/archive/master.tar.gz"
+          wget -q -O ./SOURCES/plugins.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-plugins/archive/master.tar.gz"
+          mv ./SOURCES/product.rpmlintrc ./SOURCES/${PRODUCT_LOW}.rpmlintrc
+          sed -i -e '/BuildRequires/d' product.spec
+          rpmbuild -D "packager Ascensio System SIA <support@onlyoffice.com>" \
+                   -D "_topdir $(pwd)" \
+                   -D "version ${PRODUCT_VERSION}" \
+                   -D "release ${BUILD_NUMBER}" -ba product.spec
+
+      - name: Sign DEB Packages
+        if: matrix.packageType == 'deb'
+        run: |
+          dpkg-sig --sign origin \
+            --gpg-options "--pinentry-mode loopback --passphrase ${{ secrets.GPG_PRIVATE_KEY_PASS }}" \
+            --batch ${PACKAGE_DIRECTORY}/install/*.deb
+
+      - name: Sign RPM Packages
+        if: matrix.packageType == 'rpm'
+        run: |
+          gpg --export --armor > gpgkey.pub && rpm --import gpgkey.pub
+          rpm -D "__gpg /usr/bin/gpg" \
+              -D "_gpg_path $HOME/.gnupg" \
+              -D "_gpg_name ${{ secrets.GPG_KEY_NAME }}" \
+              -D "_gpg_sign_cmd_extra_args --pinentry-mode loopback --passphrase ${{ secrets.GPG_PRIVATE_KEY_PASS }}" \
+              --addsign ${PACKAGE_DIRECTORY}/install/rpm/SPECS/RPMS/noarch/*.rpm 
+
+      - name: Upload DEB Packages
+        if: matrix.packageType == 'deb'
+        run: |
+          for deb_package in ${PACKAGE_DIRECTORY}/install/*.deb; do
+            echo -n "Uploading $( basename $deb_package )... "
+            curl --user "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" \
+                 -H "Content-Type: multipart/form-data" \
+                 --data-binary "@$deb_package" "${{ secrets.REPO_URL_4TESTING_DEB }}" \
+              && echo "Success: $(basename "$deb_package") uploaded." || echo "Error: Failed to upload $(basename "$deb_package")"
+          done
+        
+      - name: Upload RPM Packages
+        if: matrix.packageType == 'rpm'
+        run: |
+          for rpm_package in ${PACKAGE_DIRECTORY}/install/rpm/SPECS/RPMS/noarch/*.rpm; do
+            echo -n "Uploading $( basename $rpm_package )... "
+            curl --user "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" \
+                 --upload-file "$rpm_package" "${{ secrets.REPO_URL_4TESTING_RPM }}" \
+              && echo "Success: $(basename "$rpm_package") uploaded." || echo "Error: Failed to upload $(basename "$rpm_package")"
+          done
+
+      - name: Checking the DEB package for errors
+        if: matrix.packageType == 'deb'
+        run: |
+          lintian --profile debian ${PACKAGE_DIRECTORY}/install/*.deb | tee -a LINTIAN
+          if grep -qE '^(W:|E:)' LINTIAN; then
+            echo "::warning Noticedeb=lintian::$(cat LINTIAN | awk '/^W:/ { ws += 1 } /^E:/ { es += 1 } END { print "Warnings:", ws, "Errors:", es }')"
+          fi
+
+      - name: Checking the RPM package for errors
+        if: matrix.packageType == 'rpm'
+        run: |
+          for rpm_package in ${PACKAGE_DIRECTORY}/install/rpm/SPECS/RPMS/noarch/*.rpm; do
+            rpmlint --ignore-unused-rpmlintrc --rpmlintrc ${PACKAGE_DIRECTORY}/install/rpm/SPECS/SOURCES/${PRODUCT_LOW}.rpmlintrc $rpm_package | tee -a RPM_LINT
+          done
+          if grep -qE '(W:|E:)' RPM_LINT; then
+            echo "::warning Noticerpm=rpmlint::$(cat RPM_LINT | awk '/W:/ { ws += 1 } /E:/ { es += 1 } END { print "Warnings:", ws, "Errors:", es }')"
+          fi
+      
+      - name: Trigger CI-OCI-Install Workflow
+        if: ${{ success() }}
+        run: |
+          curl \
+            -X POST \
+            -u "${{ secrets.USERNAME}}:${{secrets.TOKEN}}" \
+            https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/actions/workflows/85067971/dispatches \
+            -H "Accept: application/vnd.github.everest-preview+json" \
+            --data '{
+              "ref": "'"${{ github.ref_name }}"'",
+              "inputs": {
+                "deb_built": "'"${{ needs.prepare.outputs.deb_built }}"'",
+                "rpm_built": "'"${{ needs.prepare.outputs.rpm_built }}"'"
+              }
+            }'
+

@@ -20,13 +20,13 @@ fi
 PACKAGES_TO_UNINSTALL=($(dpkg -l | awk '{print $2}' | grep -E "^(${package_sysname}|${product})" || true))
 
 DEPENDENCIES=(
-    nodejs dotnet-sdk-8.0 mysql-server mysql-client postgresql
+    nodejs dotnet-sdk-9.0 mysql-server mysql-client postgresql
     redis-server rabbitmq-server ffmpeg opensearch
     opensearch-dashboards fluent-bit openresty
 )
 
 if [ "$UNINSTALL_DEPENDENCIES" = true ]; then
-    PACKAGES_TO_UNINSTALL+=("${DEPENDENCIES[@]}")
+    PACKAGES_TO_UNINSTALL+=("${DEPENDENCIES[@]}" $(dpkg-query -W -f='${Package}\n' | grep -E "^postgresql(-[0-9]+)?(-.*)?$"))
 fi
 
 # Uninstall packages and clean up
