@@ -1001,7 +1001,7 @@
     <ROW Action="AI_DATA_SETTER_4" Type="51" Source="CustomActionData" Target="[~]"/>
     <ROW Action="AI_DATA_SETTER_40" Type="51" Source="CustomActionData" Target="AEQAaQBnAGkAdABhAGwAbAB5AFMAaQBnAG4AUwBjAHIAaQBwAHQAAgAxAAEARgBsAGEAZwBzAAIAMwABAEwAYQB1AG4AYwBoAEQAaQByAAIAAQBQAGEAcgBhAG0AcwACAE0AbwB2AGUAQwBvAG4AZgBpAGcAcwABAFMAYwByAGkAcAB0AFMAcgBjAEIAaQBuAGEAcgB5AFIAbwB3AEkAZAACAHUAdABpAGwAcwAuAHAAcwAxAF8AMQ=="/>
     <ROW Action="AI_DATA_SETTER_5" Type="51" Source="CustomActionData" Target="[SqlConnectionError] |[ProductName] Setup |MB_OK,MB_ICONWARNING,MB_DEFBUTTON1||[CLIENTPROCESSID]"/>
-    <ROW Action="AI_DATA_SETTER_6" Type="51" Source="CustomActionData" Target="[APPDIR_FORWARD_SLASH]"/>
+    <ROW Action="AI_DATA_SETTER_6" Type="51" Source="CustomActionData" Target="AEYAbABhAGcAcwACADEAAQBQAGEAcgBhAG0AcwACAFMAZQB0AEEAcABwAEQAaQByAFcAaQB0AGgARgBvAHIAdwBhAHIAZABTAGwAYQBzAGgAAQBTAGMAcgBpAHAAdABTAHIAYwBCAGkAbgBhAHIAeQBSAG8AdwBJAGQAAgB1AHQAaQBsAHMALgBwAHMAMQBfADE="/>
     <ROW Action="AI_DATA_SETTER_7" Type="51" Source="CustomActionData" Target="[~]"/>
     <ROW Action="AI_DATA_SETTER_8" Type="51" Source="CustomActionData" Target="[~]"/>
     <ROW Action="AI_DATA_SETTER_9" Type="51" Source="CustomActionData" Target="MySQL80"/>
@@ -1079,7 +1079,7 @@
     <ROW Action="SetDocumentServerJWTSecretProp" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_35"/>
     <ROW Action="SetMachineKey" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_36"/>
     <ROW Action="SetSERVERNAME" Type="51" Source="SERVER_NAME" Target="[ComputerName]"/>
-    <ROW Action="Set_APPDIR_FORWARD_SLASH" Type="38" Target="Script Text" TargetUnformatted="Session.Property(&quot;APPDIR_FORWARD_SLASH&quot;) = Replace(Session.Property(&quot;APPDIR&quot;), &quot;\&quot;, &quot;/&quot;)&#13;&#10;" AdditionalSeq="AI_DATA_SETTER_6"/>
+    <ROW Action="Set_APPDIR_FORWARD_SLASH" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_6"/>
     <ROW Action="Set_DS_JWT_ENABLED" Type="51" Source="DOCUMENT_SERVER_JWT_ENABLED" Target="[JWT_ENABLED]"/>
     <ROW Action="Set_DS_JWT_HEADER" Type="51" Source="DOCUMENT_SERVER_JWT_HEADER" Target="[JWT_HEADER]"/>
     <ROW Action="Set_DS_JWT_SECRET" Type="51" Source="DOCUMENT_SERVER_JWT_SECRET" Target="[JWT_SECRET]"/>
@@ -1245,8 +1245,6 @@
     <ROW Action="AI_DATA_SETTER_8" Condition="(REMOVE)" Sequence="3103"/>
     <ROW Action="StopMySQLService" Condition="( NOT Installed AND NOT OLDPRODUCTS ) AND ( AI_PROCESS_STATE &lt;&gt; &quot;Not Found&quot; )" Sequence="1613"/>
     <ROW Action="AI_DATA_SETTER_10" Condition="( NOT Installed AND NOT OLDPRODUCTS ) AND ( AI_PROCESS_STATE &lt;&gt; &quot;Not Found&quot; )" Sequence="1612"/>
-    <ROW Action="Set_APPDIR_FORWARD_SLASH" Condition="( NOT Installed )" Sequence="1635"/>
-    <ROW Action="AI_DATA_SETTER_6" Condition="( NOT Installed )" Sequence="1630"/>
     <ROW Action="DetectMySQLService" Condition="( ( NOT Installed AND NOT OLDPRODUCTS ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1611"/>
     <ROW Action="AI_DATA_SETTER_9" Condition="( ( NOT Installed AND NOT OLDPRODUCTS ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1608"/>
     <ROW Action="StopOpenSearchService" Condition="( NOT Installed )" Sequence="1619"/>
@@ -1268,11 +1266,11 @@
     <ROW Action="AI_DATA_SETTER_15" Condition="(REMOVE)" Sequence="3101"/>
     <ROW Action="AI_ConfigPermissions" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="5852"/>
     <ROW Action="AI_DATA_SETTER_4" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="5851"/>
-    <ROW Action="MsiUnpublishAssemblies" Condition="Installed" Sequence="1637" SeqType="0" MsiKey="MsiUnpublishAssemblies"/>
-    <ROW Action="StopRedisService" Condition="( NOT Installed )" Sequence="1632"/>
-    <ROW Action="AI_DATA_SETTER_16" Condition="( NOT Installed )" Sequence="1631"/>
-    <ROW Action="StartService" Condition="( NOT Installed )" Sequence="1634"/>
-    <ROW Action="AI_DATA_SETTER_19" Condition="( NOT Installed )" Sequence="1633"/>
+    <ROW Action="MsiUnpublishAssemblies" Condition="Installed" Sequence="1638" SeqType="0" MsiKey="MsiUnpublishAssemblies"/>
+    <ROW Action="StopRedisService" Condition="( NOT Installed )" Sequence="1631"/>
+    <ROW Action="AI_DATA_SETTER_16" Condition="( NOT Installed )" Sequence="1630"/>
+    <ROW Action="StartService" Condition="( NOT Installed )" Sequence="1633"/>
+    <ROW Action="AI_DATA_SETTER_19" Condition="( NOT Installed )" Sequence="1632"/>
     <ROW Action="AI_FwInstall" Condition="(VersionNT &gt;= 501) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5802"/>
     <ROW Action="AI_DATA_SETTER_21" Condition="(VersionNT &gt;= 501) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5801"/>
     <ROW Action="AI_FwUninstall" Condition="(VersionNT &gt;= 501) AND (REMOVE=&quot;ALL&quot;)" Sequence="1702"/>
@@ -1305,6 +1303,8 @@
     <ROW Action="AI_DATA_SETTER_33" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1605"/>
     <ROW Action="PostgreSQLConfigure" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1610"/>
     <ROW Action="AI_DATA_SETTER_34" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1609"/>
+    <ROW Action="Set_APPDIR_FORWARD_SLASH" Sequence="1635"/>
+    <ROW Action="AI_DATA_SETTER_6" Sequence="1634"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstallUISequenceComponent">
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>

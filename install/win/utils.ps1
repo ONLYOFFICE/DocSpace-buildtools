@@ -338,6 +338,14 @@ function RedisSetup {
     }
 }
 
+# Sets AppDir with forward slash
+function SetAppDirWithForwardSlash {
+    $AppDir = AI_GetMsiProperty APPDIR
+    $AppDirForwardSlash = $AppDir -replace '\\', '/'
+
+    AI_SetMsiProperty APPDIR_FORWARD_SLASH $AppDirForwardSlash
+}
+
 # Function to move configurations and manage files.
 function MoveConfigs {
     # Define source and target paths.
