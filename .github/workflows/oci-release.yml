@@ -3,7 +3,7 @@ name: Upload OneСlickInstall scripts on S3
 on:
   push:
     branches:
-      - master
+      - bugfix/rabbitmq
     paths:
       - 'install/docker/*.yml'
       - 'install/docker/*.env'
