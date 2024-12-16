@@ -25,6 +25,14 @@ on:
         description: 'Branch for server repository'
         required: true
         default: 'develop'
+      deb_build:
+        description: 'Trigger DEB build'
+        required: false
+        default: 'false'
+      rpm_build:
+        description: 'Trigger RPM build'
+        required: false
+        default: 'false'
 
 concurrency:
   group: ${{ github.ref }}
@@ -44,8 +52,6 @@ jobs:
     runs-on: ubuntu-22.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
-      deb_built: ${{ steps.changes.outputs.build_deb }}
-      rpm_built: ${{ steps.changes.outputs.build_rpm }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -56,19 +62,20 @@ jobs:
         id: changes
         run: |
           git fetch --no-tags --prune --depth=2
-          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
-          echo "build_deb=$(echo "$CHANGED_FILES" | grep -qE '^install/common/|^install/deb/' && echo true || echo false)" >> $GITHUB_OUTPUT
-          echo "build_rpm=$(echo "$CHANGED_FILES" | grep -qE '^install/common/|^install/rpm/' && echo true || echo false)" >> $GITHUB_OUTPUT      
-          echo "build_all=$(echo "$CHANGED_FILES" | grep -qE '^.github/workflows/build_packages.yml' && echo true || echo false)" >> $GITHUB_OUTPUT
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)     
+          echo "build_all=$(echo "$CHANGED_FILES" | grep -qE '^.github/workflows/build_packages.yml' && echo true || echo false)" >> $GITHUB_OUTPUT          
       - name: Set matrix
         id: set-matrix
         run: |
           package_types=()
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" || "${{ steps.changes.outputs.build_all }}" == "true" ]]; then
-            package_types+=("deb" "rpm")
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            [[ "${{ github.event.inputs.deb_build }}" == "true" ]] && package_types+=("deb")
+            [[ "${{ github.event.inputs.rpm_build }}" == "true" ]] && package_types+=("rpm")
+          elif [[ "${{ steps.changes.outputs.build_all }}" == "true" ]]; then
+              package_types+=("deb" "rpm")
           else
-            [[ "${{ steps.changes.outputs.build_deb }}" == "true" ]] && package_types+=("deb")
-            [[ "${{ steps.changes.outputs.build_rpm }}" == "true" ]] && package_types+=("rpm")
+            [[ "${{ github.event.inputs.deb_build }}" == "true" ]] && package_types+=("deb")
+            [[ "${{ github.event.inputs.rpm_build }}" == "true" ]] && package_types+=("rpm")
           fi
           [[ ${#package_types[@]} -eq 0 ]] && exit 0
           matrix=$(printf '%s\n' "${package_types[@]}" | jq -R . | jq -sc '{include: map({packageType: .})}')
@@ -215,8 +222,13 @@ jobs:
             echo "::warning Noticerpm=rpmlint::$(cat RPM_LINT | awk '/W:/ { ws += 1 } /E:/ { es += 1 } END { print "Warnings:", ws, "Errors:", es }')"
           fi
       
+  trigger_oci:
+    name: Trigger ci-oci-install Workflow
+    needs: build
+    runs-on: ubuntu-22.04
+    if: ${{ success() }}
+    steps:
       - name: Trigger CI-OCI-Install Workflow
-        if: ${{ success() }}
         run: |
           curl \
             -X POST \
@@ -226,8 +238,8 @@ jobs:
             --data '{
               "ref": "'"${{ github.ref_name }}"'",
               "inputs": {
-                "deb_built": "'"${{ needs.prepare.outputs.deb_built }}"'",
-                "rpm_built": "'"${{ needs.prepare.outputs.rpm_built }}"'"
+                "deb_build": "'"${{ github.event.inputs.deb_build }}"'",
+                "rpm_build": "'"${{ github.event.inputs.rpm_build }}"'"
               }
             }'
 

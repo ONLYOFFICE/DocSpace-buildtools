@@ -21,9 +21,6 @@ on:
         required: true
         default: false
         type: boolean
-  repository_dispatch:
-    types:
-      - oci-docker-install-trigger
 
 jobs:
   Install-OneClickInstall-Docker:
@@ -34,9 +31,6 @@ jobs:
           case "${{ github.event_name }}" in
             "pull_request")
               BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
-              ;;
-            "repository_dispatch")
-              BRANCH_NAME="${{ github.event.client_payload.branch }}"
               ;;
             *)
               BRANCH_NAME="${GITHUB_REF#refs/heads/}"

@@ -15,13 +15,13 @@ on:
 
   workflow_dispatch:
     inputs:
-      deb_built:
+      deb_build:
         type: boolean
-        description: "DEB packages were built"
+        description: "DEB packages were build"
         default: false
-      rpm_built:
+      rpm_build:
         type: boolean
-        description: "RPM packages were built"
+        description: "RPM packages were build"
         default: false
       centos9s:
          type: boolean
@@ -82,10 +82,10 @@ jobs:
             ]
           }')            
         
-          matrix=$(echo "$matrix" | jq -c --argjson debuilt "${{ github.event.inputs.deb_built || false }}" --argjson rpmbuilt "${{ github.event.inputs.rpm_built || false }}" '
+          matrix=$(echo "$matrix" | jq -c --argjson debuild "${{ github.event.inputs.deb_build || true }}" --argjson rpmbuild "${{ github.event.inputs.rpm_build || true }}" '
             { include: [ .include[] | select(
-                  ($debuilt and (.name | test("Debian|Ubuntu"))) or
-                  ($rpmbuilt and (.name | test("CentOS|Fedora")))
+                  ($debuild and (.name | test("Debian|Ubuntu"))) or
+                  ($rpmbuild and (.name | test("CentOS|Fedora")))
                 )
             ] }')
         
