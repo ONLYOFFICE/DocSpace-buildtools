@@ -536,6 +536,7 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiBinaryComponent">
     <ROW Name="NetFirewall.dll" SourcePath="&lt;AI_CUSTACTS&gt;NetFirewall.dll"/>
+    <ROW Name="PowerShellScriptLauncher.dll" SourcePath="&lt;AI_CUSTACTS&gt;PowerShellScriptLauncher.dll"/>
     <ROW Name="Prereq.dll" SourcePath="&lt;AI_CUSTACTS&gt;Prereq.dll"/>
     <ROW Name="SoftwareDetector.dll" SourcePath="&lt;AI_CUSTACTS&gt;SoftwareDetector.dll"/>
     <ROW Name="TxtUpdater.dll" SourcePath="&lt;AI_CUSTACTS&gt;TxtUpdater.dll"/>
@@ -549,7 +550,7 @@
     <ROW Name="lzmaextractor.dll" SourcePath="&lt;AI_CUSTACTS&gt;lzmaextractor.dll"/>
     <ROW Name="sql.dll" SourcePath="&lt;AI_CUSTACTS&gt;sql.dll"/>
     <ROW Name="userAccounts.dll" SourcePath="&lt;AI_CUSTACTS&gt;userAccounts.dll"/>
-    <ROW Name="utils.vbs" SourcePath="utils.vbs"/>
+    <ROW Name="utils.ps1_1" SourcePath="utils.ps1"/>
     <ROW Name="viewer.exe" SourcePath="&lt;AI_CUSTACTS&gt;viewer.exe" DigSign="true"/>
     <ROW Name="xmlCfg.dll" SourcePath="&lt;AI_CUSTACTS&gt;xmlCfg.dll"/>
   </COMPONENT>
@@ -829,8 +830,8 @@
     <ROW Dialog_="PrereqLicenseAgreementDlg" Control_="Next" Action="Enable" Condition="Prereq_IAgree = &quot;Yes&quot;"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiControlEventComponent">
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="LicenseAgreementDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS = &quot;&quot; )" Ordering="19"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="SQLConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="216"/>
+    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="LicenseAgreementDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS = &quot;&quot; )" Ordering="21"/>
+    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="SQLConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="218"/>
     <ROW Dialog_="FolderDlg" Control_="Back" Event="NewDialog" Argument="LicenseAgreementDlg" Condition="AI_INSTALL" Ordering="1"/>
     <ROW Dialog_="VerifyReadyDlg" Control_="Install" Event="EndDialog" Argument="Return" Condition="AI_INSTALL" Ordering="197"/>
     <ROW Dialog_="VerifyReadyDlg" Control_="Back" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="203"/>
@@ -857,21 +858,21 @@
     <ROW Dialog_="PrereqLicenseAgreementDlg" Control_="Back" Event="NewDialog" Argument="WelcomePrereqDlg" Condition="AI_BOOTSTRAPPER" Ordering="1"/>
     <ROW Dialog_="VerifyReadyDlg" Control_="Install" Event="EndDialog" Argument="Return" Condition="AI_PATCH" Ordering="199"/>
     <ROW Dialog_="VerifyReadyDlg" Control_="Back" Event="NewDialog" Argument="PatchWelcomeDlg" Condition="AI_PATCH" Ordering="205"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_5" Condition="AI_INSTALL AND ( SqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="4"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="DoAction" Argument="TestSQLConnectionMsgBox" Condition="AI_INSTALL AND ( SqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="5"/>
+    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_5" Condition="AI_INSTALL AND ( SqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="5"/>
+    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="DoAction" Argument="TestSQLConnectionMsgBox" Condition="AI_INSTALL AND ( SqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="6"/>
     <ROW Dialog_="SQLConnectionDlg" Control_="SQLConnectionDlgDialogInitializer" Event="[DB_PWD]" Argument="{}" Condition="AI_INSTALL AND ( OLDPRODUCTS=&quot;&quot; AND SQLConnectionDlg_Cond )" Ordering="4"/>
     <ROW Dialog_="SQLConnectionDlg" Control_="SQLConnectionDlgDialogInitializer" Event="[AI_ButtonText_Next_Orig]" Argument="[ButtonText_Next]" Condition="AI_INSTALL AND ( OLDPRODUCTS=&quot;&quot; AND SQLConnectionDlg_Cond )" Ordering="3"/>
     <ROW Dialog_="SQLConnectionDlg" Control_="SQLConnectionDlgDialogInitializer" Event="[ButtonText_Next]" Argument="[[AI_CommitButton]]" Condition="AI_INSTALL AND ( OLDPRODUCTS=&quot;&quot; AND SQLConnectionDlg_Cond )" Ordering="2"/>
     <ROW Dialog_="SQLConnectionDlg" Control_="SQLConnectionDlgDialogInitializer" Event="[AI_Text_Next_Orig]" Argument="[Text_Next]" Condition="AI_INSTALL AND ( OLDPRODUCTS=&quot;&quot; AND SQLConnectionDlg_Cond )" Ordering="1"/>
     <ROW Dialog_="SQLConnectionDlg" Control_="SQLConnectionDlgDialogInitializer" Event="[Text_Next]" Argument="[Text_Install]" Condition="AI_INSTALL AND ( OLDPRODUCTS=&quot;&quot; AND SQLConnectionDlg_Cond )" Ordering="0"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="6"/>
+    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="7"/>
     <ROW Dialog_="SQLConnectionDlg" Control_="Back" Event="NewDialog" Argument="FolderDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS = &quot;&quot; )" Ordering="2"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="TestSqlConnection" Condition="AI_INSTALL" Ordering="1"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="SQLConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError &lt;&gt; &quot;&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="20"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="25"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="TestSqlConnection" Condition="AI_INSTALL" Ordering="201"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="222"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="DoAction" Argument="TestSqlConnection" Condition="AI_INSTALL" Ordering="3"/>
+    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="TestSqlConnection" Condition="AI_INSTALL" Ordering="2"/>
+    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="SQLConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError &lt;&gt; &quot;&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="22"/>
+    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="27"/>
+    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="TestSqlConnection" Condition="AI_INSTALL" Ordering="202"/>
+    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="224"/>
+    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="DoAction" Argument="TestSqlConnection" Condition="AI_INSTALL" Ordering="4"/>
     <ROW Dialog_="VerifyReadyDlg" Control_="Back" Event="NewDialog" Argument="FolderDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS = &quot;&quot; )" Ordering="201"/>
     <ROW Dialog_="VerifyReadyDlg" Control_="Back" Event="NewDialog" Argument="WelcomeDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="202"/>
     <ROW Dialog_="OpenSearchConnectionDlg" Control_="Cancel" Event="SpawnDialog" Argument="CancelDlg" Condition="1" Ordering="100"/>
@@ -884,13 +885,13 @@
     <ROW Dialog_="OpenSearchConnectionDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER" Condition="AI_INSTALL AND ( OPENSEARCH_CONNECTION = &quot;False&quot; )" Ordering="3"/>
     <ROW Dialog_="SQLConnectionDlg" Control_="Back" Event="NewDialog" Argument="WelcomeDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="3"/>
     <ROW Dialog_="OpenSearchConnectionDlg" Control_="Back" Event="NewDialog" Argument="WelcomeDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="4"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="TestOpenSearchConnection" Condition="AI_INSTALL" Ordering="16"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_1" Condition="AI_INSTALL" Ordering="15"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;False&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="22"/>
+    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="TestOpenSearchConnection" Condition="AI_INSTALL" Ordering="18"/>
+    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_1" Condition="AI_INSTALL" Ordering="17"/>
+    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;False&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="24"/>
     <ROW Dialog_="CancelDlg" Control_="Yes" Event="DoAction" Argument="OpenCancelUrl" Condition="OPEN_INSTALL_CANCEL_URL = &quot;1&quot;" Ordering="101"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="TestOpenSearchConnection" Condition="AI_INSTALL AND ( SqlConnectionError=&quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; )" Ordering="212"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_1" Condition="AI_INSTALL AND ( SqlConnectionError=&quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; )" Ordering="211"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;False&quot; )" Ordering="218"/>
+    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="TestOpenSearchConnection" Condition="AI_INSTALL AND ( SqlConnectionError=&quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; )" Ordering="214"/>
+    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_1" Condition="AI_INSTALL AND ( SqlConnectionError=&quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; )" Ordering="213"/>
+    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;False&quot; )" Ordering="220"/>
     <ROW Dialog_="RabbitMQConnectionDlg" Control_="Cancel" Event="SpawnDialog" Argument="CancelDlg" Condition="1" Ordering="100"/>
     <ROW Dialog_="RabbitMQConnectionDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="11"/>
     <ROW Dialog_="RabbitMQConnectionDlg" Control_="Back" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND ( OPENSEARCH_CONNECTION = &quot;False&quot; )" Ordering="3"/>
@@ -901,17 +902,17 @@
     <ROW Dialog_="RedisServerConnectionDlg" Control_="Back" Event="NewDialog" Argument="FolderDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS = &quot;&quot; )" Ordering="2"/>
     <ROW Dialog_="RabbitMQConnectionDlg" Control_="Back" Event="NewDialog" Argument="WelcomeDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="1"/>
     <ROW Dialog_="RedisServerConnectionDlg" Control_="Back" Event="NewDialog" Argument="WelcomeDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="1"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="TestRabbitMQServerConnection" Condition="AI_INSTALL" Ordering="17"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="TestRedisServerConnection" Condition="AI_INSTALL" Ordering="18"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="RabbitMQConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;False&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="23"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;False&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="24"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="RabbitMQConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="219"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="221"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="TestRabbitMQServerConnection" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="213"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="TestRedisServerConnection" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="214"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="RabbitMQConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="10"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="11"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="12"/>
+    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="TestRabbitMQServerConnection" Condition="AI_INSTALL" Ordering="19"/>
+    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="TestRedisServerConnection" Condition="AI_INSTALL" Ordering="20"/>
+    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="RabbitMQConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;False&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="25"/>
+    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;False&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="26"/>
+    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="RabbitMQConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="221"/>
+    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="223"/>
+    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="TestRabbitMQServerConnection" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="215"/>
+    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="TestRedisServerConnection" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="216"/>
+    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="RabbitMQConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="11"/>
+    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="12"/>
+    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="13"/>
     <ROW Dialog_="OpenSearchConnectionDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="6"/>
     <ROW Dialog_="OpenSearchConnectionDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="10"/>
     <ROW Dialog_="RabbitMQConnectionDlg" Control_="Next" Event="DoAction" Argument="TestRabbitMQConnectionMsgBox" Condition="AI_INSTALL AND ( RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="10"/>
@@ -925,27 +926,33 @@
     <ROW Dialog_="FatalError" Control_="Finish" Event="DoAction" Argument="AI_CleanPrereq" Condition="1" Ordering="102"/>
     <ROW Dialog_="UserExit" Control_="Finish" Event="DoAction" Argument="AI_CleanPrereq" Condition="1" Ordering="101"/>
     <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Cancel" Event="SpawnDialog" Argument="CancelDlg" Condition="1" Ordering="100"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="DoAction" Argument="TestPostgreSqlConnection" Condition="AI_INSTALL" Ordering="1"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="DoAction" Argument="TestPostgreSqlConnectionMsgBox" Condition="AI_INSTALL AND ( PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="3"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_20" Condition="AI_INSTALL AND ( PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="2"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;False&quot; )" Ordering="9"/>
+    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="DoAction" Argument="TestPostgreSqlConnection" Condition="AI_INSTALL" Ordering="2"/>
+    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="DoAction" Argument="TestPostgreSqlConnectionMsgBox" Condition="AI_INSTALL AND ( PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="4"/>
+    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_20" Condition="AI_INSTALL AND ( PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="3"/>
+    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND  OPENSEARCH_CONNECTION = &quot;False&quot; )" Ordering="10"/>
     <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Back" Event="NewDialog" Argument="FolderDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS = &quot;&quot; )" Ordering="1"/>
     <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Back" Event="NewDialog" Argument="WelcomeDlg" Condition="AI_INSTALL AND ( OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="2"/>
     <ROW Dialog_="CancelDlg" Control_="No" Event="EndDialog" Argument="Return" Condition="1" Ordering="100" MsiKey="CancelDlg#No#EndDialog#Return#1"/>
     <ROW Dialog_="CancelDlg" Control_="Yes" Event="EndDialog" Argument="Exit" Condition="1" Ordering="100" MsiKey="CancelDlg#Yes#EndDialog#Exit#1"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="TestPostgreSqlConnection" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; )" Ordering="210"/>
-    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="PostgreSQLConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="217"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="PostgreSQLConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError &lt;&gt; &quot;&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="21"/>
-    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="TestPostgreSqlConnection" Condition="AI_INSTALL" Ordering="14"/>
+    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="TestPostgreSqlConnection" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; )" Ordering="212"/>
+    <ROW Dialog_="FolderDlg" Control_="Next" Event="NewDialog" Argument="PostgreSQLConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="219"/>
+    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="NewDialog" Argument="PostgreSQLConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError &lt;&gt; &quot;&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot; )" Ordering="23"/>
+    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="TestPostgreSqlConnection" Condition="AI_INSTALL" Ordering="16"/>
     <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="[PostgreSQLConnectionDlg_Cond]" Argument="1" Condition="((&amp;DocumentServer = 3) AND NOT (!DocumentServer = 3))" Ordering="2"/>
     <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="[PostgreSQLConnectionDlg_Cond]" Argument="{}" Condition="1" Ordering="1"/>
-    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="PostgreSQLConnectionDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="8"/>
+    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="PostgreSQLConnectionDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="9"/>
     <ROW Dialog_="OpenSearchConnectionDlg" Control_="Back" Event="NewDialog" Argument="PostgreSQLConnectionDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="6"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;False&quot; )" Ordering="5"/>
+    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;False&quot; )" Ordering="6"/>
     <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Back" Event="NewDialog" Argument="SQLConnectionDlg" Condition="PostgreSQLConnectionDlg_Cond AND AI_INSTALL AND ( SqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="3"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="6"/>
+    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="7"/>
     <ROW Dialog_="LicenseAgreementDlg" Control_="Next" Event="NewDialog" Argument="FolderDlg" Condition="AI_INSTALL" Ordering="1"/>
     <ROW Dialog_="LicenseAgreementDlg" Control_="Back" Event="NewDialog" Argument="WelcomeDlg" Condition="AI_INSTALL" Ordering="1"/>
+    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_31" Condition="AI_INSTALL" Ordering="1"/>
+    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_31" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; )" Ordering="211"/>
+    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_31" Condition="AI_INSTALL" Ordering="15"/>
+    <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_32" Condition="AI_INSTALL" Ordering="1"/>
+    <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_32" Condition="AI_INSTALL" Ordering="201"/>
+    <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_32" Condition="AI_INSTALL" Ordering="3"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCreateFolderComponent">
     <ROW Directory_="APPDIR" Component_="APPDIR" ManualDelete="true"/>
@@ -982,9 +989,19 @@
     <ROW Action="AI_DATA_SETTER_29" Type="51" Source="CustomActionData" Target="Fluent-Bit"/>
     <ROW Action="AI_DATA_SETTER_3" Type="51" Source="CustomActionData" Target="[~]"/>
     <ROW Action="AI_DATA_SETTER_30" Type="51" Source="CustomActionData" Target="Fluent-Bit"/>
+    <ROW Action="AI_DATA_SETTER_31" Type="51" Source="CustomActionData" Target="AEQAaQBnAGkAdABhAGwAbAB5AFMAaQBnAG4AUwBjAHIAaQBwAHQAAgAxAAEARgBsAGEAZwBzAAIAMwABAEwAYQB1AG4AYwBoAEQAaQByAAIAAQBQAGEAcgBhAG0AcwACAFQAZQBzAHQAUABvAHMAdABnAHIAZQBTAHEAbABDAG8AbgBuAGUAYwB0AGkAbwBuAAEAUwBjAHIAaQBwAHQAUwByAGMAQgBpAG4AYQByAHkAUgBvAHcASQBkAAIAdQB0AGkAbABzAC4AcABzADEAXwAx"/>
+    <ROW Action="AI_DATA_SETTER_32" Type="51" Source="CustomActionData" Target="AEQAaQBnAGkAdABhAGwAbAB5AFMAaQBnAG4AUwBjAHIAaQBwAHQAAgAxAAEARgBsAGEAZwBzAAIAMQABAEwAYQB1AG4AYwBoAEQAaQByAAIAAQBQAGEAcgBhAG0AcwACAFQAZQBzAHQAUwBxAGwAQwBvAG4AbgBlAGMAdABpAG8AbgABAFMAYwByAGkAcAB0AFMAcgBjAEIAaQBuAGEAcgB5AFIAbwB3AEkAZAACAHUAdABpAGwAcwAuAHAAcwAxAF8AMQ=="/>
+    <ROW Action="AI_DATA_SETTER_33" Type="51" Source="CustomActionData" Target="AEQAaQBnAGkAdABhAGwAbAB5AFMAaQBnAG4AUwBjAHIAaQBwAHQAAgAxAAEARgBsAGEAZwBzAAIAMwABAEwAYQB1AG4AYwBoAEQAaQByAAIAAQBQAGEAcgBhAG0AcwACAE0AeQBTAFEATABDAG8AbgBmAGkAZwB1AHIAZQABAFMAYwByAGkAcAB0AFMAcgBjAEIAaQBuAGEAcgB5AFIAbwB3AEkAZAACAHUAdABpAGwAcwAuAHAAcwAxAF8AMQ=="/>
+    <ROW Action="AI_DATA_SETTER_34" Type="51" Source="CustomActionData" Target="AEQAaQBnAGkAdABhAGwAbAB5AFMAaQBnAG4AUwBjAHIAaQBwAHQAAgAxAAEARgBsAGEAZwBzAAIAMwABAEwAYQB1AG4AYwBoAEQAaQByAAIAAQBQAGEAcgBhAG0AcwACAFAAbwBzAHQAZwByAGUAUwBxAGwAQwBvAG4AZgBpAGcAdQByAGUAAQBTAGMAcgBpAHAAdABTAHIAYwBCAGkAbgBhAHIAeQBSAG8AdwBJAGQAAgB1AHQAaQBsAHMALgBwAHMAMQBfADE="/>
+    <ROW Action="AI_DATA_SETTER_35" Type="51" Source="CustomActionData" Target="AEYAbABhAGcAcwACADEAAQBQAGEAcgBhAG0AcwACAFMAZQB0AEQAbwBjAHUAbQBlAG4AdABTAGUAcgB2AGUAcgBKAFcAVABTAGUAYwByAGUAdABQAHIAbwBwAAEAUwBjAHIAaQBwAHQAUwByAGMAQgBpAG4AYQByAHkAUgBvAHcASQBkAAIAdQB0AGkAbABzAC4AcABzADEAXwAx"/>
+    <ROW Action="AI_DATA_SETTER_36" Type="51" Source="CustomActionData" Target="AEYAbABhAGcAcwACADEAAQBQAGEAcgBhAG0AcwACAFMAZQB0AE0AYQBjAGgAaQBuAGUASwBlAHkAAQBTAGMAcgBpAHAAdABTAHIAYwBCAGkAbgBhAHIAeQBSAG8AdwBJAGQAAgB1AHQAaQBsAHMALgBwAHMAMQBfADE="/>
+    <ROW Action="AI_DATA_SETTER_37" Type="51" Source="CustomActionData" Target="AEYAbABhAGcAcwACADEAAQBQAGEAcgBhAG0AcwACAFMAZQB0AEQAYQBzAGgAYgBvAGEAcgBkAHMAUAB3AGQAAQBTAGMAcgBpAHAAdABTAHIAYwBCAGkAbgBhAHIAeQBSAG8AdwBJAGQAAgB1AHQAaQBsAHMALgBwAHMAMQBfADE="/>
+    <ROW Action="AI_DATA_SETTER_38" Type="51" Source="CustomActionData" Target="AEYAbABhAGcAcwACADEAAQBQAGEAcgBhAG0AcwACAE8AcABlAG4AUwBlAGEAcgBjAGgAUwBlAHQAdQBwAAEAUwBjAHIAaQBwAHQAUwByAGMAQgBpAG4AYQByAHkAUgBvAHcASQBkAAIAdQB0AGkAbABzAC4AcABzADEAXwAx"/>
+    <ROW Action="AI_DATA_SETTER_39" Type="51" Source="CustomActionData" Target="AEYAbABhAGcAcwACADEAAQBQAGEAcgBhAG0AcwACAFIAZQBkAGkAcwBTAGUAdAB1AHAAAQBTAGMAcgBpAHAAdABTAHIAYwBCAGkAbgBhAHIAeQBSAG8AdwBJAGQAAgB1AHQAaQBsAHMALgBwAHMAMQBfADE="/>
     <ROW Action="AI_DATA_SETTER_4" Type="51" Source="CustomActionData" Target="[~]"/>
+    <ROW Action="AI_DATA_SETTER_40" Type="51" Source="CustomActionData" Target="AEQAaQBnAGkAdABhAGwAbAB5AFMAaQBnAG4AUwBjAHIAaQBwAHQAAgAxAAEARgBsAGEAZwBzAAIAMwABAEwAYQB1AG4AYwBoAEQAaQByAAIAAQBQAGEAcgBhAG0AcwACAE0AbwB2AGUAQwBvAG4AZgBpAGcAcwABAFMAYwByAGkAcAB0AFMAcgBjAEIAaQBuAGEAcgB5AFIAbwB3AEkAZAACAHUAdABpAGwAcwAuAHAAcwAxAF8AMQ=="/>
     <ROW Action="AI_DATA_SETTER_5" Type="51" Source="CustomActionData" Target="[SqlConnectionError] |[ProductName] Setup |MB_OK,MB_ICONWARNING,MB_DEFBUTTON1||[CLIENTPROCESSID]"/>
-    <ROW Action="AI_DATA_SETTER_6" Type="51" Source="CustomActionData" Target="[APPDIR_FORWARD_SLASH]"/>
+    <ROW Action="AI_DATA_SETTER_6" Type="51" Source="CustomActionData" Target="AEYAbABhAGcAcwACADEAAQBQAGEAcgBhAG0AcwACAFMAZQB0AEEAcABwAEQAaQByAFcAaQB0AGgARgBvAHIAdwBhAHIAZABTAGwAYQBzAGgAAQBTAGMAcgBpAHAAdABTAHIAYwBCAGkAbgBhAHIAeQBSAG8AdwBJAGQAAgB1AHQAaQBsAHMALgBwAHMAMQBfADE="/>
     <ROW Action="AI_DATA_SETTER_7" Type="51" Source="CustomActionData" Target="[~]"/>
     <ROW Action="AI_DATA_SETTER_8" Type="51" Source="CustomActionData" Target="[~]"/>
     <ROW Action="AI_DATA_SETTER_9" Type="51" Source="CustomActionData" Target="MySQL80"/>
@@ -1049,20 +1066,20 @@
     <ROW Action="AI_XmlRollback" Type="11521" Source="xmlCfg.dll" Target="OnXmlRollback" WithoutSeq="true"/>
     <ROW Action="AI_XmlUninstall" Type="1" Source="xmlCfg.dll" Target="OnXmlUninstall" AdditionalSeq="AI_DATA_SETTER_15"/>
     <ROW Action="DetectMySQLService" Type="1" Source="aicustact.dll" Target="DetectProcess" Options="3" AdditionalSeq="AI_DATA_SETTER_9"/>
-    <ROW Action="MoveConfigs" Type="4102" Source="utils.vbs" Target="MoveConfigs"/>
-    <ROW Action="MySQLConfigure" Type="4358" Source="utils.vbs" Target="MySQLConfigure"/>
+    <ROW Action="MoveConfigs" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_40"/>
+    <ROW Action="MySQLConfigure" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_33"/>
     <ROW Action="OpenCancelUrl" Type="194" Source="viewer.exe" Target="http://www.onlyoffice.com/install-canceled.aspx" WithoutSeq="true" Options="1"/>
-    <ROW Action="OpenSearchSetup" Type="6" Source="utils.vbs" Target="OpenSearchSetup"/>
-    <ROW Action="PostgreSQLConfigure" Type="4102" Source="utils.vbs" Target="PostgreSqlConfigure"/>
-    <ROW Action="RedisSearchSetup" Type="6" Source="utils.vbs" Target="RedisSetup"/>
+    <ROW Action="OpenSearchSetup" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_38"/>
+    <ROW Action="PostgreSQLConfigure" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_34"/>
+    <ROW Action="RedisSetup" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_39"/>
     <ROW Action="SET_APPDIR" Type="307" Source="APPDIR" Target="[ProgramFilesFolder][Manufacturer]\[ProductName]" MultiBuildTarget="DefaultBuild:[ProgramFilesFolder][INSTALL_ROOT_FOLDER_NAME]\DocSpace#ExeBuild:[ProgramFilesFolder][INSTALL_ROOT_FOLDER_NAME]\DocSpace#ExeBuild_1:[ProgramFilesFolder][INSTALL_ROOT_FOLDER_NAME]\DocSpace"/>
     <ROW Action="SET_SHORTCUTDIR" Type="307" Source="SHORTCUTDIR" Target="[ProgramMenuFolder][ProductName]" MultiBuildTarget="DefaultBuild:[ProgramMenuFolder][INSTALL_ROOT_FOLDER_NAME]\DocSpace#ExeBuild:[ProgramMenuFolder][INSTALL_ROOT_FOLDER_NAME]\DocSpace#ExeBuild_1:[ProgramMenuFolder][INSTALL_ROOT_FOLDER_NAME]\DocSpace"/>
     <ROW Action="SET_TARGETDIR_TO_APPDIR" Type="51" Source="TARGETDIR" Target="[APPDIR]"/>
-    <ROW Action="SetDashboardsPwd" Type="6" Source="utils.vbs" Target="SetDashboardsPwd"/>
-    <ROW Action="SetDocumentServerJWTSecretProp" Type="6" Source="utils.vbs" Target="SetDocumentServerJWTSecretProp"/>
-    <ROW Action="SetMACHINEKEY" Type="262" Source="utils.vbs" Target="SetMACHINEKEY"/>
+    <ROW Action="SetDashboardsPwd" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_37"/>
+    <ROW Action="SetDocumentServerJWTSecretProp" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_35"/>
+    <ROW Action="SetMachineKey" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_36"/>
     <ROW Action="SetSERVERNAME" Type="51" Source="SERVER_NAME" Target="[ComputerName]"/>
-    <ROW Action="Set_APPDIR_FORWARD_SLASH" Type="38" Target="Script Text" TargetUnformatted="Session.Property(&quot;APPDIR_FORWARD_SLASH&quot;) = Replace(Session.Property(&quot;APPDIR&quot;), &quot;\&quot;, &quot;/&quot;)&#13;&#10;" AdditionalSeq="AI_DATA_SETTER_6"/>
+    <ROW Action="Set_APPDIR_FORWARD_SLASH" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_6"/>
     <ROW Action="Set_DS_JWT_ENABLED" Type="51" Source="DOCUMENT_SERVER_JWT_ENABLED" Target="[JWT_ENABLED]"/>
     <ROW Action="Set_DS_JWT_HEADER" Type="51" Source="DOCUMENT_SERVER_JWT_HEADER" Target="[JWT_HEADER]"/>
     <ROW Action="Set_DS_JWT_SECRET" Type="51" Source="DOCUMENT_SERVER_JWT_SECRET" Target="[JWT_SECRET]"/>
@@ -1082,14 +1099,14 @@
     <ROW Action="StopRedisService" Type="3073" Source="aicustact.dll" Target="StopWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_16"/>
     <ROW Action="TestOpenSearchConnection" Type="1" Source="Utils.CA.dll" Target="CheckTCPAvailability" WithoutSeq="true" AdditionalSeq="AI_DATA_SETTER_1"/>
     <ROW Action="TestOpenSearchConnectionMsgBox" Type="1" Source="aicustact.dll" Target="MsgBox" WithoutSeq="true" Options="1" AdditionalSeq="AI_DATA_SETTER"/>
-    <ROW Action="TestPostgreSqlConnection" Type="4102" Source="utils.vbs" Target="TestPostgreSqlConnection" WithoutSeq="true"/>
+    <ROW Action="TestPostgreSqlConnection" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" WithoutSeq="true" Options="134217729" AdditionalSeq="AI_DATA_SETTER_31"/>
     <ROW Action="TestPostgreSqlConnectionMsgBox" Type="1" Source="aicustact.dll" Target="MsgBox" WithoutSeq="true" Options="1" AdditionalSeq="AI_DATA_SETTER_20"/>
     <ROW Action="TestRabbitMQConnectionMsgBox" Type="1" Source="aicustact.dll" Target="MsgBox" WithoutSeq="true" AdditionalSeq="AI_DATA_SETTER_18"/>
     <ROW Action="TestRabbitMQServerConnection" Type="1" Source="Utils.CA.dll" Target="TestRabbitMQConnection" WithoutSeq="true"/>
     <ROW Action="TestRedisServerConnection" Type="1" Source="Utils.CA.dll" Target="TestRedisServerConnection" WithoutSeq="true"/>
     <ROW Action="TestRedisServerConnectionMsgBox" Type="1" Source="aicustact.dll" Target="MsgBox" WithoutSeq="true" AdditionalSeq="AI_DATA_SETTER_17"/>
     <ROW Action="TestSQLConnectionMsgBox" Type="1" Source="aicustact.dll" Target="MsgBox" WithoutSeq="true" Options="1" AdditionalSeq="AI_DATA_SETTER_5"/>
-    <ROW Action="TestSqlConnection" Type="6" Source="utils.vbs" Target="TestSqlConnection" WithoutSeq="true"/>
+    <ROW Action="TestSqlConnection" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" WithoutSeq="true" Options="134217729" AdditionalSeq="AI_DATA_SETTER_32"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiDialogComponent">
     <ROW Dialog="OpenSearchConnectionDlg" HCentering="50" VCentering="50" Width="370" Height="270" Attributes="3" Title="[ProductName] [Setup]" Control_Default="Next" Control_Cancel="Cancel"/>
@@ -1226,24 +1243,20 @@
     <ROW Action="AI_DATA_SETTER_7" Condition="(REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5103"/>
     <ROW Action="AI_JsonUninstall" Condition="(REMOVE)" Sequence="3104"/>
     <ROW Action="AI_DATA_SETTER_8" Condition="(REMOVE)" Sequence="3103"/>
-    <ROW Action="StopMySQLService" Condition="( NOT Installed AND NOT OLDPRODUCTS ) AND ( AI_PROCESS_STATE &lt;&gt; &quot;Not Found&quot; )" Sequence="1611"/>
-    <ROW Action="AI_DATA_SETTER_10" Condition="( NOT Installed AND NOT OLDPRODUCTS ) AND ( AI_PROCESS_STATE &lt;&gt; &quot;Not Found&quot; )" Sequence="1610"/>
-    <ROW Action="Set_APPDIR_FORWARD_SLASH" Condition="( NOT Installed )" Sequence="1632"/>
-    <ROW Action="AI_DATA_SETTER_6" Condition="( NOT Installed )" Sequence="1627"/>
-    <ROW Action="DetectMySQLService" Condition="( ( NOT Installed AND NOT OLDPRODUCTS ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1609"/>
+    <ROW Action="StopMySQLService" Condition="( NOT Installed AND NOT OLDPRODUCTS ) AND ( AI_PROCESS_STATE &lt;&gt; &quot;Not Found&quot; )" Sequence="1613"/>
+    <ROW Action="AI_DATA_SETTER_10" Condition="( NOT Installed AND NOT OLDPRODUCTS ) AND ( AI_PROCESS_STATE &lt;&gt; &quot;Not Found&quot; )" Sequence="1612"/>
+    <ROW Action="DetectMySQLService" Condition="( ( NOT Installed AND NOT OLDPRODUCTS ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1611"/>
     <ROW Action="AI_DATA_SETTER_9" Condition="( ( NOT Installed AND NOT OLDPRODUCTS ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1608"/>
-    <ROW Action="OpenSearchSetup" Condition="( NOT Installed )" Sequence="1621"/>
-    <ROW Action="StopOpenSearchService" Condition="( NOT Installed )" Sequence="1617"/>
-    <ROW Action="AI_DATA_SETTER_12" Condition="( NOT Installed )" Sequence="1616"/>
-    <ROW Action="StartOpenSearchService" Condition="( NOT Installed )" Sequence="1623"/>
-    <ROW Action="AI_DATA_SETTER_13" Condition="( NOT Installed )" Sequence="1622"/>
+    <ROW Action="StopOpenSearchService" Condition="( NOT Installed )" Sequence="1619"/>
+    <ROW Action="AI_DATA_SETTER_12" Condition="( NOT Installed )" Sequence="1618"/>
+    <ROW Action="StartOpenSearchService" Condition="( NOT Installed )" Sequence="1625"/>
+    <ROW Action="AI_DATA_SETTER_13" Condition="( NOT Installed )" Sequence="1624"/>
     <ROW Action="AI_GetArpIconPath" Sequence="1401"/>
-    <ROW Action="StartMySQLService" Condition="( NOT Installed AND NOT OLDPRODUCTS ) AND ( AI_PROCESS_STATE &lt;&gt; &quot;Not Found&quot; )" Sequence="1613"/>
-    <ROW Action="AI_DATA_SETTER_11" Condition="( NOT Installed AND NOT OLDPRODUCTS ) AND ( AI_PROCESS_STATE &lt;&gt; &quot;Not Found&quot; )" Sequence="1612"/>
+    <ROW Action="StartMySQLService" Condition="( NOT Installed AND NOT OLDPRODUCTS ) AND ( AI_PROCESS_STATE &lt;&gt; &quot;Not Found&quot; )" Sequence="1615"/>
+    <ROW Action="AI_DATA_SETTER_11" Condition="( NOT Installed AND NOT OLDPRODUCTS ) AND ( AI_PROCESS_STATE &lt;&gt; &quot;Not Found&quot; )" Sequence="1614"/>
     <ROW Action="StartMigrationRunner" Condition="( NOT Installed )" Sequence="5826"/>
     <ROW Action="AI_DETECT_MODERNWIN" Condition="(VersionNT &gt;= 603)" Sequence="55" MsiKey="AI_DETECT_MODERNWIN"/>
     <ROW Action="AI_ResolveLocalizedCredentials" Sequence="51"/>
-    <ROW Action="MySQLConfigure" Condition="( NOT Installed )" Sequence="1606"/>
     <ROW Action="AI_ConfigureChainer" Condition="((UILevel = 2) OR (UILevel = 3)) AND (NOT UPGRADINGPRODUCTCODE)" Sequence="6598"/>
     <ROW Action="AI_LaunchChainer" Condition="AI_PREREQ_CHAINER AND (NOT UPGRADINGPRODUCTCODE)" Sequence="6599"/>
     <ROW Action="AI_VerifyPrereq" Sequence="1101"/>
@@ -1253,36 +1266,45 @@
     <ROW Action="AI_DATA_SETTER_15" Condition="(REMOVE)" Sequence="3101"/>
     <ROW Action="AI_ConfigPermissions" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="5852"/>
     <ROW Action="AI_DATA_SETTER_4" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="5851"/>
-    <ROW Action="MsiUnpublishAssemblies" Condition="Installed" Sequence="1635" SeqType="0" MsiKey="MsiUnpublishAssemblies"/>
-    <ROW Action="RedisSearchSetup" Condition="( NOT Installed )" Sequence="1626"/>
-    <ROW Action="StopRedisService" Condition="( NOT Installed )" Sequence="1629"/>
-    <ROW Action="AI_DATA_SETTER_16" Condition="( NOT Installed )" Sequence="1628"/>
-    <ROW Action="StartService" Condition="( NOT Installed )" Sequence="1631"/>
-    <ROW Action="AI_DATA_SETTER_19" Condition="( NOT Installed )" Sequence="1630"/>
-    <ROW Action="PostgreSQLConfigure" Condition="( NOT Installed )" Sequence="1607"/>
+    <ROW Action="MsiUnpublishAssemblies" Condition="Installed" Sequence="1638" SeqType="0" MsiKey="MsiUnpublishAssemblies"/>
+    <ROW Action="StopRedisService" Condition="( NOT Installed )" Sequence="1631"/>
+    <ROW Action="AI_DATA_SETTER_16" Condition="( NOT Installed )" Sequence="1630"/>
+    <ROW Action="StartService" Condition="( NOT Installed )" Sequence="1633"/>
+    <ROW Action="AI_DATA_SETTER_19" Condition="( NOT Installed )" Sequence="1632"/>
     <ROW Action="AI_FwInstall" Condition="(VersionNT &gt;= 501) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5802"/>
     <ROW Action="AI_DATA_SETTER_21" Condition="(VersionNT &gt;= 501) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5801"/>
     <ROW Action="AI_FwUninstall" Condition="(VersionNT &gt;= 501) AND (REMOVE=&quot;ALL&quot;)" Sequence="1702"/>
     <ROW Action="AI_DATA_SETTER_22" Condition="(VersionNT &gt;= 501) AND (REMOVE=&quot;ALL&quot;)" Sequence="1701"/>
     <ROW Action="SetSERVERNAME" Condition="( NOT Installed )" Sequence="1604"/>
-    <ROW Action="MoveConfigs" Condition="( NOT Installed )" Sequence="6601"/>
-    <ROW Action="StopOpenResty" Condition="( NOT Installed )" Sequence="6605"/>
-    <ROW Action="AI_DATA_SETTER_23" Condition="( NOT Installed )" Sequence="6604"/>
-    <ROW Action="StartOpenResty" Condition="( NOT Installed )" Sequence="6607"/>
-    <ROW Action="AI_DATA_SETTER_24" Condition="( NOT Installed )" Sequence="6606"/>
+    <ROW Action="StopOpenResty" Condition="( NOT Installed )" Sequence="6606"/>
+    <ROW Action="AI_DATA_SETTER_23" Condition="( NOT Installed )" Sequence="6605"/>
+    <ROW Action="StartOpenResty" Condition="( NOT Installed )" Sequence="6608"/>
+    <ROW Action="AI_DATA_SETTER_24" Condition="( NOT Installed )" Sequence="6607"/>
     <ROW Action="Set_LICENSE_PATH" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) OR ( Installed AND ( REMOVE = &quot;ALL&quot; OR AI_INSTALL_MODE = &quot;Remove&quot; ) AND UPGRADINGPRODUCTCODE ) )" Sequence="201"/>
     <ROW Action="AI_SqlInstall" Condition="(VersionNT &gt;= 500) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5502"/>
     <ROW Action="AI_DATA_SETTER_25" Condition="(VersionNT &gt;= 500) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5501"/>
     <ROW Action="AI_SqlUninstall" Condition="(VersionNT &gt;= 500) AND (REMOVE=&quot;ALL&quot;)" Sequence="1704"/>
     <ROW Action="AI_DATA_SETTER_26" Condition="(VersionNT &gt;= 500) AND (REMOVE=&quot;ALL&quot;)" Sequence="1703"/>
-    <ROW Action="StopOpenSearchDashboardsService" Condition="( NOT Installed )" Sequence="1619"/>
-    <ROW Action="AI_DATA_SETTER_28" Condition="( NOT Installed )" Sequence="1618"/>
-    <ROW Action="StopFluentBitService" Condition="( NOT Installed )" Sequence="1615"/>
-    <ROW Action="AI_DATA_SETTER_29" Condition="( NOT Installed )" Sequence="1614"/>
-    <ROW Action="StartFluentBitService" Condition="( NOT Installed )" Sequence="6603"/>
-    <ROW Action="AI_DATA_SETTER_30" Condition="( NOT Installed )" Sequence="6602"/>
-    <ROW Action="StartOpenSearchDashboardsService" Condition="( NOT Installed )" Sequence="1625"/>
-    <ROW Action="AI_DATA_SETTER_27" Condition="( NOT Installed )" Sequence="1624"/>
+    <ROW Action="StopOpenSearchDashboardsService" Condition="( NOT Installed )" Sequence="1621"/>
+    <ROW Action="AI_DATA_SETTER_28" Condition="( NOT Installed )" Sequence="1620"/>
+    <ROW Action="StopFluentBitService" Condition="( NOT Installed )" Sequence="1617"/>
+    <ROW Action="AI_DATA_SETTER_29" Condition="( NOT Installed )" Sequence="1616"/>
+    <ROW Action="StartFluentBitService" Condition="( NOT Installed )" Sequence="6604"/>
+    <ROW Action="AI_DATA_SETTER_30" Condition="( NOT Installed )" Sequence="6603"/>
+    <ROW Action="StartOpenSearchDashboardsService" Condition="( NOT Installed )" Sequence="1627"/>
+    <ROW Action="AI_DATA_SETTER_27" Condition="( NOT Installed )" Sequence="1626"/>
+    <ROW Action="OpenSearchSetup" Condition="( NOT Installed )" Sequence="1623"/>
+    <ROW Action="AI_DATA_SETTER_38" Condition="( NOT Installed )" Sequence="1622"/>
+    <ROW Action="RedisSetup" Condition="( NOT Installed )" Sequence="1629"/>
+    <ROW Action="AI_DATA_SETTER_39" Condition="( NOT Installed )" Sequence="1628"/>
+    <ROW Action="MoveConfigs" Condition="( NOT Installed )" Sequence="6602"/>
+    <ROW Action="AI_DATA_SETTER_40" Condition="( NOT Installed )" Sequence="6601"/>
+    <ROW Action="MySQLConfigure" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1606"/>
+    <ROW Action="AI_DATA_SETTER_33" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1605"/>
+    <ROW Action="PostgreSQLConfigure" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1610"/>
+    <ROW Action="AI_DATA_SETTER_34" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1609"/>
+    <ROW Action="Set_APPDIR_FORWARD_SLASH" Sequence="1635"/>
+    <ROW Action="AI_DATA_SETTER_6" Sequence="1634"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstallUISequenceComponent">
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>
@@ -1293,22 +1315,27 @@
     <ROW Action="AI_RESTORE_AI_SETUPEXEPATH" Condition="AI_SETUPEXEPATH_ORIGINAL" Sequence="103"/>
     <ROW Action="AI_AppSearchEx" Sequence="102"/>
     <ROW Action="AI_DetectSoftware" Sequence="101"/>
-    <ROW Action="MySQLConfigure" Condition="( NOT Installed )" Sequence="1101"/>
     <ROW Action="AI_ResolveLocalizedCredentials" Sequence="52"/>
     <ROW Action="AI_DownloadPrereq" Sequence="1297"/>
     <ROW Action="AI_ExtractPrereq" Sequence="1298"/>
     <ROW Action="AI_InstallPrerequisite" Sequence="1299"/>
     <ROW Action="AI_InstallPostPrerequisite" Sequence="1301"/>
     <ROW Action="AI_CleanPrereq" Sequence="1302"/>
-    <ROW Action="SetDocumentServerJWTSecretProp" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( JWT_ENABLED = &quot;true&quot; )" Sequence="1103"/>
-    <ROW Action="Set_DS_JWT_ENABLED" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( JWT_ENABLED = &quot;true&quot; )" Sequence="1104"/>
-    <ROW Action="Set_DS_JWT_HEADER" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( JWT_ENABLED = &quot;true&quot; )" Sequence="1105"/>
-    <ROW Action="Set_DS_JWT_SECRET" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( JWT_ENABLED = &quot;true&quot; AND DOCUMENT_SERVER_JWT_SECRET = &quot; &quot; )" Sequence="1106"/>
-    <ROW Action="PostgreSQLConfigure" Condition="( NOT Installed )" Sequence="1102"/>
+    <ROW Action="Set_DS_JWT_ENABLED" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( JWT_ENABLED = &quot;true&quot; )" Sequence="1107"/>
+    <ROW Action="Set_DS_JWT_HEADER" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( JWT_ENABLED = &quot;true&quot; )" Sequence="1108"/>
+    <ROW Action="Set_DS_JWT_SECRET" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( JWT_ENABLED = &quot;true&quot; AND DOCUMENT_SERVER_JWT_SECRET = &quot; &quot; )" Sequence="1109"/>
     <ROW Action="AI_PRESERVE_INSTALL_TYPE" Sequence="199"/>
     <ROW Action="AI_RestartElevated" Sequence="51" Builds="ExeBuild;ExeBuild_1"/>
-    <ROW Action="SetMACHINEKEY" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( MACHINE_KEY = &quot; &quot; )" Sequence="1107"/>
-    <ROW Action="SetDashboardsPwd" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( DASHBOARDS_PWD = &quot; &quot; )" Sequence="1108"/>
+    <ROW Action="MySQLConfigure" Condition="( NOT Installed )" Sequence="1102"/>
+    <ROW Action="AI_DATA_SETTER_33" Condition="( NOT Installed )" Sequence="1101"/>
+    <ROW Action="PostgreSQLConfigure" Condition="( NOT Installed )" Sequence="1104"/>
+    <ROW Action="AI_DATA_SETTER_34" Condition="( NOT Installed )" Sequence="1103"/>
+    <ROW Action="SetMachineKey" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( MACHINE_KEY = &quot; &quot; )" Sequence="1111"/>
+    <ROW Action="AI_DATA_SETTER_36" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( MACHINE_KEY = &quot; &quot; )" Sequence="1110"/>
+    <ROW Action="SetDashboardsPwd" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( DASHBOARDS_PWD = &quot; &quot; )" Sequence="1113"/>
+    <ROW Action="AI_DATA_SETTER_37" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( DASHBOARDS_PWD = &quot; &quot; )" Sequence="1112"/>
+    <ROW Action="SetDocumentServerJWTSecretProp" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( JWT_ENABLED = &quot;true&quot; )" Sequence="1106"/>
+    <ROW Action="AI_DATA_SETTER_35" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( JWT_ENABLED = &quot;true&quot; )" Sequence="1105"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiLaunchConditionsComponent">
     <ROW Condition="( Version9X OR ( NOT VersionNT64 ) OR ( VersionNT64 AND ((VersionNT64 &lt;&gt; 600) OR (MsiNTProductType &lt;&gt; 1)) AND ((VersionNT64 &lt;&gt; 600) OR (MsiNTProductType = 1)) AND ((VersionNT64 &lt;&gt; 601) OR (MsiNTProductType &lt;&gt; 1)) AND ((VersionNT64 &lt;&gt; 601) OR (MsiNTProductType = 1)) AND ((VersionNT64 &lt;&gt; 602) OR (MsiNTProductType &lt;&gt; 1)) AND ((VersionNT64 &lt;&gt; 602) OR (MsiNTProductType = 1)) AND ((VersionNT64 &lt;&gt; 603) OR (MsiNTProductType &lt;&gt; 1)) AND ((VersionNT64 &lt;&gt; 603) OR (MsiNTProductType = 1)) AND ((VersionNT64 &lt;&gt; 1000) OR (MsiNTProductType &lt;&gt; 1)) AND ((VersionNT64 &lt;&gt; 1100) OR (MsiNTProductType &lt;&gt; 1)) ) )" Description="[ProductName] cannot be installed on the following Windows versions: [WindowsTypeNT64Display]." DescriptionLocId="AI.LaunchCondition.NoSpecificNT64" IsPredefined="true" Builds="DefaultBuild;ExeBuild;ExeBuild_1"/>

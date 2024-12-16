@@ -1027,7 +1027,7 @@ domain_check () {
 		fi
 	fi
 
-	[[ -n "${APP_DOMAIN_PORTAL}" ]] && APP_URL_PORTAL="http://${APP_DOMAIN_PORTAL}:${EXTERNAL_PORT}"
+	APP_URL_PORTAL=${APP_DOMAIN_PORTAL:+http://${APP_DOMAIN_PORTAL}:${EXTERNAL_PORT}}
 }
 
 establish_conn() {
@@ -1068,7 +1068,7 @@ get_tag_from_hub () {
 			CREDENTIALS=$(jq -r --arg hub "${HUB}" '.auths | to_entries[] | select(.key | contains($hub)).value.auth // empty' "$HOME/.docker/config.json")
 		fi
 
-		[[ -n ${CREDENTIALS} ]] && AUTH_HEADER="Authorization: Basic $CREDENTIALS"
+		AUTH_HEADER=${CREDENTIALS:+Authorization: Basic $CREDENTIALS}
 
 		HUB_URL="https://${HUB}/v2/${1/#$HUB\//}/tags/list"
 		JQ_FILTER='.tags | join("\n")'
@@ -1130,7 +1130,7 @@ set_jwt_header () {
 
 set_core_machinekey () {
 	APP_CORE_MACHINEKEY="${APP_CORE_MACHINEKEY:-$(get_env_parameter "APP_CORE_MACHINEKEY" "${CONTAINER_NAME}")}"
-	[[ "$UPDATE" != "true" ]] && APP_CORE_MACHINEKEY="${APP_CORE_MACHINEKEY:-$(get_random_str 12))}"
+	[ "$UPDATE" != "true" ] && APP_CORE_MACHINEKEY="${APP_CORE_MACHINEKEY:-$(get_random_str 12)}"
 }
 
 set_mysql_params () {
@@ -1190,7 +1190,7 @@ set_installation_type_data () {
 download_files () {
 	[ "${OFFLINE_INSTALLATION}" = "false" ] && echo -n "Downloading configuration files to ${BASE_DIR}..." || echo "Unzip docker.tar.gz to ${BASE_DIR}..."
 
-	[ -d "${BASE_DIR}" ] && rm -rf "${BASE_DIR}"
+	rm -rf "${BASE_DIR:?}"
 	mkdir -p ${BASE_DIR}
 
 	
@@ -1464,18 +1464,18 @@ services_check_connection () {
 	for HOST in "${HOSTS[@]}"; do [[ "${!HOST}" == *CONTAINER_PREFIX* || "${!HOST}" == *$PACKAGE_SYSNAME* ]] && export "$HOST="; done
 	[[ "${APP_URL_PORTAL}" == *${PACKAGE_SYSNAME}-proxy* ]] && APP_URL_PORTAL=""
 
-	[[ ! -z "$MYSQL_HOST" ]] && {
+	if [[ ! -z "$MYSQL_HOST" ]]; then
 		establish_conn ${MYSQL_HOST} "${MYSQL_PORT:-3306}" "MySQL"
 		reconfigure MYSQL_HOST ${MYSQL_HOST}
 		reconfigure MYSQL_PORT "${MYSQL_PORT:-3306}"
-	}
-	[[ ! -z "$DOCUMENT_SERVER_HOST" ]] && {
+	fi
+	if [[ ! -z "$DOCUMENT_SERVER_HOST" ]]; then
 		APP_URL_PORTAL=${APP_URL_PORTAL:-"http://$(curl -s ifconfig.me):${EXTERNAL_PORT}"}
 		establish_conn ${DOCUMENT_SERVER_HOST} ${DOCUMENT_SERVER_PORT} "${PACKAGE_SYSNAME^^} Docs"
 		reconfigure DOCUMENT_SERVER_URL_EXTERNAL ${DOCUMENT_SERVER_URL_EXTERNAL}
 		reconfigure DOCUMENT_SERVER_URL_PUBLIC ${DOCUMENT_SERVER_URL_EXTERNAL}
-	}
-	[[ ! -z "$RABBIT_HOST" ]] && {
+	fi
+	if [[ ! -z "$RABBIT_HOST" ]]; then
 		establish_conn ${RABBIT_HOST} "${RABBIT_PORT:-5672}" "RabbitMQ"
 		reconfigure RABBIT_PROTOCOL ${RABBIT_PROTOCOL:-amqp}
 		reconfigure RABBIT_HOST ${RABBIT_HOST}
@@ -1483,20 +1483,20 @@ services_check_connection () {
 		reconfigure RABBIT_USER_NAME ${RABBIT_USER_NAME}
 		reconfigure RABBIT_PASSWORD ${RABBIT_PASSWORD}
 		reconfigure RABBIT_VIRTUAL_HOST "${RABBIT_VIRTUAL_HOST:-/}"
-	}
-	[[ ! -z "$REDIS_HOST" ]] && {
+	fi
+	if [[ ! -z "$REDIS_HOST" ]]; then
 		establish_conn ${REDIS_HOST} "${REDIS_PORT:-6379}" "Redis"
 		reconfigure REDIS_HOST ${REDIS_HOST}
 		reconfigure REDIS_PORT "${REDIS_PORT:-6379}"
 		reconfigure REDIS_USER_NAME ${REDIS_USER_NAME}
 		reconfigure REDIS_PASSWORD ${REDIS_PASSWORD}
-	}
-	[[ ! -z "$ELK_HOST" ]] && {
+	fi
+	if [[ ! -z "$ELK_HOST" ]]; then
 		establish_conn ${ELK_HOST} "${ELK_PORT:-9200}" "search engine"
 		reconfigure ELK_SHEME "${ELK_SHEME:-http}"
 		reconfigure ELK_HOST ${ELK_HOST}
 		reconfigure ELK_PORT "${ELK_PORT:-9200}"
-	}
+	fi
 }
 
 start_installation () {

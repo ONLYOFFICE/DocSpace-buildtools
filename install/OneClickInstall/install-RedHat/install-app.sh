@@ -136,6 +136,10 @@ expect << EOF
 EOF
 fi
 
+if [ "$MAKESWAP" == "true" ]; then
+	make_swap
+fi
+
 { ${package_manager} check-update ${product}; PRODUCT_CHECK_UPDATE=$?; } || true
 if [ "$PRODUCT_INSTALLED" = "false" ]; then
 	${package_manager} install -y ${product} --best --allowerasing $TESTING_REPO
@@ -153,10 +157,6 @@ elif [[ "${PRODUCT_CHECK_UPDATE}" -eq "${UPDATE_AVAILABLE_CODE}" || "${RECONFIGU
 		-mysqld $(grep -oP 'Database=\K[^;]*' <<< "$CONNECTION_STRING") \
 		-mysqlu $(grep -oP 'User ID=\K[^;]*' <<< "$CONNECTION_STRING") \
 		-mysqlp $(grep -oP 'Password=\K[^;]*' <<< "$CONNECTION_STRING")
-fi
-
-if [ "$MAKESWAP" == "true" ]; then
-	make_swap
 fi
 
 echo ""
