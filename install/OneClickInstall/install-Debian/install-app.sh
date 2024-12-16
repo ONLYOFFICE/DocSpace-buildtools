@@ -57,6 +57,10 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
 	apt-get install -yq ${ds_pkg_name}
 fi
 
+if [ "$MAKESWAP" == "true" ]; then
+	make_swap
+fi
+
 if [ "$PRODUCT_INSTALLED" = "false" ]; then
 	echo ${product} ${product}/db-pwd select $MYSQL_SERVER_PASS | sudo debconf-set-selections
 	echo ${product} ${product}/db-user select $MYSQL_SERVER_USER | sudo debconf-set-selections
@@ -72,10 +76,6 @@ elif [ "$UPDATE" = "true" ] && [ "$PRODUCT_INSTALLED" = "true" ]; then
 	elif [ "${RECONFIGURE_PRODUCT}" = "true" ]; then
 		DEBIAN_FRONTEND=noninteractive dpkg-reconfigure ${product}
 	fi
-fi
-
-if [ "$MAKESWAP" == "true" ]; then
-	make_swap
 fi
 
 echo ""
