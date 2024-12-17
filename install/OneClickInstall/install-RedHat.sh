@@ -156,7 +156,7 @@ fi
 # Run uninstall if requested
 if [ "${UNINSTALL}" == "true" ]; then
     if [ "${LOCAL_SCRIPTS}" == "true" ]; then
-        source install-Redhat/uninstall.sh
+        source install-RedHat/uninstall.sh
     else
         source <(curl -fsSL ${DOWNLOAD_URL_PREFIX}/uninstall.sh)
     fi
