@@ -476,19 +476,15 @@ setup_openresty(){
 	sed "s!\(^worker_processes\).*;!\1 ${NGINX_WORKER_PROCESSES:-$(grep processor /proc/cpuinfo | wc -l)};!" -i "${OPENRESTY_CONF}"
 	sed "s!\(worker_connections\).*;!\1 ${NGINX_WORKER_CONNECTIONS:-$(ulimit -n)};!" -i "${OPENRESTY_CONF}"
 
-	# Check for old configuration files
-	if [ -f "${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}-proxy.conf.dpkg-old" ]; then
-		PROXY_CONF="${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}-proxy.conf.dpkg-old"
-	elif [ -f "${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}-proxy.conf.rpmsave" ]; then
-		PROXY_CONF="${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}-proxy.conf.rpmsave"
-	fi
-
-	# If the configuration file is found, extract the paths to the certificate and key
+	PROXY_CONF="${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}-proxy.conf"
 	if [ ! -z "${PROXY_CONF}" ]; then
-		DOMAIN=$(json -f ${USER_CONF} files.docservice.url.portal | awk -F[/:] '{if ($1 == "https") print $4; else print ""}')
+		DOMAIN=$(json -f ${USER_CONF} files.docservice.url.portal | awk -F[/:] '{print ($1 == "https") ? $4 : ""}')
 		CERTIFICATE_PATH=$(grep -oP 'ssl_certificate\s+\K\S+' "${PROXY_CONF}" | tr -d ';')
 		CERTIFICATE_KEY_PATH=$(grep -oP 'ssl_certificate_key\s+\K\S+' "${PROXY_CONF}" | tr -d ';')
 		
+		# (DS v3.0.0) Fix the problem related to environment change 
+		[[ -f "${APP_DIR}/appsettings.production.json" ]] && DOMAIN=${DOMAIN:-$(json -f "$APP_DIR/appsettings.production.json" files.docservice.url.portal | awk -F[/:] '{print ($1 == "https") ? $4 : ""}')}
+
 		# If both values are found, start SSL configuration
 		if [ ! -z "${DOMAIN}" ] && [ ! -z "${CERTIFICATE_PATH}" ] && [ ! -z "${CERTIFICATE_KEY_PATH}" ]; then
 			/usr/bin/${PRODUCT}-ssl-setup -f "${DOMAIN}" "${CERTIFICATE_PATH}" "${CERTIFICATE_KEY_PATH}"
