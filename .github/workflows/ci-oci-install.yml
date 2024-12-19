@@ -15,21 +15,21 @@ on:
 
   workflow_dispatch:
     inputs:
+      deb_build:
+        type: boolean
+        description: "DEB packages were build"
+        default: false
+      rpm_build:
+        type: boolean
+        description: "RPM packages were build"
+        default: false
       centos9s:
          type: boolean
          description: 'CentOS 9 Stream'
          default: true
-      debian11:
-         type: boolean
-         description: 'Debian 11'
-         default: true
       debian12:
          type: boolean
          description: 'Debian 12'
-         default: true
-      ubuntu2004:
-         type: boolean
-         description: 'Ubuntu 20.04'
          default: true
       ubuntu2204:
          type: boolean
@@ -39,14 +39,14 @@ on:
           type: boolean
           description: 'Ubuntu 24.04'
           default: true
-      fedora39:
-         type: boolean
-         description: 'Fedora 39'
-         default: true
       fedora40:
          type: boolean
          description: 'Fedora 40'
          default: true
+      fedora41:
+        type: boolean
+        description: 'Fedora 41'
+        default: true
 
 jobs:
   prepare:
@@ -74,24 +74,32 @@ jobs:
           matrix=$(echo '{
             "include": [
               {"execute": '${{ github.event.inputs.centos9s || true }}', "name": "CentOS9S", "os": "centos9s", "distr": "generic"},
-              {"execute": '${{ github.event.inputs.debian11 || true }}', "name": "Debian11", "os": "debian11", "distr": "generic"},
               {"execute": '${{ github.event.inputs.debian12 || true }}', "name": "Debian12", "os": "debian12", "distr": "generic"},
-              {"execute": '${{ github.event.inputs.ubuntu2004 || true }}', "name": "Ubuntu20.04", "os": "ubuntu2004", "distr": "generic"},
               {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu22.04", "os": "ubuntu2204", "distr": "generic"},
               {"execute": '${{ github.event.inputs.ubuntu2404 || true }}', "name": "Ubuntu24.04", "os": "ubuntu-24.04", "distr": "bento"},
-              {"execute": '${{ github.event.inputs.fedora39 || true }}', "name": "Fedora39", "os": "39-cloud-base", "distr": "fedora"},
-              {"execute": '${{ github.event.inputs.fedora40 || true }}', "name": "Fedora40", "os": "fedora-40", "distr": "bento"}
+              {"execute": '${{ github.event.inputs.fedora40 || true }}', "name": "Fedora40", "os": "fedora-40", "distr": "bento"},
+              {"execute": '${{ github.event.inputs.fedora41 || true }}', "name": "Fedora41", "os": "41-cloud-base", "distr": "fedora"}
             ]
-          }' | jq -c '.include')
-
-          matrix=$(jq -c --arg REDHAT_CHANGED "${{ env.redhat_changed }}" --arg DEBIAN_CHANGED "${{ env.debian_changed }}" '
-            { include: [.[] | select(
-                ($REDHAT_CHANGED == $DEBIAN_CHANGED and .execute == true) or
-                ($REDHAT_CHANGED == "true" and (.name | test("CentOS|Fedora"))) or
-                ($DEBIAN_CHANGED == "true" and (.name | test("Debian|Ubuntu"))))]
-            }' <<< "$matrix")
-
-          echo "matrix=${matrix}" >> $GITHUB_OUTPUT
+          }')            
+        
+          matrix=$(echo "$matrix" | jq -c --argjson debuild "${{ github.event.inputs.deb_build || true }}" --argjson rpmbuild "${{ github.event.inputs.rpm_build || true }}" '
+            { include: [ .include[] | select(
+                  ($debuild and (.name | test("Debian|Ubuntu"))) or
+                  ($rpmbuild and (.name | test("CentOS|Fedora")))
+                )
+            ] }')
+        
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            matrix=$(echo "$matrix" | jq -c --arg REDHAT_CHANGED "${{ env.redhat_changed }}" --arg DEBIAN_CHANGED "${{ env.debian_changed }}" '
+              { include: [ .include[] | select(
+                    ($REDHAT_CHANGED == $DEBIAN_CHANGED and .execute == true) or
+                    ($REDHAT_CHANGED == "true" and (.name | test("CentOS|Fedora"))) or
+                    ($DEBIAN_CHANGED == "true" and (.name | test("Debian|Ubuntu")))
+                  )
+              ] }')
+          fi
+        
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
 
   vagrant-up:
     name: "Test DocSpace with ${{ matrix.name}}"

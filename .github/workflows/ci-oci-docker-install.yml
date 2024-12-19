@@ -6,6 +6,14 @@ on:
     paths:
       - '.github/workflows/ci-oci-docker-install.yml'
       - 'install/OneClickInstall/install-Docker.sh'
+  push:
+    branches:
+      - 'hotfix/**'
+      - 'release/**'
+      - 'develop'
+    paths:
+      - 'install/OneClickInstall/install-Docker.sh'
+      - 'install/docker/*.yml'
   workflow_dispatch:
     inputs:
       offline:
@@ -20,7 +28,14 @@ jobs:
     steps:
       - name: Determine Branch Name
         run: |
-          BRANCH_NAME=$([ "${{ github.event_name }}" = "pull_request" ] && echo "${{ github.event.pull_request.head.ref }}" || echo "${GITHUB_REF#refs/heads/}")
+          case "${{ github.event_name }}" in
+            "pull_request")
+              BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
+              ;;
+            *)
+              BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+              ;;
+          esac
           echo "BRANCH_NAME=${BRANCH_NAME:-master}" >> $GITHUB_ENV
 
       - name: Free Disk Space

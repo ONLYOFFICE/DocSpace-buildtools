@@ -16,20 +16,19 @@ RES_QUESTIONS="In case you have any questions contact us via http://support.only
 RES_MARIADB="To continue the installation, you need to remove MariaDB"
 INSTALL_FLUENT_BIT="true"
 
-res_unsupported_version () {
-	RES_CHOICE="Please, enter Y or N"
-	RES_CHOICE_INSTALLATION="Continue installation [Y/N]? "
-	RES_UNSPPORTED_VERSION="You have an unsupported version of $DIST installed"
-	RES_SELECT_INSTALLATION="Select 'N' to cancel the ONLYOFFICE installation (recommended). Select 'Y' to continue installing ONLYOFFICE"
-	RES_ERROR_REMINDER="Please note, that if you continue with the installation, there may be errors"
-}
-
 while [ "$1" != "" ]; do
 	case $1 in
 
 		-u | --update )
 			if [ "$2" != "" ]; then
 				UPDATE=$2
+				shift
+			fi
+		;;
+
+		-uni | --uninstall )
+			if [ "$2" != "" ]; then
+				UNINSTALL=$2
 				shift
 			fi
 		;;
@@ -117,6 +116,7 @@ while [ "$1" != "" ]; do
 			echo "    Parameters:"
 			echo "      -it, --installation_type          installation type (community|developer|enterprise)"
 			echo "      -u, --update                      use to update existing components (true|false)"
+			echo "      -uni, --uninstall                  uninstall existing installation (true|false)"
 			echo "      -je, --jwtenabled                 specifies the enabling the JWT validation (true|false)"
 			echo "      -jh, --jwtheader                  defines the http header that will be used to send the JWT"
 			echo "      -js, --jwtsecret                  defines the secret key to validate the JWT in the request"
@@ -147,6 +147,22 @@ if [ -z "${SKIP_HARDWARE_CHECK}" ]; then
    SKIP_HARDWARE_CHECK="false";
 fi
 
+if [ -z $GIT_BRANCH ]; then
+	DOWNLOAD_URL_PREFIX="https://download.onlyoffice.com/${product}/install-RedHat"
+else
+	DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall/install-RedHat"
+fi
+
+# Run uninstall if requested
+if [ "${UNINSTALL}" == "true" ]; then
+    if [ "${LOCAL_SCRIPTS}" == "true" ]; then
+        source install-RedHat/uninstall.sh
+    else
+        source <(curl -fsSL ${DOWNLOAD_URL_PREFIX}/uninstall.sh)
+    fi
+    exit 0
+fi
+
 cat > /etc/yum.repos.d/onlyoffice.repo <<END
 [onlyoffice]
 name=onlyoffice repo
@@ -155,12 +171,6 @@ gpgcheck=1
 enabled=1
 gpgkey=https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE
 END
-
-if [ -z $GIT_BRANCH ]; then
-	DOWNLOAD_URL_PREFIX="https://download.onlyoffice.com/${product}/install-RedHat"
-else
-	DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall/install-RedHat"
-fi
 
 if [ "$LOCAL_SCRIPTS" = "true" ]; then
 	source install-RedHat/tools.sh

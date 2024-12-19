@@ -53,21 +53,7 @@ if [ "$SKIP_HARDWARE_CHECK" != "true" ]; then
 	check_hardware
 fi
 
-read_unsupported_installation () {
-	read -p "$RES_CHOICE_INSTALLATION " CHOICE_INSTALLATION
-	case "$CHOICE_INSTALLATION" in
-		y|Y ) yum -y install $DIST*-release
-		;;
-
-		n|N ) exit 0;
-		;;
-
-		* ) echo $RES_CHOICE;
-			read_unsupported_installation
-		;;
-	esac
-}
-
+UPDATE_AVAILABLE_CODE=100
 DIST=$(rpm -qa --queryformat '%{NAME}\n' | grep -E 'centos-release|redhat-release|fedora-release' | awk -F '-' '{print $1}' | head -n 1)
 DIST=${DIST:-$(awk -F= '/^ID=/ {gsub(/"/, "", $2); print tolower($2)}' /etc/os-release)}; 
 [[ "$DIST" =~ ^(centos|redhat|fedora)$ ]] || DIST="centos"

@@ -113,6 +113,9 @@ services:
     <<: *x-service-base
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-socket:${DOCKER_TAG}"
     container_name: ${SOCKET_HOST}
+    healthcheck:
+     <<: *x-healthcheck
+     test: curl --fail http://${SERVICE_SOCKET}/health/ || exit 1
     expose:
       - ${SERVICE_PORT}
 
@@ -152,6 +155,9 @@ services:
     <<: *x-service-base
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-ssoauth:${DOCKER_TAG}"
     container_name: ${SSOAUTH_HOST}
+    healthcheck:
+     <<: *x-healthcheck
+     test: curl --fail http://${SERVICE_SSOAUTH}/health/ || exit 1
     expose:
       - ${SERVICE_PORT}
       - "9834"

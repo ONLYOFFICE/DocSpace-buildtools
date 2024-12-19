@@ -25,6 +25,13 @@ while [ "$1" != "" ]; do
 			fi
 		;;
 
+		-uni | --uninstall )
+			if [ "$2" != "" ]; then
+				UNINSTALL=$2
+				shift
+			fi
+		;;
+
 		-je | --jwtenabled )
 			if [ "$2" != "" ]; then
 				DS_JWT_ENABLED=$2
@@ -108,6 +115,7 @@ while [ "$1" != "" ]; do
 			echo "    Parameters:"
 			echo "      -it, --installation_type          installation type (community|developer|enterprise)"
 			echo "      -u, --update                      use to update existing components (true|false)"
+			echo "      -uni, --uninstall                  uninstall existing installation (true|false)"
 			echo "      -je, --jwtenabled                 specifies the enabling the JWT validation (true|false)"
 			echo "      -jh, --jwtheader                  defines the http header that will be used to send the JWT"
 			echo "      -js, --jwtsecret                  defines the secret key to validate the JWT in the request"
@@ -147,6 +155,16 @@ if [ -z $GIT_BRANCH ]; then
 	DOWNLOAD_URL_PREFIX="https://download.onlyoffice.com/${product}/install-Debian"
 else
 	DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall/install-Debian"
+fi
+
+# Run uninstall if requested
+if [ "${UNINSTALL}" == "true" ]; then
+    if [ "${LOCAL_SCRIPTS}" == "true" ]; then
+        source install-Debian/uninstall.sh
+    else
+        source <(curl -fsSL ${DOWNLOAD_URL_PREFIX}/uninstall.sh)
+    fi
+    exit 0
 fi
 
 if [ "${LOCAL_SCRIPTS}" == "true" ]; then

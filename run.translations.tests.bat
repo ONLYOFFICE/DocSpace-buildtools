@@ -21,7 +21,11 @@ call npm install
 
 call npm run test:locales
 
-set OUTPUT=%root%\TestsResults\TestResult__%date:/=%_%time:~0,2%%time:~3,2%%time:~6,2%.html
+@Echo off
+:: Display date and time independent of OS Locale, Language or date format.
+For /f "delims=" %%A in ('powershell get-date -format "{yyyy-MM-dd_HH_mm_ss}"') do @set _isodate=%%A
+
+set OUTPUT=%root%\TestsResults\TestResult__%_isodate%.html
 
 echo f | xcopy %tests%\reports\tests-results.html %OUTPUT% /F /E /R /Y
 

@@ -71,7 +71,7 @@ override_dh_auto_build: check_archives
 	-e "this.ssoauth={ 'path': '../ASC.SsoAuth/' }"  -e "this.logLevel=\"warning\"" -e "this.core={ 'products': { 'folder': '/var/www/${PRODUCT}/products', 'subfolder': 'server'} }"
 
 	find ${BUILDTOOLS_PATH}/config/ -type f -regex '.*\.\(test\|dev\)\..*' -delete
-	json -I -f ${BUILDTOOLS_PATH}/config/appsettings.json -e "this.core.notify.postman=\"services\"" -e "this['debug-info'].enabled=\"false\"" -e "this.web.samesite=\"None\""
+	json -I -f ${BUILDTOOLS_PATH}/config/appsettings.json -e "this.core.notify.postman=\"services\"" -e "this['debug-info'].enabled=\"false\"" -e "this.web.samesite=\"None\"" -e "this.core.oidc.disableValidateToken=\"false\"" -e "this.core.oidc.showPII=\"false\""
 	json -I -f ${BUILDTOOLS_PATH}/config/apisystem.json -e "this.core.notify.postman=\"services\""
 	sed 's_\(minlevel=\)"[^"]*"_\1"Warn"_g' -i ${BUILDTOOLS_PATH}/config/nlog.config
 
@@ -102,9 +102,13 @@ override_dh_auto_build: check_archives
 execute_after_dh_fixperms:
 	chmod o-rwx ${CURDIR}/debian/${PRODUCT}-common/etc/onlyoffice/${PRODUCT}/*
 
-override_dh_auto_install:
+override_dh_systemd_enable:
 	dh_systemd_enable --no-enable
-	dh_systemd_start --no-start
+
+override_dh_systemd_start:
+	dh_systemd_start --no-start --no-restart-after-upgrade --no-stop-on-upgrade
+
+override_dh_auto_install:
 
 override_dh_strip:
 	dh_strip -Xarm --no-automatic-dbgsym

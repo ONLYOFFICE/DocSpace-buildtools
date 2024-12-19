@@ -18,25 +18,12 @@ ${package_manager} -y install yum-utils
 { yum check-update postgresql; PSQLExitCode=$?; } || true #Checking for postgresql update
 { yum check-update $DIST*-release; exitCode=$?; } || true #Checking for distribution update
 
-UPDATE_AVAILABLE_CODE=100
-if [[ $exitCode -eq $UPDATE_AVAILABLE_CODE ]]; then
-	res_unsupported_version
-	echo $RES_UNSPPORTED_VERSION
-	echo $RES_SELECT_INSTALLATION
-	echo $RES_ERROR_REMINDER
-	echo $RES_QUESTIONS
-	read_unsupported_installation
-fi
-
 if rpm -qa | grep mariadb.*config >/dev/null 2>&1; then
    echo $RES_MARIADB && exit 0
 fi
 
-#Add repositories: EPEL, REMI and RPMFUSION
+#Add repository EPEL
 [ "$DIST" != "fedora" ] && { rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-$REV.noarch.rpm || true; }
-rpm -ivh https://rpms.remirepo.net/$REMI_DISTR_NAME/remi-release-$REV.rpm || true
-yum localinstall -y --nogpgcheck https://download1.rpmfusion.org/free/$RPMFUSION_DISTR_NAME/rpmfusion-free-release-$REV.noarch.rpm
-
 [ "$REV" = "9" ] && update-crypto-policies --set DEFAULT:SHA1 && ${package_manager} -y install xorg-x11-font-utils
 [ "$DIST" = "centos" ] && TESTING_REPO="--enablerepo=$( [ "$REV" = "9" ] && echo "crb" || echo "powertools" )"
 [ "$DIST" = "redhat" ] && { /usr/bin/crb enable && yum repolist enabled | grep -qi -e crb -e codeready || echo "Failed to enable or verify CRB repository."; exit 1; }
@@ -52,7 +39,7 @@ curl -fsSL https://rpm.nodesource.com/setup_${NODE_VERSION}.x | sed '/update -y/
 #add mysql repo
 dnf remove -y @mysql && dnf module -y reset mysql && dnf module -y disable mysql
 MYSQL_REPO_VERSION="$(curl https://repo.mysql.com | grep -oP "mysql84-community-release-${MYSQL_DISTR_NAME}${REV}-\K.*" | grep -o '^[^.]*' | sort | tail -n1)"
-yum localinstall -y https://repo.mysql.com/mysql84-community-release-${MYSQL_DISTR_NAME}${REV}-${MYSQL_REPO_VERSION}.noarch.rpm || true
+yum install -y https://repo.mysql.com/mysql84-community-release-${MYSQL_DISTR_NAME}${REV}-${MYSQL_REPO_VERSION}.noarch.rpm || true
 
 if ! rpm -q mysql-community-server; then
 	MYSQL_FIRST_TIME_INSTALL="true";
@@ -90,17 +77,17 @@ JAVA_VERSION=21
 ${package_manager} -y install $([ $DIST != "fedora" ] && echo "epel-release") \
 			python3 \
 			nodejs ${NODEJS_OPTION} \
-			dotnet-sdk-8.0 \
-			opensearch-${ELASTIC_VERSION} --enablerepo=opensearch-2.x \
+			dotnet-sdk-9.0 \
+			opensearch-${ELASTIC_VERSION} \
 			mysql-community-server \
 			postgresql \
 			postgresql-server \
 			rabbitmq-server$rabbitmq_version \
-			redis --enablerepo=remi \
-			SDL2 $POWERTOOLS_REPO \
+			redis \
+			SDL2 \
 			expect \
 			java-${JAVA_VERSION}-openjdk-headless \
-			ffmpeg $TESTING_REPO
+			--enablerepo=opensearch-2.x
 
 # Set Java ${JAVA_VERSION} as the default version
 JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | head -1)
@@ -108,8 +95,7 @@ alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && alternatives --set
 
 #add repo, install fluent-bit
 if [ ${INSTALL_FLUENT_BIT} == "true" ]; then 
-	curl https://raw.githubusercontent.com/fluent/fluent-bit/master/install.sh | bash
-	[ "$DIST" = "fedora" ] && rm -f /etc/yum.repos.d/fluent-bit.repo
+	[ "$DIST" != "fedora" ] && curl https://raw.githubusercontent.com/fluent/fluent-bit/master/install.sh | bash || yum -y install fluent-bit
 	${package_manager} -y install opensearch-dashboards-${DASHBOARDS_VERSION} --enablerepo=opensearch-dashboards-2.x
 fi
 
@@ -126,3 +112,4 @@ fi
 semanage permissive -a httpd_t
 
 package_services="rabbitmq-server postgresql redis mysqld"
+rpm -q valkey &>/dev/null && package_services="${package_services//redis/valkey}" || true # https://fedoraproject.org/wiki/Changes/Replace_Redis_With_Valkey 
