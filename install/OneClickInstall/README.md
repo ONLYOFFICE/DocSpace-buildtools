@@ -1,5 +1,18 @@
 # ONLYOFFICE DocSpace Installation Guide 
 
+## Supported Operating Systems
+
+The installation scripts support the following operating systems:
+
+- CentOS 9 Stream
+- Debian 11
+- Debian 12
+- Ubuntu 20.04
+- Ubuntu 22.04
+- Ubuntu 24.04
+- Fedora 39
+- Fedora 40
+
 ## Step 1: Download the Installation Script
 Download the appropriate OneClickInstall script based on the version you want to install:
 
