@@ -52,6 +52,7 @@ jobs:
     runs-on: ubuntu-22.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      build_all: ${{ steps.changes.outputs.build_all }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -224,12 +225,15 @@ jobs:
       
   trigger_oci:
     name: Trigger ci-oci-install Workflow
-    needs: build
+    needs: [prepare, build]
     runs-on: ubuntu-22.04
     if: ${{ success() }}
     steps:
       - name: Trigger CI-OCI-Install Workflow
         run: |
+          deb_build="${{ github.event.inputs.deb_build }}"
+          rpm_build="${{ github.event.inputs.rpm_build }}"
+          [[ "${{ needs.prepare.outputs.build_all }}" == "true" ]] && deb_build="true" && rpm_build="true"
           curl \
             -X POST \
             -u "${{ secrets.USERNAME}}:${{secrets.TOKEN}}" \
@@ -238,8 +242,8 @@ jobs:
             --data '{
               "ref": "'"${{ github.ref_name }}"'",
               "inputs": {
-                "deb_build": "'"${{ github.event.inputs.deb_build }}"'",
-                "rpm_build": "'"${{ github.event.inputs.rpm_build }}"'"
+                "deb_build": "'"${deb_build}"'",
+                "rpm_build": "'"${rpm_build}"'"
               }
             }'
 
