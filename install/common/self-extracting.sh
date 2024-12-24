@@ -20,9 +20,12 @@ echo "Extracting OneClickInstall files to the current directory..."
 mv -f ${TEMP_DIR}/docker.tar.gz $(dirname "$0")/docker.tar.gz
 mv -f ${TEMP_DIR}/install-Docker.sh $(dirname "$0")/install-Docker.sh
 
+#Check if an update is needed
+docker ps -aqf name=$(grep -oP 'PACKAGE_SYSNAME="\K[^"]+' $(dirname "$0")/install-Docker.sh)-api && UPDATE="-u true" 
+
 echo "Running the install-Docker.sh script..."
 chmod +x $(dirname "$0")/install-Docker.sh
-$(dirname "$0")/install-Docker.sh
+$(dirname "$0")/install-Docker.sh ${UPDATE}
 
 exit 0
 
