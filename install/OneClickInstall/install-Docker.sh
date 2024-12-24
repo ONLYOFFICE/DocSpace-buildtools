@@ -1092,6 +1092,7 @@ get_available_version () {
 
 	VERSION_REGEX='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
 	[ ${#TAGS_RESP[@]} -eq 1 ] && LATEST_TAG="${TAGS_RESP[0]}" || LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$VERSION_REGEX" | sort -V | tail -n 1)
+	LATEST_TAG=${STATUS:+${LATEST_TAG:-$(printf "%s\n" "${TAGS_RESP[@]}" | sort -V | tail -n 1)}} #Fix for 4testing develop tags
 
 	if [ ! -z "${LATEST_TAG}" ]; then
 		echo "${LATEST_TAG}" | sed "s/\"//g"
