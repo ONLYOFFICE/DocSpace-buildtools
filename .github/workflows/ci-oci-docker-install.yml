@@ -11,7 +11,9 @@ on:
       - 'hotfix/**'
       - 'release/**'
       - 'develop'
+      - 'bugfix/offline-arhive'
     paths:
+      - '.github/workflows/ci-oci-docker-install.yml'
       - 'install/OneClickInstall/install-Docker.sh'
       - 'install/docker/*.yml'
   workflow_dispatch:
@@ -19,7 +21,7 @@ on:
       offline:
         description: 'Publish 4testing offline archive'
         required: true
-        default: false
+        default: true
         type: boolean
 
 jobs:
@@ -82,19 +84,16 @@ jobs:
           esac
 
       - name: Checkout repository
-        if: ${{ github.event.inputs.offline == 'true' }}
         uses: actions/checkout@v4
         with:
           ref: ${{ env.BRANCH_NAME }}
 
       - name: Free Disk Space
-        if: ${{ github.event.inputs.offline == 'true' }}
         run: |
           docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q) && docker volume rm $(docker volume ls -q)
           sudo rm -rf /usr/local/lib/android /opt/ghc /usr/share/swift /usr/share/miniconda /usr/share/az* /usr/share/glade* /usr/local/lib/node_modules /usr/local/share/chromium /usr/local/share/powershell
 
       - name: Creating 4testing offline self-extracting archive
-        if: ${{ github.event.inputs.offline == 'true' }}
         run: |
           INSTALL_PATH=${{ github.workspace }}/install
 
@@ -120,7 +119,6 @@ jobs:
           chmod +x ${INSTALL_PATH}/${ARTIFACT_NAME} 
 
       - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.offline == 'true' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_OCI }}
@@ -128,7 +126,6 @@ jobs:
           aws-region: us-east-1
       
       - name: Upload 4testing offline self-extracting archive
-        if: ${{ github.event.inputs.offline == 'true' }}
         run: |
           aws s3 cp ${{ github.workspace }}/install/${{ env.ARTIFACT_NAME }} \
             ${{ secrets.AWS_BUCKET_URL_OCI }}/${{ env.ARTIFACT_NAME }} \
