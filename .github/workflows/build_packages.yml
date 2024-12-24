@@ -63,8 +63,7 @@ jobs:
         id: changes
         run: |
           git fetch --no-tags --prune --depth=2
-          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)     
-          echo "build_all=$(echo "$CHANGED_FILES" | grep -qE '^.github/workflows/build_packages.yml' && echo true || echo false)" >> $GITHUB_OUTPUT          
+          echo "build_all=$(git diff --name-only HEAD~1 HEAD | grep -qE 'build_packages.yml|install/common' && echo true)" >> $GITHUB_OUTPUT
       - name: Set matrix
         id: set-matrix
         run: |
