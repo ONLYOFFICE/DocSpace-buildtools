@@ -61,9 +61,30 @@ $psql_version = '14.0'
 
 $path_prereq = "${pwd}\buildtools\install\win\"
 
+$opensearchstack_path = "${pwd}\buildtools\install\win\OpenSearchStack\"
+
 $opensearch_version = '2.11.1'
 
+$opensearchdashboards_version = '2.11.1'
+
 $openresty_version = '1.25.3.2'
+
+$fluentbit_version = '2.2.2'
+
+$opensearchstack_components = @(
+
+  @{
+    download_allways = $false;
+    name = "opensearch-dashboards-${opensearchdashboards_version}-windows-x64.zip";
+    link = "https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/2.11.1/opensearch-dashboards-${opensearchdashboards_version}-windows-x64.zip";
+  }
+
+  @{
+    download_allways = $false;
+    name = "fluent-bit-${fluentbit_version}-win64.zip";
+    link = "https://packages.fluentbit.io/windows/fluent-bit-${fluentbit_version}-win64.zip";
+  }
+)
 
 $prerequisites = @(
   
@@ -130,7 +151,6 @@ $prerequisites = @(
     link = "https://get.enterprisedb.com/postgresql/postgresql-${psql_version}-1-windows-x64.exe"
   }
 )
-
 
 $path_enterprise_prereq = "${pwd}\buildtools\install\win\redist\"
 
@@ -247,3 +267,5 @@ $enterprise_prerequisites = @(
 DownloadComponents $prerequisites $path_prereq
 
 DownloadComponents $enterprise_prerequisites $path_enterprise_prereq
+
+DownloadComponents $opensearchstack_components $opensearchstack_path
