@@ -62,7 +62,6 @@ INSTALL_DOCUMENT_SERVER="true";
 INSTALL_ELASTICSEARCH="true";
 INSTALL_FLUENT_BIT="true";
 INSTALL_PRODUCT="true";
-UPDATE="false";
 UNINSTALL="false";
 HUB="";
 USERNAME="";
@@ -1092,7 +1091,7 @@ get_available_version () {
 
 	VERSION_REGEX='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
 	[ ${#TAGS_RESP[@]} -eq 1 ] && LATEST_TAG="${TAGS_RESP[0]}" || LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$VERSION_REGEX" | sort -V | tail -n 1)
-	LATEST_TAG=${STATUS:+${LATEST_TAG:-$(printf "%s\n" "${TAGS_RESP[@]}" | sort -V | tail -n 1)}} #Fix for 4testing develop tags
+	LATEST_TAG=${LATEST_TAG:-${STATUS:+-$(printf "%s\n" "${TAGS_RESP[@]}" | sort -V | tail -n 1)}} #Fix for 4testing develop tags
 
 	if [ ! -z "${LATEST_TAG}" ]; then
 		echo "${LATEST_TAG}" | sed "s/\"//g"
@@ -1179,6 +1178,7 @@ set_docspace_params() {
 }
 
 set_installation_type_data () {
+	UPDATE=${UPDATE:-$(test -n "$(docker ps -aqf name=${CONTAINER_NAME})" && echo true)}
 	if [ -z "${DOCUMENT_SERVER_IMAGE_NAME}" ]; then
 		DOCUMENT_SERVER_IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}documentserver"
 		case "${INSTALLATION_TYPE}" in
