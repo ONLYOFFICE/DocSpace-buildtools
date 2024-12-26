@@ -163,14 +163,14 @@ $enterprise_prerequisites = @(
 
   @{
     download_allways = $false;
-    name = "aspnetcore-runtime-8.0.2-win-x64.exe";
-    link = "https://download.visualstudio.microsoft.com/download/pr/34d3e426-9f3c-45a6-8496-f21b3adbbf5f/475aec17378cc8ab0fcfe535e84698f9/aspnetcore-runtime-8.0.2-win-x64.exe";
+    name = "aspnetcore-runtime-9.0.0-win-x64.exe";
+    link = "https://download.visualstudio.microsoft.com/download/pr/815e6104-b92c-4cd5-8971-cba2f685002a/37befaa217f3269a152016da80a922c1/aspnetcore-runtime-9.0.0-win-x64.exe";
   }
 
   @{
     download_allways = $false;
-    name = "dotnet-runtime-8.0.2-win-x64.exe";
-    link = "https://download.visualstudio.microsoft.com/download/pr/a4bc7333-6e30-4e2d-b300-0b4f23537e5b/4b81af6d46a02fba5d9ce030af438c67/dotnet-runtime-8.0.2-win-x64.exe";
+    name = "dotnet-runtime-9.0.0-win-x64.exe";
+    link = "https://download.visualstudio.microsoft.com/download/pr/99bd07c2-c95c-44dc-9d47-36d3b18df240/bdf26c62f69c1b783687c1dce83ccf7a/dotnet-runtime-9.0.0-win-x64.exe";
   }
 
   @{
