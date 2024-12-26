@@ -36,13 +36,14 @@ locale-gen en_US.UTF-8
 # add opensearch repo
 curl -o- https://artifacts.opensearch.org/publickeys/opensearch.pgp | gpg --dearmor --batch --yes -o /usr/share/keyrings/opensearch-keyring
 echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch/2.x/apt stable main" > /etc/apt/sources.list.d/opensearch-2.x.list
-ELASTIC_VERSION="2.11.1"
+ELASTIC_VERSION="2.18.0"
+export OPENSEARCH_INITIAL_ADMIN_PASSWORD="$(echo "${package_sysname}!A1")"
 
 #add opensearch dashboards repo
 if [ ${INSTALL_FLUENT_BIT} == "true" ]; then
 	curl -o- https://artifacts.opensearch.org/publickeys/opensearch.pgp | gpg --dearmor --batch --yes -o /usr/share/keyrings/opensearch-keyring
 	echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/2.x/apt stable main" > /etc/apt/sources.list.d/opensearch-dashboards-2.x.list
-	DASHBOARDS_VERSION="2.11.1"
+	DASHBOARDS_VERSION="2.18.0"
 fi
 
 # add nodejs repo
@@ -128,6 +129,7 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 				gcc \
 				make \
 				dotnet-sdk-9.0 \
+				opensearch=${ELASTIC_VERSION} \
 				mysql-server \
 				mysql-client \
 				postgresql \
@@ -136,9 +138,6 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 				temurin-${JAVA_VERSION}-jre \
 				ffmpeg 
 
-if ! dpkg -l | grep -q "opensearch"; then
-	apt-get install -yq opensearch=${ELASTIC_VERSION}
-fi
 # Set Java ${JAVA_VERSION} as the default version
 JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*temurin-${JAVA_VERSION}*" | head -1)
 update-alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && update-alternatives --set java "$JAVA_PATH"

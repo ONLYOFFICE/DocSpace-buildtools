@@ -47,12 +47,13 @@ fi
 
 #add opensearch repo
 curl -SL https://artifacts.opensearch.org/releases/bundle/opensearch/2.x/opensearch-2.x.repo -o /etc/yum.repos.d/opensearch-2.x.repo
-ELASTIC_VERSION="2.11.1"
+ELASTIC_VERSION="2.18.0"
+export OPENSEARCH_INITIAL_ADMIN_PASSWORD="$(echo "${package_sysname}!A1")"
 
 #add opensearch dashboards repo
 if [ ${INSTALL_FLUENT_BIT} == "true" ]; then
 	curl -SL https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/2.x/opensearch-dashboards-2.x.repo -o /etc/yum.repos.d/opensearch-dashboards-2.x.repo
-	DASHBOARDS_VERSION="2.11.1"
+	DASHBOARDS_VERSION="2.18.0"
 fi
 
 # add nginx repo, Fedora doesn't need it
