@@ -34,6 +34,7 @@ RABBITMQ_PORT="5672"
 	
 REDIS_HOST="127.0.0.1"
 REDIS_PORT="6379"
+REDIS_DB="0"
 
 JSON="json -I -f"
 
@@ -129,6 +130,13 @@ while [ "$1" != "" ]; do
 			fi
 		;;
 
+		-rdb | --redisdb )
+			if [ "$2" != "" ]; then
+				REDIS_DB=$2
+				shift
+			fi
+		;;
+
 		-rbh | --rabbitmqhost )
 			if [ "$2" != "" ]; then
 				RABBITMQ_HOST=$2
@@ -211,6 +219,7 @@ while [ "$1" != "" ]; do
 			echo "      -esp, --elasticport                 elasticsearch port (default 9200)"
 			echo "      -rdh, --redishost                 	redis ip"
 			echo "      -rdp, --redisport                 	redis port (default 6379)"
+			echo "      -rdb, --redisdb                     redis database index (default 0)"
 			echo "      -rbh, --rabbitmqhost                rabbitmq ip"
 			echo "      -rbp, --rabbitmqport                rabbitmq port"
 			echo "      -rbu, --rabbitmquser                rabbitmq user"
@@ -747,11 +756,12 @@ setup_fluentbit() {
 setup_redis() {
 	echo -n "Configuring redis... "
 
-	$JSON $APP_DIR/redis.$ENVIRONMENT.json -e "this.Redis={'Hosts': [ { Host: \"${REDIS_HOST}\", Port: \"${REDIS_PORT}\" } ] }" >/dev/null 2>&1
-	echo -e "REDIS_HOST=${REDIS_HOST}\nREDIS_PORT=${REDIS_PORT}" >> "${APP_DIR}/systemd.env"
+	$JSON $APP_DIR/redis.$ENVIRONMENT.json -e "this.Redis={'Hosts': [ { Host: \"${REDIS_HOST}\", Port: \"${REDIS_PORT}\" } ], 'Database': \"${REDIS_DB}\"}" >/dev/null 2>&1
+	echo -e "REDIS_HOST=${REDIS_HOST}\nREDIS_PORT=${REDIS_PORT}\nREDIS_DB=${REDIS_DB}" >> "${APP_DIR}/systemd.env"
 
 	sed -i "s~\(redis_host =\).*~\1 \"$REDIS_HOST\"~" "${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}.conf"
 	sed -i "s~\(redis_port =\).*~\1 $REDIS_PORT~" "${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}.conf"
+	sed -i "s~\(redis_db =\).*~\1 $REDIS_DB~" "${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}.conf"
 
 	if [ $1 == "LOCAL_REDIS_SERVER" ]; then
 		REDIS_CONF=$(find /etc/redis/redis.conf /etc/redis.conf /etc/valkey/valkey.conf -type f 2>/dev/null | head -n 1)
