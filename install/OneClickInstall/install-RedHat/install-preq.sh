@@ -42,7 +42,7 @@ MYSQL_REPO_VERSION="$(curl https://repo.mysql.com | grep -oP "mysql84-community-
 yum install -y https://repo.mysql.com/mysql84-community-release-${MYSQL_DISTR_NAME}${REV}-${MYSQL_REPO_VERSION}.noarch.rpm || true
 
 if ! rpm -q mysql-community-server; then
-	MYSQL_FIRST_TIME_INSTALL="true";
+	MYSQL_FIRST_TIME_INSTALL="true"
 fi
 
 #add opensearch repo

@@ -31,18 +31,18 @@
  # terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
  #
 
-PARAMETERS="$PARAMETERS -it COMMUNITY";
-DOCKER="";
+PARAMETERS="$PARAMETERS -it COMMUNITY"
+DOCKER=""
 LOCAL_SCRIPTS="false"
 product="docspace"
-product_sysname="onlyoffice";
+product_sysname="onlyoffice"
 FILE_NAME="$(basename "$0")"
 
 while [ "$1" != "" ]; do
 	case $1 in
 		-ls | --localscripts )
 			if [ "$2" == "true" ] || [ "$2" == "false" ]; then
-				PARAMETERS="$PARAMETERS ${1}";
+				PARAMETERS="$PARAMETERS ${1}"
 				LOCAL_SCRIPTS=$2
 				shift
 			fi
@@ -50,19 +50,19 @@ while [ "$1" != "" ]; do
 		
 		-gb | --gitbranch )
 			if [ "$2" != "" ]; then
-				PARAMETERS="$PARAMETERS ${1}";
+				PARAMETERS="$PARAMETERS ${1}"
 				GIT_BRANCH=$2
 				shift
 			fi
 		;;
 
 		docker )
-			DOCKER="true";
+			DOCKER="true"
 			shift && continue
 		;;
 
 		package )
-			DOCKER="false";
+			DOCKER="false"
 			shift && continue
 		;;
 
@@ -70,24 +70,24 @@ while [ "$1" != "" ]; do
 			if [ -z "$DOCKER" ]; then
 				echo "Run 'bash $FILE_NAME docker' to install docker version of application or 'bash $FILE_NAME package' to install deb/rpm version."
 				echo "Run 'bash $FILE_NAME docker -h' or 'bash $FILE_NAME package -h' to get more details."
-				exit 0;
+				exit 0
 			fi
-			PARAMETERS="$PARAMETERS -ht $FILE_NAME";
+			PARAMETERS="$PARAMETERS -ht $FILE_NAME"
 		;;
 	esac
-	PARAMETERS="$PARAMETERS ${1}";
+	PARAMETERS="$PARAMETERS ${1}"
 	shift
 done
 
 root_checking () {
-	if [ ! $( id -u ) -eq 0 ]; then
+	if [[ $EUID -ne 0 ]]; then
 		echo "To perform this action you must be logged in with root rights"
-		exit 1;
+		exit 1
 	fi
 }
 
 command_exists () {
-	type "$1" &> /dev/null;
+	type "$1" &> /dev/null
 }
 
 install_curl () {
@@ -100,40 +100,40 @@ install_curl () {
 
 	if ! command_exists curl; then
 		echo "command curl not found"
-		exit 1;
+		exit 1
 	fi
 }
 
 read_installation_method () {
-	echo "Select 'Y' to install ${product_sysname^^} $product using Docker (recommended). Select 'N' to install it using RPM/DEB packages.";
+	echo "Select 'Y' to install ${product_sysname^^} $product using Docker (recommended). Select 'N' to install it using RPM/DEB packages."
 	read -p "Install with Docker [Y/N/C]? " choice
 	case "$choice" in
 		y|Y )
-			DOCKER="true";
+			DOCKER="true"
 		;;
 
 		n|N )
-			DOCKER="false";
+			DOCKER="false"
 		;;
 
 		c|C )
-			exit 0;
+			exit 0
 		;;
 
 		* )
-			echo "Please, enter Y, N or C to cancel";
+			echo "Please, enter Y, N or C to cancel"
 		;;
 	esac
 
 	if [ "$DOCKER" == "" ]; then
-		read_installation_method;
+		read_installation_method
 	fi
 }
 
 root_checking
 
 if ! command_exists curl ; then
-	install_curl;
+	install_curl
 fi
 
 if command_exists docker &> /dev/null && docker ps -a --format '{{.Names}}' | grep -q "${product_sysname}-api"; then
@@ -145,7 +145,7 @@ elif command_exists yum &> /dev/null && rpm -q ${product}-api >/dev/null 2>&1; t
 fi
  
 if [ -z "$DOCKER" ]; then
-	read_installation_method;
+	read_installation_method
 fi
 
 if [ -z $GIT_BRANCH ]; then
@@ -180,8 +180,8 @@ else
 			rm install-Debian.sh
 		fi
 	else
-		echo "Not supported OS";
-		exit 1;
+		echo "Not supported OS"
+		exit 1
 	fi
 fi
 

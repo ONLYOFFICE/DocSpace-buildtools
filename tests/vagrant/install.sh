@@ -229,7 +229,7 @@ function install_docspace() {
 #   Message about service status 
 #############################################################################################
 function healthcheck_systemd_services() {
-  for service in ${SERVICES_SYSTEMD[@]}; do
+  for service in "${SERVICES_SYSTEMD[@]}"; do
     [[ "$service" == *migration* ]] && continue;
     if systemctl is-active --quiet ${service}; then
       echo "${COLOR_GREEN}☑ OK: Service ${service} is running${COLOR_RESET}"
@@ -275,7 +275,7 @@ function services_logs() {
   SERVICES_SYSTEMD=($(awk '/SERVICE_NAME=\(/{flag=1; next} /\)/{flag=0} flag' "build.sh" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed 's/^/docspace-/' | sed 's/$/.service/'))
   SERVICES_SYSTEMD+=("ds-converter.service" "ds-docservice.service" "ds-metrics.service")
 
-  for service in ${SERVICES_SYSTEMD[@]}; do
+  for service in "${SERVICES_SYSTEMD[@]}"; do
     echo $LINE_SEPARATOR && echo "${COLOR_GREEN}Check logs for systemd service: $service${COLOR_RESET}" && echo $LINE_SEPARATOR   
     journalctl -u $service -n 30 || true
   done

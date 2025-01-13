@@ -5,7 +5,7 @@ set -e
 cat<<EOF
 
 #######################################
-#  INSTALL APP 
+#  INSTALL APP
 #######################################
 
 EOF
@@ -18,28 +18,28 @@ case "${INSTALLATION_TYPE}" in
 esac
 
 if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ]; then
-	ds_pkg_installed_name=$(dpkg -l | grep ${package_sysname}-documentserver | tail -n1 | awk '{print $2}');
+	ds_pkg_installed_name=$(dpkg -l | grep ${package_sysname}-documentserver | tail -n1 | awk '{print $2}')
 	if [ -n "${ds_pkg_installed_name}" ] && [ "${ds_pkg_installed_name}" != "${ds_pkg_name}" ]; then
 		debconf-get-selections | grep ^${ds_pkg_installed_name} | sed s/${ds_pkg_installed_name}/${ds_pkg_name}/g | debconf-set-selections
 		DEBIAN_FRONTEND=noninteractive apt-get purge -yq ${ds_pkg_installed_name}
 		apt-get install -yq ${ds_pkg_name}
 		RECONFIGURE_PRODUCT="true"
 	else
-		apt-get install -y --only-upgrade ${ds_pkg_name};	
+		apt-get install -y --only-upgrade ${ds_pkg_name}
 	fi
 fi
 
 if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
-	DS_PORT=${DS_PORT:-8083};
+	DS_PORT=${DS_PORT:-8083}
 
-	DS_DB_HOST=localhost;
-	DS_DB_NAME=$DS_COMMON_NAME;
-	DS_DB_USER=$DS_COMMON_NAME;
-	DS_DB_PWD=$DS_COMMON_NAME;
+	DS_DB_HOST=localhost
+	DS_DB_NAME=$DS_COMMON_NAME
+	DS_DB_USER=$DS_COMMON_NAME
+	DS_DB_PWD=$DS_COMMON_NAME
 	
-	DS_JWT_ENABLED=${DS_JWT_ENABLED:-true};
-	DS_JWT_SECRET=${DS_JWT_SECRET:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)};
-	DS_JWT_HEADER=${DS_JWT_HEADER:-AuthorizationJwt};
+	DS_JWT_ENABLED=${DS_JWT_ENABLED:-true}
+	DS_JWT_SECRET=${DS_JWT_SECRET:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)}
+	DS_JWT_HEADER=${DS_JWT_HEADER:-AuthorizationJwt}
 
 	if ! su - postgres -s /bin/bash -c "psql -lqt" | cut -d \| -f 1 | grep -q ${DS_DB_NAME}; then
 		su - postgres -s /bin/bash -c "psql -c \"CREATE USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';\""

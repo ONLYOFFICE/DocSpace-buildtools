@@ -34,7 +34,7 @@
 PACKAGE_SYSNAME="onlyoffice"
 PRODUCT_NAME="DocSpace"
 PRODUCT=$(tr '[:upper:]' '[:lower:]' <<< ${PRODUCT_NAME})
-BASE_DIR="/app/$PACKAGE_SYSNAME";
+BASE_DIR="/app/$PACKAGE_SYSNAME"
 PROXY_YML="${BASE_DIR}/proxy.yml"
 STATUS=""
 DOCKER_TAG=""
@@ -44,28 +44,28 @@ CONTAINER_NAME="${PACKAGE_SYSNAME}-api"
 
 NETWORK_NAME=${PACKAGE_SYSNAME}
 
-SWAPFILE="/${PRODUCT}_swapfile";
-MAKESWAP="true";
+SWAPFILE="/${PRODUCT}_swapfile"
+MAKESWAP="true"
 
-DISK_REQUIREMENTS=40960;
-MEMORY_REQUIREMENTS=8000;
-CORE_REQUIREMENTS=4;
+DISK_REQUIREMENTS=40960
+MEMORY_REQUIREMENTS=8000
+CORE_REQUIREMENTS=4
 
-DIST="";
-REV="";
-KERNEL="";
+DIST=""
+REV=""
+KERNEL=""
 
-INSTALL_REDIS="true";
-INSTALL_RABBITMQ="true";
-INSTALL_MYSQL_SERVER="true";
-INSTALL_DOCUMENT_SERVER="true";
-INSTALL_ELASTICSEARCH="true";
-INSTALL_FLUENT_BIT="true";
-INSTALL_PRODUCT="true";
-UNINSTALL="false";
-HUB="";
-USERNAME="";
-PASSWORD="";
+INSTALL_REDIS="true"
+INSTALL_RABBITMQ="true"
+INSTALL_MYSQL_SERVER="true"
+INSTALL_DOCUMENT_SERVER="true"
+INSTALL_ELASTICSEARCH="true"
+INSTALL_FLUENT_BIT="true"
+INSTALL_PRODUCT="true"
+UNINSTALL="false"
+HUB=""
+USERNAME=""
+PASSWORD=""
 
 MYSQL_VERSION=""
 MYSQL_DATABASE=""
@@ -104,7 +104,7 @@ ENV_EXTENSION=""
 LETS_ENCRYPT_DOMAIN=""
 LETS_ENCRYPT_MAIL=""
 
-HELP_TARGET="install-Docker.sh";
+HELP_TARGET="install-Docker.sh"
 OFFLINE_INSTALLATION="false"
 
 SKIP_HARDWARE_CHECK="false"
@@ -305,7 +305,7 @@ while [ "$1" != "" ]; do
 		
 		-gb | --gitbranch )
 			if [ "$2" != "" ]; then
-				PARAMETERS="$PARAMETERS ${1}";
+				PARAMETERS="$PARAMETERS ${1}"
 				GIT_BRANCH=$2
 				shift
 			fi
@@ -355,7 +355,7 @@ while [ "$1" != "" ]; do
 
 		-it | --installation_type )
 			if [ "$2" != "" ]; then
-				INSTALLATION_TYPE=$(echo "$2" | awk '{print toupper($0)}');
+				INSTALLATION_TYPE="${2^^}"
 				shift
 			fi
 		;;
@@ -479,14 +479,14 @@ while [ "$1" != "" ]; do
 			fi
 		;;
 
-		-du | --dashboadrsusername )
+		-du | --dashboardsusername )
 			if [ "$2" != "" ]; then
 				DASHBOARDS_USERNAME=$2
 				shift
 			fi
 		;;
 
-		-dp | --dashboadrspassword )
+		-dp | --dashboardspassword )
 			if [ "$2" != "" ]; then
 				DASHBOARDS_PASSWORD=$2
 				shift
@@ -542,8 +542,8 @@ while [ "$1" != "" ]; do
 			echo "      -imysql, --installmysql           install or update mysql (true|false)"		
 			echo "      -ies, --installelastic            install or update elasticsearch (true|false)"
 			echo "      -ifb, --installfluentbit          install or update fluent-bit (true|false)"
-			echo "      -du, --dashboadrsusername         login for authorization in /dashboards/"
-			echo "      -dp, --dashboadrspassword         password for authorization in /dashboards/"
+			echo "      -du, --dashboardsusername         login for authorization in /dashboards/"
+			echo "      -dp, --dashboardspassword         password for authorization in /dashboards/"
 			echo "      -espr, --elasticprotocol          the protocol for the connection to elasticsearch (default value http)"
 			echo "      -esh, --elastichost               the IP address or hostname of the elasticsearch"
 			echo "      -esp, --elasticport               elasticsearch port number (default value 9200)"
@@ -619,7 +619,6 @@ uninstall() {
 
 	docker network rm "${NETWORK_NAME}" 2>/dev/null && NETWORK_REMOVED=true || echo "Failed to remove network ${NETWORK_NAME}."
 
-
 	read -p "Do you want to retain data (keep .env file)? (Y/n): " KEEP_DATA
 
 	if [[ "$NETWORK_REMOVED" == "true" && -d "$BASE_DIR" ]]; then
@@ -636,14 +635,14 @@ uninstall() {
 
 root_checking () {
 	PID=$$
-	if [ ! $( id -u ) -eq 0 ]; then
+	if [[ $EUID -ne 0 ]]; then
 		echo "To perform this action you must be logged in with root rights"
-		exit 1;
+		exit 1
 	fi
 }
 
 is_command_exists () {
-    type "$1" &> /dev/null;
+    type "$1" &> /dev/null
 }
 
 file_exists () {
@@ -653,9 +652,9 @@ file_exists () {
 	fi
 
 	if [ -f "$1" ]; then
-		return 0; #true
+		return 0 #true
 	else
-		return 1; #false
+		return 1 #false
 	fi
 }
 
@@ -674,7 +673,7 @@ get_random_str () {
 		LENGTH=12;
 	fi
 
-	VALUE=$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c ${LENGTH});
+	VALUE=$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c ${LENGTH})
 	echo "$VALUE"
 }
 
@@ -744,9 +743,9 @@ get_os_info () {
 
 check_os_info () {
 	if [[ -z ${KERNEL} || -z ${DIST} || -z ${REV} ]]; then
-		echo "$KERNEL, $DIST, $REV";
-		echo "Not supported OS";
-		exit 1;
+		echo "$KERNEL, $DIST, $REV"
+		echo "Not supported OS"
+		exit 1
 	fi
 
 	if [ -f /etc/needrestart/needrestart.conf ]; then
@@ -755,21 +754,21 @@ check_os_info () {
 }
 
 check_kernel () {
-	MIN_NUM_ARR=(3 10 0);
-	CUR_NUM_ARR=();
+	MIN_NUM_ARR=(3 10 0)
+	CUR_NUM_ARR=()
 
-	CUR_STR_ARR=$(echo $KERNEL | grep -Po "[0-9]+\.[0-9]+\.[0-9]+" | tr "." " ");
+	CUR_STR_ARR=$(echo $KERNEL | grep -Po "[0-9]+\.[0-9]+\.[0-9]+" | tr "." " ")
 	for CUR_STR_ITEM in $CUR_STR_ARR
 	do
 		CUR_NUM_ARR=(${CUR_NUM_ARR[@]} $CUR_STR_ITEM)
 	done
 
-	INDEX=0;
+	INDEX=0
 
 	while [[ $INDEX -lt 3 ]]; do
 		if [ ${CUR_NUM_ARR[INDEX]} -lt ${MIN_NUM_ARR[INDEX]} ]; then
 			echo "Not supported OS Kernel"
-			exit 1;
+			exit 1
 		elif [ ${CUR_NUM_ARR[INDEX]} -gt ${MIN_NUM_ARR[INDEX]} ]; then
 			INDEX=3
 		fi
@@ -778,25 +777,25 @@ check_kernel () {
 }
 
 check_hardware () {
-	AVAILABLE_DISK_SPACE=$(df -m /  | tail -1 | awk '{ print $4 }');
+	AVAILABLE_DISK_SPACE=$(df -m /  | tail -1 | awk '{ print $4 }')
 
 	if [ ${AVAILABLE_DISK_SPACE} -lt ${DISK_REQUIREMENTS} ]; then
 		echo "Minimal requirements are not met: need at least $DISK_REQUIREMENTS MB of free HDD space"
-		exit 1;
+		exit 1
 	fi
 
-	TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1);
+	TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1)
 
 	if [ ${TOTAL_MEMORY} -lt ${MEMORY_REQUIREMENTS} ]; then
 		echo "Minimal requirements are not met: need at least $MEMORY_REQUIREMENTS MB of RAM"
-		exit 1;
+		exit 1
 	fi
 
-	CPU_CORES_NUMBER=$(cat /proc/cpuinfo | grep processor | wc -l);
+	CPU_CORES_NUMBER=$(cat /proc/cpuinfo | grep processor | wc -l)
 
 	if [ ${CPU_CORES_NUMBER} -lt ${CORE_REQUIREMENTS} ]; then
 		echo "The system does not meet the minimal hardware requirements. CPU with at least $CORE_REQUIREMENTS cores is required"
-		exit 1;
+		exit 1
 	fi
 }
 
@@ -823,21 +822,21 @@ install_docker_compose () {
 }
 
 check_ports () {
-	RESERVED_PORTS=();
-	ARRAY_PORTS=();
-	USED_PORTS="";
+	RESERVED_PORTS=()
+	ARRAY_PORTS=()
+	USED_PORTS=""
 
 	if [ "${EXTERNAL_PORT//[0-9]}" = "" ]; then
 		for RESERVED_PORT in "${RESERVED_PORTS[@]}"
 		do
 			if [ "$RESERVED_PORT" -eq "$EXTERNAL_PORT" ] ; then
 				echo "External port $EXTERNAL_PORT is reserved. Select another port"
-				exit 1;
+				exit 1
 			fi
 		done
 	else
 		echo "Invalid external port $EXTERNAL_PORT"
-		exit 1;
+		exit 1
 	fi
 
 	if [ "$INSTALL_PRODUCT" == "true" ]; then
@@ -860,42 +859,42 @@ check_ports () {
 
 	if [[ $USED_PORTS != "" ]]; then
 		echo "The following TCP Ports must be available: $USED_PORTS"
-		exit 1;
+		exit 1
 	fi
 }
 
 check_docker_version () {
-	CUR_FULL_VERSION=$(docker -v | cut -d ' ' -f3 | cut -d ',' -f1);
-	CUR_VERSION=$(echo $CUR_FULL_VERSION | cut -d '-' -f1);
-	CUR_EDITION=$(echo $CUR_FULL_VERSION | cut -d '-' -f2);
+	CUR_FULL_VERSION=$(docker -v | cut -d ' ' -f3 | cut -d ',' -f1)
+	CUR_VERSION=$(echo $CUR_FULL_VERSION | cut -d '-' -f1)
+	CUR_EDITION=$(echo $CUR_FULL_VERSION | cut -d '-' -f2)
 
 	if [ "${CUR_EDITION}" == "ce" ] || [ "${CUR_EDITION}" == "ee" ]; then
-		return 0;
+		return 0
 	fi
 
 	if [ "${CUR_VERSION}" != "${CUR_EDITION}" ]; then
 		echo "Unspecific docker version"
-		exit 1;
+		exit 1
 	fi
 
-	MIN_NUM_ARR=(1 10 0);
+	MIN_NUM_ARR=(1 10 0)
 	CUR_NUM_ARR=();
 
-	CUR_STR_ARR=$(echo $CUR_VERSION | grep -Po "[0-9]+\.[0-9]+\.[0-9]+" | tr "." " ");
+	CUR_STR_ARR=$(echo $CUR_VERSION | grep -Po "[0-9]+\.[0-9]+\.[0-9]+" | tr "." " ")
 
 	for CUR_STR_ITEM in $CUR_STR_ARR
 	do
 		CUR_NUM_ARR=(${CUR_NUM_ARR[@]} $CUR_STR_ITEM)
 	done
 
-	INDEX=0;
+	INDEX=0
 
 	while [[ $INDEX -lt 3 ]]; do
 		if [ ${CUR_NUM_ARR[INDEX]} -lt ${MIN_NUM_ARR[INDEX]} ]; then
 			echo "The outdated Docker version has been found. Please update to the latest version."
-			exit 1;
+			exit 1
 		elif [ ${CUR_NUM_ARR[INDEX]} -gt ${MIN_NUM_ARR[INDEX]} ]; then
-			return 0;
+			return 0
 		fi
 		(( INDEX++ ))
 	done
@@ -923,7 +922,7 @@ install_docker () {
 			echo "Your operating system does not allow Docker CE installation."
 			echo "You can install Docker EE using the manual here - https://docs.docker.com/engine/installation/linux/rhel/"
 			echo ""
-			exit 1;
+			exit 1
 		fi
 
 	elif [ "${DIST}" == "SuSe" ]; then
@@ -932,7 +931,7 @@ install_docker () {
 		echo "Your operating system does not allow Docker CE installation."
 		echo "You can install Docker EE using the manual here - https://docs.docker.com/engine/installation/linux/suse/"
 		echo ""
-		exit 1;
+		exit 1
 
 	elif [ "${DIST}" == "altlinux" ]; then
 
@@ -952,13 +951,13 @@ install_docker () {
 		echo "Docker could not be installed automatically."
 		echo "Please use this official instruction https://docs.docker.com/engine/installation/linux/other/ for its manual installation."
 		echo ""
-		exit 1;
+		exit 1
 
 	fi
 
 	if ! is_command_exists docker ; then
 		echo "error while installing docker"
-		exit 1;
+		exit 1
 	fi
 }
 
@@ -969,7 +968,7 @@ docker_login () {
 }
 
 create_network () {
-	NETWORT_EXIST=$(docker network ls | awk '{print $2;}' | { grep -x ${NETWORK_NAME} || true; });
+	NETWORT_EXIST=$(docker network ls | awk '{print $2;}' | { grep -x ${NETWORK_NAME} || true; })
 
 	if [[ -z ${NETWORT_EXIST} ]]; then
 		docker network create --driver bridge ${NETWORK_NAME}
@@ -988,11 +987,11 @@ read_continue_installation () {
 		;;
 
 		n|N )
-			exit 0;
+			exit 0
 		;;
 
 		* )
-			echo "Please, enter Y or N";
+			echo "Please, enter Y or N"
 			read_continue_installation
 		;;
 	esac
@@ -1036,19 +1035,19 @@ establish_conn() {
 }
 
 get_env_parameter () {
-	local PARAMETER_NAME=$1;
-	local CONTAINER_NAME=$2;
+	local PARAMETER_NAME=$1
+	local CONTAINER_NAME=$2
 
 	if [[ -z ${PARAMETER_NAME} ]]; then
 		echo "Empty parameter name"
-		exit 1;
+		exit 1
 	fi
 
 	if is_command_exists docker ; then
-		[ -n "$CONTAINER_NAME" ] && CONTAINER_EXIST=$(docker ps -aqf "name=$CONTAINER_NAME");
+		[ -n "$CONTAINER_NAME" ] && CONTAINER_EXIST=$(docker ps -aqf "name=$CONTAINER_NAME")
 
 		if [[ -n ${CONTAINER_EXIST} ]]; then
-			VALUE=$(docker inspect --format='{{range .Config.Env}}{{println .}}{{end}}' ${CONTAINER_NAME} | grep "${PARAMETER_NAME}=" | sed 's/^.*=//');
+			VALUE=$(docker inspect --format='{{range .Config.Env}}{{println .}}{{end}}' ${CONTAINER_NAME} | grep "${PARAMETER_NAME}=" | sed 's/^.*=//')
 		fi
 	fi
 
@@ -1074,9 +1073,9 @@ get_tag_from_hub () {
 	else
 		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
 			CREDENTIALS="{\"username\":\"$USERNAME\",\"password\":\"$PASSWORD\"}"
-			TOKEN=$(curl -s -H "Content-Type: application/json" -X POST -d "$CREDENTIALS" https://hub.docker.com/v2/users/login/ | jq -r '.token');
+			TOKEN=$(curl -s -H "Content-Type: application/json" -X POST -d "$CREDENTIALS" https://hub.docker.com/v2/users/login/ | jq -r '.token')
 			AUTH_HEADER="Authorization: JWT $TOKEN"
-			sleep 1;
+			sleep 1
 		fi
 
 		HUB_URL="https://hub.docker.com/v2/repositories/${1}/tags/"
@@ -1106,7 +1105,7 @@ get_available_version () {
 }
 
 set_docs_url_external () {
-	DOCUMENT_SERVER_URL_EXTERNAL=${DOCUMENT_SERVER_URL_EXTERNAL:-$(get_env_parameter "DOCUMENT_SERVER_URL_EXTERNAL" "${CONTAINER_NAME}")};
+	DOCUMENT_SERVER_URL_EXTERNAL=${DOCUMENT_SERVER_URL_EXTERNAL:-$(get_env_parameter "DOCUMENT_SERVER_URL_EXTERNAL" "${CONTAINER_NAME}")}
 
 	if [[ ! -z ${DOCUMENT_SERVER_URL_EXTERNAL} ]] && [[ $DOCUMENT_SERVER_URL_EXTERNAL =~ ^(https?://)?([^:/]+)(:([0-9]+))?(/.*)?$ ]]; then
 		[[ -z ${BASH_REMATCH[1]} ]] && DOCUMENT_SERVER_URL_EXTERNAL="http://$DOCUMENT_SERVER_URL_EXTERNAL"
@@ -1147,34 +1146,34 @@ set_mysql_params () {
 }
 
 set_docspace_params() {
-	HUB=${HUB:-$(get_env_parameter "HUB")};
+	HUB=${HUB:-$(get_env_parameter "HUB")}
 
-	ENV_EXTENSION=${ENV_EXTENSION:-$(get_env_parameter "ENV_EXTENSION" "${CONTAINER_NAME}")};
-	APP_CORE_BASE_DOMAIN=${APP_CORE_BASE_DOMAIN:-$(get_env_parameter "APP_CORE_BASE_DOMAIN" "${CONTAINER_NAME}")};
-	EXTERNAL_PORT=${EXTERNAL_PORT:-$(get_env_parameter "EXTERNAL_PORT" "${CONTAINER_NAME}")};
+	ENV_EXTENSION=${ENV_EXTENSION:-$(get_env_parameter "ENV_EXTENSION" "${CONTAINER_NAME}")}
+	APP_CORE_BASE_DOMAIN=${APP_CORE_BASE_DOMAIN:-$(get_env_parameter "APP_CORE_BASE_DOMAIN" "${CONTAINER_NAME}")}
+	EXTERNAL_PORT=${EXTERNAL_PORT:-$(get_env_parameter "EXTERNAL_PORT" "${CONTAINER_NAME}")}
 
-	PREVIOUS_ELK_VERSION=$(get_env_parameter "ELK_VERSION");
-	ELK_SHEME=${ELK_SHEME:-$(get_env_parameter "ELK_SHEME" "${CONTAINER_NAME}")};
-	ELK_HOST=${ELK_HOST:-$(get_env_parameter "ELK_HOST" "${CONTAINER_NAME}")};
-	ELK_PORT=${ELK_PORT:-$(get_env_parameter "ELK_PORT" "${CONTAINER_NAME}")};
+	PREVIOUS_ELK_VERSION=$(get_env_parameter "ELK_VERSION")
+	ELK_SHEME=${ELK_SHEME:-$(get_env_parameter "ELK_SHEME" "${CONTAINER_NAME}")}
+	ELK_HOST=${ELK_HOST:-$(get_env_parameter "ELK_HOST" "${CONTAINER_NAME}")}
+	ELK_PORT=${ELK_PORT:-$(get_env_parameter "ELK_PORT" "${CONTAINER_NAME}")}
 
-	REDIS_HOST=${REDIS_HOST:-$(get_env_parameter "REDIS_HOST" "${CONTAINER_NAME}")};
-	REDIS_PORT=${REDIS_PORT:-$(get_env_parameter "REDIS_PORT" "${CONTAINER_NAME}")};
-	REDIS_USER_NAME=${REDIS_USER_NAME:-$(get_env_parameter "REDIS_USER_NAME" "${CONTAINER_NAME}")};
-	REDIS_PASSWORD=${REDIS_PASSWORD:-$(get_env_parameter "REDIS_PASSWORD" "${CONTAINER_NAME}")};
+	REDIS_HOST=${REDIS_HOST:-$(get_env_parameter "REDIS_HOST" "${CONTAINER_NAME}")}
+	REDIS_PORT=${REDIS_PORT:-$(get_env_parameter "REDIS_PORT" "${CONTAINER_NAME}")}
+	REDIS_USER_NAME=${REDIS_USER_NAME:-$(get_env_parameter "REDIS_USER_NAME" "${CONTAINER_NAME}")}
+	REDIS_PASSWORD=${REDIS_PASSWORD:-$(get_env_parameter "REDIS_PASSWORD" "${CONTAINER_NAME}")}
 
-	RABBIT_HOST=${RABBIT_HOST:-$(get_env_parameter "RABBIT_HOST" "${CONTAINER_NAME}")};
-	RABBIT_PORT=${RABBIT_PORT:-$(get_env_parameter "RABBIT_PORT" "${CONTAINER_NAME}")};
-	RABBIT_USER_NAME=${RABBIT_USER_NAME:-$(get_env_parameter "RABBIT_USER_NAME" "${CONTAINER_NAME}")};
-	RABBIT_PASSWORD=${RABBIT_PASSWORD:-$(get_env_parameter "RABBIT_PASSWORD" "${CONTAINER_NAME}")};
-	RABBIT_VIRTUAL_HOST=${RABBIT_VIRTUAL_HOST:-$(get_env_parameter "RABBIT_VIRTUAL_HOST" "${CONTAINER_NAME}")};
+	RABBIT_HOST=${RABBIT_HOST:-$(get_env_parameter "RABBIT_HOST" "${CONTAINER_NAME}")}
+	RABBIT_PORT=${RABBIT_PORT:-$(get_env_parameter "RABBIT_PORT" "${CONTAINER_NAME}")}
+	RABBIT_USER_NAME=${RABBIT_USER_NAME:-$(get_env_parameter "RABBIT_USER_NAME" "${CONTAINER_NAME}")}
+	RABBIT_PASSWORD=${RABBIT_PASSWORD:-$(get_env_parameter "RABBIT_PASSWORD" "${CONTAINER_NAME}")}
+	RABBIT_VIRTUAL_HOST=${RABBIT_VIRTUAL_HOST:-$(get_env_parameter "RABBIT_VIRTUAL_HOST" "${CONTAINER_NAME}")}
 	
-	DASHBOARDS_USERNAME=${DASHBOARDS_USERNAME:-$(get_env_parameter "DASHBOARDS_USERNAME" "${CONTAINER_NAME}")};
-	DASHBOARDS_PASSWORD=${DASHBOARDS_PASSWORD:-$(get_env_parameter "DASHBOARDS_PASSWORD" "${CONTAINER_NAME}")};
+	DASHBOARDS_USERNAME=${DASHBOARDS_USERNAME:-$(get_env_parameter "DASHBOARDS_USERNAME" "${CONTAINER_NAME}")}
+	DASHBOARDS_PASSWORD=${DASHBOARDS_PASSWORD:-$(get_env_parameter "DASHBOARDS_PASSWORD" "${CONTAINER_NAME}")}
 
-	CERTIFICATE_PATH=${CERTIFICATE_PATH:-$(get_env_parameter "CERTIFICATE_PATH")};
-	CERTIFICATE_KEY_PATH=${CERTIFICATE_KEY_PATH:-$(get_env_parameter "CERTIFICATE_KEY_PATH")};
-	DHPARAM_PATH=${DHPARAM_PATH:-$(get_env_parameter "DHPARAM_PATH")};
+	CERTIFICATE_PATH=${CERTIFICATE_PATH:-$(get_env_parameter "CERTIFICATE_PATH")}
+	CERTIFICATE_KEY_PATH=${CERTIFICATE_KEY_PATH:-$(get_env_parameter "CERTIFICATE_KEY_PATH")}
+	DHPARAM_PATH=${DHPARAM_PATH:-$(get_env_parameter "DHPARAM_PATH")}
 }
 
 set_installation_type_data () {
@@ -1227,7 +1226,7 @@ reconfigure () {
 }
 
 install_mysql_server () {
-	reconfigure DATABASE_MIGRATION ${DATABASE_MIGRATION}	
+	reconfigure DATABASE_MIGRATION ${DATABASE_MIGRATION}
 	reconfigure MYSQL_DATABASE ${MYSQL_DATABASE}
 	reconfigure MYSQL_USER ${MYSQL_USER}
 	reconfigure MYSQL_PASSWORD ${MYSQL_PASSWORD}
@@ -1287,9 +1286,9 @@ install_fluent_bit () {
 		if crontab -l | grep -q "${OPENSEARCH_INDEX}"; then
 			crontab -l | grep -v "${OPENSEARCH_INDEX}" | crontab -
 		fi
-		(crontab -l 2>/dev/null; echo "0 0 */1 * * curl -s -X POST "$(get_env_parameter 'ELK_SHEME')"://${ELK_HOST:-127.0.0.1}:$(get_env_parameter 'ELK_PORT')/${OPENSEARCH_INDEX}/_delete_by_query -H 'Content-Type: application/json' -d '{\"query\": {\"range\": {\"@timestamp\": {\"lt\": \"now-30d\"}}}}'") | crontab -		
+		(crontab -l 2>/dev/null; echo "0 0 */1 * * curl -s -X POST "$(get_env_parameter 'ELK_SHEME')"://${ELK_HOST:-127.0.0.1}:$(get_env_parameter 'ELK_PORT')/${OPENSEARCH_INDEX}/_delete_by_query -H 'Content-Type: application/json' -d '{\"query\": {\"range\": {\"@timestamp\": {\"lt\": \"now-30d\"}}}}'") | crontab -
 
-		sed -i "s/OPENSEARCH_HOST/${ELK_HOST:-"${PACKAGE_SYSNAME}-opensearch"}/g" "${BASE_DIR}/config/fluent-bit.conf" 
+		sed -i "s/OPENSEARCH_HOST/${ELK_HOST:-"${PACKAGE_SYSNAME}-opensearch"}/g" "${BASE_DIR}/config/fluent-bit.conf"
 		sed -i "s/OPENSEARCH_PORT/$(get_env_parameter "ELK_PORT")/g" ${BASE_DIR}/config/fluent-bit.conf
 		sed -i "s/OPENSEARCH_INDEX/${OPENSEARCH_INDEX}/g" ${BASE_DIR}/config/fluent-bit.conf
 
@@ -1362,12 +1361,12 @@ install_product () {
 }
 
 make_swap () {
-	DISK_REQUIREMENTS=6144; #6Gb free space
-	MEMORY_REQUIREMENTS=12000; #RAM ~12Gb
+	DISK_REQUIREMENTS=6144 #6Gb free space
+	MEMORY_REQUIREMENTS=12000 #RAM ~12Gb
 
-	AVAILABLE_DISK_SPACE=$(df -m /  | tail -1 | awk '{ print $4 }');
-	TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1);
-	EXIST=$(swapon -s | awk '{ print $1 }' | { grep -x ${SWAPFILE} || true; });
+	AVAILABLE_DISK_SPACE=$(df -m /  | tail -1 | awk '{ print $4 }')
+	TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1)
+	EXIST=$(swapon -s | awk '{ print $1 }' | { grep -x ${SWAPFILE} || true; })
 
 	if [[ -z $EXIST ]] && [ ${TOTAL_MEMORY} -lt ${MEMORY_REQUIREMENTS} ] && [ ${AVAILABLE_DISK_SPACE} -gt ${DISK_REQUIREMENTS} ]; then
 
@@ -1461,7 +1460,7 @@ check_docker_image () {
 
 services_check_connection () {
 	# Fixes issues with variables when upgrading to v1.1.3
-	HOSTS=("ELK_HOST" "REDIS_HOST" "RABBIT_HOST" "MYSQL_HOST"); 
+	HOSTS=("ELK_HOST" "REDIS_HOST" "RABBIT_HOST" "MYSQL_HOST")
 	for HOST in "${HOSTS[@]}"; do [[ "${!HOST}" == *CONTAINER_PREFIX* || "${!HOST}" == *$PACKAGE_SYSNAME* ]] && export "$HOST="; done
 	[[ "${APP_URL_PORTAL}" == *${PACKAGE_SYSNAME}-proxy* ]] && APP_URL_PORTAL=""
 
@@ -1568,7 +1567,7 @@ start_installation () {
 	echo "In case you have any questions contact us via http://support.${PACKAGE_SYSNAME}.com or visit our forum at http://forum.${PACKAGE_SYSNAME}.com"
 	echo ""
 
-	exit 0;
+	exit 0
 }
 
 [[ $UNINSTALL != true ]] && start_installation || uninstall
