@@ -65,18 +65,18 @@ $opensearchstack_path = "${pwd}\buildtools\install\win\OpenSearchStack\"
 
 $opensearch_version = '2.11.1'
 
-$opensearchdashboards_version = '2.11.1'
+$opensearchdashboards_version = '2.18.0'
 
 $openresty_version = '1.27.1.1'
 
-$fluentbit_version = '2.2.2'
+$fluentbit_version = '3.2.4'
 
 $opensearchstack_components = @(
 
   @{
     download_allways = $false;
     name = "opensearch-dashboards-${opensearchdashboards_version}-windows-x64.zip";
-    link = "https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/2.11.1/opensearch-dashboards-${opensearchdashboards_version}-windows-x64.zip";
+    link = "https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/${opensearchdashboards_version}/opensearch-dashboards-${opensearchdashboards_version}-windows-x64.zip";
   }
 
   @{
