@@ -271,7 +271,7 @@ function SetDashboardsPwd {
 # Function to set up OpenSearch.
 function OpenSearchSetup {
     $AppDir = AI_GetMsiProperty APPDIR
-    $AppIndexDir = Join-Path $AppDir "Data\Index\v2.11.1\"
+    $AppIndexDir = Join-Path $AppDir "Data\Index\v2.18.0\"
     $LogsDir     = Join-Path $AppDir "Logs\"
     $OpenSearchDashboardsYml = "C:\OpenSearchStack\opensearch-dashboards-2.18.0\config\opensearch_dashboards.yml"
 

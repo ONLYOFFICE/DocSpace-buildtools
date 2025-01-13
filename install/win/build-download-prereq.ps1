@@ -63,7 +63,7 @@ $path_prereq = "${pwd}\buildtools\install\win\"
 
 $opensearchstack_path = "${pwd}\buildtools\install\win\OpenSearchStack\"
 
-$opensearch_version = '2.11.1'
+$opensearch_version = '2.18.0'
 
 $opensearchdashboards_version = '2.18.0'
 

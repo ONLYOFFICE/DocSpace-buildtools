@@ -1,7 +1,7 @@
 REM echo ######## Set variables ########
 set "publisher="Ascensio System SIA""
 set "nuget="%cd%\buildtools\install\win\nuget.exe""
-set "opensearch_version=2.11.1"
+set "opensearch_version=2.18.0"
 set "openresty_version=1.27.1.1"
 
 REM echo ######## Extracting and preparing files to build ########
