@@ -658,87 +658,62 @@ file_exists () {
 	fi
 }
 
-to_lowercase () {
-	echo "$1" | awk '{print tolower($0)}'
-}
-
-trim () {
-	echo -e "$1" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
-}
-
 get_random_str () {
-	LENGTH=$1;
-
-	if [[ -z ${LENGTH} ]]; then
-		LENGTH=12;
-	fi
-
-	VALUE=$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c ${LENGTH})
-	echo "$VALUE"
+    local LENGTH=${1:-12}
+    tr -dc 'A-Za-z0-9' < /dev/urandom | head -c "$LENGTH"
 }
 
 get_os_info () {
-	OS=`to_lowercase \`uname\``
+	OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 
-	if [ "${OS}" == "windowsnt" ]; then
-		echo "Not supported OS";
-		exit 1;
-	elif [ "${OS}" == "darwin" ]; then
-		echo "Not supported OS";
-		exit 1;
-	else
-		OS=`uname`
+    case "$OS" in
+        windowsnt|darwin|sunos|aix)
+            echo "Not supported OS"
+            exit 1
+            ;;
+    esac
 
-		if [ "${OS}" == "SunOS" ] ; then
-			echo "Not supported OS";
-			exit 1;
-		elif [ "${OS}" == "AIX" ] ; then
-			echo "Not supported OS";
-			exit 1;
-		elif [ "${OS}" == "Linux" ] ; then
-			MACH=`uname -m`
-
-			if [ "${MACH}" != "x86_64" ]; then
-				echo "Currently only supports 64bit OS's";
-				exit 1;
-			fi
-
-			KERNEL=`uname -r`
-
-			if [ -f /etc/redhat-release ] ; then
-				CONTAINS=$(cat /etc/redhat-release | { grep -sw release || true; });
-				if [[ -n ${CONTAINS} ]]; then
-					DIST=`cat /etc/redhat-release |sed s/\ release.*//`
-					REV=`cat /etc/redhat-release | grep -oP '(?<=release )\d+'`
-				else
-					DIST=`cat /etc/os-release | grep -sw 'ID' | awk -F=  '{ print $2 }' | sed -e 's/^"//' -e 's/"$//'`
-					REV=`cat /etc/os-release | grep -sw 'VERSION_ID' | awk -F=  '{ print $2 }' | sed -e 's/^"//' -e 's/"$//'`
-				fi
-			elif [ -f /etc/SuSE-release ] ; then
-				REV=`cat /etc/os-release  | grep '^VERSION_ID' | awk -F=  '{ print $2 }' |  sed -e 's/^"//'  -e 's/"$//'`
-				DIST='SuSe'
-			elif [ -f /etc/debian_version ] ; then
-				REV=`cat /etc/debian_version`
-				DIST='Debian'
-				if [ -f /etc/lsb-release ] ; then
-					DIST=`cat /etc/lsb-release | grep '^DISTRIB_ID' | awk -F=  '{ print $2 }'`
-					REV=`cat /etc/lsb-release | grep '^DISTRIB_RELEASE' | awk -F=  '{ print $2 }'`
-				elif [ -f /etc/lsb_release ] || [ -f /usr/bin/lsb_release ] ; then
-					DIST=`lsb_release -a 2>&1 | grep 'Distributor ID:' | awk -F ":" '{print $2 }'`
-					REV=`lsb_release -a 2>&1 | grep 'Release:' | awk -F ":" '{print $2 }'`
-				fi
-			elif [ -f /etc/VERSION ]; then
-				DIST=$(grep -oP 'os_name="\K[^"]+' /etc/VERSION)
-				REV=$(grep -oP 'majorversion="\K[^"]+' /etc/VERSION)
-			elif [ -f /etc/os-release ] ; then
-				DIST=`cat /etc/os-release | grep -sw 'ID' | awk -F=  '{ print $2 }' | sed -e 's/^"//' -e 's/"$//'`
-				REV=`cat /etc/os-release | grep -sw 'VERSION_ID' | awk -F=  '{ print $2 }' | sed -e 's/^"//' -e 's/"$//'`
-			fi
+	if [ "$OS" == "linux" ]; then
+        MACH=$(uname -m)
+		if [ "${MACH}" != "x86_64" ]; then
+			echo "Currently only supports 64bit OS's"
+			exit 1
 		fi
 
-		REV=$(trim $REV);
-		DIST=$(trim "$DIST")
-	fi
+		KERNEL=$(uname -r)
+
+		if [ -f /etc/redhat-release ]; then
+            if grep -qsw release /etc/redhat-release; then
+                DIST=$(sed 's/ release.*//' /etc/redhat-release)
+                REV=$(grep -oP '(?<=release )\d+' /etc/redhat-release)
+            else
+                DIST=$(grep -sw 'ID' /etc/os-release | cut -d= -f2 | tr -d '"')
+                REV=$(grep -sw 'VERSION_ID' /etc/os-release | cut -d= -f2 | tr -d '"')
+            fi
+        elif [ -f /etc/SuSE-release ]; then
+            DIST='SuSe'
+            REV=$(grep '^VERSION_ID' /etc/os-release | cut -d= -f2 | tr -d '"')
+        elif [ -f /etc/debian_version ]; then
+            DIST='Debian'
+            REV=$(cat /etc/debian_version)
+            if [ -f /etc/lsb-release ]; then
+                DIST=$(grep '^DISTRIB_ID' /etc/lsb-release | cut -d= -f2 | tr -d '"')
+                REV=$(grep '^DISTRIB_RELEASE' /etc/lsb-release | cut -d= -f2 | tr -d '"')
+            elif command -v lsb_release > /dev/null 2>&1; then
+                DIST=$(lsb_release -si)
+                REV=$(lsb_release -sr)
+            fi
+        elif [ -f /etc/VERSION ]; then
+            DIST=$(grep -oP 'os_name="\K[^"]+' /etc/VERSION)
+            REV=$(grep -oP 'majorversion="\K[^"]+' /etc/VERSION)
+        elif [ -f /etc/os-release ]; then
+            DIST=$(grep -sw 'ID' /etc/os-release | cut -d= -f2 | tr -d '"')
+            REV=$(grep -sw 'VERSION_ID' /etc/os-release | cut -d= -f2 | tr -d '"')
+        fi
+
+        DIST=$(echo "$DIST" | xargs)
+        REV=$(echo "$REV" | xargs)
+    fi
 }
 
 check_os_info () {
@@ -757,10 +732,9 @@ check_kernel () {
 	MIN_NUM_ARR=(3 10 0)
 	CUR_NUM_ARR=()
 
-	CUR_STR_ARR=$(echo $KERNEL | grep -Po "[0-9]+\.[0-9]+\.[0-9]+" | tr "." " ")
-	for CUR_STR_ITEM in $CUR_STR_ARR
-	do
-		CUR_NUM_ARR=(${CUR_NUM_ARR[@]} $CUR_STR_ITEM)
+	CUR_STR_ARR=$(echo "$KERNEL" | grep -Po "[0-9]+\.[0-9]+\.[0-9]+" | tr "." " ")
+	for CUR_STR_ITEM in $CUR_STR_ARR; do
+		CUR_NUM_ARR+=("$CUR_STR_ITEM")
 	done
 
 	INDEX=0
@@ -840,7 +814,7 @@ check_ports () {
 	fi
 
 	if [ "$INSTALL_PRODUCT" == "true" ]; then
-		ARRAY_PORTS=(${ARRAY_PORTS[@]} "$EXTERNAL_PORT");
+		ARRAY_PORTS+=("$EXTERNAL_PORT")
 	fi
 
 	for PORT in "${ARRAY_PORTS[@]}"
@@ -882,9 +856,8 @@ check_docker_version () {
 
 	CUR_STR_ARR=$(echo $CUR_VERSION | grep -Po "[0-9]+\.[0-9]+\.[0-9]+" | tr "." " ")
 
-	for CUR_STR_ITEM in $CUR_STR_ARR
-	do
-		CUR_NUM_ARR=(${CUR_NUM_ARR[@]} $CUR_STR_ITEM)
+	for CUR_STR_ITEM in $CUR_STR_ARR; do
+		CUR_NUM_ARR+=("$CUR_STR_ITEM")
 	done
 
 	INDEX=0
@@ -1006,7 +979,7 @@ domain_check () {
 		if [[ -n "$IP_ADDRESS" && "$IP_ADDRESS" =~ ^(10\.|127\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.) ]]; then
 			LOCAL_RESOLVED_DOMAINS+="$DOMAIN"
 		fi
-	done <<< "${APP_DOMAIN_PORTAL:-$(dig +short -x $(curl -s ifconfig.me) | sed 's/\.$//')}"
+	done <<< "${APP_DOMAIN_PORTAL:-$(dig +short -x "$(curl -s ifconfig.me)" | sed 's/\.$//')}"
 
 	if [[ -n "${LOCAL_RESOLVED_DOMAINS}" ]] || [[ $(ip route get 8.8.8.8 | awk '{print $7}') != $(curl -s ifconfig.me) ]]; then
 		DOCKER_DAEMON_FILE="/etc/docker/daemon.json"
@@ -1205,7 +1178,7 @@ download_files () {
 		curl -sL "${DOWNLOAD_URL}" | tar -xzf - -C "${BASE_DIR}" ${STRIP_COMPONENTS}
 	else
 		if [ -f "$(dirname "$0")/docker.tar.gz" ]; then
-			tar -xf $(dirname "$0")/docker.tar.gz -C "${BASE_DIR}"
+			tar -xf "$(dirname "$0")/docker.tar.gz" -C "${BASE_DIR}"
 		else
 			echo "Error: docker.tar.gz not found in the same directory as the script."
 			echo "You need to download the docker.tar.gz file from https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/docker.tar.gz"
@@ -1267,7 +1240,7 @@ install_redis () {
 
 install_elasticsearch () {
 	if [[ -z ${ELK_HOST} ]] && [ "$INSTALL_ELASTICSEARCH" == "true" ]; then
-		if [ $(free --mega | grep -oP '\d+' | head -n 1) -gt "12000" ]; then #RAM ~12Gb
+		if [ "$(free --mega | grep -oP '\d+' | head -n 1)" -gt "12000" ]; then #RAM ~12Gb
 			sed -i 's/Xms[0-9]g/Xms4g/g; s/Xmx[0-9]g/Xmx4g/g' $BASE_DIR/opensearch.yml
 		else
 			sed -i 's/Xms[0-9]g/Xms1g/g; s/Xmx[0-9]g/Xmx1g/g' $BASE_DIR/opensearch.yml
