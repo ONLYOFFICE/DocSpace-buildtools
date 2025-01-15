@@ -92,7 +92,7 @@ case $1 in
     if grep -q '${CERTIFICATE_PATH}:' ${DOCKERCOMPOSE}/docspace.yml; then
       sed -i '/USE_UNAUTHORIZED_STORAGE/d' ${DOCKERCOMPOSE}/ds.yml
       sed -i '/${CERTIFICATE_PATH}:/d' ${DOCKERCOMPOSE}/docspace.yml ${DOCKERCOMPOSE}/ds.yml
-      docker-compose -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-doceditor onlyoffice-login onlyoffice-socket onlyoffice-ssoauth
+      docker-compose -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-doceditor onlyoffice-sdk onlyoffice-login onlyoffice-socket onlyoffice-ssoauth
       docker-compose -f ${DOCKERCOMPOSE}/ds.yml up --force-recreate -d
     fi
 
