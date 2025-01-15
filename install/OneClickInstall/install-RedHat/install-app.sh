@@ -58,8 +58,8 @@ if [ "${MYSQL_FIRST_TIME_INSTALL}" = "true" ]; then
 		MYSQL_AUTHENTICATION_PLUGIN=$($MYSQL -e "SHOW VARIABLES LIKE 'default_authentication_plugin';" -s | awk '{print $2}')
 		MYSQL_AUTHENTICATION_PLUGIN=${MYSQL_AUTHENTICATION_PLUGIN:-caching_sha2_password}
 
-		$MYSQL -e "ALTER USER '${MYSQL_SERVER_USER}'@'localhost' IDENTIFIED WITH ${MYSQL_AUTHENTICATION_PLUGIN} BY '${MYSQL_ROOT_PASS}'" >/dev/null 2>&1 \
-		|| $MYSQL -e "UPDATE user SET plugin='${MYSQL_AUTHENTICATION_PLUGIN}', authentication_string=PASSWORD('${MYSQL_ROOT_PASS}') WHERE user='${MYSQL_SERVER_USER}' and host='localhost';"
+		$MYSQL -e "ALTER USER '${MYSQL_SERVER_USER}'@'localhost' IDENTIFIED WITH ${MYSQL_AUTHENTICATION_PLUGIN} BY '${MYSQL_ROOT_PASS}'" >/dev/null 2>&1 || \
+		$MYSQL -e "UPDATE user SET plugin='${MYSQL_AUTHENTICATION_PLUGIN}', authentication_string=PASSWORD('${MYSQL_ROOT_PASS}') WHERE user='${MYSQL_SERVER_USER}' and host='localhost';"
 
 		systemctl restart mysqld
 	fi
@@ -141,19 +141,19 @@ fi
 if [ "$PRODUCT_INSTALLED" = "false" ]; then
 	${package_manager} install -y ${product} --best --allowerasing $TESTING_REPO
 	${product}-configuration \
-		-mysqlh ${MYSQL_SERVER_HOST} \
-		-mysqld ${MYSQL_SERVER_DB_NAME} \
-		-mysqlu ${MYSQL_SERVER_USER} \
-		-mysqlp ${MYSQL_ROOT_PASS}
+		-mysqlh "${MYSQL_SERVER_HOST}" \
+		-mysqld "${MYSQL_SERVER_DB_NAME}" \
+		-mysqlu "${MYSQL_SERVER_USER}" \
+		-mysqlp "${MYSQL_ROOT_PASS}"
 elif [[ "${PRODUCT_CHECK_UPDATE}" -eq "${UPDATE_AVAILABLE_CODE}" || "${RECONFIGURE_PRODUCT}" = "true" ]]; then
 	ENVIRONMENT=$(grep -oP 'ENVIRONMENT=\K.*' /etc/${package_sysname}/${product}/systemd.env || grep -oP 'ENVIRONMENT=\K.*' /usr/lib/systemd/system/${product}-api.service)
 	CONNECTION_STRING=$(json -f /etc/${package_sysname}/${product}/appsettings.$ENVIRONMENT.json ConnectionStrings.default.connectionString)
 	${package_manager} -y update ${product} --best --allowerasing $TESTING_REPO
 	${product}-configuration \
-		-mysqlh $(grep -oP 'Server=\K[^;]*' <<< "$CONNECTION_STRING") \
-		-mysqld $(grep -oP 'Database=\K[^;]*' <<< "$CONNECTION_STRING") \
-		-mysqlu $(grep -oP 'User ID=\K[^;]*' <<< "$CONNECTION_STRING") \
-		-mysqlp $(grep -oP 'Password=\K[^;]*' <<< "$CONNECTION_STRING")
+		-mysqlh "$(grep -oP 'Server=\K[^;]*' <<< "${CONNECTION_STRING}")" \
+		-mysqld "$(grep -oP 'Database=\K[^;]*' <<< "${CONNECTION_STRING}")" \
+		-mysqlu "$(grep -oP 'User ID=\K[^;]*' <<< "${CONNECTION_STRING}")" \
+		-mysqlp "$(grep -oP 'Password=\K[^;]*' <<< "${CONNECTION_STRING}")"
 fi
 
 echo ""

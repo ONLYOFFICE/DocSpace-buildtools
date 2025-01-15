@@ -75,7 +75,7 @@ curl -o /etc/yum.repos.d/openresty.repo "https://openresty.org/package/${OPENRES
 [ "$DIST" == "fedora" ] && sed -i "s/\$releasever/$OPENRESTY_REV/g" /etc/yum.repos.d/openresty.repo
 
 JAVA_VERSION=21
-${package_manager} -y install $([ $DIST != "fedora" ] && echo "epel-release") \
+${package_manager} -y install $([ "$DIST" != "fedora" ] && echo "epel-release") \
 			python3 \
 			nodejs ${NODEJS_OPTION} \
 			dotnet-sdk-9.0 \

@@ -63,7 +63,7 @@ function check_hw() {
 # Outputs:     None
 #############################################################################################
 function add-repo-deb() {
-  mkdir -p -m 700 $HOME/.gnupg
+  mkdir -p $HOME/.gnupg && chmod 700 $HOME/.gnupg
   echo "deb [signed-by=/usr/share/keyrings/onlyoffice.gpg] https://nexus.onlyoffice.com/repository/4testing-debian stable main" | \
   sudo tee /etc/apt/sources.list.d/onlyoffice4testing.list
   curl -fsSL https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE | \

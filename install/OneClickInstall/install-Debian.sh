@@ -147,11 +147,11 @@ if [ -z "${SKIP_HARDWARE_CHECK}" ]; then
 fi
 
 apt-get update -y --allow-releaseinfo-change;
-if [ $(dpkg-query -W -f='${Status}' curl 2>/dev/null | grep -c "ok installed") -eq 0 ]; then
+if [ "$(dpkg-query -W -f='${Status}' curl 2>/dev/null | grep -c "ok installed")" -eq 0 ]; then
   apt-get install -yq curl
 fi
 
-if [ -z $GIT_BRANCH ]; then
+if [ -z "$GIT_BRANCH" ]; then
 	DOWNLOAD_URL_PREFIX="https://download.onlyoffice.com/${product}/install-Debian"
 else
 	DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall/install-Debian"
