@@ -1,0 +1,21 @@
+ {
+    "externalresources": {
+        "legalterms": "https://help.onlyoffice.co/products/files/doceditor.aspx?fileid=5048502&doc=SXhWMEVzSEYxNlVVaXJJeUVtS0kyYk14YWdXTEFUQmRWL250NllHNUFGbz0_IjUwNDg1MDIi0",
+        "license": "https://www.gnu.org/licenses/agpl-3.0.en.html",
+        "support": "https://helpdesk.onlyoffice.com",
+        "supportemail": "support@onlyoffice.com",
+        "paymentemail": "sales@onlyoffice.com",
+        "site": "https://www.onlyoffice.com",
+        "buyenterprise": "https://www.onlyoffice.com/post.ashx?type=buydocspaceenterprise",
+        "buydeveloper": "https://www.onlyoffice.com/post.ashx?type=buydocspacedeveloper",
+        "removeportalfeedbackform": "https://www.onlyoffice.com/registration-canceled.aspx",
+        "subscribe": "https://www.onlyoffice.com/post.ashx",
+        "helpcenter": "https://helpcenter.onlyoffice.com/{ru|de|fr|es|it}",
+        "videoguides": "https://helpcenter.onlyoffice.com/{ru|de|fr|es|it}/video.aspx",
+        "forum": "https://forum.onlyoffice.com",
+        "api": "https://api.onlyoffice.com",
+        "orderdemo": "https://www.onlyoffice.com/demo-order.aspx",
+        "booktrainingemail": "",
+        "documentationemail": "",
+    }
+ }
