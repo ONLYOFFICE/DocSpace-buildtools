@@ -102,7 +102,7 @@ function TestSqlConnection {
     $Uid      = AI_GetMsiProperty DB_USER
     $Pwd      = AI_GetMsiProperty DB_PWD
 
-    $ConnectionString = "DRIVER={MySQL ODBC 8.0 Unicode Driver};SERVER=$Server;PORT=$Port;USER=$Uid;PASSWORD=$Pwd;"
+    $ConnectionString = "DRIVER={MySQL ODBC 8.4 Unicode Driver};SERVER=$Server;PORT=$Port;USER=$Uid;PASSWORD=$Pwd;"
     $Connection = New-Object System.Data.Odbc.OdbcConnection($ConnectionString)
 
     try {
@@ -128,14 +128,14 @@ function MySQLConfigure {
     $DbName      = AI_GetMsiProperty DB_NAME
     $DbPass      = AI_GetMsiProperty DB_PWD
 
-    $InstallDir = Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\MySQL AB\MySQL Server 8.0" -Name "Location"
-    $DataDir    = Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\MySQL AB\MySQL Server 8.0" -Name "DataLocation"
+    $InstallDir = (AI_GetMsiProperty "ProgramFiles64Folder") + "/MySQL/MySQL Server 8.4"
+    $DataDir    = (AI_GetMsiProperty "ProgramFiles64Folder") + "/MySQL/MySQL Server 8.4/data"
 
     Write-Output "MySQLConfigure: InstallDir $InstallDir"
     Write-Output "MySQLConfigure: DataDir $DataDir"
 
     try {
-        $Service = Get-Service -Name "MySQL80" -ErrorAction Stop
+        $Service = Get-Service -Name "MySQL84" -ErrorAction Stop
 
         if ($Service.Status -eq 'Running') {
             $MySqlPath = Join-Path $InstallDir "bin\mysql.exe"
