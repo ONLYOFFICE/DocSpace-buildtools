@@ -9,6 +9,9 @@ on:
       - 'install/OneClickInstall/install-RedHat/**'
       - 'install/OneClickInstall/install-Debian.sh'
       - 'install/OneClickInstall/install-RedHat.sh'
+  push:
+    paths:
+      - '.github/workflows/ci-oci-install.yml'
 
   schedule:
     - cron: '00 20 * * 6'  # At 23:00 on Saturday.
@@ -47,6 +50,14 @@ on:
          type: boolean
          description: 'Fedora 40'
          default: true
+      rhel8:
+         type: boolean
+         description: 'RHEL 8'
+         default: true
+      rhel9:
+         type: boolean
+         description: 'RHEL 9'
+         default: true
 
 jobs:
   prepare:
@@ -73,21 +84,15 @@ jobs:
         run: |
           matrix=$(echo '{
             "include": [
-              {"execute": '${{ github.event.inputs.centos9s || true }}', "name": "CentOS9S", "os": "centos9s", "distr": "generic"},
-              {"execute": '${{ github.event.inputs.debian11 || true }}', "name": "Debian11", "os": "debian11", "distr": "generic"},
-              {"execute": '${{ github.event.inputs.debian12 || true }}', "name": "Debian12", "os": "debian12", "distr": "generic"},
-              {"execute": '${{ github.event.inputs.ubuntu2004 || true }}', "name": "Ubuntu20.04", "os": "ubuntu2004", "distr": "generic"},
-              {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu22.04", "os": "ubuntu2204", "distr": "generic"},
-              {"execute": '${{ github.event.inputs.ubuntu2404 || true }}', "name": "Ubuntu24.04", "os": "ubuntu-24.04", "distr": "bento"},
-              {"execute": '${{ github.event.inputs.fedora39 || true }}', "name": "Fedora39", "os": "39-cloud-base", "distr": "fedora"},
-              {"execute": '${{ github.event.inputs.fedora40 || true }}', "name": "Fedora40", "os": "fedora-40", "distr": "bento"}
+              {"execute": '${{ github.event.inputs.rhel8 || true }}', "name": "RHEL8", "os": "rhel8", "distr": "generic"},
+              {"execute": '${{ github.event.inputs.rhel9 || true }}', "name": "RHEL9", "os": "rhel9", "distr": "generic"}
             ]
           }' | jq -c '.include')
 
           matrix=$(jq -c --arg REDHAT_CHANGED "${{ env.redhat_changed }}" --arg DEBIAN_CHANGED "${{ env.debian_changed }}" '
             { include: [.[] | select(
                 ($REDHAT_CHANGED == $DEBIAN_CHANGED and .execute == true) or
-                ($REDHAT_CHANGED == "true" and (.name | test("CentOS|Fedora"))) or
+                ($REDHAT_CHANGED == "true" and (.name | test("CentOS|RHEL|Fedora"))) or
                 ($DEBIAN_CHANGED == "true" and (.name | test("Debian|Ubuntu"))))]
             }' <<< "$matrix")
 
