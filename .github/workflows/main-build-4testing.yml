@@ -23,7 +23,7 @@ jobs:
       matrix:
         platform: 
           - linux/amd64
-          - linux/arm64
+       # - linux/arm64
         
     steps:
       - name: Checkout
@@ -65,7 +65,7 @@ jobs:
           --set *.args.GIT_BRANCH="develop" \
           --set *.args.PRODUCT_VERSION=${PRODUCT_VERSION} \
           --set *.args.BUILD_NUMBER=${BUILD_NUMBER} \
-          --set *.platform=linux/arm64
+          --set *.platform=linux/amd64
           --push
 
           echo "version=${DOCKER_TAG}" >> "$GITHUB_OUTPUT"
