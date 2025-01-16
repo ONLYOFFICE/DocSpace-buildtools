@@ -515,7 +515,7 @@ while [ "$1" != "" ]; do
 			fi
 		;;
 
-		-? | -h | --help )
+		-h | -? | --help )
 			echo "  Usage: bash $HELP_TARGET [PARAMETER] [[PARAMETER], ...]"
 			echo
 			echo "    Parameters:"

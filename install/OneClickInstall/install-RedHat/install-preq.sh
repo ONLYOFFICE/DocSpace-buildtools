@@ -18,7 +18,7 @@ ${package_manager} -y install yum-utils
 { yum check-update postgresql; PSQLExitCode=$?; } || true #Checking for postgresql update
 { yum check-update "$DIST"*-release; exitCode=$?; } || true #Checking for distribution update
 
-if rpm -qa | grep mariadb.*config >/dev/null 2>&1; then
+if rpm -qa | grep 'mariadb.*config' >/dev/null 2>&1; then
    echo "$RES_MARIADB" && exit 0
 fi
 
