@@ -26,12 +26,6 @@ jobs:
        # - linux/arm64
         
     steps:
-      - name: Maximize build space
-        uses: easimon/maximize-build-space@master
-        with:
-          root-reserve-mb: 512
-          swap-size-mb: 1024
-          remove-dotnet: 'true'
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -51,6 +45,9 @@ jobs:
         run: |
           echo "Free space:"
           df -h
+          ls -la /root
+          docker image ls
+          docker system df
 
       - name: Login to DockerHub
         uses: docker/login-action@v2
