@@ -2,16 +2,15 @@ name: DocSpace main test main-buil-test.yml
 on:
   push:
     branches:
-      - 'hotfix/v*'
-      - 'release/v*'
+      - 'feature/add-arm-build'
       - 'develop'
     paths:
-      - '.github/workflows/main-build-test.yml'
+      - '.github/workflows/main-build-4testing.yml'
           
   workflow_dispatch:
 
 env:
-  DOCKER_PATH: "/docker"
+  DOCKER_PATH: "/install/docker"
   REPO: ${{ secrets.DOCKERHUB_USERNAME }}
   DOCKER_IMAGE_PREFIX: "4testing-docspace"
   DOCKERFILE: "Dockerfile.app"
@@ -60,7 +59,7 @@ jobs:
             PRODUCT_VERSION=$(echo "${{  github.GITHUB_REF_NAME }}" | sed '/^release\b\|^hotfix\b\|^feature\b/s/release.*\/\|hotfix.*\/\|feature.*\///; s/-git-action$//; s/^v//') 
             DOCKER_TAG=${PRODUCT_VERSION}.${{github.run_number}}
           fi
-          DOCKER_TAG=develop.${{ github.run_number }}
+          DOCKER_TAG=develop-test.${{ github.run_number }}
           export DOCKER_TAG
           docker buildx bake -f build.yml onlyoffice-api onlyoffice-api-system \
           --set *.args.GIT_BRANCH="develop" \
