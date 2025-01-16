@@ -272,7 +272,7 @@ function healthcheck_general_status() {
 # This function succeeds even if the file for cat was not found. For that use ${SKIP_EXIT} variable
 #############################################################################################
 function services_logs() {
-  SERVICES_SYSTEMD=($(awk '/SERVICE_NAME=\(/{flag=1; next} /\)/{flag=0} flag' "build.sh" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed 's/^/docspace-/' | sed 's/$/.service/'))
+  mapfile -t SERVICES_SYSTEMD < <(awk '/SERVICE_NAME=\(/{flag=1; next} /\)/{flag=0} flag' "build.sh" | sed -E 's/^[[:space:]]*|[[:space:]]*$//g; s/^/docspace-/; s/$/.service/')
   SERVICES_SYSTEMD+=("ds-converter.service" "ds-docservice.service" "ds-metrics.service")
 
   for service in "${SERVICES_SYSTEMD[@]}"; do

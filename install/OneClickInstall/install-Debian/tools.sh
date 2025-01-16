@@ -68,7 +68,7 @@ check_hardware () {
 
 	CPU_CORES_NUMBER=$(grep -c ^processor /proc/cpuinfo)
 
-	if [ ${CPU_CORES_NUMBER} -lt ${CORE_REQUIREMENTS} ]; then
+	if [ "${CPU_CORES_NUMBER}" -lt ${CORE_REQUIREMENTS} ]; then
 		echo "The system does not meet the minimal hardware requirements. CPU with at least $CORE_REQUIREMENTS cores is required"
 		exit 1
 	fi

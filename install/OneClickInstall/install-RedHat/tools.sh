@@ -74,7 +74,7 @@ if [ "$DIST" == "fedora" ]; then
 	OPENRESTY_REV=$([ "$REV" -ge 37 ] && echo 36 || echo "$REV")
 
 	FEDORA_SUPP=$(curl https://docs.fedoraproject.org/en-US/releases/ | awk '/Supported Releases/,/EOL Releases/' | grep -oP 'F\d+' | tr -d 'F')
-	[ ! "$(echo "$FEDORA_SUPP" | grep "$REV")" ] && SUPPORTED_FEDORA_FLAG="false"
+	echo "$FEDORA_SUPP" | grep -q "$REV" || SUPPORTED_FEDORA_FLAG="false"
 fi
 
 # Check if it's Centos less than 8 or Fedora release is out of service
