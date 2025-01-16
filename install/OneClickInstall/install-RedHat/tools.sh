@@ -11,7 +11,7 @@ function make_swap () {
 	local TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1)
 	local EXIST=$(swapon -s | awk '{ print $1 }' | { grep -x ${SWAPFILE} || true; })
 
-	if [[ -z $EXIST ]] && [ ${TOTAL_MEMORY} -lt ${MEMORY_REQUIREMENTS} ] && [ ${AVAILABLE_DISK_SPACE} -gt ${DISK_REQUIREMENTS} ]; then
+	if [[ -z $EXIST ]] && [ "${TOTAL_MEMORY}" -lt ${MEMORY_REQUIREMENTS} ] && [ "${AVAILABLE_DISK_SPACE}" -gt ${DISK_REQUIREMENTS} ]; then
 		touch "$SWAPFILE"
 		[[ "$(df -T / | awk 'NR==2{print $2}')" = "btrfs" ]] && chattr +C "$SWAPFILE"
 		fallocate -l 6G "$SWAPFILE"
@@ -29,21 +29,21 @@ check_hardware () {
 
 	AVAILABLE_DISK_SPACE=$(df -m /  | tail -1 | awk '{ print $4 }')
 
-	if [ ${AVAILABLE_DISK_SPACE} -lt ${DISK_REQUIREMENTS} ]; then
+	if [ "${AVAILABLE_DISK_SPACE}" -lt ${DISK_REQUIREMENTS} ]; then
 		echo "Minimal requirements are not met: need at least $DISK_REQUIREMENTS MB of free HDD space"
 		exit 1
 	fi
 
 	TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1)
 
-	if [ ${TOTAL_MEMORY} -lt ${MEMORY_REQUIREMENTS} ]; then
+	if [ "${TOTAL_MEMORY}" -lt ${MEMORY_REQUIREMENTS} ]; then
 		echo "Minimal requirements are not met: need at least $MEMORY_REQUIREMENTS MB of RAM"
 		exit 1
 	fi
 
-	CPU_CORES_NUMBER=$(cat /proc/cpuinfo | grep processor | wc -l)
+	CPU_CORES_NUMBER=$(grep -c ^processor /proc/cpuinfo)
 
-	if [ ${CPU_CORES_NUMBER} -lt ${CORE_REQUIREMENTS} ]; then
+	if [ "${CPU_CORES_NUMBER}" -lt ${CORE_REQUIREMENTS} ]; then
 		echo "The system does not meet the minimal hardware requirements. CPU with at least $CORE_REQUIREMENTS cores is required"
 		exit 1
 	fi

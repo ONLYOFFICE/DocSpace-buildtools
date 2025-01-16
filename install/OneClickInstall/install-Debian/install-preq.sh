@@ -40,7 +40,7 @@ ELASTIC_VERSION="2.18.0"
 export OPENSEARCH_INITIAL_ADMIN_PASSWORD="$(echo "${package_sysname}!A1")"
 
 #add opensearch dashboards repo
-if [ ${INSTALL_FLUENT_BIT} == "true" ]; then
+if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then
 	curl -o- https://artifacts.opensearch.org/publickeys/opensearch.pgp | gpg --dearmor --batch --yes -o /usr/share/keyrings/opensearch-keyring
 	echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/2.x/apt stable main" > /etc/apt/sources.list.d/opensearch-dashboards-2.x.list
 	DASHBOARDS_VERSION="2.18.0"
@@ -54,7 +54,7 @@ curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
 if [ "$DIST" = "ubuntu" ]; then
     add-apt-repository -y ppa:dotnet/backports
 elif [ "$DIST" = "debian" ]; then
-	curl https://packages.microsoft.com/config/$DIST/$REV/packages-microsoft-prod.deb -O
+	curl https://packages.microsoft.com/config/"$DIST"/"$REV"/packages-microsoft-prod.deb -O
 	echo -e "Package: *\nPin: origin \"packages.microsoft.com\"\nPin-Priority: 1002" | tee /etc/apt/preferences.d/99microsoft-prod.pref
 	dpkg -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
 fi
@@ -69,23 +69,23 @@ if ! dpkg -l | grep -q "mysql-server"; then
 	MYSQL_SERVER_PASS=${MYSQL_SERVER_PASS:-"$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)"}
 
 	# setup mysql 8.4 package
-	curl -OL http://repo.mysql.com/${MYSQL_PACKAGE_NAME}
+	curl -OL http://repo.mysql.com/"${MYSQL_PACKAGE_NAME}"
 	echo "mysql-apt-config mysql-apt-config/repo-codename  select  $DISTRIB_CODENAME" | debconf-set-selections
 	echo "mysql-apt-config mysql-apt-config/repo-distro  select  $DIST" | debconf-set-selections
 	echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.4-lts" | debconf-set-selections
-	DEBIAN_FRONTEND=noninteractive dpkg -i ${MYSQL_PACKAGE_NAME}
-	rm -f ${MYSQL_PACKAGE_NAME}
+	DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
+	rm -f "${MYSQL_PACKAGE_NAME}"
 
-	echo mysql-community-server mysql-community-server/root-pass password ${MYSQL_SERVER_PASS} | debconf-set-selections
-	echo mysql-community-server mysql-community-server/re-root-pass password ${MYSQL_SERVER_PASS} | debconf-set-selections
+	echo mysql-community-server mysql-community-server/root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+	echo mysql-community-server mysql-community-server/re-root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
 	echo mysql-community-server mysql-server/default-auth-override select "Use Strong Password Encryption (RECOMMENDED)" | debconf-set-selections
-	echo mysql-server mysql-server/root_password password ${MYSQL_SERVER_PASS} | debconf-set-selections
-	echo mysql-server mysql-server/root_password_again password ${MYSQL_SERVER_PASS} | debconf-set-selections
+	echo mysql-server mysql-server/root_password password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+	echo mysql-server mysql-server/root_password_again password "${MYSQL_SERVER_PASS}" | debconf-set-selections
 
 elif dpkg -l | grep -q "mysql-apt-config" && [ "$(apt-cache policy mysql-apt-config | awk 'NR==2{print $2}')" != "${MYSQL_REPO_VERSION}" ]; then
 	curl -OL http://repo.mysql.com/${MYSQL_PACKAGE_NAME}
-	DEBIAN_FRONTEND=noninteractive dpkg -i ${MYSQL_PACKAGE_NAME}
-	rm -f ${MYSQL_PACKAGE_NAME}
+	DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
+	rm -f "${MYSQL_PACKAGE_NAME}"
 fi
 
 # add redis repo  --- temporary fix for complete installation on Ubuntu 24.04. REDIS_DIST_CODENAME change to DISTRIB_CODENAME
@@ -142,12 +142,12 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*temurin-${JAVA_VERSION}*" | head -1)
 update-alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && update-alternatives --set java "$JAVA_PATH"
 
-if [ ${INSTALL_FLUENT_BIT} == "true" ]; then
+if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then
 	[[ "$DISTRIB_CODENAME" =~ noble ]] && FLUENTBIT_DIST_CODENAME="jammy" || FLUENTBIT_DIST_CODENAME="${DISTRIB_CODENAME}"
 	curl https://packages.fluentbit.io/fluentbit.key | gpg --dearmor > /usr/share/keyrings/fluentbit-keyring.gpg
 	echo "deb [signed-by=/usr/share/keyrings/fluentbit-keyring.gpg] https://packages.fluentbit.io/$DIST/$FLUENTBIT_DIST_CODENAME $FLUENTBIT_DIST_CODENAME main" | tee /etc/apt/sources.list.d/fluent-bit.list
 	apt update
-	apt-get install -yq opensearch-dashboards=${DASHBOARDS_VERSION} fluent-bit
+	apt-get install -yq opensearch-dashboards="${DASHBOARDS_VERSION}" fluent-bit
 fi
 
 # disable apparmor for mysql

@@ -22,12 +22,12 @@ case "${INSTALLATION_TYPE}" in
 esac
 
 if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ]; then
-	ds_pkg_installed_name=$(rpm -qa --qf '%{NAME}\n' | grep ${package_sysname}-documentserver)
+	ds_pkg_installed_name=$(rpm -qa --qf '%{NAME}\n' | grep "${package_sysname}"-documentserver)
 	if [ -n "${ds_pkg_installed_name}" ] && [ "${ds_pkg_installed_name}" != "${ds_pkg_name}" ]; then
-		${package_manager} -y remove ${ds_pkg_installed_name} --setopt=clean_requirements_on_remove=false
+		"${package_manager}" -y remove "${ds_pkg_installed_name}" --setopt=clean_requirements_on_remove=false
 		DOCUMENT_SERVER_INSTALLED="false" RECONFIGURE_PRODUCT="true"
 	else
-		${package_manager} -y update ${ds_pkg_installed_name}
+		${package_manager} -y update "${ds_pkg_installed_name}"
 	fi
 fi
 
@@ -48,11 +48,11 @@ if [ "${MYSQL_FIRST_TIME_INSTALL}" = "true" ]; then
 	done
 
 	if ! mysql "-u$MYSQL_SERVER_USER" "-p$MYSQL_TEMPORARY_ROOT_PASS" -e ";" >/dev/null 2>&1; then
-		if [ -z $MYSQL_TEMPORARY_ROOT_PASS ]; then
+		if [ -z "$MYSQL_TEMPORARY_ROOT_PASS" ]; then
 		   MYSQL="mysql --connect-expired-password -u$MYSQL_SERVER_USER -D mysql"
 		else
 		   MYSQL="mysql --connect-expired-password -u$MYSQL_SERVER_USER -p${MYSQL_TEMPORARY_ROOT_PASS} -D mysql"
-		   MYSQL_ROOT_PASS=$(echo $MYSQL_TEMPORARY_ROOT_PASS | sed -e 's/;/%/g' -e 's/=/%/g')
+		   MYSQL_ROOT_PASS=$(echo "$MYSQL_TEMPORARY_ROOT_PASS" | sed -e 's/;/%/g' -e 's/=/%/g')
 		fi
 
 		MYSQL_AUTHENTICATION_PLUGIN=$($MYSQL -e "SHOW VARIABLES LIKE 'default_authentication_plugin';" -s | awk '{print $2}')
@@ -85,7 +85,7 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
 	declare -x JWT_SECRET=${JWT_SECRET:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)}
 	declare -x JWT_HEADER=${JWT_HEADER:-AuthorizationJwt}
 		
-	if ! su - postgres -s /bin/bash -c "psql -lqt" | cut -d \| -f 1 | grep -q ${DS_DB_NAME}; then
+	if ! su - postgres -s /bin/bash -c "psql -lqt" | cut -d \| -f 1 | grep -q "${DS_DB_NAME}"; then
 		su - postgres -s /bin/bash -c "psql -c \"CREATE USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';\""
 		su - postgres -s /bin/bash -c "psql -c \"CREATE DATABASE ${DS_DB_NAME} OWNER ${DS_DB_USER};\""
 	fi
@@ -140,16 +140,16 @@ fi
 { ${package_manager} check-update ${product}; PRODUCT_CHECK_UPDATE=$?; } || true
 if [ "$PRODUCT_INSTALLED" = "false" ]; then
 	${package_manager} install -y ${product} --best --allowerasing $TESTING_REPO
-	${product}-configuration \
+	"${product}"-configuration \
 		-mysqlh "${MYSQL_SERVER_HOST}" \
 		-mysqld "${MYSQL_SERVER_DB_NAME}" \
 		-mysqlu "${MYSQL_SERVER_USER}" \
 		-mysqlp "${MYSQL_ROOT_PASS}"
 elif [[ "${PRODUCT_CHECK_UPDATE}" -eq "${UPDATE_AVAILABLE_CODE}" || "${RECONFIGURE_PRODUCT}" = "true" ]]; then
-	ENVIRONMENT=$(grep -oP 'ENVIRONMENT=\K.*' /etc/${package_sysname}/${product}/systemd.env || grep -oP 'ENVIRONMENT=\K.*' /usr/lib/systemd/system/${product}-api.service)
-	CONNECTION_STRING=$(json -f /etc/${package_sysname}/${product}/appsettings.$ENVIRONMENT.json ConnectionStrings.default.connectionString)
-	${package_manager} -y update ${product} --best --allowerasing $TESTING_REPO
-	${product}-configuration \
+	ENVIRONMENT=$(grep -oP 'ENVIRONMENT=\K.*' /etc/"${package_sysname}"/"${product}"/systemd.env || grep -oP 'ENVIRONMENT=\K.*' /usr/lib/systemd/system/"${product}"-api.service)
+	CONNECTION_STRING=$(json -f /etc/"${package_sysname}"/"${product}"/appsettings."$ENVIRONMENT".json ConnectionStrings.default.connectionString)
+	${package_manager} -y update "${product}" --best --allowerasing $TESTING_REPO
+	"${product}"-configuration \
 		-mysqlh "$(grep -oP 'Server=\K[^;]*' <<< "${CONNECTION_STRING}")" \
 		-mysqld "$(grep -oP 'Database=\K[^;]*' <<< "${CONNECTION_STRING}")" \
 		-mysqlu "$(grep -oP 'User ID=\K[^;]*' <<< "${CONNECTION_STRING}")" \

@@ -162,7 +162,7 @@ if [ "${UNINSTALL}" == "true" ]; then
     if [ "${LOCAL_SCRIPTS}" == "true" ]; then
         source install-Debian/uninstall.sh
     else
-        source <(curl -fsSL ${DOWNLOAD_URL_PREFIX}/uninstall.sh)
+        source <(curl -fsSL "${DOWNLOAD_URL_PREFIX}"/uninstall.sh)
     fi
     exit 0
 fi
@@ -174,7 +174,7 @@ else
 fi
 
 # add onlyoffice repo
-mkdir -p -m 700 $HOME/.gnupg
+mkdir -p -m 700 "$HOME"/.gnupg
 echo "deb [signed-by=/usr/share/keyrings/onlyoffice.gpg] http://download.onlyoffice.com/repo/debian squeeze main" | tee /etc/apt/sources.list.d/onlyoffice.list
 curl -fsSL https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/onlyoffice.gpg --import
 chmod 644 /usr/share/keyrings/onlyoffice.gpg
@@ -189,8 +189,8 @@ if [ "${LOCAL_SCRIPTS}" == "true" ]; then
 	source install-Debian/install-preq.sh
 	source install-Debian/install-app.sh
 else
-	source <(curl ${DOWNLOAD_URL_PREFIX}/tools.sh)
-	source <(curl ${DOWNLOAD_URL_PREFIX}/check-ports.sh)
-	source <(curl ${DOWNLOAD_URL_PREFIX}/install-preq.sh)
-	source <(curl ${DOWNLOAD_URL_PREFIX}/install-app.sh)
+	source <(curl "${DOWNLOAD_URL_PREFIX}"/tools.sh)
+	source <(curl "${DOWNLOAD_URL_PREFIX}"/check-ports.sh)
+	source <(curl "${DOWNLOAD_URL_PREFIX}"/install-preq.sh)
+	source <(curl "${DOWNLOAD_URL_PREFIX}"/install-app.sh)
 fi
