@@ -55,6 +55,11 @@ Type: string
 Default: 6379
 Description: Redis port:
 
+Template: {{product}}/redis-db
+Type: string
+Default: 0
+Description: Redis database index:
+
 Template: {{product}}/rabbitmq-host
 Type: string
 Description: RabbitMQ host:

@@ -11,5 +11,5 @@ cat<<EOF
 EOF
 
 if ! rpm -q net-tools; then
-	${package_manager} -y install net-tools;
+	${package_manager} -y install net-tools
 fi

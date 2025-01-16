@@ -6,6 +6,7 @@
 	<startmode>Automatic</startmode>
 	<delayedAutoStart>true</delayedAutoStart>
 	<onfailure action="restart" delay="1 sec"/>
+	<env name="OPENSEARCH_INITIAL_ADMIN_PASSWORD" value="onlyoffice!A1" />
 	<logpath>%BASE%\..\Log\</logpath>
 	<workingdirectory>%BASE%\..\</workingdirectory>
 	<executable>%BASE%\..\opensearch-windows-install.bat</executable>

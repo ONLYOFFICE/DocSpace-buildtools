@@ -40,3 +40,4 @@ fi
 
 echo -e "Uninstallation of ${package_sysname^^} ${product_name}" \
          "$( [ "$UNINSTALL_DEPENDENCIES" = true ] && echo "and all dependencies" ) \e[32mcompleted.\e[0m"
+

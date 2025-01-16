@@ -26,6 +26,7 @@ DEPENDENCIES=(
 )
 
 if [ "$UNINSTALL_DEPENDENCIES" = true ]; then
+    rpm -q valkey &>/dev/null && DEPENDENCIES+=("valkey")
     PACKAGES_TO_UNINSTALL+=("${DEPENDENCIES[@]}")
 fi
 
@@ -41,3 +42,4 @@ fi
 
 echo -e "Uninstallation of ${package_sysname^^} ${product_name}" \
          "$( [ "$UNINSTALL_DEPENDENCIES" = true ] && echo "and all dependencies" ) \e[32mcompleted.\e[0m"
+

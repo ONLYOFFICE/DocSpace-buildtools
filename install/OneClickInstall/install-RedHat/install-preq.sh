@@ -42,17 +42,18 @@ MYSQL_REPO_VERSION="$(curl https://repo.mysql.com | grep -oP "mysql84-community-
 yum install -y https://repo.mysql.com/mysql84-community-release-${MYSQL_DISTR_NAME}${REV}-${MYSQL_REPO_VERSION}.noarch.rpm || true
 
 if ! rpm -q mysql-community-server; then
-	MYSQL_FIRST_TIME_INSTALL="true";
+	MYSQL_FIRST_TIME_INSTALL="true"
 fi
 
 #add opensearch repo
 curl -SL https://artifacts.opensearch.org/releases/bundle/opensearch/2.x/opensearch-2.x.repo -o /etc/yum.repos.d/opensearch-2.x.repo
-ELASTIC_VERSION="2.11.1"
+ELASTIC_VERSION="2.18.0"
+export OPENSEARCH_INITIAL_ADMIN_PASSWORD="$(echo "${package_sysname}!A1")"
 
 #add opensearch dashboards repo
 if [ ${INSTALL_FLUENT_BIT} == "true" ]; then
 	curl -SL https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/2.x/opensearch-dashboards-2.x.repo -o /etc/yum.repos.d/opensearch-dashboards-2.x.repo
-	DASHBOARDS_VERSION="2.11.1"
+	DASHBOARDS_VERSION="2.18.0"
 fi
 
 # add nginx repo, Fedora doesn't need it
@@ -74,7 +75,7 @@ curl -o /etc/yum.repos.d/openresty.repo "https://openresty.org/package/${OPENRES
 [ "$DIST" == "fedora" ] && sed -i "s/\$releasever/$OPENRESTY_REV/g" /etc/yum.repos.d/openresty.repo
 
 JAVA_VERSION=21
-${package_manager} -y install $([ $DIST != "fedora" ] && echo "epel-release") \
+${package_manager} -y install $([ "$DIST" != "fedora" ] && echo "epel-release") \
 			python3 \
 			nodejs ${NODEJS_OPTION} \
 			dotnet-sdk-9.0 \
@@ -104,6 +105,9 @@ if [[ $PSQLExitCode -eq $UPDATE_AVAILABLE_CODE ]]; then
 	postgresql-setup --upgrade || true
 fi
 postgresql-setup initdb	|| true
+
+sed -E -i "s/(host\s+(all|replication)\s+all\s+(127\.0\.0\.1\/32|\:\:1\/128)\s+)(ident|trust|md5)/\1scram-sha-256/" /var/lib/pgsql/data/pg_hba.conf
+sed -i "s/^#\?password_encryption = .*/password_encryption = 'scram-sha-256'/" /var/lib/pgsql/data/postgresql.conf
 
 if ! command -v semanage &> /dev/null; then
 	yum install -y policycoreutils-python || yum install -y policycoreutils-python-utils

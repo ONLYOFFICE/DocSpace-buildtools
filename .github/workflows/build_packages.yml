@@ -7,9 +7,6 @@ on:
       - 'hotfix/**'
       - 'develop'
     paths:
-      - 'install/common/**'
-      - 'install/deb/**'
-      - 'install/rpm/**'
       - '.github/workflows/build_packages.yml'
   workflow_dispatch:
     inputs:
@@ -25,6 +22,14 @@ on:
         description: 'Branch for server repository'
         required: true
         default: 'develop'
+      deb_build:
+        description: 'Trigger DEB build'
+        required: false
+        default: 'false'
+      rpm_build:
+        description: 'Trigger RPM build'
+        required: false
+        default: 'false'
 
 concurrency:
   group: ${{ github.ref }}
@@ -44,8 +49,7 @@ jobs:
     runs-on: ubuntu-22.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
-      deb_built: ${{ steps.changes.outputs.build_deb }}
-      rpm_built: ${{ steps.changes.outputs.build_rpm }}
+      build_all: ${{ steps.changes.outputs.build_all }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -56,19 +60,19 @@ jobs:
         id: changes
         run: |
           git fetch --no-tags --prune --depth=2
-          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
-          echo "build_deb=$(echo "$CHANGED_FILES" | grep -qE '^install/common/|^install/deb/' && echo true || echo false)" >> $GITHUB_OUTPUT
-          echo "build_rpm=$(echo "$CHANGED_FILES" | grep -qE '^install/common/|^install/rpm/' && echo true || echo false)" >> $GITHUB_OUTPUT      
-          echo "build_all=$(echo "$CHANGED_FILES" | grep -qE '^.github/workflows/build_packages.yml' && echo true || echo false)" >> $GITHUB_OUTPUT
+          echo "build_all=$(git diff --name-only HEAD~1 HEAD | grep -qE 'build_packages.yml' && echo true)" >> $GITHUB_OUTPUT
       - name: Set matrix
         id: set-matrix
         run: |
           package_types=()
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" || "${{ steps.changes.outputs.build_all }}" == "true" ]]; then
-            package_types+=("deb" "rpm")
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            [[ "${{ github.event.inputs.deb_build }}" == "true" ]] && package_types+=("deb")
+            [[ "${{ github.event.inputs.rpm_build }}" == "true" ]] && package_types+=("rpm")
+          elif [[ "${{ steps.changes.outputs.build_all }}" == "true" ]]; then
+              package_types+=("deb" "rpm")
           else
-            [[ "${{ steps.changes.outputs.build_deb }}" == "true" ]] && package_types+=("deb")
-            [[ "${{ steps.changes.outputs.build_rpm }}" == "true" ]] && package_types+=("rpm")
+            [[ "${{ github.event.inputs.deb_build }}" == "true" ]] && package_types+=("deb")
+            [[ "${{ github.event.inputs.rpm_build }}" == "true" ]] && package_types+=("rpm")
           fi
           [[ ${#package_types[@]} -eq 0 ]] && exit 0
           matrix=$(printf '%s\n' "${package_types[@]}" | jq -R . | jq -sc '{include: map({packageType: .})}')
@@ -89,7 +93,7 @@ jobs:
         run: |
           PRODUCT_VERSION=$(grep -oP '\d+\.\d+\.\d+' <<< "${BRANCH_BUILDTOOLS//\//} ${BRANCH_CLIENT//\//} \
           ${BRANCH_SERVER//\//}" | head -n1)
-          echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.0.1}" >> $GITHUB_ENV
+          echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.0.2}" >> $GITHUB_ENV
 
       - name: Free Disk Space
         run: |
@@ -215,9 +219,17 @@ jobs:
             echo "::warning Noticerpm=rpmlint::$(cat RPM_LINT | awk '/W:/ { ws += 1 } /E:/ { es += 1 } END { print "Warnings:", ws, "Errors:", es }')"
           fi
       
+  trigger_oci:
+    name: Trigger ci-oci-install Workflow
+    needs: [prepare, build]
+    runs-on: ubuntu-22.04
+    if: ${{ success() }}
+    steps:
       - name: Trigger CI-OCI-Install Workflow
-        if: ${{ success() }}
         run: |
+          deb_build="${{ github.event.inputs.deb_build }}"
+          rpm_build="${{ github.event.inputs.rpm_build }}"
+          [[ "${{ needs.prepare.outputs.build_all }}" == "true" ]] && deb_build="true" && rpm_build="true"
           curl \
             -X POST \
             -u "${{ secrets.USERNAME}}:${{secrets.TOKEN}}" \
@@ -226,8 +238,8 @@ jobs:
             --data '{
               "ref": "'"${{ github.ref_name }}"'",
               "inputs": {
-                "deb_built": "'"${{ needs.prepare.outputs.deb_built }}"'",
-                "rpm_built": "'"${{ needs.prepare.outputs.rpm_built }}"'"
+                "deb_build": "'"${deb_build}"'",
+                "rpm_build": "'"${rpm_build}"'"
               }
             }'
 
