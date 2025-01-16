@@ -45,7 +45,7 @@ jobs:
         run: |
           echo "Free space:"
           df -h
-          ls -la /root
+          sudo du -sh /
           docker image ls
           docker system df
 
