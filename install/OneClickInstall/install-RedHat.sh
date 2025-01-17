@@ -111,7 +111,7 @@ while [ "$1" != "" ]; do
 			fi
 		;;
 
-		-? | -h | --help )
+		-h | -? | --help )
 			echo "  Usage $0 [PARAMETER] [[PARAMETER], ...]"
 			echo "    Parameters:"
 			echo "      -it, --installation_type          installation type (community|developer|enterprise)"
@@ -158,7 +158,7 @@ if [ "${UNINSTALL}" == "true" ]; then
     if [ "${LOCAL_SCRIPTS}" == "true" ]; then
         source install-RedHat/uninstall.sh
     else
-        source <(curl -fsSL ${DOWNLOAD_URL_PREFIX}/uninstall.sh)
+        source <(curl -fsSL "${DOWNLOAD_URL_PREFIX}"/uninstall.sh)
     fi
     exit 0
 fi
@@ -179,9 +179,9 @@ if [ "$LOCAL_SCRIPTS" = "true" ]; then
 	source install-RedHat/install-preq.sh
 	source install-RedHat/install-app.sh
 else
-	source <(curl ${DOWNLOAD_URL_PREFIX}/tools.sh)
-	source <(curl ${DOWNLOAD_URL_PREFIX}/bootstrap.sh)
-	source <(curl ${DOWNLOAD_URL_PREFIX}/check-ports.sh)
-	source <(curl ${DOWNLOAD_URL_PREFIX}/install-preq.sh)
-	source <(curl ${DOWNLOAD_URL_PREFIX}/install-app.sh)
+	source <(curl "${DOWNLOAD_URL_PREFIX}"/tools.sh)
+	source <(curl "${DOWNLOAD_URL_PREFIX}"/bootstrap.sh)
+	source <(curl "${DOWNLOAD_URL_PREFIX}"/check-ports.sh)
+	source <(curl "${DOWNLOAD_URL_PREFIX}"/install-preq.sh)
+	source <(curl "${DOWNLOAD_URL_PREFIX}"/install-app.sh)
 fi

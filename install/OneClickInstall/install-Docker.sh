@@ -515,7 +515,7 @@ while [ "$1" != "" ]; do
 			fi
 		;;
 
-		-? | -h | --help )
+		-h | -? | --help )
 			echo "  Usage: bash $HELP_TARGET [PARAMETER] [[PARAMETER], ...]"
 			echo
 			echo "    Parameters:"
@@ -765,7 +765,7 @@ check_hardware () {
 		exit 1
 	fi
 
-	CPU_CORES_NUMBER=$(cat /proc/cpuinfo | grep processor | wc -l)
+	CPU_CORES_NUMBER=$(grep -c ^processor /proc/cpuinfo)
 
 	if [ ${CPU_CORES_NUMBER} -lt ${CORE_REQUIREMENTS} ]; then
 		echo "The system does not meet the minimal hardware requirements. CPU with at least $CORE_REQUIREMENTS cores is required"
