@@ -72,6 +72,10 @@
         "siteopenai": "https://www.onlyoffice.com/app-directory/openai",
         "siteopenaizh-CN": "https://www.onlyoffice.com/app-directory/zh/zhipu",
         "sitedownload-desktop": "https://www.onlyoffice.com/download-desktop.aspx#desktop",
-        "sitedownload-mobile": "https://www.onlyoffice.com/download-desktop.aspx#mobile"
+        "sitedownload-mobile": "https://www.onlyoffice.com/download-desktop.aspx#mobile",
+
+        "helpcenterabackup": "https://helpcenter.onlyoffice.com/administration/docspace-settings.aspx#CreatingBackup_block",
+        "helpcenterdocspace": "https://helpcenter.onlyoffice.com/administration/docspace.aspx",
+        "helpcenteruserguidesdocspace": "https://helpcenter.onlyoffice.com/userguides/docspace-index.aspx"
     }
  }
