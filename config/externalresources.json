@@ -70,6 +70,8 @@
         "siteform-filling-rooms": "https://www.onlyoffice.com/form-filling-rooms.aspx",
         "siteseamless-collaboration": "https://www.onlyoffice.com/seamless-collaboration.aspx",
         "siteopenai": "https://www.onlyoffice.com/app-directory/openai",
-        "siteopenaizh-CN": "https://www.onlyoffice.com/app-directory/zh/zhipu"
+        "siteopenaizh-CN": "https://www.onlyoffice.com/app-directory/zh/zhipu",
+        "sitedownload-desktop": "https://www.onlyoffice.com/download-desktop.aspx#desktop",
+        "sitedownload-mobile": "https://www.onlyoffice.com/download-desktop.aspx#mobile"
     }
  }
