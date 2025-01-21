@@ -1150,7 +1150,7 @@ set_docspace_params() {
 }
 
 set_installation_type_data () {
-	UPDATE=${UPDATE:-$(test -n "$(docker ps -aqf name=${CONTAINER_NAME})" && echo true)}
+	is_command_exists docker && UPDATE=${UPDATE:-$(test -n "$(docker ps -aqf name=${CONTAINER_NAME})" && echo true)}
 	if [ -z "${DOCUMENT_SERVER_IMAGE_NAME}" ]; then
 		DOCUMENT_SERVER_IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}documentserver"
 		case "${INSTALLATION_TYPE}" in

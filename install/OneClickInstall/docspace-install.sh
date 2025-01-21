@@ -138,10 +138,13 @@ fi
 
 if command_exists docker &> /dev/null && docker ps -a --format '{{.Names}}' | grep -q "${product_sysname}-api"; then
     DOCKER="true"
+    PARAMETERS="-u true $PARAMETERS"
 elif command_exists apt-get &> /dev/null && dpkg -s ${product}-api >/dev/null 2>&1; then
     DOCKER="false"
+	PARAMETERS="-u true $PARAMETERS"
 elif command_exists yum &> /dev/null && rpm -q ${product}-api >/dev/null 2>&1; then
     DOCKER="false"
+	PARAMETERS="-u true $PARAMETERS"
 fi
  
 if [ -z "$DOCKER" ]; then
