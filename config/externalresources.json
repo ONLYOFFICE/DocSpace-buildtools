@@ -7,6 +7,7 @@
 
         "booktrainingemail": "",
         "documentationemail": "",
+
         "forum": "https://forum.onlyoffice.com",
 
         "helpcenter": "https://helpcenter.onlyoffice.com/{ru|de|fr|es|it}",
@@ -77,14 +78,15 @@
         "site_custom-rooms": "https://www.onlyoffice.com/custom-rooms.aspx",
         "site_demo-order": "https://www.onlyoffice.com/demo-order.aspx",
         "site_desktop": "https://www.onlyoffice.com/desktop.aspx",
-        "site_docspace": "http://www.onlyoffice.com/docspace.aspx",
+        "site_docspace": "https://www.onlyoffice.com/docspace.aspx",
+        "site_docspace-prices": "https://www.onlyoffice.com/docspace-prices.aspx",
         "site_download-desktop": "https://www.onlyoffice.com/download-desktop.aspx#desktop",
         "site_download-mobile": "https://www.onlyoffice.com/download-desktop.aspx#mobile",
         "site_for-enterprises": "https://www.onlyoffice.com/for-enterprises.aspx",
         "site_form-filling-rooms": "https://www.onlyoffice.com/form-filling-rooms.aspx",
-        "site_office-for-android": "http://www.onlyoffice.com/office-for-android.aspx",
+        "site_office-for-android": "https://www.onlyoffice.com/office-for-android.aspx",
         "site_office-for-drupal": "https://www.onlyoffice.com/office-for-drupal.aspx",
-        "site_office-for-ios": "http://www.onlyoffice.com/office-for-ios.aspx",
+        "site_office-for-ios": "https://www.onlyoffice.com/office-for-ios.aspx",
         "site_office-for-wordpress": "https://www.onlyoffice.com/office-for-wordpress.aspx",
         "site_office-for-zapier": "https://www.onlyoffice.com/office-for-zapier.aspx",
         "site_office-for-zoom": "https://www.onlyoffice.com/office-for-zoom.aspx",
@@ -95,7 +97,7 @@
         "site_registration-canceled": "https://www.onlyoffice.com/registration-canceled.aspx",
         "site_seamless-collaboration": "https://www.onlyoffice.com/seamless-collaboration.aspx",
         "site_subscribe": "https://www.onlyoffice.com/post.ashx",
-        "site_wrongportalname": "http://www.onlyoffice.com/wrongportalname.aspx",
+        "site_wrongportalname": "https://www.onlyoffice.com/wrongportalname.aspx",
 
         "socialnetwork_facebook": "https://www.facebook.com/pages/OnlyOffice/833032526736775",
         "socialnetwork_instagram": "https://www.instagram.com/the_onlyoffice/",
