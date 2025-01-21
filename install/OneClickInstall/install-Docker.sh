@@ -1055,11 +1055,11 @@ get_tag_from_hub () {
 		JQ_FILTER='.results[].name // empty'
 	fi
 
-	TAGS_RESP=($(curl -s -H "${AUTH_HEADER}" -X GET "${HUB_URL}" | jq -r "${JQ_FILTER}"))
+	mapfile -t TAGS_RESP < <(curl -s -H "${AUTH_HEADER}" -X GET "${HUB_URL}" | jq -r "${JQ_FILTER}")
 }
 
 get_available_version () {
-	[ "${OFFLINE_INSTALLATION}" = "false" ] && get_tag_from_hub ${1} || TAGS_RESP=$(docker images --format "{{.Tag}}" ${1})
+	[ "${OFFLINE_INSTALLATION}" = "false" ] && get_tag_from_hub ${1} || mapfile -t TAGS_RESP < <(docker images --format "{{.Tag}}" "${1}")
 
 	VERSION_REGEX='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
 	[ ${#TAGS_RESP[@]} -eq 1 ] && LATEST_TAG="${TAGS_RESP[0]}" || LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$VERSION_REGEX" | sort -V | tail -n 1)
@@ -1259,7 +1259,7 @@ install_fluent_bit () {
 		if crontab -l | grep -q "${OPENSEARCH_INDEX}"; then
 			crontab -l | grep -v "${OPENSEARCH_INDEX}" | crontab -
 		fi
-		(crontab -l 2>/dev/null; echo "0 0 */1 * * curl -s -X POST "$(get_env_parameter 'ELK_SHEME')"://${ELK_HOST:-127.0.0.1}:$(get_env_parameter 'ELK_PORT')/${OPENSEARCH_INDEX}/_delete_by_query -H 'Content-Type: application/json' -d '{\"query\": {\"range\": {\"@timestamp\": {\"lt\": \"now-30d\"}}}}'") | crontab -
+		(crontab -l 2>/dev/null; echo "0 0 */1 * * curl -s -X POST $(get_env_parameter 'ELK_SHEME')://${ELK_HOST:-127.0.0.1}:$(get_env_parameter 'ELK_PORT')/${OPENSEARCH_INDEX}/_delete_by_query -H 'Content-Type: application/json' -d '{\"query\": {\"range\": {\"@timestamp\": {\"lt\": \"now-30d\"}}}}'") | crontab -
 
 		sed -i "s/OPENSEARCH_HOST/${ELK_HOST:-"${PACKAGE_SYSNAME}-opensearch"}/g" "${BASE_DIR}/config/fluent-bit.conf"
 		sed -i "s/OPENSEARCH_PORT/$(get_env_parameter "ELK_PORT")/g" ${BASE_DIR}/config/fluent-bit.conf
@@ -1365,7 +1365,7 @@ offline_check_docker_image() {
 
 check_hub_connection() {
 	get_tag_from_hub ${IMAGE_NAME}
-	[ -z "$TAGS_RESP" ] && { echo -e "Unable to download tags from ${HUB:-hub.docker.com}.\nTry specifying another dockerhub name using -hub"; exit 1; } || true
+	[ -z "${TAGS_RESP[*]}" ] && { echo -e "Unable to download tags from ${HUB:-hub.docker.com}.\nTry specifying another dockerhub name using -hub"; exit 1; }
 }
 
 dependency_installation() {
