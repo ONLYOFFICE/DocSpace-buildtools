@@ -112,9 +112,8 @@ done
 
 cd "${SRC_PATH}"
 function get_services_name {
-  if [[ $# -gt 0 ]]
-  then
-    ARRAY_NAME_SERVICES=($(echo $1 | tr "," " "))
+  if [[ $# -gt 0 ]]; then
+    IFS=',' read -r -a ARRAY_NAME_SERVICES <<< "$1"
   fi
 }
 
