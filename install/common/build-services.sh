@@ -85,7 +85,7 @@ while [ "$1" != "" ]; do
             shift
           fi
       ;;
-        -? | -h | --help )
+        -h | -? | --help )
             echo " Usage: bash build-services.sh [PARAMETER] [[PARAMETER], ...]"
             echo "    Parameters:"
             echo -e " -sp, --srcpath \t path to project root directory"

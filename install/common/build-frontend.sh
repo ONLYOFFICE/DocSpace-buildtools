@@ -33,7 +33,7 @@ while [ "$1" != "" ]; do
 				shift
 			fi
 		;;
-        -? | -h | --help )
+        -h | -? | --help )
             echo " Usage: bash build-backend.sh [PARAMETER] [[PARAMETER], ...]"
             echo "    Parameters:"
             echo "      -sp, --srcpath             path to AppServer root directory"

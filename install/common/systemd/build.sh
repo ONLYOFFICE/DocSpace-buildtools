@@ -21,7 +21,7 @@ while [ "$1" != "" ]; do
 			    fi
 		;;
 
-        -? | -h | --help )
+        -h | -? | --help )
             echo " Usage: bash build.sh [PARAMETER] [[PARAMETER], ...]"
             echo "    Parameters:"
             echo "      -pm, --packagemanager      dependencies for package manager"
