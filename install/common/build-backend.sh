@@ -42,20 +42,20 @@ done
 	
 echo "== BACK-END-BUILD =="
 
-cd ${SRC_PATH}/server
-dotnet build ASC.Web.slnf ${ARGS}
-dotnet build ASC.Migrations.sln --property:OutputPath=${SRC_PATH}/server/ASC.Migration.Runner/service/
+cd "${SRC_PATH}"/server
+dotnet build ASC.Web.slnf "${ARGS}"
+dotnet build ASC.Migrations.sln --property:OutputPath="${SRC_PATH}"/server/ASC.Migration.Runner/service/
 
-cd ${SRC_PATH}/client
+cd "${SRC_PATH}"/client
 # Array of names backend services in directory common (Nodejs)
 services_name_backend_nodejs=() 
 services_name_backend_nodejs+=(ASC.Socket.IO)
 services_name_backend_nodejs+=(ASC.SsoAuth)
 
 # Build backend services (Nodejs) 
-for i in ${!services_name_backend_nodejs[@]}; do
+for i in "${!services_name_backend_nodejs[@]}"; do
   echo "== Build ${services_name_backend_nodejs[$i]} project =="
-  cd ${SRC_PATH}/server/common/${services_name_backend_nodejs[$i]}
+  cd "${SRC_PATH}"/server/common/"${services_name_backend_nodejs[$i]}"
   yarn install --frozen-lockfile
 done
 
@@ -65,12 +65,12 @@ IDENTITY_NAMES+=("ASC.Identity.Registration")
 IDENTITY_MODULES+=("authorization/authorization-container")
 IDENTITY_MODULES+=("registration/registration-container")
 
-cd ${SRC_PATH}/server/common/ASC.Identity/
+cd "${SRC_PATH}"/server/common/ASC.Identity/
 
 # Build and publish identity services
 mvn -B dependency:go-offline
 for i in "${!IDENTITY_NAMES[@]}"; do
   echo "== Build ${IDENTITY_NAMES[$i]} project =="
   mvn clean package -B -DskipTests -pl "${IDENTITY_MODULES[$i]}" -am
-  mkdir -p ${IDENTITY_NAMES[$i]} && cp -rf "${IDENTITY_MODULES[$i]}/target/"*.jar "${IDENTITY_NAMES[$i]}/app.jar"
+  mkdir -p "${IDENTITY_NAMES[$i]}" && cp -rf "${IDENTITY_MODULES[$i]}/target/"*.jar "${IDENTITY_NAMES[$i]}/app.jar"
 done

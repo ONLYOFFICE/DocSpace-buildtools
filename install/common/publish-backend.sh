@@ -69,11 +69,11 @@ servers_products_name_backend+=(ASC.Files)
 servers_products_name_backend+=(ASC.People)
 
 # Publish server backend products
-for i in ${!servers_products_name_backend[@]}; do
+for i in "${!servers_products_name_backend[@]}"; do
   echo "== Publish ${servers_products_name_backend[$i]}.csproj project =="
-  SERVICE_DIR="$(dirname "$(find ${SRC_PATH} -type f -name "${servers_products_name_backend[$i]}".csproj)")"
-  cd ${SERVICE_DIR}
-  dotnet publish -c ${PUBLISH_CNF} --self-contained ${SELF_CONTAINED} ${ARGS} --property:PublishDir="${BUILD_PATH}/products/${servers_products_name_backend[$i]}/server/"
+  SERVICE_DIR="$(dirname "$(find "${SRC_PATH}" -type f -name "${servers_products_name_backend[$i]}".csproj)")"
+  cd "${SERVICE_DIR}"
+  dotnet publish -c "${PUBLISH_CNF}" --self-contained "${SELF_CONTAINED}" "${ARGS}" --property:PublishDir="${BUILD_PATH}/products/${servers_products_name_backend[$i]}/server/"
 done
 
 # Array of names backend services
@@ -90,11 +90,11 @@ services_name_backend+=(ASC.ApiSystem)
 services_name_backend+=(ASC.Web.HealthChecks.UI)
 
 # Publish backend services
-for i in ${!services_name_backend[@]}; do
+for i in "${!services_name_backend[@]}"; do
   echo "== Publish ${services_name_backend[$i]}.csproj project =="
-  SERVICE_DIR="$(dirname "$(find ${SRC_PATH} -type f -name "${services_name_backend[$i]}".csproj)")"
-  cd ${SERVICE_DIR}
-  dotnet publish -c ${PUBLISH_CNF} --self-contained ${SELF_CONTAINED} ${ARGS} --property:PublishDir="${BUILD_PATH}/services/${services_name_backend[$i]}/service/"
+  SERVICE_DIR="$(dirname "$(find "${SRC_PATH}" -type f -name "${services_name_backend[$i]}".csproj)")"
+  cd "${SERVICE_DIR}"
+  dotnet publish -c "${PUBLISH_CNF}" --self-contained "${SELF_CONTAINED}" "${ARGS}" --property:PublishDir="${BUILD_PATH}/services/${services_name_backend[$i]}/service/"
 done
 
 # Array of names backend services in directory common (Nodejs)
@@ -108,7 +108,7 @@ services_name_backend_java+=(ASC.Identity.Registration)
 # Publish backend services (Nodejs/Java) 
 for SERVICE in "${services_name_backend_nodejs[@]}" "${services_name_backend_java[@]}"; do
   echo "== Publish ${SERVICE} project =="
-  SERVICE_DIR="$(find ${SRC_PATH} -type d -name ${SERVICE})"
-  mkdir -p ${BUILD_PATH}/services/${SERVICE}/service/
-  [ -n "${SERVICE_DIR}" ] && cp -arfv ${SERVICE_DIR}/* ${BUILD_PATH}/services/${SERVICE}/service/
+  SERVICE_DIR="$(find "${SRC_PATH}" -type d -name "${SERVICE}")"
+  mkdir -p "${BUILD_PATH}"/services/"${SERVICE}"/service/
+  [ -n "${SERVICE_DIR}" ] && cp -arfv "${SERVICE_DIR}"/* "${BUILD_PATH}"/services/"${SERVICE}"/service/
 done

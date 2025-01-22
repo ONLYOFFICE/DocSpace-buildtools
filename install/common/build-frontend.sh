@@ -56,13 +56,13 @@ done
 
 echo "== FRONT-END-BUILD =="
 
-cd ${SRC_PATH}
+cd "${SRC_PATH}"
 # debug config
 if [ "$DEBUG_INFO" = true ]; then
-	pip install -r ${SRC_PATH}/buildtools/requirements.txt --break-system-packages
-	python3 ${SRC_PATH}/buildtools/debuginfo.py
+	pip install -r "${SRC_PATH}"/buildtools/requirements.txt --break-system-packages
+	python3 "${SRC_PATH}"/buildtools/debuginfo.py
 fi 
-cd ${SRC_PATH}/client
+cd "${SRC_PATH}"/client
 yarn install
-yarn ${BUILD_ARGS}
-yarn ${DEPLOY_ARGS}
+yarn "${BUILD_ARGS}"
+yarn "${DEPLOY_ARGS}"

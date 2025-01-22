@@ -110,7 +110,7 @@ while [ "$1" != "" ]; do
   shift
 done
 
-cd ${SRC_PATH}
+cd "${SRC_PATH}"
 function get_services_name {
   if [[ $# -gt 0 ]]
   then
@@ -126,21 +126,21 @@ function build_dotnetcore_backend {
     dotnet build server/ASC.Web.slnf
   else
     echo "== Build ASC.Web.slnf ${BUILD_DOTNET_CORE_ARGS} =="
-    dotnet build server/ASC.Web.slnf ${BUILD_DOTNET_CORE_ARGS}
+    dotnet build server/ASC.Web.slnf "${BUILD_DOTNET_CORE_ARGS}"
   fi
   
   if [[ $# -gt 0 ]]
   then
-    local migration_check=$(echo $1 | tr '[:upper:]' '[:lower:]' | tr -d ' ')
+    local migration_check=$(echo "$1" | tr '[:upper:]' '[:lower:]' | tr -d ' ')
     if [[ ${migration_check} == "true" ]]
     then
       echo "== Build ASC.Migrations.sln =="
-      dotnet build server/ASC.Migrations.sln -o ${BUILD_PATH}/services/ASC.Migration.Runner/service/
+      dotnet build server/ASC.Migrations.sln -o "${BUILD_PATH}"/services/ASC.Migration.Runner/service/
     fi
     if [[ ${DOCKER_ENTRYPOINT} != "false" ]]
     then
        echo "== ADD ${SRC_PATH}/buildtools/install/docker/docker-migration-entrypoint.sh to ASC.Migration.Runner =="
-       cp ${SRC_PATH}/buildtools/install/docker/docker-migration-entrypoint.sh ${BUILD_PATH}/services/ASC.Migration.Runner/service/
+       cp "${SRC_PATH}"/buildtools/install/docker/docker-migration-entrypoint.sh "${BUILD_PATH}"/services/ASC.Migration.Runner/service/
     fi
   fi
 }
@@ -154,16 +154,16 @@ function backend-dotnet-publish {
 
   if [[ ${PUBLISH_BACKEND_ARGS} == "false" ]]
   then
-    dotnet publish $SRC_PATH/server/ASC.Web.slnf -p "PublishProfile=FolderProfile"
+    dotnet publish "$SRC_PATH"/server/ASC.Web.slnf -p "PublishProfile=FolderProfile"
   else
-    dotnet publish $SRC_PATH/server/ASC.Web.slnf ${PUBLISH_BACKEND_ARGS} -p "PublishProfile=FolderProfile"
+    dotnet publish "$SRC_PATH"/server/ASC.Web.slnf "${PUBLISH_BACKEND_ARGS}" -p "PublishProfile=FolderProfile"
   fi
 
   if [[ ${DOCKER_ENTRYPOINT} != "false" ]]
   then
-    for i in ${!ARRAY_NAME_SERVICES[@]}; do
+    for i in "${!ARRAY_NAME_SERVICES[@]}"; do
       echo "== ADD ${DOCKER_ENTRYPOINT} to ${ARRAY_NAME_SERVICES[$i]} =="
-      cp ${DOCKER_ENTRYPOINT} ${BUILD_PATH}/services/${ARRAY_NAME_SERVICES[$i]}/service/
+      cp "${DOCKER_ENTRYPOINT}" "${BUILD_PATH}"/services/"${ARRAY_NAME_SERVICES[$i]}"/service/
     done
   fi  
 
@@ -174,16 +174,16 @@ function backend-dotnet-publish {
 function backend-nodejs-publish {
   # List of names for nodejs backend projects
   get_services_name "${BACKEND_NODEJS_SERVICES}"
-  for i in ${!ARRAY_NAME_SERVICES[@]}; do
+  for i in "${!ARRAY_NAME_SERVICES[@]}"; do
     echo "== Build ${ARRAY_NAME_SERVICES[$i]} project =="
-    yarn install --cwd ${SRC_PATH}/server/common/${ARRAY_NAME_SERVICES[$i]} && \
-    mkdir -p ${BUILD_PATH}/services/${ARRAY_NAME_SERVICES[$i]}/service/ && \
-    cp -rfv ${SRC_PATH}/server/common/${ARRAY_NAME_SERVICES[$i]}/* ${BUILD_PATH}/services/${ARRAY_NAME_SERVICES[$i]}/service/
+    yarn install --cwd "${SRC_PATH}"/server/common/"${ARRAY_NAME_SERVICES[$i]}" && \
+    mkdir -p "${BUILD_PATH}"/services/"${ARRAY_NAME_SERVICES[$i]}"/service/ && \
+    cp -rfv "${SRC_PATH}"/server/common/"${ARRAY_NAME_SERVICES[$i]}"/* "${BUILD_PATH}"/services/"${ARRAY_NAME_SERVICES[$i]}"/service/
 
     if [[ ${DOCKER_ENTRYPOINT} != "false" ]]
     then
        echo "== ADD ${DOCKER_ENTRYPOINT} to ${ARRAY_NAME_SERVICES[$i]} =="
-       cp ${DOCKER_ENTRYPOINT} ${BUILD_PATH}/services/${ARRAY_NAME_SERVICES[$i]}/service/
+       cp "${DOCKER_ENTRYPOINT}" "${BUILD_PATH}"/services/"${ARRAY_NAME_SERVICES[$i]}"/service/
     fi
   done
   ARRAY_NAME_SERVICES=()
@@ -196,7 +196,7 @@ function build_nodejs_frontend {
   # Install debug config mode
   if [[ $# -gt 0 ]]
   then
-    local debug_info_check=$(echo $1 | tr '[:upper:]' '[:lower:]' | tr -d ' ')
+    local debug_info_check=$(echo "$1" | tr '[:upper:]' '[:lower:]' | tr -d ' ')
     if [[ ${debug_info_check} == "true" ]]
     then
       echo "== yarn debug-info =="
@@ -204,16 +204,16 @@ function build_nodejs_frontend {
     fi
   fi
   echo "== yarn ${FRONTEND_BUILD_ARGS} =="
-  yarn ${FRONTEND_BUILD_ARGS}
+  yarn "${FRONTEND_BUILD_ARGS}"
   
   echo "== yarn ${FRONTEND_DEPLOY_ARGS} =="
-  yarn ${FRONTEND_DEPLOY_ARGS}
+  yarn "${FRONTEND_DEPLOY_ARGS}"
   if [[ ${DOCKER_ENTRYPOINT} != "false" ]]
   then
     echo "== ADD ${DOCKER_ENTRYPOINT} to ASC.Login =="
-    cp ${DOCKER_ENTRYPOINT} ${SRC_PATH}/buildtools/deploy/login/
+    cp "${DOCKER_ENTRYPOINT}" "${SRC_PATH}"/buildtools/deploy/login/
     echo "== ADD ${DOCKER_ENTRYPOINT} toASC.Editors =="
-    cp ${DOCKER_ENTRYPOINT} ${SRC_PATH}/buildtools/deploy/editor/
+    cp "${DOCKER_ENTRYPOINT}" "${SRC_PATH}"/buildtools/deploy/editor/
   fi
 }
 

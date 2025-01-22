@@ -1,7 +1,7 @@
 #!/bin/bash
 set -xe
 
-BASEDIR="$(cd $(dirname $0) && pwd)"
+BASEDIR="$(cd "$(dirname "$0")" && pwd)"
 BUILD_PATH="$BASEDIR/modules"
 
 while [ "$1" != "" ]; do
@@ -218,10 +218,10 @@ write_to_file () {
   -e "s#\${EXEC_START}#$EXEC_START#g" -e "s#\${SERVICE_TYPE}#$SERVICE_TYPE#g"  $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
 }
 
-mkdir -p $BUILD_PATH
+mkdir -p "$BUILD_PATH"
 
-for i in ${!SERVICE_NAME[@]}; do
-  cp $BASEDIR/service $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
+for i in "${!SERVICE_NAME[@]}"; do
+  cp "$BASEDIR"/service "$BUILD_PATH"/${PRODUCT}-"${SERVICE_NAME[$i]}".service
   reassign_values "${SERVICE_NAME[$i]}"
-  write_to_file $i
+  write_to_file "$i"
 done
