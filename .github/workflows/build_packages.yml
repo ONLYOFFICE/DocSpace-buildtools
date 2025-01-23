@@ -7,8 +7,8 @@ on:
       - 'hotfix/**'
       - 'develop'
       - 'feature/fix-common-scripts'
-    paths:
-      - '.github/workflows/build_packages.yml'
+    # paths:
+    #   - '.github/workflows/build_packages.yml'
   workflow_dispatch:
     inputs:
       branch-buildtools:
