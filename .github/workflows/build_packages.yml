@@ -41,9 +41,9 @@ env:
   PRODUCT_LOW: "docspace"
   BUILD_NUMBER: ${{ github.run_number }}
   PACKAGE_DIRECTORY: "/home/runner/work/${{ github.event.repository.name }}/${{ github.event.repository.name }}"
-  BRANCH_BUILDTOOLS: 'develop'
-  BRANCH_CLIENT: 'develop'
-  BRANCH_SERVER: 'develop'
+  BRANCH_BUILDTOOLS: 'feature/fix-common-scripts'
+  BRANCH_CLIENT: 'master'
+  BRANCH_SERVER: 'master'
 
 jobs:
   prepare:
