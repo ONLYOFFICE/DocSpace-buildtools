@@ -3,8 +3,8 @@ set -xe
 
 SRC_PATH=${1:-"/plugins"}
 
-for PLUGIN_DIR in "${SRC_PATH}"/*; do
-  [[ -d "$PLUGIN_DIR" && ( -f "$PLUGIN_DIR/yarn.lock" || -f "$PLUGIN_DIR/package.json" ) ]] || continue
+for PLUGIN_DIR in $(ls -d ${SRC_PATH}/*); do
+  [[ -f "${PLUGIN_DIR}"/yarn.lock || -f "${PLUGIN_DIR}"/package.json ]] || continue
   PLUGIN_NAME=$(basename "${PLUGIN_DIR}")
   echo "Building plugin: ${PLUGIN_NAME}"
   cd "${PLUGIN_DIR}" && yarn install && yarn run build
