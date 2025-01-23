@@ -2,9 +2,9 @@
   "externalresources": {
     "default": {
       "api": "https://api.onlyoffice.com",
-      "api_docspace": "https://api.onlyoffice.com/docspace/",
-      "api_javascript-sdk": "https://api.onlyoffice.com/docspace/javascript-sdk/get-started/basic-concepts/",
-      "api_plugins-sdk": "https://api.onlyoffice.com/docspace/plugins-sdk/get-started/basic-concepts/",
+      "api_docspace": "/docspace/",
+      "api_javascript-sdk": "/docspace/javascript-sdk/get-started/basic-concepts/",
+      "api_plugins-sdk": "/docspace/plugins-sdk/get-started/basic-concepts/",
 
       "booktrainingemail": "",
       "documentationemail": "",
