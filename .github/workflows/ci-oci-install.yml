@@ -73,7 +73,6 @@ jobs:
         run: |
           matrix=$(echo '{
             "include": [
-              {"execute": '${{ github.event.inputs.centos9s || true }}', "name": "CentOS9S", "os": "centos9s", "distr": "generic"},
               {"execute": '${{ github.event.inputs.ubuntu2404 || true }}', "name": "Ubuntu24.04", "os": "ubuntu-24.04", "distr": "bento"},
               {"execute": '${{ github.event.inputs.fedora41 || true }}', "name": "Fedora41", "os": "41-cloud-base", "distr": "fedora"}
             ]

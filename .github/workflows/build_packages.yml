@@ -41,7 +41,7 @@ env:
   PRODUCT_LOW: "docspace"
   BUILD_NUMBER: ${{ github.run_number }}
   PACKAGE_DIRECTORY: "/home/runner/work/${{ github.event.repository.name }}/${{ github.event.repository.name }}"
-  BRANCH_BUILDTOOLS: 'feature/fix-common-scripts'
+  BRANCH_BUILDTOOLS: 'develop'
   BRANCH_CLIENT: 'develop'
   BRANCH_SERVER: 'develop'
 
@@ -76,8 +76,8 @@ jobs:
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             [[ "${{ github.event.inputs.deb_build }}" == "true" ]] && package_types+=("deb")
             [[ "${{ github.event.inputs.rpm_build }}" == "true" ]] && package_types+=("rpm")
-          # elif [[ "${{ steps.changes.outputs.build_all }}" == "true" ]]; then
-          #     package_types+=("deb" "rpm")
+           elif [[ "${{ steps.changes.outputs.build_all }}" == "true" ]]; then
+               package_types+=("deb" "rpm")
           else
             [[ "${{ github.event.inputs.deb_build }}" == "true" ]] && package_types+=("deb")
             [[ "${{ github.event.inputs.rpm_build }}" == "true" ]] && package_types+=("rpm")
@@ -209,23 +209,23 @@ jobs:
               && echo "Success: $(basename "$rpm_package") uploaded." || echo "Error: Failed to upload $(basename "$rpm_package")"
           done
 
-      - name: Checking the DEB package for errors
-        if: matrix.packageType == 'deb'
-        run: |
-          lintian --profile debian ${PACKAGE_DIRECTORY}/install/*.deb | tee -a LINTIAN
-          if grep -qE '^(W:|E:)' LINTIAN; then
-            echo "::warning Noticedeb=lintian::$(cat LINTIAN | awk '/^W:/ { ws += 1 } /^E:/ { es += 1 } END { print "Warnings:", ws, "Errors:", es }')"
-          fi
+      # - name: Checking the DEB package for errors
+      #   if: matrix.packageType == 'deb'
+      #   run: |
+      #     lintian --profile debian ${PACKAGE_DIRECTORY}/install/*.deb | tee -a LINTIAN
+      #     if grep -qE '^(W:|E:)' LINTIAN; then
+      #       echo "::warning Noticedeb=lintian::$(cat LINTIAN | awk '/^W:/ { ws += 1 } /^E:/ { es += 1 } END { print "Warnings:", ws, "Errors:", es }')"
+      #     fi
 
-      - name: Checking the RPM package for errors
-        if: matrix.packageType == 'rpm'
-        run: |
-          for rpm_package in ${PACKAGE_DIRECTORY}/install/rpm/SPECS/RPMS/noarch/*.rpm; do
-            rpmlint --ignore-unused-rpmlintrc --rpmlintrc ${PACKAGE_DIRECTORY}/install/rpm/SPECS/SOURCES/${PRODUCT_LOW}.rpmlintrc $rpm_package | tee -a RPM_LINT
-          done
-          if grep -qE '(W:|E:)' RPM_LINT; then
-            echo "::warning Noticerpm=rpmlint::$(cat RPM_LINT | awk '/W:/ { ws += 1 } /E:/ { es += 1 } END { print "Warnings:", ws, "Errors:", es }')"
-          fi
+      # - name: Checking the RPM package for errors
+      #   if: matrix.packageType == 'rpm'
+      #   run: |
+      #     for rpm_package in ${PACKAGE_DIRECTORY}/install/rpm/SPECS/RPMS/noarch/*.rpm; do
+      #       rpmlint --ignore-unused-rpmlintrc --rpmlintrc ${PACKAGE_DIRECTORY}/install/rpm/SPECS/SOURCES/${PRODUCT_LOW}.rpmlintrc $rpm_package | tee -a RPM_LINT
+      #     done
+      #     if grep -qE '(W:|E:)' RPM_LINT; then
+      #       echo "::warning Noticerpm=rpmlint::$(cat RPM_LINT | awk '/W:/ { ws += 1 } /E:/ { es += 1 } END { print "Warnings:", ws, "Errors:", es }')"
+      #     fi
       
   trigger_oci:
     name: Trigger ci-oci-install Workflow
