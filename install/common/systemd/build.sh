@@ -214,8 +214,8 @@ reassign_values (){
 write_to_file () {
   [[ -n ${SYSTEMD_ENVIRONMENT} ]] && sed "/^ExecStart=/a Environment=${SYSTEMD_ENVIRONMENT}" -i "$BUILD_PATH"/${PRODUCT}-"${SERVICE_NAME[$i]}".service
   [[ -n ${DEPENDENCY_LIST} ]] && sed -e "s_\(After=.*\)_\1 ${DEPENDENCY_LIST}_" -e "/After=/a Wants=${DEPENDENCY_LIST}" -i "$BUILD_PATH"/${PRODUCT}-"${SERVICE_NAME[$i]}".service
-  sed -i -e "s#\${SERVICE_NAME}#${SERVICE_NAME[i]}#g" -e "s#\${WORK_DIR}#${WORK_DIR}#g" -e "s#\${RESTART}#${RESTART}#g" -e "s#\${SYSTEMD_ENVIRONMENT_FILE}#${SYSTEMD_ENVIRONMENT_FILE}#g" \
-  -e "s#\${EXEC_START}#${EXEC_START}#g" -e "s#\${SERVICE_TYPE}#${SERVICE_TYPE}#g" "$BUILD_PATH/${PRODUCT}-${SERVICE_NAME[i]}.service"
+  sed -i -e 's#${SERVICE_NAME}#'$SERVICE_NAME'#g' -e 's#${WORK_DIR}#'$WORK_DIR'#g' -e "s#\${RESTART}#$RESTART#g" -e "s#\${SYSTEMD_ENVIRONMENT_FILE}#$SYSTEMD_ENVIRONMENT_FILE#g" \
+  -e "s#\${EXEC_START}#$EXEC_START#g" -e "s#\${SERVICE_TYPE}#$SERVICE_TYPE#g"  $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
 }
 
 mkdir -p "$BUILD_PATH"

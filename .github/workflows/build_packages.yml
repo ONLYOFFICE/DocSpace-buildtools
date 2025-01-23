@@ -26,7 +26,7 @@ on:
       deb_build:
         description: 'Trigger DEB build'
         required: false
-        default: 'true'
+        default: 'false'
       rpm_build:
         description: 'Trigger RPM build'
         required: false
