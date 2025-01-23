@@ -26,11 +26,11 @@ on:
       deb_build:
         description: 'Trigger DEB build'
         required: false
-        default: 'false'
+        default: 'true'
       rpm_build:
         description: 'Trigger RPM build'
         required: false
-        default: 'true'
+        default: 'false'
 
 concurrency:
   group: ${{ github.ref }}
@@ -57,6 +57,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: "Checking common scripts for errors"
+        run: |
+          set -eux
+          sudo apt-get install -y shellcheck
+          find install/common -type f -name "*.sh" | xargs shellcheck --exclude="$(awk '!/^#|^$/ {print $1}' tests/lint/sc_ignore | paste -sd ",")" --severity=warning | tee sc_output
+          awk '/\(warning\):/ {w++} /\(error\):/ {e++} END {if (w+e) printf "::warning ::ShellCheck detected %d warnings and %d errors\n", w+0, e+0}' sc_output
+
       - name: Determine changed
         id: changes
         run: |
@@ -69,8 +76,8 @@ jobs:
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             [[ "${{ github.event.inputs.deb_build }}" == "true" ]] && package_types+=("deb")
             [[ "${{ github.event.inputs.rpm_build }}" == "true" ]] && package_types+=("rpm")
-          elif [[ "${{ steps.changes.outputs.build_all }}" == "true" ]]; then
-              package_types+=("deb" "rpm")
+          # elif [[ "${{ steps.changes.outputs.build_all }}" == "true" ]]; then
+          #     package_types+=("deb" "rpm")
           else
             [[ "${{ github.event.inputs.deb_build }}" == "true" ]] && package_types+=("deb")
             [[ "${{ github.event.inputs.rpm_build }}" == "true" ]] && package_types+=("rpm")
@@ -89,13 +96,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
-      - name: "Checking common scripts for errors"
-        run: |
-          set -eux
-          sudo apt-get install -y shellcheck
-          find install/common -type f -name "*.sh" | xargs shellcheck --exclude="$(awk '!/^#|^$/ {print $1}' tests/lint/sc_ignore | paste -sd ",")" --severity=warning | tee sc_output
-          awk '/\(warning\):/ {w++} /\(error\):/ {e++} END {if (w+e) printf "::warning ::ShellCheck detected %d warnings and %d errors\n", w+0, e+0}' sc_output
 
       - name: Set product version
         run: |
