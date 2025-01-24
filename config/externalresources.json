@@ -1,147 +1,199 @@
 {
   "externalresources": {
-    "default": {
-      "api": "https://api.onlyoffice.com",
-      "api_docspace": "/docspace/",
-      "api_javascript-sdk": "/docspace/javascript-sdk/get-started/basic-concepts/",
-      "api_plugins-sdk": "/docspace/plugins-sdk/get-started/basic-concepts/",
-
-      "booktrainingemail": "",
-      "documentationemail": "",
-
-      "forum": "https://forum.onlyoffice.com",
-
-      "helpcenter": "https://helpcenter.onlyoffice.com/{ru|de|fr|es|it}",
-      "helpcenter_become-translator": "/guides/become-translator.aspx",
-      "helpcenter_configuration": "/administration/configuration.aspx#loginsettings",
-      "helpcenter_connect-amazon-docspace": "/administration/connect-amazon-docspace.aspx",
-      "helpcenter_connect-apple-docspace": "/administration/connect-apple-docspace.aspx",
-      "helpcenter_connect-box-docspace": "/administration/connect-box-docspace.aspx",
-      "helpcenter_connect-clickatell-docspace": "/administration/connect-clickatell-docspace.aspx",
-      "helpcenter_connect-docusign-docspace": "/administration/connect-docusign-docspace.aspx",
-      "helpcenter_connect-dropbox-docspace": "/administration/connect-dropbox-docspace.aspx",
-      "helpcenter_connect-facebook-docspace": "/administration/connect-facebook-docspace.aspx",
-      "helpcenter_connect-firebase-docspace": "/administration/connect-firebase-docspace.aspx",
-      "helpcenter_connect-google-cloud-storage-docspace": "/administration/connect-google-cloud-storage-docspace.aspx",
-      "helpcenter_connect-google-docspace": "/administration/connect-google-docspace.aspx",
-      "helpcenter_connect-linkedin-docspace": "/administration/connect-linkedin-docspace.aspx",
-      "helpcenter_connect-mail-ru-docspace": "/administration/connect-mail-ru-docspace.aspx",
-      "helpcenter_connect-microsoft-docspace.": "/administration/connect-microsoft-docspace.aspx",
-      "helpcenter_connect-onedrive-docspace": "/administration/connect-onedrive-docspace.aspx",
-      "helpcenter_connect-rackspace-docspace": "/administration/connect-rackspace-docspace.aspx",
-      "helpcenter_connect-selectel-docspace": "/administration/connect-selectel-docspace.aspx",
-      "helpcenter_connect-smsc-docspace": "/administration/connect-smsc-docspace.aspx",
-      "helpcenter_connect-telegram-docspace": "/administration/connect-telegram-docspace.aspx",
-      "helpcenter_connect-vk-docspace": "/administration/connect-vk-docspace.aspx",
-      "helpcenter_connect-wordpress-docspace.": "/administration/connect-wordpress-docspace.aspx",
-      "helpcenter_connect-yandex-docspace": "/administration/connect-yandex-docspace.aspx",
-      "helpcenter_docspace": "/administration/docspace.aspx",
-      "helpcenter_docspace-enterprise-index": "/administration/docspace-enterprise-index.aspx",
-      "helpcenter_docspace-enterprise-install-script": "/installation/docspace-enterprise-install-script.aspx",
-      "helpcenter_docspace-enterprise-install-windows": "/installation/docspace-enterprise-install-windows.aspx",
-      "helpcenter_docspace-gettingstarted": "/userguides/docspace-gettingstarted.aspx#AccessRights_block",
-      "helpcenter_docspace-index": "/userguides/docspace-index.aspx",
-      "helpcenter_docspace-managing-users": "/userguides/docspace-managing-users.aspx",
-      "helpcenter_docspace-settings": "/administration/docspace-settings.aspx",
-      "helpcenter_docspace-settings_adjustingintegrationsettings": "/administration/docspace-settings.aspx#AdjustingIntegrationSettings_block",
-      "helpcenter_docspace-settings_administratormessage": "/administration/docspace-settings.aspx#administratormessage",
-      "helpcenter_docspace-settings_alternativeurl": "/administration/docspace-settings.aspx#alternativeurl",
-      "helpcenter_docspace-settings_autobackup": "/administration/docspace-settings.aspx#AutoBackup",
-      "helpcenter_docspace-settings_creatingbackup": "/administration/docspace-settings.aspx#CreatingBackup_block",
-      "helpcenter_docspace-settings_docspacelanguage": "/administration/docspace-settings.aspx#DocSpacelanguage",
-      "helpcenter_docspace-settings_docspacerenaming": "/administration/docspace-settings.aspx#DocSpacerenaming",
-      "helpcenter_docspace-settings_docspacetitle": "/administration/docspace-settings.aspx#DocSpacetitle",
-      "helpcenter_docspace-settings_ipsecurity": "/administration/docspace-settings.aspx#ipsecurity",
-      "helpcenter_docspace-settings_ldapsettings": "/administration/docspace-settings.aspx#LdapSettings_block",
-      "helpcenter_docspace-settings_oauth": "/administration/docspace-settings.aspx#oauth",
-      "helpcenter_docspace-settings_passwordstrength": "/administration/docspace-settings.aspx#passwordstrength",
-      "helpcenter_docspace-settings_sessionlifetime": "/administration/docspace-settings.aspx#sessionlifetime",
-      "helpcenter_docspace-settings_storagemanagement": "/administration/docspace-settings.aspx#StorageManagement_block",
-      "helpcenter_docspace-settings_trusteddomain": "/administration/docspace-settings.aspx#TrustedDomain",
-      "helpcenter_docspace-two-factor-authentication": "/administration/docspace-two-factor-authentication.aspx",
-      "helpcenter_docspace-webhooks": "/administration/docspace-webhooks.aspx",
-
-      "integration_drupal": "https://www.drupal.org/project/onlyoffice_docspace",
-      "integration_pipedrive": "https://www.pipedrive.com/en/marketplace/app/onlyoffice-doc-space/4cb3b5d9d19a1918",
-      "integration_wordpress": "https://wordpress.org/plugins/onlyoffice-docspace/",
-      "integration_zapier": "https://zapier.com/apps/onlyoffice-docspace/integrations",
-      "integration_zoom": "https://marketplace.zoom.us/apps/OW6rOq-nRgCihG5eps_p-g",
-
-      "legalterms": "https://help.onlyoffice.co/products/files/doceditor.aspx?fileid=5048502&doc=SXhWMEVzSEYxNlVVaXJJeUVtS0kyYk14YWdXTEFUQmRWL250NllHNUFGbz0_IjUwNDg1MDIi0",
-      "license": "https://www.gnu.org/licenses/agpl-3.0.en.html",
-      "paymentemail": "sales@onlyoffice.com",
-
-      "site": "https://www.onlyoffice.com/{ru|de|fr|es|it|pt|cs|nl|ja|zh}",
-      "site_all-connectors": "/all-connectors.aspx",
-      "site_buydeveloper": "/post.ashx?type=buydocspacedeveloper",
-      "site_buyenterprise": "/post.ashx?type=buydocspaceenterprise",
-      "site_collaboration-rooms": "/collaboration-rooms.aspx",
-      "site_custom-rooms": "/custom-rooms.aspx",
-      "site_demo-order": "/demo-order.aspx",
-      "site_desktop": "/desktop.aspx",
-      "site_docspace": "/docspace.aspx",
-      "site_docspace-prices": "/docspace-prices.aspx",
-      "site_download-desktop": "/download-desktop.aspx#desktop",
-      "site_download-mobile": "/download-desktop.aspx#mobile",
-      "site_for-enterprises": "/for-enterprises.aspx",
-      "site_form-filling-rooms": "/form-filling-rooms.aspx",
-      "site_office-for-android": "/office-for-android.aspx",
-      "site_office-for-drupal": "/office-for-drupal.aspx",
-      "site_office-for-ios": "/office-for-ios.aspx",
-      "site_office-for-wordpress": "/office-for-wordpress.aspx",
-      "site_office-for-zapier": "/office-for-zapier.aspx",
-      "site_office-for-zoom": "/office-for-zoom.aspx",
-      "site_openai": "/app-directory/openai",
-      "site_private-rooms": "/private-rooms.aspx",
-      "site_public-rooms": "/public-rooms.aspx",
-      "site_registration-canceled": "/registration-canceled.aspx",
-      "site_seamless-collaboration": "/seamless-collaboration.aspx",
-      "site_subscribe": "/post.ashx",
-      "site_wrongportalname": "/wrongportalname.aspx",
-
-      "socialnetwork_facebook": "https://www.facebook.com/pages/OnlyOffice/833032526736775",
-      "socialnetwork_instagram": "https://www.instagram.com/the_onlyoffice/",
-      "socialnetwork_tiktok": "https://vm.tiktok.com/ZMLXbFEyd/",
-      "socialnetwork_twitter": "https://twitter.com/ONLY_OFFICE",
-      "socialnetwork_youtube": "https://www.youtube.com/user/onlyofficeTV",
-
-      "support": "https://helpdesk.onlyoffice.com",
-      "supportemail": "support@onlyoffice.com",
-
-      "videoguides": "https://helpcenter.onlyoffice.com/{ru|de|fr|es|it}/video.aspx",
-      "videoguides_docspaceactivesessions": "https://youtu.be/QxrRtMDj2ZM",
-      "videoguides_docspacearchive": "https://youtu.be/WX-SN_nB4cI",   
-      "videoguides_docspacebackup": "https://youtu.be/2ed2iSxLCwk",
-      "videoguides_docspacecreatefiles": "https://youtu.be/1f9sl4u94v4",
-      "videoguides_docspacefileversions": "https://youtu.be/_Br4aGP7f3c",
-      "videoguides_docspacefilterfiles": "https://youtu.be/zy5mPrf1DqY",
-      "videoguides_docspacefull": "https://youtu.be/rEurv8Mss0o",
-      "videoguides_docspacehotkeys": "https://youtu.be/jclhTh5TXp0",
-      "videoguides_docspaceoperationswithfiles": "https://youtu.be/E96rEIgDO8M",
-      "videoguides_docspaceprofile": "https://youtu.be/eJNHyjoc3lQ",
-      "videoguides_docspaceroles": "https://youtu.be/5tzRL9Kxj1Y",
-      "videoguides_docspacerooms": "https://youtu.be/XBY2H9BaYDk",
-      "videoguides_docspacesecurity": "https://youtu.be/psxZ0fDXiUo",
-      "videoguides_docspacewhatis": "https://youtu.be/T8_hGjQR1Kk",
-      "videoguides_playlist": "https://www.youtube.com/playlist?list=PLCF48HEKMOYM8MBnwYs8q5J0ILMK9NzIx"
+    "api": {
+      "default": {
+        "domain": "https://api.onlyoffice.com",
+        "entries": {
+          "docspace": "/docspace",
+          "javascript-sdk": "/docspace/javascript-sdk/get-started/basic-concepts",
+          "plugins-sdk": "/docspace/plugins-sdk/get-started/basic-concepts"
+        }
+      }
     },
-    "zh-CN": {
-      "site_openai": "https://www.onlyoffice.com/app-directory/zh/zhipu",
+    
+    "common": {
+      "default": {
+        "entries": {
+          "booktrainingemail": "",
+          "documentationemail": "",
+          "legalterms": "https://help.onlyoffice.co/products/files/doceditor.aspx?fileid=5048502&doc=SXhWMEVzSEYxNlVVaXJJeUVtS0kyYk14YWdXTEFUQmRWL250NllHNUFGbz0_IjUwNDg1MDIi0",
+          "license": "https://www.gnu.org/licenses/agpl-3.0.en.html",
+          "paymentemail": "sales@onlyoffice.com",
+          "supportemail": "support@onlyoffice.com"
+        }
+      }
+    },
+    
+    "forum": {
+      "default": {
+        "domain": "https://forum.onlyoffice.com"
+      }
+    },
+      
+    "helpcenter": {
+      "default": {
+        "domain": "https://helpcenter.onlyoffice.com/{ru|de|fr|es|it}",
+        "entries": {
+          "accessrights": "/userguides/docspace-gettingstarted.aspx#AccessRights_block",
+          "administrationguides": "/administration/docspace.aspx",
+          "administratormessage": "/administration/docspace-settings.aspx#administratormessage",
+          "alternativeurl": "/administration/docspace-settings.aspx#alternativeurl",
+          "autobackup": "/administration/docspace-settings.aspx#AutoBackup",
+          "becometranslator": "/guides/become-translator.aspx",
+          "connectamazon": "/administration/connect-amazon-docspace.aspx",
+          "connectapple": "/administration/connect-apple-docspace.aspx",
+          "connectbox": "/administration/connect-box-docspace.aspx",
+          "connectclickatell": "/administration/connect-clickatell-docspace.aspx",
+          "connectdocusign": "/administration/connect-docusign-docspace.aspx",
+          "connectdropbox": "/administration/connect-dropbox-docspace.aspx",
+          "connectfacebook": "/administration/connect-facebook-docspace.aspx",
+          "connectfirebase": "/administration/connect-firebase-docspace.aspx",
+          "connectgooglecloudstorage": "/administration/connect-google-cloud-storage-docspace.aspx",
+          "connectgoogle": "/administration/connect-google-docspace.aspx",
+          "connectlinkedin": "/administration/connect-linkedin-docspace.aspx",
+          "connectmailru": "/administration/connect-mail-ru-docspace.aspx",
+          "connectmicrosoft": "/administration/connect-microsoft-docspace.aspx",
+          "connectonedrive": "/administration/connect-onedrive-docspace.aspx",
+          "connectrackspace": "/administration/connect-rackspace-docspace.aspx",
+          "connectselectel": "/administration/connect-selectel-docspace.aspx",
+          "connectsmsc": "/administration/connect-smsc-docspace.aspx",
+          "connecttelegram": "/administration/connect-telegram-docspace.aspx",
+          "connectvk": "/administration/connect-vk-docspace.aspx",
+          "connectwordpress": "/administration/connect-wordpress-docspace.aspx",
+          "connectyandex": "/administration/connect-yandex-docspace.aspx",
+          "creatingbackup": "/administration/docspace-settings.aspx#CreatingBackup_block",
+          "enterpriseinstall": "/installation/docspace-enterprise-index.aspx",
+          "enterpriseinstallscript": "/installation/docspace-enterprise-install-script.aspx",
+          "enterpriseinstallwindows": "/installation/docspace-enterprise-install-windows.aspx",
+          "integrationsettings": "/administration/docspace-settings.aspx#AdjustingIntegrationSettings_block",
+          "ipsecurity": "/administration/docspace-settings.aspx#ipsecurity",
+          "language": "/administration/docspace-settings.aspx#DocSpacelanguage",
+          "ldap": "/administration/docspace-settings.aspx#LdapSettings_block",
+          "login": "/administration/configuration.aspx#loginsettings",
+          "managingusers": "/userguides/docspace-managing-users.aspx",
+          "oauth": "/administration/docspace-settings.aspx#oauth",
+          "passwordstrength": "/administration/docspace-settings.aspx#passwordstrength",
+          "renaming": "/administration/docspace-settings.aspx#DocSpacerenaming",
+          "sessionlifetime": "/administration/docspace-settings.aspx#sessionlifetime",
+          "settings": "/administration/docspace-settings.aspx",
+          "storagemanagement": "/administration/docspace-settings.aspx#StorageManagement_block",
+          "trusteddomain": "/administration/docspace-settings.aspx#TrustedDomain",
+          "twofactorauthentication": "/administration/docspace-two-factor-authentication.aspx",
+          "userguides": "/userguides/docspace-index.aspx",
+          "welcomepage": "/administration/docspace-settings.aspx#DocSpacetitle"
+        }
+      }
+    },
 
-      "videoguides_docspacearchive": "https://www.bilibili.com/video/BV188411S7ak/",
-      "videoguides_docspacebackup": "https://www.bilibili.com/video/BV1p84y1Z74K/",
-      "videoguides_docspacecreatefiles": "https://www.bilibili.com/video/BV1Uu411j7iQ/",
-      "videoguides_docspacefileversions": "https://www.bilibili.com/video/BV1Bx4y1X7xm/",
-      "videoguides_docspacefilterfiles": "https://www.bilibili.com/video/BV1XF411Q7UL/",
-      "videoguides_docspacefull": "https://www.bilibili.com/video/BV1gk4y1K7XW/",
-      "videoguides_docspacehotkeys": "https://www.bilibili.com/video/BV15h4y157m3/",
-      "videoguides_docspaceoperationswithfiles": "https://www.bilibili.com/video/BV1j14y197Fk/",
-      "videoguides_docspaceprofile": "https://www.bilibili.com/video/BV1eW4y1o7ui/",
-      "videoguides_docspaceroles": "https://www.bilibili.com/video/BV1dP411Y7rh/",
-      "videoguides_docspacerooms": "https://www.bilibili.com/video/BV17g4y1F7iP/",
-      "videoguides_docspacesecurity": "https://www.bilibili.com/video/BV1m94y1z747",
-      "videoguides_docspacewhatis": "https://www.bilibili.com/video/BV1ao4y14788/",
-      "videoguides_playlist": "https://space.bilibili.com/1870911731"
+    "integrations": {
+      "default": {
+        "entries": {
+          "drupal": "https://www.drupal.org/project/onlyoffice_docspace",
+          "pipedrive": "https://www.pipedrive.com/en/marketplace/app/onlyoffice-doc-space/4cb3b5d9d19a1918",
+          "wordpress": "https://wordpress.org/plugins/onlyoffice-docspace/",
+          "zapier": "https://zapier.com/apps/onlyoffice-docspace/integrations",
+          "zoom": "https://marketplace.zoom.us/apps/OW6rOq-nRgCihG5eps_p-g"
+        }
+      }
+    },
+
+    "site": {
+      "default": {
+        "domain": "https://www.onlyoffice.com/{ru|de|fr|es|it|pt|cs|nl|ja|zh}",
+        "entries": {
+          "allconnectors": "/all-connectors.aspx",
+          "buydeveloper": "/post.ashx?type=buydocspacedeveloper",
+          "buyenterprise": "/post.ashx?type=buydocspaceenterprise",
+          "collaborationrooms": "/collaboration-rooms.aspx",
+          "customrooms": "/custom-rooms.aspx",
+          "demoorder": "/demo-order.aspx",
+          "desktop": "/desktop.aspx",
+          "docspace": "/docspace.aspx",
+          "docspaceprices": "/docspace-prices.aspx",
+          "downloaddesktop": "/download-desktop.aspx#desktop",
+          "downloadmobile": "/download-desktop.aspx#mobile",
+          "forenterprises": "/for-enterprises.aspx",
+          "formfillingrooms": "/form-filling-rooms.aspx",
+          "officeforandroid": "/office-for-android.aspx",
+          "officefordrupal": "/office-for-drupal.aspx",
+          "officeforios": "/office-for-ios.aspx",
+          "officeforwordpress": "/office-for-wordpress.aspx",
+          "officeforzapier": "/office-for-zapier.aspx",
+          "officeforzoom": "/office-for-zoom.aspx",
+          "openai": "/app-directory/openai",
+          "privaterooms": "/private-rooms.aspx",
+          "publicrooms": "/public-rooms.aspx",
+          "registrationcanceled": "/registration-canceled.aspx",
+          "seamlesscollaboration": "/seamless-collaboration.aspx",
+          "subscribe": "/post.ashx",
+          "wrongportalname": "/wrongportalname.aspx"
+        }
+      },
+      "zh-CN": {
+        "entries": {
+          "openai": "/app-directory/zh/zhipu"
+        }
+      }
+    },
+
+    "socialnetworks": {
+      "default": {
+        "entries": {
+          "facebook": "https://www.facebook.com/pages/OnlyOffice/833032526736775",
+          "instagram": "https://www.instagram.com/the_onlyoffice/",
+          "tiktok": "https://vm.tiktok.com/ZMLXbFEyd/",
+          "twitter": "https://twitter.com/ONLY_OFFICE",
+          "youtube": "https://www.youtube.com/user/onlyofficeTV"
+        }
+      }
+    },
+    
+    "support": {
+      "default": {
+        "domain": "https://helpdesk.onlyoffice.com"
+      }
+    },
+    
+    "videoguides": {
+      "default": {
+        "domain": "https://helpcenter.onlyoffice.com/{ru|de|fr|es|it}/video.aspx",
+        "entries": {
+          "activesessions": "https://youtu.be/QxrRtMDj2ZM",
+          "archive": "https://youtu.be/WX-SN_nB4cI",   
+          "backup": "https://youtu.be/2ed2iSxLCwk",
+          "createfiles": "https://youtu.be/1f9sl4u94v4",
+          "fileversions": "https://youtu.be/_Br4aGP7f3c",
+          "filterfiles": "https://youtu.be/zy5mPrf1DqY",
+          "full": "https://youtu.be/rEurv8Mss0o",
+          "hotkeys": "https://youtu.be/jclhTh5TXp0",
+          "operationswithfiles": "https://youtu.be/E96rEIgDO8M",
+          "playlist": "https://www.youtube.com/playlist?list=PLCF48HEKMOYM8MBnwYs8q5J0ILMK9NzIx",
+          "profile": "https://youtu.be/eJNHyjoc3lQ",
+          "roles": "https://youtu.be/5tzRL9Kxj1Y",
+          "rooms": "https://youtu.be/XBY2H9BaYDk",
+          "security": "https://youtu.be/psxZ0fDXiUo",
+          "whatis": "https://youtu.be/T8_hGjQR1Kk"
+        }
+      },
+      "zh-CN": {
+        "entries": {
+          "activesessions": "https://www.bilibili.com/video/BV1pX4y177tR",
+          "archive": "https://www.bilibili.com/video/BV188411S7ak/",
+          "backup": "https://www.bilibili.com/video/BV1p84y1Z74K/",
+          "createfiles": "https://www.bilibili.com/video/BV1Uu411j7iQ/",
+          "fileversions": "https://www.bilibili.com/video/BV1Bx4y1X7xm/",
+          "filterfiles": "https://www.bilibili.com/video/BV1XF411Q7UL/",
+          "full": "https://www.bilibili.com/video/BV1gk4y1K7XW/",
+          "hotkeys": "https://www.bilibili.com/video/BV15h4y157m3/",
+          "operationswithfiles": "https://www.bilibili.com/video/BV1j14y197Fk/",
+          "playlist": "https://space.bilibili.com/1870911731",
+          "profile": "https://www.bilibili.com/video/BV1eW4y1o7ui/",
+          "roles": "https://www.bilibili.com/video/BV1dP411Y7rh/",
+          "rooms": "https://www.bilibili.com/video/BV17g4y1F7iP/",
+          "security": "https://www.bilibili.com/video/BV1m94y1z747",
+          "whatis": "https://www.bilibili.com/video/BV1ao4y14788/"
+        }
+      }
     }
   }
 }
