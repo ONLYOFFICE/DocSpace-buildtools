@@ -16,17 +16,21 @@ ${package_manager} clean all
 ${package_manager} -y install yum-utils
 
 { yum check-update postgresql; PSQLExitCode=$?; } || true #Checking for postgresql update
-{ yum check-update $DIST*-release; exitCode=$?; } || true #Checking for distribution update
+{ yum check-update "$DIST"*-release; exitCode=$?; } || true #Checking for distribution update
 
-if rpm -qa | grep mariadb.*config >/dev/null 2>&1; then
-   echo $RES_MARIADB && exit 0
+if rpm -qa | grep 'mariadb.*config' >/dev/null 2>&1; then
+   echo "$RES_MARIADB" && exit 0
 fi
 
 #Add repository EPEL
-[ "$DIST" != "fedora" ] && { rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-$REV.noarch.rpm || true; }
+EPEL_URL="https://dl.fedoraproject.org/pub/epel/"
+[ "$DIST" != "fedora" ] && { rpm -ivh ${EPEL_URL}/epel-release-latest-$REV.noarch.rpm || true; }
 [ "$REV" = "9" ] && update-crypto-policies --set DEFAULT:SHA1 && ${package_manager} -y install xorg-x11-font-utils
 [ "$DIST" = "centos" ] && TESTING_REPO="--enablerepo=$( [ "$REV" = "9" ] && echo "crb" || echo "powertools" )"
-[ "$DIST" = "redhat" ] && { /usr/bin/crb enable && yum repolist enabled | grep -qi -e crb -e codeready || echo "Failed to enable or verify CRB repository."; exit 1; }
+if [ "$DIST" = "redhat" ]; then 
+	LADSPA_PACKAGE_VERSION=$(curl -s "${EPEL_URL}/10/Everything/x86_64/Packages/l/" | grep -oP 'ladspa-[0-9].*?\.rpm' | sort -V | tail -n 1)
+	${package_manager} install -y "${EPEL_URL}/10/Everything/x86_64/Packages/l/${LADSPA_PACKAGE_VERSION}"
+fi
 
 #add rabbitmq & erlang repo
 curl -s https://packagecloud.io/install/repositories/rabbitmq/rabbitmq-server/script.rpm.sh | bash
@@ -39,7 +43,7 @@ curl -fsSL https://rpm.nodesource.com/setup_${NODE_VERSION}.x | sed '/update -y/
 #add mysql repo
 dnf remove -y @mysql && dnf module -y reset mysql && dnf module -y disable mysql
 MYSQL_REPO_VERSION="$(curl https://repo.mysql.com | grep -oP "mysql84-community-release-${MYSQL_DISTR_NAME}${REV}-\K.*" | grep -o '^[^.]*' | sort | tail -n1)"
-yum install -y https://repo.mysql.com/mysql84-community-release-${MYSQL_DISTR_NAME}${REV}-${MYSQL_REPO_VERSION}.noarch.rpm || true
+yum install -y https://repo.mysql.com/mysql84-community-release-"${MYSQL_DISTR_NAME}""${REV}"-"${MYSQL_REPO_VERSION}".noarch.rpm || true
 
 if ! rpm -q mysql-community-server; then
 	MYSQL_FIRST_TIME_INSTALL="true"
@@ -95,16 +99,16 @@ JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | hea
 alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && alternatives --set java "$JAVA_PATH"
 
 #add repo, install fluent-bit
-if [ ${INSTALL_FLUENT_BIT} == "true" ]; then 
+if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then 
 	[ "$DIST" != "fedora" ] && curl https://raw.githubusercontent.com/fluent/fluent-bit/master/install.sh | bash || yum -y install fluent-bit
-	${package_manager} -y install opensearch-dashboards-${DASHBOARDS_VERSION} --enablerepo=opensearch-dashboards-2.x
+	${package_manager} -y install opensearch-dashboards-"${DASHBOARDS_VERSION}" --enablerepo=opensearch-dashboards-2.x
 fi
 
 if [[ $PSQLExitCode -eq $UPDATE_AVAILABLE_CODE ]]; then
 	yum -y install postgresql-upgrade
 	postgresql-setup --upgrade || true
 fi
-postgresql-setup initdb	|| true
+postgresql-setup --initdb || true
 
 sed -E -i "s/(host\s+(all|replication)\s+all\s+(127\.0\.0\.1\/32|\:\:1\/128)\s+)(ident|trust|md5)/\1scram-sha-256/" /var/lib/pgsql/data/pg_hba.conf
 sed -i "s/^#\?password_encryption = .*/password_encryption = 'scram-sha-256'/" /var/lib/pgsql/data/postgresql.conf

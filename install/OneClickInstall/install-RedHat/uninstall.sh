@@ -17,7 +17,7 @@ if [[ "$DEP_CHOICE" =~ ^(y|yes|)$ ]]; then
 fi
 
 # Get packages to uninstall
-PACKAGES_TO_UNINSTALL=($(rpm -qa | grep -E "^(${package_sysname}|${product})" || true))
+mapfile -t PACKAGES_TO_UNINSTALL < <(rpm -qa | grep -E "^(${package_sysname}|${product})" || true)
 
 DEPENDENCIES=(
     nodejs dotnet-sdk-9.0 mysql-community-server postgresql
