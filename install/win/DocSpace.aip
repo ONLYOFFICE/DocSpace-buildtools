@@ -149,6 +149,7 @@
     <ROW Directory="logs_Dir" Directory_Parent="nginx_Dir" DefaultDir="logs" DirectoryOptions="15"/>
     <ROW Directory="nginx_Dir" Directory_Parent="APPDIR" DefaultDir="nginx" DirectoryOptions="15"/>
     <ROW Directory="products_Dir" Directory_Parent="APPDIR" DefaultDir="products" DirectoryOptions="15"/>
+    <ROW Directory="sbin_Dir" Directory_Parent="APPDIR" DefaultDir="sbin" DirectoryOptions="15"/>
     <ROW Directory="server_2_Dir" Directory_Parent="ASC.Files_Dir" DefaultDir="server" DirectoryOptions="15"/>
     <ROW Directory="server_5_Dir" Directory_Parent="ASC.People_Dir" DefaultDir="server" DirectoryOptions="15"/>
     <ROW Directory="service_11_Dir" Directory_Parent="ASC.Studio.Notify_Dir" DefaultDir="service" DirectoryOptions="15"/>
@@ -1638,12 +1639,14 @@
     <ROW Name="ReplaceDbName" TxtUpdateSet="xml" FindPattern="{DB_NAME}" ReplacePattern="[DB_NAME]" Options="2" Order="11" FileEncoding="-1"/>
     <ROW Name="ReplaceRedisHost" TxtUpdateSet="xml" FindPattern="{REDIS_HOST}" ReplacePattern="[REDIS_HOST]" Options="2" Order="11" FileEncoding="-1"/>
     <ROW Name="ReplaceRedisHost" TxtUpdateSet="xml" FindPattern="{REDIS_PORT}" ReplacePattern="[REDIS_PORT]" Options="2" Order="12" FileEncoding="-1"/>
+    <ROW Name="Replace" TxtUpdateSet="YourFile.txt_4" FindPattern="production" ReplacePattern="[ENVIRONMENT]" Options="18" Order="0" FileEncoding="-1"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.TxtUpdateSetComponent">
     <ROW Key="YourFile.txt" Component="conf" FileName="onlyoffice.conf" Directory="conf_Dir" Options="17"/>
     <ROW Key="YourFile.txt_1" Component="conf" FileName="onlyoffice-client.conf" Directory="conf_Dir" Options="17"/>
     <ROW Key="YourFile.txt_2" Component="includes" FileName="onlyoffice-public.conf" Directory="includes_Dir" Options="17"/>
     <ROW Key="YourFile.txt_3" Component="conf" FileName="onlyoffice-proxy*" Directory="conf_Dir" Options="17"/>
+    <ROW Key="YourFile.txt_4" Component="APPDIR" FileName="docspace-ssl-setup.ps1" Directory="sbin_Dir" Options="17"/>
     <ROW Key="YourFile.txt_5" Component="includes" FileName="letsencrypt.conf" Directory="includes_Dir" Options="17"/>
     <ROW Key="YourFile.txt_6" Component="conf" FileName="onlyoffice-management.conf" Directory="conf_Dir" Options="17"/>
     <ROW Key="fluentbit.conf" Component="config" FileName="fluent-bit.conf" Directory="config_Dir" Options="17"/>
