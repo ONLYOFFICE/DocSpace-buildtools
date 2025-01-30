@@ -563,7 +563,14 @@ setup_openresty(){
 		fi
 	fi
 
-	chown nginx:nginx ${OPENRESTY_DIR}* -R
+	NGINX_USER="nginx" NGINX_GROUP="nginx"
+	NGINX_LOG_DIR=/var/log/nginx/
+
+	getent group "${NGINX_GROUP}" > /dev/null || groupadd "${NGINX_GROUP}"
+	id "${NGINX_USER}" > /dev/null 2>&1 || useradd -g "${NGINX_GROUP}" -s ${OPENRESTY_DIR}/ "${NGINX_USER}"
+	chown ${NGINX_USER}:${NGINX_GROUP} ${OPENRESTY_DIR}* -R
+	[ -d "${NGINX_LOG_DIR}" ] || { mkdir -p "${NGINX_LOG_DIR}" && chown "${NGINX_USER}:${NGINX_GROUP}" "${NGINX_LOG_DIR}"; }
+	
 	systemctl enable openresty >/dev/null 2>&1
 	systemctl restart openresty
 	echo "OK"
@@ -724,7 +731,7 @@ setup_dashboards() {
 
 	# configure login&pass for Dashboards, used by Nginx HTTP Basic Authentication
 	echo "${DASHBOARDS_USERNAME:-"onlyoffice"}:$(openssl passwd -6 -stdin <<< "${DASHBOARDS_PASSWORD}")" > /etc/openresty/.htpasswd_dashboards
-	chown nginx:nginx /etc/openresty/.htpasswd_dashboards
+	chown ${NGINX_USER}:${NGINX_GROUP} /etc/openresty/.htpasswd_dashboards
 
 	# enable connection with opensearch
 	sed -i 's~\(opensearch\.hosts:\).*~\1 \[http://localhost:9200\]~' ${DASHBOARDS_CONF_PATH}

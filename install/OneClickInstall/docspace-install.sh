@@ -138,17 +138,20 @@ fi
 
 if command_exists docker &> /dev/null && docker ps -a --format '{{.Names}}' | grep -q "${product_sysname}-api"; then
     DOCKER="true"
+    PARAMETERS="-u true $PARAMETERS"
 elif command_exists apt-get &> /dev/null && dpkg -s ${product}-api >/dev/null 2>&1; then
     DOCKER="false"
+	PARAMETERS="-u true $PARAMETERS"
 elif command_exists yum &> /dev/null && rpm -q ${product}-api >/dev/null 2>&1; then
     DOCKER="false"
+	PARAMETERS="-u true $PARAMETERS"
 fi
  
 if [ -z "$DOCKER" ]; then
 	read_installation_method
 fi
 
-if [ -z $GIT_BRANCH ]; then
+if [ -z "$GIT_BRANCH" ]; then
 	DOWNLOAD_URL_PREFIX="https://download.${product_sysname}.com/${product}"
 else
 	DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${product_sysname^^}/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
@@ -158,7 +161,7 @@ if [ "$DOCKER" == "true" ]; then
 	if [ "$LOCAL_SCRIPTS" == "true" ]; then
 		bash install-Docker.sh ${PARAMETERS} || EXIT_CODE=$?
 	else
-		curl -s -O  ${DOWNLOAD_URL_PREFIX}/install-Docker.sh
+		curl -s -O "${DOWNLOAD_URL_PREFIX}"/install-Docker.sh
 		bash install-Docker.sh ${PARAMETERS} || EXIT_CODE=$?
 		rm install-Docker.sh
 	fi
@@ -167,7 +170,7 @@ else
 		if [ "$LOCAL_SCRIPTS" == "true" ]; then
 			bash install-RedHat.sh ${PARAMETERS} || EXIT_CODE=$?
 		else
-			curl -s -O ${DOWNLOAD_URL_PREFIX}/install-RedHat.sh
+			curl -s -O "${DOWNLOAD_URL_PREFIX}"/install-RedHat.sh
 			bash install-RedHat.sh ${PARAMETERS} || EXIT_CODE=$?
 			rm install-RedHat.sh
 		fi
@@ -175,7 +178,7 @@ else
 		if [ "$LOCAL_SCRIPTS" == "true" ]; then
 			bash install-Debian.sh ${PARAMETERS} || EXIT_CODE=$?
 		else
-			curl -s -O ${DOWNLOAD_URL_PREFIX}/install-Debian.sh
+			curl -s -O "${DOWNLOAD_URL_PREFIX}"/install-Debian.sh
 			bash install-Debian.sh ${PARAMETERS} || EXIT_CODE=$?
 			rm install-Debian.sh
 		fi

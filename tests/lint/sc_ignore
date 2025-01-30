@@ -1,0 +1,18 @@
+# ShellCheck can't follow non-constant source. Used for dynamically sourcing scripts.
+SC1090 # Example: source <(curl -fsSL "${DOWNLOAD_URL_PREFIX}/uninstall.sh")
+
+# Variable appears unused. May be used indirectly or exported.
+SC2034 # Example: INSTALLATION_TYPE="${2^^}"
+
+# Quote to prevent word splitting. Not quoted due to intentional command behavior.
+SC2046 # Example: ${package_manager} -y install $([ "$DIST" != "fedora" ] && echo "epel-release")
+
+# Variable referenced but not assigned. Likely set dynamically or externally.
+SC2154 # Example: echo "${product}"
+
+# Declare and assign separately to avoid masking return values. Combined for simplicity.
+SC2155 # Example: local AVAILABLE_DISK_SPACE=$(df -m / | tail -1 | awk '{ print $4 }')
+
+# The 'local' is undefined in POSIX sh but used intentionally in Bash.
+SC3043 # Example: local conffile="/etc/nginx/nginx.conf"
+

@@ -82,10 +82,17 @@ jobs:
           esac
 
       - name: Checkout repository
-        if: ${{ github.event.inputs.offline == 'true' }}
         uses: actions/checkout@v4
         with:
           ref: ${{ env.BRANCH_NAME }}
+
+      - name: "Checking Docker scripts for errors"
+        run: |
+          set -eux
+          sudo apt-get install -y shellcheck
+          find install/docker -type f -name "*.sh" | cat - <(echo "install/OneClickInstall/install-Docker.sh") \
+            | xargs shellcheck --exclude="$(awk '!/^#|^$/ {print $1}' tests/lint/sc_ignore | paste -sd ",")" --severity=warning | tee sc_output
+          awk '/\(warning\):/ {w++} /\(error\):/ {e++} END {if (w+e) printf "::warning ::ShellCheck detected %d warnings and %d errors\n", w+0, e+0}' sc_output
 
       - name: Free Disk Space
         if: ${{ github.event.inputs.offline == 'true' }}
