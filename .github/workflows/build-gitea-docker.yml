@@ -1,0 +1,89 @@
+name: DocSpace services build and push
+
+on:
+  push:
+    branches:
+    #  - 'hotfix/v*'
+    #  - 'release/v*'
+    #  - 'develop'
+       - feature/add-arm-build
+    paths:
+      - '.github/workflows/build-gitea-docker.yml'
+      - 'install/docker/Dockerfile.app'
+          
+  workflow_dispatch:
+
+env:
+  DOCKER_PATH: "/install/docker"
+  REPO: ${{ secrets.DOCKERHUB_USERNAME }}
+  DOCKER_IMAGE_PREFIX: "4testing-docspace"
+  DOCKERFILE: "Dockerfile.app"
+
+jobs:
+
+  build:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        platform: 
+          - linux/amd64
+       #   - linux/arm64
+        
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.branch }}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/local/lib/android /opt/ghc
+          sudo docker image prune --all --force
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          
+      - name: Build 4testing
+        id: build
+        run: |
+          echo ${REPO}
+          cd .${DOCKER_PATH}
+          if [ "${{ github.GITHUB_REF_NAME }}" = "develop" ]; then
+            PRODUCT_VERSION="develop"
+            DOCKER_TAG=${PRODUCT_VERSION}.${{ github.run_number }}
+          else
+            PRODUCT_VERSION=$(echo "${{  github.GITHUB_REF_NAME }}" | sed '/^release\b\|^hotfix\b\|^feature\b/s/release.*\/\|hotfix.*\/\|feature.*\///; s/-git-action$//; s/^v//') 
+            DOCKER_TAG=${PRODUCT_VERSION}.${{github.run_number}}
+          fi
+          DOCKER_TAG=develop.test
+          export DOCKER_TAG
+          docker buildx bake -f build.yml \
+          --set *.args.GIT_BRANCH=develop \
+          --set *.args.PRODUCT_VERSION=${PRODUCT_VERSION} \
+          --set *.args.BUILD_NUMBER=${BUILD_NUMBER} \
+          --set *.platform=linux/amd64 \
+          --push
+
+          echo "version=${DOCKER_TAG}" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+     
+      # docker buildx bake -f build.yml \
+      #     --set *.args.GIT_BRANCH=${{ github.GITHUB_REF_NAME }} \
+      #     --set *.args.PRODUCT_VERSION=${PRODUCT_VERSION} \
+      #     --set *.args.BUILD_NUMBER=${BUILD_NUMBER} \
+      #     --set *.platform=${{ matrix.platform }} \
+      #     --set *.platform=${{ matrix.platform }} \
+      #     --set *.args.PRODUCT_VERSION=${PRODUCT_VERSION} \
+      #     --set *.args.BUILD_NUMBER=${{github.run_number}} \
+      #     --push
+
+      #     echo "version=${DOCKER_TAG}" >> "$GITH
