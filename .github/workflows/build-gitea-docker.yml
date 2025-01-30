@@ -26,7 +26,7 @@ jobs:
     strategy:
       matrix:
         platform: 
-          - linux/amd64
+          #- linux/amd64
           - linux/arm64
         
     steps:
@@ -69,7 +69,7 @@ jobs:
           --set *.args.GIT_BRANCH=develop \
           --set *.args.PRODUCT_VERSION=${PRODUCT_VERSION} \
           --set *.args.BUILD_NUMBER=${BUILD_NUMBER} \
-          --set *.platform=${{ matrix.platform }} \
+          --set *.platform=linux/arm64 \
           --push
 
           echo "version=${DOCKER_TAG}" >> "$GITHUB_OUTPUT"
