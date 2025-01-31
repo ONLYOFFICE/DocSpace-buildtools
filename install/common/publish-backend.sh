@@ -110,5 +110,5 @@ for SERVICE in "${services_name_backend_nodejs[@]}" "${services_name_backend_jav
   echo "== Publish ${SERVICE} project =="
   SERVICE_DIR="$(find ${SRC_PATH} -type d -name ${SERVICE})"
   mkdir -p ${BUILD_PATH}/services/${SERVICE}/service/
-  [ -n "${SERVICE_DIR}" ] && cp -arfv ${SERVICE_DIR}/* ${BUILD_PATH}/services/${SERVICE}/service/
+  [ -n "${SERVICE_DIR}" ] && cp -arf ${SERVICE_DIR}/* ${BUILD_PATH}/services/${SERVICE}/service/
 done

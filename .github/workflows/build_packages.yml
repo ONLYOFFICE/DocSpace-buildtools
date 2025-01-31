@@ -184,8 +184,7 @@ jobs:
         if: matrix.packageType == 'deb'
         run: |
           for deb_package in ${PACKAGE_DIRECTORY}/install/*.deb; do
-            echo -n "Uploading $( basename $deb_package )... "
-            curl --user "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" \
+            curl -s --user "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" \
                  -H "Content-Type: multipart/form-data" \
                  --data-binary "@$deb_package" "${{ secrets.REPO_URL_4TESTING_DEB }}" \
               && echo "Success: $(basename "$deb_package") uploaded." || echo "Error: Failed to upload $(basename "$deb_package")"
@@ -195,8 +194,7 @@ jobs:
         if: matrix.packageType == 'rpm'
         run: |
           for rpm_package in ${PACKAGE_DIRECTORY}/install/rpm/SPECS/RPMS/noarch/*.rpm; do
-            echo -n "Uploading $( basename $rpm_package )... "
-            curl --user "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" \
+            curl -s --user "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" \
                  --upload-file "$rpm_package" "${{ secrets.REPO_URL_4TESTING_RPM }}" \
               && echo "Success: $(basename "$rpm_package") uploaded." || echo "Error: Failed to upload $(basename "$rpm_package")"
           done
