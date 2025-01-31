@@ -115,8 +115,6 @@ jobs:
           sudo chmod 644 /usr/share/keyrings/yarnkey.gpg
           echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian/ stable main" | \
           sudo tee /etc/apt/sources.list.d/yarn.list
-          sudo add-apt-repository -y ppa:dotnet/backports
-          sudo apt remove -y netstandard-targeting-pack-2.1
           curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
           sudo apt install -y dotnet-sdk-9.0 yarn nodejs rename unzip maven openjdk-21-jdk-headless
           JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | head -1)
