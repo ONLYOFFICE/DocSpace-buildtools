@@ -41,7 +41,7 @@ jobs:
         
       - name: Free Disk Space
         run: |
-          sudo rm -rf /usr/local/lib/android /opt/ghc
+          curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | bash
           sudo docker image prune --all --force
 
       - name: Login to DockerHub
