@@ -37,9 +37,9 @@ while [ "$1" != "" ]; do
             echo " Usage: bash build-backend.sh [PARAMETER] [[PARAMETER], ...]"
             echo "    Parameters:"
             echo "      -sp, --srcpath             path to AppServer root directory"
-            echo "      -ba, --build-args          arguments for yarn building"
-            echo "      -da, --deploy-args         arguments for yarn deploying"
-			echo "      -di, --depbug-info         arguments for yarn debug info configure"
+            echo "      -ba, --build-args          arguments for pnpm building"
+            echo "      -da, --deploy-args         arguments for pnpm deploying"
+            echo "      -di, --depbug-info         arguments for pnpm debug info configure"
             echo "      -?, -h, --help             this help"
             echo "  Examples"
             echo "  bash build-backend.sh -sp /app/AppServer"
@@ -62,7 +62,13 @@ if [ "$DEBUG_INFO" = true ]; then
 	pip install -r ${SRC_PATH}/buildtools/requirements.txt --break-system-packages
 	python3 ${SRC_PATH}/buildtools/debuginfo.py
 fi 
+
+CLIENT_PACKAGES+=("@docspace/client")
+CLIENT_PACKAGES+=("@docspace/login")
+CLIENT_PACKAGES+=("@docspace/doceditor")
+CLIENT_PACKAGES+=("@docspace/management")
+
 cd ${SRC_PATH}/client
-yarn install
-yarn ${BUILD_ARGS}
-yarn ${DEPLOY_ARGS}
+pnpm install
+pnpm nx run-many -t ${BUILD_ARGS} -p "${CLIENT_PACKAGES[@]}" --parallel=4  
+pnpm nx run-many -t ${DEPLOY_ARGS} -p "${CLIENT_PACKAGES[@]}" --parallel=4
