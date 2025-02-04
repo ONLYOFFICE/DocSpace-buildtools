@@ -18,8 +18,8 @@ env:
 jobs:
 
   build:
-    #runs-on: ubuntu-latest-docspace
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-docspace
+    #runs-on: ubuntu-latest
     strategy:
       matrix:
         platform: 
