@@ -60,7 +60,7 @@ jobs:
         run: |
            docker pull onlyoffice/4testing-docspace-api:develop.4430 
            docker image ls --all
-           docker tag onlyoffice/4testing-docspace-api:develop.4430 /4testing-docspace-api:develop.test.4430
+           docker tag onlyoffice/4testing-docspace-api:develop.4430 ${{ secrets.DOCKERHUB_USERNAME_TEMP }}/4testing-docspace-api:develop.test.4430
            docker image ls --all
            docker push ${{ secrets.DOCKERHUB_USERNAME_TEMP }}/4testing-docspace-api:develop.test.4430    
 
