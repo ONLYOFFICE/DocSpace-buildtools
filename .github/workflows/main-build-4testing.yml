@@ -11,7 +11,7 @@ on:
 
 env:
   DOCKER_PATH: "/install/docker"
-  REPO:  "onlyoffice"
+  REPO: "onlyoffice"
   DOCKER_IMAGE_PREFIX: "4testing-docspace"
   DOCKERFILE: "Dockerfile.app"
 
@@ -55,6 +55,12 @@ jobs:
           df -h
           docker image ls
           docker system df
+      
+      - name: Check docker login
+        run: |
+           docker pull onlyoffice/4testing-docspace-api:develop.4430
+           docker tag  onlyoffice/4testing-docspace-api:develop.4430 onlyoffice/4testing-docspace-api:develop.test.4430
+           docker push onlyoffice/4testing-docspace-api:develop.test.4430    
 
       - name: Build 4testing
         id: build
