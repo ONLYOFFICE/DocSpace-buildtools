@@ -59,6 +59,9 @@ jobs:
       
       - name: Check docker login
         run: |
+           docker pull onlyoffice/4testing-docspace-api:develop.4430 
+           docker image ls --all
+           docker tag onlyoffice/4testing-docspace-api:develop.4430 onlyoffice/4testing-docspace-api:develop.test.4430
            docker image ls --all
            docker push onlyoffice/4testing-docspace-api:develop.test.4430    
 
