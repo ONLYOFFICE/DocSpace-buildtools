@@ -11,7 +11,7 @@ on:
 
 env:
   DOCKER_PATH: "/install/docker"
-  REPO: ${{ secrets.DOCKERHUB_USERNAME }}
+  REPO:  "onlyoffice"
   DOCKER_IMAGE_PREFIX: "4testing-docspace"
   DOCKERFILE: "Dockerfile.app"
 
