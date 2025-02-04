@@ -14,8 +14,6 @@ env:
   REPO: "onlyoffice"
   DOCKER_IMAGE_PREFIX: "4testing-docspace"
   DOCKERFILE: "Dockerfile.app"
-  USER_U: ${{ secrets.DOCKERHUB_USERNAME_TEMP }}
-  USER_P: ${{ secrets.DOCKERHUB_TOKEN_TEMP }}
 
 jobs:
 
@@ -43,9 +41,6 @@ jobs:
         
       - name: Free Disk Space
         run: |
-          echo ${USER_U}
-          echo ${USER_P}
-          docker login -u ${USER_U} -p ${USER_P}
           sudo rm -rf /usr/local/lib/android /opt/ghc
           sudo docker image prune --all --force
       
@@ -57,7 +52,6 @@ jobs:
           
       - name: Show free space
         run: |
-          echo "Free space:"
           df -h
           docker image ls
           docker system df
