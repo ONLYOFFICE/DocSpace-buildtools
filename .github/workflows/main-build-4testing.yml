@@ -18,7 +18,8 @@ env:
 jobs:
 
   build:
-    runs-on: ubuntu-latest-docspace
+    #runs-on: ubuntu-latest-docspace
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         platform: 
@@ -56,11 +57,11 @@ jobs:
           docker image ls
           docker system df
       
-      - name: Check docker login
-        run: |
-           docker pull onlyoffice/4testing-docspace-api:develop.4430
-           docker tag  onlyoffice/4testing-docspace-api:develop.4430 onlyoffice/4testing-docspace-api:develop.test.4430
-           docker push onlyoffice/4testing-docspace-api:develop.test.4430    
+     # - name: Check docker login
+     #   run: |
+     #      docker login
+     #      docker image ls --all
+     #      docker push onlyoffice/4testing-docspace-api:develop.test.4430    
 
       - name: Build 4testing
         id: build
