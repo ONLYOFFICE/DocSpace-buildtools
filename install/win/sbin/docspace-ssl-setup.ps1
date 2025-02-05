@@ -30,6 +30,7 @@ if ( -not $certbot_path )
 
 $product = "docspace"
 $letsencrypt_root_dir = "$env:SystemDrive\Certbot\live"
+$letsencrypt_domain_dir = "$env:SystemDrive\Certbot\archive\${product}"
 $app = Resolve-Path -Path ".\..\"
 $root_dir = "${app}\letsencrypt"
 $environment = "production"
@@ -66,13 +67,13 @@ if ( $args.Count -ge 2 )
   if ( [System.IO.File]::Exists($ssl_cert) -and [System.IO.File]::Exists($ssl_key) -and [System.IO.File]::Exists("${nginx_conf_dir}\${nginx_ssl_tmpl}"))
   {
     Copy-Item "${nginx_conf_dir}\${nginx_ssl_tmpl}" -Destination "${nginx_conf_dir}\${nginx_conf}"
-    ((Get-Content -Path "${app}\config\appsettings.$environment.json" -Raw) -replace '"portal":\s*"[^"]*"', "`"portal`": `"https://$DOMAIN`"") | Set-Content -Path "${app}\config\appsettings.$environment.json"
+    ((Get-Content -Path "${app}\config\appsettings.$environment.json" -Raw) -replace '"portal":\s*"[^"]*"', "`"portal`": `"https://$letsencrypt_domain`"") | Set-Content -Path "${app}\config\appsettings.$environment.json"
     ((Get-Content -Path "${nginx_conf_dir}\${nginx_conf}" -Raw) -replace '/usr/local/share/ca-certificates/tls.crt', $ssl_cert) | Set-Content -Path "${nginx_conf_dir}\${nginx_conf}"
     ((Get-Content -Path "${nginx_conf_dir}\${nginx_conf}" -Raw) -replace '/etc/ssl/private/tls.key', $ssl_key) | Set-Content -Path "${nginx_conf_dir}\${nginx_conf}"
 
-    if ($letsencrypt_domain)
+    if ($letsencrypt_domain -and (Test-Path $letsencrypt_domain_dir))
     {
-        $acl = Get-Acl -Path "$env:SystemDrive\Certbot\archive\${product}"
+        $acl = Get-Acl -Path $letsencrypt_domain_dir
         $acl.SetSecurityDescriptorSddlForm('O:LAG:S-1-5-21-4011186057-2202358572-2315966083-513D:PAI(A;;0x1200a9;;;WD)(A;;FA;;;SY)(A;OI;0x1200a9;;;LS)(A;;FA;;;BA)(A;;FA;;;LA)')
         Set-Acl -Path $acl.path -ACLObject $acl
     }
