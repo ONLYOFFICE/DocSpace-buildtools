@@ -26,6 +26,7 @@ services:
       SPRING_PROFILES_ACTIVE: dev
       SPRING_APPLICATION_NAME: ASC.Identity.Authorization
       SERVER_PORT: 8080
+      GRPC_CLIENT_REGISTRATION_ADDRESS: static://onlyoffice-identity-api:8888
 
   onlyoffice-identity-api:
     build:
@@ -41,6 +42,7 @@ services:
       SPRING_PROFILES_ACTIVE: dev
       SPRING_APPLICATION_NAME: ASC.Identity.Registration
       SERVER_PORT: 9090
+      GRPC_CLIENT_AUTHORIZATION_ADDRESS: static://onlyoffice-identity-authorization:9999
 
 networks:
   default:
