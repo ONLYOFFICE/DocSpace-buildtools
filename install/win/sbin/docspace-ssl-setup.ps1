@@ -39,6 +39,14 @@ $nginx_conf = "onlyoffice-proxy.conf"
 $nginx_conf_tmpl = "onlyoffice-proxy.conf.tmpl"
 $nginx_ssl_tmpl = "onlyoffice-proxy-ssl.conf.tmpl"
 $proxy_service = "OpenResty"
+$node_services = @(
+    "DocSpace.DocEditor",
+    "DocSpace.Login",
+    "DocSpace.Socket.IO",
+    "DocSpace.SsoAuth.Svc",
+    "DsDocServiceSvc",
+    "DsConverterSvc"
+)
 
 if ( $args.Count -ge 2 )
 {
@@ -77,6 +85,13 @@ if ( $args.Count -ge 2 )
         $acl.SetSecurityDescriptorSddlForm('O:LAG:S-1-5-21-4011186057-2202358572-2315966083-513D:PAI(A;;0x1200a9;;;WD)(A;;FA;;;SY)(A;OI;0x1200a9;;;LS)(A;;FA;;;BA)(A;;FA;;;LA)')
         Set-Acl -Path $acl.path -ACLObject $acl
     }
+
+    $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($ssl_cert)
+
+    if ($cert.Subject -eq $cert.Issuer) {
+        [System.Environment]::SetEnvironmentVariable("NODE_EXTRA_CA_CERTS", $ssl_cert, [System.EnvironmentVariableTarget]::Machine)
+        foreach ($service in $node_services) { Restart-Service -Name $service }
+    }
   }
 
   Restart-Service -Name $proxy_service
@@ -98,6 +113,9 @@ if ( $args.Count -ge 2 )
 
 elseif ($args[0] -eq "-d" -or $args[0] -eq "--default") {
     Copy-Item "${nginx_conf_dir}\${nginx_conf_tmpl}" -Destination "${nginx_conf_dir}\${nginx_conf}"
+    ((Get-Content -Path "${app}\config\appsettings.$environment.json" -Raw) -replace '"portal":\s*"[^"]*"', '"portal": "http://localhost:80"') | Set-Content -Path "${app}\config\appsettings.$environment.json"
+    [System.Environment]::SetEnvironmentVariable("NODE_EXTRA_CA_CERTS", $null, "Machine")
+    foreach ($service in $node_services) { Restart-Service -Name $service }
     Restart-Service -Name $proxy_service
     Remove-Item -Path "${app}\letsencrypt\letsencrypt_cron.bat" -Force
     Write-Host "Returned to the default proxy configuration."
