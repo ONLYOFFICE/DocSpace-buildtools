@@ -1285,7 +1285,7 @@ install_product () {
 		fi
 
 		reconfigure ENV_EXTENSION ${ENV_EXTENSION}
-		reconfigure IDENTITY_PROFILE "${IDENTITY_PROFILE:-"prod"}"
+		reconfigure IDENTITY_PROFILE "${IDENTITY_PROFILE:-"prod,server"}"
 		reconfigure APP_CORE_MACHINEKEY ${APP_CORE_MACHINEKEY}
 		reconfigure APP_CORE_BASE_DOMAIN ${APP_CORE_BASE_DOMAIN}
 		reconfigure APP_URL_PORTAL "${APP_URL_PORTAL:-"http://${PACKAGE_SYSNAME}-router:8092"}"
