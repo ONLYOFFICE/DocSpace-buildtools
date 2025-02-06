@@ -826,7 +826,7 @@ product_configuration(){
 	done
 
 	echo "ENVIRONMENT=${ENVIRONMENT}" > "$APP_DIR/systemd.env"
-	echo "SPRING_PROFILES_ACTIVE=prod" >> "$APP_DIR/systemd.env"
+	echo "SPRING_PROFILES_ACTIVE=prod,server" >> "$APP_DIR/systemd.env"
 	chmod o-rwx "$APP_DIR/systemd.env"
 
 	set_core_machinekey
