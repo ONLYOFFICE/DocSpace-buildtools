@@ -224,6 +224,15 @@ ENTRYPOINT  [ "/docker-entrypoint.sh" ]
 
 CMD ["/usr/local/openresty/bin/openresty", "-g", "daemon off;"]
 
+## Sdk ##
+FROM noderun AS sdk
+WORKDIR ${BUILD_PATH}/products/ASC.Sdk/sdk
+
+COPY --chown=onlyoffice:onlyoffice docker-entrypoint.py ./docker-entrypoint.py
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/ .
+
+CMD ["server.js", "ASC.Sdk"]
+
 ## Doceditor ##
 FROM noderun AS doceditor
 WORKDIR ${BUILD_PATH}/products/ASC.Editors/editor

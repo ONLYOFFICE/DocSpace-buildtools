@@ -187,6 +187,16 @@ RUN chown nginx:nginx /etc/nginx/* -R && \
     sed -i '/client_body_temp_path/ i \ \ \ \ $MAP_HASH_BUCKET_SIZE' /etc/nginx/nginx.conf.template && \
     sed -i 's/\(worker_connections\).*;/\1 $COUNT_WORKER_CONNECTIONS;/' /etc/nginx/nginx.conf.template 
 
+
+## Sdk ##
+FROM noderun AS sdk
+WORKDIR ${BUILD_PATH}/products/ASC.Sdk/sdk
+
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/deploy/sdk/ .
+
+CMD ["server.js", "ASC.Sdk"]
+
 ## Doceditor ##
 FROM noderun as doceditor
 WORKDIR ${BUILD_PATH}/services/ASC.Editors/editor
