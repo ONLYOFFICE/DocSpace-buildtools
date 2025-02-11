@@ -37,6 +37,7 @@ services:
     environment:
       <<: *x-common-environment
       SERVER_PORT: ${IDENTITY_AUTHORIZATION_SERVER_PORT}
+      GRPC_CLIENT_REGISTRATION_ADDRESS: static://${IDENTITY_API_CONTAINER_NAME}:8888
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail ${SERVICE_IDENTITY}/health/ || exit 1
@@ -53,6 +54,7 @@ services:
     environment:
       <<: *x-common-environment
       SERVER_PORT: ${IDENTITY_API_SERVER_PORT}
+      GRPC_CLIENT_AUTHORIZATION_ADDRESS: static://${IDENTITY_AUTHORIZATION_CONTAINER_NAME}:9999
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail ${SERVICE_IDENTITY_API}/health/ || exit 1
