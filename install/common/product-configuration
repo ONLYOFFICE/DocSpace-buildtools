@@ -169,6 +169,7 @@ while [ "$1" != "" ]; do
 		-mk | --machinekey )
 			if [ "$2" != "" ]; then
 				CORE_MACHINEKEY=$2
+				echo "$CORE_MACHINEKEY" > "$APP_DIR/.private/machinekey"
 				shift
 			fi
 		;;
@@ -197,6 +198,7 @@ while [ "$1" != "" ]; do
 		-dp | --dashboadrspassword )
 			if [ "$2" != "" ]; then
 				DASHBOARDS_PASSWORD=$2
+				echo "$DASHBOARDS_PASSWORD" > "$APP_DIR/.private/dashboards-password"
 				shift
 			fi
 		;;
@@ -245,23 +247,6 @@ while [ "$1" != "" ]; do
 	esac
 	shift
 done
-
-set_core_machinekey () {
-	if [[ -f $APP_DIR/.private/machinekey ]] || [[ -n $CORE_MACHINEKEY ]]; then
-		CORE_MACHINEKEY=${CORE_MACHINEKEY:-$(cat $APP_DIR/.private/machinekey)};
-	else
-		CORE_MACHINEKEY=$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12);
-		if [ "$DIST" = "RedHat" ]; then
-			echo $CORE_MACHINEKEY > $APP_DIR/.private/machinekey
-			chmod o-rwx $APP_DIR/.private/machinekey
-		fi
-	fi
-
-	save_undefined_param "${USER_CONF}" "core.machinekey" "${CORE_MACHINEKEY}"
-	save_undefined_param "${USER_CONF}" "core['base-domain']" "${APP_HOST}" "rewrite"
-	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core.machinekey" "${CORE_MACHINEKEY}"
-	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core['base-domain']" "${APP_HOST}" "rewrite"
-}
 
 install_json() {
 	if ! command -v json; then
@@ -718,16 +703,7 @@ setup_dashboards() {
 	echo -n "Configuring dashboards... "
 
 	DASHBOARDS_CONF_PATH="/etc/opensearch-dashboards/opensearch_dashboards.yml"
-
-	if [[ -n ${DASHBOARDS_PASSWORD} ]]; then
-		echo "${DASHBOARDS_PASSWORD}" > ${APP_DIR}/.private/dashboards-password
-	elif [[ -f ${APP_DIR}/.private/dashboards-password ]]; then
-		DASHBOARDS_PASSWORD=$(cat ${APP_DIR}/.private/dashboards-password);
-	else
-		DASHBOARDS_PASSWORD=$(echo "$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 20)" | tee ${APP_DIR}/.private/dashboards-password)
-	fi
-
-	chmod o-rwx $APP_DIR/.private/dashboards-password
+	DASHBOARDS_PASSWORD=${DASHBOARDS_PASSWORD:-$(generate_key "dashboards-password" 20)}
 
 	# configure login&pass for Dashboards, used by Nginx HTTP Basic Authentication
 	echo "${DASHBOARDS_USERNAME:-"onlyoffice"}:$(openssl passwd -6 -stdin <<< "${DASHBOARDS_PASSWORD}")" > /etc/openresty/.htpasswd_dashboards
@@ -806,6 +782,14 @@ setup_rabbitmq() {
 	echo "OK"
 }
 
+generate_key() {
+    local FILE_NAME=$1
+    local KEY_LENGTH=${2:-12}
+    local KEY=${3:-$( [[ -f ${APP_DIR}/.private/$FILE_NAME ]] && cat ${APP_DIR}/.private/$FILE_NAME || tr -dc A-Za-z0-9 </dev/urandom | head -c $KEY_LENGTH )}
+    echo "${KEY}" | tee "${APP_DIR}/.private/$FILE_NAME"
+    chmod -R 600 ${APP_DIR}/.private
+}
+
 product_configuration(){
 	echo -n "Configuring ${PRODUCT}... "
 
@@ -829,7 +813,15 @@ product_configuration(){
 	echo "SPRING_PROFILES_ACTIVE=prod,server" >> "$APP_DIR/systemd.env"
 	chmod o-rwx "$APP_DIR/systemd.env"
 
-	set_core_machinekey
+	echo "SPRING_APPLICATION_SIGNATURE_SECRET=${SIGNATURE_SECRET:-$(generate_key "signature")}" >> "$APP_DIR/systemd.env"
+	echo "SPRING_APPLICATION_ENCRYPTION_SECRET=${ENCRYPTION_SECRET:-$(generate_key "encryption")}" >> "$APP_DIR/systemd.env"
+
+	CORE_MACHINEKEY=${CORE_MACHINEKEY:-$(generate_key "machinekey")}
+	save_undefined_param "${USER_CONF}" "core.machinekey" "${CORE_MACHINEKEY}"
+	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core.machinekey" "${CORE_MACHINEKEY}"
+
+	save_undefined_param "${USER_CONF}" "core['base-domain']" "${APP_HOST}" "rewrite"
+	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core['base-domain']" "${APP_HOST}" "rewrite"
 
 	echo "OK"
 }
@@ -918,5 +910,5 @@ if $PACKAGE_MANAGER opensearch >/dev/null 2>&1; then
 	ELASTIC_VERSION=$(awk '/build:/{f=1} f&&/version:/{gsub(/"/,"",$2);print $2; exit}' /usr/share/opensearch/manifest.yml 2>/dev/null || echo "2.18.0")
 	[[ ! -f "$APP_DIR/.private/opensearch-version" || $(cat "$APP_DIR/.private/opensearch-version") != *"$ELASTIC_VERSION"* ]] && $MYSQL "$DB_NAME" -e "TRUNCATE webstudio_index";
 	echo "$ELASTIC_VERSION" > $APP_DIR/.private/opensearch-version
-	chmod o-rwx $APP_DIR/.private/opensearch-version
+	chmod -R 600 $APP_DIR/.private
 fi
