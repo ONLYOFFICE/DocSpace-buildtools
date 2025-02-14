@@ -33,13 +33,14 @@ RUN apt-get -y update && \
     npm  && \
     locale-gen en_US.UTF-8 && \
     npm install --global yarn && \
-    wget -O openjdk-21-jdk.deb https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.deb && \
-    dpkg -i openjdk-21-jdk.deb && apt-get install -f && \
+    echo "deb [signed-by=//usr/share/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb $(awk -F= '/^VERSION_CODENAME/{print$2}' /etc/os-release) main" | tee /etc/apt/sources.list.d/adoptium.list && \
+    curl -fsSL https://packages.adoptium.net/artifactory/api/gpg/key/public | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/adoptium.gpg --import && \
+    chmod 644 /usr/share/keyrings/adoptium.gpg && \
     echo "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list && \
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/nodesource.gpg --import && \
     chmod 644 /usr/share/keyrings/nodesource.gpg && \
     apt-get -y update && \
-    apt-get install -y nodejs unzip && \
+    apt-get install -y nodejs unzip temurin-21-jdk && \
     rm -rf /var/lib/apt/lists/*
 
 ADD https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/git/refs/heads/${GIT_BRANCH} version.json
