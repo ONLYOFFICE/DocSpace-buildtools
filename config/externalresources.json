@@ -10,7 +10,7 @@
         }
       }
     },
-    
+
     "common": {
       "default": {
         "entries": {
@@ -23,13 +23,13 @@
         }
       }
     },
-    
+
     "forum": {
       "default": {
         "domain": "https://forum.onlyoffice.com"
       }
     },
-      
+
     "helpcenter": {
       "default": {
         "domain": "https://helpcenter.onlyoffice.com/{ru|de|fr|es|it}",
@@ -147,19 +147,22 @@
         }
       }
     },
-    
+
     "support": {
       "default": {
-        "domain": "https://helpdesk.onlyoffice.com"
+        "domain": "https://helpdesk.onlyoffice.com",
+        "entries": {
+          "request": "/hc/requests/new"
+        }
       }
     },
-    
+
     "videoguides": {
       "default": {
         "domain": "https://helpcenter.onlyoffice.com/{ru|de|fr|es|it}/video.aspx",
         "entries": {
           "activesessions": "https://youtu.be/QxrRtMDj2ZM",
-          "archive": "https://youtu.be/WX-SN_nB4cI",   
+          "archive": "https://youtu.be/WX-SN_nB4cI",
           "backup": "https://youtu.be/2ed2iSxLCwk",
           "createfiles": "https://youtu.be/1f9sl4u94v4",
           "fileversions": "https://youtu.be/_Br4aGP7f3c",
