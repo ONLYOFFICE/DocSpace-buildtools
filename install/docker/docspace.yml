@@ -114,8 +114,8 @@ services:
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-socket:${DOCKER_TAG}"
     container_name: ${SOCKET_HOST}
     healthcheck:
-     <<: *x-healthcheck
-     test: curl --fail http://${SERVICE_SOCKET}/health/ || exit 1
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_SOCKET}/health/ || exit 1
     expose:
       - ${SERVICE_PORT}
 
@@ -156,8 +156,8 @@ services:
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-ssoauth:${DOCKER_TAG}"
     container_name: ${SSOAUTH_HOST}
     healthcheck:
-     <<: *x-healthcheck
-     test: curl --fail http://${SERVICE_SSOAUTH}/health/ || exit 1
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_SSOAUTH}/health/ || exit 1
     expose:
       - ${SERVICE_PORT}
       - "9834"
@@ -209,6 +209,7 @@ services:
       - onlyoffice-ssoauth
       - onlyoffice-doceditor
       - onlyoffice-login
+      - onlyoffice-ai
     environment:
       - SERVICE_BACKUP=${SERVICE_BACKUP}
       - SERVICE_FILES=${SERVICE_FILES}
@@ -219,6 +220,7 @@ services:
       - SERVICE_SOCKET=${SERVICE_SOCKET}
       - SERVICE_IDENTITY_API=${SERVICE_IDENTITY_API}
       - SERVICE_IDENTITY=${SERVICE_IDENTITY}
+      - SERVICE_AI=${SERVICE_AI}
       - SERVICE_STUDIO_NOTIFY=${SERVICE_STUDIO_NOTIFY}
       - SERVICE_API=${SERVICE_API}
       - SERVICE_API_SYSTEM=${SERVICE_API_SYSTEM}

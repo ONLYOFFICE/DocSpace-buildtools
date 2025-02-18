@@ -66,6 +66,12 @@ map $SERVICE_IDENTITY $service_identity {
     default $SERVICE_IDENTITY;
 }
 
+map $SERVICE_AI $service_ai {
+    volatile;
+    "" 127.0.0.1:8000;
+    default $SERVICE_AI;
+}
+
 map $SERVICE_STUDIO $service_studio {
     volatile;
     "" 127.0.0.1:5003;

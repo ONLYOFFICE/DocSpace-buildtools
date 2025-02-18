@@ -52,6 +52,7 @@ login = f"{local_ip}:5011"
 client = f"{local_ip}:5001"
 identity_auth = f"{local_ip}:8080"
 identity_api = f"{local_ip}:9090"
+ai = f"{local_ip}:8000"
 management = f"{local_ip}:5015"
 portal_url = f"http://{local_ip}"
 
@@ -198,6 +199,12 @@ else:
     print("Error: Unknown CPU Type:", arch_name)
     sys.exit(1)
 
+subprocess.run(["docker", "compose", "-f",
+                os.path.join(dockerDir, "qdrant.yml"), "up", "-d"])
+
+subprocess.run(["docker", "compose", "-f",
+                os.path.join(dockerDir, "ai.yml"), "up", "-d"])
+
 if dns == True:
     print("Run local dns server")
     os.environ["ROOT_DIR"] = dir
@@ -320,6 +327,7 @@ os.environ["SERVICE_MANAGEMENT"] = management
 os.environ["SERVICE_CLIENT"] = client
 os.environ["SERVICE_IDENTITY"] = identity_auth
 os.environ["SERVICE_IDENTITY_API"] = identity_api
+os.environ["SERVICE_AI"] = ai
 os.environ["ROOT_DIR"] = dir
 os.environ["BUILD_PATH"] = "/var/www"
 os.environ["SRC_PATH"] = os.path.join(dir, "publish/services")
