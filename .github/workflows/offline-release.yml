@@ -1,6 +1,9 @@
 name: Upload offline self-extracting archive
 
 on:
+  push:
+    tags:
+      - 'v*.*.*-server'
   workflow_dispatch:
 
 jobs:
@@ -10,6 +13,26 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Trigger creation of an offline archive
+        run: |
+          curl -s -X POST -H "Accept: application/vnd.github.everest-preview+json" -u "${{ secrets.USERNAME }}:${{ secrets.TOKEN }}" \
+            "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/actions/workflows/103532315/dispatches" \
+            --data '{"ref":"'"${{ github.ref }}"'","inputs":{"offline":"true"}}'
+          sleep 5
+
+          ACTION_RUN_ID=$(curl -s -u "${{ secrets.USERNAME }}:${{ secrets.TOKEN }}" \
+            "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/actions/workflows/103532315/runs" | \
+            jq -r ".workflow_runs[] | select(.head_branch==\"${GITHUB_REF#refs/heads/}\") | .id" | head -n 1)
+          [[ -z "${ACTION_RUN_ID}" || "${ACTION_RUN_ID}" == "null" ]] && { echo "Failed to initiate the workflow."; exit 1; }
+
+          while ACTION_STATUS=$(curl -s -u "${{ secrets.USERNAME }}:${{ secrets.TOKEN }}" \
+            "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/actions/runs/${ACTION_RUN_ID}" | jq -r '.status'); [[ "${ACTION_STATUS}" != "completed" ]]; do
+            echo "Current workflow status: ${ACTION_STATUS}" && sleep 10
+          done
+
+          ACTION_RESULT=$(curl -s -u "${{ secrets.USERNAME }}:${{ secrets.TOKEN }}" "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/actions/runs/${ACTION_RUN_ID}" | jq -r '.conclusion')
+          [[ "${ACTION_RESULT}" == "success" ]] && echo "Workflow completed successfully." || { echo "Workflow failed."; exit 1; }
 
       - name: Set environment variables
         run: |

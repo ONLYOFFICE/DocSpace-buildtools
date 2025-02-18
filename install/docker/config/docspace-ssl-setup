@@ -32,10 +32,10 @@ help(){
   echo "                  example.com,s1.example.com,s2.example.com."
   echo ""
   echo "Using your own certificates via the -f or --file parameter:"
-  echo "  docspace-ssl-setup --file DOMAIN CERTIFICATE PRIVATEKEY"
+  echo "  docspace-ssl-setup --file DOMAIN CERTIFICATE [PRIVATEKEY]"
   echo "    DOMAIN        Main domain name to apply."
-  echo "    CERTIFICATE   Path to the certificate file for the domain."
-  echo "    PRIVATEKEY    Path to the private key file for the certificate."
+  echo "    CERTIFICATE   Path to the certificate file for the domain (PEM, PFX, DER, CER, PKCS#7)."
+  echo "    PRIVATEKEY    (Optional) Path to private key (required unless PFX)."
   echo ""
   echo "Return to the default proxy configuration using the -d or --default parameter:"
   echo "  docspace-ssl-setup --default"
@@ -61,18 +61,59 @@ create_renew_script() {
   fi
 }
 
-case $1 in
+check_file_format() {
+  FILE=$1
+
+  if openssl pkcs12 -in "$FILE" -info -noout --passin pass:"$PFX_PASSWORD" > /dev/null 2>&1; then
+    CERTIFICATE_FILE="${FILE%.pfx}.pem"
+    PRIVATEKEY_FILE="${FILE%.pfx}-private.pem"
+    
+    echo "$FILE is a valid PFX certificate. Converting to PEM..."
+    openssl pkcs12 -in "$FILE" -out "$CERTIFICATE_FILE" -nokeys --passin pass:"$PFX_PASSWORD"
+    openssl pkcs12 -in "$FILE" -out "$PRIVATEKEY_FILE" -nocerts -nodes --passin pass:"$PFX_PASSWORD"
+
+  elif openssl x509 -in "$FILE" -text -noout > /dev/null 2>&1; then
+    echo "$FILE is a valid PEM certificate."
+  elif openssl pkey -in "$FILE" -check > /dev/null 2>&1; then
+    echo "$FILE is a valid private key."
+
+  elif openssl x509 -in "$FILE" -inform DER -text -noout > /dev/null 2>&1; then
+    echo "$FILE is a valid DER/CER certificate. Converting to PEM..."
+    CERTIFICATE_FILE="${FILE%.*}.pem"
+    openssl x509 -in "$FILE" -inform DER -out "$CERTIFICATE_FILE"
+
+  elif openssl pkcs7 -in "$FILE" -print_certs -noout > /dev/null 2>&1; then
+    echo "$FILE is a valid PKCS#7 certificate. Converting to PEM..."
+    CERTIFICATE_FILE="${FILE%.*}.pem"
+    openssl pkcs7 -in "$FILE" -print_certs -out "$CERTIFICATE_FILE"
+
+  else
+    echo "Unsupported or invalid file format: $FILE" && exit 1
+  fi
+}
+                                                                                                                                                              
+case $1 in 
   -f | --file )
-    if [ -n "$2" ] && [ -n "$3" ] && [ -n "$4" ]; then
-      echo "Using specified files to configure SSL..."
+    if [ -n "$2" ] && [ -n "$3" ]; then
       DOMAIN=$2
       CERTIFICATE_FILE=$3
-      PRIVATEKEY_FILE=$4
+      
+      if [[ "$CERTIFICATE_FILE" =~ \.(p12|pfx)$ ]]; then
+        echo "Using PKCS#12 file for SSL configuration..."
+        openssl pkcs12 -in "$CERTIFICATE_FILE" -info -noout -passin pass: >/dev/null 2>&1 || read -s -p "Enter password: " PFX_PASSWORD
+        check_file_format "$CERTIFICATE_FILE"
+      elif [ -n "$4" ]; then
+        echo "Using specified certificate and private key for SSL configuration..."
+        PRIVATEKEY_FILE=$4
+        check_file_format "$CERTIFICATE_FILE"
+        check_file_format "$PRIVATEKEY_FILE"
+      else
+        echo "Error: PRIVATEKEY_FILE is required unless using a .p12/.pfx file." && exit 1
+      fi
     else
       help
     fi
   ;;
-  
   -d | --default )
     echo "Return to the default proxy configuration..."
     if [ -z "$(awk -F '=' '/^\s*DOCUMENT_SERVER_URL_EXTERNAL/{gsub(/^[[:space:]]*"|"[[:space:]]*$/, "", $2); print $2}' ${DOCKERCOMPOSE}/.env)" ]; then
