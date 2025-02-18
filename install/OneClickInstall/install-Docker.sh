@@ -41,6 +41,7 @@ DOCKER_TAG=""
 INSTALLATION_TYPE="ENTERPRISE"
 IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-api"
 CONTAINER_NAME="${PACKAGE_SYSNAME}-api"
+IDENTITY_CONTAINER_NAME="${PACKAGE_SYSNAME}-identity-api"
 
 NETWORK_NAME=${PACKAGE_SYSNAME}
 
@@ -103,6 +104,8 @@ APP_CORE_MACHINEKEY=""
 ENV_EXTENSION=""
 LETS_ENCRYPT_DOMAIN=""
 LETS_ENCRYPT_MAIL=""
+IDENTITY_SIGNATURE_SECRET=""
+IDENTITY_ENCRYPTION_SECRET=""
 
 HELP_TARGET="install-Docker.sh"
 OFFLINE_INSTALLATION="false"
@@ -1055,11 +1058,11 @@ get_tag_from_hub () {
 		JQ_FILTER='.results[].name // empty'
 	fi
 
-	TAGS_RESP=($(curl -s -H "${AUTH_HEADER}" -X GET "${HUB_URL}" | jq -r "${JQ_FILTER}"))
+	mapfile -t TAGS_RESP < <(curl -s -H "${AUTH_HEADER}" -X GET "${HUB_URL}" | jq -r "${JQ_FILTER}")
 }
 
 get_available_version () {
-	[ "${OFFLINE_INSTALLATION}" = "false" ] && get_tag_from_hub ${1} || TAGS_RESP=$(docker images --format "{{.Tag}}" ${1})
+	[ "${OFFLINE_INSTALLATION}" = "false" ] && get_tag_from_hub ${1} || mapfile -t TAGS_RESP < <(docker images --format "{{.Tag}}" "${1}")
 
 	VERSION_REGEX='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
 	[ ${#TAGS_RESP[@]} -eq 1 ] && LATEST_TAG="${TAGS_RESP[0]}" || LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$VERSION_REGEX" | sort -V | tail -n 1)
@@ -1103,6 +1106,13 @@ set_jwt_header () {
 set_core_machinekey () {
 	APP_CORE_MACHINEKEY="${APP_CORE_MACHINEKEY:-$(get_env_parameter "APP_CORE_MACHINEKEY" "${CONTAINER_NAME}")}"
 	[ "$UPDATE" != "true" ] && APP_CORE_MACHINEKEY="${APP_CORE_MACHINEKEY:-$(get_random_str 12)}"
+}
+
+set_identity_secrets () {
+	IDENTITY_SIGNATURE_SECRET="${IDENTITY_SIGNATURE_SECRET:-$(get_env_parameter "IDENTITY_SIGNATURE_SECRET" "${IDENTITY_CONTAINER_NAME}")}"
+	IDENTITY_SIGNATURE_SECRET="${IDENTITY_SIGNATURE_SECRET:-$(get_random_str 12)}"
+	IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-$(get_env_parameter "IDENTITY_ENCRYPTION_SECRET" "${IDENTITY_CONTAINER_NAME}")}"
+	IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-$(get_random_str 12)}"
 }
 
 set_mysql_params () {
@@ -1150,7 +1160,7 @@ set_docspace_params() {
 }
 
 set_installation_type_data () {
-	UPDATE=${UPDATE:-$(test -n "$(docker ps -aqf name=${CONTAINER_NAME})" && echo true)}
+	is_command_exists docker && UPDATE=${UPDATE:-$(test -n "$(docker ps -aqf name=${CONTAINER_NAME})" && echo true)}
 	if [ -z "${DOCUMENT_SERVER_IMAGE_NAME}" ]; then
 		DOCUMENT_SERVER_IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}documentserver"
 		case "${INSTALLATION_TYPE}" in
@@ -1259,7 +1269,7 @@ install_fluent_bit () {
 		if crontab -l | grep -q "${OPENSEARCH_INDEX}"; then
 			crontab -l | grep -v "${OPENSEARCH_INDEX}" | crontab -
 		fi
-		(crontab -l 2>/dev/null; echo "0 0 */1 * * curl -s -X POST "$(get_env_parameter 'ELK_SHEME')"://${ELK_HOST:-127.0.0.1}:$(get_env_parameter 'ELK_PORT')/${OPENSEARCH_INDEX}/_delete_by_query -H 'Content-Type: application/json' -d '{\"query\": {\"range\": {\"@timestamp\": {\"lt\": \"now-30d\"}}}}'") | crontab -
+		(crontab -l 2>/dev/null; echo "0 0 */1 * * curl -s -X POST $(get_env_parameter 'ELK_SHEME')://${ELK_HOST:-127.0.0.1}:$(get_env_parameter 'ELK_PORT')/${OPENSEARCH_INDEX}/_delete_by_query -H 'Content-Type: application/json' -d '{\"query\": {\"range\": {\"@timestamp\": {\"lt\": \"now-30d\"}}}}'") | crontab -
 
 		sed -i "s/OPENSEARCH_HOST/${ELK_HOST:-"${PACKAGE_SYSNAME}-opensearch"}/g" "${BASE_DIR}/config/fluent-bit.conf"
 		sed -i "s/OPENSEARCH_PORT/$(get_env_parameter "ELK_PORT")/g" ${BASE_DIR}/config/fluent-bit.conf
@@ -1285,8 +1295,10 @@ install_product () {
 		fi
 
 		reconfigure ENV_EXTENSION ${ENV_EXTENSION}
-		reconfigure IDENTITY_PROFILE "${IDENTITY_PROFILE:-"prod"}"
+		reconfigure IDENTITY_PROFILE "${IDENTITY_PROFILE:-"prod,server"}"
 		reconfigure APP_CORE_MACHINEKEY ${APP_CORE_MACHINEKEY}
+		reconfigure IDENTITY_SIGNATURE_SECRET ${IDENTITY_SIGNATURE_SECRET}
+		reconfigure IDENTITY_ENCRYPTION_SECRET ${IDENTITY_ENCRYPTION_SECRET}
 		reconfigure APP_CORE_BASE_DOMAIN ${APP_CORE_BASE_DOMAIN}
 		reconfigure APP_URL_PORTAL "${APP_URL_PORTAL:-"http://${PACKAGE_SYSNAME}-router:8092"}"
 		reconfigure EXTERNAL_PORT ${EXTERNAL_PORT}
@@ -1315,7 +1327,7 @@ install_product () {
 			docker run --rm --network="$(get_env_parameter "NETWORK_NAME")" mysql:${MYSQL_TAG:-latest} mysql -h "${MYSQL_HOST:-${MYSQL_CONTAINER_NAME}}" -P "${MYSQL_PORT:-3306}" -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DATABASE}" -e "TRUNCATE webstudio_index;"
 		fi
 
-		if [ ! -z "${CERTIFICATE_PATH}" ] && [ ! -z "${CERTIFICATE_KEY_PATH}" ] && [[ ! -z "${APP_DOMAIN_PORTAL}" ]]; then
+		if [ ! -z "${CERTIFICATE_PATH}" ] && [[ ! -z "${APP_DOMAIN_PORTAL}" ]]; then
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -f "${APP_DOMAIN_PORTAL}" "${CERTIFICATE_PATH}" "${CERTIFICATE_KEY_PATH}"
 		elif [ ! -z "${LETS_ENCRYPT_DOMAIN}" ] && [ ! -z "${LETS_ENCRYPT_MAIL}" ]; then
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup "${LETS_ENCRYPT_MAIL}" "${LETS_ENCRYPT_DOMAIN}"
@@ -1365,7 +1377,7 @@ offline_check_docker_image() {
 
 check_hub_connection() {
 	get_tag_from_hub ${IMAGE_NAME}
-	[ -z "$TAGS_RESP" ] && { echo -e "Unable to download tags from ${HUB:-hub.docker.com}.\nTry specifying another dockerhub name using -hub"; exit 1; } || true
+	[ -z "${TAGS_RESP[*]}" ] && { echo -e "Unable to download tags from ${HUB:-hub.docker.com}.\nTry specifying another dockerhub name using -hub"; exit 1; }
 }
 
 dependency_installation() {
@@ -1512,6 +1524,7 @@ start_installation () {
 	set_jwt_header
 
 	set_core_machinekey
+	set_identity_secrets
 
 	set_mysql_params
 

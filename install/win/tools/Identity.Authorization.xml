@@ -5,7 +5,7 @@
 	<priority>RealTime</priority>
 	<startmode>Automatic</startmode>
 	<autoRefresh>false</autoRefresh>
-	<logpath>{APPDIR}logs</logpath>
+	<logpath>{APPDIR}Logs</logpath>
 	<onfailure action="restart" delay="10 sec"/>
 	<executable>java</executable>
 	<env name="JDBC_URL" value="{DB_HOST}" />
@@ -20,7 +20,7 @@
 	<env name="RABBIT_URI" value="{AMQP_PROTOCOL}://{AMQP_USER}:{AMQP_PWD}@{AMQP_HOST}:{AMQP_PORT}{AMQP_VHOST}" />
 	<env name="REDIS_HOST" value="{REDIS_HOST}" />
         <env name="REDIS_PORT" value="{REDIS_PORT}" />
-	<env name="LOG_FILE_PATH" value="{APPDIR}logs\ASC.Identity.Authorization.log" />
+	<env name="LOG_FILE_PATH" value="{APPDIR}Logs\ASC.Identity.Authorization.log" />
 	<env name="SPRING_PROFILES_ACTIVE" value="prod" />
 	<env name="SPRING_APPLICATION_NAME" value="ASC.Identity.Authorization" />
 	<env name="SERVER_PORT" value="8080" />
