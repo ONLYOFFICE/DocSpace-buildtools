@@ -19,12 +19,12 @@ services:
     environment:
       - ROUTER_HOST=${ROUTER_HOST}
     volumes:
-      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}webroot_path:/letsencrypt
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/nginx
       - ./config/nginx/templates/nginx.conf.template:/etc/nginx/nginx.conf
       - ./config/nginx/letsencrypt.conf:/etc/nginx/includes/letsencrypt.conf
       - ./config/nginx/templates/proxy.upstream.conf.template:/etc/nginx/templates/proxy.upstream.conf.template:ro
       - ./config/nginx/onlyoffice-proxy.conf:/etc/nginx/conf.d/default.conf
+      - webroot_path:/letsencrypt
 
 networks:
   default:
