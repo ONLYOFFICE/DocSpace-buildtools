@@ -21,8 +21,8 @@ services:
     environment:
       - ROUTER_HOST=${ROUTER_HOST}
     volumes:
-      - webroot_path:/letsencrypt
-      - log_data:/var/log/nginx
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}webroot_path:/letsencrypt
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/nginx
       - ./config/nginx/templates/nginx.conf.template:/etc/nginx/nginx.conf
       - ./config/nginx/letsencrypt.conf:/etc/nginx/includes/letsencrypt.conf
       - ./config/nginx/templates/proxy.upstream.conf.template:/etc/nginx/templates/proxy.upstream.conf.template:ro

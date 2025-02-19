@@ -55,8 +55,8 @@ x-service:
       DEBUG_INFO: ${DEBUG_INFO}
     volumes:
     #- /app/onlyoffice/CommunityServer/data:/app/onlyoffice/data
-    - log_data:/var/log/onlyoffice
-    - app_data:/app/onlyoffice/data
+    - ${VOLUMES_DIR:+${VOLUMES_DIR}/}app_data:/app/onlyoffice/data
+    - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
 
 services:
   onlyoffice-notify:
@@ -75,7 +75,3 @@ networks:
 volumes:
   log_data:
   app_data:
-  crm_data:
-  project_data:
-  calendar_data:
-  mail_data:

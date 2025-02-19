@@ -7,7 +7,7 @@ services:
       - HOST=${ELK_CONTAINER_NAME}
       - PORT=${ELK_PORT}
     volumes:
-      - log_data:/var/log/onlyoffice
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
       - ./config/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
 
 networks:

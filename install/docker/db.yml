@@ -23,7 +23,7 @@ services:
       start_period: 10s
       retries: 3
     volumes:
-      - mysql_data:/var/lib/mysql
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}mysql_data:/var/lib/mysql
       - ./config/mysql/conf.d/:/etc/mysql/conf.d
     networks:
       - ${NETWORK_NAME}
