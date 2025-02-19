@@ -199,11 +199,6 @@ else:
     print("Error: Unknown CPU Type:", arch_name)
     sys.exit(1)
 
-subprocess.run(["docker", "compose", "-f",
-                os.path.join(dockerDir, "qdrant.yml"), "up", "-d"])
-
-subprocess.run(["docker", "compose", "-f",
-                os.path.join(dockerDir, "ai.yml"), "up", "-d"])
 
 if dns == True:
     print("Run local dns server")
@@ -343,6 +338,13 @@ if identity:
     print("Run identity")
     subprocess.run(["docker-compose", "-f",
                    os.path.join(dockerDir, "build-identity.yml"), "up", "-d"])
+
+subprocess.run(["docker", "compose", "-f",
+                os.path.join(dockerDir, "qdrant.yml"), "up", "-d"])
+
+subprocess.run(["docker", "compose", "-f",
+                os.path.join(dockerDir, "ai.yml"), "up", "-d"])
+
 
 print()
 print("Run script directory:", dir)

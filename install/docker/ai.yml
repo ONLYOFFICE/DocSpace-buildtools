@@ -8,6 +8,31 @@ x-healthcheck: &x-healthcheck
   start_period: 20s
   timeout: 10s
 
+x-common-environment: &x-common-environment
+  MYSQL_CONTAINER_NAME: ${MYSQL_CONTAINER_NAME}
+  MYSQL_HOST: ${MYSQL_CONTAINER_NAME}
+  MYSQL_PORT: ${MYSQL_PORT}
+  MYSQL_DATABASE: ${MYSQL_DATABASE}
+  MYSQL_USER: ${MYSQL_USER}
+  MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+  RABBIT_CONTAINER_NAME: ${RABBIT_CONTAINER_NAME}
+  RABBIT_PROTOCOL: ${RABBIT_PROTOCOL}
+  RABBIT_HOST: onlyoffice-rabbitmq
+  RABBIT_USER_NAME: ${RABBIT_USER_NAME}
+  RABBIT_PASSWORD: ${RABBIT_PASSWORD}
+  RABBIT_VIRTUAL_HOST: ${RABBIT_VIRTUAL_HOST}
+  REDIS_HOST: onlyoffice-redis
+  REDIS_PORT: ${REDIS_PORT}
+  REDIS_USERNAME: ${REDIS_USER_NAME}
+  REDIS_PASSWORD: ${REDIS_PASSWORD}
+  REDIS_CONTAINER_NAME: ${REDIS_CONTAINER_NAME}
+  QDRANT_HOST: qdrant
+  QDRANT_PORT: 6333
+  ROUTER_CLIENT_ADDRESS: http://onlyoffice-router:8092
+  PEOPLE_SERIVCE_ADDRESS: http://onlyoffice-people-server:5050
+  SETTINGS_SERVICE_ADDRESS: http://onlyoffice-api:5050
+  FILES_SERVICE_ADDRESS: http://onlyoffice-files:5050
+
 services:
   onlyoffice-ai:
     build:
@@ -16,31 +41,14 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - PORT=8000
-      - MYSQL_CONTAINER_NAME=${MYSQL_CONTAINER_NAME}
-      - MYSQL_HOST=${MYSQL_HOST}
-      - MYSQL_PORT=${MYSQL_PORT}
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-      - RABBIT_CONTAINER_NAME=${RABBIT_CONTAINER_NAME}
-      - RABBIT_PROTOCOL=${RABBIT_PROTOCOL}
-      - RABBIT_HOST=${RABBIT_HOST}
-      - RABBIT_USER_NAME=${RABBIT_USER_NAME}
-      - RABBIT_PASSWORD=${RABBIT_PASSWORD}
-      - RABBIT_VIRTUAL_HOST=${RABBIT_VIRTUAL_HOST}
-      - REDIS_HOST=${REDIS_HOST}
-      - REDIS_PORT=${REDIS_PORT}
-      - REDIS_USERNAME=${REDIS_USER_NAME}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - REDIS_CONTAINER_NAME=${REDIS_CONTAINER_NAME}
-      - QDRANT_HOST=qdrant
-      - QDRANT_PORT=6333
+      <<: *x-common-environment
+      PORT: 8000
     volumes:
+      - ../../../../DocSpace-AI:/app
       - ../../config:/app/src/config
     healthcheck:
       <<: *x-healthcheck
-      test: ["CMD", "curl", "-f", "${SERVICE_AI}/api/2.0/ai/health"]
+      test: ["CMD", "curl", "-f", "${SERVICE_AI}/health"]
 
 networks:
   default:
