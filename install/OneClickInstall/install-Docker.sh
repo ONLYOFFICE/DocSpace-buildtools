@@ -518,6 +518,15 @@ while [ "$1" != "" ]; do
 			fi
 		;;
 
+		-vd | --volumesdir )
+			if [ "$2" != "" ]; then
+				VOLUMES_DIR=$2
+				[[ "$VOLUMES_DIR" == "$BASE_DIR"* ]] && { echo "Warning: Please change the volumes directory, as $BASE_DIR will be removed during an update."; exit 1; }
+				shift
+			fi
+		;;
+
+
 		-h | -? | --help )
 			echo "  Usage: bash $HELP_TARGET [PARAMETER] [[PARAMETER], ...]"
 			echo
@@ -534,6 +543,7 @@ while [ "$1" != "" ]; do
 			echo "      -env, --environment               $PRODUCT environment"
 			echo "      -mk, --machinekey                 setting for core.machinekey"
 			echo "      -ep, --externalport               external $PRODUCT port (default value 80)"
+			echo "      -vd, --volumesdir                 directory for storing Docker volumes (default value /var/lib/docker/volumes)"
 			echo "      -idocs, --installdocs             install or update document server (true|false)"
 			echo "      -docsi, --docsimage               document server image name"
 			echo "      -docsv, --docsversion             document server version"
@@ -1132,6 +1142,7 @@ set_docspace_params() {
 	HUB=${HUB:-$(get_env_parameter "HUB")}
 
 	ENV_EXTENSION=${ENV_EXTENSION:-$(get_env_parameter "ENV_EXTENSION" "${CONTAINER_NAME}")}
+	VOLUMES_DIR=${VOLUMES_DIR:-$(get_env_parameter "VOLUMES_DIR")}
 	APP_CORE_BASE_DOMAIN=${APP_CORE_BASE_DOMAIN:-$(get_env_parameter "APP_CORE_BASE_DOMAIN" "${CONTAINER_NAME}")}
 	EXTERNAL_PORT=${EXTERNAL_PORT:-$(get_env_parameter "EXTERNAL_PORT" "${CONTAINER_NAME}")}
 
@@ -1216,6 +1227,11 @@ install_mysql_server () {
 	reconfigure MYSQL_ROOT_PASSWORD ${MYSQL_ROOT_PASSWORD}
 
 	if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ]; then
+		if [ -n "${VOLUMES_DIR}" ]; then
+			mkdir -p "${VOLUMES_DIR}/mysql_data"
+			chown $(docker run --rm "$(docker-compose -f ${BASE_DIR}/db.yml config | awk '/image:/ {print $2; exit}')" stat -c '%u:%g' /var/lib/mysql) "${VOLUMES_DIR}/mysql_data"
+			chmod $(docker run --rm "$(docker-compose -f ${BASE_DIR}/db.yml config | awk '/image:/ {print $2; exit}')" stat -c '%a' /var/lib/mysql) "${VOLUMES_DIR}/mysql_data"
+		fi
 		docker-compose -f $BASE_DIR/db.yml up -d --force-recreate
 	elif [ "$INSTALL_MYSQL_SERVER" == "pull" ]; then
 		docker-compose -f $BASE_DIR/db.yml pull
@@ -1250,11 +1266,17 @@ install_redis () {
 
 install_elasticsearch () {
 	if [[ -z ${ELK_HOST} ]] && [ "$INSTALL_ELASTICSEARCH" == "true" ]; then
+		if [ -n "${VOLUMES_DIR}" ]; then
+			mkdir -p "${VOLUMES_DIR}/os_data"
+			chown $(docker run --rm "$(docker-compose -f ${BASE_DIR}/opensearch.yml config | awk '/image:/ {print $2; exit}')" stat -c '%u:%g' /usr/share/opensearch/data) "${VOLUMES_DIR}/os_data"
+		fi
+
 		if [ "$(free --mega | grep -oP '\d+' | head -n 1)" -gt "12000" ]; then #RAM ~12Gb
 			sed -i 's/Xms[0-9]g/Xms4g/g; s/Xmx[0-9]g/Xmx4g/g' $BASE_DIR/opensearch.yml
 		else
 			sed -i 's/Xms[0-9]g/Xms1g/g; s/Xmx[0-9]g/Xmx1g/g' $BASE_DIR/opensearch.yml
 		fi
+
 		docker-compose -f $BASE_DIR/opensearch.yml up -d
 	elif [ "$INSTALL_ELASTICSEARCH" == "pull" ]; then
 		docker-compose -f $BASE_DIR/opensearch.yml pull
@@ -1416,6 +1438,7 @@ check_docker_image () {
 	reconfigure STATUS ${STATUS}
 	reconfigure INSTALLATION_TYPE ${INSTALLATION_TYPE}
 	reconfigure NETWORK_NAME ${NETWORK_NAME}
+	reconfigure VOLUMES_DIR ${VOLUMES_DIR}
 	
 	reconfigure MYSQL_VERSION ${MYSQL_VERSION}
 	reconfigure ELK_VERSION ${ELK_VERSION}
