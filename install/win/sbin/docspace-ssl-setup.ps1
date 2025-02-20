@@ -48,14 +48,131 @@ $node_services = @(
     "DsConverterSvc"
 )
 
-if ( $args.Count -ge 2 )
-{
+function ConvertToPem {
+    param (
+        [string]$filePath
+    )
 
-  if ($args[0] -eq "-f") {
-    $letsencrypt_domain = $args[1] -JOIN ","
-    $ssl_cert = $args[2]
-    $ssl_key = $args[3]
-  }
+    $extension = [System.IO.Path]::GetExtension($filePath).ToLower()
+
+    switch ($extension) {
+        ".pfx" {
+            Write-Output "Converting PFX to PEM..."
+            $pemCertFile = "$($filePath -replace '\.pfx$', '.pem')"
+            $pemKeyFile = "$($filePath -replace '\.pfx$', '-private.pem')"
+
+            $pfx = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
+            try {
+                $pfx.Import($filePath, $null, "Exportable, PersistKeySet")
+            } catch {
+                $password = Read-Host "Enter password for PFX" -AsSecureString
+                try {
+                    $pfx.Import($filePath, $password, "Exportable, PersistKeySet")
+                } catch {
+                    Write-Output "Invalid password or corrupt PFX file"
+                    exit 1
+                }
+            }
+
+            $pemCert = "-----BEGIN CERTIFICATE-----`n" + [Convert]::ToBase64String($pfx.RawData, 'InsertLineBreaks') + "`n-----END CERTIFICATE-----"
+            $pemCert | Set-Content -Path $pemCertFile -Encoding Ascii
+
+            $privateKey = $pfx.PrivateKey
+            if ($privateKey) {
+                $pemKey = "-----BEGIN PRIVATE KEY-----`n" + [Convert]::ToBase64String($privateKey.ExportPkcs8PrivateKey(), 'InsertLineBreaks') + "`n-----END PRIVATE KEY-----"
+                $pemKey | Set-Content -Path $pemKeyFile -Encoding Ascii
+            } else {
+                Write-Output "No private key found in PFX"
+            }
+
+            return @{"CertFile" = $pemCertFile; "KeyFile" = $pemKeyFile}
+        }
+
+        ".der" { 
+            Write-Output "Converting DER to PEM..."
+            $pemCertFile = "$($filePath -replace '\.der$', '.pem')"
+            $DerBytes = [System.IO.File]::ReadAllBytes($filePath)
+            $PemCert = "-----BEGIN CERTIFICATE-----`n" + [Convert]::ToBase64String($DerBytes, 'InsertLineBreaks') + "`n-----END CERTIFICATE-----"
+            $PemCert | Set-Content -Path $pemCertFile -Encoding Ascii
+            return @{"CertFile" = $pemCertFile}
+        }
+
+        ".cer" {
+            Write-Output "Converting CER to PEM..."
+            $pemCertFile = "$($filePath -replace '\.cer$', '.pem')"
+            $CerBytes = [System.IO.File]::ReadAllBytes($filePath)
+            $PemCert = "-----BEGIN CERTIFICATE-----`n" + [Convert]::ToBase64String($CerBytes, 'InsertLineBreaks') + "`n-----END CERTIFICATE-----"
+            $PemCert | Set-Content -Path $pemCertFile -Encoding Ascii
+            return @{"CertFile" = $pemCertFile}
+        }
+
+        ".p7b" { 
+            Write-Output "Converting PKCS#7 (P7B) to PEM..."
+            $pemCertFile = "$($filePath -replace '\.p7b$', '.pem')"
+            $CertCollection = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2Collection
+            $CertCollection.Import($filePath)
+
+            $PemCerts = ""
+            foreach ($Cert in $CertCollection) {
+                $PemCerts += "-----BEGIN CERTIFICATE-----`n" + [Convert]::ToBase64String($Cert.RawData, 'InsertLineBreaks') + "`n-----END CERTIFICATE-----`n"
+            }
+            $PemCerts | Set-Content -Path $pemCertFile -Encoding Ascii
+            return @{"CertFile" = $pemCertFile}
+        }
+
+        default {
+            Write-Output "Unsupported file format: $filePath"
+            exit 1
+        }
+    }
+}
+
+function CheckFileFormat {
+    param (
+        [string]$filePath
+    )
+
+    if (!(Test-Path $filePath)) {
+        Write-Output "File not found - $filePath"
+        exit 1
+    }
+
+    $extension = [System.IO.Path]::GetExtension($filePath).ToLower()
+
+    if ($extension -in @(".pfx", ".der", ".cer", ".p7b", ".p7c")) {
+        Write-Output "Detected format: $extension"
+        return $extension
+    }
+
+    $content = Get-Content -Path $filePath -Raw
+    if ($content -match "-----BEGIN CERTIFICATE-----") {
+        Write-Output "PEM format detected."
+        return "PEM"
+    }
+
+    Write-Output "Unsupported or invalid file format: $filePath"
+    exit 1
+}
+
+
+if ($args.Count -ge 2) {
+    if ($args[0] -eq "-f") {
+        $letsencrypt_domain = $args[1] -JOIN ","
+        $ssl_cert = $args[2]
+        $ssl_key = $args[3]
+
+        $certFormat = CheckFileFormat -filePath $ssl_cert
+
+        if ($certFormat -in @(".pfx", ".der", ".cer", ".p7b")) {
+            Write-Output "Detected $certFormat certificate, converting to PEM..."
+            $pemFiles = ConvertToPem -filePath $ssl_cert
+            $ssl_cert = $pemFiles.CertFile
+            if ($pemFiles.ContainsKey("KeyFile")) {
+                $ssl_key = $pemFiles.KeyFile
+            }
+        }
+    }
+}
 
   else {
     $letsencrypt_mail = $args[0] -JOIN ","
