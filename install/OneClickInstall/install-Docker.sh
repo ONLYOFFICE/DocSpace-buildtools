@@ -1388,18 +1388,14 @@ dependency_installation() {
 		install_package jq
 	fi
 
-	if ! is_command_exists docker; then
-		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker || { echo "docker not installed"; exit 1; }
-	elif [ "$(docker --version | awk -F'[ ,.]' '{print $3}')" -lt "18" ]; then
-		[ "$OFFLINE_INSTALLATION" = "false" ]   && install_docker || { echo "docker version is outdated"; exit 1; }
+	if ! is_command_exists docker || [ "$(docker --version | awk -F'[ ,.]' '{print $3}')" -lt 18 ]; then
+		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker || { echo "docker not installed or outdated version"; exit 1; }
 	else
 		systemctl start docker
 	fi
 
-	if ! is_command_exists docker-compose; then
-		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker_compose || { echo "docker-compose not installed"; exit 1; }
-	elif [ $(docker-compose -v | awk '{sub(/^v/,"",$NF);split($NF,a,".");printf "%d%03d%03d",a[1],a[2],a[3]}') -lt 2018000 ]; then
-		[ "$OFFLINE_INSTALLATION" = "false" ]   && install_docker_compose || { echo "docker-compose version is outdated"; exit 1; }
+	if ! is_command_exists docker-compose || [ $(docker-compose -v | awk '{sub(/^v/,"",$NF);split($NF,a,".");printf "%d%03d%03d",a[1],a[2],a[3]}') -lt 2018000 ]; then
+		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker_compose || { echo "docker-compose not installed or outdated version"; exit 1; }
 	fi
 }
 
