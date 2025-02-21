@@ -34,9 +34,8 @@ help(){
   echo "Using your own certificates via the -f or --file parameter:"
   echo "  docspace-ssl-setup --file DOMAIN CERTIFICATE [PRIVATEKEY]"
   echo "    DOMAIN        Main domain name to apply."
-  echo "    CERTIFICATE   Path to the certificate file for the domain."
-  echo "    PRIVATEKEY    (Optional) Path to the private key file for the certificate."
-  echo "                  Required unless using a PFX certificate."
+  echo "    CERTIFICATE   Path to the certificate file for the domain (PEM, PFX, DER, CER, PKCS#7)."
+  echo "    PRIVATEKEY    (Optional) Path to private key (required unless PFX)."
   echo ""
   echo "Return to the default proxy configuration using the -d or --default parameter:"
   echo "  docspace-ssl-setup --default"
@@ -77,6 +76,17 @@ check_file_format() {
     echo "$FILE is a valid PEM certificate."
   elif openssl pkey -in "$FILE" -check > /dev/null 2>&1; then
     echo "$FILE is a valid private key."
+
+  elif openssl x509 -in "$FILE" -inform DER -text -noout > /dev/null 2>&1; then
+    echo "$FILE is a valid DER/CER certificate. Converting to PEM..."
+    CERTIFICATE_FILE="${FILE%.*}.pem"
+    openssl x509 -in "$FILE" -inform DER -out "$CERTIFICATE_FILE"
+
+  elif openssl pkcs7 -in "$FILE" -print_certs -noout > /dev/null 2>&1; then
+    echo "$FILE is a valid PKCS#7 certificate. Converting to PEM..."
+    CERTIFICATE_FILE="${FILE%.*}.pem"
+    openssl pkcs7 -in "$FILE" -print_certs -out "$CERTIFICATE_FILE"
+
   else
     echo "Unsupported or invalid file format: $FILE" && exit 1
   fi

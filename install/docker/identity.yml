@@ -42,7 +42,7 @@ services:
       <<: *x-healthcheck
       test: curl --fail ${SERVICE_IDENTITY}/health/ || exit 1
     volumes:
-      - log_data:/var/log/onlyoffice
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
 
   onlyoffice-identity-api:
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-api:${DOCKER_TAG}"
@@ -59,7 +59,7 @@ services:
       <<: *x-healthcheck
       test: curl --fail ${SERVICE_IDENTITY_API}/health/ || exit 1
     volumes:
-      - log_data:/var/log/onlyoffice
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
 
 networks:
   default:

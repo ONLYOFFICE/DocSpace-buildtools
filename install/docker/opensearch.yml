@@ -19,7 +19,7 @@ services:
         soft: 65536 # maximum number of open files for the OpenSearch user, set to at least 65536 on modern systems
         hard: 65536
     volumes:
-      - os_data:/usr/share/opensearch/data
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}os_data:/usr/share/opensearch/data
     expose:
       - "9200"
       - "9600" # required for Performance Analyzer
