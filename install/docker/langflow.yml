@@ -1,0 +1,37 @@
+services:
+  onlyoffice-langflow:
+    image: ${HUB}${ONLYFLOW_IMAGE_NAME}
+    container_name: ${ONLYFLOW_HOST}
+    restart: always
+    ports:
+      - "${ONLYFLOW_BACKEND_PORT}:${ONLYFLOW_BACKEND_PORT}"
+      - "${ONLYFLOW_FRONTEND_PORT}:${ONLYFLOW_FRONTEND_PORT}"
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@onlyoffice-langflow-postgres:5432/langflow
+      - LANGFLOW_CONFIG_DIR=/app/langflow
+    volumes:
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}langflow_data:/app
+    depends_on:
+      - onlyoffice-langflow-postgres
+
+  onlyoffice-langflow-postgres:
+    container_name: onlyoffice-langflow-postgres
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: langflow
+      POSTGRES_PASSWORD: langflow
+      POSTGRES_DB: langflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}langflow_pg_data:/var/lib/postgresql/data
+
+networks:
+  default:
+    name: onlyoffice
+    external: true
+
+volumes:
+  langflow_data:
+  langflow_pg_data:

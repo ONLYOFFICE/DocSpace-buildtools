@@ -62,6 +62,7 @@ INSTALL_MYSQL_SERVER="true"
 INSTALL_DOCUMENT_SERVER="true"
 INSTALL_ELASTICSEARCH="true"
 INSTALL_FLUENT_BIT="true"
+INSTALL_LANGFLOW="true"
 INSTALL_PRODUCT="true"
 UNINSTALL="false"
 HUB=""
@@ -384,6 +385,13 @@ while [ "$1" != "" ]; do
 			fi
 		;;
 
+		-ilf | --installlangflow )
+			if [ "$2" != "" ]; then
+				INSTALL_LANGFLOW=$2
+				shift
+			fi
+		;;
+
 		-rdsh | --redishost )
 			if [ "$2" != "" ]; then
 				REDIS_HOST=$2
@@ -555,6 +563,7 @@ while [ "$1" != "" ]; do
 			echo "      -imysql, --installmysql           install or update mysql (true|false)"		
 			echo "      -ies, --installelastic            install or update elasticsearch (true|false)"
 			echo "      -ifb, --installfluentbit          install or update fluent-bit (true|false)"
+			echo "      -ilf, --installlangflow           install or update langflow (true|false)"
 			echo "      -du, --dashboardsusername         login for authorization in /dashboards/"
 			echo "      -dp, --dashboardspassword         password for authorization in /dashboards/"
 			echo "      -espr, --elasticprotocol          the protocol for the connection to elasticsearch (default value http)"
@@ -1283,6 +1292,14 @@ install_elasticsearch () {
 	fi
 }
 
+install_langflow () {
+	if [ "$INSTALL_LANGFLOW" == "true" ]; then
+		[ -f $BASE_DIR/langflow.yml ] && docker-compose -f $BASE_DIR/langflow.yml up -d
+	elif [ "$INSTALL_LANGFLOW" == "pull" ]; then
+		[ -f $BASE_DIR/langflow.yml ] && docker-compose -f $BASE_DIR/langflow.yml pull
+	fi
+}
+
 install_fluent_bit () {
 	if [ "$INSTALL_FLUENT_BIT" == "true" ]; then
 		[ ! -z "$ELK_HOST" ] && sed -i "s/ELK_CONTAINER_NAME/ELK_HOST/g" $BASE_DIR/fluent.yml ${BASE_DIR}/dashboards.yml
@@ -1568,6 +1585,8 @@ start_installation () {
 	install_redis
 
 	install_document_server
+
+	install_langflow
 
 	install_product
 
