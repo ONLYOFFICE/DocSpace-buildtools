@@ -8,24 +8,35 @@ services:
       - "${ONLYFLOW_FRONTEND_PORT}:${ONLYFLOW_FRONTEND_PORT}"
     environment:
       - PYTHONDONTWRITEBYTECODE=1
-      - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@onlyoffice-langflow-postgres:5432/langflow
+      - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@${ONLYFLOW_PG_HOST}:${ONLYFLOW_PG_PORT}/langflow
       - LANGFLOW_CONFIG_DIR=/app/langflow
     volumes:
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}langflow_data:/app
     depends_on:
       - onlyoffice-langflow-postgres
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:${ONLYFLOW_BACKEND_PORT}/health_check')\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   onlyoffice-langflow-postgres:
-    container_name: onlyoffice-langflow-postgres
-    image: pgvector/pgvector:pg16
+    container_name: ${ONLYFLOW_PG_HOST}
+    image: ${HUB}${ONLYFLOW_PG_IMAGE_NAME}
     environment:
       POSTGRES_USER: langflow
       POSTGRES_PASSWORD: langflow
       POSTGRES_DB: langflow
     ports:
-      - "5432:5432"
+      - "${ONLYFLOW_PG_PORT}:${ONLYFLOW_PG_PORT}"
     volumes:
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}langflow_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "langflow"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
 
 networks:
   default:
