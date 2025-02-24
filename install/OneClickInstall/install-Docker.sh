@@ -648,27 +648,11 @@ uninstall() {
 
 root_checking () {
 	PID=$$
-	if [[ $EUID -ne 0 ]]; then
-		echo "To perform this action you must be logged in with root rights"
-		exit 1
-	fi
+	[[ $EUID -eq 0 ]] || { echo "To perform this action you must be logged in with root rights"; exit 1; }
 }
 
 is_command_exists () {
     type "$1" &> /dev/null
-}
-
-file_exists () {
-	if [ -z "$1" ]; then
-		echo "file path is empty"
-		exit 1;
-	fi
-
-	if [ -f "$1" ]; then
-		return 0 #true
-	else
-		return 1 #false
-	fi
 }
 
 get_random_str () {
@@ -926,25 +910,16 @@ create_network () {
 }
 
 read_continue_installation () {
-	if [[ "${NON_INTERACTIVE}" = "true" ]]; then
-		return 0
-	fi
+	[ "$NON_INTERACTIVE" = "true" ] && return 0
 
-	read -p "Continue installation [Y/N]? " CHOICE_INSTALLATION
-	case "$CHOICE_INSTALLATION" in
-		y|Y )
-			return 0
-		;;
-
-		n|N )
-			exit 0
-		;;
-
-		* )
-			echo "Please, enter Y or N"
-			read_continue_installation
-		;;
-	esac
+	while true; do
+        read -p "Continue installation [Y/N]? " CHOICE_INSTALLATION
+        case "$CHOICE_INSTALLATION" in
+            [yY]) return 0 ;;
+            [nN]) exit 0 ;;
+            *) echo "Please, enter Y or N" ;;
+        esac
+    done
 }
 
 domain_check () {
