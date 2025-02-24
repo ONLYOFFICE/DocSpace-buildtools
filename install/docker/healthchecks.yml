@@ -13,7 +13,7 @@ x-service:
     - ${SERVICE_PORT}
     volumes:
     #- /app/onlyoffice/CommunityServer/data:/app/onlyoffice/data
-    - app_data:/app/onlyoffice/data
+    - ${VOLUMES_DIR:+${VOLUMES_DIR}/}app_data:/app/onlyoffice/data
 
 services:
   onlyoffice-health-checks-ui:
