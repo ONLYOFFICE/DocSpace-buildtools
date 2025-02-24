@@ -37,6 +37,7 @@ LOCAL_SCRIPTS="false"
 product="docspace"
 product_sysname="onlyoffice"
 FILE_NAME="$(basename "$0")"
+ENABLE_LOGGING="true"
 
 while [ "$1" != "" ]; do
 	case $1 in
@@ -44,6 +45,13 @@ while [ "$1" != "" ]; do
 			if [ "$2" == "true" ] || [ "$2" == "false" ]; then
 				PARAMETERS="$PARAMETERS ${1}"
 				LOCAL_SCRIPTS=$2
+				shift
+			fi
+		;;
+		
+		-log | --logging )
+			if [ "$2" == "true" ] || [ "$2" == "false" ]; then
+				ENABLE_LOGGING=$2
 				shift
 			fi
 		;;
@@ -141,8 +149,15 @@ else
     exit 1
 fi
 
+if [ "$ENABLE_LOGGING" = "true" ]; then
+    LOG_FILE="OneClick${SCRIPT_NAME%.sh}_$(date +%Y%m%d_%H%M%S).log"
+    touch "${LOG_FILE}" || { echo "Failed to create log file"; exit 1; }
+    exec > >(tee "${LOG_FILE}") 2>&1
+fi
+
 [ "$LOCAL_SCRIPTS" != "true" ] && curl -s -O ${DOWNLOAD_URL_PREFIX}/${SCRIPT_NAME}
 bash ${SCRIPT_NAME} ${PARAMETERS} || EXIT_CODE=$?
 [ "$LOCAL_SCRIPTS" != "true" ] && rm ${SCRIPT_NAME}
+[ "$ENABLE_LOGGING" = "true" ] && [ $EXIT_CODE -eq 0 ] && rm "${LOG_FILE}"
 
 exit ${EXIT_CODE:-0}

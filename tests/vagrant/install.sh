@@ -215,7 +215,7 @@ function prepare_vm() {
 #############################################################################################
 function install_docspace() {
   [[ "${DOWNLOAD_SCRIPTS}" == 'true' ]] && wget https://download.onlyoffice.com/docspace/docspace-install.sh || sed 's/set -e/set -xe/' -i *.sh
-  bash docspace-install.sh package ${ARGUMENTS} || { echo "Exit code non-zero. Exit with 1."; exit 1; }
+  bash docspace-install.sh package ${ARGUMENTS} -log false || { echo "Exit code non-zero. Exit with 1."; exit 1; }
   echo "Exit code 0. Continue..."
 }
 
