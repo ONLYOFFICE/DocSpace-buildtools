@@ -272,7 +272,7 @@ RUN echo "--- install runtime node.22 ---" && \
         sed -i 's/127.0.0.1:5011/$service_login/' /etc/nginx/conf.d/onlyoffice.conf && \
         sed -i 's/127.0.0.1:9090/$service_identity_api/' /etc/nginx/conf.d/onlyoffice.conf && \
         sed -i 's/127.0.0.1:8080/$service_identity/' /etc/nginx/conf.d/onlyoffice.conf && \
-        ed -i 's/127.0.0.1:3000/$service_onlyflow_frontend/' /etc/nginx/conf.d/onlyoffice.conf && \
+        sed -i 's/127.0.0.1:3000/$service_onlyflow_frontend/' /etc/nginx/conf.d/onlyoffice.conf && \
         sed -i 's/127.0.0.1:7860/$service_onlyflow_backend/' /etc/nginx/conf.d/onlyoffice.conf && \
         if [[ -z "${SERVICE_CLIENT}" ]] ; then sed -i 's/127.0.0.1:5001/$service_client/' /etc/nginx/conf.d/onlyoffice.conf; fi && \
         if [[ -z "${SERVICE_MANAGEMENT}" ]] ; then sed -i 's/127.0.0.1:5015/$service_management/' /etc/nginx/conf.d/onlyoffice.conf; fi && \
