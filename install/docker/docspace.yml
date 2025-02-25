@@ -57,8 +57,8 @@ x-service: &x-service-base
     NODE_OPTIONS: ${NODE_OPTIONS}
   volumes:
     #- /app/onlyoffice/CommunityServer/data:/app/onlyoffice/data
-    - log_data:/var/log/onlyoffice
-    - app_data:/app/onlyoffice/data
+    - ${VOLUMES_DIR:+${VOLUMES_DIR}/}app_data:/app/onlyoffice/data
+    - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
 
 services:
   onlyoffice-backup-background-tasks:
@@ -240,7 +240,7 @@ services:
       - DASHBOARDS_USERNAME=${DASHBOARDS_USERNAME}
       - DASHBOARDS_PASSWORD=${DASHBOARDS_PASSWORD}
     volumes:
-      - log_data:/var/log/nginx
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
 
 networks:
   default:
