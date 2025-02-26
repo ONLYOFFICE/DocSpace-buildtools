@@ -3,19 +3,20 @@ services:
     image: ${HUB}${ONLYFLOW_IMAGE_NAME}
     container_name: ${ONLYFLOW_HOST}
     restart: always
-    ports:
-      - "${ONLYFLOW_BACKEND_PORT}:${ONLYFLOW_BACKEND_PORT}"
-      - "${ONLYFLOW_FRONTEND_PORT}:${ONLYFLOW_FRONTEND_PORT}"
+    expose:
+      - "${ONLYFLOW_BACKEND_PORT}"
     environment:
-      - PYTHONDONTWRITEBYTECODE=1
-      - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@${ONLYFLOW_PG_HOST}:${ONLYFLOW_PG_PORT}/langflow
+      - DO_NOT_TRACK=true
+      - LANGFLOW_LOG_LEVEL=${LOG_LEVEL}
       - LANGFLOW_CONFIG_DIR=/app/langflow
+      - LANGFLOW_NEW_USER_IS_ACTIVE=False
+      - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@${ONLYFLOW_PG_HOST}:${ONLYFLOW_PG_PORT}/langflow
     volumes:
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}langflow_data:/app
     depends_on:
       - onlyoffice-langflow-postgres
     healthcheck:
-      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:${ONLYFLOW_BACKEND_PORT}/health_check')\" || exit 1"]
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://${ONLYFLOW_HOST}:${ONLYFLOW_BACKEND_PORT}/health_check')\" || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -28,8 +29,8 @@ services:
       POSTGRES_USER: langflow
       POSTGRES_PASSWORD: langflow
       POSTGRES_DB: langflow
-    ports:
-      - "${ONLYFLOW_PG_PORT}:${ONLYFLOW_PG_PORT}"
+    expose:
+      - "${ONLYFLOW_PG_PORT}"
     volumes:
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}langflow_pg_data:/var/lib/postgresql/data
     healthcheck:
