@@ -1,7 +1,7 @@
 #!/bin/bash
 
  #
- # (c) Copyright Ascensio System SIA 2021
+ # (c) Copyright Ascensio System SIA 2025
  #
  # This program is a free software product. You can redistribute it and/or
  # modify it under the terms of the GNU Affero General Public License (AGPL)
@@ -37,6 +37,7 @@ LOCAL_SCRIPTS="false"
 product="docspace"
 product_sysname="onlyoffice"
 FILE_NAME="$(basename "$0")"
+ENABLE_LOGGING="true"
 
 while [ "$1" != "" ]; do
 	case $1 in
@@ -44,6 +45,13 @@ while [ "$1" != "" ]; do
 			if [ "$2" == "true" ] || [ "$2" == "false" ]; then
 				PARAMETERS="$PARAMETERS ${1}"
 				LOCAL_SCRIPTS=$2
+				shift
+			fi
+		;;
+		
+		-log | --logging )
+			if [ "$2" == "true" ] || [ "$2" == "false" ]; then
+				ENABLE_LOGGING=$2
 				shift
 			fi
 		;;
@@ -68,7 +76,8 @@ while [ "$1" != "" ]; do
 
 		"-?" | -h | --help )
 			if [ -z "$DOCKER" ]; then
-				echo "Run 'bash $FILE_NAME docker' to install docker version of application or 'bash $FILE_NAME package' to install deb/rpm version."
+				echo "Run 'bash $FILE_NAME docker' to install Docker version of application."
+				echo "Run 'bash $FILE_NAME package' to install DEB/RPM version."
 				echo "Run 'bash $FILE_NAME docker -h' or 'bash $FILE_NAME package -h' to get more details."
 				exit 0
 			fi
@@ -80,112 +89,75 @@ while [ "$1" != "" ]; do
 done
 
 root_checking () {
-	if [[ $EUID -ne 0 ]]; then
-		echo "To perform this action you must be logged in with root rights"
-		exit 1
-	fi
+	[[ $EUID -eq 0 ]] || { echo "To perform this action you must be logged in with root rights"; exit 1; }
 }
 
-command_exists () {
+is_command_exists () {
 	type "$1" &> /dev/null
 }
 
 install_curl () {
-	if command_exists apt-get; then
+	if is_command_exists apt-get; then
 		apt-get -y update
 		apt-get -y -q install curl
-	elif command_exists yum; then
+	elif is_command_exists yum; then
 		yum -y install curl
 	fi
 
-	if ! command_exists curl; then
-		echo "command curl not found"
-		exit 1
-	fi
+	is_command_exists curl || { echo "Command curl not found."; exit 1; }
 }
 
-read_installation_method () {
-	echo "Select 'Y' to install ${product_sysname^^} $product using Docker (recommended). Select 'N' to install it using RPM/DEB packages."
-	read -p "Install with Docker [Y/N/C]? " choice
-	case "$choice" in
-		y|Y )
-			DOCKER="true"
-		;;
-
-		n|N )
-			DOCKER="false"
-		;;
-
-		c|C )
-			exit 0
-		;;
-
-		* )
-			echo "Please, enter Y, N or C to cancel"
-		;;
-	esac
-
-	if [ "$DOCKER" == "" ]; then
-		read_installation_method
-	fi
+read_installation_method() {
+    echo "Select 'Y' to install ${product_sysname^^} $product using Docker (recommended)."
+    echo "Select 'N' to install it using RPM/DEB packages."
+    while true; do
+        read -p "Install with Docker [Y/N/C]? " choice
+        case "$choice" in
+            [yY]) DOCKER="true"; break ;;
+            [nN]) DOCKER="false"; break ;;
+            [cC]) exit 0 ;;
+            *) echo "Please, enter Y, N, or C to cancel." ;;
+        esac
+    done
 }
 
 root_checking
 
-if ! command_exists curl ; then
-	install_curl
-fi
+is_command_exists curl || install_curl
 
-if command_exists docker &> /dev/null && docker ps -a --format '{{.Names}}' | grep -q "${product_sysname}-api"; then
+if is_command_exists docker && docker ps -a --format '{{.Names}}' | grep -q "${product_sysname}-api"; then
     DOCKER="true"
     PARAMETERS="-u true $PARAMETERS"
-elif command_exists apt-get &> /dev/null && dpkg -s ${product}-api >/dev/null 2>&1; then
-    DOCKER="false"
-	PARAMETERS="-u true $PARAMETERS"
-elif command_exists yum &> /dev/null && rpm -q ${product}-api >/dev/null 2>&1; then
+elif (is_command_exists dpkg && dpkg -s ${product}-api >/dev/null 2>&1) || (is_command_exists rpm && rpm -q ${product}-api >/dev/null 2>&1); then
     DOCKER="false"
 	PARAMETERS="-u true $PARAMETERS"
 fi
  
-if [ -z "$DOCKER" ]; then
-	read_installation_method
-fi
+[ -z "$DOCKER" ] && read_installation_method
 
-if [ -z "$GIT_BRANCH" ]; then
-	DOWNLOAD_URL_PREFIX="https://download.${product_sysname}.com/${product}"
-else
-	DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${product_sysname^^}/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
-fi
+DOWNLOAD_URL_PREFIX="https://download.${product_sysname}.com/${product}"
+[ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${product_sysname^^}/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
 
 if [ "$DOCKER" == "true" ]; then
-	if [ "$LOCAL_SCRIPTS" == "true" ]; then
-		bash install-Docker.sh ${PARAMETERS} || EXIT_CODE=$?
-	else
-		curl -s -O "${DOWNLOAD_URL_PREFIX}"/install-Docker.sh
-		bash install-Docker.sh ${PARAMETERS} || EXIT_CODE=$?
-		rm install-Docker.sh
-	fi
+    SCRIPT_NAME="install-Docker.sh"
+elif [ -f /etc/redhat-release ]; then
+    SCRIPT_NAME="install-RedHat.sh"
+elif [ -f /etc/debian_version ]; then
+    SCRIPT_NAME="install-Debian.sh"
 else
-	if [ -f /etc/redhat-release ] ; then
-		if [ "$LOCAL_SCRIPTS" == "true" ]; then
-			bash install-RedHat.sh ${PARAMETERS} || EXIT_CODE=$?
-		else
-			curl -s -O "${DOWNLOAD_URL_PREFIX}"/install-RedHat.sh
-			bash install-RedHat.sh ${PARAMETERS} || EXIT_CODE=$?
-			rm install-RedHat.sh
-		fi
-	elif [ -f /etc/debian_version ] ; then
-		if [ "$LOCAL_SCRIPTS" == "true" ]; then
-			bash install-Debian.sh ${PARAMETERS} || EXIT_CODE=$?
-		else
-			curl -s -O "${DOWNLOAD_URL_PREFIX}"/install-Debian.sh
-			bash install-Debian.sh ${PARAMETERS} || EXIT_CODE=$?
-			rm install-Debian.sh
-		fi
-	else
-		echo "Not supported OS"
-		exit 1
-	fi
+    echo "Not supported OS"
+    exit 1
 fi
+
+if [ "$ENABLE_LOGGING" = "true" ]; then
+    LOG_FILE="OneClick${SCRIPT_NAME%.sh}_$(date +%Y%m%d_%H%M%S).log"
+    touch "${LOG_FILE}" || { echo "Failed to create log file"; exit 1; }
+    exec > >(tee "${LOG_FILE}") 2>&1
+fi
+
+[ "$LOCAL_SCRIPTS" != "true" ] && curl -s -O ${DOWNLOAD_URL_PREFIX}/${SCRIPT_NAME}
+bash ${SCRIPT_NAME} ${PARAMETERS} || EXIT_CODE=$?
+[ "$LOCAL_SCRIPTS" != "true" ] && rm ${SCRIPT_NAME}
+[ "$ENABLE_LOGGING" = "true" ] && [ $EXIT_CODE -eq 0 ] && rm "${LOG_FILE}"
 
 exit ${EXIT_CODE:-0}
