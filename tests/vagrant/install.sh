@@ -83,76 +83,6 @@ END
 }
 
 #############################################################################################
-# Resize Fedora disk. 
-# Globals:
-#   None
-# Arguments:
-#   None
-# Outputs:
-#   None
-#############################################################################################
-function resize_fedora_disk() {
-  # Print current disk layout
-  echo "Current disk layout:"
-  lsblk
-
-  # Install required tools if they are not available
-  if ! command -v parted &> /dev/null; then
-    echo "parted not found, installing..."
-    sudo dnf install -y parted
-  fi
-
-  if ! command -v growpart &> /dev/null; then
-    echo "growpart not found, installing..."
-    sudo dnf install -y cloud-utils-growpart
-  fi
-
-  # Check Fedora version and set the correct partition number
-  if [ "$VERSION_ID" == "40" ]; then
-    PARTITION_NUMBER=2
-  elif [ "$VERSION_ID" == "41" ]; then
-    PARTITION_NUMBER=4
-  else
-    echo "Unsupported Fedora version: $VERSION_ID"
-    exit 1
-  fi
-
- # Fix GPT table to use all available space
-  echo "Fixing GPT to use all available space..."
-  echo -e "fix\n" | sudo parted /dev/sda
-
-  # Use growpart to resize the correct partition
-  echo "Resizing partition /dev/sda${PARTITION_NUMBER} using growpart..."
-  sudo growpart /dev/sda ${PARTITION_NUMBER}
-
-  # Check the filesystem type before resizing
-  FSTYPE=$(df -T | grep '/$' | awk '{print $2}')
-
-  # Resize the filesystem based on the filesystem type (xfs or ext4)
-  if [ "$FSTYPE" == "xfs" ]; then
-    echo "Resizing XFS filesystem on /dev/sda${PARTITION_NUMBER}..."
-    sudo xfs_growfs /
-  elif [ "$FSTYPE" == "ext4" ]; then
-    echo "Resizing ext4 filesystem on /dev/sda${PARTITION_NUMBER}..."
-    sudo resize2fs /dev/sda${PARTITION_NUMBER}
-  elif [ "$FSTYPE" == "btrfs" ]; then
-    echo "Resizing Btrfs filesystem on /dev/sda${PARTITION_NUMBER}..."
-    sudo btrfs filesystem resize max /
-  else
-    echo "Unsupported filesystem type: $FSTYPE"
-    exit 1
-  fi
-
-  # Print the new disk layout
-  echo "Disk layout after resizing:"
-  lsblk
-
-  # Verify new available space
-  echo "Filesystem after resizing:"
-  df -h /
-}
-
-#############################################################################################
 # Prepare vagrant boxes like: set hostname/remove postfix for DEB distributions
 # Globals:
 #   None
@@ -177,9 +107,6 @@ function prepare_vm() {
 
       fedora)
           [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-rpm
-          if [[ "$VERSION_ID" == "40" || "$VERSION_ID" == "41" ]]; then
-              resize_fedora_disk
-          fi
           ;;
 
       centos)
