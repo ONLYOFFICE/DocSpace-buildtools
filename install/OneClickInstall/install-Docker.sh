@@ -903,14 +903,17 @@ docker_login() {
         return 0
     fi
 
+    [[ -n "$HUB" ]] && return 0
+
     if [[ "$NON_INTERACTIVE" == "true" ]]; then
         [[ -z "$USERNAME" || -z "$PASSWORD" ]] && return 0
     else
+        echo "Please log in: Docker Hub limits to 10 pulls."
         [[ -z "$USERNAME" ]] && read -rp "Enter DockerHub username: " USERNAME
         [[ -z "$PASSWORD" ]] && read -rsp "Enter DockerHub password: " PASSWORD && echo
     fi
 
-    echo "$PASSWORD" | docker login "${HUB}" --username "$USERNAME" --password-stdin || { echo "Docker authentication failed"; exit 1; }
+    echo "$PASSWORD" | docker login --username "$USERNAME" --password-stdin || { echo "Docker authentication failed"; exit 1; }
 }
 
 create_network () {
