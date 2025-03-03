@@ -1061,16 +1061,15 @@ set_jwt_header () {
 	DOCUMENT_SERVER_JWT_HEADER="${DOCUMENT_SERVER_JWT_HEADER:-"AuthorizationJwt"}"
 }
 
-set_core_machinekey () {
+set_secrets () {
 	APP_CORE_MACHINEKEY="${APP_CORE_MACHINEKEY:-$(get_env_parameter "APP_CORE_MACHINEKEY" "${CONTAINER_NAME}")}"
 	[ "$UPDATE" != "true" ] && APP_CORE_MACHINEKEY="${APP_CORE_MACHINEKEY:-$(get_random_str 12)}"
-}
-
-set_identity_secrets () {
 	IDENTITY_SIGNATURE_SECRET="${IDENTITY_SIGNATURE_SECRET:-$(get_env_parameter "IDENTITY_SIGNATURE_SECRET" "${IDENTITY_CONTAINER_NAME}")}"
 	IDENTITY_SIGNATURE_SECRET="${IDENTITY_SIGNATURE_SECRET:-$(get_random_str 12)}"
 	IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-$(get_env_parameter "IDENTITY_ENCRYPTION_SECRET" "${IDENTITY_CONTAINER_NAME}")}"
 	IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-$(get_random_str 12)}"
+	ONLYFLOW_SECRET_KEY="${ONLYFLOW_SECRET_KEY:-$(get_env_parameter "ONLYFLOW_SECRET_KEY")}"
+	ONLYFLOW_SECRET_KEY="${ONLYFLOW_SECRET_KEY:-$(get_random_str 32)}"
 }
 
 set_mysql_params () {
@@ -1232,6 +1231,7 @@ install_elasticsearch () {
 }
 
 install_langflow () {
+	reconfigure ONLYFLOW_SECRET_KEY ${ONLYFLOW_SECRET_KEY}
 	if [ "$INSTALL_LANGFLOW" == "true" ]; then
 		[ -f $BASE_DIR/langflow.yml ] && docker-compose -f $BASE_DIR/langflow.yml up -d
 	elif [ "$INSTALL_LANGFLOW" == "pull" ]; then
@@ -1505,8 +1505,7 @@ start_installation () {
 	set_jwt_secret
 	set_jwt_header
 
-	set_core_machinekey
-	set_identity_secrets
+	set_secrets
 
 	set_mysql_params
 

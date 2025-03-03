@@ -12,6 +12,8 @@ services:
     expose:
       - "${ONLYFLOW_BACKEND_PORT}"
     environment:
+      - LANGFLOW_DATABASE_CONNECTION_RETRY=true
+      - LANGFLOW_SECRET_KEY=${ONLYFLOW_SECRET_KEY}
       - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@${ONLYFLOW_PG_HOST}:${ONLYFLOW_PG_PORT}/langflow
     depends_on:
       onlyoffice-langflow-postgres
