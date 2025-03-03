@@ -64,7 +64,6 @@ INSTALL_ELASTICSEARCH="true"
 INSTALL_FLUENT_BIT="true"
 INSTALL_PRODUCT="true"
 UNINSTALL="false"
-HUB=""
 USERNAME=""
 PASSWORD=""
 
@@ -124,9 +123,9 @@ while [ "$1" != "" ]; do
 			fi
 		;;
 
-		-hub | --hub )
+		-reg | --registry )
 			if [ "$2" != "" ]; then
-				HUB=$2
+				REGISTRY_URL=$2
 				shift
 			fi
 		;;
@@ -531,9 +530,9 @@ while [ "$1" != "" ]; do
 			echo "  Usage: bash $HELP_TARGET [PARAMETER] [[PARAMETER], ...]"
 			echo
 			echo "    Parameters:"
-			echo "      -hub, --hub                       dockerhub name"
-			echo "      -un, --username                   dockerhub username"
-			echo "      -p, --password                    dockerhub password"
+			echo "      -reg, --registry                  docker registry URL (e.g., https://myregistry.com:5000)"
+			echo "      -un, --username                   docker registry login"
+			echo "      -p, --password                    docker registry password"
 			echo "      -it, --installation_type          installation type (community|developer|enterprise)"
 			echo "      -skiphc, --skiphardwarecheck      skip hardware check (true|false)"
 			echo "      -u, --update                      use to update existing components (true|false)"
@@ -899,11 +898,11 @@ docker_login() {
     [[ "$OFFLINE_INSTALLATION" == "true" ]] && return 0
 
     if [[ -f "$HOME/.docker/config.json" ]] && \
-       jq -r --arg key "${HUB:-https://index.docker.io/v1/}" '.auths | has($key)' "$HOME/.docker/config.json" | grep -q "true"; then
+       jq -r --arg key "${REGISTRY_URL:-https://index.docker.io/v1/}" '.auths | has($key)' "$HOME/.docker/config.json" | grep -q "true"; then
         return 0
     fi
 
-    [[ -n "$HUB" ]] && return 0
+    [[ -n "$REGISTRY_URL" ]] && return 0
 
     if [[ "$NON_INTERACTIVE" == "true" ]]; then
         [[ -z "$USERNAME" || -z "$PASSWORD" ]] && return 0
@@ -998,17 +997,17 @@ get_env_parameter () {
 	echo ${VALUE//\"}
 }
 
-get_tag_from_hub () {
-	if [[ -n ${HUB} ]]; then
+get_tag_from_registry () {
+	if [[ -n ${REGISTRY_URL} ]]; then
 		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
 			CREDENTIALS=$(echo -n "$USERNAME:$PASSWORD" | base64)
 		elif [[ -f "$HOME/.docker/config.json" ]]; then
-			CREDENTIALS=$(jq -r --arg hub "${HUB}" '.auths | to_entries[] | select(.key | contains($hub)).value.auth // empty' "$HOME/.docker/config.json")
+			CREDENTIALS=$(jq -r --arg registry "${REGISTRY_URL}" '.auths | to_entries[] | select(.key | contains($registry)).value.auth // empty' "$HOME/.docker/config.json")
 		fi
 
 		AUTH_HEADER=${CREDENTIALS:+Authorization: Basic $CREDENTIALS}
 
-		HUB_URL="https://${HUB}/v2/${1/#$HUB\//}/tags/list"
+		REGISTRY_TAGS_URL="${REGISTRY_URL%/}/v2/${1}/tags/list"
 		JQ_FILTER='.tags | join("\n")'
 	else
 		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
@@ -1018,15 +1017,15 @@ get_tag_from_hub () {
 			sleep 1
 		fi
 
-		HUB_URL="https://hub.docker.com/v2/repositories/${1}/tags/"
+		REGISTRY_TAGS_URL="https://hub.docker.com/v2/repositories/${1}/tags/"
 		JQ_FILTER='.results[].name // empty'
 	fi
 
-	mapfile -t TAGS_RESP < <(curl -s -H "${AUTH_HEADER}" -X GET "${HUB_URL}" | jq -r "${JQ_FILTER}")
+	mapfile -t TAGS_RESP < <(curl -s -H "${AUTH_HEADER}" -X GET "${REGISTRY_TAGS_URL}" | jq -r "${JQ_FILTER}")
 }
 
 get_available_version () {
-	[ "${OFFLINE_INSTALLATION}" = "false" ] && get_tag_from_hub ${1} || mapfile -t TAGS_RESP < <(docker images --format "{{.Tag}}" "${1}")
+	[ "${OFFLINE_INSTALLATION}" = "false" ] && get_tag_from_registry ${1} || mapfile -t TAGS_RESP < <(docker images --format "{{.Tag}}" "${1}")
 
 	VERSION_REGEX='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
 	[ ${#TAGS_RESP[@]} -eq 1 ] && LATEST_TAG="${TAGS_RESP[0]}" || LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$VERSION_REGEX" | sort -V | tail -n 1)
@@ -1093,7 +1092,7 @@ set_mysql_params () {
 }
 
 set_docspace_params() {
-	HUB=${HUB:-$(get_env_parameter "HUB")}
+	REGISTRY=${REGISTRY:-$(get_env_parameter "REGISTRY")}
 
 	ENV_EXTENSION=${ENV_EXTENSION:-$(get_env_parameter "ENV_EXTENSION" "${CONTAINER_NAME}")}
 	VOLUMES_DIR=${VOLUMES_DIR:-$(get_env_parameter "VOLUMES_DIR")}
@@ -1351,9 +1350,9 @@ offline_check_docker_image() {
 	done
 }
 
-check_hub_connection() {
-	get_tag_from_hub ${IMAGE_NAME}
-	[ -z "${TAGS_RESP[*]}" ] && { echo -e "Unable to download tags from ${HUB:-hub.docker.com}.\nTry specifying another dockerhub name using -hub"; exit 1; }
+check_registry_connection() {
+	get_tag_from_registry ${IMAGE_NAME}
+	[ -z "${TAGS_RESP[*]}" ] && { echo -e "Unable to download tags from ${REGISTRY_URL:-https://hub.docker.com}.\nTry specifying another docker registry URL using -reg"; exit 1; }
 }
 
 dependency_installation() {
@@ -1390,7 +1389,7 @@ dependency_installation() {
 }
 
 check_docker_image () {
-	reconfigure HUB "${HUB%/}${HUB:+/}"
+	reconfigure REGISTRY "${REGISTRY_URL:+$(sed -E 's~^https?://~~; s~/*$~~' <<< "$REGISTRY_URL")/}"
 	reconfigure STATUS ${STATUS}
 	reconfigure INSTALLATION_TYPE ${INSTALLATION_TYPE}
 	reconfigure NETWORK_NAME ${NETWORK_NAME}
@@ -1489,7 +1488,7 @@ start_installation () {
 
 	docker_login
 
-	[ "${OFFLINE_INSTALLATION}" = "false" ] && check_hub_connection
+	[ "${OFFLINE_INSTALLATION}" = "false" ] && check_registry_connection
 
 	create_network
 

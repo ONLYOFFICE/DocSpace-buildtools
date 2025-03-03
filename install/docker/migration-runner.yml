@@ -1,6 +1,6 @@
 services:
   onlyoffice-migration-runner:
-    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-migration-runner:${DOCKER_TAG}"
+    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-migration-runner:${DOCKER_TAG}"
     container_name: ${MIGRATION_RUNNER_HOST}
     restart: "on-failure"
     environment:
