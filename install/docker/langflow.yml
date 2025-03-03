@@ -14,7 +14,7 @@ services:
     environment:
       - LANGFLOW_DATABASE_CONNECTION_RETRY=true
       - LANGFLOW_SECRET_KEY=${ONLYFLOW_SECRET_KEY}
-      - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@${ONLYFLOW_PG_HOST}:${ONLYFLOW_PG_PORT}/langflow
+      - LANGFLOW_DATABASE_URL=postgresql://onlyoffice:${ONLYFLOW_PG_PASSWORD}@${ONLYFLOW_PG_HOST}:${ONLYFLOW_PG_PORT}/onlyoffice
     depends_on:
       onlyoffice-langflow-postgres
     healthcheck:
@@ -40,9 +40,9 @@ services:
     container_name: ${ONLYFLOW_PG_HOST}
     image: ${HUB}${ONLYFLOW_PG_IMAGE_NAME}
     environment:
-      POSTGRES_USER: langflow
-      POSTGRES_PASSWORD: langflow
-      POSTGRES_DB: langflow
+      POSTGRES_USER: onlyoffice
+      POSTGRES_PASSWORD: ${ONLYFLOW_PG_PASSWORD}
+      POSTGRES_DB: onlyoffice
     expose:
       - "${ONLYFLOW_PG_PORT}"
     volumes:

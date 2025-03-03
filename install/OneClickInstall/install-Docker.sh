@@ -1112,6 +1112,8 @@ set_docspace_params() {
 	DASHBOARDS_USERNAME=${DASHBOARDS_USERNAME:-$(get_env_parameter "DASHBOARDS_USERNAME" "${CONTAINER_NAME}")}
 	DASHBOARDS_PASSWORD=${DASHBOARDS_PASSWORD:-$(get_env_parameter "DASHBOARDS_PASSWORD" "${CONTAINER_NAME}")}
 
+	ONLYFLOW_PG_PASSWORD=${ONLYFLOW_PG_PASSWORD:-$(get_env_parameter "ONLYFLOW_PG_PASSWORD")}
+
 	CERTIFICATE_PATH=${CERTIFICATE_PATH:-$(get_env_parameter "CERTIFICATE_PATH")}
 	CERTIFICATE_KEY_PATH=${CERTIFICATE_KEY_PATH:-$(get_env_parameter "CERTIFICATE_KEY_PATH")}
 	DHPARAM_PATH=${DHPARAM_PATH:-$(get_env_parameter "DHPARAM_PATH")}
@@ -1232,6 +1234,8 @@ install_elasticsearch () {
 
 install_langflow () {
 	reconfigure ONLYFLOW_SECRET_KEY ${ONLYFLOW_SECRET_KEY}
+	reconfigure ONLYFLOW_PG_PASSWORD "${ONLYFLOW_PG_PASSWORD:-$(get_random_str 12)}"
+	
 	if [ "$INSTALL_LANGFLOW" == "true" ]; then
 		[ -f $BASE_DIR/langflow.yml ] && docker-compose -f $BASE_DIR/langflow.yml up -d
 	elif [ "$INSTALL_LANGFLOW" == "pull" ]; then
