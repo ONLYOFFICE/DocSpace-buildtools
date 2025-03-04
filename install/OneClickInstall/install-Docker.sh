@@ -1426,9 +1426,7 @@ dependency_installation() {
 }
 
 check_docker_image () {
-	normalized_registry=$(echo "${REGISTRY_URL}" | sed 's~http[s]*://~~;s~/*$~/~')
-    echo "DEBUG: Normalized REGISTRY_URL: ${normalized_registry}"
-    reconfigure REGISTRY_URL "${normalized_registry}"
+	reconfigure REGISTRY_URL "$(sed 's~http[s]*://~~; s~/*$~/~' <<< "$REGISTRY_URL")"
 	reconfigure STATUS ${STATUS}
 	reconfigure INSTALLATION_TYPE ${INSTALLATION_TYPE}
 	reconfigure NETWORK_NAME ${NETWORK_NAME}
