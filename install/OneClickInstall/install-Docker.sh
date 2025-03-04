@@ -124,10 +124,10 @@ while [ "$1" != "" ]; do
 		;;
 
 		-reg | --registry )
-		if [ "$2" != "" ]; then
-			REGISTRY_URL=$2
-			shift
-		fi
+			if [ "$2" != "" ]; then
+				REGISTRY_URL=$2
+				shift
+			fi
 		;;
 
 		-hub | --hub )
@@ -620,7 +620,7 @@ while [ "$1" != "" ]; do
 	shift
 done
 
-[ -n "$REGISTRY_URL" ] && HUB=${REGISTRY_URL#*://}
+# [ -n "$REGISTRY_URL" ] && HUB=${REGISTRY_URL#*://}
 
 uninstall() {
     read -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " REMOVE_DATA_SERVICES
@@ -911,7 +911,8 @@ docker_login() {
         return 0
     fi
 
-    [[ -n "$REGISTRY_URL" || -n "$HUB" ]] && return 0
+    # [[ -n "$REGISTRY_URL" || -n "$HUB" ]] && return 0
+    [[ -n "$REGISTRY_URL" ]] && return 0
 
     if [[ "$NON_INTERACTIVE" == "true" ]]; then
         [[ -z "$USERNAME" || -z "$PASSWORD" ]] && return 0
@@ -1011,12 +1012,12 @@ get_tag_from_hub () {
 		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
 			CREDENTIALS=$(echo -n "$USERNAME:$PASSWORD" | base64)
 		elif [[ -f "$HOME/.docker/config.json" ]]; then
-			CREDENTIALS=$(jq -r --arg hub "${HUB}" '.auths | to_entries[] | select(.key | contains($hub)).value.auth // empty' "$HOME/.docker/config.json")
+			CREDENTIALS=$(jq -r --arg registry "${REGISTRY_URL}" '.auths | to_entries[] | select(.key | contains($registry)).value.auth // empty' "$HOME/.docker/config.json")
 		fi
 
 		AUTH_HEADER=${CREDENTIALS:+Authorization: Basic $CREDENTIALS}
 
-		HUB_URL="${REGISTRY_URL%/}/v2/${1/#$HUB\//}/tags/list"
+		REGISTRY_TAGS_URL="${REGISTRY_URL%/}/v2/${1}/tags/list"
 		JQ_FILTER='.tags | join("\n")'
 	else
 		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
@@ -1026,12 +1027,39 @@ get_tag_from_hub () {
 			sleep 1
 		fi
 
-		HUB_URL="https://hub.docker.com/v2/repositories/${1}/tags/"
+		REGISTRY_TAGS_URL="https://hub.docker.com/v2/repositories/${1}/tags/"
 		JQ_FILTER='.results[].name // empty'
 	fi
 
-	mapfile -t TAGS_RESP < <(curl -s -H "${AUTH_HEADER}" -X GET "${HUB_URL}" | jq -r "${JQ_FILTER}")
+	mapfile -t TAGS_RESP < <(curl -s -H "${AUTH_HEADER}" -X GET "${REGISTRY_TAGS_URL}" | jq -r "${JQ_FILTER}")
 }
+
+# get_tag_from_hub () {
+# 	if [[ -n ${REGISTRY_URL} ]]; then
+# 		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
+# 			CREDENTIALS=$(echo -n "$USERNAME:$PASSWORD" | base64)
+# 		elif [[ -f "$HOME/.docker/config.json" ]]; then
+# 			CREDENTIALS=$(jq -r --arg hub "${HUB}" '.auths | to_entries[] | select(.key | contains($hub)).value.auth // empty' "$HOME/.docker/config.json")
+# 		fi
+
+# 		AUTH_HEADER=${CREDENTIALS:+Authorization: Basic $CREDENTIALS}
+
+# 		HUB_URL="${REGISTRY_URL%/}/v2/${1/#$HUB\//}/tags/list"
+# 		JQ_FILTER='.tags | join("\n")'
+# 	else
+# 		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
+# 			CREDENTIALS="{\"username\":\"$USERNAME\",\"password\":\"$PASSWORD\"}"
+# 			TOKEN=$(curl -s -H "Content-Type: application/json" -X POST -d "$CREDENTIALS" https://hub.docker.com/v2/users/login/ | jq -r '.token')
+# 			AUTH_HEADER="Authorization: JWT $TOKEN"
+# 			sleep 1
+# 		fi
+
+# 		HUB_URL="https://hub.docker.com/v2/repositories/${1}/tags/"
+# 		JQ_FILTER='.results[].name // empty'
+# 	fi
+
+# 	mapfile -t TAGS_RESP < <(curl -s -H "${AUTH_HEADER}" -X GET "${HUB_URL}" | jq -r "${JQ_FILTER}")
+# }
 
 get_available_version () {
 	[ "${OFFLINE_INSTALLATION}" = "false" ] && get_tag_from_hub ${1} || mapfile -t TAGS_RESP < <(docker images --format "{{.Tag}}" "${1}")
@@ -1101,7 +1129,7 @@ set_mysql_params () {
 }
 
 set_docspace_params() {
-	HUB=${HUB:-$(get_env_parameter "HUB")}
+	REGISTRY_URL=${REGISTRY_URL:-$(get_env_parameter "REGISTRY_URL")}
 
 	ENV_EXTENSION=${ENV_EXTENSION:-$(get_env_parameter "ENV_EXTENSION" "${CONTAINER_NAME}")}
 	VOLUMES_DIR=${VOLUMES_DIR:-$(get_env_parameter "VOLUMES_DIR")}
@@ -1398,7 +1426,7 @@ dependency_installation() {
 }
 
 check_docker_image () {
-	reconfigure HUB "${HUB%/}${HUB:+/}"
+	reconfigure REGISTRY_URL "${REGISTRY_URL%/}${REGISTRY_URL:+/}"
 	reconfigure STATUS ${STATUS}
 	reconfigure INSTALLATION_TYPE ${INSTALLATION_TYPE}
 	reconfigure NETWORK_NAME ${NETWORK_NAME}
