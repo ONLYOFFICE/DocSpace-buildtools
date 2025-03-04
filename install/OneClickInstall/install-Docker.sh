@@ -1426,7 +1426,7 @@ dependency_installation() {
 }
 
 check_docker_image () {
-	reconfigure REGISTRY_URL "${REGISTRY_URL%/}${REGISTRY_URL:+/}"
+	reconfigure REGISTRY_URL "$(echo "${REGISTRY_URL}" | sed 's~http[s]*://~~;s~/*$~/~')"
 	reconfigure STATUS ${STATUS}
 	reconfigure INSTALLATION_TYPE ${INSTALLATION_TYPE}
 	reconfigure NETWORK_NAME ${NETWORK_NAME}
