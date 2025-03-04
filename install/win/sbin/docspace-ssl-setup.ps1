@@ -67,8 +67,8 @@ if ( $args.Count -ge 2 )
     cmd.exe /c "certbot certonly --expand --webroot -w `"${root_dir}`" --key-type rsa --cert-name ${product} --noninteractive --agree-tos --email ${letsencrypt_mail} -d ${letsencrypt_domain}" > "${app}\letsencrypt\Logs\le-new.log"
 
     pushd "${letsencrypt_root_dir}\${product}"
-        $ssl_cert = (Resolve-Path -Path (Get-Item "${letsencrypt_root_dir}\${product}\fullchain.pem").Target).ToString().Replace('\', '/')
-        $ssl_key = (Resolve-Path -Path (Get-Item "${letsencrypt_root_dir}\${product}\privkey.pem").Target).ToString().Replace('\', '/')
+        $ssl_cert = (Get-Item "${letsencrypt_root_dir}\${product}\fullchain.pem").FullName.Replace('\', '/')
+        $ssl_key = (Get-Item "${letsencrypt_root_dir}\${product}\privkey.pem").FullName.Replace('\', '/')
     popd
   }
 

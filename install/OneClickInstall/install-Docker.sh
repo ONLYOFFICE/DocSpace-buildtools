@@ -1,7 +1,7 @@
 #!/bin/bash
 
  #
- # (c) Copyright Ascensio System SIA 2021
+ # (c) Copyright Ascensio System SIA 2025
  #
  # This program is a free software product. You can redistribute it and/or
  # modify it under the terms of the GNU Affero General Public License (AGPL)
@@ -648,27 +648,11 @@ uninstall() {
 
 root_checking () {
 	PID=$$
-	if [[ $EUID -ne 0 ]]; then
-		echo "To perform this action you must be logged in with root rights"
-		exit 1
-	fi
+	[[ $EUID -eq 0 ]] || { echo "To perform this action you must be logged in with root rights"; exit 1; }
 }
 
 is_command_exists () {
     type "$1" &> /dev/null
-}
-
-file_exists () {
-	if [ -z "$1" ]; then
-		echo "file path is empty"
-		exit 1;
-	fi
-
-	if [ -f "$1" ]; then
-		return 0 #true
-	else
-		return 1 #false
-	fi
 }
 
 get_random_str () {
@@ -804,7 +788,7 @@ install_package () {
 }
 
 install_docker_compose () {
-	curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/bin/docker-compose
+	curl -sL "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/bin/docker-compose
 	chmod +x /usr/bin/docker-compose
 }
 
@@ -848,42 +832,6 @@ check_ports () {
 		echo "The following TCP Ports must be available: $USED_PORTS"
 		exit 1
 	fi
-}
-
-check_docker_version () {
-	CUR_FULL_VERSION=$(docker -v | cut -d ' ' -f3 | cut -d ',' -f1)
-	CUR_VERSION=$(echo $CUR_FULL_VERSION | cut -d '-' -f1)
-	CUR_EDITION=$(echo $CUR_FULL_VERSION | cut -d '-' -f2)
-
-	if [ "${CUR_EDITION}" == "ce" ] || [ "${CUR_EDITION}" == "ee" ]; then
-		return 0
-	fi
-
-	if [ "${CUR_VERSION}" != "${CUR_EDITION}" ]; then
-		echo "Unspecific docker version"
-		exit 1
-	fi
-
-	MIN_NUM_ARR=(1 10 0)
-	CUR_NUM_ARR=();
-
-	CUR_STR_ARR=$(echo $CUR_VERSION | grep -Po "[0-9]+\.[0-9]+\.[0-9]+" | tr "." " ")
-
-	for CUR_STR_ITEM in $CUR_STR_ARR; do
-		CUR_NUM_ARR+=("$CUR_STR_ITEM")
-	done
-
-	INDEX=0
-
-	while [[ $INDEX -lt 3 ]]; do
-		if [ ${CUR_NUM_ARR[INDEX]} -lt ${MIN_NUM_ARR[INDEX]} ]; then
-			echo "The outdated Docker version has been found. Please update to the latest version."
-			exit 1
-		elif [ ${CUR_NUM_ARR[INDEX]} -gt ${MIN_NUM_ARR[INDEX]} ]; then
-			return 0
-		fi
-		(( INDEX++ ))
-	done
 }
 
 install_docker () {
@@ -947,10 +895,25 @@ install_docker () {
 	fi
 }
 
-docker_login () {
-	if [[ -n ${USERNAME} && -n ${PASSWORD}  ]]; then
-		docker login ${HUB} --username ${USERNAME} --password ${PASSWORD}
-	fi
+docker_login() {
+    [[ "$OFFLINE_INSTALLATION" == "true" ]] && return 0
+
+    if [[ -f "$HOME/.docker/config.json" ]] && \
+       jq -r --arg key "${HUB:-https://index.docker.io/v1/}" '.auths | has($key)' "$HOME/.docker/config.json" | grep -q "true"; then
+        return 0
+    fi
+
+    [[ -n "$HUB" ]] && return 0
+
+    if [[ "$NON_INTERACTIVE" == "true" ]]; then
+        [[ -z "$USERNAME" || -z "$PASSWORD" ]] && return 0
+    else
+        echo "Please log in: Docker Hub limits to 10 pulls."
+        [[ -z "$USERNAME" ]] && read -rp "Enter DockerHub username: " USERNAME
+        [[ -z "$PASSWORD" ]] && read -rsp "Enter DockerHub password: " PASSWORD && echo
+    fi
+
+    echo "$PASSWORD" | docker login --username "$USERNAME" --password-stdin || { echo "Docker authentication failed"; exit 1; }
 }
 
 create_network () {
@@ -962,25 +925,16 @@ create_network () {
 }
 
 read_continue_installation () {
-	if [[ "${NON_INTERACTIVE}" = "true" ]]; then
-		return 0
-	fi
+	[ "$NON_INTERACTIVE" = "true" ] && return 0
 
-	read -p "Continue installation [Y/N]? " CHOICE_INSTALLATION
-	case "$CHOICE_INSTALLATION" in
-		y|Y )
-			return 0
-		;;
-
-		n|N )
-			exit 0
-		;;
-
-		* )
-			echo "Please, enter Y or N"
-			read_continue_installation
-		;;
-	esac
+	while true; do
+        read -p "Continue installation [Y/N]? " CHOICE_INSTALLATION
+        case "$CHOICE_INSTALLATION" in
+            [yY]) return 0 ;;
+            [nN]) exit 0 ;;
+            *) echo "Please, enter Y or N" ;;
+        esac
+    done
 }
 
 domain_check () {
@@ -1424,12 +1378,14 @@ dependency_installation() {
 		install_package jq
 	fi
 
-	is_command_exists docker && { check_docker_version; systemctl start docker; } || { [ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker || { echo "docker not installed"; exit 1; }; }
+	if ! is_command_exists docker || [ "$(docker --version | awk -F'[ ,.]' '{print $3}')" -lt 18 ]; then
+		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker || { echo "docker not installed or outdated version"; exit 1; }
+	else
+		systemctl start docker
+	fi
 
-	if ! is_command_exists docker-compose; then
-		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker_compose || { echo "docker-compose not installed"; exit 1; }
-	elif [ "$(docker-compose --version | grep -oP '(?<=v)\d+\.\d+'| sed 's/\.//')" -lt "21" ]; then
-		[ "$OFFLINE_INSTALLATION" = "false" ]   && install_docker_compose || { echo "docker-compose version is outdated"; exit 1; }
+	if ! is_command_exists docker-compose || [ $(docker-compose -v | awk '{sub(/^v/,"",$NF);split($NF,a,".");printf "%d%03d%03d",a[1],a[2],a[3]}') -lt 2018000 ]; then
+		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker_compose || { echo "docker-compose not installed or outdated version"; exit 1; }
 	fi
 }
 
@@ -1458,6 +1414,7 @@ check_docker_image () {
 
 		if [ "$INSTALL_PRODUCT" == "true" ]; then
 			offline_check_docker_image ${BASE_DIR}/migration-runner.yml
+			offline_check_docker_image ${BASE_DIR}/identity.yml
 			offline_check_docker_image ${BASE_DIR}/${PRODUCT}.yml
 			offline_check_docker_image ${BASE_DIR}/notify.yml
 			offline_check_docker_image ${BASE_DIR}/healthchecks.yml
