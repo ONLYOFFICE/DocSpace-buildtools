@@ -904,10 +904,25 @@ install_docker () {
 	fi
 }
 
-docker_login () {
-	if [[ -n ${USERNAME} && -n ${PASSWORD}  ]]; then
-		docker login ${HUB} --username ${USERNAME} --password ${PASSWORD}
-	fi
+docker_login() {
+    [[ "$OFFLINE_INSTALLATION" == "true" ]] && return 0
+
+    if [[ -f "$HOME/.docker/config.json" ]] && \
+       jq -r --arg key "${HUB:-https://index.docker.io/v1/}" '.auths | has($key)' "$HOME/.docker/config.json" | grep -q "true"; then
+        return 0
+    fi
+
+    [[ -n "$HUB" ]] && return 0
+
+    if [[ "$NON_INTERACTIVE" == "true" ]]; then
+        [[ -z "$USERNAME" || -z "$PASSWORD" ]] && return 0
+    else
+        echo "Please log in: Docker Hub limits to 10 pulls."
+        [[ -z "$USERNAME" ]] && read -rp "Enter DockerHub username: " USERNAME
+        [[ -z "$PASSWORD" ]] && read -rsp "Enter DockerHub password: " PASSWORD && echo
+    fi
+
+    echo "$PASSWORD" | docker login --username "$USERNAME" --password-stdin || { echo "Docker authentication failed"; exit 1; }
 }
 
 create_network () {
