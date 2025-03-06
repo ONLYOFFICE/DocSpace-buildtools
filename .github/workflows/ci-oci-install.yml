@@ -73,7 +73,7 @@ jobs:
         run: |
           matrix=$(echo '{
             "include": [
-              {"execute": '${{ github.event.inputs.centos9s || true }}', "name": "Centos9s", "os": "base-centos9s", "distr": "onlyoffice"},
+              {"execute": '${{ github.event.inputs.centos9s || true }}', "name": "CentOS9s", "os": "base-centos9s", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.debian12 || true }}', "name": "Debian12", "os": "base-debian12", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu22.04", "os": "base-ubuntu2204", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.ubuntu2404 || true }}', "name": "Ubuntu24.04", "os": "base-ubuntu2404", "distr": "onlyoffice"},

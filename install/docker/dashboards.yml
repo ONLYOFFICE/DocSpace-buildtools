@@ -1,6 +1,6 @@
 services:
   onlyoffice-opensearch-dashboards:
-    image: ${HUB}${DASHBOARDS_IMAGE_NAME}
+    image: ${REGISTRY}${DASHBOARDS_IMAGE_NAME}
     container_name: ${DASHBOARDS_CONTAINER_NAME}
     restart: always
     environment:
