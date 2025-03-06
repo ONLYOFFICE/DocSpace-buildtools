@@ -1,6 +1,6 @@
 services:
   onlyoffice-mysql-server:
-    image: ${HUB}${MYSQL_IMAGE}
+    image: ${REGISTRY}${MYSQL_IMAGE}
     cap_add:
       - SYS_NICE
     container_name: ${MYSQL_CONTAINER_NAME}

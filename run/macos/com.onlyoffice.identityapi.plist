@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.onlyoffice.identityapi</string>
+
+    <key>WorkingDirectory</key>
+    <string>${DOCSPACE_ROOT}</string>
+   
+    <key>ProgramArguments</key>
+    <array>
+        <string>java</string>
+        <string>-jar</string>
+        <string>server/common/ASC.Identity/registration/registration-container/target/registration-container-1.0.0.jar</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>LOG_FILE_PATH</key>
+        <string>${DOCSPACE_ROOT}/Logs/identity-api.log</string>
+        <key>SPRING_PROFILES_ACTIVE</key>
+        <string>""</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardErrorPath</key>
+    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.identityapi.err</string>
+
+    <key>StandardOutPath</key>
+    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.identityapi.log</string>
+
+    <key>KeepAlive</key>
+    <true/>
+
+</dict>
+</plist>

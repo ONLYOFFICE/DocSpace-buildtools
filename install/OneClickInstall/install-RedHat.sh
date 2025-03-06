@@ -135,23 +135,12 @@ while [ "$1" != "" ]; do
 	shift
 done
 
-if [ -z "${UPDATE}" ]; then
-   UPDATE="false";
-fi
+UPDATE="${UPDATE:-false}"
+LOCAL_SCRIPTS="${LOCAL_SCRIPTS:-false}"
+SKIP_HARDWARE_CHECK="${SKIP_HARDWARE_CHECK:-false}"
 
-if [ -z "${LOCAL_SCRIPTS}" ]; then
-   LOCAL_SCRIPTS="false";
-fi
-
-if [ -z "${SKIP_HARDWARE_CHECK}" ]; then
-   SKIP_HARDWARE_CHECK="false";
-fi
-
-if [ -z "$GIT_BRANCH" ]; then
-	DOWNLOAD_URL_PREFIX="https://download.onlyoffice.com/${product}/install-RedHat"
-else
-	DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall/install-RedHat"
-fi
+DOWNLOAD_URL_PREFIX="https://download.onlyoffice.com/${product}/install-RedHat"
+[ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall/install-RedHat"
 
 # Run uninstall if requested
 if [ "${UNINSTALL}" == "true" ]; then
