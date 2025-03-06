@@ -176,8 +176,6 @@ services:
     <<: *x-service-base
     image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-sdk:${DOCKER_TAG}"
     container_name: ${SDK_HOST}
-    expose:
-      - "5099"
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_SDK}/sdk/health || exit 1
