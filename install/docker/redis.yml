@@ -1,6 +1,6 @@
 services:
   onlyoffice-redis:
-    image: ${HUB}${REDIS_IMAGE_NAME}
+    image: ${REGISTRY}${REDIS_IMAGE_NAME}
     container_name: ${REDIS_CONTAINER_NAME}
     restart: always
     expose:
