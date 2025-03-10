@@ -70,6 +70,7 @@ CLIENT_PACKAGES+=("@docspace/client")
 CLIENT_PACKAGES+=("@docspace/login")
 CLIENT_PACKAGES+=("@docspace/doceditor")
 CLIENT_PACKAGES+=("@docspace/management")
+CLIENT_PACKAGES+=("@docspace/sdk")
 
 export TS_ERRORS_IGNORE=true
 for PKG in ${CLIENT_PACKAGES[@]}; do

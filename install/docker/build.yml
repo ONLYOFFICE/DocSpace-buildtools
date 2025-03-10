@@ -111,6 +111,13 @@ services:
       target: doceditor
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-doceditor:${DOCKER_TAG}"
 
+  onlyoffice-sdk:
+    build:
+      context:  ./
+      dockerfile: "${DOCKERFILE}"
+      target: sdk
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-sdk:${DOCKER_TAG}"
+
   onlyoffice-login:
     build:
       context:  ./
