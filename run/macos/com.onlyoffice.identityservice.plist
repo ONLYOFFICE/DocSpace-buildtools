@@ -26,7 +26,7 @@
     </dict>
 
     <key>RunAtLoad</key>
-    <true/>
+    <false/>
 
     <key>StandardErrorPath</key>
     <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.identityservice.err</string>

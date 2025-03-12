@@ -24,7 +24,7 @@
     </dict>
 
     <key>RunAtLoad</key>
-    <true/>
+    <false/>
 
     <key>StandardErrorPath</key>
     <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.identitymigration.err</string>
@@ -33,14 +33,7 @@
     <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.identitymigration.log</string>
 
     <key>KeepAlive</key>
-    <dict>
-        <key>SuccessfulExit</key>
-        <false/>
-        <key>Crashed</key>
-        <true/>
-    </dict>
-
-    <key>ThrottleInterval</key>
-    <integer>5</integer>
+    <true/>
+    
 </dict>
 </plist>

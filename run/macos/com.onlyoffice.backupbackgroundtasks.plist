@@ -22,7 +22,7 @@
     </array>
 
     <key>RunAtLoad</key>
-    <true/>
+    <false/>
 
     <key>StandardErrorPath</key>
     <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.backupbackgroundtasks.err</string>
