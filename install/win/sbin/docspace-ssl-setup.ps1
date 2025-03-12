@@ -24,7 +24,7 @@ elseif ((Test-RegistryValue "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\Curren
 if ( -not $certbot_path )
 {
   Write-Output " Attention! Certbot is not installed on your computer. "
-  Write-Output " Certbot could be downloaded by this link 'https://github.com/certbot/certbot/releases/latest/download/certbot-beta-installer-win_amd64_signed.exe' "
+  Write-Output " Certbot could be downloaded by this link 'https://github.com/certbot/certbot/releases/download/v2.6.0/certbot-beta-installer-win_amd64_signed.exe' "
   exit
 }
 
@@ -154,14 +154,14 @@ function CheckFileFormat {
     exit 1
 }
 
+if ( $args.Count -ge 2 )
+{
 
-if ($args.Count -ge 2) {
-    if ($args[0] -eq "-f") {
-        $letsencrypt_domain = $args[1] -JOIN ","
-        $ssl_cert = $args[2]
-        $ssl_key = $args[3]
-
-        $certFormat = CheckFileFormat -filePath $ssl_cert
+  if ($args[0] -eq "-f") {
+    $letsencrypt_domain = $args[1] -JOIN ","
+    $ssl_cert = $args[2]
+    $ssl_key = $args[3]
+	$certFormat = CheckFileFormat -filePath $ssl_cert
 
         if ($certFormat -in @(".pfx", ".der", ".cer", ".p7b")) {
             Write-Output "Detected $certFormat certificate, converting to PEM..."
@@ -171,8 +171,7 @@ if ($args.Count -ge 2) {
                 $ssl_key = $pemFiles.KeyFile
             }
         }
-    }
-}
+  }
 
   else {
     $letsencrypt_mail = $args[0] -JOIN ","
@@ -184,8 +183,8 @@ if ($args.Count -ge 2) {
     cmd.exe /c "certbot certonly --expand --webroot -w `"${root_dir}`" --key-type rsa --cert-name ${product} --noninteractive --agree-tos --email ${letsencrypt_mail} -d ${letsencrypt_domain}" > "${app}\letsencrypt\Logs\le-new.log"
 
     pushd "${letsencrypt_root_dir}\${product}"
-        $ssl_cert = (Resolve-Path -Path (Get-Item "${letsencrypt_root_dir}\${product}\fullchain.pem").Target).ToString().Replace('\', '/')
-        $ssl_key = (Resolve-Path -Path (Get-Item "${letsencrypt_root_dir}\${product}\privkey.pem").Target).ToString().Replace('\', '/')
+        $ssl_cert = (Get-Item "${letsencrypt_root_dir}\${product}\fullchain.pem").FullName.Replace('\', '/')
+        $ssl_key = (Get-Item "${letsencrypt_root_dir}\${product}\privkey.pem").FullName.Replace('\', '/')
     popd
   }
 
