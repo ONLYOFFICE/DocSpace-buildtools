@@ -73,6 +73,7 @@ SERVICE_NAME=(
 	migration-runner
 	login
 	healthchecks
+	langflow
 	)
 
 reassign_values (){
@@ -188,9 +189,16 @@ reassign_values (){
 		EXEC_FILE="ASC.Web.HealthChecks.UI.dll"
 		DEPENDENCY_LIST=""
 	;;
+	langflow )
+		SERVICE_PORT="7860"
+		WORK_DIR="${BASE_DIR}/services/langflow"
+		EXEC_FILE="${WORK_DIR}/.venv/bin/python -m langflow run"
+		DEPENDENCY_LIST=""
+	;;
   esac
   SERVICE_NAME="$1"
   RESTART="always"
+  unset EXEC_START_PRE
   unset SYSTEMD_ENVIRONMENT
   if [[ "${EXEC_FILE}" == *".js" ]]; then
 	SERVICE_TYPE="simple"
@@ -203,6 +211,11 @@ reassign_values (){
 	SERVICE_TYPE="simple"
 	RESTART="on-failure"
 	EXEC_START="${DOTNET_RUN} ${WORK_DIR}${EXEC_FILE} standalone=true"
+  elif [[ "${SERVICE_NAME}" = "langflow" ]]; then
+	SERVICE_TYPE="simple"
+	RESTART="on-failure"
+	EXEC_START_PRE="${WORK_DIR}/.venv/bin/uv sync --frozen --no-editable"
+	EXEC_START="${EXEC_FILE} --backend-only --host ${APP_URLS#http://} --port ${SERVICE_PORT} --log-file ${LOG_DIR}/${SERVICE_NAME}.log"
   else
 	SERVICE_TYPE="notify"
 	EXEC_START="${DOTNET_RUN} ${WORK_DIR}${EXEC_FILE} --urls=${APP_URLS}:${SERVICE_PORT} --pathToConf=${PATH_TO_CONF} \
@@ -212,6 +225,7 @@ reassign_values (){
 }
 
 write_to_file () {
+  [[ -n ${EXEC_START_PRE} ]] && sed "/^ExecStart=/i ExecStartPre=${EXEC_START_PRE}" -i $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
   [[ -n ${SYSTEMD_ENVIRONMENT} ]] && sed "/^ExecStart=/a Environment=${SYSTEMD_ENVIRONMENT}" -i $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
   [[ -n ${DEPENDENCY_LIST} ]] && sed -e "s_\(After=.*\)_\1 ${DEPENDENCY_LIST}_" -e "/After=/a Wants=${DEPENDENCY_LIST}" -i $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
   sed -i -e 's#${SERVICE_NAME}#'$SERVICE_NAME'#g' -e 's#${WORK_DIR}#'$WORK_DIR'#g' -e "s#\${RESTART}#$RESTART#g" -e "s#\${SYSTEMD_ENVIRONMENT_FILE}#$SYSTEMD_ENVIRONMENT_FILE#g" \

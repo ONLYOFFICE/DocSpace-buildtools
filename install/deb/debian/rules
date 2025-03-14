@@ -47,6 +47,7 @@ check_archives:
 	@$(call extract_archive,${SOURCE_PATH}/DocStore.tar.gz,DocStore,-C ${SERVER_PATH}/products/ASC.Files/Server)
 	@$(call extract_archive,${SOURCE_PATH}/campaigns.tar.gz,campaigns,-C ${BUILD_PATH})
 	@$(call extract_archive,${SOURCE_PATH}/plugins.tar.gz,plugins,-C ${BUILD_PATH})
+	@$(call extract_archive,${SOURCE_PATH}/langflow.tar.gz,langflow,-C ${BUILD_PATH})
 	@echo "Source archives check passed."
 
 override_dh_auto_build: check_archives
@@ -56,7 +57,8 @@ override_dh_auto_build: check_archives
 	bash build-frontend.sh -sp ${BUILD_PATH} -di "false"; \
 	bash build-backend.sh -sp ${BUILD_PATH}; \
 	bash publish-backend.sh -sp ${SERVER_PATH}; \
-	bash plugins-build.sh ${BUILD_PATH}/plugins
+	bash plugins-build.sh ${BUILD_PATH}/plugins; \
+	bash langflow-build.sh ${BUILD_PATH}/langflow
 
 	find ${BUILDTOOLS_PATH}/install/common -type f -exec rename -f -v "s/product([^\/]*)$$/${PRODUCT}\$$1/g" {} ';'
 

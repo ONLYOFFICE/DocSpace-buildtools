@@ -262,3 +262,17 @@ AutoReqProv:    no
 BuildArch:      noarch
 %description    plugins
 This package includes plugins that extend DocSpace functionality
+
+%package        langflow
+Packager:       %{packager}
+Summary:        Langflow
+Group:          Applications/Internet
+Requires:       %name-proxy = %version-%release
+Requires:       python3
+AutoReqProv:    no
+BuildArch:      noarch
+%description    langflow
+Langflow is a tool for building and deploying AI agents and workflows.
+It offers a visual authoring experience and an API server to integrate
+agents into any application. It supports major LLMs, vector databases,
+and AI tools.

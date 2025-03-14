@@ -54,8 +54,9 @@
 %files proxy
 %defattr(-, onlyoffice, onlyoffice, -)
 %config %{_sysconfdir}/openresty/includes/*
+%exclude %{_sysconfdir}/openresty/includes/onlyoffice-langflow.conf
 %config %{_sysconfdir}/openresty/conf.d/*
-%config %{_sysconfdir}/openresty/html/*
+%{_sysconfdir}/openresty/html/*.html
 %attr(744, root, root) %{_bindir}/%{product}-ssl-setup
 %config %{_sysconfdir}/onlyoffice/%{product}/openresty/nginx.conf.template
 %dir %{_sysconfdir}/onlyoffice/
@@ -151,3 +152,13 @@
 %{_var}/www/onlyoffice/Data/Studio/webplugins/
 %dir %{_var}/www/onlyoffice/Data/
 %dir %{_var}/www/onlyoffice/Data/Studio/
+
+%files langflow
+%defattr(-, onlyoffice, onlyoffice, -)
+%{buildpath}/services/langflow/
+%{_sysconfdir}/openresty/html/
+%{_sysconfdir}/openresty/includes/onlyoffice-langflow.conf
+/usr/lib/systemd/system/%{product}-langflow.service
+%dir %{buildpath}/services/
+%dir %{_sysconfdir}/openresty/
+%dir %{_sysconfdir}/openresty/includes/

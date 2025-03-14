@@ -283,7 +283,7 @@ restart_services() {
 	SERVICES=(login api socket studio-notify notify \
 	people-server files files-services studio backup api-system \
 	clear-events backup-background ssoauth doceditor healthchecks \
-	identity-authorization identity-api)
+	identity-authorization identity-api langflow)
 	SERVICES_LIST=("${SERVICES[@]/#/${PRODUCT}-}")
 
 	systemctl enable "${SERVICES_LIST[@]}" >/dev/null 2>&1
@@ -519,6 +519,8 @@ setup_openresty(){
 					PORTS+=('9090') #ASC.Identity.API
 					PORTS+=('9834') #ASC.SsoAuth
 					PORTS+=('9899') #ASC.Socket.IO
+					PORTS+=('3000') #Frontend Langflow
+					PORTS+=('7860') #Backend Langflow
 					setsebool -P httpd_can_network_connect on
 				;;
 				disabled)
@@ -741,6 +743,7 @@ setup_redis() {
 
 	$JSON $APP_DIR/redis.$ENVIRONMENT.json -e "this.Redis={'Hosts': [ { Host: \"${REDIS_HOST}\", Port: \"${REDIS_PORT}\" } ], 'Database': \"${REDIS_DB}\"}" >/dev/null 2>&1
 	echo -e "REDIS_HOST=${REDIS_HOST}\nREDIS_PORT=${REDIS_PORT}\nREDIS_DB=${REDIS_DB}" >> "${APP_DIR}/systemd.env"
+	echo -e "LANGFLOW_REDIS_HOST=${REDIS_HOST}\nLANGFLOW_REDIS_PORT=${REDIS_PORT}\nLANGFLOW_REDIS_DB=${REDIS_DB}" >> "${APP_DIR}/systemd.env"
 
 	sed -i "s~\(redis_host =\).*~\1 \"$REDIS_HOST\"~" "${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}.conf"
 	sed -i "s~\(redis_port =\).*~\1 $REDIS_PORT~" "${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}.conf"
@@ -822,6 +825,10 @@ product_configuration(){
 
 	save_undefined_param "${USER_CONF}" "core['base-domain']" "${APP_HOST}" "rewrite"
 	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core['base-domain']" "${APP_HOST}" "rewrite"
+
+	echo "LANGFLOW_LOG_FILE=${LOG_DIR}/langflow.log" >> "${APP_DIR}/systemd.env"
+	echo "LANGFLOW_CONFIG_DIR=${APP_DIR}/langflow" >> "${APP_DIR}/systemd.env"
+	echo "LANGFLOW_SAVE_DB_IN_CONFIG_DIR=true" >> "${APP_DIR}/systemd.env"
 
 	echo "OK"
 }

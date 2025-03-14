@@ -8,6 +8,7 @@ bash install/common/build-frontend.sh --srcpath %{_builddir} -di "false"
 bash install/common/build-backend.sh --srcpath %{_builddir}
 bash install/common/publish-backend.sh --srcpath %{_builddir}/server
 bash install/common/plugins-build.sh %{_builddir}/plugins
+bash install/common/langflow-build.sh %{_builddir}/langflow
 
 rename -f -v "s/product([^\/]*)$/%{product}\$1/g" install/common/*
 
