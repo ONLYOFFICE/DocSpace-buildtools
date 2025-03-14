@@ -20,13 +20,14 @@ Vendor:         Ascensio System SIA
 Packager:       %{packager}
 License:        AGPLv3
 
-Source0:        https://github.com/ONLYOFFICE/%{product}-buildtools/archive/master.tar.gz#/buildtools.tar.gz
-Source1:        https://github.com/ONLYOFFICE/%{product}-client/archive/master.tar.gz#/client.tar.gz
-Source2:        https://github.com/ONLYOFFICE/%{product}-server/archive/master.tar.gz#/server.tar.gz
-Source3:        https://github.com/ONLYOFFICE/document-templates/archive/main/community-server.tar.gz#/DocStore.tar.gz
-Source4:        https://github.com/ONLYOFFICE/ASC.Web.Campaigns/archive/master.tar.gz#/campaigns.tar.gz
-Source5:        https://github.com/ONLYOFFICE/%{product}-plugins/archive/master.tar.gz#/plugins.tar.gz
-Source6:        %{product}.rpmlintrc
+Source0:        %{product}.rpmlintrc
+Source1:        https://github.com/ONLYOFFICE/%{product}-buildtools/archive/master.tar.gz#/buildtools.tar.gz
+Source2:        https://github.com/ONLYOFFICE/%{product}-client/archive/master.tar.gz#/client.tar.gz
+Source3:        https://github.com/ONLYOFFICE/%{product}-server/archive/master.tar.gz#/server.tar.gz
+Source4:        https://github.com/ONLYOFFICE/document-templates/archive/main/community-server.tar.gz#/DocStore.tar.gz
+Source5:        https://github.com/ONLYOFFICE/ASC.Web.Campaigns/archive/master.tar.gz#/campaigns.tar.gz
+Source6:        https://github.com/ONLYOFFICE/%{product}-plugins/archive/master.tar.gz#/plugins.tar.gz
+Source7:        https://github.com/ONLYOFFICE/langflow/archive/master.tar.gz#/langflow.tar.gz
 
 BuildRequires:  nodejs >= 18.0
 BuildRequires:  yarn
@@ -46,6 +47,7 @@ Requires:       %name-doceditor = %version-%release
 Requires:       %name-files = %version-%release
 Requires:       %name-files-services = %version-%release
 Requires:       %name-healthchecks = %version-%release
+Requires:       %name-langflow = %version-%release
 Requires:       %name-login = %version-%release
 Requires:       %name-migration-runner = %version-%release
 Requires:       %name-notify = %version-%release
@@ -73,14 +75,15 @@ predefined permissions.
 %prep
 rm -rf %{_rpmdir}/%{_arch}/%{name}-* %{_builddir}/*
 
-tar -xf %{SOURCE0} --transform='s,^[^/]\+,buildtools,'   -C %{_builddir} &
-tar -xf %{SOURCE1} --transform='s,^[^/]\+,client,'       -C %{_builddir} &
-tar -xf %{SOURCE2} --transform='s,^[^/]\+,server,'       -C %{_builddir} &
-tar -xf %{SOURCE4} --transform='s,^[^/]\+,campaigns,'    -C %{_builddir} &
-tar -xf %{SOURCE5} --transform='s,^[^/]\+,plugins,'      -C %{_builddir} &
+cp %{SOURCE0} .
+tar -xf %{SOURCE1} --transform='s,^[^/]\+,buildtools,'   -C %{_builddir} &
+tar -xf %{SOURCE2} --transform='s,^[^/]\+,client,'       -C %{_builddir} &
+tar -xf %{SOURCE3} --transform='s,^[^/]\+,server,'       -C %{_builddir} &
+tar -xf %{SOURCE5} --transform='s,^[^/]\+,campaigns,'    -C %{_builddir} &
+tar -xf %{SOURCE6} --transform='s,^[^/]\+,plugins,'      -C %{_builddir} &
+tar -xf %{SOURCE7} --transform='s,^[^/]\+,langflow,'     -C %{_builddir} &
 wait
-tar -xf %{SOURCE3} --transform='s,^[^/]\+,DocStore,'     -C %{_builddir}/server/products/ASC.Files/Server
-cp -rf %{SOURCE6} .
+tar -xf %{SOURCE4} --transform='s,^[^/]\+,DocStore,'     -C %{_builddir}/server/products/ASC.Files/Server
 
 %include build.spec
 
@@ -111,6 +114,25 @@ fi
 
 if [ "$1" -eq 0 ]; then
     rm -rf %{buildpath}
+fi
+
+%post langflow
+
+DIR="%{buildpath}/services/langflow" UV="${DIR}/.local/bin/uv"
+HOME=${DIR} ${UV} venv --directory "${DIR}" && source "${DIR}/.venv/bin/activate"
+echo "Installing langflow..."
+HOME=${DIR} ${UV} pip install --quiet --force-reinstall "${DIR}"/*.whl --directory "${DIR}"
+
+# It ensures SELinux allows executing files in the venv's bin directory
+if command -v semanage &> /dev/null && command -v restorecon &> /dev/null; then
+    find "${DIR}/.venv" "${DIR}/.local/share" -type d -name bin 2>/dev/null | while read BIN_DIR; do
+        if ! semanage fcontext -l | awk '{print $1}' | grep -Fxq "${BIN_DIR}(/.*)?"; then
+            echo "Adding SELinux context for: ${BIN_DIR}"
+            semanage fcontext -a -t bin_t "${BIN_DIR}(/.*)?"
+        fi
+        echo "Restoring SELinux context for: ${BIN_DIR}"
+        restorecon -Rv "${BIN_DIR}" >/dev/null
+    done
 fi
 
 %clean

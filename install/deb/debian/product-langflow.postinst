@@ -1,0 +1,12 @@
+#!/bin/bash
+#
+# see: dh_installdeb(1)
+
+set -e
+
+DIR="/var/www/{{product}}/services/langflow" UV="${DIR}/.local/bin/uv"
+HOME=${DIR} ${UV} venv --directory "${DIR}" && source "${DIR}/.venv/bin/activate"
+echo "Installing langflow..."
+HOME=${DIR} ${UV} pip install --quiet --force-reinstall "${DIR}"/*.whl --directory "${DIR}"
+
+#DEBHELPER#

@@ -50,7 +50,6 @@ DOTNET_RUN="/usr/bin/dotnet"
 NODE_RUN="/usr/bin/node"
 JAVA_RUN="/usr/bin/java -jar"
 APP_URLS="http://127.0.0.1"
-SYSTEMD_ENVIRONMENT_FILE="${PATH_TO_CONF}/systemd.env"
 CORE=" --core:products:folder=${BASE_DIR}/products --core:products:subfolder=server"
 
 SERVICE_NAME=(
@@ -74,6 +73,7 @@ SERVICE_NAME=(
 	login
 	healthchecks
 	sdk
+	langflow
 	)
 
 reassign_values (){
@@ -195,9 +195,16 @@ reassign_values (){
         EXEC_FILE="server.js"
         DEPENDENCY_LIST=""
     ;;
+	langflow )
+		SERVICE_PORT="7860"
+		WORK_DIR="${BASE_DIR}/services/langflow"
+		EXEC_FILE="${WORK_DIR}/.venv/bin/langflow run"
+		DEPENDENCY_LIST=""
+	;;
   esac
   SERVICE_NAME="$1"
   RESTART="always"
+  SYSTEMD_ENVIRONMENT_FILE="${PATH_TO_CONF}/systemd.env"
   unset SYSTEMD_ENVIRONMENT
   if [[ "${EXEC_FILE}" == *".js" ]]; then
 	SERVICE_TYPE="simple"
@@ -210,6 +217,12 @@ reassign_values (){
 	SERVICE_TYPE="simple"
 	RESTART="on-failure"
 	EXEC_START="${DOTNET_RUN} ${WORK_DIR}${EXEC_FILE} standalone=true"
+  elif [[ "${SERVICE_NAME}" = "langflow" ]]; then
+	SERVICE_TYPE="simple"
+	RESTART="on-failure"
+	SYSTEMD_ENVIRONMENT_FILE="${PATH_TO_CONF}/langflow.env"
+	SYSTEMD_ENVIRONMENT="HOME=${WORK_DIR} LANGFLOW_LOG_FILE=${LOG_DIR}/langflow.log LANGFLOW_CONFIG_DIR=${PATH_TO_CONF}/langflow "
+	EXEC_START="${EXEC_FILE} --backend-only --host ${APP_URLS#http://} --port ${SERVICE_PORT}"
   else
 	SERVICE_TYPE="notify"
 	EXEC_START="${DOTNET_RUN} ${WORK_DIR}${EXEC_FILE} --urls=${APP_URLS}:${SERVICE_PORT} --pathToConf=${PATH_TO_CONF} \

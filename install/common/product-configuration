@@ -283,7 +283,7 @@ restart_services() {
 	SERVICES=(login api socket studio-notify notify \
 	people-server files files-services studio backup api-system \
 	clear-events backup-background ssoauth doceditor healthchecks \
-	identity-authorization identity-api sdk)
+	identity-authorization identity-api sdk langflow)
 	SERVICES_LIST=("${SERVICES[@]/#/${PRODUCT}-}")
 
 	systemctl enable "${SERVICES_LIST[@]}" >/dev/null 2>&1
@@ -524,6 +524,8 @@ setup_openresty(){
 					PORTS+=('9090') #ASC.Identity.API
 					PORTS+=('9834') #ASC.SsoAuth
 					PORTS+=('9899') #ASC.Socket.IO
+					PORTS+=('3000') #Frontend Langflow
+					PORTS+=('7860') #Backend Langflow
 					setsebool -P httpd_can_network_connect on
 				;;
 				disabled)
@@ -747,6 +749,7 @@ setup_redis() {
 
 	$JSON $APP_DIR/redis.$ENVIRONMENT.json -e "this.Redis={'Hosts': [ { Host: \"${REDIS_HOST}\", Port: \"${REDIS_PORT}\" } ], 'Database': \"${REDIS_DB}\"}" >/dev/null 2>&1
 	echo -e "REDIS_HOST=${REDIS_HOST}\nREDIS_PORT=${REDIS_PORT}\nREDIS_DB=${REDIS_DB}" >> "${APP_DIR}/systemd.env"
+	echo -e "LANGFLOW_REDIS_HOST=${REDIS_HOST}\nLANGFLOW_REDIS_PORT=${REDIS_PORT}\nLANGFLOW_REDIS_DB=${REDIS_DB}" >> "${APP_DIR}/langflow.env"
 
 	sed -i "s~\(redis_host =\).*~\1 \"$REDIS_HOST\"~" "${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}.conf"
 	sed -i "s~\(redis_port =\).*~\1 $REDIS_PORT~" "${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}.conf"
@@ -816,8 +819,9 @@ product_configuration(){
 	done
 
 	echo "ENVIRONMENT=${ENVIRONMENT}" > "$APP_DIR/systemd.env"
+	echo "OPENAI_API_KEY=your_api_key" > "$APP_DIR/langflow.env"
 	echo "SPRING_PROFILES_ACTIVE=prod,server" >> "$APP_DIR/systemd.env"
-	chmod o-rwx "$APP_DIR/systemd.env"
+	chmod o-rwx ${APP_DIR}/{systemd,langflow}.env
 
 	CORE_MACHINEKEY=${CORE_MACHINEKEY:-$(generate_key "machinekey")}
 	save_undefined_param "${USER_CONF}" "core.machinekey" "${CORE_MACHINEKEY}"
@@ -830,6 +834,33 @@ product_configuration(){
 	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core['base-domain']" "${APP_HOST}" "rewrite"
 
 	echo "OK"
+}
+
+langflow_configuration(){
+	echo -n "Configuring langflow... "
+
+	LANGFLOW_DB_HOST="127.0.0.1" LANGFLOW_DB_PORT="5432"
+	LANGFLOW_DB_NAME=${LANGFLOW_DB_NAME:-"langflow"}
+	LANGFLOW_DB_USER=${LANGFLOW_DB_USER:-"langflow"}
+	LANGFLOW_DB_PASSWORD=${LANGFLOW_DB_PASSWORD:-$(generate_key "langflow-db-password")}
+
+	if ! su - postgres -s /bin/bash -c "psql -lqt" | cut -d \| -f 1 | grep -q "${LANGFLOW_DB_NAME}"; then
+		su - postgres -s /bin/bash -c "psql -c \"CREATE USER ${LANGFLOW_DB_USER} WITH password '${LANGFLOW_DB_PASSWORD}';\""
+		su - postgres -s /bin/bash -c "psql -c \"CREATE DATABASE ${LANGFLOW_DB_NAME} OWNER ${LANGFLOW_DB_USER};\""
+	fi
+
+	echo "LANGFLOW_DATABASE_URL=postgresql://${LANGFLOW_DB_NAME}:${LANGFLOW_DB_PASSWORD}@${LANGFLOW_DB_HOST}:${LANGFLOW_DB_PORT}/${LANGFLOW_DB_NAME}" >> "${APP_DIR}/langflow.env"
+	echo "HOST_API_SERVICE=http://127.0.0.1:5000" >> "${APP_DIR}/langflow.env"
+	echo "HOST_FILES_SERVICE=http://127.0.0.1:5007" >> "${APP_DIR}/langflow.env"
+	echo "API_ROUTER_HOST=http://127.0.0.1:8092" >> "${APP_DIR}/langflow.env"
+	echo "HOST_QDRANT_SERVICE=127.0.0.1" >> "${APP_DIR}/langflow.env"
+	echo "HOST_QDRANT_PORT=6333" >> "${APP_DIR}/langflow.env"
+
+	echo "Set your OpenAI API key to enable Langflow:"
+	echo "  OPENAI_API_KEY=your_api_key"
+	echo "  sed -i \"s|\(OPENAI_API_KEY=\).*|\1\${OPENAI_API_KEY}|\" $APP_DIR/langflow.env"
+	echo "  systemctl restart ${PRODUCT}-langflow"
+	echo "✅ Langflow is now ready to use your API key."
 }
 
 # Function below checks if there is a connection to the external service. 0 - OK, connection established
@@ -908,6 +939,8 @@ if [[ ! -z $EXTERNAL_RABBITMQ_FLAG ]]; then
 elif $PACKAGE_MANAGER rabbitmq-server >/dev/null 2>&1; then
     setup_rabbitmq "LOCAL_RABBITMQ_SERVER"
 fi
+
+langflow_configuration
 
 restart_services
 

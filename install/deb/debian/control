@@ -23,6 +23,7 @@ Depends: debconf, openssl,
          {{product}}-files (= {{package_header_tag_version}}),
          {{product}}-files-services (= {{package_header_tag_version}}),
          {{product}}-healthchecks (= {{package_header_tag_version}}),
+         {{product}}-langflow (= {{package_header_tag_version}}),
          {{product}}-login (= {{package_header_tag_version}}),
          {{product}}-migration-runner (= {{package_header_tag_version}}),
          {{product}}-notify (= {{package_header_tag_version}}),
@@ -235,3 +236,13 @@ Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= 16), 
 Description: {{product}}-sdk
   The service provides a Software Development Kit (SDK) with APIs and tools for custom
   integrations and plugins
+
+Package: {{product}}-langflow
+Architecture: all
+Multi-Arch: foreign
+Depends: postgresql-client (>= 12), {{product}}-proxy (= {{package_header_tag_version}}), ${misc:Depends}, ${shlibs:Depends}
+Description: {{product}}-langflow
+	Langflow is a tool for building and deploying AI agents and workflows.
+	It offers a visual authoring experience and an API server to integrate
+	agents into any application. It supports major LLMs, vector databases,
+	and AI tools.

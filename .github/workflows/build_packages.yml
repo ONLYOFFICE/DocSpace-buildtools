@@ -91,9 +91,9 @@ jobs:
           echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.0.5}" >> $GITHUB_ENV
 
       - name: Free Disk Space
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | bash
-          sudo docker image prune --all --force
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: true
 
       - name: Import GPG
         uses: crazy-max/ghaction-import-gpg@v6
@@ -132,6 +132,7 @@ jobs:
           wget -q -O ./debian/source/DocStore.tar.gz "https://github.com/ONLYOFFICE/document-templates/archive/main/community-server.tar.gz" &
           wget -q -O ./debian/source/campaigns.tar.gz "https://github.com/ONLYOFFICE/ASC.Web.Campaigns/archive/master.tar.gz" &
           wget -q -O ./debian/source/plugins.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-plugins/archive/master.tar.gz" &
+          wget -q -O ./debian/source/langflow.tar.gz "https://github.com/ONLYOFFICE/langflow/archive/master.tar.gz" &
           wait
 
           rename -f -v "s/product([^\/]*)$/${PRODUCT_LOW}\$1/g" debian/*
@@ -150,6 +151,7 @@ jobs:
           wget -q -O ./SOURCES/DocStore.tar.gz "https://github.com/ONLYOFFICE/document-templates/archive/main/community-server.tar.gz" &
           wget -q -O ./SOURCES/campaigns.tar.gz "https://github.com/ONLYOFFICE/ASC.Web.Campaigns/archive/master.tar.gz" &
           wget -q -O ./SOURCES/plugins.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-plugins/archive/master.tar.gz" &
+          wget -q -O ./SOURCES/langflow.tar.gz "https://github.com/ONLYOFFICE/langflow/archive/master.tar.gz" &
           wait
           mv ./SOURCES/product.rpmlintrc ./SOURCES/${PRODUCT_LOW}.rpmlintrc
           sed -i -e '/BuildRequires/d' product.spec

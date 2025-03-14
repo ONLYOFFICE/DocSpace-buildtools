@@ -8,6 +8,7 @@ run_script install/common/build-backend.sh --srcpath %{_builddir}
 run_script install/common/publish-backend.sh --srcpath %{_builddir}/server
 run_script install/common/plugins-build.sh %{_builddir}/plugins
 run_script install/common/systemd/build.sh -pm "rpm"
+run_script install/common/langflow-build.sh %{_builddir}/langflow
 run_script install/common/packages-build.sh rpm %{_builddir} %{product}
 
 find %{_builddir}/server/publish/ \

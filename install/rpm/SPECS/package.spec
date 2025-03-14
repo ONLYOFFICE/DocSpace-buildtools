@@ -274,3 +274,18 @@ BuildArch:      noarch
 %description sdk
 The service provides a Software Development Kit (SDK) with APIs and tools for custom
 integrations and plugins
+
+%package        langflow
+Packager:       %{packager}
+Summary:        Langflow
+Group:          Applications/Internet
+Requires:       %name-proxy = %version-%release
+Requires:       postgresql >= 12
+Requires:       gcc
+AutoReqProv:    no
+BuildArch:      noarch
+%description    langflow
+Langflow is a tool for building and deploying AI agents and workflows.
+It offers a visual authoring experience and an API server to integrate
+agents into any application. It supports major LLMs, vector databases,
+and AI tools.

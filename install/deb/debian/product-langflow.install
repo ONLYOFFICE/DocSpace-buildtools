@@ -1,0 +1,4 @@
+debian/build/langflow/.local                                                    var/www/{{product}}/services/langflow
+debian/build/langflow/dist/*.whl                                                var/www/{{product}}/services/langflow
+debian/build/langflow/src/frontend/build/*                                      etc/openresty/html/langflow
+debian/build/langflow/src/frontend/onlyoffice-langflow.conf                     etc/openresty/includes
