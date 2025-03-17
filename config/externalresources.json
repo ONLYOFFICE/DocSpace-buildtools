@@ -32,7 +32,7 @@
 
     "helpcenter": {
       "default": {
-        "domain": "https://helpcenter.onlyoffice.com/{ru|de|fr|es|it}",
+        "domain": "https://helpcenter.onlyoffice.com/{de|fr|es|it}",
         "entries": {
           "accessrights": "/userguides/docspace-gettingstarted.aspx#AccessRights_block",
           "administrationguides": "/administration/docspace.aspx",
