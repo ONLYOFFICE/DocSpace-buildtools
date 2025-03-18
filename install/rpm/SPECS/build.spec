@@ -9,6 +9,11 @@ bash install/common/build-backend.sh --srcpath %{_builddir}
 bash install/common/publish-backend.sh --srcpath %{_builddir}/server
 bash install/common/plugins-build.sh %{_builddir}/plugins
 
+find %{_builddir}/server -type d -name "runtimes" | \
+while IFS= read -r RUNTIMES_DIR; do \
+     find "$RUNTIMES_DIR" -mindepth 1 -maxdepth 1 -type d ! -name "linux-x64" ! -name "linux-arm64" -exec rm -rf {} \; ; \
+done
+
 rename -f -v "s/product([^\/]*)$/%{product}\$1/g" install/common/*
 
 rm -f config/nginx/onlyoffice-login.conf

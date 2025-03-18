@@ -58,6 +58,11 @@ override_dh_auto_build: check_archives
 	bash publish-backend.sh -sp ${SERVER_PATH}; \
 	bash plugins-build.sh ${BUILD_PATH}/plugins
 
+	find ${SERVER_PATH} -type d -name "runtimes" | \
+	while IFS= read -r RUNTIMES_DIR; do \
+		find "$$RUNTIMES_DIR" -mindepth 1 -maxdepth 1 -type d ! -name "linux-x64" ! -name "linux-arm64" -exec rm -rf {} \; ; \
+	done
+
 	find ${BUILDTOOLS_PATH}/install/common -type f -exec rename -f -v "s/product([^\/]*)$$/${PRODUCT}\$$1/g" {} ';'
 
 	find ${BUILD_PATH}/**/publish/ \
