@@ -48,6 +48,7 @@ local_ip = "host.docker.internal"  # networks[-1][-1]
 #     sys.exit(1)
 
 doceditor = f"{local_ip}:5013"
+sdk = f"{local_ip}:5099"
 login = f"{local_ip}:5011"
 client = f"{local_ip}:5001"
 identity_auth = f"{local_ip}:8080"
@@ -119,6 +120,7 @@ print("Docker files root directory:", dockerDir)
 
 print()
 print(f"SERVICE_DOCEDITOR: {doceditor}")
+print(f"SERVICE_SDK: {sdk}")
 print(f"SERVICE_LOGIN: {login}")
 print(f"SERVICE_CLIENT: {client}")
 print(f"SERVICE_MANAGEMENT: {management}")
@@ -315,6 +317,7 @@ os.environ["Baseimage_Nodejs_Run"] = "onlyoffice/4testing-docspace-nodejs-runtim
 os.environ["Baseimage_Proxy_Run"] = "onlyoffice/4testing-docspace-proxy-runtime:" + proxy_version
 os.environ["DOCUMENT_SERVER_IMAGE_NAME"] = document_server_image_name
 os.environ["SERVICE_DOCEDITOR"] = doceditor
+os.environ["SERVICE_SDK"] = sdk
 os.environ["SERVICE_LOGIN"] = login
 os.environ["SERVICE_MANAGEMENT"] = management
 os.environ["SERVICE_CLIENT"] = client
@@ -343,6 +346,7 @@ print("Docker files root directory:", dockerDir)
 
 print()
 print(f"SERVICE_DOCEDITOR: {doceditor}")
+print(f"SERVICE_SDK: {sdk}")
 print(f"SERVICE_LOGIN: {login}")
 print(f"SERVICE_CLIENT: {client}")
 print(f"SERVICE_MANAGEMENT: {management}")

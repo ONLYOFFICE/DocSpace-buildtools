@@ -1,6 +1,6 @@
 services:
   onlyoffice-mysql-server:
-    image: ${HUB}${MYSQL_IMAGE}
+    image: ${REGISTRY}${MYSQL_IMAGE}
     cap_add:
       - SYS_NICE
     container_name: ${MYSQL_CONTAINER_NAME}
@@ -23,7 +23,7 @@ services:
       start_period: 10s
       retries: 3
     volumes:
-      - mysql_data:/var/lib/mysql
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}mysql_data:/var/lib/mysql
       - ./config/mysql/conf.d/:/etc/mysql/conf.d
     networks:
       - ${NETWORK_NAME}

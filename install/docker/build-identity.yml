@@ -16,7 +16,7 @@ services:
       <<: *x-build
       args:
         - MODULE=authorization/authorization-container
-    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-authorization:${DOCKER_TAG}"
+    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-authorization:${DOCKER_TAG}"
     container_name: ${IDENTITY_AUTHORIZATION_CONTAINER_NAME}
     restart: always
     ports:
@@ -26,13 +26,14 @@ services:
       SPRING_PROFILES_ACTIVE: dev
       SPRING_APPLICATION_NAME: ASC.Identity.Authorization
       SERVER_PORT: 8080
+      GRPC_CLIENT_REGISTRATION_ADDRESS: static://onlyoffice-identity-api:8888
 
   onlyoffice-identity-api:
     build:
       <<: *x-build
       args:
         - MODULE=registration/registration-container
-    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-api:${DOCKER_TAG}"
+    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-api:${DOCKER_TAG}"
     container_name: ${IDENTITY_API_CONTAINER_NAME}
     ports:
       - 9090:9090
@@ -41,6 +42,7 @@ services:
       SPRING_PROFILES_ACTIVE: dev
       SPRING_APPLICATION_NAME: ASC.Identity.Registration
       SERVER_PORT: 9090
+      GRPC_CLIENT_AUTHORIZATION_ADDRESS: static://onlyoffice-identity-authorization:9999
 
 networks:
   default:

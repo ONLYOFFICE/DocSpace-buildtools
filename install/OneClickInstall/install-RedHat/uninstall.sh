@@ -17,7 +17,7 @@ if [[ "$DEP_CHOICE" =~ ^(y|yes|)$ ]]; then
 fi
 
 # Get packages to uninstall
-PACKAGES_TO_UNINSTALL=($(rpm -qa | grep -E "^(${package_sysname}|${product})" || true))
+mapfile -t PACKAGES_TO_UNINSTALL < <(rpm -qa | grep -E "^(${package_sysname}|${product})" || true)
 
 DEPENDENCIES=(
     nodejs dotnet-sdk-9.0 mysql-community-server postgresql
@@ -26,6 +26,7 @@ DEPENDENCIES=(
 )
 
 if [ "$UNINSTALL_DEPENDENCIES" = true ]; then
+    rpm -q valkey &>/dev/null && DEPENDENCIES+=("valkey")
     PACKAGES_TO_UNINSTALL+=("${DEPENDENCIES[@]}")
 fi
 
@@ -41,3 +42,4 @@ fi
 
 echo -e "Uninstallation of ${package_sysname^^} ${product_name}" \
          "$( [ "$UNINSTALL_DEPENDENCIES" = true ] && echo "and all dependencies" ) \e[32mcompleted.\e[0m"
+

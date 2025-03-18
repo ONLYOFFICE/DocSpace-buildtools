@@ -34,6 +34,7 @@ RABBITMQ_PORT="5672"
 	
 REDIS_HOST="127.0.0.1"
 REDIS_PORT="6379"
+REDIS_DB="0"
 
 JSON="json -I -f"
 
@@ -129,6 +130,13 @@ while [ "$1" != "" ]; do
 			fi
 		;;
 
+		-rdb | --redisdb )
+			if [ "$2" != "" ]; then
+				REDIS_DB=$2
+				shift
+			fi
+		;;
+
 		-rbh | --rabbitmqhost )
 			if [ "$2" != "" ]; then
 				RABBITMQ_HOST=$2
@@ -161,6 +169,7 @@ while [ "$1" != "" ]; do
 		-mk | --machinekey )
 			if [ "$2" != "" ]; then
 				CORE_MACHINEKEY=$2
+				echo "$CORE_MACHINEKEY" > "$APP_DIR/.private/machinekey"
 				shift
 			fi
 		;;
@@ -189,6 +198,7 @@ while [ "$1" != "" ]; do
 		-dp | --dashboadrspassword )
 			if [ "$2" != "" ]; then
 				DASHBOARDS_PASSWORD=$2
+				echo "$DASHBOARDS_PASSWORD" > "$APP_DIR/.private/dashboards-password"
 				shift
 			fi
 		;;
@@ -211,6 +221,7 @@ while [ "$1" != "" ]; do
 			echo "      -esp, --elasticport                 elasticsearch port (default 9200)"
 			echo "      -rdh, --redishost                 	redis ip"
 			echo "      -rdp, --redisport                 	redis port (default 6379)"
+			echo "      -rdb, --redisdb                     redis database index (default 0)"
 			echo "      -rbh, --rabbitmqhost                rabbitmq ip"
 			echo "      -rbp, --rabbitmqport                rabbitmq port"
 			echo "      -rbu, --rabbitmquser                rabbitmq user"
@@ -236,23 +247,6 @@ while [ "$1" != "" ]; do
 	esac
 	shift
 done
-
-set_core_machinekey () {
-	if [[ -f $APP_DIR/.private/machinekey ]] || [[ -n $CORE_MACHINEKEY ]]; then
-		CORE_MACHINEKEY=${CORE_MACHINEKEY:-$(cat $APP_DIR/.private/machinekey)};
-	else
-		CORE_MACHINEKEY=$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12);
-		if [ "$DIST" = "RedHat" ]; then
-			echo $CORE_MACHINEKEY > $APP_DIR/.private/machinekey
-			chmod o-rwx $APP_DIR/.private/machinekey
-		fi
-	fi
-
-	save_undefined_param "${USER_CONF}" "core.machinekey" "${CORE_MACHINEKEY}"
-	save_undefined_param "${USER_CONF}" "core['base-domain']" "${APP_HOST}" "rewrite"
-	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core.machinekey" "${CORE_MACHINEKEY}"
-	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core['base-domain']" "${APP_HOST}" "rewrite"
-}
 
 install_json() {
 	if ! command -v json; then
@@ -554,7 +548,14 @@ setup_openresty(){
 		fi
 	fi
 
-	chown nginx:nginx ${OPENRESTY_DIR}* -R
+	NGINX_USER="nginx" NGINX_GROUP="nginx"
+	NGINX_LOG_DIR=/var/log/nginx/
+
+	getent group "${NGINX_GROUP}" > /dev/null || groupadd "${NGINX_GROUP}"
+	id "${NGINX_USER}" > /dev/null 2>&1 || useradd -g "${NGINX_GROUP}" -s ${OPENRESTY_DIR}/ "${NGINX_USER}"
+	chown ${NGINX_USER}:${NGINX_GROUP} ${OPENRESTY_DIR}* -R
+	[ -d "${NGINX_LOG_DIR}" ] || { mkdir -p "${NGINX_LOG_DIR}" && chown "${NGINX_USER}:${NGINX_GROUP}" "${NGINX_LOG_DIR}"; }
+	
 	systemctl enable openresty >/dev/null 2>&1
 	systemctl restart openresty
 	echo "OK"
@@ -610,8 +611,7 @@ change_elasticsearch_config(){
 		systemctl stop elasticsearch >/dev/null 2>&1
 	fi
 
-	sed -i '/^plugins\.security/d' /etc/opensearch/opensearch.yml
-	sed -i '/CN=kirk,OU=client,O=client,L=test, C=de/d' /etc/opensearch/opensearch.yml
+	sed -i '/^plugins\.security\./,/^[^ ]/d' /etc/opensearch/opensearch.yml
   	if /usr/share/opensearch/bin/opensearch-plugin list | grep -x "opensearch-security" > /dev/null 2>&1 ; then
 		/usr/share/opensearch/bin/opensearch-plugin remove opensearch-security > /dev/null 2>&1
 	fi
@@ -703,20 +703,11 @@ setup_dashboards() {
 	echo -n "Configuring dashboards... "
 
 	DASHBOARDS_CONF_PATH="/etc/opensearch-dashboards/opensearch_dashboards.yml"
-
-	if [[ -n ${DASHBOARDS_PASSWORD} ]]; then
-		echo "${DASHBOARDS_PASSWORD}" > ${APP_DIR}/.private/dashboards-password
-	elif [[ -f ${APP_DIR}/.private/dashboards-password ]]; then
-		DASHBOARDS_PASSWORD=$(cat ${APP_DIR}/.private/dashboards-password);
-	else
-		DASHBOARDS_PASSWORD=$(echo "$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 20)" | tee ${APP_DIR}/.private/dashboards-password)
-	fi
-
-	chmod o-rwx $APP_DIR/.private/dashboards-password
+	DASHBOARDS_PASSWORD=${DASHBOARDS_PASSWORD:-$(generate_key "dashboards-password" 20)}
 
 	# configure login&pass for Dashboards, used by Nginx HTTP Basic Authentication
 	echo "${DASHBOARDS_USERNAME:-"onlyoffice"}:$(openssl passwd -6 -stdin <<< "${DASHBOARDS_PASSWORD}")" > /etc/openresty/.htpasswd_dashboards
-	chown nginx:nginx /etc/openresty/.htpasswd_dashboards
+	chown ${NGINX_USER}:${NGINX_GROUP} /etc/openresty/.htpasswd_dashboards
 
 	# enable connection with opensearch
 	sed -i 's~\(opensearch\.hosts:\).*~\1 \[http://localhost:9200\]~' ${DASHBOARDS_CONF_PATH}
@@ -748,11 +739,12 @@ setup_fluentbit() {
 setup_redis() {
 	echo -n "Configuring redis... "
 
-	$JSON $APP_DIR/redis.$ENVIRONMENT.json -e "this.Redis={'Hosts': [ { Host: \"${REDIS_HOST}\", Port: \"${REDIS_PORT}\" } ] }" >/dev/null 2>&1
-	echo -e "REDIS_HOST=${REDIS_HOST}\nREDIS_PORT=${REDIS_PORT}" >> "${APP_DIR}/systemd.env"
+	$JSON $APP_DIR/redis.$ENVIRONMENT.json -e "this.Redis={'Hosts': [ { Host: \"${REDIS_HOST}\", Port: \"${REDIS_PORT}\" } ], 'Database': \"${REDIS_DB}\"}" >/dev/null 2>&1
+	echo -e "REDIS_HOST=${REDIS_HOST}\nREDIS_PORT=${REDIS_PORT}\nREDIS_DB=${REDIS_DB}" >> "${APP_DIR}/systemd.env"
 
 	sed -i "s~\(redis_host =\).*~\1 \"$REDIS_HOST\"~" "${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}.conf"
 	sed -i "s~\(redis_port =\).*~\1 $REDIS_PORT~" "${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}.conf"
+	sed -i "s~\(redis_db =\).*~\1 $REDIS_DB~" "${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}.conf"
 
 	if [ $1 == "LOCAL_REDIS_SERVER" ]; then
 		REDIS_CONF=$(find /etc/redis/redis.conf /etc/redis.conf /etc/valkey/valkey.conf -type f 2>/dev/null | head -n 1)
@@ -790,6 +782,14 @@ setup_rabbitmq() {
 	echo "OK"
 }
 
+generate_key() {
+    local FILE_NAME=$1
+    local KEY_LENGTH=${2:-12}
+    local KEY=${3:-$( [[ -f ${APP_DIR}/.private/$FILE_NAME ]] && cat ${APP_DIR}/.private/$FILE_NAME || tr -dc A-Za-z0-9 </dev/urandom | head -c $KEY_LENGTH )}
+    echo "${KEY}" | tee "${APP_DIR}/.private/$FILE_NAME"
+    chmod -R 600 ${APP_DIR}/.private
+}
+
 product_configuration(){
 	echo -n "Configuring ${PRODUCT}... "
 
@@ -810,10 +810,18 @@ product_configuration(){
 	done
 
 	echo "ENVIRONMENT=${ENVIRONMENT}" > "$APP_DIR/systemd.env"
-	echo "SPRING_PROFILES_ACTIVE=prod" >> "$APP_DIR/systemd.env"
+	echo "SPRING_PROFILES_ACTIVE=prod,server" >> "$APP_DIR/systemd.env"
 	chmod o-rwx "$APP_DIR/systemd.env"
 
-	set_core_machinekey
+	echo "SPRING_APPLICATION_SIGNATURE_SECRET=${SIGNATURE_SECRET:-$(generate_key "signature")}" >> "$APP_DIR/systemd.env"
+	echo "SPRING_APPLICATION_ENCRYPTION_SECRET=${ENCRYPTION_SECRET:-$(generate_key "encryption")}" >> "$APP_DIR/systemd.env"
+
+	CORE_MACHINEKEY=${CORE_MACHINEKEY:-$(generate_key "machinekey")}
+	save_undefined_param "${USER_CONF}" "core.machinekey" "${CORE_MACHINEKEY}"
+	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core.machinekey" "${CORE_MACHINEKEY}"
+
+	save_undefined_param "${USER_CONF}" "core['base-domain']" "${APP_HOST}" "rewrite"
+	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core['base-domain']" "${APP_HOST}" "rewrite"
 
 	echo "OK"
 }
@@ -899,8 +907,8 @@ restart_services
 
 # Truncate MySQL DB to make opensearch work with updated app. Strictly after restart_services ()
 if $PACKAGE_MANAGER opensearch >/dev/null 2>&1; then
-	ELASTIC_VERSION=$(awk '/build:/{f=1} f&&/version:/{gsub(/"/,"",$2);print $2; exit}' /usr/share/opensearch/manifest.yml 2>/dev/null || echo "2.11.1")
+	ELASTIC_VERSION=$(awk '/build:/{f=1} f&&/version:/{gsub(/"/,"",$2);print $2; exit}' /usr/share/opensearch/manifest.yml 2>/dev/null || echo "2.18.0")
 	[[ ! -f "$APP_DIR/.private/opensearch-version" || $(cat "$APP_DIR/.private/opensearch-version") != *"$ELASTIC_VERSION"* ]] && $MYSQL "$DB_NAME" -e "TRUNCATE webstudio_index";
 	echo "$ELASTIC_VERSION" > $APP_DIR/.private/opensearch-version
-	chmod o-rwx $APP_DIR/.private/opensearch-version
+	chmod -R 600 $APP_DIR/.private
 fi

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.onlyoffice.webhealthchecksui</string>
+
+    <key>WorkingDirectory</key>
+    <string>${DOCSPACE_ROOT}</string>
+   
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/share/dotnet/dotnet</string>
+        <string>server/web/ASC.Web.HealthChecks.UI/bin/Debug/ASC.Web.HealthChecks.UI.dll</string>
+        <string>urls=http://0.0.0.0:5033</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardErrorPath</key>
+    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.webhealthchecksui.err</string>
+
+    <key>StandardOutPath</key>
+    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.webhealthchecksui.log</string>
+
+    <key>KeepAlive</key>
+    <true/>
+</dict>
+</plist>

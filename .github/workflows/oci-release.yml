@@ -60,6 +60,7 @@ jobs:
             --metadata-directive REPLACE \
             --exclude '*' \
             --include="${{ env.PRODUCT }}-install.sh" \
+            --include="${{ env.PRODUCT }}-developer-install.sh" \
             --include="${{ env.PRODUCT }}-enterprise-install.sh" \
             --include="install-RedHat.sh" \
             --include="install-RedHat/*" \
@@ -74,6 +75,7 @@ jobs:
             --distribution-id ${{ secrets.AWS_DISTRIBUTION_ID_OCI }} \
             --paths \
             "/${{ env.PRODUCT }}/${{ env.PRODUCT }}-install.sh" \
+            "/${{ env.PRODUCT }}/${{ env.PRODUCT }}-developer-install.sh" \
             "/${{ env.PRODUCT }}/${{ env.PRODUCT }}-enterprise-install.sh" \
             "/${{ env.PRODUCT }}/install-RedHat.sh" \
             "/${{ env.PRODUCT }}/install-RedHat/*" \

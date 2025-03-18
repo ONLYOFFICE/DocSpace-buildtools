@@ -63,7 +63,7 @@ function check_hw() {
 # Outputs:     None
 #############################################################################################
 function add-repo-deb() {
-  mkdir -p -m 700 $HOME/.gnupg
+  mkdir -p "$HOME"/.gnupg && chmod 700 "$HOME"/.gnupg
   echo "deb [signed-by=/usr/share/keyrings/onlyoffice.gpg] https://nexus.onlyoffice.com/repository/4testing-debian stable main" | \
   sudo tee /etc/apt/sources.list.d/onlyoffice4testing.list
   curl -fsSL https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE | \
@@ -80,76 +80,6 @@ gpgcheck=1
 enabled=1
 gpgkey=https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE
 END
-}
-
-#############################################################################################
-# Resize Fedora disk. 
-# Globals:
-#   None
-# Arguments:
-#   None
-# Outputs:
-#   None
-#############################################################################################
-function resize_fedora_disk() {
-  # Print current disk layout
-  echo "Current disk layout:"
-  lsblk
-
-  # Install required tools if they are not available
-  if ! command -v parted &> /dev/null; then
-    echo "parted not found, installing..."
-    sudo dnf install -y parted
-  fi
-
-  if ! command -v growpart &> /dev/null; then
-    echo "growpart not found, installing..."
-    sudo dnf install -y cloud-utils-growpart
-  fi
-
-  # Check Fedora version and set the correct partition number
-  if [ "$VERSION_ID" == "40" ]; then
-    PARTITION_NUMBER=2
-  elif [ "$VERSION_ID" == "41" ]; then
-    PARTITION_NUMBER=4
-  else
-    echo "Unsupported Fedora version: $VERSION_ID"
-    exit 1
-  fi
-
- # Fix GPT table to use all available space
-  echo "Fixing GPT to use all available space..."
-  echo -e "fix\n" | sudo parted /dev/sda
-
-  # Use growpart to resize the correct partition
-  echo "Resizing partition /dev/sda${PARTITION_NUMBER} using growpart..."
-  sudo growpart /dev/sda ${PARTITION_NUMBER}
-
-  # Check the filesystem type before resizing
-  FSTYPE=$(df -T | grep '/$' | awk '{print $2}')
-
-  # Resize the filesystem based on the filesystem type (xfs or ext4)
-  if [ "$FSTYPE" == "xfs" ]; then
-    echo "Resizing XFS filesystem on /dev/sda${PARTITION_NUMBER}..."
-    sudo xfs_growfs /
-  elif [ "$FSTYPE" == "ext4" ]; then
-    echo "Resizing ext4 filesystem on /dev/sda${PARTITION_NUMBER}..."
-    sudo resize2fs /dev/sda${PARTITION_NUMBER}
-  elif [ "$FSTYPE" == "btrfs" ]; then
-    echo "Resizing Btrfs filesystem on /dev/sda${PARTITION_NUMBER}..."
-    sudo btrfs filesystem resize max /
-  else
-    echo "Unsupported filesystem type: $FSTYPE"
-    exit 1
-  fi
-
-  # Print the new disk layout
-  echo "Disk layout after resizing:"
-  lsblk
-
-  # Verify new available space
-  echo "Filesystem after resizing:"
-  df -h /
 }
 
 #############################################################################################
@@ -177,9 +107,6 @@ function prepare_vm() {
 
       fedora)
           [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-rpm
-          if [[ "$VERSION_ID" == "40" || "$VERSION_ID" == "41" ]]; then
-              resize_fedora_disk
-          fi
           ;;
 
       centos)
@@ -215,7 +142,7 @@ function prepare_vm() {
 #############################################################################################
 function install_docspace() {
   [[ "${DOWNLOAD_SCRIPTS}" == 'true' ]] && wget https://download.onlyoffice.com/docspace/docspace-install.sh || sed 's/set -e/set -xe/' -i *.sh
-  bash docspace-install.sh package ${ARGUMENTS} || { echo "Exit code non-zero. Exit with 1."; exit 1; }
+  bash docspace-install.sh package ${ARGUMENTS} -log false || { echo "Exit code non-zero. Exit with 1."; exit 1; }
   echo "Exit code 0. Continue..."
 }
 
@@ -229,9 +156,9 @@ function install_docspace() {
 #   Message about service status 
 #############################################################################################
 function healthcheck_systemd_services() {
-  for service in ${SERVICES_SYSTEMD[@]}; do
+  for service in "${SERVICES_SYSTEMD[@]}"; do
     [[ "$service" == *migration* ]] && continue;
-    if systemctl is-active --quiet ${service}; then
+    if systemctl is-active --quiet "${service}"; then
       echo "${COLOR_GREEN}☑ OK: Service ${service} is running${COLOR_RESET}"
     else
       echo "${COLOR_RED}⚠ FAILED: Service ${service} is not running${COLOR_RESET}"
@@ -272,12 +199,12 @@ function healthcheck_general_status() {
 # This function succeeds even if the file for cat was not found. For that use ${SKIP_EXIT} variable
 #############################################################################################
 function services_logs() {
-  SERVICES_SYSTEMD=($(awk '/SERVICE_NAME=\(/{flag=1; next} /\)/{flag=0} flag' "build.sh" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed 's/^/docspace-/' | sed 's/$/.service/'))
+  mapfile -t SERVICES_SYSTEMD < <(awk '/SERVICE_NAME=\(/{flag=1; next} /\)/{flag=0} flag' "build.sh" | sed -E 's/^[[:space:]]*|[[:space:]]*$//g; s/^/docspace-/; s/$/.service/')
   SERVICES_SYSTEMD+=("ds-converter.service" "ds-docservice.service" "ds-metrics.service")
 
-  for service in ${SERVICES_SYSTEMD[@]}; do
+  for service in "${SERVICES_SYSTEMD[@]}"; do
     echo $LINE_SEPARATOR && echo "${COLOR_GREEN}Check logs for systemd service: $service${COLOR_RESET}" && echo $LINE_SEPARATOR   
-    journalctl -u $service -n 30 || true
+    journalctl -u "$service" -n 30 || true
   done
   
   local DOCSPACE_LOGS_DIR="/var/log/onlyoffice/docspace"

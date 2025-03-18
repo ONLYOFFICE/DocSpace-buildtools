@@ -102,7 +102,7 @@ function TestSqlConnection {
     $Uid      = AI_GetMsiProperty DB_USER
     $Pwd      = AI_GetMsiProperty DB_PWD
 
-    $ConnectionString = "DRIVER={MySQL ODBC 8.0 Unicode Driver};SERVER=$Server;PORT=$Port;USER=$Uid;PASSWORD=$Pwd;"
+    $ConnectionString = "DRIVER={MySQL ODBC 8.4 Unicode Driver};SERVER=$Server;PORT=$Port;USER=$Uid;PASSWORD=$Pwd;"
     $Connection = New-Object System.Data.Odbc.OdbcConnection($ConnectionString)
 
     try {
@@ -128,14 +128,14 @@ function MySQLConfigure {
     $DbName      = AI_GetMsiProperty DB_NAME
     $DbPass      = AI_GetMsiProperty DB_PWD
 
-    $InstallDir = Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\MySQL AB\MySQL Server 8.0" -Name "Location"
-    $DataDir    = Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\MySQL AB\MySQL Server 8.0" -Name "DataLocation"
+    $InstallDir = (AI_GetMsiProperty "ProgramFiles64Folder") + "/MySQL/MySQL Server 8.4"
+    $DataDir    = (AI_GetMsiProperty "ProgramFiles64Folder") + "/MySQL/MySQL Server 8.4/data"
 
     Write-Output "MySQLConfigure: InstallDir $InstallDir"
     Write-Output "MySQLConfigure: DataDir $DataDir"
 
     try {
-        $Service = Get-Service -Name "MySQL80" -ErrorAction Stop
+        $Service = Get-Service -Name "MySQL84" -ErrorAction Stop
 
         if ($Service.Status -eq 'Running') {
             $MySqlPath = Join-Path $InstallDir "bin\mysql.exe"
@@ -271,9 +271,9 @@ function SetDashboardsPwd {
 # Function to set up OpenSearch.
 function OpenSearchSetup {
     $AppDir = AI_GetMsiProperty APPDIR
-    $AppIndexDir = Join-Path $AppDir "Data\Index\v2.11.1\"
+    $AppIndexDir = Join-Path $AppDir "Data\Index\v2.18.0\"
     $LogsDir     = Join-Path $AppDir "Logs\"
-    $OpenSearchDashboardsYml = "C:\OpenSearchStack\opensearch-dashboards-2.11.1\config\opensearch_dashboards.yml"
+    $OpenSearchDashboardsYml = "C:\OpenSearchStack\opensearch-dashboards-2.18.0\config\opensearch_dashboards.yml"
 
     # Check if the index directory exists and set NEED_REINDEX_OPENSEARCH property if it doesn't.
     if (-not (Test-Path $AppIndexDir)) {
@@ -357,7 +357,7 @@ function MoveConfigs {
     $ConfigFile = Join-Path $TargetFolder "onlyoffice-proxy.conf"
     $SslScriptPath = Join-Path $AppDir "sbin\docspace-ssl-setup.ps1"
     $FluentBitSourceFile = Join-Path $AppDir "config\fluent-bit.conf"
-    $FluentBitDstFolder = "C:\OpenSearchStack\fluent-bit-2.2.2-win64\conf\"
+    $FluentBitDstFolder = "C:\OpenSearchStack\fluent-bit-3.2.4-win64\conf\"
 
     # Extract SSL certificate and key paths if config file exists.
     if (Test-Path $ConfigFile) {

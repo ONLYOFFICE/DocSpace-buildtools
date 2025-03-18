@@ -7,9 +7,6 @@ on:
       - 'hotfix/**'
       - 'develop'
     paths:
-      - 'install/common/**'
-      - 'install/deb/**'
-      - 'install/rpm/**'
       - '.github/workflows/build_packages.yml'
   workflow_dispatch:
     inputs:
@@ -52,6 +49,7 @@ jobs:
     runs-on: ubuntu-22.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      build_all: ${{ steps.changes.outputs.build_all }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -62,8 +60,7 @@ jobs:
         id: changes
         run: |
           git fetch --no-tags --prune --depth=2
-          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)     
-          echo "build_all=$(echo "$CHANGED_FILES" | grep -qE '^.github/workflows/build_packages.yml' && echo true || echo false)" >> $GITHUB_OUTPUT          
+          echo "build_all=$(git diff --name-only HEAD~1 HEAD | grep -qE 'build_packages.yml' && echo true)" >> $GITHUB_OUTPUT
       - name: Set matrix
         id: set-matrix
         run: |
@@ -96,11 +93,11 @@ jobs:
         run: |
           PRODUCT_VERSION=$(grep -oP '\d+\.\d+\.\d+' <<< "${BRANCH_BUILDTOOLS//\//} ${BRANCH_CLIENT//\//} \
           ${BRANCH_SERVER//\//}" | head -n1)
-          echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.0.1}" >> $GITHUB_ENV
+          echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.0.5}" >> $GITHUB_ENV
 
       - name: Free Disk Space
         run: |
-          sudo rm -rf /usr/local/lib/android /opt/ghc
+          curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | bash
           sudo docker image prune --all --force
 
       - name: Import GPG
@@ -118,8 +115,6 @@ jobs:
           sudo chmod 644 /usr/share/keyrings/yarnkey.gpg
           echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian/ stable main" | \
           sudo tee /etc/apt/sources.list.d/yarn.list
-          sudo add-apt-repository -y ppa:dotnet/backports
-          sudo apt remove -y netstandard-targeting-pack-2.1
           curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
           sudo apt install -y dotnet-sdk-9.0 yarn nodejs rename unzip maven openjdk-21-jdk-headless
           JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | head -1)
@@ -187,8 +182,7 @@ jobs:
         if: matrix.packageType == 'deb'
         run: |
           for deb_package in ${PACKAGE_DIRECTORY}/install/*.deb; do
-            echo -n "Uploading $( basename $deb_package )... "
-            curl --user "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" \
+            curl -s --user "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" \
                  -H "Content-Type: multipart/form-data" \
                  --data-binary "@$deb_package" "${{ secrets.REPO_URL_4TESTING_DEB }}" \
               && echo "Success: $(basename "$deb_package") uploaded." || echo "Error: Failed to upload $(basename "$deb_package")"
@@ -198,8 +192,7 @@ jobs:
         if: matrix.packageType == 'rpm'
         run: |
           for rpm_package in ${PACKAGE_DIRECTORY}/install/rpm/SPECS/RPMS/noarch/*.rpm; do
-            echo -n "Uploading $( basename $rpm_package )... "
-            curl --user "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" \
+            curl -s --user "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" \
                  --upload-file "$rpm_package" "${{ secrets.REPO_URL_4TESTING_RPM }}" \
               && echo "Success: $(basename "$rpm_package") uploaded." || echo "Error: Failed to upload $(basename "$rpm_package")"
           done
@@ -224,12 +217,15 @@ jobs:
       
   trigger_oci:
     name: Trigger ci-oci-install Workflow
-    needs: build
+    needs: [prepare, build]
     runs-on: ubuntu-22.04
     if: ${{ success() }}
     steps:
       - name: Trigger CI-OCI-Install Workflow
         run: |
+          deb_build="${{ github.event.inputs.deb_build }}"
+          rpm_build="${{ github.event.inputs.rpm_build }}"
+          [[ "${{ needs.prepare.outputs.build_all }}" == "true" ]] && deb_build="true" && rpm_build="true"
           curl \
             -X POST \
             -u "${{ secrets.USERNAME}}:${{secrets.TOKEN}}" \
@@ -238,8 +234,8 @@ jobs:
             --data '{
               "ref": "'"${{ github.ref_name }}"'",
               "inputs": {
-                "deb_build": "'"${{ github.event.inputs.deb_build }}"'",
-                "rpm_build": "'"${{ github.event.inputs.rpm_build }}"'"
+                "deb_build": "'"${deb_build}"'",
+                "rpm_build": "'"${rpm_build}"'"
               }
             }'
 

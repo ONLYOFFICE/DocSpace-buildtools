@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.onlyoffice.identitymigration</string>
+
+    <key>WorkingDirectory</key>
+    <string>${DOCSPACE_ROOT}</string>
+   
+    <key>ProgramArguments</key>
+    <array>
+        <string>java</string>
+        <string>-jar</string>
+        <string>server/common/ASC.Identity/infrastructure/infrastructure-migration-runner/target/infrastructure-migration-runner-1.0.0.jar</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>LOG_FILE_PATH</key>
+        <string>${DOCSPACE_ROOT}/Logs/identity-migration.log</string>
+        <key>SPRING_PROFILES_ACTIVE</key>
+        <string>dev</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardErrorPath</key>
+    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.identitymigration.err</string>
+
+    <key>StandardOutPath</key>
+    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.identitymigration.log</string>
+
+    <key>KeepAlive</key>
+    <true/>
+    
+</dict>
+</plist>

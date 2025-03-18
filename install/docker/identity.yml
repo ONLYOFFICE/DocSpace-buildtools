@@ -6,6 +6,8 @@ x-healthcheck: &x-healthcheck
 
 x-common-environment: &x-common-environment
   SPRING_PROFILES_ACTIVE: ${IDENTITY_PROFILE}
+  SPRING_APPLICATION_SIGNATURE_SECRET: ${IDENTITY_SIGNATURE_SECRET}
+  SPRING_APPLICATION_ENCRYPTION_SECRET: ${IDENTITY_ENCRYPTION_SECRET}
   MYSQL_CONTAINER_NAME: ${MYSQL_CONTAINER_NAME}
   MYSQL_HOST: ${MYSQL_HOST}
   MYSQL_PORT: ${MYSQL_PORT}
@@ -26,7 +28,7 @@ x-common-environment: &x-common-environment
 
 services:
   onlyoffice-identity-authorization:
-    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-authorization:${DOCKER_TAG}"
+    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-authorization:${DOCKER_TAG}"
     container_name: ${IDENTITY_AUTHORIZATION_CONTAINER_NAME}
     user: "${UID}:${GID}"
     restart: always
@@ -35,14 +37,15 @@ services:
     environment:
       <<: *x-common-environment
       SERVER_PORT: ${IDENTITY_AUTHORIZATION_SERVER_PORT}
+      GRPC_CLIENT_REGISTRATION_ADDRESS: static://${IDENTITY_API_CONTAINER_NAME}:8888
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail ${SERVICE_IDENTITY}/health/ || exit 1
     volumes:
-      - log_data:/var/log/onlyoffice
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
 
   onlyoffice-identity-api:
-    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-api:${DOCKER_TAG}"
+    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-api:${DOCKER_TAG}"
     container_name: ${IDENTITY_API_CONTAINER_NAME}
     user: "${UID}:${GID}"
     restart: always
@@ -51,11 +54,12 @@ services:
     environment:
       <<: *x-common-environment
       SERVER_PORT: ${IDENTITY_API_SERVER_PORT}
+      GRPC_CLIENT_AUTHORIZATION_ADDRESS: static://${IDENTITY_AUTHORIZATION_CONTAINER_NAME}:9999
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail ${SERVICE_IDENTITY_API}/health/ || exit 1
     volumes:
-      - log_data:/var/log/onlyoffice
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
 
 networks:
   default:

@@ -17,7 +17,7 @@ if [[ "$DEP_CHOICE" =~ ^(y|yes|)$ ]]; then
 fi
 
 # Get packages to uninstall
-PACKAGES_TO_UNINSTALL=($(dpkg -l | awk '{print $2}' | grep -E "^(${package_sysname}|${product})" || true))
+mapfile -t PACKAGES_TO_UNINSTALL < <(dpkg -l | awk '{print $2}' | grep -E "^(${package_sysname}|${product})" || true)
 
 DEPENDENCIES=(
     nodejs dotnet-sdk-9.0 mysql-server mysql-client postgresql
@@ -26,7 +26,8 @@ DEPENDENCIES=(
 )
 
 if [ "$UNINSTALL_DEPENDENCIES" = true ]; then
-    PACKAGES_TO_UNINSTALL+=("${DEPENDENCIES[@]}" $(dpkg-query -W -f='${Package}\n' | grep -E "^postgresql(-[0-9]+)?(-.*)?$"))
+    PACKAGES_TO_UNINSTALL+=( "${DEPENDENCIES[@]}" )
+    mapfile -t -O "${#PACKAGES_TO_UNINSTALL[@]}" PACKAGES_TO_UNINSTALL < <(dpkg-query -W -f='${Package}\n' | grep -E "^postgresql(-[0-9]+)?(-.*)?$")
 fi
 
 # Uninstall packages and clean up
@@ -40,3 +41,4 @@ fi
 
 echo -e "Uninstallation of ${package_sysname^^} ${product_name}" \
          "$( [ "$UNINSTALL_DEPENDENCIES" = true ] && echo "and all dependencies" ) \e[32mcompleted.\e[0m"
+
