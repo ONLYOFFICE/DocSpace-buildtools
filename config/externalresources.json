@@ -38,6 +38,7 @@
           "administrationguides": "/administration/docspace.aspx",
           "administratormessage": "/administration/docspace-settings.aspx#administratormessage",
           "alternativeurl": "/administration/docspace-settings.aspx#alternativeurl",
+          "appearance": "/administration/docspace-settings.aspx#Appearance_block",
           "autobackup": "/administration/docspace-settings.aspx#AutoBackup",
           "becometranslator": "/guides/become-translator.aspx",
           "connectamazon": "/administration/connect-amazon-docspace.aspx",
