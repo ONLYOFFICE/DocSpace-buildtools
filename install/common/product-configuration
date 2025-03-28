@@ -813,12 +813,12 @@ product_configuration(){
 	echo "SPRING_PROFILES_ACTIVE=prod,server" >> "$APP_DIR/systemd.env"
 	chmod o-rwx "$APP_DIR/systemd.env"
 
-	echo "SPRING_APPLICATION_SIGNATURE_SECRET=${SIGNATURE_SECRET:-$(generate_key "signature")}" >> "$APP_DIR/systemd.env"
-	echo "SPRING_APPLICATION_ENCRYPTION_SECRET=${ENCRYPTION_SECRET:-$(generate_key "encryption")}" >> "$APP_DIR/systemd.env"
-
 	CORE_MACHINEKEY=${CORE_MACHINEKEY:-$(generate_key "machinekey")}
 	save_undefined_param "${USER_CONF}" "core.machinekey" "${CORE_MACHINEKEY}"
 	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core.machinekey" "${CORE_MACHINEKEY}"
+
+	echo "SPRING_APPLICATION_SIGNATURE_SECRET=${CORE_MACHINEKEY}" >> "$APP_DIR/systemd.env"
+	echo "SPRING_APPLICATION_ENCRYPTION_SECRET=${ENCRYPTION_SECRET:-$(generate_key "encryption")}" >> "$APP_DIR/systemd.env"
 
 	save_undefined_param "${USER_CONF}" "core['base-domain']" "${APP_HOST}" "rewrite"
 	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core['base-domain']" "${APP_HOST}" "rewrite"
