@@ -81,7 +81,8 @@
           "trusteddomain": "/administration/docspace-settings.aspx#TrustedDomain",
           "twofactorauthentication": "/administration/docspace-two-factor-authentication.aspx",
           "userguides": "/userguides/docspace-index.aspx",
-          "welcomepage": "/administration/docspace-settings.aspx#DocSpacetitle"
+          "welcomepage": "/administration/docspace-settings.aspx#DocSpacetitle",
+          "docspacemanagingrooms": "/docspace/administration/docspace-managing-rooms.aspx"
         }
       }
     },
