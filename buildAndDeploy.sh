@@ -1,4 +1,5 @@
 #!/bin/bash
+set -Eeuo pipefail
 
 echo "##########################################################"
 echo "#########  Start build and deploy  #######################"
