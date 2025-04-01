@@ -1178,7 +1178,6 @@ install_mysql_server () {
 	reconfigure MYSQL_USER ${MYSQL_USER}
 	reconfigure MYSQL_PASSWORD ${MYSQL_PASSWORD}
 	reconfigure MYSQL_ROOT_PASSWORD ${MYSQL_ROOT_PASSWORD}
-	reconfigure MYSQL_EXTERNAL_PORT "${MYSQL_EXTERNAL_PORT:-"127.0.0.1:33060:3306"}"
 
 	if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ]; then
 		if [ -n "${VOLUMES_DIR}" ]; then

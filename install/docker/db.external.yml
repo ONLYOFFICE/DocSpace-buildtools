@@ -1,0 +1,4 @@
+services:
+  onlyoffice-mysql-server:
+    ports:
+      - "33060:3306"

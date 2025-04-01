@@ -188,14 +188,16 @@ if "onlyoffice" not in existsnetwork:
 if arch_name == "x86_64" or arch_name == "AMD64":
     print("CPU Type: x86_64 -> run db.yml")
     os.environ["MYSQL_DATABASE"] = mysql_database
-    subprocess.run(["docker", "compose", "-f",
-                   os.path.join(dockerDir, "db.yml"), "up", "-d"])
+    subprocess.run(["docker", "compose",
+                    "-f", os.path.join(dockerDir, "db.yml"), 
+                    "-f", os.path.join(dockerDir, "db.external.yml"), "up", "-d"])
 elif arch_name == "arm64":
     print("CPU Type: arm64 -> run db.yml with arm64v8 image")
     os.environ["MYSQL_IMAGE"] = "arm64v8/mysql:8.3.0-oracle"
     os.environ["MYSQL_DATABASE"] = mysql_database
-    subprocess.run(["docker", "compose", "-f",
-                   os.path.join(dockerDir, "db.yml"), "up", "-d"])
+    subprocess.run(["docker", "compose", 
+                    "-f", os.path.join(dockerDir, "db.yml"), 
+                    "-f", os.path.join(dockerDir, "db.external.yml"), "up", "-d"])
 else:
     print("Error: Unknown CPU Type:", arch_name)
     sys.exit(1)
