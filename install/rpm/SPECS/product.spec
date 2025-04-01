@@ -58,6 +58,7 @@ Requires:       %name-identity-authorization = %version-%release
 Requires:       %name-identity-api = %version-%release
 Requires:       %name-studio = %version-%release
 Requires:       %name-studio-notify = %version-%release
+Requires:       %name-sdk = %version-%release
 Requires:       openssl
 
 Conflicts:      %name-radicale
