@@ -46,7 +46,7 @@ env:
 
 jobs:
   prepare:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       build_all: ${{ steps.changes.outputs.build_all }}
@@ -122,8 +122,7 @@ jobs:
           echo "JAVA_HOME=$(dirname $(dirname "$JAVA_PATH"))" >> $GITHUB_ENV
           sudo npm install -g json
           if [[ "${{ matrix.packageType }}" == "rpm" ]]; then
-            sudo apt install -y python3-rpm python3-pip
-            sudo pip install rpmlint
+            sudo apt-get install -y rpmlint
           else
             sudo apt install -y dpkg-sig lintian dh-make
           fi
