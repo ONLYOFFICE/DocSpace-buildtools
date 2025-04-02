@@ -132,28 +132,31 @@ jobs:
         if: matrix.packageType == 'deb'
         run: |
           cd install/deb/
-          wget -q -O ./debian/source/buildtools.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-buildtools/archive/${BRANCH_BUILDTOOLS}.tar.gz"
-          wget -q -O ./debian/source/client.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-client/archive/${BRANCH_CLIENT}.tar.gz"
-          wget -q -O ./debian/source/server.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-server/archive/${BRANCH_SERVER}.tar.gz"
-          wget -q -O ./debian/source/DocStore.tar.gz "https://github.com/ONLYOFFICE/document-templates/archive/main/community-server.tar.gz"
-          wget -q -O ./debian/source/campaigns.tar.gz "https://github.com/ONLYOFFICE/ASC.Web.Campaigns/archive/master.tar.gz"
-          wget -q -O ./debian/source/plugins.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-plugins/archive/master.tar.gz"
+          wget -q -O ./debian/source/buildtools.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-buildtools/archive/${BRANCH_BUILDTOOLS}.tar.gz" &
+          wget -q -O ./debian/source/client.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-client/archive/${BRANCH_CLIENT}.tar.gz" &
+          wget -q -O ./debian/source/server.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-server/archive/${BRANCH_SERVER}.tar.gz" &
+          wget -q -O ./debian/source/DocStore.tar.gz "https://github.com/ONLYOFFICE/document-templates/archive/main/community-server.tar.gz" &
+          wget -q -O ./debian/source/campaigns.tar.gz "https://github.com/ONLYOFFICE/ASC.Web.Campaigns/archive/master.tar.gz" &
+          wget -q -O ./debian/source/plugins.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-plugins/archive/master.tar.gz" &
+          wait
 
           rename -f -v "s/product([^\/]*)$/${PRODUCT_LOW}\$1/g" debian/*
           find debian/ -type f -exec sed -i "s/{{product}}/${PRODUCT_LOW}/g" {} ';'
           sed -i "s/{{package_header_tag_version}}/${PRODUCT_VERSION}.${BUILD_NUMBER}/g" debian/changelog debian/control
+          export DEB_BUILD_OPTIONS="parallel=$(nproc)"
           dpkg-buildpackage -uc -us
 
       - name: Build RPM Packages
         if: matrix.packageType == 'rpm'
         run: |
           cd install/rpm/SPECS
-          wget -q -O ./SOURCES/buildtools.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-buildtools/archive/${BRANCH_BUILDTOOLS}.tar.gz"
-          wget -q -O ./SOURCES/client.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-client/archive/${BRANCH_CLIENT}.tar.gz"
-          wget -q -O ./SOURCES/server.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-server/archive/${BRANCH_SERVER}.tar.gz"
-          wget -q -O ./SOURCES/DocStore.tar.gz "https://github.com/ONLYOFFICE/document-templates/archive/main/community-server.tar.gz"
-          wget -q -O ./SOURCES/campaigns.tar.gz "https://github.com/ONLYOFFICE/ASC.Web.Campaigns/archive/master.tar.gz"
-          wget -q -O ./SOURCES/plugins.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-plugins/archive/master.tar.gz"
+          wget -q -O ./SOURCES/buildtools.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-buildtools/archive/${BRANCH_BUILDTOOLS}.tar.gz" &
+          wget -q -O ./SOURCES/client.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-client/archive/${BRANCH_CLIENT}.tar.gz" &
+          wget -q -O ./SOURCES/server.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-server/archive/${BRANCH_SERVER}.tar.gz" &
+          wget -q -O ./SOURCES/DocStore.tar.gz "https://github.com/ONLYOFFICE/document-templates/archive/main/community-server.tar.gz" &
+          wget -q -O ./SOURCES/campaigns.tar.gz "https://github.com/ONLYOFFICE/ASC.Web.Campaigns/archive/master.tar.gz" &
+          wget -q -O ./SOURCES/plugins.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-plugins/archive/master.tar.gz" &
+          wait
           mv ./SOURCES/product.rpmlintrc ./SOURCES/${PRODUCT_LOW}.rpmlintrc
           sed -i -e '/BuildRequires/d' product.spec
           rpmbuild -D "packager Ascensio System SIA <support@onlyoffice.com>" \
@@ -185,8 +188,9 @@ jobs:
             curl -s --user "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" \
                  -H "Content-Type: multipart/form-data" \
                  --data-binary "@$deb_package" "${{ secrets.REPO_URL_4TESTING_DEB }}" \
-              && echo "Success: $(basename "$deb_package") uploaded." || echo "Error: Failed to upload $(basename "$deb_package")"
+              && echo "Success: $(basename "$deb_package") uploaded." || echo "Error: Failed to upload $(basename "$deb_package")" &
           done
+          wait
         
       - name: Upload RPM Packages
         if: matrix.packageType == 'rpm'
@@ -194,8 +198,9 @@ jobs:
           for rpm_package in ${PACKAGE_DIRECTORY}/install/rpm/SPECS/RPMS/noarch/*.rpm; do
             curl -s --user "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" \
                  --upload-file "$rpm_package" "${{ secrets.REPO_URL_4TESTING_RPM }}" \
-              && echo "Success: $(basename "$rpm_package") uploaded." || echo "Error: Failed to upload $(basename "$rpm_package")"
+              && echo "Success: $(basename "$rpm_package") uploaded." || echo "Error: Failed to upload $(basename "$rpm_package")" &
           done
+          wait
 
       - name: Checking the DEB package for errors
         if: matrix.packageType == 'deb'
