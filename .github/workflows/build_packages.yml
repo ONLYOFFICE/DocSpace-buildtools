@@ -6,6 +6,7 @@ on:
       - 'release/**'
       - 'hotfix/**'
       - 'develop'
+      - feature/package-refactoring
     paths:
       - '.github/workflows/build_packages.yml'
   workflow_dispatch:
@@ -40,9 +41,9 @@ env:
   PRODUCT_LOW: "docspace"
   BUILD_NUMBER: ${{ github.run_number }}
   PACKAGE_DIRECTORY: "/home/runner/work/${{ github.event.repository.name }}/${{ github.event.repository.name }}"
-  BRANCH_BUILDTOOLS: ${{ github.event.inputs.branch-buildtools != '' && github.event.inputs.branch-buildtools || github.ref_name || 'develop' }}
-  BRANCH_CLIENT: ${{ github.event.inputs.branch-client != '' && github.event.inputs.branch-client || github.ref_name || 'develop' }}
-  BRANCH_SERVER: ${{ github.event.inputs.branch-server != '' && github.event.inputs.branch-server || github.ref_name || 'develop' }}
+  BRANCH_BUILDTOOLS: 'feature/package-refactoring'
+  BRANCH_CLIENT: 'develop'
+  BRANCH_SERVER: 'develop'
 
 jobs:
   prepare:
@@ -214,27 +215,3 @@ jobs:
             echo "::warning Noticerpm=rpmlint::$(cat RPM_LINT | awk '/W:/ { ws += 1 } /E:/ { es += 1 } END { print "Warnings:", ws, "Errors:", es }')"
           fi
       
-  trigger_oci:
-    name: Trigger ci-oci-install Workflow
-    needs: [prepare, build]
-    runs-on: ubuntu-22.04
-    if: ${{ success() }}
-    steps:
-      - name: Trigger CI-OCI-Install Workflow
-        run: |
-          deb_build="${{ github.event.inputs.deb_build }}"
-          rpm_build="${{ github.event.inputs.rpm_build }}"
-          [[ "${{ needs.prepare.outputs.build_all }}" == "true" ]] && deb_build="true" && rpm_build="true"
-          curl \
-            -X POST \
-            -u "${{ secrets.USERNAME}}:${{secrets.TOKEN}}" \
-            https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/actions/workflows/85067971/dispatches \
-            -H "Accept: application/vnd.github.everest-preview+json" \
-            --data '{
-              "ref": "'"${{ github.ref_name }}"'",
-              "inputs": {
-                "deb_build": "'"${deb_build}"'",
-                "rpm_build": "'"${rpm_build}"'"
-              }
-            }'
-
