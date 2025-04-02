@@ -2,12 +2,12 @@
 
 cd %{_builddir}/buildtools
 
-bash install/common/systemd/build.sh -pm "rpm"
-
-bash install/common/build-frontend.sh --srcpath %{_builddir} -di "false"
-bash install/common/build-backend.sh --srcpath %{_builddir}
+bash install/common/systemd/build.sh -pm "rpm" &
+bash install/common/build-frontend.sh --srcpath %{_builddir} -di "false" &
+bash install/common/build-backend.sh --srcpath %{_builddir} &
+bash install/common/plugins-build.sh %{_builddir}/plugins &
+wait
 bash install/common/publish-backend.sh --srcpath %{_builddir}/server
-bash install/common/plugins-build.sh %{_builddir}/plugins
 
 find %{_builddir}/server -type d -name "runtimes" | \
 while IFS= read -r RUNTIMES_DIR; do \

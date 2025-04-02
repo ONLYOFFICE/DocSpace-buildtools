@@ -50,13 +50,13 @@ check_archives:
 	@echo "Source archives check passed."
 
 override_dh_auto_build: check_archives
-	cd ${BUILDTOOLS_PATH}/install/common/systemd; \
-	bash build.sh -bp "${CURDIR}/debian/"; \
 	cd ${BUILDTOOLS_PATH}/install/common; \
-	bash build-frontend.sh -sp ${BUILD_PATH} -di "false"; \
-	bash build-backend.sh -sp ${BUILD_PATH}; \
+	bash ${BUILDTOOLS_PATH}/install/common/systemd/build.sh -bp "${CURDIR}/debian/" & \
+	bash build-frontend.sh -sp ${BUILD_PATH} -di "false" & \
+	bash build-backend.sh -sp ${BUILD_PATH} & \
+	bash plugins-build.sh ${BUILD_PATH}/plugins & \
+	wait; \
 	bash publish-backend.sh -sp ${SERVER_PATH}; \
-	bash plugins-build.sh ${BUILD_PATH}/plugins
 
 	find ${SERVER_PATH} -type d -name "runtimes" | \
 	while IFS= read -r RUNTIMES_DIR; do \
