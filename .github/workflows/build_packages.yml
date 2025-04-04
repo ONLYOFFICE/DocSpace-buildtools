@@ -24,11 +24,9 @@ on:
         default: 'develop'
       deb_build:
         description: 'Trigger DEB build'
-        required: false
         default: 'false'
       rpm_build:
         description: 'Trigger RPM build'
-        required: false
         default: 'false'
 
 concurrency:
@@ -39,10 +37,10 @@ env:
   PRODUCT: "DocSpace"
   PRODUCT_LOW: "docspace"
   BUILD_NUMBER: ${{ github.run_number }}
-  PACKAGE_DIRECTORY: "/home/runner/work/${{ github.event.repository.name }}/${{ github.event.repository.name }}"
-  BRANCH_BUILDTOOLS: ${{ github.event.inputs.branch-buildtools != '' && github.event.inputs.branch-buildtools || github.ref_name || 'develop' }}
-  BRANCH_CLIENT: ${{ github.event.inputs.branch-client != '' && github.event.inputs.branch-client || github.ref_name || 'develop' }}
-  BRANCH_SERVER: ${{ github.event.inputs.branch-server != '' && github.event.inputs.branch-server || github.ref_name || 'develop' }}
+  PACKAGE_DIRECTORY: "${{ github.workspace }}"
+  BRANCH_BUILDTOOLS: ${{ github.event.inputs.branch-buildtools || github.ref_name || 'develop' }}
+  BRANCH_CLIENT: ${{ github.event.inputs.branch-client || github.ref_name || 'develop' }}
+  BRANCH_SERVER: ${{ github.event.inputs.branch-server || github.ref_name || 'develop' }}
 
 jobs:
   prepare:
@@ -65,11 +63,8 @@ jobs:
         id: set-matrix
         run: |
           package_types=()
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            [[ "${{ github.event.inputs.deb_build }}" == "true" ]] && package_types+=("deb")
-            [[ "${{ github.event.inputs.rpm_build }}" == "true" ]] && package_types+=("rpm")
-          elif [[ "${{ steps.changes.outputs.build_all }}" == "true" ]]; then
-              package_types+=("deb" "rpm")
+          if [[ "${{ steps.changes.outputs.build_all }}" == "true" ]]; then
+            package_types=("deb" "rpm")
           else
             [[ "${{ github.event.inputs.deb_build }}" == "true" ]] && package_types+=("deb")
             [[ "${{ github.event.inputs.rpm_build }}" == "true" ]] && package_types+=("rpm")
@@ -108,7 +103,6 @@ jobs:
           passphrase: ${{ secrets.GPG_PRIVATE_KEY_PASS }}
 
       - name: Prepare build
-        if: matrix.packageType == 'deb' || matrix.packageType == 'rpm'
         run: |
           wget -O - https://dl.yarnpkg.com/debian/pubkey.gpg | \
           sudo gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/yarnkey.gpg --import
