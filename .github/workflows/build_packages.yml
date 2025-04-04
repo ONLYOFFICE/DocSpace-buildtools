@@ -205,7 +205,11 @@ jobs:
       - name: Checking the DEB package for errors
         if: matrix.packageType == 'deb'
         run: |
-          lintian --profile debian ${PACKAGE_DIRECTORY}/install/*.deb | tee -a LINTIAN
+          for deb in ${PACKAGE_DIRECTORY}/install/*.deb; do
+            lintian --profile debian "$deb" > "${deb}.lintian" 2>&1 &
+          done
+          wait
+          cat ${PACKAGE_DIRECTORY}/install/*.lintian | tee LINTIAN
           if grep -qE '^(W:|E:)' LINTIAN; then
             echo "::warning Noticedeb=lintian::$(cat LINTIAN | awk '/^W:/ { ws += 1 } /^E:/ { es += 1 } END { print "Warnings:", ws, "Errors:", es }')"
           fi
