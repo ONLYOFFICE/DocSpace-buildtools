@@ -151,3 +151,10 @@
 %{_var}/www/onlyoffice/Data/Studio/webplugins/
 %dir %{_var}/www/onlyoffice/Data/
 %dir %{_var}/www/onlyoffice/Data/Studio/
+
+%files sdk
+%defattr(-, onlyoffice, onlyoffice, -)
+%{buildpath}/products/ASC.Sdk/sdk/
+/usr/lib/systemd/system/%{product}-sdk.service
+%dir %{buildpath}/products/
+%dir %{buildpath}/products/ASC.Sdk/

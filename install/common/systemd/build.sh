@@ -73,6 +73,7 @@ SERVICE_NAME=(
 	migration-runner
 	login
 	healthchecks
+	sdk
 	)
 
 reassign_values (){
@@ -188,6 +189,12 @@ reassign_values (){
 		EXEC_FILE="ASC.Web.HealthChecks.UI.dll"
 		DEPENDENCY_LIST=""
 	;;
+	sdk )
+        SERVICE_PORT="5099"
+        WORK_DIR="${BASE_DIR}/products/ASC.Sdk/sdk/"
+        EXEC_FILE="server.js"
+        DEPENDENCY_LIST=""
+    ;;
   esac
   SERVICE_NAME="$1"
   RESTART="always"

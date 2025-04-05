@@ -174,7 +174,7 @@ services:
   
   onlyoffice-sdk:
     <<: *x-service-base
-    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-sdk:${DOCKER_TAG}"
+    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-sdk:${DOCKER_TAG}"
     container_name: ${SDK_HOST}
     healthcheck:
       <<: *x-healthcheck
