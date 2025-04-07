@@ -1,5 +1,5 @@
 %build
-run_script() { start=$(date +%s.%N) && bash "$@"; echo "::notice::$1 completed in $(printf "%.0f\n" $(echo "$(date +%s.%N) - $start" | bc -l)) seconds"; }
+run_script() { start=$(date +%s); bash "$@"; end=$(date +%s); echo "::notice::$1 completed in $((end - start)) seconds"; }
 
 cd %{_builddir}/buildtools
 
