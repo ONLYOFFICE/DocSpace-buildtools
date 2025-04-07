@@ -397,6 +397,10 @@ change_mysql_config(){
 
 	fi
 
+    # Restrict MySQL (port 3306) and MySQL X Plugin (port 33060) to localhost
+    sed -i "/^\[mysqld\]/!b;/bind-address/ s|.*|bind-address = 127.0.0.1|; t; a bind-address = 127.0.0.1" "${CNF_PATH}"
+    sed -i "/^\[mysqld\]/!b;/mysqlx_bind_address/ s|.*|mysqlx_bind_address = 127.0.0.1|; t; a mysqlx_bind_address = 127.0.0.1" "${CNF_PATH}"
+
     sed '/skip-networking/d' -i ${CNF_PATH} || true # ignore errors
 
     if ! grep -q "^sql_mode" ${CNF_PATH}; then
