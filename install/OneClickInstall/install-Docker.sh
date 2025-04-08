@@ -1079,8 +1079,6 @@ set_secrets () {
 	[ "$UPDATE" != "true" ] && APP_CORE_MACHINEKEY="${APP_CORE_MACHINEKEY:-$(get_random_str 12)}"
 	IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-$(get_env_parameter "IDENTITY_ENCRYPTION_SECRET" "${IDENTITY_CONTAINER_NAME}")}"
 	IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-$(get_random_str 12)}"
-	ONLYFLOW_SECRET_KEY="${ONLYFLOW_SECRET_KEY:-$(get_env_parameter "ONLYFLOW_SECRET_KEY")}"
-	ONLYFLOW_SECRET_KEY="${ONLYFLOW_SECRET_KEY:-$(get_random_str 32)}"
 }
 
 set_mysql_params () {
@@ -1244,7 +1242,6 @@ install_elasticsearch () {
 }
 
 install_langflow () {
-	reconfigure ONLYFLOW_SECRET_KEY ${ONLYFLOW_SECRET_KEY}
 	reconfigure ONLYFLOW_PG_PASSWORD "${ONLYFLOW_PG_PASSWORD:-$(get_random_str 12)}"
 	
 	if [ "$INSTALL_LANGFLOW" == "true" ]; then
