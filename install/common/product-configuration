@@ -283,7 +283,7 @@ restart_services() {
 	SERVICES=(login api socket studio-notify notify \
 	people-server files files-services studio backup api-system \
 	clear-events backup-background ssoauth doceditor healthchecks \
-	identity-authorization identity-api sdk langflow)
+	identity-authorization identity-api sdk langflow qdrant)
 	SERVICES_LIST=("${SERVICES[@]/#/${PRODUCT}-}")
 
 	systemctl enable "${SERVICES_LIST[@]}" >/dev/null 2>&1
@@ -526,6 +526,8 @@ setup_openresty(){
 					PORTS+=('9899') #ASC.Socket.IO
 					PORTS+=('3000') #Frontend Langflow
 					PORTS+=('7860') #Backend Langflow
+					PORTS+=('6333') #QDRANT HTTP
+					PORTS+=('6334') #QDRANT GRPC
 					setsebool -P httpd_can_network_connect on
 				;;
 				disabled)

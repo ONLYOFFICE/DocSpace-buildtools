@@ -27,3 +27,14 @@ sed -i  -e "s#\${FRONTEND_PORT}#${FRONTEND_HOST}#g" \
         -e "s#\${BACKEND_URL}#${VITE_BACKEND_PROXY_URL}#g" \
         -e "s#usr/share/nginx/html#etc/openresty/html/langflow#g" \
         "${SRC_PATH}/src/frontend/onlyoffice-langflow.conf"
+
+#qdrant
+for ARCH in x86_64 aarch64; do
+    mkdir -p "${SRC_PATH}/qdrant/${ARCH}"
+    FILE="qdrant-${ARCH}-unknown-linux-musl.tar.gz"
+    wget "https://github.com/qdrant/qdrant/releases/latest/download/${FILE}" 
+    tar -xzf "${FILE}" -C "${SRC_PATH}/qdrant/${ARCH}" && rm -rf "${FILE}"
+    chmod +x "${SRC_PATH}/qdrant/${ARCH}/qdrant"
+done
+mkdir -p "${SRC_PATH}/qdrant/config"
+echo -e "log_level: WARN\nservice:\n  host: 127.0.0.1\n  http_port: 6333\n  grpc_port: 6334" > "${SRC_PATH}/qdrant/config/config.yaml"

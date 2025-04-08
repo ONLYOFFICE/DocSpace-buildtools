@@ -169,3 +169,9 @@
 %dir %{buildpath}/services/
 %dir %{_sysconfdir}/openresty/
 %dir %{_sysconfdir}/openresty/includes/
+
+%files qdrant
+%defattr(-, onlyoffice, onlyoffice, -)
+%{buildpath}/services/qdrant/
+/usr/lib/systemd/system/%{product}-qdrant.service
+%dir %{buildpath}/services/

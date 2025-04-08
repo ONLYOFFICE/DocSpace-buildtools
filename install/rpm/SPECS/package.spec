@@ -280,6 +280,7 @@ Packager:       %{packager}
 Summary:        Langflow
 Group:          Applications/Internet
 Requires:       %name-proxy = %version-%release
+Requires:       %name-qdrant = %version-%release
 Requires:       postgresql >= 12
 Requires:       gcc
 AutoReqProv:    no
@@ -289,3 +290,12 @@ Langflow is a tool for building and deploying AI agents and workflows.
 It offers a visual authoring experience and an API server to integrate
 agents into any application. It supports major LLMs, vector databases,
 and AI tools.
+
+%package        qdrant
+Packager:       %{packager}
+Summary:        Qdrant
+Group:          Applications/Internet
+AutoReqProv:    no
+BuildArch:      noarch
+%description    qdrant
+Qdrant is a vector similarity search engine and vector database.

@@ -74,6 +74,7 @@ SERVICE_NAME=(
 	healthchecks
 	sdk
 	langflow
+	qdrant
 	)
 
 reassign_values (){
@@ -201,6 +202,12 @@ reassign_values (){
 		EXEC_FILE="${WORK_DIR}/.venv/bin/langflow run"
 		DEPENDENCY_LIST=""
 	;;
+	qdrant )
+		SERVICE_PORT="6333"
+		WORK_DIR="${BASE_DIR}/services/qdrant"
+		EXEC_FILE="${WORK_DIR}/qdrant"
+		DEPENDENCY_LIST=""
+	;;
   esac
   SERVICE_NAME="$1"
   RESTART="always"
@@ -223,6 +230,10 @@ reassign_values (){
 	SYSTEMD_ENVIRONMENT_FILE="${PATH_TO_CONF}/langflow.env"
 	SYSTEMD_ENVIRONMENT="HOME=${WORK_DIR} LANGFLOW_LOG_FILE=${LOG_DIR}/langflow.log LANGFLOW_CONFIG_DIR=${PATH_TO_CONF}/langflow "
 	EXEC_START="${EXEC_FILE} --backend-only --host ${APP_URLS#http://} --port ${SERVICE_PORT}"
+  elif [[ "${SERVICE_NAME}" = "qdrant" ]]; then
+	SERVICE_TYPE="simple"
+	RESTART="on-failure"
+	EXEC_START="/bin/bash -c 'exec ${WORK_DIR}/\$(uname -m)/qdrant'"
   else
 	SERVICE_TYPE="notify"
 	EXEC_START="${DOTNET_RUN} ${WORK_DIR}${EXEC_FILE} --urls=${APP_URLS}:${SERVICE_PORT} --pathToConf=${PATH_TO_CONF} \
