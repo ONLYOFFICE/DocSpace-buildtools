@@ -173,8 +173,7 @@
         "path": "$STORAGE_ROOT\\Studio\\webplugins",
         "virtualpath": "~/studio/webplugins",
         "appendTenantId": false,
-        "disableMigrate": true,
-        "disableEncryption": true
+        "disableMigrate": true
       }
     ]
   }

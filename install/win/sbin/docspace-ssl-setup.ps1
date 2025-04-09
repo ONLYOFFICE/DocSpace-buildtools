@@ -28,6 +28,15 @@ if ( -not $certbot_path )
   exit
 }
 
+$openssl_path = Get-Command openssl -ErrorAction SilentlyContinue
+
+if ( -not $openssl_path )
+{
+  Write-Output " Attention! OpenSSL is not accessible on your computer. "
+  Write-Output " OpenSSL could be downloaded by this link 'https://download.firedaemon.com/FireDaemon-OpenSSL/FireDaemon-OpenSSL-x64-3.3.0.exe' "
+  exit
+}
+
 $product = "docspace"
 $letsencrypt_root_dir = "$env:SystemDrive\Certbot\live"
 $letsencrypt_domain_dir = "$env:SystemDrive\Certbot\archive\${product}"
@@ -48,6 +57,72 @@ $node_services = @(
     "DsConverterSvc"
 )
 
+function ConvertToPem {
+    param (
+        [string]$certFile
+    )
+
+    $extension = [System.IO.Path]::GetExtension($certFile).ToLower()
+    $pemCertFile = "$($certFile -replace '\.[^.]+$', '.pem')"
+    $pemKeyFile = "$($certFile -replace '\.[^.]+$', '-private.pem')"
+
+    switch ($extension) {
+        ".pfx" {
+            Write-Output "Detected PFX certificate, converting to PEM..."
+            try {
+                $password = Read-Host "Enter password for PFX (press Enter if none)" -AsSecureString
+                $plainPassword = [System.Net.NetworkCredential]::new("", $password).Password
+                openssl pkcs12 -in "$certFile" -out "$pemCertFile" -nokeys -passin pass:"$plainPassword"
+                openssl pkcs12 -in "$certFile" -out "$pemKeyFile" -nocerts -nodes -passin pass:"$plainPassword"
+            } catch {
+                Write-Output "Failed to convert PFX. Check password or file integrity."
+                exit 1
+            }
+        }
+        ".der" {
+            Write-Output "Detected DER certificate, converting to PEM..."
+            openssl x509 -inform DER -in "$certFile" -out "$pemCertFile"
+        }
+        ".cer" {
+            Write-Output "Detected CER certificate, converting to PEM..."
+            openssl x509 -inform DER -in "$certFile" -out "$pemCertFile"
+        }
+        ".p7b" {
+            Write-Output "Detected PKCS#7 certificate, converting to PEM..."
+            openssl pkcs7 -print_certs -in "$certFile" -out "$pemCertFile"
+        }
+        default {
+            Write-Output "No conversion needed or unsupported format: $certFile"
+        }
+    }
+    return @{
+        CertFile = $pemCertFile
+        KeyFile = $pemKeyFile
+    }
+}
+
+function CheckFileFormat {
+    param (
+        [string]$filePath
+    )
+
+    if (!(Test-Path $filePath)) {
+        Write-Output "Error: File not found - $filePath"
+        exit 1
+    }
+
+    $extension = [System.IO.Path]::GetExtension($filePath).ToLower()
+    switch ($extension) {
+        ".pfx" { return "PFX" }
+        ".der" { return "DER" }
+        ".cer" { return "CER" }
+        ".p7b" { return "PKCS7" }
+		".pem" { return "PEM" }
+    }
+    Write-Output "Unsupported or invalid file format: $filePath"
+    exit 1
+}
+
 if ( $args.Count -ge 2 )
 {
 
@@ -55,6 +130,13 @@ if ( $args.Count -ge 2 )
     $letsencrypt_domain = $args[1] -JOIN ","
     $ssl_cert = $args[2]
     $ssl_key = $args[3]
+    $certFormat = CheckFileFormat -filePath $ssl_cert
+     if ($certFormat -ne "PEM") {
+         Write-Output "Detected $certFormat certificate, converting to PEM..."
+         $pemFiles = ConvertToPem -certFile $ssl_cert
+         $ssl_cert = $pemFiles.CertFile
+         $ssl_key = $pemFiles.KeyFile
+     }
   }
 
   else {
@@ -70,14 +152,28 @@ if ( $args.Count -ge 2 )
         $ssl_cert = (Get-Item "${letsencrypt_root_dir}\${product}\fullchain.pem").FullName.Replace('\', '/')
         $ssl_key = (Get-Item "${letsencrypt_root_dir}\${product}\privkey.pem").FullName.Replace('\', '/')
     popd
+
+    @(
+        "certbot renew >> `"${app}\letsencrypt\Logs\le-renew.log`"",
+        "net stop $proxy_service",
+        "net start $proxy_service"
+    ) | Set-Content -Path "${app}\letsencrypt\letsencrypt_cron.bat" -Encoding ascii
+
+    $day = (Get-Date -Format "dddd").ToUpper().SubString(0, 3)
+    $time = Get-Date -Format "HH:mm"
+    $taskName = "Certbot renew"
+    $action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c `"${app}\letsencrypt\letsencrypt_cron.bat`""
+    $trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $day -At $time
+
+    Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Force
   }
 
   if ( [System.IO.File]::Exists($ssl_cert) -and [System.IO.File]::Exists($ssl_key) -and [System.IO.File]::Exists("${nginx_conf_dir}\${nginx_ssl_tmpl}"))
   {
     Copy-Item "${nginx_conf_dir}\${nginx_ssl_tmpl}" -Destination "${nginx_conf_dir}\${nginx_conf}"
     ((Get-Content -Path "${app}\config\appsettings.$environment.json" -Raw) -replace '"portal":\s*"[^"]*"', "`"portal`": `"https://$letsencrypt_domain`"") | Set-Content -Path "${app}\config\appsettings.$environment.json"
-    ((Get-Content -Path "${nginx_conf_dir}\${nginx_conf}" -Raw) -replace '/usr/local/share/ca-certificates/tls.crt', $ssl_cert) | Set-Content -Path "${nginx_conf_dir}\${nginx_conf}"
-    ((Get-Content -Path "${nginx_conf_dir}\${nginx_conf}" -Raw) -replace '/etc/ssl/private/tls.key', $ssl_key) | Set-Content -Path "${nginx_conf_dir}\${nginx_conf}"
+    ((Get-Content -Path "${nginx_conf_dir}\${nginx_conf}" -Raw) -replace '/usr/local/share/ca-certificates/tls.crt', "`"$ssl_cert`"") | Set-Content -Path "${nginx_conf_dir}\${nginx_conf}"
+    ((Get-Content -Path "${nginx_conf_dir}\${nginx_conf}" -Raw) -replace '/etc/ssl/private/tls.key', "`"$ssl_key`"") | Set-Content -Path "${nginx_conf_dir}\${nginx_conf}"
 
     if ($letsencrypt_domain -and (Test-Path $letsencrypt_domain_dir))
     {
@@ -86,29 +182,16 @@ if ( $args.Count -ge 2 )
         Set-Acl -Path $acl.path -ACLObject $acl
     }
 
-    $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($ssl_cert)
+	$subject = (& openssl x509 -in $ssl_cert -noout -subject) -replace '^subject= *', ''
+	$issuer  = (& openssl x509 -in $ssl_cert -noout -issuer)  -replace '^issuer= *', ''
 
-    if ($cert.Subject -eq $cert.Issuer) {
+    if ($subject -eq $issuer) {
         [System.Environment]::SetEnvironmentVariable("NODE_EXTRA_CA_CERTS", $ssl_cert, [System.EnvironmentVariableTarget]::Machine)
         foreach ($service in $node_services) { Restart-Service -Name $service }
     }
   }
 
   Restart-Service -Name $proxy_service
-
-  @(
-    "certbot renew >> `"${app}\letsencrypt\Logs\le-renew.log`"",
-    "net stop $proxy_service",
-    "net start $proxy_service"
-  ) | Set-Content -Path "${app}\letsencrypt\letsencrypt_cron.bat" -Encoding ascii
-
-  $day = (Get-Date -Format "dddd").ToUpper().SubString(0, 3)
-  $time = Get-Date -Format "HH:mm"
-  $taskName = "Certbot renew"
-  $action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c `"${app}\letsencrypt\letsencrypt_cron.bat`""
-  $trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $day -At $time
-
-  Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Force
 }
 
 elseif ($args[0] -eq "-d" -or $args[0] -eq "--default") {
@@ -137,8 +220,8 @@ else
   Write-Output " usage: "
   Write-Output "  docspace-ssl-setup.ps1 -f DOMAIN CERTIFICATE PRIVATEKEY "
   Write-Output "    DOMAIN        Domain name to apply."
-  Write-Output "    CERTIFICATE   Path to the certificate file for the domain."
-  Write-Output "    PRIVATEKEY    Path to the private key file for the certificate."
+  Write-Output "    CERTIFICATE   Path to the certificate file for the domain (PEM, PFX, DER, CER, PKCS#7)."
+  Write-Output "    PRIVATEKEY    (Optional) Path to private key (required unless PFX)."
   Write-Output "                                                                   "
   Write-Output " Return to the default proxy configuration using the -d or --default parameter: "
   Write-Output "  docspace-ssl-setup.ps1 -d | docspace-ssl-setup.ps1 --default  "
