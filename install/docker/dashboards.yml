@@ -7,10 +7,11 @@ services:
       - OPENSEARCH_HOSTS=${ELK_SHEME}://${ELK_CONTAINER_NAME}:${ELK_PORT}
       - "DISABLE_SECURITY_DASHBOARDS_PLUGIN=true"
       - "SERVER_BASEPATH=/dashboards"
+      - "SERVER_REWRITEBASEPATH=true"
     expose:
       - "5601"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5601/api/status"]
+      test: ["CMD", "curl", "-f", "http://localhost:5601/dashboards/api/status"]
       interval: 10s
       retries: 3
       start_period: 10s

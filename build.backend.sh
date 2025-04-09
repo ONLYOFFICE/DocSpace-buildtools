@@ -1,4 +1,7 @@
 #!/bin/bash
+
+set -Eeuo pipefail
+
 echo "Start build backend..."
 echo
 
