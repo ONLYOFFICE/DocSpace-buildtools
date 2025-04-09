@@ -152,6 +152,20 @@ if ( $args.Count -ge 2 )
         $ssl_cert = (Get-Item "${letsencrypt_root_dir}\${product}\fullchain.pem").FullName.Replace('\', '/')
         $ssl_key = (Get-Item "${letsencrypt_root_dir}\${product}\privkey.pem").FullName.Replace('\', '/')
     popd
+
+    @(
+        "certbot renew >> `"${app}\letsencrypt\Logs\le-renew.log`"",
+        "net stop $proxy_service",
+        "net start $proxy_service"
+    ) | Set-Content -Path "${app}\letsencrypt\letsencrypt_cron.bat" -Encoding ascii
+
+    $day = (Get-Date -Format "dddd").ToUpper().SubString(0, 3)
+    $time = Get-Date -Format "HH:mm"
+    $taskName = "Certbot renew"
+    $action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c `"${app}\letsencrypt\letsencrypt_cron.bat`""
+    $trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $day -At $time
+
+    Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Force
   }
 
   if ( [System.IO.File]::Exists($ssl_cert) -and [System.IO.File]::Exists($ssl_key) -and [System.IO.File]::Exists("${nginx_conf_dir}\${nginx_ssl_tmpl}"))
@@ -178,20 +192,6 @@ if ( $args.Count -ge 2 )
   }
 
   Restart-Service -Name $proxy_service
-
-  @(
-    "certbot renew >> `"${app}\letsencrypt\Logs\le-renew.log`"",
-    "net stop $proxy_service",
-    "net start $proxy_service"
-  ) | Set-Content -Path "${app}\letsencrypt\letsencrypt_cron.bat" -Encoding ascii
-
-  $day = (Get-Date -Format "dddd").ToUpper().SubString(0, 3)
-  $time = Get-Date -Format "HH:mm"
-  $taskName = "Certbot renew"
-  $action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c `"${app}\letsencrypt\letsencrypt_cron.bat`""
-  $trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $day -At $time
-
-  Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Force
 }
 
 elseif ($args[0] -eq "-d" -or $args[0] -eq "--default") {
