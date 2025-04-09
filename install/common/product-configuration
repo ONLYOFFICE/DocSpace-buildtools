@@ -397,6 +397,10 @@ change_mysql_config(){
 
 	fi
 
+    # Restrict MySQL (port 3306) and MySQL X Plugin (port 33060) to localhost
+    sed -i "/^\[mysqld\]/!b;/bind-address/ s|.*|bind-address = 127.0.0.1|; t; a bind-address = 127.0.0.1" "${CNF_PATH}"
+    sed -i "/^\[mysqld\]/!b;/mysqlx_bind_address/ s|.*|mysqlx_bind_address = 127.0.0.1|; t; a mysqlx_bind_address = 127.0.0.1" "${CNF_PATH}"
+
     sed '/skip-networking/d' -i ${CNF_PATH} || true # ignore errors
 
     if ! grep -q "^sql_mode" ${CNF_PATH}; then
@@ -708,7 +712,7 @@ setup_dashboards() {
 
 	# configure login&pass for Dashboards, used by Nginx HTTP Basic Authentication
 	echo "${DASHBOARDS_USERNAME:-"onlyoffice"}:$(openssl passwd -6 -stdin <<< "${DASHBOARDS_PASSWORD}")" > /etc/openresty/.htpasswd_dashboards
-	chown ${NGINX_USER}:${NGINX_GROUP} /etc/openresty/.htpasswd_dashboards
+	chown ${NGINX_USER}:${NGINX_GROUP} /etc/openresty/.htpasswd_dashboards && chmod 640 /etc/openresty/.htpasswd_dashboards
 
 	# enable connection with opensearch
 	sed -i 's~\(opensearch\.hosts:\).*~\1 \[http://localhost:9200\]~' ${DASHBOARDS_CONF_PATH}
@@ -719,6 +723,7 @@ setup_dashboards() {
 
 	# set basePath variable to get access to Dashboards from a remote host
 	sed 's_.*\(server.basePath:\).*_\1 "/dashboards"_' -i ${DASHBOARDS_CONF_PATH}
+	sed 's_.*\(server.rewriteBasePath:\).*_\1 "true"_' -i ${DASHBOARDS_CONF_PATH}
 
 	systemctl enable opensearch-dashboards >/dev/null 2>&1
 	systemctl restart opensearch-dashboards

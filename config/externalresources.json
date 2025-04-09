@@ -82,7 +82,9 @@
           "twofactorauthentication": "/administration/docspace-two-factor-authentication.aspx",
           "userguides": "/userguides/docspace-index.aspx",
           "welcomepage": "/administration/docspace-settings.aspx#DocSpacetitle",
-          "docspacemanagingrooms": "/docspace/administration/docspace-managing-rooms.aspx"
+          "docspacemanagingrooms": "/docspace/administration/docspace-managing-rooms.aspx",
+          "limiteddevtools": "/docspace/configuration/docspace-security-settings.aspx#limiteddevelopertoolsaccess_block",
+          "encryption": "/docspace/configuration/docspace-encryption-at-rest.aspx"
         }
       }
     },
