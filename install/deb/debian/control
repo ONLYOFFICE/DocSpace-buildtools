@@ -34,7 +34,8 @@ Depends: debconf, openssl,
          {{product}}-studio (= {{package_header_tag_version}}),
          {{product}}-studio-notify (= {{package_header_tag_version}}),
          {{product}}-identity-api (= {{package_header_tag_version}}),
-         {{product}}-identity-authorization (= {{package_header_tag_version}})
+         {{product}}-identity-authorization (= {{package_header_tag_version}}),
+         {{product}}-sdk (= {{package_header_tag_version}})
 Description: {{product}}
 	ONLYOFFICE {{product}} is a new way to collaborate on documents with teams, 
 	clients, partners, etc., based on the concept of rooms - special spaces with 
@@ -226,3 +227,11 @@ Multi-Arch: foreign
 Depends: {{product}}-common (= {{package_header_tag_version}}), ${misc:Depends}, ${shlibs:Depends}
 Description: {{product}}-plugins
 	This package includes plugins that extend DocSpace functionality
+
+Package: {{product}}-sdk
+Architecture: all
+Multi-Arch: foreign
+Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= 16), ${misc:Depends}, ${shlibs:Depends}
+Description: {{product}}-sdk
+  The service provides a Software Development Kit (SDK) with APIs and tools for custom
+  integrations and plugins

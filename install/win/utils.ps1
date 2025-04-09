@@ -268,6 +268,12 @@ function SetDashboardsPwd {
     AI_SetMsiProperty DASHBOARDS_PWD $DashboardsPwd
 }
 
+# Sets a random IDENTITY_ENCRYPTION_SECRET property.
+function SetIdentityEncryptionSecret {
+    $IdentityEncryptionSecret = RandomString -Length 12
+    AI_SetMsiProperty IDENTITY_ENCRYPTION_SECRET $IdentityEncryptionSecret
+}
+
 # Function to set up OpenSearch.
 function OpenSearchSetup {
     $AppDir = AI_GetMsiProperty APPDIR

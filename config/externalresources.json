@@ -82,7 +82,9 @@
           "twofactorauthentication": "/administration/docspace-two-factor-authentication.aspx",
           "userguides": "/userguides/docspace-index.aspx",
           "welcomepage": "/administration/docspace-settings.aspx#DocSpacetitle",
-          "docspacemanagingrooms": "/docspace/administration/docspace-managing-rooms.aspx"
+          "docspacemanagingrooms": "/docspace/administration/docspace-managing-rooms.aspx",
+          "limiteddevtools": "/docspace/configuration/docspace-security-settings.aspx#limiteddevelopertoolsaccess_block",
+          "encryption": "/docspace/configuration/docspace-encryption-at-rest.aspx"
         }
       }
     },
@@ -144,7 +146,7 @@
           "facebook": "https://www.facebook.com/pages/OnlyOffice/833032526736775",
           "instagram": "https://www.instagram.com/the_onlyoffice/",
           "tiktok": "https://vm.tiktok.com/ZMLXbFEyd/",
-          "twitter": "https://twitter.com/ONLY_OFFICE",
+          "twitter": "https://x.com/ONLY_OFFICE",
           "youtube": "https://www.youtube.com/user/onlyofficeTV"
         }
       }

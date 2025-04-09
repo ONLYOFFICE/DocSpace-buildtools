@@ -58,6 +58,7 @@ Requires:       %name-identity-authorization = %version-%release
 Requires:       %name-identity-api = %version-%release
 Requires:       %name-studio = %version-%release
 Requires:       %name-studio-notify = %version-%release
+Requires:       %name-sdk = %version-%release
 Requires:       openssl
 
 Conflicts:      %name-radicale
@@ -72,13 +73,14 @@ predefined permissions.
 %prep
 rm -rf %{_rpmdir}/%{_arch}/%{name}-* %{_builddir}/*
 
-tar -xf %{SOURCE0} --transform='s,^[^/]\+,buildtools,'   -C %{_builddir} 
-tar -xf %{SOURCE1} --transform='s,^[^/]\+,client,'       -C %{_builddir} 
-tar -xf %{SOURCE2} --transform='s,^[^/]\+,server,'       -C %{_builddir} 
+tar -xf %{SOURCE0} --transform='s,^[^/]\+,buildtools,'   -C %{_builddir} &
+tar -xf %{SOURCE1} --transform='s,^[^/]\+,client,'       -C %{_builddir} &
+tar -xf %{SOURCE2} --transform='s,^[^/]\+,server,'       -C %{_builddir} &
+tar -xf %{SOURCE4} --transform='s,^[^/]\+,campaigns,'    -C %{_builddir} &
+tar -xf %{SOURCE5} --transform='s,^[^/]\+,plugins,'      -C %{_builddir} &
+wait
 tar -xf %{SOURCE3} --transform='s,^[^/]\+,DocStore,'     -C %{_builddir}/server/products/ASC.Files/Server
-tar -xf %{SOURCE4} --transform='s,^[^/]\+,campaigns,'    -C %{_builddir}
-tar -xf %{SOURCE5} --transform='s,^[^/]\+,plugins,'      -C %{_builddir}
-cp %{SOURCE6} .
+cp -rf %{SOURCE6} .
 
 %include build.spec
 
