@@ -11,13 +11,13 @@
  # of any third-party rights.
  #
  # This program is distributed WITHOUT ANY WARRANTY; without even the implied
- # warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
+ # warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. For
  # details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
  #
  # You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
  # street, Riga, Latvia, EU, LV-1050.
  #
- # The  interactive user interfaces in modified source and object code versions
+ # The interactive user interfaces in modified source and object code versions
  # of the Program must display Appropriate Legal Notices, as required under
  # Section 5 of the GNU AGPL version 3.
  #
@@ -575,7 +575,7 @@ while [ "$1" != "" ]; do
 			echo "      -mysqlh, --mysqlhost              mysql server host"
 			echo "      -mysqlport, --mysqlport           mysql server port number (default value 3306)"
 			echo "      -led, --letsencryptdomain         defines the domain for Let's Encrypt certificate"
-			echo "      -lem, --letsencryptmail           defines the domain administator mail address for Let's Encrypt certificate"
+			echo "      -lem, --letsencryptmail           defines the domain administrator mail address for Let's Encrypt certificate"
 			echo "      -cf, --certfile                   path to the certificate file for the domain"
 			echo "      -ckf, --certkeyfile               path to the private key file for the certificate"
 			echo "      -off, --offline                   set the script for offline installation (true|false)"
@@ -915,9 +915,9 @@ docker_login() {
 }
 
 create_network () {
-	NETWORT_EXIST=$(docker network ls | awk '{print $2;}' | { grep -x ${NETWORK_NAME} || true; })
+	NETWORK_EXIST=$(docker network ls | awk '{print $2;}' | { grep -x ${NETWORK_NAME} || true; })
 
-	if [[ -z ${NETWORT_EXIST} ]]; then
+	if [[ -z ${NETWORK_EXIST} ]]; then
 		docker network create --driver bridge ${NETWORK_NAME}
 	fi
 }
