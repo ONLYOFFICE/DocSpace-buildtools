@@ -1,0 +1,77 @@
+resolver 127.0.0.11 valid=30s;
+
+map $scheme $client_service_url {
+  default $client_service_env;
+}
+
+map $scheme $management_service_url {
+  default $management_service_env;
+}
+
+map $scheme $doceditor_service_url {
+  default "$doceditor_service_env";
+}
+
+map $scheme $login_service_url {
+  default "$login_service_env";
+}
+
+map $scheme $sockjs_node_url {
+  default "$sockjs_node_env";
+}
+
+map $scheme $api_system_url {
+  default "$api_system_env";
+}
+
+map $scheme $webapi_service_url {
+  default "$webapi_service_env";
+}
+
+map $scheme $webstudio_service_url {
+  default "$webstudio_service_env";
+}
+
+map $scheme $people_service_url {
+  default "$people_service_env";
+}
+
+map $scheme $files_service_url {
+  default "$files_service_env";
+}
+
+map $scheme $backup_service_url {
+  default "$backup_service_env";
+}
+
+map $scheme $plugins_service_url {
+  default "$plugins_service_env";
+}
+
+map $scheme $migration_service_url {
+  default "$migration_service_env";
+}
+
+map $scheme $clients_service_url {
+  default "$clients_service_env";
+}
+
+map $scheme $oauth2_service_url {
+  default "$oauth2_service_env";
+}
+
+map $scheme $sso_service_url {
+  default "$sso_service_env";
+}
+
+map $scheme $socket_io_url {
+  default "$socket_io_env";
+}
+
+map $scheme $api_cache_url {
+  default "$api_cache_env";
+}
+
+map $scheme $health_checks_url {
+  default "$health_checks_env";
+}
