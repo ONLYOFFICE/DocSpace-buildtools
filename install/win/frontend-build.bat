@@ -27,6 +27,9 @@ pushd %~s1
   call yarn workspace @docspace/doceditor build
   call yarn workspace @docspace/doceditor deploy
 
+  call yarn workspace @docspace/sdk build
+  call yarn workspace @docspace/sdk deploy
+
   xcopy /E /I /Y public "..\publish\web\public\"
   call node common\scripts\minify-common-locales.js
 
