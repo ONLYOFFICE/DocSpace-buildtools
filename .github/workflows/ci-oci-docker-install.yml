@@ -1,6 +1,8 @@
 name: Install OneClickInstall Docker
 
 on:
+  schedule:
+    - cron: '00 20 * * 0'
   pull_request:
     types: [opened, reopened, synchronize]
     paths:
