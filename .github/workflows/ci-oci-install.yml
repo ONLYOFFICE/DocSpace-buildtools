@@ -1,15 +1,6 @@
 name: Install OneClickInstall DocSpace
 
 on:
-  pull_request:
-    types: [opened, reopened, synchronize]
-    paths:
-      - '.github/workflows/ci-oci-install.yml'
-      - 'install/OneClickInstall/install-Debian/**'
-      - 'install/OneClickInstall/install-RedHat/**'
-      - 'install/OneClickInstall/install-Debian.sh'
-      - 'install/OneClickInstall/install-RedHat.sh'
-
   schedule:
     - cron: '00 20 * * 0'
 
@@ -164,7 +155,7 @@ jobs:
             vagrant destroy --force
 
       - name: "Test Local scripts with ${{matrix.name}}"
-        if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
+        if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
         uses: nick-fields/retry@v3
         with:
           max_attempts: 2
