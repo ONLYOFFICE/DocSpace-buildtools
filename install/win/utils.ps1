@@ -324,6 +324,7 @@ function OpenSearchSetup {
     $FileContent = UpdateConfig $FileContent "opensearch.hosts:.*" "opensearch.hosts: [http://localhost:9200]"
     $FileContent = UpdateConfig $FileContent "server.host:.*" "server.host: 127.0.0.1"
     $FileContent = UpdateConfig $FileContent "server.basePath:.*" "server.basePath: /dashboards"
+    $FileContent = UpdateConfig $FileContent "server.rewriteBasePath:.*" "server.rewriteBasePath: true"
 
     Set-Content -Path $OpenSearchDashboardsYml -Value $FileContent
 }
