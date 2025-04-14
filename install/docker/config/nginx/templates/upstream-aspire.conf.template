@@ -12,6 +12,10 @@ map $scheme $doceditor_service_url {
   default "$doceditor_service_env";
 }
 
+map $scheme $doceditor_url {
+  default "$doceditor_env";
+}
+
 map $scheme $login_service_url {
   default "$login_service_env";
 }
