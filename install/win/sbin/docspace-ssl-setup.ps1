@@ -200,7 +200,7 @@ elseif ($args[0] -eq "-d" -or $args[0] -eq "--default") {
     [System.Environment]::SetEnvironmentVariable("NODE_EXTRA_CA_CERTS", $null, "Machine")
     foreach ($service in $node_services) { Restart-Service -Name $service }
     Restart-Service -Name $proxy_service
-    Remove-Item -Path "${app}\letsencrypt\letsencrypt_cron.bat" -Force
+    if (Test-Path "${app}\letsencrypt\letsencrypt_cron.bat") { Remove-Item -Path "${app}\letsencrypt\letsencrypt_cron.bat" -Force }
     Write-Host "Returned to the default proxy configuration."
 }
 
