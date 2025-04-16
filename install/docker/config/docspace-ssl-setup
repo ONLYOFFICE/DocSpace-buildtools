@@ -77,7 +77,7 @@ check_file_format() {
     CERTIFICATE_FILE="${FILE%.*}.pem"
     openssl x509 -in "$FILE" -inform DER -out "$CERTIFICATE_FILE"
 
-  elif openssl x509 -in "$FILE" -text -noout > /dev/null 2>&1; then
+  elif openssl x509 -in "$FILE" -inform PEM -text -noout > /dev/null 2>&1; then
     echo "$FILE is a valid PEM certificate."
   elif openssl pkey -in "$FILE" -check > /dev/null 2>&1; then
     echo "$FILE is a valid private key."
