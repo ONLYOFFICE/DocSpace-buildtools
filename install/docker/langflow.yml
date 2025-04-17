@@ -12,6 +12,7 @@ services:
     expose:
       - "${ONLYFLOW_BACKEND_PORT}"
     environment:
+      - LANGFLOW_CONFIG_DIR=/app/langflow
       - OPENAI_API_KEY=${ONLYFLOW_OPENAI_API_KEY}
       - LANGFLOW_DATABASE_URL=postgresql://${ONLYFLOW_PG_USER}:${ONLYFLOW_PG_PASSWORD}@${ONLYFLOW_PG_HOST}:${ONLYFLOW_PG_PORT}/${ONLYFLOW_PG_DATABASE}
       - LANGFLOW_DATABASE_CONNECTION_RETRY=true
@@ -22,6 +23,8 @@ services:
       - API_ROUTER_HOST=${APP_URL_PORTAL}
     depends_on:
       - onlyoffice-langflow-pgvector
+    volumes:
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}langflow_data:/app/langflow
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://${ONLYFLOW_HOST}-backend:${ONLYFLOW_BACKEND_PORT}/health')\" || exit 1"]
       <<: *x-healthcheck
