@@ -72,15 +72,15 @@ check_file_format() {
     openssl pkcs12 -in "$FILE" -out "$CERTIFICATE_FILE" -nokeys --passin pass:"$PFX_PASSWORD"
     openssl pkcs12 -in "$FILE" -out "$PRIVATEKEY_FILE" -nocerts -nodes --passin pass:"$PFX_PASSWORD"
 
-  elif openssl x509 -in "$FILE" -text -noout > /dev/null 2>&1; then
-    echo "$FILE is a valid PEM certificate."
-  elif openssl pkey -in "$FILE" -check > /dev/null 2>&1; then
-    echo "$FILE is a valid private key."
-
   elif openssl x509 -in "$FILE" -inform DER -text -noout > /dev/null 2>&1; then
     echo "$FILE is a valid DER/CER certificate. Converting to PEM..."
     CERTIFICATE_FILE="${FILE%.*}.pem"
     openssl x509 -in "$FILE" -inform DER -out "$CERTIFICATE_FILE"
+
+  elif openssl x509 -in "$FILE" -inform PEM -text -noout > /dev/null 2>&1; then
+    echo "$FILE is a valid PEM certificate."
+  elif openssl pkey -in "$FILE" -check > /dev/null 2>&1; then
+    echo "$FILE is a valid private key."
 
   elif openssl pkcs7 -in "$FILE" -print_certs -noout > /dev/null 2>&1; then
     echo "$FILE is a valid PKCS#7 certificate. Converting to PEM..."

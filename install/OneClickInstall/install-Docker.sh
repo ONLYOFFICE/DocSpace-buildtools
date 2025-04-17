@@ -11,13 +11,13 @@
  # of any third-party rights.
  #
  # This program is distributed WITHOUT ANY WARRANTY; without even the implied
- # warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
+ # warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. For
  # details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
  #
  # You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
  # street, Riga, Latvia, EU, LV-1050.
  #
- # The  interactive user interfaces in modified source and object code versions
+ # The interactive user interfaces in modified source and object code versions
  # of the Program must display Appropriate Legal Notices, as required under
  # Section 5 of the GNU AGPL version 3.
  #
@@ -575,7 +575,7 @@ while [ "$1" != "" ]; do
 			echo "      -mysqlh, --mysqlhost              mysql server host"
 			echo "      -mysqlport, --mysqlport           mysql server port number (default value 3306)"
 			echo "      -led, --letsencryptdomain         defines the domain for Let's Encrypt certificate"
-			echo "      -lem, --letsencryptmail           defines the domain administator mail address for Let's Encrypt certificate"
+			echo "      -lem, --letsencryptmail           defines the domain administrator mail address for Let's Encrypt certificate"
 			echo "      -cf, --certfile                   path to the certificate file for the domain"
 			echo "      -ckf, --certkeyfile               path to the private key file for the certificate"
 			echo "      -off, --offline                   set the script for offline installation (true|false)"
@@ -894,30 +894,15 @@ install_docker () {
 }
 
 docker_login() {
-    [[ "$OFFLINE_INSTALLATION" == "true" ]] && return 0
-
-    if [[ -f "$HOME/.docker/config.json" ]] && \
-       jq -r --arg key "${REGISTRY_URL:-https://index.docker.io/v1/}" '.auths | has($key)' "$HOME/.docker/config.json" | grep -q "true"; then
-        return 0
+    if [[ -n "$USERNAME" && -n "$PASSWORD" ]]; then
+        echo "$PASSWORD" | docker login "$REGISTRY_URL" --username "$USERNAME" --password-stdin || { echo "Docker authentication failed"; exit 1; }
     fi
-
-    [[ -n "$REGISTRY_URL" ]] && return 0
-
-    if [[ "$NON_INTERACTIVE" == "true" ]]; then
-        [[ -z "$USERNAME" || -z "$PASSWORD" ]] && return 0
-    else
-        echo "Please log in: Docker Hub limits to 10 pulls."
-        [[ -z "$USERNAME" ]] && read -rp "Enter DockerHub username: " USERNAME
-        [[ -z "$PASSWORD" ]] && read -rsp "Enter DockerHub password: " PASSWORD && echo
-    fi
-
-    echo "$PASSWORD" | docker login --username "$USERNAME" --password-stdin || { echo "Docker authentication failed"; exit 1; }
 }
 
 create_network () {
-	NETWORT_EXIST=$(docker network ls | awk '{print $2;}' | { grep -x ${NETWORK_NAME} || true; })
+	NETWORK_EXIST=$(docker network ls | awk '{print $2;}' | { grep -x ${NETWORK_NAME} || true; })
 
-	if [[ -z ${NETWORT_EXIST} ]]; then
+	if [[ -z ${NETWORK_EXIST} ]]; then
 		docker network create --driver bridge ${NETWORK_NAME}
 	fi
 }

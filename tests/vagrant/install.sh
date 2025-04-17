@@ -89,7 +89,7 @@ END
 # Arguments:
 #   None
 # Outputs:
-#   ☑ PREPAVE_VM: **<prepare_message>**
+#   ☑ PREPARE_VM: **<prepare_message>**
 #############################################################################################
 function prepare_vm() {
   if [ -f /etc/os-release ]; then
@@ -101,7 +101,7 @@ function prepare_vm() {
 
       debian)
           [ "$VERSION_CODENAME" == "bookworm" ] && apt-get update -y && apt install -y curl gnupg
-          apt-get remove postfix -y && echo "${COLOR_GREEN}☑ PREPAVE_VM: Postfix was removed${COLOR_RESET}"
+          apt-get remove postfix -y && echo "${COLOR_GREEN}☑ PREPARE_VM: Postfix was removed${COLOR_RESET}"
           [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-deb
           ;;
 
@@ -128,7 +128,7 @@ function prepare_vm() {
   [ -d /tmp/docspace ] && mv /tmp/docspace/* /home/vagrant
 
   echo '127.0.0.1 host4test' | sudo tee -a /etc/hosts   
-  echo "${COLOR_GREEN}☑ PREPAVE_VM: Hostname was setting up${COLOR_RESET}"   
+  echo "${COLOR_GREEN}☑ PREPARE_VM: Hostname was setting up${COLOR_RESET}"   
 }
 
 #############################################################################################
@@ -174,7 +174,7 @@ function healthcheck_systemd_services() {
 # Arguments:
 #   None
 # Outputs:
-#   ⚠ ⚠  ATTENTION: Some sevices is not running ⚠ ⚠ 
+#   ⚠ ⚠  ATTENTION: Some services is not running ⚠ ⚠ 
 # Returns
 # 0 if all services is start correctly, non-zero if some failed
 #############################################################################################

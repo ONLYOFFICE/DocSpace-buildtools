@@ -781,6 +781,16 @@ setup_rabbitmq() {
 	echo -e "RABBIT_URI=${RABBITMQ_PROTOCOL}://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/" >> "${APP_DIR}/systemd.env"
 
 	if [ $1 == "LOCAL_RABBITMQ_SERVER" ]; then
+        systemctl stop rabbitmq-server epmd.socket >/dev/null 2>&1 || true
+        systemctl mask epmd.socket >/dev/null 2>&1 || true
+        pkill -f epmd >/dev/null 2>&1 || true
+
+        mkdir -p /etc/rabbitmq /etc/systemd/system/rabbitmq-server.service.d
+        [ -f /etc/rabbitmq/rabbitmq.conf ] && sed -i '/^listeners\.tcp\.default\|^loopback_users\.guest/d' /etc/rabbitmq/rabbitmq.conf
+        printf "listeners.tcp.default = 127.0.0.1:5672\nloopback_users.guest = true\n" >> /etc/rabbitmq/rabbitmq.conf
+        printf "[Service]\nEnvironment=\"RABBITMQ_NODENAME=rabbit@localhost\"\nEnvironment=\"ERL_EPMD_ADDRESS=127.0.0.1\"\n" > /etc/systemd/system/rabbitmq-server.service.d/override.conf
+
+        systemctl daemon-reload
 		systemctl enable rabbitmq-server >/dev/null 2>&1
 		systemctl restart rabbitmq-server
 	fi
