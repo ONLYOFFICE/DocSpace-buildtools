@@ -32,12 +32,12 @@ jobs:
             name: "centos9s"
 
           - distr: onlyoffice
-            os: base-debian12
-            name: "debian12"
-
-          - distr: onlyoffice
             os: base-debian11
             name: "debian11"
+
+          - distr: onlyoffice
+            os: base-debian12
+            name: "debian12"
 
           - distr: onlyoffice
             os: base-ubuntu2204
@@ -53,7 +53,11 @@ jobs:
 
           - distr: onlyoffice
             os: base-fedora41
-            name: "fedora41"
+            name: ""
+
+          - distr: onlyoffice
+            os: base-fedora42
+            name: "fedora42"
 
     steps:
       - name: Checkout code
