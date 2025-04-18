@@ -36,6 +36,10 @@ jobs:
             name: "debian12"
 
           - distr: onlyoffice
+            os: base-debian11
+            name: "debian11"
+
+          - distr: onlyoffice
             os: base-ubuntu2204
             name: "ubuntu2204"
 
