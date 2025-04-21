@@ -1,8 +1,8 @@
 x-healthcheck: &x-healthcheck
-  interval: 10s
-  timeout: 5s
+  interval: 60s
+  timeout: 10s
   retries: 5
-  start_period: 10s
+  start_period: 20s
 
 services:
   onlyoffice-langflow-backend:
