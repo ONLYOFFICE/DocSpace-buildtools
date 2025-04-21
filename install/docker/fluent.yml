@@ -1,6 +1,6 @@
 services:
   fluent-bit:
-    image: ${HUB}${FLUENT_BIT_IMAGE_NAME}
+    image: ${REGISTRY}${FLUENT_BIT_IMAGE_NAME}
     container_name: ${FLUENT_BIT_CONTAINER_NAME}
     restart: always
     environment:

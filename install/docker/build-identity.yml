@@ -16,7 +16,7 @@ services:
       <<: *x-build
       args:
         - MODULE=authorization/authorization-container
-    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-authorization:${DOCKER_TAG}"
+    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-authorization:${DOCKER_TAG}"
     container_name: ${IDENTITY_AUTHORIZATION_CONTAINER_NAME}
     restart: always
     ports:
@@ -33,7 +33,7 @@ services:
       <<: *x-build
       args:
         - MODULE=registration/registration-container
-    image: "${HUB}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-api:${DOCKER_TAG}"
+    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-api:${DOCKER_TAG}"
     container_name: ${IDENTITY_API_CONTAINER_NAME}
     ports:
       - 9090:9090

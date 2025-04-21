@@ -262,6 +262,12 @@ $enterprise_prerequisites = @(
     name = "jdk-21_windows-x64_bin.msi";
     link = "https://download.oracle.com/java/21/latest/jdk-21_windows-x64_bin.msi"
   }
+  
+  @{
+    download_allways = $false;
+    name = "FireDaemon-OpenSSL-x64-3.3.0.exe";
+    link = "https://download.firedaemon.com/FireDaemon-OpenSSL/FireDaemon-OpenSSL-x64-3.3.0.exe"
+  }
 )
 
 DownloadComponents $prerequisites $path_prereq

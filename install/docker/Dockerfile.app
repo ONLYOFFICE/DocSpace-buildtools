@@ -20,9 +20,9 @@ RUN set -eux; \
 
 ADD https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/git/refs/heads/${GIT_BRANCH} version.json
 RUN echo "--- clone resources ---" && \
-    git clone -b ${GIT_BRANCH} --depth 1  https://github.com/ONLYOFFICE/DocSpace-buildtools.git ${SRC_PATH}/buildtools && \
-    git clone --recurse-submodules -b ${GIT_BRANCH} --depth 1  https://github.com/ONLYOFFICE/DocSpace-Server.git ${SRC_PATH}/server && \
-    git clone -b ${GIT_BRANCH} --depth 1  https://github.com/ONLYOFFICE/DocSpace-Client.git ${SRC_PATH}/client && \
+    git clone -b ${GIT_BRANCH} --depth 30  https://github.com/ONLYOFFICE/DocSpace-buildtools.git ${SRC_PATH}/buildtools && \
+    git clone --recurse-submodules -b ${GIT_BRANCH} --depth 30  https://github.com/ONLYOFFICE/DocSpace-Server.git ${SRC_PATH}/server && \
+    git clone -b ${GIT_BRANCH} --depth 30  https://github.com/ONLYOFFICE/DocSpace-Client.git ${SRC_PATH}/client && \
     git clone -b "master" --depth 1 https://github.com/ONLYOFFICE/docspace-plugins.git ${SRC_PATH}/plugins && \
     git clone -b "master" --depth 1 https://github.com/ONLYOFFICE/ASC.Web.Campaigns.git ${SRC_PATH}/campaigns
 
@@ -91,6 +91,7 @@ node common/scripts/before-build.js
 CLIENT_PACKAGES+=("@docspace/client")
 CLIENT_PACKAGES+=("@docspace/login")
 CLIENT_PACKAGES+=("@docspace/doceditor")
+CLIENT_PACKAGES+=("@docspace/sdk")
 CLIENT_PACKAGES+=("@docspace/management")
 
 for PKG in ${CLIENT_PACKAGES[@]}; do
@@ -246,6 +247,9 @@ RUN echo "--- install runtime node.22 ---" && \
     COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/login/.next/static/chunks ${BUILD_PATH}/build/login/static/chunks
     COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/login/.next/static/css ${BUILD_PATH}/build/login/static/css
     COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/login/.next/static/media ${BUILD_PATH}/build/login/static/media
+    COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/.next/static/chunks ${BUILD_PATH}/build/sdk/static/chunks
+    COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/.next/static/css ${BUILD_PATH}/build/sdk/static/css
+    COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/.next/static/media ${BUILD_PATH}/build/sdk/static/media
     COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management ${BUILD_PATH}/management
     COPY --from=src --chown=onlyoffice:onlyoffice /etc/nginx/conf.d /etc/nginx/conf.d
     COPY --from=src --chown=onlyoffice:onlyoffice /etc/nginx/includes /etc/nginx/includes
@@ -269,6 +273,7 @@ RUN echo "--- install runtime node.22 ---" && \
         sed -i 's/127.0.0.1:9899/$service_socket/' /etc/nginx/conf.d/onlyoffice.conf && \
         sed -i 's/127.0.0.1:9834/$service_sso/' /etc/nginx/conf.d/onlyoffice.conf && \
         sed -i 's/127.0.0.1:5013/$service_doceditor/' /etc/nginx/conf.d/onlyoffice.conf && \
+        sed -i 's/127.0.0.1:5099/$service_sdk/' /etc/nginx/conf.d/onlyoffice.conf && \
         sed -i 's/127.0.0.1:5011/$service_login/' /etc/nginx/conf.d/onlyoffice.conf && \
         sed -i 's/127.0.0.1:9090/$service_identity_api/' /etc/nginx/conf.d/onlyoffice.conf && \
         sed -i 's/127.0.0.1:8080/$service_identity/' /etc/nginx/conf.d/onlyoffice.conf && \
@@ -285,6 +290,15 @@ RUN echo "--- install runtime node.22 ---" && \
     ENTRYPOINT  [ "/docker-entrypoint.sh" ]
     
     CMD ["/usr/local/openresty/bin/openresty", "-g", "daemon off;"]
+
+## Sdk ##
+FROM noderun AS sdk
+WORKDIR ${BUILD_PATH}/products/ASC.Sdk/sdk
+
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/ .
+
+CMD ["server.js", "ASC.Sdk"]
 
 ## Doceditor ##
 FROM noderun AS doceditor
