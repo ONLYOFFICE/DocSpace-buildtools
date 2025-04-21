@@ -46,6 +46,27 @@ if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then
 	DASHBOARDS_VERSION="2.18.0"
 fi
 
+#add rabbitmq & erlang repo
+if [[ "${DISTRIB_CODENAME}" =~ "bullseye" ]]; then 
+	[ ! -f /etc/apt/sources.list.d/rabbitmq.list ] && RABBITMQ_REPO=false
+	curl -1sLf https://github.com/rabbitmq/signing-keys/releases/download/3.0/cloudsmith.rabbitmq-erlang.E495BB49CC4BBE5B.key | gpg --dearmor > /usr/share/keyrings/erlang.gpg
+	curl -1sLf https://github.com/rabbitmq/signing-keys/releases/download/3.0/cloudsmith.rabbitmq-server.9F4587F226208342.key | gpg --dearmor > /usr/share/keyrings/rabbitmq.gpg
+	echo "deb [arch=amd64 signed-by=/usr/share/keyrings/erlang.gpg] https://ppa1.rabbitmq.com/rabbitmq/rabbitmq-erlang/deb/${DIST} ${DISTRIB_CODENAME} main" > /etc/apt/sources.list.d/rabbitmq.list
+	echo "deb [arch=amd64 signed-by=/usr/share/keyrings/rabbitmq.gpg] https://ppa1.rabbitmq.com/rabbitmq/rabbitmq-server/deb/${DIST} ${DISTRIB_CODENAME} main" >> /etc/apt/sources.list.d/rabbitmq.list
+	if dpkg -l | grep -q rabbitmq-server && [ "${RABBITMQ_REPO}" = false ]; then
+		echo "You have an old version of RabbitMQ installed. The update will cause the RabbitMQ database to be deleted."
+		echo "If you use the database only in the ONLYOFFICE configuration, then the update will be safe for you."
+		echo "Select 'Y' to install the new version of RabbitMQ. Select 'N' to abort the installation."
+		read -r -p "Please, enter Y or N: " CHOICE_INSTALLATION
+		if [[ "${CHOICE_INSTALLATION,,}" =~ ^(y|yes)$ ]]; then
+			apt-get purge -y rabbitmq-server $(dpkg -l | awk '/erlang/ {print $2}')
+		else
+			rm -f /etc/apt/sources.list.d/rabbitmq.list
+			exit 1
+		fi
+	fi
+fi
+
 # add nodejs repo
 NODE_VERSION="18"
 curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -

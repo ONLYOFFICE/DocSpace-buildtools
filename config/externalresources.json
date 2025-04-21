@@ -6,7 +6,8 @@
         "entries": {
           "docspace": "/docspace",
           "javascript-sdk": "/docspace/javascript-sdk/get-started/basic-concepts",
-          "plugins-sdk": "/docspace/plugins-sdk/get-started/basic-concepts"
+          "plugins-sdk": "/docspace/plugins-sdk/get-started/basic-concepts",
+          "apikeys": "/docspace/api-backend/get-started/how-it-works/api-keys"
         }
       }
     },
@@ -146,7 +147,7 @@
           "facebook": "https://www.facebook.com/pages/OnlyOffice/833032526736775",
           "instagram": "https://www.instagram.com/the_onlyoffice/",
           "tiktok": "https://vm.tiktok.com/ZMLXbFEyd/",
-          "twitter": "https://twitter.com/ONLY_OFFICE",
+          "twitter": "https://x.com/ONLY_OFFICE",
           "youtube": "https://www.youtube.com/user/onlyofficeTV"
         }
       }

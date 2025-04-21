@@ -68,14 +68,14 @@ while [ "$1" != "" ]; do
 			fi
 		;;
 
-		-du | --dashboadrsusername )
+		-du | --dashboardsusername )
 			if [ "$2" != "" ]; then
 				DASHBOARDS_USERNAME=$2
 				shift
 			fi
 		;;
 
-		-dp | --dashboadrspassword )
+		-dp | --dashboardspassword )
 			if [ "$2" != "" ]; then
 				DASHBOARDS_PASSWORD=$2
 				shift
@@ -122,7 +122,7 @@ while [ "$1" != "" ]; do
 			echo "      -ifb, --installfluentbit          install or update fluent-bit (true|false)"
 			echo "      -du, --dashboardsusername         login for authorization in /dashboards/"
 			echo "      -dp, --dashboardspassword         password for authorization in /dashboards/"
-			echo "      -ls, --local_scripts              use 'true' to run local scripts (true|false)"
+			echo "      -ls, --localscripts               use 'true' to run local scripts (true|false)"
 			echo "      -skiphc, --skiphardwarecheck      use to skip hardware check (true|false)"
 			echo "      -ms, --makeswap                   make swap file (true|false)"
 			echo "      -?, -h, --help                    this help"
