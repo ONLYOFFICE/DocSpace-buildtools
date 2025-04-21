@@ -17,6 +17,7 @@ services:
       - LANGFLOW_NEW_USER_IS_ACTIVE=False
       - LANGFLOW_LOG_LEVEL=${LOG_LEVEL}
       - LANGFLOW_CONFIG_DIR=/app/langflow
+      - LANGFLOW_LOG_FILE=/var/log/langflow/langflow.log
       - LANGFLOW_DATABASE_URL=postgresql://${ONLYFLOW_PG_USER}:${ONLYFLOW_PG_PASSWORD}@${ONLYFLOW_PG_HOST}:${ONLYFLOW_PG_PORT}/${ONLYFLOW_PG_DATABASE}
       - LANGFLOW_DATABASE_CONNECTION_RETRY=true
       - HOST_QDRANT_SERVICE=${ONLYFLOW_QDRANT_HOST}
@@ -29,6 +30,7 @@ services:
       - onlyoffice-langflow-pgvector
     volumes:
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}langflow_data:/app/langflow
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/langflow
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://${ONLYFLOW_HOST}-backend:${ONLYFLOW_BACKEND_PORT}/health')\" || exit 1"]
       <<: *x-healthcheck
@@ -88,4 +90,5 @@ networks:
 volumes:
   langflow_data:
   langflow_pg_data:
+  langflow_log_data:
   langflow_qdrant_data:
