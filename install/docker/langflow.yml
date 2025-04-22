@@ -24,7 +24,7 @@ services:
       - HOST_QDRANT_PORT=${ONLYFLOW_QDRANT_HTTP_PORT}
       - HOST_API_SERVICE=${SERVICE_API}
       - HOST_FILES_SERVICE=${SERVICE_FILES}
-      - API_ROUTER_HOST=${APP_URL_PORTAL}
+      - API_ROUTER_HOST=http://onlyoffice-router:8092
       - OPENAI_API_KEY=${ONLYFLOW_OPENAI_API_KEY}
     depends_on:
       - onlyoffice-langflow-pgvector
