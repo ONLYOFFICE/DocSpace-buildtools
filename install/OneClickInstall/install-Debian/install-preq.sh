@@ -46,6 +46,27 @@ if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then
 	DASHBOARDS_VERSION="2.18.0"
 fi
 
+#add rabbitmq & erlang repo
+if [[ "${DISTRIB_CODENAME}" =~ "bullseye" ]]; then 
+	[ ! -f /etc/apt/sources.list.d/rabbitmq.list ] && RABBITMQ_REPO=false
+	curl -1sLf https://github.com/rabbitmq/signing-keys/releases/download/3.0/cloudsmith.rabbitmq-erlang.E495BB49CC4BBE5B.key | gpg --dearmor > /usr/share/keyrings/erlang.gpg
+	curl -1sLf https://github.com/rabbitmq/signing-keys/releases/download/3.0/cloudsmith.rabbitmq-server.9F4587F226208342.key | gpg --dearmor > /usr/share/keyrings/rabbitmq.gpg
+	echo "deb [arch=amd64 signed-by=/usr/share/keyrings/erlang.gpg] https://ppa1.rabbitmq.com/rabbitmq/rabbitmq-erlang/deb/${DIST} ${DISTRIB_CODENAME} main" > /etc/apt/sources.list.d/rabbitmq.list
+	echo "deb [arch=amd64 signed-by=/usr/share/keyrings/rabbitmq.gpg] https://ppa1.rabbitmq.com/rabbitmq/rabbitmq-server/deb/${DIST} ${DISTRIB_CODENAME} main" >> /etc/apt/sources.list.d/rabbitmq.list
+	if dpkg -l | grep -q rabbitmq-server && [ "${RABBITMQ_REPO}" = false ]; then
+		echo "You have an old version of RabbitMQ installed. The update will cause the RabbitMQ database to be deleted."
+		echo "If you use the database only in the ONLYOFFICE configuration, then the update will be safe for you."
+		echo "Select 'Y' to install the new version of RabbitMQ. Select 'N' to abort the installation."
+		read -r -p "Please, enter Y or N: " CHOICE_INSTALLATION
+		if [[ "${CHOICE_INSTALLATION,,}" =~ ^(y|yes)$ ]]; then
+			apt-get purge -y rabbitmq-server $(dpkg -l | awk '/erlang/ {print $2}')
+		else
+			rm -f /etc/apt/sources.list.d/rabbitmq.list
+			exit 1
+		fi
+	fi
+fi
+
 # add nodejs repo
 NODE_VERSION="18"
 curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
@@ -116,7 +137,6 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 				gcc \
 				make \
 				dotnet-sdk-9.0 \
-				opensearch=${ELASTIC_VERSION} \
 				mysql-server \
 				mysql-client \
 				postgresql \
@@ -124,6 +144,13 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 				rabbitmq-server \
 				temurin-${JAVA_VERSION}-jre \
 				ffmpeg 
+
+if ! dpkg -l | grep -q "opensearch"; then
+	apt-get install -yq opensearch=${ELASTIC_VERSION}
+else
+	ELASTIC_PLUGIN="/usr/share/opensearch/bin/opensearch-plugin"
+	"${ELASTIC_PLUGIN}" list | grep -q ingest-attachment && "${ELASTIC_PLUGIN}" remove -s ingest-attachment
+fi
 
 # Set Java ${JAVA_VERSION} as the default version
 JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*temurin-${JAVA_VERSION}*" | head -1)
@@ -133,8 +160,8 @@ if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then
 	[[ "$DISTRIB_CODENAME" =~ noble ]] && FLUENTBIT_DIST_CODENAME="jammy" || FLUENTBIT_DIST_CODENAME="${DISTRIB_CODENAME}"
 	curl https://packages.fluentbit.io/fluentbit.key | gpg --dearmor > /usr/share/keyrings/fluentbit-keyring.gpg
 	echo "deb [signed-by=/usr/share/keyrings/fluentbit-keyring.gpg] https://packages.fluentbit.io/$DIST/$FLUENTBIT_DIST_CODENAME $FLUENTBIT_DIST_CODENAME main" | tee /etc/apt/sources.list.d/fluent-bit.list
-	apt update
-	apt-get install -yq opensearch-dashboards="${DASHBOARDS_VERSION}" fluent-bit
+	apt-get -y update
+	apt-get install -o DPkg::options::="--force-confnew" -yq opensearch-dashboards="${DASHBOARDS_VERSION}" fluent-bit
 fi
 
 # disable apparmor for mysql
