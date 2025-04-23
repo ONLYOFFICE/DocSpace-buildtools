@@ -119,7 +119,7 @@ function ConvertToPem {
 
 if ( $args.Count -ge 2 ) {
   if ($args[0] -eq "-f" -or $args[0] -eq "--file") {
-    $letsencrypt_domain = $args[1] -join ","
+    $domain_name = $args[1] -join ","
     $ssl_cert           = $args[2]
     $ssl_key            = $null
 
@@ -164,6 +164,7 @@ if ( $args.Count -ge 2 ) {
   else {
     $letsencrypt_mail = $args[0] -JOIN ","
     $letsencrypt_domain = $args[1] -JOIN ","
+    $domain_name = $letsencrypt_domain -split ',' | Select-Object -First 1
 
     [void](New-Item -ItemType "directory" -Path "${root_dir}\Logs" -Force)
 
@@ -193,9 +194,11 @@ if ( $args.Count -ge 2 ) {
   if ( [System.IO.File]::Exists($ssl_cert) -and [System.IO.File]::Exists($ssl_key) -and [System.IO.File]::Exists("${nginx_conf_dir}\${nginx_ssl_tmpl}"))
   {
     Copy-Item "${nginx_conf_dir}\${nginx_ssl_tmpl}" -Destination "${nginx_conf_dir}\${nginx_conf}"
-    ((Get-Content -Path "${app}\config\appsettings.$environment.json" -Raw) -replace '"portal":\s*"[^"]*"', "`"portal`": `"https://$($letsencrypt_domain -split ',' | Select-Object -First 1)`"") | Set-Content -Path "${app}\config\appsettings.$environment.json"
+    if ($domain_name -ne "localhost:80") { ((Get-Content -Path "${app}\config\appsettings.$environment.json" -Raw) -replace '"portal":\s*"[^"]*"', "`"portal`": `"https://$domain_name`"") | Set-Content -Path "${app}\config\appsettings.$environment.json" }
     ((Get-Content -Path "${nginx_conf_dir}\${nginx_conf}" -Raw) -replace '/usr/local/share/ca-certificates/tls.crt', "`"$ssl_cert`"") | Set-Content -Path "${nginx_conf_dir}\${nginx_conf}"
     ((Get-Content -Path "${nginx_conf_dir}\${nginx_conf}" -Raw) -replace '/etc/ssl/private/tls.key', "`"$ssl_key`"") | Set-Content -Path "${nginx_conf_dir}\${nginx_conf}"
+
+    Set-ItemProperty -Path "HKLM:\SOFTWARE\Wow6432Node\Ascensio System SIA\ONLYOFFICE DocSpace" -Name "DOMAIN_NAME" -Value $domain_name
 
     if ($letsencrypt_domain -and (Test-Path $letsencrypt_domain_dir))
     {

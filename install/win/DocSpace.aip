@@ -44,6 +44,7 @@
     <ROW Property="DOCUMENT_SERVER_HOST" Value="localhost"/>
     <ROW Property="DOCUMENT_SERVER_JWT_SECRET" Value=" "/>
     <ROW Property="DOCUMENT_SERVER_PORT" Value="8083"/>
+    <ROW Property="DOMAIN_NAME" Value="localhost:80"/>
     <ROW Property="ENVIRONMENT" Value="community" MultiBuildValue="ExeBuild:enterprise#ExeBuild_1:developer"/>
     <ROW Property="Editor_Port" Value="5013"/>
     <ROW Property="IDENTITY_ENCRYPTION_SECRET" Value=" "/>
@@ -549,6 +550,7 @@
     <ROW Property="MACHINE_KEY" Signature_="AppSearchSign_25"/>
     <ROW Property="DASHBOARDS_PWD" Signature_="AppSearchSign_26"/>
     <ROW Property="IDENTITY_ENCRYPTION_SECRET" Signature_="AppSearchSign_27"/>
+    <ROW Property="DOMAIN_NAME" Signature_="AppSearchSign_28"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiBinaryComponent">
     <ROW Name="NetFirewall.dll" SourcePath="&lt;AI_CUSTACTS&gt;NetFirewall.dll"/>
@@ -1398,6 +1400,7 @@
     <ROW Signature_="AppSearchSign_25" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="MACHINE_KEY" Type="2"/>
     <ROW Signature_="AppSearchSign_26" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="DASHBOARDS_PWD" Type="2"/>
     <ROW Signature_="AppSearchSign_27" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="IDENTITY_ENCRYPTION_SECRET" Type="2"/>
+    <ROW Signature_="AppSearchSign_28" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="DOMAIN_NAME" Type="2"/>
     <ROW Signature_="AppSearchSign_3" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_USER" Type="2"/>
     <ROW Signature_="AppSearchSign_4" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_PWD" Type="2"/>
     <ROW Signature_="AppSearchSign_5" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_PORT" Type="2"/>

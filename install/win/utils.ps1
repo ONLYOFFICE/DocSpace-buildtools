@@ -371,6 +371,7 @@ function MoveConfigs {
         $Content = ReadFileContent $ConfigFile
         $SslCertPath = ExtractPath -Content $Content -RegexPattern "ssl_certificate\s+(.*?);"
         $SslCertKeyPath = ExtractPath -Content $Content -RegexPattern "ssl_certificate_key\s+(.*?);"
+        $DomainName = AI_GetMsiProperty DOMAIN_NAME
     } else {
         Write-Output "Configuration file not found!"
     }
@@ -402,8 +403,8 @@ function MoveConfigs {
     }
 
     # Run the SSL setup script if paths are valid.
-    if (Test-Path $ConfigSslFile)  {
-        $PsCommand = "& '$SslScriptPath' -f $SslCertPath $SslCertKeyPath"
+    if ((Test-Path $ConfigSslFile) -and ($SslCertPath) -and ($SslCertKeyPath)) {
+        $PsCommand = "& '$SslScriptPath' -f $DomainName $SslCertPath $SslCertKeyPath"
         Invoke-Expression $PsCommand
     } else {
         Write-Output "SSL script not executed. Missing paths or ConfigSslFile."
