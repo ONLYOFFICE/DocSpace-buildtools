@@ -194,11 +194,12 @@ if ( $args.Count -ge 2 ) {
   if ( [System.IO.File]::Exists($ssl_cert) -and [System.IO.File]::Exists($ssl_key) -and [System.IO.File]::Exists("${nginx_conf_dir}\${nginx_ssl_tmpl}"))
   {
     Copy-Item "${nginx_conf_dir}\${nginx_ssl_tmpl}" -Destination "${nginx_conf_dir}\${nginx_conf}"
-    if ($domain_name -ne "localhost:80") { ((Get-Content -Path "${app}\config\appsettings.$environment.json" -Raw) -replace '"portal":\s*"[^"]*"', "`"portal`": `"https://$domain_name`"") | Set-Content -Path "${app}\config\appsettings.$environment.json" }
+    if ($domain_name -ne "localhost:80") {
+      ((Get-Content -Path "${app}\config\appsettings.$environment.json" -Raw) -replace '"portal":\s*"[^"]*"', "`"portal`": `"https://$domain_name`"") | Set-Content -Path "${app}\config\appsettings.$environment.json"
+      Set-ItemProperty -Path "HKLM:\SOFTWARE\Wow6432Node\Ascensio System SIA\ONLYOFFICE DocSpace" -Name "DOMAIN_NAME" -Value $domain_name
+    }
     ((Get-Content -Path "${nginx_conf_dir}\${nginx_conf}" -Raw) -replace '/usr/local/share/ca-certificates/tls.crt', "`"$ssl_cert`"") | Set-Content -Path "${nginx_conf_dir}\${nginx_conf}"
     ((Get-Content -Path "${nginx_conf_dir}\${nginx_conf}" -Raw) -replace '/etc/ssl/private/tls.key', "`"$ssl_key`"") | Set-Content -Path "${nginx_conf_dir}\${nginx_conf}"
-
-    Set-ItemProperty -Path "HKLM:\SOFTWARE\Wow6432Node\Ascensio System SIA\ONLYOFFICE DocSpace" -Name "DOMAIN_NAME" -Value $domain_name
 
     if ($letsencrypt_domain -and (Test-Path $letsencrypt_domain_dir))
     {
