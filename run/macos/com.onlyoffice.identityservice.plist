@@ -22,17 +22,17 @@
         <key>SERVER_PORT</key>
         <string>8080</string>
         <key>SPRING_PROFILES_ACTIVE</key>
-        <string></string>
+        <string>dev,server</string>
     </dict>
 
     <key>RunAtLoad</key>
     <false/>
 
-    <key>StandardErrorPath</key>
-    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.identityservice.err</string>
+    <!--<key>StandardErrorPath</key>
+    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.identityservice.err</string>-->
 
-    <key>StandardOutPath</key>
-    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.identityservice.log</string>
+    <!--<key>StandardOutPath</key>
+    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.identityservice.log</string>-->
 
     <key>KeepAlive</key>
     <true/>
