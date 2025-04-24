@@ -4,9 +4,10 @@
   <startmode>manual</startmode>
   <executable>java</executable>
   <env name="LOG_FILE_PATH" value="../../Logs/identity-api.log"/>
-  <env name="SPRING_PROFILES_ACTIVE" value=""/>
+  <env name="SERVER_PORT" value="9090"/>
+  <env name="SPRING_PROFILES_ACTIVE" value="dev,server"/>
   <arguments>-jar ../../server/common/ASC.Identity/registration/registration-container/target/registration-container-1.0.0.jar</arguments>
   <log mode="none"/>
   <delayedAutoStart>true</delayedAutoStart>
   <onfailure action="restart" delay="5 sec" />
-</service>
+</service>  

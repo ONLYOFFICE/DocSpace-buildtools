@@ -8,11 +8,10 @@ fi
 
 launchctl load ~/Library/LaunchAgents/com.onlyoffice.* 2>/dev/null || true
 
-echo "Waiting 3 seconds for services to start"
+#echo "Waiting 3 seconds for services to start"
+#sleep 3s
 
-sleep 3s
-
-echo
+#echo
 
 # Function to check service status
 check_service_status() {
@@ -44,3 +43,7 @@ for service in ~/Library/LaunchAgents/com.onlyoffice.*; do
         echo "Service  $service_name is loaded but not running"
     fi
 done
+
+echo
+
+echo "All services have been loaded and started."

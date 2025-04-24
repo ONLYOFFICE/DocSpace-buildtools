@@ -33,6 +33,8 @@ for plist in "$CURRENT_PATH/run/macos/"*.plist; do
     launchctl load ~/Library/LaunchAgents/$filename
 done
 
+echo
+
 # Cleanup
 rm -rf "$TEMP_DIR"
 echo "All services have been installed and loaded."
@@ -57,8 +59,8 @@ check_service_status() {
 
 echo
 
-echo "Waiting 3 seconds for services to start"
-sleep 3s
+# echo "Waiting 3 seconds for services to start"
+# sleep 3s
 
 echo
 
@@ -74,3 +76,7 @@ for service in ~/Library/LaunchAgents/com.onlyoffice.*; do
         echo "Service  $service_name is loaded but not running"
     fi
 done
+
+echo
+
+echo "All services have been started."

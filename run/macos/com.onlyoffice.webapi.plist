@@ -26,10 +26,10 @@
     <key>KeepAlive</key>
     <true/>
 
-    <key>StandardOutPath</key>
-    <string>/Users/alexeybannov/Documents/Works/docspace/Logs/webapi.stdout.log</string>
+    <!--<key>StandardOutPath</key>
+    <string>/Users/alexeybannov/Documents/Works/docspace/Logs/webapi.stdout.log</string>-->
 
-    <key>StandardErrorPath</key>
-    <string>/Users/alexeybannov/Documents/Works/docspace/Logs/webapi.stderr.log</string>
+    <!--<key>StandardErrorPath</key>
+    <string>/Users/alexeybannov/Documents/Works/docspace/Logs/webapi.stderr.log</string>-->
 </dict>
 </plist>
