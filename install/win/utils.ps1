@@ -270,7 +270,13 @@ function SetDashboardsPwd {
 
 # Sets a random IDENTITY_ENCRYPTION_SECRET property.
 function SetIdentityEncryptionSecret {
-    $IdentityEncryptionSecret = RandomString -Length 12
+    $IsUpdate = AI_GetMsiProperty OLDPRODUCTS
+    $IdentityEncryptionSecret = "secret"
+
+    if (-not $IsUpdate) {
+        $IdentityEncryptionSecret = RandomString -Length 12
+    }
+
     AI_SetMsiProperty IDENTITY_ENCRYPTION_SECRET $IdentityEncryptionSecret
 }
 
