@@ -126,7 +126,7 @@ jobs:
         run: |
           set -eux
           sudo wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-          sudo echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
           sudo apt update -y
           sudo apt install vagrant virtualbox -y
 
@@ -152,7 +152,7 @@ jobs:
             RAM='8192' \
             CPU='3' \
             ARGUMENTS="-arg '--skiphardwarecheck true'" \
-            vagrant up
+            vagrant up --provider=virtualbox
           on_retry_command: |
             echo "RUN CLEAN UP: Destroy vagrant and one more try"
             cd tests/vagrant
@@ -177,7 +177,7 @@ jobs:
             DOWNLOAD_SCRIPT='-ds false' \
             TEST_REPO='-tr true' \
             ARGUMENTS="-arg '--skiphardwarecheck true --localscripts true'" \
-            vagrant up
+            vagrant up --provider=virtualbox
           on_retry_command: |
             echo "RUN CLEAN UP: Destroy vagrant and one more try"
             cd tests/vagrant
