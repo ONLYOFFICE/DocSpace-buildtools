@@ -178,23 +178,18 @@ jobs:
       - name: Upload DEB Packages
         if: matrix.packageType == 'deb'
         run: |
-          for deb_package in ${PACKAGE_DIRECTORY}/install/*.deb; do
-            curl -s --user "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" \
-                 -H "Content-Type: multipart/form-data" \
-                 --data-binary "@$deb_package" "${{ secrets.REPO_URL_4TESTING_DEB }}" \
-              && echo "Success: $(basename "$deb_package") uploaded." || echo "Error: Failed to upload $(basename "$deb_package")" &
-          done
-          wait
-        
+          find "${PACKAGE_DIRECTORY}/install" -name "*.${{ matrix.packageType }}" | xargs -P4 -I{} bash -c '
+            curl -sS --fail --retry 10 --retry-delay 10 --connect-timeout 60 --max-time 180 -H "Content-Type: multipart/form-data" \
+              -u "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" --data-binary "@$1" "${{ secrets.REPO_URL_4TESTING_DEB }}" \
+            && echo -e "\e[32m[Success] $(basename "$1")\e[0m" || echo "::warning:: [Uploading errors] $(basename "$1")"' _ {}
+
       - name: Upload RPM Packages
         if: matrix.packageType == 'rpm'
         run: |
-          for rpm_package in ${PACKAGE_DIRECTORY}/install/rpm/SPECS/RPMS/noarch/*.rpm; do
-            curl -s --user "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" \
-                 --upload-file "$rpm_package" "${{ secrets.REPO_URL_4TESTING_RPM }}" \
-              && echo "Success: $(basename "$rpm_package") uploaded." || echo "Error: Failed to upload $(basename "$rpm_package")" &
-          done
-          wait
+          find "${PACKAGE_DIRECTORY}/install/rpm/SPECS/RPMS/noarch" -name "*.${{ matrix.packageType }}" | xargs -P4 -I{} bash -c '
+            curl -sS --fail --retry 10 --retry-delay 10 --connect-timeout 60 --max-time 180 \
+              -u "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" --upload-file "$1" "${{ secrets.REPO_URL_4TESTING_RPM}}/$(basename $1)" \
+            && echo -e "\e[32m[Success] $(basename "$1")\e[0m" || echo "::warning:: [Uploading errors] $(basename "$1")"' _ {}
 
       - name: Checking the DEB package for errors
         if: matrix.packageType == 'deb'
