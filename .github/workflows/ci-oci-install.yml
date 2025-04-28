@@ -6,14 +6,6 @@ on:
 
   workflow_dispatch:
     inputs:
-      deb_build:
-        type: boolean
-        description: "DEB packages were build"
-        default: false
-      rpm_build:
-        type: boolean
-        description: "RPM packages were build"
-        default: false
       centos9s:
          type: boolean
          description: 'CentOS 9 Stream'
@@ -41,6 +33,14 @@ on:
       fedora41:
         type: boolean
         description: 'Fedora 41'
+        default: true
+      deb_build:
+        type: boolean
+        description: "Run tests on DEB-based distros"
+        default: true
+      rpm_build:
+        type: boolean
+        description: "Run tests on RPM-based distros"
         default: true
 
 jobs:
