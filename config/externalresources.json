@@ -85,7 +85,8 @@
           "welcomepage": "/administration/docspace-settings.aspx#DocSpacetitle",
           "docspacemanagingrooms": "/docspace/administration/docspace-managing-rooms.aspx",
           "limiteddevtools": "/docspace/configuration/docspace-security-settings.aspx#limiteddevelopertoolsaccess_block",
-          "encryption": "/docspace/configuration/docspace-encryption-at-rest.aspx"
+          "encryption": "/docspace/configuration/docspace-encryption-at-rest.aspx",
+          "workspacefaq": "/workspace/workspace-faq.aspx"
         }
       }
     },
