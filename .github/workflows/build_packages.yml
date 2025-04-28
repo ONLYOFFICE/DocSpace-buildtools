@@ -24,10 +24,10 @@ on:
         default: 'develop'
       deb_build:
         description: 'Trigger DEB build'
-        default: 'false'
+        default: 'true'
       rpm_build:
         description: 'Trigger RPM build'
-        default: 'false'
+        default: 'true'
 
 concurrency:
   group: ${{ github.ref }}
@@ -88,7 +88,7 @@ jobs:
         run: |
           PRODUCT_VERSION=$(grep -oP '\d+\.\d+\.\d+' <<< "${BRANCH_BUILDTOOLS//\//} ${BRANCH_CLIENT//\//} \
           ${BRANCH_SERVER//\//}" | head -n1)
-          echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.0.5}" >> $GITHUB_ENV
+          echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.1.1}" >> $GITHUB_ENV
 
       - name: Free Disk Space
         run: |
