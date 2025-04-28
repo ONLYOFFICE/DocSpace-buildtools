@@ -122,12 +122,13 @@ jobs:
             sudo apt install -y dpkg-sig lintian dh-make
           fi
 
-      - name: Build DEB Packages
-        if: matrix.packageType == 'deb'
+      - name: Download sources
         run: |
-          cd install/deb/
-
-          download() { wget -q -O "./debian/source/$3.tar.gz" "https://github.com/ONLYOFFICE/$1/archive/$2.tar.gz" && echo "✅ $3" || echo "❌ $3"; }
+          case "${{ matrix.packageType }}" in
+            deb) SOURCE_DIR="${PACKAGE_DIRECTORY}/install/${{ matrix.packageType }}/debian/source" ;;
+            rpm) SOURCE_DIR="${PACKAGE_DIRECTORY}/install/${{ matrix.packageType }}/SPECS/SOURCES" ;;
+          esac
+          download() { wget -q -O "${SOURCE_DIR}/$3.tar.gz" "https://github.com/ONLYOFFICE/$1/archive/$2.tar.gz" && echo -e "\e[32m[OK] $3\e[0m" || echo -e "\e[31m[FAILED] $3\e[0m"; }
           download "$PRODUCT-buildtools"  "$BRANCH_BUILDTOOLS"      buildtools &
           download "$PRODUCT-client"      "$BRANCH_CLIENT"          client &
           download "$PRODUCT-server"      "$BRANCH_SERVER"          server &
@@ -136,6 +137,10 @@ jobs:
           download "$PRODUCT-plugins"     "master"                  plugins &
           wait
 
+      - name: Build DEB Packages
+        if: matrix.packageType == 'deb'
+        run: |
+          cd ${PACKAGE_DIRECTORY}/install/deb/
           rename -f -v "s/product([^\/]*)$/${PRODUCT_LOW}\$1/g" debian/*
           find debian/ -type f -exec sed -i "s/{{product}}/${PRODUCT_LOW}/g" {} ';'
           sed -i "s/{{package_header_tag_version}}/${PRODUCT_VERSION}.${BUILD_NUMBER}/g" debian/changelog debian/control
@@ -145,17 +150,7 @@ jobs:
       - name: Build RPM Packages
         if: matrix.packageType == 'rpm'
         run: |
-          cd install/rpm/SPECS
-
-          download() { wget -q -O "./SOURCES/$3.tar.gz" "https://github.com/ONLYOFFICE/$1/archive/$2.tar.gz" && echo "✅ $3" || echo "❌ $3"; }
-          download "$PRODUCT-buildtools"  "$BRANCH_BUILDTOOLS"      buildtools &
-          download "$PRODUCT-client"      "$BRANCH_CLIENT"          client &
-          download "$PRODUCT-server"      "$BRANCH_SERVER"          server &
-          download "document-templates"   "main/community-server"   DocStore &
-          download "ASC.Web.Campaigns"    "master"                  campaigns &
-          download "$PRODUCT-plugins"     "master"                  plugins &
-          wait
-
+          cd ${PACKAGE_DIRECTORY}/install/rpm/SPECS
           mv ./SOURCES/product.rpmlintrc ./SOURCES/${PRODUCT_LOW}.rpmlintrc
           sed -i -e '/BuildRequires/d' product.spec
           rpmbuild -D "packager Ascensio System SIA <support@onlyoffice.com>" \
