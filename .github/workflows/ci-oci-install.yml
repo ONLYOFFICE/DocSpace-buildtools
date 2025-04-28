@@ -77,22 +77,20 @@ jobs:
               {"execute": '${{ github.event.inputs.fedora41 || true }}', "name": "Fedora41", "os": "base-fedora41", "distr": "onlyoffice"}
             ]
           }')            
-        
-          matrix=$(echo "$matrix" | jq -c --argjson debuild "${{ github.event.inputs.deb_build || true }}" --argjson rpmbuild "${{ github.event.inputs.rpm_build || true }}" '
-            { include: [ .include[] | select(
-                  ($debuild and (.name | test("Debian|Ubuntu"))) or
-                  ($rpmbuild and (.name | test("CentOS|Fedora")))
-                )
-            ] }')
-        
+
+          matrix=$(jq -c --argjson debuild "${{ github.event.inputs.deb_build||true }}" --argjson rpmbuild "${{ github.event.inputs.rpm_build||true }}" \
+          '{include:[.include[]|select(.execute and(
+            ($debuild and(.name|test("Debian|Ubuntu"))) or
+            ($rpmbuild and(.name|test("CentOS|Fedora")))
+          ))]}' <<< "$matrix")
+
           if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            matrix=$(echo "$matrix" | jq -c --arg REDHAT_CHANGED "${{ env.redhat_changed }}" --arg DEBIAN_CHANGED "${{ env.debian_changed }}" '
-              { include: [ .include[] | select(
-                    ($REDHAT_CHANGED == $DEBIAN_CHANGED and .execute == true) or
-                    ($REDHAT_CHANGED == "true" and (.name | test("CentOS|Fedora"))) or
-                    ($DEBIAN_CHANGED == "true" and (.name | test("Debian|Ubuntu")))
-                  )
-              ] }')
+            matrix=$(jq -c --arg REDHAT_CHANGED "${{ env.redhat_changed }}" --arg DEBIAN_CHANGED "${{ env.debian_changed }}" \
+            '{include:[.include[]|select(.execute and(
+              ($REDHAT_CHANGED==$DEBIAN_CHANGED) or
+              ($REDHAT_CHANGED=="true" and(.name|test("CentOS|Fedora"))) or
+              ($DEBIAN_CHANGED=="true" and(.name|test("Debian|Ubuntu")))
+            ))]}' <<< "$matrix")
           fi
         
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
