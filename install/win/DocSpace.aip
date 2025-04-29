@@ -44,6 +44,7 @@
     <ROW Property="DOCUMENT_SERVER_HOST" Value="localhost"/>
     <ROW Property="DOCUMENT_SERVER_JWT_SECRET" Value=" "/>
     <ROW Property="DOCUMENT_SERVER_PORT" Value="8083"/>
+    <ROW Property="DOMAIN_NAME" Value="localhost:80"/>
     <ROW Property="ENVIRONMENT" Value="community" MultiBuildValue="ExeBuild:enterprise#ExeBuild_1:developer"/>
     <ROW Property="Editor_Port" Value="5013"/>
     <ROW Property="IDENTITY_ENCRYPTION_SECRET" Value=" "/>
@@ -226,12 +227,12 @@
     <ROW Component="DocumentServer" ComponentId="{9F6BB24B-F2F9-4FE5-8431-A46F38A301AD}" Directory_="APPDIR" Attributes="260" KeyPath="DocumentServer" Options="2"/>
     <ROW Component="DocumentServer.DE" ComponentId="{F0381FCD-B31D-4E19-BA87-2F1330FC48DB}" Directory_="APPDIR" Attributes="4" KeyPath="DocumentServer.DE" Options="2"/>
     <ROW Component="DocumentServer.EE" ComponentId="{F1FEAEA5-AE4B-4C94-A699-0410A6C6D1B0}" Directory_="APPDIR" Attributes="4" KeyPath="DocumentServer.EE" Options="2"/>
+    <ROW Component="IDENTITY_ENCRYPTION_SECRET" ComponentId="{A3029F44-A45C-4A29-A500-B797F45C4A7C}" Directory_="APPDIR" Attributes="20" KeyPath="IDENTITY_ENCRYPTION_SECRET"/>
     <ROW Component="Identity.Authorization.exe" ComponentId="{751E3F35-D9BE-4C73-BC3A-5653B860C9E2}" Directory_="tools_Dir" Attributes="0" KeyPath="Identity.Authorization.exe"/>
     <ROW Component="Identity.Registration.exe" ComponentId="{A831909E-FD1D-49B5-8884-C9A8540E8828}" Directory_="tools_Dir" Attributes="0" KeyPath="Identity.Registration.exe"/>
     <ROW Component="Login.exe" ComponentId="{FBE9155F-9ACD-4A1A-9198-891ED73BA202}" Directory_="tools_Dir" Attributes="0" KeyPath="Login.exe"/>
     <ROW Component="Logs" ComponentId="{6C28AF1C-0190-4DE3-A753-430496711F3C}" Directory_="Logs_Dir" Attributes="0"/>
     <ROW Component="MACHINE_KEY" ComponentId="{61A271B4-4D82-4664-B2D2-2EB120D15DA6}" Directory_="APPDIR" Attributes="20" KeyPath="MACHINE_KEY"/>
-    <ROW Component="IDENTITY_ENCRYPTION_SECRET" ComponentId="{A3029F44-A45C-4A29-A500-B797F45C4A7C}" Directory_="APPDIR" Attributes="4" KeyPath="IDENTITY_ENCRYPTION_SECRET"/>
     <ROW Component="ProdInfo" ComponentId="{5FB28D19-6A7D-4078-901F-58C2DF0DE176}" Directory_="APPDIR" Attributes="260" KeyPath="Version"/>
     <ROW Component="Proxy.exe" ComponentId="{913596AD-5C75-4418-8C3A-FAB2A70530DB}" Directory_="tools_Dir" Attributes="0" KeyPath="Proxy.exe"/>
     <ROW Component="Sdk.exe" ComponentId="{0374A99E-E031-4CC9-AA10-B0A7711E9225}" Directory_="tools_Dir" Attributes="0" KeyPath="Sdk.exe"/>
@@ -549,6 +550,7 @@
     <ROW Property="MACHINE_KEY" Signature_="AppSearchSign_25"/>
     <ROW Property="DASHBOARDS_PWD" Signature_="AppSearchSign_26"/>
     <ROW Property="IDENTITY_ENCRYPTION_SECRET" Signature_="AppSearchSign_27"/>
+    <ROW Property="DOMAIN_NAME" Signature_="AppSearchSign_28"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiBinaryComponent">
     <ROW Name="NetFirewall.dll" SourcePath="&lt;AI_CUSTACTS&gt;NetFirewall.dll"/>
@@ -1398,6 +1400,7 @@
     <ROW Signature_="AppSearchSign_25" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="MACHINE_KEY" Type="2"/>
     <ROW Signature_="AppSearchSign_26" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="DASHBOARDS_PWD" Type="2"/>
     <ROW Signature_="AppSearchSign_27" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="IDENTITY_ENCRYPTION_SECRET" Type="2"/>
+    <ROW Signature_="AppSearchSign_28" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="DOMAIN_NAME" Type="2"/>
     <ROW Signature_="AppSearchSign_3" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_USER" Type="2"/>
     <ROW Signature_="AppSearchSign_4" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_PWD" Type="2"/>
     <ROW Signature_="AppSearchSign_5" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_PORT" Type="2"/>
