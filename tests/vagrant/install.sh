@@ -162,7 +162,7 @@ EOF
 #############################################################################################
 function install_docspace() {
   [[ "${DOWNLOAD_SCRIPTS}" == 'true' ]] && wget https://download.onlyoffice.com/docspace/docspace-install.sh || sed 's/set -e/set -xe/' -i *.sh
-  bash docspace-install.sh package ${ARGUMENTS} -log false || { echo "Exit code non-zero. Exit with 1."; exit 1; }
+  bash docspace-install.sh package ${ARGUMENTS} -log false -ls true || { echo "Exit code non-zero. Exit with 1."; exit 1; }
   echo "Exit code 0. Continue..."
 }
 
@@ -182,7 +182,6 @@ function healthcheck_systemd_services() {
       echo "${COLOR_GREEN}[OK] Service ${service} is running${COLOR_RESET}"
     else
       echo "${COLOR_RED}[FAILED] Service ${service} is not running${COLOR_RESET}"
-      echo "::error::Service ${service} is not running"
       SYSTEMD_SVC_FAILED="true"
     fi
   done

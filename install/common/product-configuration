@@ -286,8 +286,8 @@ restart_services() {
 	identity-authorization identity-api sdk)
 	SERVICES_LIST=("${SERVICES[@]/#/${PRODUCT}-}")
 
-	systemctl enable "${SERVICES_LIST[@]}" >/dev/null 2>&1
-	systemctl restart "${SERVICES_LIST[@]}"
+	systemctl enable "${PREQ_SERVICES[@]}" "${SERVICES_LIST[@]}" >/dev/null 2>&1
+	systemctl restart  "${PREQ_SERVICES[@]}" "${SERVICES_LIST[@]}" 
 	echo "OK"
 }
 
@@ -459,9 +459,7 @@ change_mysql_config(){
 	
 	fi
 
-    systemctl daemon-reload >/dev/null 2>&1
-	systemctl enable ${MYSQL_PACKAGE} >/dev/null 2>&1
-	systemctl restart ${MYSQL_PACKAGE}
+	PREQ_SERVICES+=(${MYSQL_PACKAGE})
 }
 
 setup_openresty(){
@@ -542,7 +540,7 @@ setup_openresty(){
 			if [ $(systemctl is-active firewalld.service) == active ]; then
 				firewall-cmd --permanent --zone=public --add-service=http
 				firewall-cmd --permanent --zone=public --add-service=https
-				systemctl restart firewalld.service
+				PREQ_SERVICES+=(firewalld.service)
 			fi
 		fi
 	elif [ "$DIST" = "Debian" ]; then
@@ -561,8 +559,7 @@ setup_openresty(){
 	chown ${NGINX_USER}:${NGINX_GROUP} ${OPENRESTY_DIR}* -R
 	[ -d "${NGINX_LOG_DIR}" ] || { mkdir -p "${NGINX_LOG_DIR}" && chown "${NGINX_USER}:${NGINX_GROUP}" "${NGINX_LOG_DIR}"; }
 	
-	systemctl enable openresty >/dev/null 2>&1
-	systemctl restart openresty
+	PREQ_SERVICES+=(openresty)
 	echo "OK"
 }
 
@@ -697,9 +694,7 @@ setup_elasticsearch() {
 
 	if [ $1 == "LOCAL_ELASTIC_SERVER" ]; then
 		change_elasticsearch_config
-	
-		systemctl enable opensearch >/dev/null 2>&1
-		systemctl restart opensearch
+		PREQ_SERVICES+=(opensearch)
 	fi
 	echo "OK"
 }
@@ -725,8 +720,7 @@ setup_dashboards() {
 	sed 's_.*\(server.basePath:\).*_\1 "/dashboards"_' -i ${DASHBOARDS_CONF_PATH}
 	sed 's_.*\(server.rewriteBasePath:\).*_\1 "true"_' -i ${DASHBOARDS_CONF_PATH}
 
-	systemctl enable opensearch-dashboards >/dev/null 2>&1
-	systemctl restart opensearch-dashboards
+	PREQ_SERVICES+=(opensearch-dashboards)
 	echo "OK"
 }
 
@@ -737,8 +731,7 @@ setup_fluentbit() {
 	sed -i "s/OPENSEARCH_HOST/$ELK_HOST/g; s/OPENSEARCH_PORT/$ELK_PORT/g; s/OPENSEARCH_INDEX/$OPENSEARCH_INDEX/g; s/OPENSEARCH_SCHEME/$ELK_SHEME/g" ${APP_DIR}/fluent-bit.conf
 	cp -f ${APP_DIR}/fluent-bit.conf /etc/fluent-bit/fluent-bit.conf
 
-	systemctl enable fluent-bit >/dev/null 2>&1
-	systemctl restart fluent-bit
+	PREQ_SERVICES+=(fluent-bit)
 	echo "OK"
 }
 
@@ -758,8 +751,7 @@ setup_redis() {
 		sed "s_\(^bind\).*_\1 ${REDIS_HOST}_" -i ${REDIS_CONF}
 		sed -r "/^save\s[0-9]+/d" -i ${REDIS_CONF}
 
-		systemctl enable $REDIS_PACKAGE >/dev/null 2>&1
-		systemctl restart $REDIS_PACKAGE
+		PREQ_SERVICES+=(${REDIS_PACKAGE})
 	fi
 
 	echo "OK"
@@ -781,18 +773,19 @@ setup_rabbitmq() {
 	echo -e "RABBIT_URI=${RABBITMQ_PROTOCOL}://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/" >> "${APP_DIR}/systemd.env"
 
 	if [ $1 == "LOCAL_RABBITMQ_SERVER" ]; then
-        systemctl stop rabbitmq-server epmd.socket >/dev/null 2>&1 || true
-        systemctl mask epmd.socket >/dev/null 2>&1 || true
-        pkill -f epmd >/dev/null 2>&1 || true
+		# Configure RabbitMQ to use local interface only
+		systemctl stop rabbitmq-server >/dev/null 2>&1 || true
+		if systemctl list-unit-files | grep -q epmd.socket; then
+			systemctl stop epmd.socket >/dev/null 2>&1 || true
+			systemctl mask epmd.socket >/dev/null 2>&1 || true
+			pkill -f epmd >/dev/null 2>&1 || true
+		fi
+		mkdir -p /etc/rabbitmq /etc/systemd/system/rabbitmq-server.service.d
+		[ -f /etc/rabbitmq/rabbitmq.conf ] && sed -i '/^listeners\.tcp\.default\|^loopback_users\.guest/d' /etc/rabbitmq/rabbitmq.conf
+		printf "listeners.tcp.default = 127.0.0.1:5672\nloopback_users.guest = true\n" >> /etc/rabbitmq/rabbitmq.conf
+		printf "[Service]\nEnvironment=\"RABBITMQ_NODENAME=rabbit@localhost\"\nEnvironment=\"ERL_EPMD_ADDRESS=127.0.0.1\"\n" > /etc/systemd/system/rabbitmq-server.service.d/override.conf
 
-        mkdir -p /etc/rabbitmq /etc/systemd/system/rabbitmq-server.service.d
-        [ -f /etc/rabbitmq/rabbitmq.conf ] && sed -i '/^listeners\.tcp\.default\|^loopback_users\.guest/d' /etc/rabbitmq/rabbitmq.conf
-        printf "listeners.tcp.default = 127.0.0.1:5672\nloopback_users.guest = true\n" >> /etc/rabbitmq/rabbitmq.conf
-        printf "[Service]\nEnvironment=\"RABBITMQ_NODENAME=rabbit@localhost\"\nEnvironment=\"ERL_EPMD_ADDRESS=127.0.0.1\"\n" > /etc/systemd/system/rabbitmq-server.service.d/override.conf
-
-        systemctl daemon-reload
-		systemctl enable rabbitmq-server >/dev/null 2>&1
-		systemctl restart rabbitmq-server
+		PREQ_SERVICES+=(rabbitmq-server)
 	fi
 
 	echo "OK"

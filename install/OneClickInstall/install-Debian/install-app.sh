@@ -67,7 +67,9 @@ if [ "$PRODUCT_INSTALLED" = "false" ]; then
 	echo "${product}" "${product}"/db-name select "$MYSQL_SERVER_DB_NAME" | sudo debconf-set-selections
 	
 	apt-get install -y "${product}" || true #Fix error 'Failed to fetch'
-	apt-get install -y "${product}"
+	sed 's/set -e/set -xe/' -i /var/lib/dpkg/info/docspace.postinst || true
+	sed 's/set -e/set -xe/' -i /usr/bin/docspace-configuration || true
+	apt-get install -y "${product}" || true
 elif [ "$UPDATE" = "true" ] && [ "$PRODUCT_INSTALLED" = "true" ]; then
 	CURRENT_VERSION=$(dpkg-query -W -f='${Version}' "${product}" 2>/dev/null)
 	AVAILABLE_VERSIONS=$(apt show "${product}" 2>/dev/null | grep -E '^Version:' | awk '{print $2}')

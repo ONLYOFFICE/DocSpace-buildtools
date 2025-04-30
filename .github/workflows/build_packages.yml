@@ -6,6 +6,7 @@ on:
       - 'release/**'
       - 'hotfix/**'
       - 'develop'
+      - bugfix/actions
     paths:
       - '.github/workflows/build_packages.yml'
   workflow_dispatch:
@@ -27,7 +28,7 @@ on:
         default: 'true'
       rpm_build:
         description: 'Trigger RPM build'
-        default: 'true'
+        default: 'false'
 
 concurrency:
   group: ${{ github.ref }}
@@ -38,9 +39,9 @@ env:
   PRODUCT_LOW: "docspace"
   BUILD_NUMBER: ${{ github.run_number }}
   PACKAGE_DIRECTORY: "${{ github.workspace }}"
-  BRANCH_BUILDTOOLS: ${{ github.event.inputs.branch-buildtools || github.ref_name || 'develop' }}
-  BRANCH_CLIENT: ${{ github.event.inputs.branch-client || github.ref_name || 'develop' }}
-  BRANCH_SERVER: ${{ github.event.inputs.branch-server || github.ref_name || 'develop' }}
+  BRANCH_BUILDTOOLS: bugfix/actions
+  BRANCH_CLIENT: release/v3.1.0
+  BRANCH_SERVER: release/v3.1.0
 
 jobs:
   prepare:
@@ -64,7 +65,7 @@ jobs:
         run: |
           package_types=()
           if [[ "${{ steps.changes.outputs.build_all }}" == "true" ]]; then
-            package_types=("deb" "rpm")
+            package_types=("deb")
           else
             [[ "${{ github.event.inputs.deb_build }}" == "true" ]] && package_types+=("deb")
             [[ "${{ github.event.inputs.rpm_build }}" == "true" ]] && package_types+=("rpm")

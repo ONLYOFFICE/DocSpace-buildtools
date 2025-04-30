@@ -9,15 +9,15 @@ on:
       rhel9:
         type: boolean
         description: 'RHEL 9'
-        default: true
+        default: false
       centos9s:
          type: boolean
          description: 'CentOS 9 Stream'
-         default: true
+         default: false
       debian12:
          type: boolean
          description: 'Debian 12'
-         default: true
+         default: false
       debian11:
          type: boolean
          description: 'Debian 11'
@@ -25,19 +25,19 @@ on:
       ubuntu2204:
          type: boolean
          description: 'Ubuntu 22.04'
-         default: true
+         default: false
       ubuntu2404:
           type: boolean
           description: 'Ubuntu 24.04'
-          default: true
+          default: false
       fedora40:
          type: boolean
          description: 'Fedora 40'
-         default: true
+         default: false
       fedora41:
         type: boolean
         description: 'Fedora 41'
-        default: true
+        default: false
       deb_build:
         type: boolean
         description: "Run tests on DEB-based distros"
@@ -45,7 +45,7 @@ on:
       rpm_build:
         type: boolean
         description: "Run tests on RPM-based distros"
-        default: true
+        default: false
 
 jobs:
   prepare:
