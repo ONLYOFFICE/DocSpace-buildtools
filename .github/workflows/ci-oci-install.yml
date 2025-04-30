@@ -6,6 +6,10 @@ on:
 
   workflow_dispatch:
     inputs:
+      rhel9:
+        type: boolean
+        description: 'RHEL 9'
+        default: true
       centos9s:
          type: boolean
          description: 'CentOS 9 Stream'
@@ -68,6 +72,7 @@ jobs:
         run: |
           matrix=$(echo '{
             "include": [
+              {"execute": '${{ github.event.inputs.rhel9 || true }}', "name": "RHEL 9", "os": "rhel9", "distr": "generic"},
               {"execute": '${{ github.event.inputs.centos9s || true }}', "name": "CentOS9s", "os": "base-centos9s", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.debian12 || true }}', "name": "Debian12", "os": "base-debian12", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.debian11 || true }}', "name": "Debian11", "os": "base-debian11", "distr": "onlyoffice"},
@@ -81,14 +86,14 @@ jobs:
           matrix=$(jq -c --argjson debuild "${{ github.event.inputs.deb_build||true }}" --argjson rpmbuild "${{ github.event.inputs.rpm_build||true }}" \
           '{include:[.include[]|select(.execute and(
             ($debuild and(.name|test("Debian|Ubuntu"))) or
-            ($rpmbuild and(.name|test("CentOS|Fedora")))
+            ($rpmbuild and(.name|test("CentOS|Fedora|RHEL")))
           ))]}' <<< "$matrix")
 
           if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
             matrix=$(jq -c --arg REDHAT_CHANGED "${{ env.redhat_changed }}" --arg DEBIAN_CHANGED "${{ env.debian_changed }}" \
             '{include:[.include[]|select(.execute and(
               ($REDHAT_CHANGED==$DEBIAN_CHANGED) or
-              ($REDHAT_CHANGED=="true" and(.name|test("CentOS|Fedora"))) or
+              ($REDHAT_CHANGED=="true" and(.name|test("CentOS|Fedora|RHEL"))) or
               ($DEBIAN_CHANGED=="true" and(.name|test("Debian|Ubuntu")))
             ))]}' <<< "$matrix")
           fi
