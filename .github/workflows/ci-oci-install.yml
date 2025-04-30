@@ -6,14 +6,6 @@ on:
 
   workflow_dispatch:
     inputs:
-      deb_build:
-        type: boolean
-        description: "DEB packages were build"
-        default: false
-      rpm_build:
-        type: boolean
-        description: "RPM packages were build"
-        default: false
       centos9s:
          type: boolean
          description: 'CentOS 9 Stream'
@@ -41,6 +33,14 @@ on:
       fedora41:
         type: boolean
         description: 'Fedora 41'
+        default: true
+      deb_build:
+        type: boolean
+        description: "Run tests on DEB-based distros"
+        default: true
+      rpm_build:
+        type: boolean
+        description: "Run tests on RPM-based distros"
         default: true
 
 jobs:
@@ -77,29 +77,27 @@ jobs:
               {"execute": '${{ github.event.inputs.fedora41 || true }}', "name": "Fedora41", "os": "base-fedora41", "distr": "onlyoffice"}
             ]
           }')            
-        
-          matrix=$(echo "$matrix" | jq -c --argjson debuild "${{ github.event.inputs.deb_build || true }}" --argjson rpmbuild "${{ github.event.inputs.rpm_build || true }}" '
-            { include: [ .include[] | select(
-                  ($debuild and (.name | test("Debian|Ubuntu"))) or
-                  ($rpmbuild and (.name | test("CentOS|Fedora")))
-                )
-            ] }')
-        
+
+          matrix=$(jq -c --argjson debuild "${{ github.event.inputs.deb_build||true }}" --argjson rpmbuild "${{ github.event.inputs.rpm_build||true }}" \
+          '{include:[.include[]|select(.execute and(
+            ($debuild and(.name|test("Debian|Ubuntu"))) or
+            ($rpmbuild and(.name|test("CentOS|Fedora")))
+          ))]}' <<< "$matrix")
+
           if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            matrix=$(echo "$matrix" | jq -c --arg REDHAT_CHANGED "${{ env.redhat_changed }}" --arg DEBIAN_CHANGED "${{ env.debian_changed }}" '
-              { include: [ .include[] | select(
-                    ($REDHAT_CHANGED == $DEBIAN_CHANGED and .execute == true) or
-                    ($REDHAT_CHANGED == "true" and (.name | test("CentOS|Fedora"))) or
-                    ($DEBIAN_CHANGED == "true" and (.name | test("Debian|Ubuntu")))
-                  )
-              ] }')
+            matrix=$(jq -c --arg REDHAT_CHANGED "${{ env.redhat_changed }}" --arg DEBIAN_CHANGED "${{ env.debian_changed }}" \
+            '{include:[.include[]|select(.execute and(
+              ($REDHAT_CHANGED==$DEBIAN_CHANGED) or
+              ($REDHAT_CHANGED=="true" and(.name|test("CentOS|Fedora"))) or
+              ($DEBIAN_CHANGED=="true" and(.name|test("Debian|Ubuntu")))
+            ))]}' <<< "$matrix")
           fi
         
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
 
   vagrant-up:
     name: "Test DocSpace with ${{ matrix.name}}"
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: prepare
     strategy:
       fail-fast: false
@@ -125,10 +123,12 @@ jobs:
       - name: Get update and install vagrant
         run: |
           set -eux
+          wget -q https://www.virtualbox.org/download/oracle_vbox_2016.asc -O- | sudo gpg --dearmor -o /usr/share/keyrings/virtualbox.gpg
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/virtualbox.gpg] https://download.virtualbox.org/virtualbox/debian $(. /etc/os-release && echo $UBUNTU_CODENAME) contrib" | sudo tee /etc/apt/sources.list.d/virtualbox.list
           sudo wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
           sudo echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
           sudo apt update -y
-          sudo apt install vagrant virtualbox -y
+          sudo apt install vagrant virtualbox-7.0 -y
 
       - name: Free Disk Space
         run: |
