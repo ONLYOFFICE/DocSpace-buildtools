@@ -17,11 +17,11 @@
     <key>RunAtLoad</key>
     <false/>
 
-    <key>StandardErrorPath</key>
-    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.login.err</string>
+    <!--<key>StandardErrorPath</key>
+    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.login.err</string>-->
 
-    <key>StandardOutPath</key>
-    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.login.log</string>
+    <!--<key>StandardOutPath</key>
+    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.login.log</string>-->
 
     <key>KeepAlive</key>
     <true/>

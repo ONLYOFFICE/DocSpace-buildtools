@@ -1,17 +1,8 @@
 name: Install OneClickInstall DocSpace
 
 on:
-  pull_request:
-    types: [opened, reopened, synchronize]
-    paths:
-      - '.github/workflows/ci-oci-install.yml'
-      - 'install/OneClickInstall/install-Debian/**'
-      - 'install/OneClickInstall/install-RedHat/**'
-      - 'install/OneClickInstall/install-Debian.sh'
-      - 'install/OneClickInstall/install-RedHat.sh'
-
   schedule:
-    - cron: '00 20 * * 6'  # At 23:00 on Saturday.
+    - cron: '00 20 * * 0'
 
   workflow_dispatch:
     inputs:
@@ -30,6 +21,10 @@ on:
       debian12:
          type: boolean
          description: 'Debian 12'
+         default: true
+      debian11:
+         type: boolean
+         description: 'Debian 11'
          default: true
       ubuntu2204:
          type: boolean
@@ -75,6 +70,7 @@ jobs:
             "include": [
               {"execute": '${{ github.event.inputs.centos9s || true }}', "name": "CentOS9s", "os": "base-centos9s", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.debian12 || true }}', "name": "Debian12", "os": "base-debian12", "distr": "onlyoffice"},
+              {"execute": '${{ github.event.inputs.debian11 || true }}', "name": "Debian11", "os": "base-debian11", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu22.04", "os": "base-ubuntu2204", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.ubuntu2404 || true }}', "name": "Ubuntu24.04", "os": "base-ubuntu2404", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.fedora40 || true }}', "name": "Fedora40", "os": "base-fedora40", "distr": "onlyoffice"},
@@ -130,7 +126,7 @@ jobs:
         run: |
           set -eux
           sudo wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-          sudo echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
           sudo apt update -y
           sudo apt install vagrant virtualbox -y
 
@@ -156,7 +152,7 @@ jobs:
             RAM='8192' \
             CPU='3' \
             ARGUMENTS="-arg '--skiphardwarecheck true'" \
-            vagrant up
+            vagrant up --provider=virtualbox
           on_retry_command: |
             echo "RUN CLEAN UP: Destroy vagrant and one more try"
             cd tests/vagrant
@@ -164,7 +160,7 @@ jobs:
             vagrant destroy --force
 
       - name: "Test Local scripts with ${{matrix.name}}"
-        if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
+        if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
         uses: nick-fields/retry@v3
         with:
           max_attempts: 2
@@ -181,7 +177,7 @@ jobs:
             DOWNLOAD_SCRIPT='-ds false' \
             TEST_REPO='-tr true' \
             ARGUMENTS="-arg '--skiphardwarecheck true --localscripts true'" \
-            vagrant up
+            vagrant up --provider=virtualbox
           on_retry_command: |
             echo "RUN CLEAN UP: Destroy vagrant and one more try"
             cd tests/vagrant

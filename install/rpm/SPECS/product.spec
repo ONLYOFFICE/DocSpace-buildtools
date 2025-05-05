@@ -103,6 +103,14 @@ if [ -f /etc/nginx/conf.d/onlyoffice.conf ]; then
     systemctl reload nginx
 fi
 
+%pre identity-api
+
+# (DS v3.1.0) fix encryption key generation issue
+ENCRYPTION_PATH=%{_sysconfdir}/onlyoffice/%{product}/.private/encryption
+if [ "$1" -eq 2 ] && [ ! -f "${ENCRYPTION_PATH}" ]; then
+  echo 'secret' > "${ENCRYPTION_PATH}" && chmod 600 "${ENCRYPTION_PATH}"
+fi
+
 %post 
 
 %preun

@@ -26,10 +26,10 @@
     <key>KeepAlive</key>
     <true/>
 
-    <key>StandardOutPath</key>
-    <string>${DOCSPACE_ROOT}/Logs/backup.stdout.log</string>
+    <!--<key>StandardOutPath</key>
+    <string>${DOCSPACE_ROOT}/Logs/backup.stdout.log</string>-->
 
-    <key>StandardErrorPath</key>
-    <string>${DOCSPACE_ROOT}/Logs/backup.stderr.log</string>
+    <!--<key>StandardErrorPath</key>
+    <string>${DOCSPACE_ROOT}/Logs/backup.stderr.log</string>-->
 </dict>
 </plist>

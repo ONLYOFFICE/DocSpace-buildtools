@@ -116,7 +116,6 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 				gcc \
 				make \
 				dotnet-sdk-9.0 \
-				opensearch=${ELASTIC_VERSION} \
 				mysql-server \
 				mysql-client \
 				postgresql \
@@ -124,6 +123,13 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 				rabbitmq-server \
 				temurin-${JAVA_VERSION}-jre \
 				ffmpeg 
+
+if ! dpkg -l | grep -q "opensearch"; then
+	apt-get install -yq opensearch=${ELASTIC_VERSION}
+else
+	ELASTIC_PLUGIN="/usr/share/opensearch/bin/opensearch-plugin"
+	"${ELASTIC_PLUGIN}" list | grep -q ingest-attachment && "${ELASTIC_PLUGIN}" remove -s ingest-attachment
+fi
 
 # Set Java ${JAVA_VERSION} as the default version
 JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*temurin-${JAVA_VERSION}*" | head -1)
@@ -133,8 +139,8 @@ if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then
 	[[ "$DISTRIB_CODENAME" =~ noble ]] && FLUENTBIT_DIST_CODENAME="jammy" || FLUENTBIT_DIST_CODENAME="${DISTRIB_CODENAME}"
 	curl https://packages.fluentbit.io/fluentbit.key | gpg --dearmor > /usr/share/keyrings/fluentbit-keyring.gpg
 	echo "deb [signed-by=/usr/share/keyrings/fluentbit-keyring.gpg] https://packages.fluentbit.io/$DIST/$FLUENTBIT_DIST_CODENAME $FLUENTBIT_DIST_CODENAME main" | tee /etc/apt/sources.list.d/fluent-bit.list
-	apt update
-	apt-get install -yq opensearch-dashboards="${DASHBOARDS_VERSION}" fluent-bit
+	apt-get -y update
+	apt-get install -o DPkg::options::="--force-confnew" -yq opensearch-dashboards="${DASHBOARDS_VERSION}" fluent-bit
 fi
 
 # disable apparmor for mysql

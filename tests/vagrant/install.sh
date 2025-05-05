@@ -35,7 +35,7 @@ while [ "$1" != "" ]; do
     shift
 done
 
-export TERM=xterm-256color^M
+export TERM=xterm-256color
 
 function common::get_colors() {
     export LINE_SEPARATOR="-----------------------------------------"
@@ -89,7 +89,7 @@ END
 # Arguments:
 #   None
 # Outputs:
-#   ☑ PREPAVE_VM: **<prepare_message>**
+#   [OK] PREPARE_VM: **<prepare_message>**
 #############################################################################################
 function prepare_vm() {
   if [ -f /etc/os-release ]; then
@@ -101,7 +101,7 @@ function prepare_vm() {
 
       debian)
           [ "$VERSION_CODENAME" == "bookworm" ] && apt-get update -y && apt install -y curl gnupg
-          apt-get remove postfix -y && echo "${COLOR_GREEN}☑ PREPAVE_VM: Postfix was removed${COLOR_RESET}"
+          apt-get remove postfix -y && echo "${COLOR_GREEN}[OK] PREPARE_VM: Postfix was removed${COLOR_RESET}"
           [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-deb
           ;;
 
@@ -128,7 +128,7 @@ function prepare_vm() {
   [ -d /tmp/docspace ] && mv /tmp/docspace/* /home/vagrant
 
   echo '127.0.0.1 host4test' | sudo tee -a /etc/hosts   
-  echo "${COLOR_GREEN}☑ PREPAVE_VM: Hostname was setting up${COLOR_RESET}"   
+  echo "${COLOR_GREEN}[OK] PREPARE_VM: Hostname was setting up${COLOR_RESET}"   
 }
 
 #############################################################################################
@@ -159,28 +159,14 @@ function healthcheck_systemd_services() {
   for service in "${SERVICES_SYSTEMD[@]}"; do
     [[ "$service" == *migration* ]] && continue;
     if systemctl is-active --quiet "${service}"; then
-      echo "${COLOR_GREEN}☑ OK: Service ${service} is running${COLOR_RESET}"
+      echo "${COLOR_GREEN}[OK] Service ${service} is running${COLOR_RESET}"
     else
-      echo "${COLOR_RED}⚠ FAILED: Service ${service} is not running${COLOR_RESET}"
+      echo "${COLOR_RED}[FAILED] Service ${service} is not running${COLOR_RESET}"
+      echo "::error::Service ${service} is not running"
       SYSTEMD_SVC_FAILED="true"
     fi
   done
-}
-
-#############################################################################################
-# Set output if some services failed
-# Globals:
-#   None
-# Arguments:
-#   None
-# Outputs:
-#   ⚠ ⚠  ATTENTION: Some sevices is not running ⚠ ⚠ 
-# Returns
-# 0 if all services is start correctly, non-zero if some failed
-#############################################################################################
-function healthcheck_general_status() {
-  if [ ! -z "${SYSTEMD_SVC_FAILED}" ]; then
-    echo "${COLOR_YELLOW}⚠ ⚠  ATTENTION: Some sevices is not running ⚠ ⚠ ${COLOR_RESET}"
+  if [ -n "${SYSTEMD_SVC_FAILED}" ]; then
     exit 1
   fi
 }
@@ -228,7 +214,6 @@ main() {
   sleep 120
   services_logs
   healthcheck_systemd_services
-  healthcheck_general_status
 }
 
 main

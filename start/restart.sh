@@ -8,9 +8,8 @@ fi
 
 launchctl kickstart -k ~/Library/LaunchAgents/com.onlyoffice.* 2>/dev/null || true
 
-echo "Waiting 3 seconds for services to start"
-
-sleep 3s
+# echo "Waiting 3 seconds for services to start"
+# sleep 3s
 
 # Function to check service status
 check_service_status() {
@@ -42,3 +41,7 @@ for service in ~/Library/LaunchAgents/com.onlyoffice.*; do
         echo "Service  $service_name is loaded but not running"
     fi
 done
+
+echo
+
+echo "All services have been restarted."

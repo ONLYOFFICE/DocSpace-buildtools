@@ -58,90 +58,113 @@ $node_services = @(
 )
 
 function ConvertToPem {
-    param (
-        [string]$certFile
-    )
+  param (
+    [string]$certFile,
+    [string]$PfxPassword = ""
+  )
 
-    $extension = [System.IO.Path]::GetExtension($certFile).ToLower()
-    $pemCertFile = "$($certFile -replace '\.[^.]+$', '.pem')"
-    $pemKeyFile = "$($certFile -replace '\.[^.]+$', '-private.pem')"
+  if (-not (Test-Path $certFile)) {
+    throw "File not found: $certFile"
+  }
 
-    switch ($extension) {
-        ".pfx" {
-            Write-Output "Detected PFX certificate, converting to PEM..."
-            try {
-                $password = Read-Host "Enter password for PFX (press Enter if none)" -AsSecureString
-                $plainPassword = [System.Net.NetworkCredential]::new("", $password).Password
-                openssl pkcs12 -in "$certFile" -out "$pemCertFile" -nokeys -passin pass:"$plainPassword"
-                openssl pkcs12 -in "$certFile" -out "$pemKeyFile" -nocerts -nodes -passin pass:"$plainPassword"
-            } catch {
-                Write-Output "Failed to convert PFX. Check password or file integrity."
-                exit 1
-            }
-        }
-        ".der" {
-            Write-Output "Detected DER certificate, converting to PEM..."
-            openssl x509 -inform DER -in "$certFile" -out "$pemCertFile"
-        }
-        ".cer" {
-            Write-Output "Detected CER certificate, converting to PEM..."
-            openssl x509 -inform DER -in "$certFile" -out "$pemCertFile"
-        }
-        ".p7b" {
-            Write-Output "Detected PKCS#7 certificate, converting to PEM..."
-            openssl pkcs7 -print_certs -in "$certFile" -out "$pemCertFile"
-        }
-        default {
-            Write-Output "No conversion needed or unsupported format: $certFile"
-        }
-    }
-    return @{
-        CertFile = $pemCertFile
-        KeyFile = $pemKeyFile
-    }
+  $certFormat = $null
+  $certOut    = $null
+  $keyOut     = $null
+
+  & openssl pkcs12 -in $certFile -info -noout -passin "pass:$PfxPassword" *> $null 2>&1
+  if ($LASTEXITCODE -eq 0) {
+    $certFormat = "PFX"
+    $baseName   = [System.IO.Path]::GetFileNameWithoutExtension($certFile)
+    $dir        = [System.IO.Path]::GetDirectoryName($certFile)
+    $certOut    = Join-Path $dir "$baseName.pem"
+    $keyOut     = Join-Path $dir "$baseName-private.pem"
+    Write-Host "$certFile is a valid PFX certificate. Converting to PEM..."
+
+    & openssl pkcs12 -in $certFile -out $certOut -nokeys -passin "pass:$PfxPassword"
+    & openssl pkcs12 -in $certFile -out $keyOut -nocerts -nodes -passin "pass:$PfxPassword"
+
+    return @{ CertFile = $certOut; KeyFile = $keyOut; Format = $certFormat }
+  }
+
+  & openssl x509 -in $certFile -inform PEM -text -noout *> $null 2>&1
+  if ($LASTEXITCODE -eq 0) {
+    Write-Host "$certFile is a valid PEM certificate."
+    return @{ CertFile = $certFile; KeyFile = $null; Format = "PEM" }
+  }
+
+  & openssl pkey -in $certFile -check *> $null 2>&1
+  if ($LASTEXITCODE -eq 0) {
+    Write-Host "$certFile is a valid private key."
+    return @{ CertFile = $null; KeyFile = $certFile; Format = "KEY" }
+  }
+
+  & openssl x509 -in $certFile -inform DER -text -noout *> $null 2>&1
+  if ($LASTEXITCODE -eq 0) {
+    $certOut = [System.IO.Path]::ChangeExtension($certFile, ".pem")
+    Write-Host "$certFile is a valid DER/CER certificate. Converting to PEM..."
+    & openssl x509 -in $certFile -inform DER -out $certOut
+    return @{ CertFile = $certOut; KeyFile = $null; Format = "DER" }
+  }
+
+  & openssl pkcs7 -in $certFile -print_certs -noout *> $null 2>&1
+  if ($LASTEXITCODE -eq 0) {
+    $certOut = [System.IO.Path]::ChangeExtension($certFile, ".pem")
+    Write-Host "$certFile is a valid PKCS#7 certificate. Converting to PEM..."
+    & openssl pkcs7 -in $certFile -print_certs -out $certOut
+    return @{ CertFile = $certOut; KeyFile = $null; Format = "PKCS7" }
+  }
+
+  throw "Unsupported or invalid file format: $certFile"
 }
 
-function CheckFileFormat {
-    param (
-        [string]$filePath
-    )
+if ( $args.Count -ge 2 ) {
+  if ($args[0] -eq "-f" -or $args[0] -eq "--file") {
+    $domain_name = $args[1] -join ","
+    $ssl_cert           = $args[2]
+    $ssl_key            = $null
 
-    if (!(Test-Path $filePath)) {
-        Write-Output "Error: File not found - $filePath"
-        exit 1
+    if ($args.Count -ge 4) {
+      $ssl_key = $args[3]
     }
 
-    $extension = [System.IO.Path]::GetExtension($filePath).ToLower()
-    switch ($extension) {
-        ".pfx" { return "PFX" }
-        ".der" { return "DER" }
-        ".cer" { return "CER" }
-        ".p7b" { return "PKCS7" }
-		".pem" { return "PEM" }
+    $PfxPassword = ""
+    if ($ssl_cert -match '\.(p12|pfx)$') {
+      Write-Host "Using PKCS#12 file for SSL configuration..."
+
+      & openssl pkcs12 -in $ssl_cert -info -noout -passin "pass:" *> $null 2>&1
+      if ($LASTEXITCODE -ne 0) {
+        $securePassword = Read-Host -AsSecureString "Enter password"
+        $BSTR           = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
+        $PfxPassword    = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR($BSTR)
+      }
     }
-    Write-Output "Unsupported or invalid file format: $filePath"
-    exit 1
-}
 
-if ( $args.Count -ge 2 )
-{
+    try {
+      $conversionResult = ConvertToPem -certFile $ssl_cert -PfxPassword $PfxPassword
 
-  if ($args[0] -eq "-f") {
-    $letsencrypt_domain = $args[1] -JOIN ","
-    $ssl_cert = $args[2]
-    $ssl_key = $args[3]
-    $certFormat = CheckFileFormat -filePath $ssl_cert
-     if ($certFormat -ne "PEM") {
-         Write-Output "Detected $certFormat certificate, converting to PEM..."
-         $pemFiles = ConvertToPem -certFile $ssl_cert
-         $ssl_cert = $pemFiles.CertFile
-         $ssl_key = $pemFiles.KeyFile
-     }
+      if ($conversionResult.Format -ne "PEM" -and $conversionResult.CertFile) {
+        Write-Host "Detected $($conversionResult.Format) certificate, converting to PEM..."
+        $ssl_cert = $conversionResult.CertFile
+      }
+
+      if ($args.Count -ge 4) {
+        $keyCheck = ConvertToPem -certFile $ssl_key
+        if ($keyCheck.Format -ne "KEY") {
+          throw "The provided file $ssl_key is not a valid private key."
+        }
+        $ssl_key = $keyCheck.KeyFile
+      }
+
+    } catch {
+      Write-Error $_.Exception.Message
+      exit 1
+    }
   }
 
   else {
     $letsencrypt_mail = $args[0] -JOIN ","
     $letsencrypt_domain = $args[1] -JOIN ","
+    $domain_name = $letsencrypt_domain -split ',' | Select-Object -First 1
 
     [void](New-Item -ItemType "directory" -Path "${root_dir}\Logs" -Force)
 
@@ -171,7 +194,10 @@ if ( $args.Count -ge 2 )
   if ( [System.IO.File]::Exists($ssl_cert) -and [System.IO.File]::Exists($ssl_key) -and [System.IO.File]::Exists("${nginx_conf_dir}\${nginx_ssl_tmpl}"))
   {
     Copy-Item "${nginx_conf_dir}\${nginx_ssl_tmpl}" -Destination "${nginx_conf_dir}\${nginx_conf}"
-    ((Get-Content -Path "${app}\config\appsettings.$environment.json" -Raw) -replace '"portal":\s*"[^"]*"', "`"portal`": `"https://$letsencrypt_domain`"") | Set-Content -Path "${app}\config\appsettings.$environment.json"
+    if ($domain_name -ne "localhost:80") {
+      ((Get-Content -Path "${app}\config\appsettings.$environment.json" -Raw) -replace '"portal":\s*"[^"]*"', "`"portal`": `"https://$domain_name`"") | Set-Content -Path "${app}\config\appsettings.$environment.json"
+      Set-ItemProperty -Path "HKLM:\SOFTWARE\Wow6432Node\Ascensio System SIA\ONLYOFFICE DocSpace" -Name "DOMAIN_NAME" -Value $domain_name
+    }
     ((Get-Content -Path "${nginx_conf_dir}\${nginx_conf}" -Raw) -replace '/usr/local/share/ca-certificates/tls.crt', "`"$ssl_cert`"") | Set-Content -Path "${nginx_conf_dir}\${nginx_conf}"
     ((Get-Content -Path "${nginx_conf_dir}\${nginx_conf}" -Raw) -replace '/etc/ssl/private/tls.key', "`"$ssl_key`"") | Set-Content -Path "${nginx_conf_dir}\${nginx_conf}"
 
@@ -200,7 +226,7 @@ elseif ($args[0] -eq "-d" -or $args[0] -eq "--default") {
     [System.Environment]::SetEnvironmentVariable("NODE_EXTRA_CA_CERTS", $null, "Machine")
     foreach ($service in $node_services) { Restart-Service -Name $service }
     Restart-Service -Name $proxy_service
-    Remove-Item -Path "${app}\letsencrypt\letsencrypt_cron.bat" -Force
+    if (Test-Path "${app}\letsencrypt\letsencrypt_cron.bat") { Remove-Item -Path "${app}\letsencrypt\letsencrypt_cron.bat" -Force }
     Write-Host "Returned to the default proxy configuration."
 }
 

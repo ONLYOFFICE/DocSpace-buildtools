@@ -1,4 +1,4 @@
-name: Upload OneСlickInstall scripts on S3
+name: Upload OneClickInstall scripts on S3
 
 on:
   push:

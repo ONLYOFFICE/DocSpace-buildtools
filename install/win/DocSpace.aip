@@ -44,6 +44,7 @@
     <ROW Property="DOCUMENT_SERVER_HOST" Value="localhost"/>
     <ROW Property="DOCUMENT_SERVER_JWT_SECRET" Value=" "/>
     <ROW Property="DOCUMENT_SERVER_PORT" Value="8083"/>
+    <ROW Property="DOMAIN_NAME" Value="localhost:80"/>
     <ROW Property="ENVIRONMENT" Value="community" MultiBuildValue="ExeBuild:enterprise#ExeBuild_1:developer"/>
     <ROW Property="Editor_Port" Value="5013"/>
     <ROW Property="IDENTITY_ENCRYPTION_SECRET" Value=" "/>
@@ -94,6 +95,7 @@
     <ROW Property="ServiceName_MigrationRunner" Value="DocSpace.MigrationRunner"/>
     <ROW Property="ServiceName_NotifyService" Value="DocSpace.NotifyService"/>
     <ROW Property="ServiceName_PeopleServer" Value="DocSpace.PeopleServer"/>
+    <ROW Property="ServiceName_Sdk" Value="DocSpace.Sdk"/>
     <ROW Property="ServiceName_Socket.IO" Value="DocSpace.Socket.IO"/>
     <ROW Property="ServiceName_SsoAuth" Value="DocSpace.SsoAuth.Svc"/>
     <ROW Property="ServiceName_StudioNotifyService" Value="DocSpace.StudioNotifyService"/>
@@ -129,6 +131,7 @@
     <ROW Directory="ASC.Migration.Runner_Dir" Directory_Parent="services_Dir" DefaultDir="ASCMIG~1.RUN|ASC.Migration.Runner" DirectoryOptions="15"/>
     <ROW Directory="ASC.Notify_Dir" Directory_Parent="services_Dir" DefaultDir="ASC~1.NOT|ASC.Notify" DirectoryOptions="15"/>
     <ROW Directory="ASC.People_Dir" Directory_Parent="products_Dir" DefaultDir="ASC~1.PEO|ASC.People" DirectoryOptions="15"/>
+    <ROW Directory="ASC.Sdk_Dir" Directory_Parent="products_Dir" DefaultDir="ASC.Sdk" DirectoryOptions="15"/>
     <ROW Directory="ASC.Socket.IO_Dir" Directory_Parent="services_Dir" DefaultDir="ASCSOC~1.IO|ASC.Socket.IO" DirectoryOptions="15"/>
     <ROW Directory="ASC.SsoAuth_Dir" Directory_Parent="services_Dir" DefaultDir="ASC~1.SSO|ASC.SsoAuth" DirectoryOptions="15"/>
     <ROW Directory="ASC.Studio.Notify_Dir" Directory_Parent="services_Dir" DefaultDir="ASCSTU~1.NOT|ASC.Studio.Notify" DirectoryOptions="15"/>
@@ -143,6 +146,7 @@
     <ROW Directory="conf_Dir" Directory_Parent="nginx_Dir" DefaultDir="conf" DirectoryOptions="15"/>
     <ROW Directory="config_1_Dir" Directory_Parent="editor_Dir" DefaultDir="config" DirectoryOptions="15"/>
     <ROW Directory="config_2_Dir" Directory_Parent="service_5_Dir" DefaultDir="config" DirectoryOptions="15"/>
+    <ROW Directory="config_3_Dir" Directory_Parent="sdk_Dir" DefaultDir="config" DirectoryOptions="15"/>
     <ROW Directory="config_Dir" Directory_Parent="APPDIR" DefaultDir="config" DirectoryOptions="15"/>
     <ROW Directory="editor_Dir" Directory_Parent="ASC.Files_Dir" DefaultDir="editor" DirectoryOptions="15"/>
     <ROW Directory="includes_Dir" Directory_Parent="conf_Dir" DefaultDir="includes" DirectoryOptions="15"/>
@@ -151,6 +155,7 @@
     <ROW Directory="nginx_Dir" Directory_Parent="APPDIR" DefaultDir="nginx" DirectoryOptions="15"/>
     <ROW Directory="products_Dir" Directory_Parent="APPDIR" DefaultDir="products" DirectoryOptions="15"/>
     <ROW Directory="sbin_Dir" Directory_Parent="APPDIR" DefaultDir="sbin" DirectoryOptions="15"/>
+    <ROW Directory="sdk_Dir" Directory_Parent="ASC.Sdk_Dir" DefaultDir="sdk" DirectoryOptions="15"/>
     <ROW Directory="server_2_Dir" Directory_Parent="ASC.Files_Dir" DefaultDir="server" DirectoryOptions="15"/>
     <ROW Directory="server_5_Dir" Directory_Parent="ASC.People_Dir" DefaultDir="server" DirectoryOptions="15"/>
     <ROW Directory="service_11_Dir" Directory_Parent="ASC.Studio.Notify_Dir" DefaultDir="service" DirectoryOptions="15"/>
@@ -222,18 +227,20 @@
     <ROW Component="DocumentServer" ComponentId="{9F6BB24B-F2F9-4FE5-8431-A46F38A301AD}" Directory_="APPDIR" Attributes="260" KeyPath="DocumentServer" Options="2"/>
     <ROW Component="DocumentServer.DE" ComponentId="{F0381FCD-B31D-4E19-BA87-2F1330FC48DB}" Directory_="APPDIR" Attributes="4" KeyPath="DocumentServer.DE" Options="2"/>
     <ROW Component="DocumentServer.EE" ComponentId="{F1FEAEA5-AE4B-4C94-A699-0410A6C6D1B0}" Directory_="APPDIR" Attributes="4" KeyPath="DocumentServer.EE" Options="2"/>
+    <ROW Component="IDENTITY_ENCRYPTION_SECRET" ComponentId="{A3029F44-A45C-4A29-A500-B797F45C4A7C}" Directory_="APPDIR" Attributes="20" KeyPath="IDENTITY_ENCRYPTION_SECRET"/>
     <ROW Component="Identity.Authorization.exe" ComponentId="{751E3F35-D9BE-4C73-BC3A-5653B860C9E2}" Directory_="tools_Dir" Attributes="0" KeyPath="Identity.Authorization.exe"/>
     <ROW Component="Identity.Registration.exe" ComponentId="{A831909E-FD1D-49B5-8884-C9A8540E8828}" Directory_="tools_Dir" Attributes="0" KeyPath="Identity.Registration.exe"/>
     <ROW Component="Login.exe" ComponentId="{FBE9155F-9ACD-4A1A-9198-891ED73BA202}" Directory_="tools_Dir" Attributes="0" KeyPath="Login.exe"/>
     <ROW Component="Logs" ComponentId="{6C28AF1C-0190-4DE3-A753-430496711F3C}" Directory_="Logs_Dir" Attributes="0"/>
     <ROW Component="MACHINE_KEY" ComponentId="{61A271B4-4D82-4664-B2D2-2EB120D15DA6}" Directory_="APPDIR" Attributes="20" KeyPath="MACHINE_KEY"/>
-    <ROW Component="IDENTITY_ENCRYPTION_SECRET" ComponentId="{A3029F44-A45C-4A29-A500-B797F45C4A7C}" Directory_="APPDIR" Attributes="4" KeyPath="IDENTITY_ENCRYPTION_SECRET"/>
     <ROW Component="ProdInfo" ComponentId="{5FB28D19-6A7D-4078-901F-58C2DF0DE176}" Directory_="APPDIR" Attributes="260" KeyPath="Version"/>
     <ROW Component="Proxy.exe" ComponentId="{913596AD-5C75-4418-8C3A-FAB2A70530DB}" Directory_="tools_Dir" Attributes="0" KeyPath="Proxy.exe"/>
+    <ROW Component="Sdk.exe" ComponentId="{0374A99E-E031-4CC9-AA10-B0A7711E9225}" Directory_="tools_Dir" Attributes="0" KeyPath="Sdk.exe"/>
     <ROW Component="Socket.IO.exe" ComponentId="{D08CDE1C-FB16-49AB-98A2-92FD887774F1}" Directory_="tools_Dir" Attributes="0" KeyPath="Socket.IO.exe"/>
     <ROW Component="SsoAuth.exe" ComponentId="{B4A48C44-5FC0-43D8-9CFB-EB4A4AAB4169}" Directory_="tools_Dir" Attributes="0" KeyPath="SsoAuth.exe"/>
     <ROW Component="conf" ComponentId="{88EC3AED-DF73-4B66-A228-9A87CFB5519D}" Directory_="conf_Dir" Attributes="0"/>
     <ROW Component="config" ComponentId="{B58E086D-0CB4-4F53-8411-3AE5A46D1DE4}" Directory_="config_Dir" Attributes="0"/>
+    <ROW Component="config_1" ComponentId="{DB40ECE7-00F5-41C3-829C-A17ABCB7CDC2}" Directory_="config_3_Dir" Attributes="0"/>
     <ROW Component="config_socketio" ComponentId="{4F28A197-AD56-48D0-9E97-9F88A73BE24E}" Directory_="NewFolder_1_Dir" Attributes="0"/>
     <ROW Component="config_ssoauth" ComponentId="{D51A4591-143D-4C91-8665-BED153555AC0}" Directory_="config_2_Dir" Attributes="0"/>
     <ROW Component="editor" ComponentId="{7BB6D12C-B38B-435D-8A86-2D5D2AB0543F}" Directory_="editor_Dir" Attributes="0"/>
@@ -292,6 +299,7 @@
     <ROW Feature="Notify" Feature_Parent="DotnetServices" Title=".NET Notify Service" Description="Feature contains .NET Notify service" Display="15" Level="1" Directory_="APPDIR" Attributes="0"/>
     <ROW Feature="People" Feature_Parent="DotnetServices" Title=".NET People Service" Description="Feature contains .NET People service" Display="13" Level="1" Directory_="APPDIR" Attributes="0"/>
     <ROW Feature="Proxy" Feature_Parent="MainFeature" Title="Nginx Proxy Service" Description="Feature contains Nginx Proxy service" Display="7" Level="1" Directory_="APPDIR" Attributes="0"/>
+    <ROW Feature="Sdk" Feature_Parent="NodeJSServices" Title="Node.js Sdk Service" Description="Description" Display="37" Level="1" Directory_="APPDIR" Attributes="0"/>
     <ROW Feature="SocketIO" Feature_Parent="NodeJSServices" Title="Node.js SocketIO Service" Description="Feature contains Node.js SocketIO service" Display="9" Level="1" Directory_="APPDIR" Attributes="0"/>
     <ROW Feature="SsoAuth" Feature_Parent="NodeJSServices" Title="Node.js SsoAuth Service" Description="Feature contains Node.js SsoAuth service" Display="7" Level="1" Directory_="APPDIR" Attributes="0"/>
     <ROW Feature="StudioNotify" Feature_Parent="DotnetServices" Title=".NET StudioNotify Service" Description="Feature contains .NET StudioNotify service" Display="11" Level="1" Directory_="APPDIR" Attributes="0"/>
@@ -311,6 +319,7 @@
     <ROW File="ASC.Web.Studio.exe" Component_="ASC.Web.Studio.exe" FileName="ASCWEB~1.EXE|ASC.Web.Studio.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.Web.Studio\service\ASC.Web.Studio.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.Web.Api.exe" Component_="ASC.Web.Api.exe" FileName="ASCWEB~1.EXE|ASC.Web.Api.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.Web.Api\service\ASC.Web.Api.exe" SelfReg="false" DigSign="true"/>
     <ROW File="Proxy.exe" Component_="Proxy.exe" FileName="Proxy.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\Proxy.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="Sdk.exe" Component_="Sdk.exe" FileName="Sdk.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\Sdk.exe" SelfReg="false" DigSign="true"/>
     <ROW File="Socket.IO.exe" Component_="Socket.IO.exe" FileName="SOCKET~1.EXE|Socket.IO.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\Socket.IO.exe" SelfReg="false" DigSign="true"/>
     <ROW File="SsoAuth.exe" Component_="SsoAuth.exe" FileName="SsoAuth.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\SsoAuth.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.ClearEvents.exe" Component_="ASC.ClearEvents.exe" FileName="ASCCLE~1.EXE|ASC.ClearEvents.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.ClearEvents\service\ASC.ClearEvents.exe" SelfReg="false" DigSign="true"/>
@@ -373,6 +382,7 @@
     <ROW JsonFile="appsettings.services.json" FileName="APPSET~2.JSO|appsettings.services.json" DirProperty="config_Dir" Component="config" RootProperty="Root_4" Flags="6" IndentUnits="2"/>
     <ROW JsonFile="config.json_config_editor" FileName="CONFIG~1.JSO|config.json" DirProperty="config_1_Dir" Component="editor" RootProperty="Root_10" Flags="6" IndentUnits="2"/>
     <ROW JsonFile="config.json_config_login" FileName="CONFIG~1.JSO|config.json" DirProperty="login_Dir" Component="login" RootProperty="Root_9" Flags="6" IndentUnits="2"/>
+    <ROW JsonFile="config.json_config_sdk" FileName="CONFIG~1.JSO|config.json" DirProperty="config_3_Dir" Component="config" RootProperty="Root_5" Flags="6" IndentUnits="2"/>
     <ROW JsonFile="config.json_config_socketio" FileName="CONFIG~1.JSO|config.json" DirProperty="NewFolder_1_Dir" Component="config_socketio" RootProperty="Root_6" Flags="6" IndentUnits="2"/>
     <ROW JsonFile="config.json_config_ssoauth" FileName="CONFIG~1.JSO|config.json" DirProperty="config_2_Dir" Component="config_ssoauth" RootProperty="Root_7" Flags="6" IndentUnits="2"/>
     <ROW JsonFile="elastic.env.json" FileName="ELASTI~1.JSO|elastic.[|ENVIRONMENT].json" DirProperty="config_Dir" Component="config" RootProperty="Root" Flags="6" IndentUnits="2"/>
@@ -405,6 +415,7 @@
     <ROW JsonProperty="Root_2" Name="Root" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="Root_3" Name="Root" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="Root_4" Name="Root" Condition="1" Order="0" Flags="60"/>
+    <ROW JsonProperty="Root_5" Name="Root" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="Root_6" Name="Root" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="Root_7" Name="Root" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="Root_9" Name="Root" Condition="1" Order="0" Flags="60"/>
@@ -418,10 +429,12 @@
     <ROW JsonProperty="__2" Parent="TeamlabsiteProviders" Name="0" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="app" Parent="Root_6" Name="app" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="app_1" Parent="Root_7" Name="app" Condition="1" Order="0" Flags="60"/>
+    <ROW JsonProperty="app_2" Parent="Root_5" Name="app" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="app_3" Parent="Root_9" Name="app" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="app_4" Parent="Root_10" Name="app" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="appsettings" Parent="app" Name="appsettings" Condition="1" Order="1" Flags="57" Value="[APPDIR_FORWARD_SLASH]config"/>
     <ROW JsonProperty="appsettings_1" Parent="app_1" Name="appsettings" Condition="1" Order="1" Flags="57" Value="[APPDIR_FORWARD_SLASH]config"/>
+    <ROW JsonProperty="appsettings_2" Parent="app_2" Name="appsettings" Condition="1" Order="0" Flags="57" Value="[APPDIR_FORWARD_SLASH]config"/>
     <ROW JsonProperty="appsettings_3" Parent="app_3" Name="appsettings" Condition="1" Order="0" Flags="57" Value="[APPDIR_FORWARD_SLASH]config"/>
     <ROW JsonProperty="appsettings_4" Parent="app_4" Name="appsettings" Condition="1" Order="0" Flags="57" Value="[APPDIR_FORWARD_SLASH]config"/>
     <ROW JsonProperty="basedomain" Parent="core_3" Name="base-domain" Condition="1" Order="0" Flags="57" Value="[BASE_DOMAIN]"/>
@@ -537,6 +550,7 @@
     <ROW Property="MACHINE_KEY" Signature_="AppSearchSign_25"/>
     <ROW Property="DASHBOARDS_PWD" Signature_="AppSearchSign_26"/>
     <ROW Property="IDENTITY_ENCRYPTION_SECRET" Signature_="AppSearchSign_27"/>
+    <ROW Property="DOMAIN_NAME" Signature_="AppSearchSign_28"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiBinaryComponent">
     <ROW Name="NetFirewall.dll" SourcePath="&lt;AI_CUSTACTS&gt;NetFirewall.dll"/>
@@ -1213,6 +1227,8 @@
     <ROW Feature_="MainFeature" Component_="Identity.Authorization.exe"/>
     <ROW Feature_="MainFeature" Component_="Identity.Registration.exe"/>
     <ROW Feature_="MainFeature" Component_="IDENTITY_ENCRYPTION_SECRET"/>
+    <ROW Feature_="Sdk" Component_="config_1"/>
+    <ROW Feature_="Sdk" Component_="Sdk.exe"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
     <ROW Name="icon.exe" SourcePath="Resources\icon.ico" Index="0"/>
@@ -1384,6 +1400,7 @@
     <ROW Signature_="AppSearchSign_25" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="MACHINE_KEY" Type="2"/>
     <ROW Signature_="AppSearchSign_26" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="DASHBOARDS_PWD" Type="2"/>
     <ROW Signature_="AppSearchSign_27" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="IDENTITY_ENCRYPTION_SECRET" Type="2"/>
+    <ROW Signature_="AppSearchSign_28" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="DOMAIN_NAME" Type="2"/>
     <ROW Signature_="AppSearchSign_3" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_USER" Type="2"/>
     <ROW Signature_="AppSearchSign_4" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_PWD" Type="2"/>
     <ROW Signature_="AppSearchSign_5" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_PORT" Type="2"/>
@@ -1478,6 +1495,7 @@
     <ROW MsiServiceConfig="ServiceName_Login" Name="[ServiceName_Login]" Event="1" ConfigType="3" Argument="1" Component_="Login.exe"/>
     <ROW MsiServiceConfig="ServiceName_NotifyService" Name="[ServiceName_NotifyService]" Event="1" ConfigType="3" Argument="1" Component_="ASC.Notify.exe"/>
     <ROW MsiServiceConfig="ServiceName_PeopleServer" Name="[ServiceName_PeopleServer]" Event="1" ConfigType="3" Argument="1" Component_="ASC.People.exe"/>
+    <ROW MsiServiceConfig="ServiceName_Sdk" Name="[ServiceName_Sdk]" Event="1" ConfigType="3" Argument="1" Component_="Sdk.exe"/>
     <ROW MsiServiceConfig="ServiceName_Socket.IO" Name="[ServiceName_Socket.IO]" Event="1" ConfigType="3" Argument="1" Component_="Socket.IO.exe"/>
     <ROW MsiServiceConfig="ServiceName_SsoAuth" Name="[ServiceName_SsoAuth]" Event="1" ConfigType="3" Argument="1" Component_="SsoAuth.exe"/>
     <ROW MsiServiceConfig="ServiceName_StudioNotifyService" Name="[ServiceName_StudioNotifyService]" Event="1" ConfigType="3" Argument="1" Component_="ASC.Studio.Notify.exe"/>
@@ -1498,6 +1516,7 @@
     <ROW MsiServiceConfigFailureActions="ServiceName_Login" Name="[ServiceName_Login]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="Login.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_NotifyService" Name="[ServiceName_NotifyService]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.Notify.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_PeopleServer" Name="[ServiceName_PeopleServer]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.People.exe"/>
+    <ROW MsiServiceConfigFailureActions="ServiceName_Sdk" Name="[ServiceName_Sdk]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="Sdk.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_Socket.IO" Name="[ServiceName_Socket.IO]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="Socket.IO.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_SsoAuth" Name="[ServiceName_SsoAuth]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="SsoAuth.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_StudioNotifyService" Name="[ServiceName_StudioNotifyService]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.Studio.Notify.exe"/>
@@ -1518,6 +1537,7 @@
     <ROW ServiceControl="ServiceName_Login" Name="[ServiceName_Login]" Event="161" Wait="0" Component_="Login.exe"/>
     <ROW ServiceControl="ServiceName_NotifyService" Name="[ServiceName_NotifyService]" Event="161" Wait="0" Component_="ASC.Notify.exe"/>
     <ROW ServiceControl="ServiceName_PeopleServer" Name="[ServiceName_PeopleServer]" Event="161" Wait="0" Component_="ASC.People.exe"/>
+    <ROW ServiceControl="ServiceName_Sdk" Name="[ServiceName_Sdk]" Event="161" Wait="0" Component_="Sdk.exe"/>
     <ROW ServiceControl="ServiceName_Socket.IO" Name="[ServiceName_Socket.IO]" Event="161" Wait="0" Component_="Socket.IO.exe"/>
     <ROW ServiceControl="ServiceName_SsoAuth" Name="[ServiceName_SsoAuth]" Event="161" Wait="0" Component_="SsoAuth.exe"/>
     <ROW ServiceControl="ServiceName_StudioNotifyService" Name="[ServiceName_StudioNotifyService]" Event="161" Wait="0" Component_="ASC.Studio.Notify.exe"/>
@@ -1538,6 +1558,7 @@
     <ROW ServiceInstall="ServiceName_Login" Name="[ServiceName_Login]" DisplayName="[ShortProductName] Login" ServiceType="16" StartType="2" ErrorControl="1" Component_="Login.exe" Description="[ShortProductName] Login"/>
     <ROW ServiceInstall="ServiceName_NotifyService" Name="[ServiceName_NotifyService]" DisplayName="[ShortProductName] NotifyService" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5005 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_NotifyService] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER] --core:eventBus:subscriptionClientName=asc_event_bus_notify_queue" Component_="ASC.Notify.exe" Description="[ShortProductName] NotifyService"/>
     <ROW ServiceInstall="ServiceName_PeopleServer" Name="[ServiceName_PeopleServer]" DisplayName="[ShortProductName] PeopleServer" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5004 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_PeopleServer] [SUBFOLDER_SERVER]" Component_="ASC.People.exe" Description="[ShortProductName] PeopleServer"/>
+    <ROW ServiceInstall="ServiceName_Sdk" Name="[ServiceName_Sdk]" DisplayName="[ShortProductName] SDK" ServiceType="16" StartType="2" ErrorControl="1" Component_="Sdk.exe" Description="[ShortProductName] SDK"/>
     <ROW ServiceInstall="ServiceName_Socket.IO" Name="[ServiceName_Socket.IO]" DisplayName="[ShortProductName] Socket.IO" ServiceType="16" StartType="2" ErrorControl="1" Component_="Socket.IO.exe" Description="[ShortProductName] Socket.IO"/>
     <ROW ServiceInstall="ServiceName_SsoAuth" Name="[ServiceName_SsoAuth]" DisplayName="[ShortProductName] SsoAuth.Svc" ServiceType="16" StartType="2" ErrorControl="1" Component_="SsoAuth.exe" Description="[ShortProductName] SsoAuth.Svc"/>
     <ROW ServiceInstall="ServiceName_StudioNotifyService" Name="[ServiceName_StudioNotifyService]" DisplayName="[ShortProductName] StudioNotifyService" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5006 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_StudioNotifyService] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER]" Component_="ASC.Studio.Notify.exe" Description="[ShortProductName] StudioNotifyService"/>
@@ -1574,7 +1595,7 @@
     <ROW PrereqKey="PostgresSQL" DisplayName="PostgreSQL v14.0 x64" VersionMin="14.0" SetupFileUrl="https://get.enterprisedb.com/postgresql/postgresql-14.0-1-windows-x64.exe" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="--unattendedmodeui none --install_runtimes 0 --mode unattended --superaccount &quot;postgres&quot; --superpassword &quot;postgres&quot;" BasicUiComLine="--unattendedmodeui none --install_runtimes 0 --mode unattended --superaccount &quot;postgres&quot; --superpassword &quot;postgres&quot;" NoUiComLine="--unattendedmodeui none --install_runtimes 0 --mode unattended --superaccount &quot;postgres&quot; --superpassword &quot;postgres&quot;" Options="xy" TargetName="PostgreSQL v14.0 x64"/>
     <ROW PrereqKey="RequiredApplication" DisplayName="MySQL Connector/ODBC 8.4.0 x64" VersionMin="8.4.0" SetupFileUrl="https://cdn.mysql.com/Downloads/Connector-ODBC/8.4/mysql-connector-odbc-8.4.0-winx64.msi" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="ym" TargetName="MySQL Connector ODBC 8.4.0 x64"/>
     <ROW PrereqKey="RequiredApplication_1" DisplayName="Node.js 20.11.1" VersionMin="20.11.1" SetupFileUrl="https://nodejs.org/dist/v20.11.1/node-v20.11.1-x64.msi" Location="1" ExactSize="0" Operator="0" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="my" TargetName="Node.js v20.11.1 x64"/>
-    <ROW PrereqKey="RequiredApplication_3" DisplayName="FireDaemon OpenSSL 3" VersionMin="3.3.0.0" SetupFileUrl="https://download.firedaemon.com/FireDaemon-OpenSSL/FireDaemon-OpenSSL-x64-3.3.0.exe" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/exenoui /qn /norestart REBOOT=ReallySuppress ADJUSTSYSTEMPATHENV=yes" BasicUiComLine="/exenoui /qn /norestart REBOOT=ReallySuppress ADJUSTSYSTEMPATHENV=yes" NoUiComLine="/exenoui /qn /norestart REBOOT=ReallySuppress ADJUSTSYSTEMPATHENV=yes" Options="y" TargetName="FireDaemon OpenSSL 3"/>
+    <ROW PrereqKey="RequiredApplication_3" DisplayName="FireDaemon OpenSSL 3" VersionMin="3.3.0.0" SetupFileUrl="https://download.firedaemon.com/FireDaemon-OpenSSL/FireDaemon-OpenSSL-x64-3.3.0.exe" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/exenoui /qn /norestart REBOOT=ReallySuppress ADJUSTSYSTEMPATHENV=yes" BasicUiComLine="/exenoui /qn /norestart REBOOT=ReallySuppress ADJUSTSYSTEMPATHENV=yes" NoUiComLine="/exenoui /qn /norestart REBOOT=ReallySuppress ADJUSTSYSTEMPATHENV=yes" Options="yx" TargetName="FireDaemon OpenSSL 3"/>
     <ROW PrereqKey="RequiredApplication_2" DisplayName="MySQL Community Server 8.4.3 x64" VersionMin="8.4.3" SetupFileUrl="https://cdn.mysql.com/Downloads/MySQL-8.4/mysql-8.4.3-winx64.msi" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="y" TargetName="MySQL Community Server 8.4.3 x64"/>
     <ROW PrereqKey="RequiredApplication_5" DisplayName="RabbitMQ v3.12.1 x64" VersionMin="3.12" SetupFileUrl="https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.12.1/rabbitmq-server-3.12.1.exe" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/S" BasicUiComLine="/S" NoUiComLine="/S" Options="yx" TargetName="RabbitMQ v3.12.1 x64"/>
     <ROW PrereqKey="RequiredApplication_6" DisplayName="Redis 7.4.0 x64" VersionMin="7.4.0" SetupFileUrl="https://github.com/ONLYOFFICE/redis-windows/releases/download/7.4.0/Redis-7.4.0-Windows-x64.msi" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet ADD_INSTALLFOLDER_TO_PATH=1" BasicUiComLine="/quiet ADD_INSTALLFOLDER_TO_PATH=1" NoUiComLine="/quiet ADD_INSTALLFOLDER_TO_PATH=1" Options="yx" TargetName="Redis 7.4.0 x64"/>
@@ -1674,11 +1695,11 @@
     <ROW XmlAttribute="minlevel_2" XmlElement="logger_2" Name="minlevel" Flags="14" Order="0" Value="Warn"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.XmlElementComponent">
-    <ROW XmlElement="logger" ParentElement="rules" Name="logger" Condition="ENVIRONMENT = &quot;PRODUCT.ENVIRONMENT.SUB&quot;" Order="0" Flags="22" UpdateIndexInParent="0"/>
-    <ROW XmlElement="logger_1" ParentElement="rules" Name="logger" Condition="ENVIRONMENT = &quot;PRODUCT.ENVIRONMENT.SUB&quot;" Order="1" Flags="22" UpdateIndexInParent="0"/>
-    <ROW XmlElement="logger_2" ParentElement="rules" Name="logger" Condition="ENVIRONMENT = &quot;PRODUCT.ENVIRONMENT.SUB&quot;" Order="2" Flags="22" UpdateIndexInParent="0"/>
+    <ROW XmlElement="logger" ParentElement="rules" Name="logger" Condition="1" Order="0" Flags="22" UpdateIndexInParent="0"/>
+    <ROW XmlElement="logger_1" ParentElement="rules" Name="logger" Condition="1" Order="1" Flags="22" UpdateIndexInParent="0"/>
+    <ROW XmlElement="logger_2" ParentElement="rules" Name="logger" Condition="1" Order="2" Flags="22" UpdateIndexInParent="0"/>
     <ROW XmlElement="nlog" Name="nlog" Condition="1" Order="0" Flags="30" UpdateIndexInParent="0"/>
-    <ROW XmlElement="rules" ParentElement="nlog" Name="rules" Condition="ENVIRONMENT = &quot;PRODUCT.ENVIRONMENT.SUB&quot;" Order="0" Flags="2" UpdateIndexInParent="0"/>
+    <ROW XmlElement="rules" ParentElement="nlog" Name="rules" Condition="1" Order="0" Flags="2" UpdateIndexInParent="0"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.XmlFileComponent">
     <ROW XmlFile="nlog.config" FileName="NLOG~1.CON|nlog.config" DirProperty="config_Dir" Component="config" RootElement="nlog" Flags="25" Version="1.0" Encoding="UTF-8" IndentUnits="2"/>
