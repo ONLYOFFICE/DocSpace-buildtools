@@ -115,6 +115,26 @@ function prepare_vm() {
           yum -y install centos*-release 
           ;;
 
+      rhel)
+          local REV=$(sed -E 's/[^0-9]+([0-9]+).*/\1/' /etc/redhat-release)
+          if [ "${REV}" == "9" ]; then
+              cat <<EOF | sudo tee /etc/yum.repos.d/centos-stream-9.repo
+[centos9s-baseos]
+name=CentOS Stream 9 - BaseOS
+baseurl=http://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os/
+enabled=1
+gpgcheck=0
+
+[centos9s-appstream]
+name=CentOS Stream 9 - AppStream
+baseurl=http://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/
+enabled=1
+gpgcheck=0
+EOF
+          fi
+
+          [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-rpm
+          ;;
       *)
           echo "${COLOR_RED}Failed to determine Linux dist${COLOR_RESET}"; exit 1
           ;;
