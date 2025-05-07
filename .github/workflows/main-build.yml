@@ -7,9 +7,6 @@ on:
         description: 'Branches for multiarch build'
         required: true
         type: string
-      zap:
-        description: 'Run ZAP scanning after build?'
-        type: boolean
 
   repository_dispatch:
     types:
@@ -74,23 +71,7 @@ jobs:
           --set *.args.BUILD_NUMBER=${{github.run_number}} \
           --push
 
-          echo "version=${DOCKER_TAG}" >> "$GITHUB_OUTPUT"
         shell: bash
-
-      - name: Run zap action if needed
-        if: ${{ github.event.action == 'cron-trigger-action' || github.event_name == 'workflow_dispatch' }}
-        env:
-          RUN_ZAP: ${{ github.event.inputs.zap || 'true' }}
-          GITHUB_TOKEN: ${{ secrets.TOKEN }}
-          VERSION: ${{ steps.build.outputs.version }}
-        shell: bash
-        run: |
-           if [[ ${{ matrix.branch }} =~ release || ${{ matrix.branch }} =~ hotfix && ${RUN_ZAP} == true ]]; then
-              gh workflow run zap-scan.yaml \
-                 --repo ONLYOFFICE/DocSpace \
-                 -f branch=${{ matrix.branch }} \
-                 -f version=${VERSION}
-           fi
 
   trigger-oci-docker:
     name: Trigger ci-oci-docker-install Workflow
