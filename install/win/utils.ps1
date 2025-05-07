@@ -302,8 +302,8 @@ function OpenSearchSetup {
    
     $FileContent = UpdateConfig $FileContent "indices.fielddata.cache.size:.*" "indices.fielddata.cache.size: 30%"
     $FileContent = UpdateConfig $FileContent "indices.memory.index_buffer_size:.*" "indices.memory.index_buffer_size: 30%"
-    $FileContent = UpdateConfig $FileContent "#path.data:.*" "path.data: $AppIndexDir"
-    $FileContent = UpdateConfig $FileContent "#path.logs:.*" "path.logs: $LogsDir"
+    $FileContent = UpdateConfig $FileContent "#?path.data:.*" "path.data: $AppIndexDir"
+    $FileContent = UpdateConfig $FileContent "#?path.logs:.*" "path.logs: $LogsDir"
     $FileContent = UpdateConfig $FileContent "plugins.security.disabled:.*" "plugins.security.disabled: true"
 
     Set-Content -Path $ConfigFilePath -Value $FileContent
