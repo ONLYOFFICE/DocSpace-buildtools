@@ -45,3 +45,20 @@ Each script provides optional parameters for advanced configuration. Use the fol
     ```
 
 Replace `<script-name>` with the appropriate script file as used in Step 2.
+
+## Supported Operating Systems
+
+The installation scripts support the following operating systems, which are **regularly tested** as part of our CI/CD pipelines:
+
+<!-- OS-SUPPORT-LIST-START -->
+- RHEL 9
+- CentOS9S
+- Debian11
+- Debian12
+- Ubuntu20.04
+- Ubuntu22.04
+- Ubuntu24.04
+- Fedora40
+- Fedora41
+<!-- OS-SUPPORT-LIST-END -->
+
