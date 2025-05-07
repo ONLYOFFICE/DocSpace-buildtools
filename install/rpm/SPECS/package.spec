@@ -3,7 +3,7 @@ Packager:       %{packager}
 Summary:        Backup
 Group:          Applications/Internet
 Requires:       %name-common  = %version-%release 
-Requires:       dotnet-sdk-8.0
+Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    backup
@@ -22,7 +22,7 @@ Packager:       %{packager}
 Summary:        Files-services
 Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-8.0
+Requires:       dotnet-sdk-9.0
 Requires:       ffmpeg-free
 AutoReqProv:    no
 BuildArch:      noarch
@@ -40,7 +40,7 @@ Packager:       %{packager}
 Summary:        Notify
 Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-8.0
+Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    notify
@@ -54,7 +54,7 @@ Packager:       %{packager}
 Summary:        Files
 Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-8.0
+Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    files
@@ -80,7 +80,7 @@ Packager:       %{packager}
 Summary:        Studio-notify
 Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-8.0
+Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    studio-notify
@@ -92,7 +92,7 @@ Packager:       %{packager}
 Summary:        People-server
 Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-8.0
+Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    people-server
@@ -114,7 +114,7 @@ Packager:       %{packager}
 Summary:        Studio
 Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-8.0
+Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    studio
@@ -125,7 +125,7 @@ Packager:       %{packager}
 Summary:        Api
 Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-8.0
+Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    api
@@ -138,7 +138,7 @@ Packager:       %{packager}
 Summary:        Api-system
 Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-8.0
+Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    api-system
@@ -184,7 +184,7 @@ Packager:       %{packager}
 Summary:        Clear-events
 Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-8.0
+Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    clear-events
@@ -196,7 +196,7 @@ Packager:       %{packager}
 Summary:        Backup-background
 Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-8.0
+Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    backup-background
@@ -223,7 +223,7 @@ Packager:       %{packager}
 Summary:        Migration-runner
 Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-8.0
+Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    migration-runner
@@ -247,7 +247,7 @@ Packager:       %{packager}
 Summary:        Healthchecks
 Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-8.0
+Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    healthchecks
@@ -262,3 +262,15 @@ AutoReqProv:    no
 BuildArch:      noarch
 %description    plugins
 This package includes plugins that extend DocSpace functionality
+
+%package sdk
+Packager:       %{packager}
+Summary:        Sdk
+Group:          Applications/Internet
+Requires:       %name-common = %version-%release
+Requires:       nodejs >= 16.0
+AutoReqProv:    no
+BuildArch:      noarch
+%description sdk
+The service provides a Software Development Kit (SDK) with APIs and tools for custom
+integrations and plugins

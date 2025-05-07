@@ -17,20 +17,20 @@ if defined SecondArg (
 )
 
 rem backend services (dotnet) in directory 'products'
-dotnet publish "%PathToRepository%\products\ASC.Files\server\ASC.Files.csproj" -c Release --self-contained false -o "%PathToAppFolder%\products\ASC.Files\server"
-dotnet publish "%PathToRepository%\products\ASC.People\server\ASC.People.csproj" -c Release --self-contained false -o "%PathToAppFolder%\products\ASC.People\server"
+dotnet publish "%PathToRepository%\products\ASC.Files\server\ASC.Files.csproj" -c Release -r win-x64 --self-contained false -o "%PathToAppFolder%\products\ASC.Files\server"
+dotnet publish "%PathToRepository%\products\ASC.People\server\ASC.People.csproj" -c Release -r win-x64 --self-contained false -o "%PathToAppFolder%\products\ASC.People\server"
 
 rem backend services (dotnet) in directory 'services'
-dotnet publish "%PathToRepository%\common\services\ASC.ApiSystem\ASC.ApiSystem.csproj" -c Release --self-contained false -o "%PathToAppFolder%\services\ASC.ApiSystem\service"
-dotnet publish "%PathToRepository%\common\services\ASC.Data.Backup\ASC.Data.Backup.csproj" -c Release --self-contained false -o "%PathToAppFolder%\services\ASC.Data.Backup\service"
-dotnet publish "%PathToRepository%\products\ASC.Files\service\ASC.Files.Service.csproj" -c Release --self-contained false -o "%PathToAppFolder%\services\ASC.Files.Service\service"
-dotnet publish "%PathToRepository%\common\services\ASC.Notify\ASC.Notify.csproj" -c Release --self-contained false -o "%PathToAppFolder%\services\ASC.Notify\service"
-dotnet publish "%PathToRepository%\common\services\ASC.Studio.Notify\ASC.Studio.Notify.csproj" -c Release --self-contained false -o "%PathToAppFolder%\services\ASC.Studio.Notify\service"
-dotnet publish "%PathToRepository%\common\services\ASC.Data.Backup.BackgroundTasks\ASC.Data.Backup.BackgroundTasks.csproj" -c Release --self-contained false -o "%PathToAppFolder%\services\ASC.Data.Backup.BackgroundTasks\service"
-dotnet publish "%PathToRepository%\common\services\ASC.ClearEvents\ASC.ClearEvents.csproj" -c Release --self-contained false -o "%PathToAppFolder%\services\ASC.ClearEvents\service"
-dotnet publish "%PathToRepository%\web\ASC.Web.Api\ASC.Web.Api.csproj" -c Release --self-contained false -o "%PathToAppFolder%\services\ASC.Web.Api\service"
-dotnet publish "%PathToRepository%\web\ASC.Web.Studio\ASC.Web.Studio.csproj" -c Release --self-contained false -o "%PathToAppFolder%\services\ASC.Web.Studio\service"
-dotnet publish "%PathToRepository%\web\ASC.Web.HealthChecks.UI\ASC.Web.HealthChecks.UI.csproj" -c Release --self-contained false -o "%PathToAppFolder%\services\ASC.Web.HealthChecks.UI\service"
+dotnet publish "%PathToRepository%\common\services\ASC.ApiSystem\ASC.ApiSystem.csproj" -c Release -r win-x64 --self-contained false -o "%PathToAppFolder%\services\ASC.ApiSystem\service"
+dotnet publish "%PathToRepository%\common\services\ASC.Data.Backup\ASC.Data.Backup.csproj" -c Release -r win-x64 --self-contained false -o "%PathToAppFolder%\services\ASC.Data.Backup\service"
+dotnet publish "%PathToRepository%\products\ASC.Files\service\ASC.Files.Service.csproj" -c Release -r win-x64 --self-contained false -o "%PathToAppFolder%\services\ASC.Files.Service\service"
+dotnet publish "%PathToRepository%\common\services\ASC.Notify\ASC.Notify.csproj" -c Release -r win-x64 --self-contained false -o "%PathToAppFolder%\services\ASC.Notify\service"
+dotnet publish "%PathToRepository%\common\services\ASC.Studio.Notify\ASC.Studio.Notify.csproj" -c Release -r win-x64 --self-contained false -o "%PathToAppFolder%\services\ASC.Studio.Notify\service"
+dotnet publish "%PathToRepository%\common\services\ASC.Data.Backup.BackgroundTasks\ASC.Data.Backup.BackgroundTasks.csproj" -c Release -r win-x64 --self-contained false -o "%PathToAppFolder%\services\ASC.Data.Backup.BackgroundTasks\service"
+dotnet publish "%PathToRepository%\common\services\ASC.ClearEvents\ASC.ClearEvents.csproj" -c Release -r win-x64 --self-contained false -o "%PathToAppFolder%\services\ASC.ClearEvents\service"
+dotnet publish "%PathToRepository%\web\ASC.Web.Api\ASC.Web.Api.csproj" -c Release -r win-x64 --self-contained false -o "%PathToAppFolder%\services\ASC.Web.Api\service"
+dotnet publish "%PathToRepository%\web\ASC.Web.Studio\ASC.Web.Studio.csproj" -c Release -r win-x64 --self-contained false -o "%PathToAppFolder%\services\ASC.Web.Studio\service"
+dotnet publish "%PathToRepository%\web\ASC.Web.HealthChecks.UI\ASC.Web.HealthChecks.UI.csproj" -c Release -r win-x64 --self-contained false -o "%PathToAppFolder%\services\ASC.Web.HealthChecks.UI\service"
 
 rem backend services (Nodejs) in directory 'services'
 mkdir "%PathToAppFolder%\services\ASC.Socket.IO\service"
@@ -45,6 +45,9 @@ xcopy "%PathToRepository%\..\publish\web\login" "%PathToAppFolder%\products\ASC.
 
 mkdir "%PathToAppFolder%\products\ASC.Files\editor"
 xcopy "%PathToRepository%\..\publish\web\editor" "%PathToAppFolder%\products\ASC.Files\editor" /s /y /b /i
+
+mkdir "%PathToAppFolder%\products\ASC.Sdk\sdk"
+xcopy "%PathToRepository%\..\publish\web\sdk" "%PathToAppFolder%\products\ASC.Sdk\sdk" /s /y /b /i
 
 rem backend services (Java) in directory 'services'
 mkdir "%PathToAppFolder%\services\ASC.Identity.Authorization\service"

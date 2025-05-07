@@ -9,7 +9,7 @@ set SRC_PATH=%~s2
 pushd %~1
 
   call dotnet build ASC.Web.slnf
-  call dotnet build ASC.Migrations.sln --property:OutputPath=%SRC_PATH%\services\ASC.Migration.Runner\service
+  call dotnet build ASC.Migrations.sln -r win-x64 --property:OutputPath=%SRC_PATH%\services\ASC.Migration.Runner\service --no-incremental
 
   echo "== Build ASC.Socket.IO =="
   pushd common\ASC.Socket.IO

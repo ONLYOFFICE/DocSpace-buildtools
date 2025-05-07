@@ -48,6 +48,7 @@ local_ip = "host.docker.internal"  # networks[-1][-1]
 #     sys.exit(1)
 
 doceditor = f"{local_ip}:5013"
+sdk = f"{local_ip}:5099"
 login = f"{local_ip}:5011"
 client = f"{local_ip}:5001"
 identity_auth = f"{local_ip}:8080"
@@ -119,6 +120,7 @@ print("Docker files root directory:", dockerDir)
 
 print()
 print(f"SERVICE_DOCEDITOR: {doceditor}")
+print(f"SERVICE_SDK: {sdk}")
 print(f"SERVICE_LOGIN: {login}")
 print(f"SERVICE_CLIENT: {client}")
 print(f"SERVICE_MANAGEMENT: {management}")
@@ -186,14 +188,16 @@ if "onlyoffice" not in existsnetwork:
 if arch_name == "x86_64" or arch_name == "AMD64":
     print("CPU Type: x86_64 -> run db.yml")
     os.environ["MYSQL_DATABASE"] = mysql_database
-    subprocess.run(["docker", "compose", "-f",
-                   os.path.join(dockerDir, "db.yml"), "up", "-d"])
+    subprocess.run(["docker", "compose",
+                    "-f", os.path.join(dockerDir, "db.yml"), 
+                    "-f", os.path.join(dockerDir, "db.dev.yml"), "up", "-d"])
 elif arch_name == "arm64":
     print("CPU Type: arm64 -> run db.yml with arm64v8 image")
     os.environ["MYSQL_IMAGE"] = "arm64v8/mysql:8.3.0-oracle"
     os.environ["MYSQL_DATABASE"] = mysql_database
-    subprocess.run(["docker", "compose", "-f",
-                   os.path.join(dockerDir, "db.yml"), "up", "-d"])
+    subprocess.run(["docker", "compose", 
+                    "-f", os.path.join(dockerDir, "db.yml"), 
+                    "-f", os.path.join(dockerDir, "db.dev.yml"), "up", "-d"])
 else:
     print("Error: Unknown CPU Type:", arch_name)
     sys.exit(1)
@@ -315,6 +319,7 @@ os.environ["Baseimage_Nodejs_Run"] = "onlyoffice/4testing-docspace-nodejs-runtim
 os.environ["Baseimage_Proxy_Run"] = "onlyoffice/4testing-docspace-proxy-runtime:" + proxy_version
 os.environ["DOCUMENT_SERVER_IMAGE_NAME"] = document_server_image_name
 os.environ["SERVICE_DOCEDITOR"] = doceditor
+os.environ["SERVICE_SDK"] = sdk
 os.environ["SERVICE_LOGIN"] = login
 os.environ["SERVICE_MANAGEMENT"] = management
 os.environ["SERVICE_CLIENT"] = client
@@ -343,6 +348,7 @@ print("Docker files root directory:", dockerDir)
 
 print()
 print(f"SERVICE_DOCEDITOR: {doceditor}")
+print(f"SERVICE_SDK: {sdk}")
 print(f"SERVICE_LOGIN: {login}")
 print(f"SERVICE_CLIENT: {client}")
 print(f"SERVICE_MANAGEMENT: {management}")

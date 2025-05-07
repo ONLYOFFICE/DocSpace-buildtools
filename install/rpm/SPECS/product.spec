@@ -30,7 +30,7 @@ Source6:        %{product}.rpmlintrc
 
 BuildRequires:  nodejs >= 18.0
 BuildRequires:  yarn
-BuildRequires:  dotnet-sdk-8.0 >= 8.0.402
+BuildRequires:  dotnet-sdk-9.0
 BuildRequires:  unzip
 BuildRequires:  java-21-openjdk-headless
 BuildRequires:  maven
@@ -58,6 +58,7 @@ Requires:       %name-identity-authorization = %version-%release
 Requires:       %name-identity-api = %version-%release
 Requires:       %name-studio = %version-%release
 Requires:       %name-studio-notify = %version-%release
+Requires:       %name-sdk = %version-%release
 Requires:       openssl
 
 Conflicts:      %name-radicale
@@ -72,13 +73,14 @@ predefined permissions.
 %prep
 rm -rf %{_rpmdir}/%{_arch}/%{name}-* %{_builddir}/*
 
-tar -xf %{SOURCE0} --transform='s,^[^/]\+,buildtools,'   -C %{_builddir} 
-tar -xf %{SOURCE1} --transform='s,^[^/]\+,client,'       -C %{_builddir} 
-tar -xf %{SOURCE2} --transform='s,^[^/]\+,server,'       -C %{_builddir} 
+tar -xf %{SOURCE0} --transform='s,^[^/]\+,buildtools,'   -C %{_builddir} &
+tar -xf %{SOURCE1} --transform='s,^[^/]\+,client,'       -C %{_builddir} &
+tar -xf %{SOURCE2} --transform='s,^[^/]\+,server,'       -C %{_builddir} &
+tar -xf %{SOURCE4} --transform='s,^[^/]\+,campaigns,'    -C %{_builddir} &
+tar -xf %{SOURCE5} --transform='s,^[^/]\+,plugins,'      -C %{_builddir} &
+wait
 tar -xf %{SOURCE3} --transform='s,^[^/]\+,DocStore,'     -C %{_builddir}/server/products/ASC.Files/Server
-tar -xf %{SOURCE4} --transform='s,^[^/]\+,campaigns,'    -C %{_builddir}
-tar -xf %{SOURCE5} --transform='s,^[^/]\+,plugins,'      -C %{_builddir}
-cp %{SOURCE6} .
+cp -rf %{SOURCE6} .
 
 %include build.spec
 
@@ -101,11 +103,23 @@ if [ -f /etc/nginx/conf.d/onlyoffice.conf ]; then
     systemctl reload nginx
 fi
 
+%pre identity-api
+
+# (DS v3.1.0) fix encryption key generation issue
+ENCRYPTION_PATH=%{_sysconfdir}/onlyoffice/%{product}/.private/encryption
+if [ "$1" -eq 2 ] && [ ! -f "${ENCRYPTION_PATH}" ]; then
+  echo 'secret' > "${ENCRYPTION_PATH}" && chmod 600 "${ENCRYPTION_PATH}"
+fi
+
 %post 
 
 %preun
 
 %postun
+
+if [ "$1" -eq 0 ]; then
+    rm -rf %{buildpath}
+fi
 
 %clean
 

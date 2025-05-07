@@ -47,7 +47,7 @@ while [ "$1" != "" ]; do
             echo "      -sp, --srcpath             path to AppServer root directory (by default=/AppServer)"
             echo "      -bp, --buildpath           path where generated output is placed (by default=/publish)"
             echo "      -sc, --self-contained      publish the .NET runtime with your application (by default=false)"
-            echo "      -ar, --arguments           additional arguments publish the .NET runtime with your application"
+            echo "      -ar, --arguments           additional arguments for the dotnet publish command"
             echo "      -pc, --publish-configuration dotnet publish configuration Ex. Release/Debug"
             echo "      -?, -h, --help             this help"
             echo "  Examples"
@@ -110,5 +110,5 @@ for SERVICE in "${services_name_backend_nodejs[@]}" "${services_name_backend_jav
   echo "== Publish ${SERVICE} project =="
   SERVICE_DIR="$(find ${SRC_PATH} -type d -name ${SERVICE})"
   mkdir -p ${BUILD_PATH}/services/${SERVICE}/service/
-  [ -n "${SERVICE_DIR}" ] && cp -arfv ${SERVICE_DIR}/* ${BUILD_PATH}/services/${SERVICE}/service/
+  [ -n "${SERVICE_DIR}" ] && cp -arf ${SERVICE_DIR}/* ${BUILD_PATH}/services/${SERVICE}/service/
 done

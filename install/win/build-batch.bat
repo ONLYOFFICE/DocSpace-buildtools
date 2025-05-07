@@ -1,8 +1,8 @@
 REM echo ######## Set variables ########
 set "publisher="Ascensio System SIA""
 set "nuget="%cd%\buildtools\install\win\nuget.exe""
-set "opensearch_version=2.11.1"
-set "openresty_version=1.25.3.2"
+set "opensearch_version=2.18.0"
+set "openresty_version=1.27.1.1"
 
 REM echo ######## Extracting and preparing files to build ########
 %sevenzip% x buildtools\install\win\opensearch-%opensearch_version%.zip -o"buildtools\install\win" -y
@@ -46,6 +46,8 @@ copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\D
 copy buildtools\install\win\tools\DocEditor.xml "buildtools\install\win\Files\tools\DocEditor.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\Login.exe" /y
 copy buildtools\install\win\tools\Login.xml "buildtools\install\win\Files\tools\Login.xml" /y
+copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\Sdk.exe" /y
+copy buildtools\install\win\tools\Sdk.xml "buildtools\install\win\Files\tools\Sdk.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\OpenSearch\tools\OpenSearch.exe" /y
 copy buildtools\install\win\tools\OpenSearch.xml "buildtools\install\win\OpenSearch\tools\OpenSearch.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\OpenSearchStack\tools\OpenSearchDashboards.exe" /y

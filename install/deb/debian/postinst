@@ -47,8 +47,11 @@ case "$1" in
 		REDIS_HOST="$RET"
 		db_get {{product}}/redis-port || true
 		REDIS_PORT="$RET"
+		db_get {{product}}/redis-db || true
+        REDIS_DB="$RET"
 
 		[ -n "$REDIS_HOST" ] && args+=(-rdh "$REDIS_HOST" -rdp "$REDIS_PORT" );
+		[ -n "$REDIS_DB" ] && args+=(-rdb "$REDIS_DB")
 
 		db_get {{product}}/rabbitmq-host || true
 		RABBITMQ_HOST="$RET"

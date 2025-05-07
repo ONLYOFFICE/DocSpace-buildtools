@@ -1,0 +1,25 @@
+name: Check Code Comments for Non-ASCII Characters
+
+on:
+  pull_request:
+    branches:
+      - release/*
+      - hotfix/*
+      - develop
+
+jobs:
+  check-comments:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Run comment checker
+        run: python .github/scripts/check-comments.py

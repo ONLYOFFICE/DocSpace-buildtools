@@ -68,7 +68,7 @@ IDENTITY_MODULES+=("registration/registration-container")
 cd ${SRC_PATH}/server/common/ASC.Identity/
 
 # Build and publish identity services
-mvn -B dependency:go-offline
+mvn -B dependency:go-offline -Dorg.slf4j.simpleLogger.defaultLogLevel=warn
 for i in "${!IDENTITY_NAMES[@]}"; do
   echo "== Build ${IDENTITY_NAMES[$i]} project =="
   mvn clean package -B -DskipTests -pl "${IDENTITY_MODULES[$i]}" -am

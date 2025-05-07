@@ -61,9 +61,30 @@ $psql_version = '14.0'
 
 $path_prereq = "${pwd}\buildtools\install\win\"
 
-$opensearch_version = '2.11.1'
+$opensearchstack_path = "${pwd}\buildtools\install\win\OpenSearchStack\"
 
-$openresty_version = '1.25.3.2'
+$opensearch_version = '2.18.0'
+
+$opensearchdashboards_version = '2.18.0'
+
+$openresty_version = '1.27.1.1'
+
+$fluentbit_version = '3.2.4'
+
+$opensearchstack_components = @(
+
+  @{
+    download_allways = $false;
+    name = "opensearch-dashboards-${opensearchdashboards_version}-windows-x64.zip";
+    link = "https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/${opensearchdashboards_version}/opensearch-dashboards-${opensearchdashboards_version}-windows-x64.zip";
+  }
+
+  @{
+    download_allways = $false;
+    name = "fluent-bit-${fluentbit_version}-win64.zip";
+    link = "https://packages.fluentbit.io/windows/fluent-bit-${fluentbit_version}-win64.zip";
+  }
+)
 
 $prerequisites = @(
   
@@ -131,7 +152,6 @@ $prerequisites = @(
   }
 )
 
-
 $path_enterprise_prereq = "${pwd}\buildtools\install\win\redist\"
 
 $enterprise_prerequisites = @(
@@ -143,14 +163,14 @@ $enterprise_prerequisites = @(
 
   @{
     download_allways = $false;
-    name = "aspnetcore-runtime-8.0.2-win-x64.exe";
-    link = "https://download.visualstudio.microsoft.com/download/pr/34d3e426-9f3c-45a6-8496-f21b3adbbf5f/475aec17378cc8ab0fcfe535e84698f9/aspnetcore-runtime-8.0.2-win-x64.exe";
+    name = "aspnetcore-runtime-9.0.0-win-x64.exe";
+    link = "https://download.visualstudio.microsoft.com/download/pr/815e6104-b92c-4cd5-8971-cba2f685002a/37befaa217f3269a152016da80a922c1/aspnetcore-runtime-9.0.0-win-x64.exe";
   }
 
   @{
     download_allways = $false;
-    name = "dotnet-runtime-8.0.2-win-x64.exe";
-    link = "https://download.visualstudio.microsoft.com/download/pr/a4bc7333-6e30-4e2d-b300-0b4f23537e5b/4b81af6d46a02fba5d9ce030af438c67/dotnet-runtime-8.0.2-win-x64.exe";
+    name = "dotnet-runtime-9.0.0-win-x64.exe";
+    link = "https://download.visualstudio.microsoft.com/download/pr/99bd07c2-c95c-44dc-9d47-36d3b18df240/bdf26c62f69c1b783687c1dce83ccf7a/dotnet-runtime-9.0.0-win-x64.exe";
   }
 
   @{
@@ -173,14 +193,14 @@ $enterprise_prerequisites = @(
 
   @{  
     download_allways = $false; 
-    name = "mysql-connector-odbc-8.0.37-win32.msi";
-    link = "https://cdn.mysql.com/Downloads/Connector-ODBC/8.0/mysql-connector-odbc-8.0.37-win32.msi";
+    name = "mysql-connector-odbc-8.4.0-winx64.msi";
+    link = "https://cdn.mysql.com/Downloads/Connector-ODBC/8.4/mysql-connector-odbc-8.4.0-winx64.msi";
   }
 
   @{  
     download_allways = $false; 
-    name = "mysql-installer-community-8.0.37.0.msi";
-    link = "https://cdn.mysql.com/Downloads/MySQLInstaller/mysql-installer-community-8.0.37.0.msi";
+    name = "mysql-8.4.3-winx64.msi";
+    link = "https://cdn.mysql.com/Downloads/MySQL-8.4/mysql-8.4.3-winx64.msi";
   }
 
   @{  
@@ -242,8 +262,16 @@ $enterprise_prerequisites = @(
     name = "jdk-21_windows-x64_bin.msi";
     link = "https://download.oracle.com/java/21/latest/jdk-21_windows-x64_bin.msi"
   }
+  
+  @{
+    download_allways = $false;
+    name = "FireDaemon-OpenSSL-x64-3.3.0.exe";
+    link = "https://download.firedaemon.com/FireDaemon-OpenSSL/FireDaemon-OpenSSL-x64-3.3.0.exe"
+  }
 )
 
 DownloadComponents $prerequisites $path_prereq
 
 DownloadComponents $enterprise_prerequisites $path_enterprise_prereq
+
+DownloadComponents $opensearchstack_components $opensearchstack_path

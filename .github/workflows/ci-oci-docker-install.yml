@@ -1,11 +1,16 @@
 name: Install OneClickInstall Docker
 
 on:
-  pull_request:
-    types: [opened, reopened, synchronize]
+  schedule:
+    - cron: '00 20 * * 0'
+  push:
+    branches:
+      - 'hotfix/**'
+      - 'release/**'
+      - 'develop'
     paths:
-      - '.github/workflows/ci-oci-docker-install.yml'
       - 'install/OneClickInstall/install-Docker.sh'
+      - 'install/docker/*.yml'
   workflow_dispatch:
     inputs:
       offline:
@@ -18,11 +23,6 @@ jobs:
   Install-OneClickInstall-Docker:
     runs-on: ubuntu-22.04
     steps:
-      - name: Determine Branch Name
-        run: |
-          BRANCH_NAME=$([ "${{ github.event_name }}" = "pull_request" ] && echo "${{ github.event.pull_request.head.ref }}" || echo "${GITHUB_REF#refs/heads/}")
-          echo "BRANCH_NAME=${BRANCH_NAME:-master}" >> $GITHUB_ENV
-
       - name: Free Disk Space
         run: |
           sudo docker image prune --all --force
@@ -32,7 +32,7 @@ jobs:
           wget https://download.onlyoffice.com/docspace/docspace-enterprise-install.sh
           sed '/bash install-Docker.sh/i sed -i "1i set -x" install-Docker.sh' -i docspace-enterprise-install.sh
           sed '/bash install-Docker.sh/i sed -i "/docker-compose.*up -d/ s/$/ --quiet-pull/" install-Docker.sh' -i docspace-enterprise-install.sh
-          sudo bash docspace-enterprise-install.sh docker -docsi onlyoffice/documentserver-ee -skiphc true -noni true $([ ${{ env.BRANCH_NAME }} != "master" ] && echo "-gb ${{ env.BRANCH_NAME }} -s 4testing-") || exit $?
+          sudo bash docspace-enterprise-install.sh docker -docsi onlyoffice/documentserver-ee -skiphc true -noni true $([ ${{ github.ref_name }} != "master" ] && echo "-gb ${{ github.ref_name }} -s 4testing-") || exit $?
           
           echo -n "Waiting for all containers to start..."
           timeout 300 bash -c 'while docker ps | grep -q "starting"; do sleep 5; done' && echo "OK" || echo "container_status=timeout" >> $GITHUB_ENV
@@ -67,10 +67,17 @@ jobs:
           esac
 
       - name: Checkout repository
-        if: ${{ github.event.inputs.offline == 'true' }}
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.BRANCH_NAME }}
+          ref: ${{ github.ref_name }}
+
+      - name: "Checking Docker scripts for errors"
+        run: |
+          set -eux
+          sudo apt-get install -y shellcheck
+          find install/docker -type f -name "*.sh" | cat - <(echo "install/OneClickInstall/install-Docker.sh") \
+            | xargs shellcheck --exclude="$(awk '!/^#|^$/ {print $1}' tests/lint/sc_ignore | paste -sd ",")" --severity=warning | tee sc_output
+          awk '/\(warning\):/ {w++} /\(error\):/ {e++} END {if (w+e) printf "::warning ::ShellCheck detected %d warnings and %d errors\n", w+0, e+0}' sc_output
 
       - name: Free Disk Space
         if: ${{ github.event.inputs.offline == 'true' }}

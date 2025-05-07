@@ -56,13 +56,27 @@ done
 
 echo "== FRONT-END-BUILD =="
 
-cd ${SRC_PATH}
-# debug config
 if [ "$DEBUG_INFO" = true ]; then
 	pip install -r ${SRC_PATH}/buildtools/requirements.txt --break-system-packages
 	python3 ${SRC_PATH}/buildtools/debuginfo.py
 fi 
+
 cd ${SRC_PATH}/client
+
 yarn install
-yarn ${BUILD_ARGS}
-yarn ${DEPLOY_ARGS}
+node common/scripts/before-build.js
+
+CLIENT_PACKAGES+=("@docspace/client")
+CLIENT_PACKAGES+=("@docspace/login")
+CLIENT_PACKAGES+=("@docspace/doceditor")
+CLIENT_PACKAGES+=("@docspace/management")
+CLIENT_PACKAGES+=("@docspace/sdk")
+
+export TS_ERRORS_IGNORE=true
+for PKG in ${CLIENT_PACKAGES[@]}; do
+  yarn workspace ${PKG} ${BUILD_ARGS} $([[ "${PKG}" =~ (client|management) ]] && echo "--env lint=false")
+  yarn workspace ${PKG} ${DEPLOY_ARGS}
+done
+
+cp -rf public "${SRC_PATH}/publish/web/"
+node common/scripts/minify-common-locales.js

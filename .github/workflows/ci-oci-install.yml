@@ -1,20 +1,15 @@
 name: Install OneClickInstall DocSpace
 
 on:
-  pull_request:
-    types: [opened, reopened, synchronize]
-    paths:
-      - '.github/workflows/ci-oci-install.yml'
-      - 'install/OneClickInstall/install-Debian/**'
-      - 'install/OneClickInstall/install-RedHat/**'
-      - 'install/OneClickInstall/install-Debian.sh'
-      - 'install/OneClickInstall/install-RedHat.sh'
-
   schedule:
-    - cron: '00 20 * * 6'  # At 23:00 on Saturday.
+    - cron: '00 20 * * 0'
 
   workflow_dispatch:
     inputs:
+      rhel9:
+        type: boolean
+        description: 'RHEL 9'
+        default: true
       centos9s:
          type: boolean
          description: 'CentOS 9 Stream'
@@ -26,10 +21,6 @@ on:
       debian12:
          type: boolean
          description: 'Debian 12'
-         default: true
-      ubuntu2004:
-         type: boolean
-         description: 'Ubuntu 20.04'
          default: true
       ubuntu2204:
          type: boolean
@@ -43,6 +34,18 @@ on:
          type: boolean
          description: 'Fedora 40'
          default: true
+      fedora41:
+        type: boolean
+        description: 'Fedora 41'
+        default: true
+      deb_build:
+        type: boolean
+        description: "Run tests on DEB-based distros"
+        default: true
+      rpm_build:
+        type: boolean
+        description: "Run tests on RPM-based distros"
+        default: true
 
 jobs:
   prepare:
@@ -69,24 +72,33 @@ jobs:
         run: |
           matrix=$(echo '{
             "include": [
-              {"execute": '${{ github.event.inputs.centos9s || true }}', "name": "CentOS9S", "os": "centos9s", "distr": "generic"},
-              {"execute": '${{ github.event.inputs.debian11 || true }}', "name": "Debian11", "os": "debian11", "distr": "generic"},
-              {"execute": '${{ github.event.inputs.debian12 || true }}', "name": "Debian12", "os": "debian12", "distr": "generic"},
-              {"execute": '${{ github.event.inputs.ubuntu2004 || true }}', "name": "Ubuntu20.04", "os": "ubuntu2004", "distr": "generic"},
-              {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu22.04", "os": "ubuntu2204", "distr": "generic"},
-              {"execute": '${{ github.event.inputs.ubuntu2404 || true }}', "name": "Ubuntu24.04", "os": "ubuntu-24.04", "distr": "bento"},
-              {"execute": '${{ github.event.inputs.fedora40 || true }}', "name": "Fedora40", "os": "fedora-40", "distr": "bento"}
+              {"execute": '${{ github.event.inputs.rhel9 || true }}', "name": "RHEL 9", "os": "rhel9", "distr": "generic"},
+              {"execute": '${{ github.event.inputs.centos9s || true }}', "name": "CentOS9s", "os": "base-centos9s", "distr": "onlyoffice"},
+              {"execute": '${{ github.event.inputs.debian11 || true }}', "name": "Debian11", "os": "base-debian11", "distr": "onlyoffice"},
+              {"execute": '${{ github.event.inputs.debian12 || true }}', "name": "Debian12", "os": "base-debian12", "distr": "onlyoffice"},
+              {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu22.04", "os": "base-ubuntu2204", "distr": "onlyoffice"},
+              {"execute": '${{ github.event.inputs.ubuntu2404 || true }}', "name": "Ubuntu24.04", "os": "base-ubuntu2404", "distr": "onlyoffice"},
+              {"execute": '${{ github.event.inputs.fedora40 || true }}', "name": "Fedora40", "os": "base-fedora40", "distr": "onlyoffice"},
+              {"execute": '${{ github.event.inputs.fedora41 || true }}', "name": "Fedora41", "os": "base-fedora41", "distr": "onlyoffice"}
             ]
-          }' | jq -c '.include')
+          }')            
 
-          matrix=$(jq -c --arg REDHAT_CHANGED "${{ env.redhat_changed }}" --arg DEBIAN_CHANGED "${{ env.debian_changed }}" '
-            { include: [.[] | select(
-                ($REDHAT_CHANGED == $DEBIAN_CHANGED and .execute == true) or
-                ($REDHAT_CHANGED == "true" and (.name | test("CentOS|Fedora"))) or
-                ($DEBIAN_CHANGED == "true" and (.name | test("Debian|Ubuntu"))))]
-            }' <<< "$matrix")
+          matrix=$(jq -c --argjson debuild "${{ github.event.inputs.deb_build||true }}" --argjson rpmbuild "${{ github.event.inputs.rpm_build||true }}" \
+          '{include:[.include[]|select(.execute and(
+            ($debuild and(.name|test("Debian|Ubuntu"))) or
+            ($rpmbuild and(.name|test("CentOS|Fedora|RHEL")))
+          ))]}' <<< "$matrix")
 
-          echo "matrix=${matrix}" >> $GITHUB_OUTPUT
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            matrix=$(jq -c --arg REDHAT_CHANGED "${{ env.redhat_changed }}" --arg DEBIAN_CHANGED "${{ env.debian_changed }}" \
+            '{include:[.include[]|select(.execute and(
+              ($REDHAT_CHANGED==$DEBIAN_CHANGED) or
+              ($REDHAT_CHANGED=="true" and(.name|test("CentOS|Fedora|RHEL"))) or
+              ($DEBIAN_CHANGED=="true" and(.name|test("Debian|Ubuntu")))
+            ))]}' <<< "$matrix")
+          fi
+        
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
 
   vagrant-up:
     name: "Test DocSpace with ${{ matrix.name}}"
@@ -99,6 +111,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: "Checking scripts for errors"
+        run: |
+          set -eux
+          sudo apt-get install -y shellcheck
+          find install/OneClickInstall tests -type f -name "*.sh" ! -path "install/OneClickInstall/install-Docker.sh" \
+            | xargs shellcheck --exclude="$(awk '!/^#|^$/ {print $1}' tests/lint/sc_ignore | paste -sd ",")" --severity=warning | tee sc_output
+          awk '/\(warning\):/ {w++} /\(error\):/ {e++} END {if (w+e) printf "::warning ::ShellCheck detected %d warnings and %d errors\n", w+0, e+0}' sc_output
 
       - name: Set up Python 3.
         uses: actions/setup-python@v5
@@ -137,7 +157,7 @@ jobs:
             RAM='8192' \
             CPU='3' \
             ARGUMENTS="-arg '--skiphardwarecheck true'" \
-            vagrant up
+            vagrant up --provider=virtualbox
           on_retry_command: |
             echo "RUN CLEAN UP: Destroy vagrant and one more try"
             cd tests/vagrant
@@ -145,7 +165,7 @@ jobs:
             vagrant destroy --force
 
       - name: "Test Local scripts with ${{matrix.name}}"
-        if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
+        if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
         uses: nick-fields/retry@v3
         with:
           max_attempts: 2
@@ -162,7 +182,7 @@ jobs:
             DOWNLOAD_SCRIPT='-ds false' \
             TEST_REPO='-tr true' \
             ARGUMENTS="-arg '--skiphardwarecheck true --localscripts true'" \
-            vagrant up
+            vagrant up --provider=virtualbox
           on_retry_command: |
             echo "RUN CLEAN UP: Destroy vagrant and one more try"
             cd tests/vagrant
