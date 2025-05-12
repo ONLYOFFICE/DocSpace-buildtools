@@ -154,7 +154,7 @@ fi
 if [ "$ENABLE_LOGGING" = "true" ]; then
     LOG_FILE="OneClick${SCRIPT_NAME%.sh}_$(date +%Y%m%d_%H%M%S).log"
     touch "${LOG_FILE}" || { echo "Failed to create log file"; exit 1; }
-    script -q -e /dev/null -c "bash ${SCRIPT_NAME} ${PARAMETERS}" 2>&1 | tee "${LOG_FILE}"
+    script -q -e "${LOG_FILE}" -c "bash ${SCRIPT_NAME} ${PARAMETERS}"
     EXIT_CODE=${PIPESTATUS[0]}
 else
     bash ${SCRIPT_NAME} ${PARAMETERS} || EXIT_CODE=$?
