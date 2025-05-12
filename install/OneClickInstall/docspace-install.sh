@@ -52,7 +52,7 @@ while [ "$1" != "" ]; do
 		-log | --logging )
 			if [ "$2" == "true" ] || [ "$2" == "false" ]; then
 				ENABLE_LOGGING=$2
-				shift
+				shift 2
 			fi
 		;;
 		
@@ -149,15 +149,18 @@ else
     exit 1
 fi
 
+[ "$LOCAL_SCRIPTS" != "true" ] && curl -s -O ${DOWNLOAD_URL_PREFIX}/${SCRIPT_NAME}
+
 if [ "$ENABLE_LOGGING" = "true" ]; then
     LOG_FILE="OneClick${SCRIPT_NAME%.sh}_$(date +%Y%m%d_%H%M%S).log"
     touch "${LOG_FILE}" || { echo "Failed to create log file"; exit 1; }
-    exec > >(tee "${LOG_FILE}") 2>&1
+    script -q -e /dev/null -c "bash ${SCRIPT_NAME} ${PARAMETERS}" 2>&1 | tee "${LOG_FILE}"
+    EXIT_CODE=${PIPESTATUS[0]}
+else
+    bash ${SCRIPT_NAME} ${PARAMETERS} || EXIT_CODE=$?
 fi
 
-[ "$LOCAL_SCRIPTS" != "true" ] && curl -s -O ${DOWNLOAD_URL_PREFIX}/${SCRIPT_NAME}
-bash ${SCRIPT_NAME} ${PARAMETERS} || EXIT_CODE=$?
 [ "$LOCAL_SCRIPTS" != "true" ] && rm ${SCRIPT_NAME}
-[ "$ENABLE_LOGGING" = "true" ] && [ $EXIT_CODE -eq 0 ] && rm "${LOG_FILE}"
+[ "$ENABLE_LOGGING" = "true" ] && [ ${EXIT_CODE:-0} -eq 0 ] && rm "${LOG_FILE}"
 
 exit ${EXIT_CODE:-0}
