@@ -161,6 +161,6 @@ else
 fi
 
 [ "$LOCAL_SCRIPTS" != "true" ] && rm ${SCRIPT_NAME}
-[ "$ENABLE_LOGGING" = "true" ] && [ ${EXIT_CODE:-0} -eq 0 ] && rm "${LOG_FILE}"
+[ "$ENABLE_LOGGING" = "true" ] && { [ "${EXIT_CODE:-0}" -eq 0 ] && rm -f "$LOG_FILE" || echo -e "\033[0;31mAn error occurred while executing the script. Log saved to: $LOG_FILE\033[0m"; }
 
 exit ${EXIT_CODE:-0}
