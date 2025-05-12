@@ -1,0 +1,53 @@
+name: Update README
+
+on:
+  push:
+    paths:
+      - '.github/workflows/ci-oci-install.yml'
+    branches:
+      - master
+
+permissions:
+  contents: write
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Install yq
+        run: |
+          sudo wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+          sudo chmod +x /usr/local/bin/yq
+      - name: Update OS list in README
+        run: |
+          OS_LIST=$(yq -r '.jobs.prepare.steps[] | select(.name == "Set matrix names") | .run' .github/workflows/ci-oci-install.yml \
+            | grep -oP '"name"\s*:\s*"\K[^"]+' \
+            | sed 's/^/- /')
+          {
+            echo '<!-- OS-SUPPORT-LIST-START -->'
+            echo "$OS_LIST"
+            echo '<!-- OS-SUPPORT-LIST-END -->'
+          } > os_block.tmp
+          awk '
+            BEGIN {in_block=0}
+            /<!-- OS-SUPPORT-LIST-START -->/ {while ((getline line < "os_block.tmp")>0) print line; in_block=1; next}
+            /<!-- OS-SUPPORT-LIST-END -->/   {in_block=0; next}
+            !in_block {print}
+          ' install/OneClickInstall/README.md > README.new \
+          && mv README.new install/OneClickInstall/README.md
+      - name: Commit changes (if any)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain)" ]; then
+            git add install/OneClickInstall/README.md
+            git commit -m "Update OS list in OCI README"
+            git pull --rebase --autostash
+            git push
+          else
+            echo "No changes to commit"
+          fi
+
