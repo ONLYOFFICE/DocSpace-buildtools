@@ -5,6 +5,12 @@ on:
     tags:
       - 'v*.*.*-server'
   workflow_dispatch:
+    inputs:
+      trigger:
+        description: 'Trigger creation of an offline archive'
+        required: true
+        default: true
+        type: boolean
 
 jobs:
   release:
@@ -15,24 +21,24 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Trigger creation of an offline archive
+        if: ${{ github.event.inputs.trigger == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.TOKEN }}
+          WORKFLOW_FILE: ci-oci-docker-install.yml
         run: |
-          curl -s -X POST -H "Accept: application/vnd.github.everest-preview+json" -u "${{ secrets.USERNAME }}:${{ secrets.TOKEN }}" \
-            "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/actions/workflows/103532315/dispatches" \
-            --data '{"ref":"'"${{ github.ref }}"'","inputs":{"offline":"true"}}'
-          sleep 5
+          echo "Dispatching workflow #${WORKFLOW_FILE} on ${{ github.repository }} (ref=${{ github.ref_name }})"
+          gh workflow run "${WORKFLOW_FILE}" --repo "${{ github.repository }}" --ref "${{ github.ref_name }}" --field offline=true && sleep 10
 
-          ACTION_RUN_ID=$(curl -s -u "${{ secrets.USERNAME }}:${{ secrets.TOKEN }}" \
-            "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/actions/workflows/103532315/runs" | \
-            jq -r ".workflow_runs[] | select(.head_branch==\"${GITHUB_REF#refs/heads/}\") | .id" | head -n 1)
-          [[ -z "${ACTION_RUN_ID}" || "${ACTION_RUN_ID}" == "null" ]] && { echo "Failed to initiate the workflow."; exit 1; }
+          RUN_ID=$(gh run list  --repo "${{ github.repository }}" --workflow "${WORKFLOW_FILE}" --branch "${{ github.ref_name }}" \
+              --json databaseId,status | jq -r '.[] | select(.status == "queued" or .status == "in_progress" ) | .databaseId' | head -n1) 
+          [ -z "$RUN_ID" ] && { echo "::error::[FAILED] Could not find a queued/in_progress run."; exit 1; }
 
-          while ACTION_STATUS=$(curl -s -u "${{ secrets.USERNAME }}:${{ secrets.TOKEN }}" \
-            "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/actions/runs/${ACTION_RUN_ID}" | jq -r '.status'); [[ "${ACTION_STATUS}" != "completed" ]]; do
-            echo "Current workflow status: ${ACTION_STATUS}" && sleep 10
-          done
-
-          ACTION_RESULT=$(curl -s -u "${{ secrets.USERNAME }}:${{ secrets.TOKEN }}" "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/actions/runs/${ACTION_RUN_ID}" | jq -r '.conclusion')
-          [[ "${ACTION_RESULT}" == "success" ]] && echo "Workflow completed successfully." || { echo "Workflow failed."; exit 1; }
+          echo "Monitoring run #${RUN_ID}…"
+          if gh run watch "${RUN_ID}" --repo "${{ github.repository }}" --interval 60 --exit-status; then
+            echo "Workflow #${RUN_ID} finished successfully."
+          else
+            echo "::error::Workflow #${RUN_ID} terminated with error." && exit 1
+          fi
 
       - name: Set environment variables
         run: |
