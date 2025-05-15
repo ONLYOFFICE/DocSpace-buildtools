@@ -54,6 +54,8 @@ client = f"{local_ip}:5001"
 identity_auth = f"{local_ip}:8080"
 identity_api = f"{local_ip}:9090"
 management = f"{local_ip}:5015"
+onlyflow_frontend = f"onlyoffice-langflow:3000"
+onlyflow_backend = f"onlyoffice-langflow:7860"
 portal_url = f"http://{local_ip}"
 
 force = False
@@ -124,6 +126,8 @@ print(f"SERVICE_SDK: {sdk}")
 print(f"SERVICE_LOGIN: {login}")
 print(f"SERVICE_CLIENT: {client}")
 print(f"SERVICE_MANAGEMENT: {management}")
+print(f"SERVICE_ONLYFLOW_FRONTEND: {onlyflow_frontend}")
+print(f"SERVICE_ONLYFLOW_BACKEND: {onlyflow_backend}")
 
 if identity == True:
     print(f"SERVICE_IDENTITY: {identity_auth}")
@@ -325,6 +329,8 @@ os.environ["SERVICE_MANAGEMENT"] = management
 os.environ["SERVICE_CLIENT"] = client
 os.environ["SERVICE_IDENTITY"] = identity_auth
 os.environ["SERVICE_IDENTITY_API"] = identity_api
+os.environ["SERVICE_ONLYFLOW_FRONTEND"] = onlyflow_frontend
+os.environ["SERVICE_ONLYFLOW_BACKEND"] = onlyflow_backend
 os.environ["ROOT_DIR"] = dir
 os.environ["BUILD_PATH"] = "/var/www"
 os.environ["SRC_PATH"] = os.path.join(dir, "publish/services")
@@ -352,6 +358,8 @@ print(f"SERVICE_SDK: {sdk}")
 print(f"SERVICE_LOGIN: {login}")
 print(f"SERVICE_CLIENT: {client}")
 print(f"SERVICE_MANAGEMENT: {management}")
+print(f"SERVICE_ONLYFLOW_FRONTEND: {onlyflow_frontend}")
+print(f"SERVICE_ONLYFLOW_BACKEND: {onlyflow_backend}")
 
 if identity == True:
     print(f"SERVICE_IDENTITY: {identity_auth}")

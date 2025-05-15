@@ -62,6 +62,7 @@ INSTALL_MYSQL_SERVER="true"
 INSTALL_DOCUMENT_SERVER="true"
 INSTALL_ELASTICSEARCH="true"
 INSTALL_FLUENT_BIT="true"
+INSTALL_LANGFLOW="true"
 INSTALL_PRODUCT="true"
 UNINSTALL="false"
 USERNAME=""
@@ -382,6 +383,13 @@ while [ "$1" != "" ]; do
 			fi
 		;;
 
+		-ilf | --installlangflow )
+			if [ "$2" != "" ]; then
+				INSTALL_LANGFLOW=$2
+				shift
+			fi
+		;;
+
 		-rdsh | --redishost )
 			if [ "$2" != "" ]; then
 				REDIS_HOST=$2
@@ -553,6 +561,7 @@ while [ "$1" != "" ]; do
 			echo "      -imysql, --installmysql           install or update mysql (true|false)"		
 			echo "      -ies, --installelastic            install or update elasticsearch (true|false)"
 			echo "      -ifb, --installfluentbit          install or update fluent-bit (true|false)"
+			echo "      -ilf, --installlangflow           install or update langflow (true|false)"
 			echo "      -du, --dashboardsusername         login for authorization in /dashboards/"
 			echo "      -dp, --dashboardspassword         password for authorization in /dashboards/"
 			echo "      -espr, --elasticprotocol          the protocol for the connection to elasticsearch (default value http)"
@@ -1050,12 +1059,9 @@ set_jwt_header () {
 	DOCUMENT_SERVER_JWT_HEADER="${DOCUMENT_SERVER_JWT_HEADER:-"AuthorizationJwt"}"
 }
 
-set_core_machinekey () {
+set_secrets () {
 	APP_CORE_MACHINEKEY="${APP_CORE_MACHINEKEY:-$(get_env_parameter "APP_CORE_MACHINEKEY" "${CONTAINER_NAME}")}"
 	[ "$UPDATE" != "true" ] && APP_CORE_MACHINEKEY="${APP_CORE_MACHINEKEY:-$(get_random_str 12)}"
-}
-
-set_identity_secrets () {
 	IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-$(get_env_parameter "IDENTITY_ENCRYPTION_SECRET" "${IDENTITY_CONTAINER_NAME}")}"
 	[ "${UPDATE}" = "true" ] && IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-"secret"}" # (DS v3.1.0) fix encryption key generation issue
 	IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-$(get_random_str 12)}"
@@ -1100,6 +1106,8 @@ set_docspace_params() {
 	
 	DASHBOARDS_USERNAME=${DASHBOARDS_USERNAME:-$(get_env_parameter "DASHBOARDS_USERNAME" "${CONTAINER_NAME}")}
 	DASHBOARDS_PASSWORD=${DASHBOARDS_PASSWORD:-$(get_env_parameter "DASHBOARDS_PASSWORD" "${CONTAINER_NAME}")}
+
+	ONLYFLOW_PG_PASSWORD=${ONLYFLOW_PG_PASSWORD:-$(get_env_parameter "ONLYFLOW_PG_PASSWORD")}
 
 	CERTIFICATE_PATH=${CERTIFICATE_PATH:-$(get_env_parameter "CERTIFICATE_PATH")}
 	CERTIFICATE_KEY_PATH=${CERTIFICATE_KEY_PATH:-$(get_env_parameter "CERTIFICATE_KEY_PATH")}
@@ -1214,6 +1222,16 @@ install_elasticsearch () {
 		docker-compose -f $BASE_DIR/opensearch.yml up -d
 	elif [ "$INSTALL_ELASTICSEARCH" == "pull" ]; then
 		docker-compose -f $BASE_DIR/opensearch.yml pull
+	fi
+}
+
+install_langflow () {
+	reconfigure ONLYFLOW_PG_PASSWORD "${ONLYFLOW_PG_PASSWORD:-$(get_random_str 12)}"
+	
+	if [ "$INSTALL_LANGFLOW" == "true" ]; then
+		[ -f $BASE_DIR/langflow.yml ] && docker-compose -f $BASE_DIR/langflow.yml up -d
+	elif [ "$INSTALL_LANGFLOW" == "pull" ]; then
+		[ -f $BASE_DIR/langflow.yml ] && docker-compose -f $BASE_DIR/langflow.yml pull
 	fi
 }
 
@@ -1482,8 +1500,7 @@ start_installation () {
 	set_jwt_secret
 	set_jwt_header
 
-	set_core_machinekey
-	set_identity_secrets
+	set_secrets
 
 	set_mysql_params
 
@@ -1504,6 +1521,8 @@ start_installation () {
 	install_redis
 
 	install_document_server
+
+	install_langflow
 
 	install_product
 

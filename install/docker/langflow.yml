@@ -1,0 +1,94 @@
+x-healthcheck: &x-healthcheck
+  interval: 60s
+  timeout: 10s
+  retries: 5
+  start_period: 20s
+
+services:
+  onlyoffice-langflow-backend:
+    image: ${REGISTRY}${ONLYFLOW_IMAGE_NAME}-backend:${ONLYFLOW_VERSION}
+    container_name: ${ONLYFLOW_HOST}-backend
+    restart: always
+    expose:
+      - "${ONLYFLOW_BACKEND_PORT}"
+    environment:
+      - DO_NOT_TRACK=true
+      - LANGFLOW_AUTO_LOGIN=true
+      - LANGFLOW_NEW_USER_IS_ACTIVE=False
+      - LANGFLOW_LOG_LEVEL=${LOG_LEVEL}
+      - LANGFLOW_CONFIG_DIR=/app/langflow
+      - LANGFLOW_LOG_FILE=/var/log/langflow/langflow.log
+      - LANGFLOW_DATABASE_URL=postgresql://${ONLYFLOW_PG_USER}:${ONLYFLOW_PG_PASSWORD}@${ONLYFLOW_PG_HOST}:${ONLYFLOW_PG_PORT}/${ONLYFLOW_PG_DATABASE}
+      - LANGFLOW_DATABASE_CONNECTION_RETRY=true
+      - HOST_QDRANT_SERVICE=${ONLYFLOW_QDRANT_HOST}
+      - HOST_QDRANT_PORT=${ONLYFLOW_QDRANT_HTTP_PORT}
+      - HOST_API_SERVICE=${SERVICE_API}
+      - HOST_FILES_SERVICE=${SERVICE_FILES}
+      - API_ROUTER_HOST=${APP_URL_PORTAL}
+      - OPENAI_API_KEY=${ONLYFLOW_OPENAI_API_KEY}
+    depends_on:
+      - onlyoffice-langflow-pgvector
+    volumes:
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}langflow_data:/app/langflow
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/langflow
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://${ONLYFLOW_HOST}-backend:${ONLYFLOW_BACKEND_PORT}/health')\" || exit 1"]
+      <<: *x-healthcheck
+
+  onlyoffice-langflow-frontend:
+    image: ${REGISTRY}${ONLYFLOW_IMAGE_NAME}-frontend:${ONLYFLOW_VERSION}
+    container_name: ${ONLYFLOW_HOST}-frontend
+    restart: always
+    expose:
+      - "${ONLYFLOW_FRONTEND_PORT}"
+    environment:
+      - BACKEND_URL=http://${ONLYFLOW_HOST}-backend:${ONLYFLOW_BACKEND_PORT}
+      - FRONTEND_PORT=${ONLYFLOW_FRONTEND_PORT}
+    depends_on:
+      - onlyoffice-langflow-backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://${ONLYFLOW_HOST}-frontend:${ONLYFLOW_FRONTEND_PORT}/onlyflow/health"]
+      <<: *x-healthcheck
+
+  onlyoffice-langflow-pgvector:
+    container_name: ${ONLYFLOW_PG_HOST}
+    image: ${REGISTRY}${ONLYFLOW_PG_IMAGE_NAME}
+    environment:
+      POSTGRES_USER: ${ONLYFLOW_PG_USER}
+      POSTGRES_PASSWORD: ${ONLYFLOW_PG_PASSWORD}
+      POSTGRES_DB: ${ONLYFLOW_PG_DATABASE}
+    expose:
+      - "${ONLYFLOW_PG_PORT}"
+    volumes:
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}langflow_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${ONLYFLOW_PG_USER}"]
+      <<: *x-healthcheck
+
+  onlyoffice-langflow-qdrant:
+    container_name: ${ONLYFLOW_QDRANT_HOST}
+    image: ${REGISTRY}${ONLYFLOW_QDRANT_IMAGE_NAME}
+    environment:
+      - QDRANT_ALLOW_PRIVATE_NETWORKS_ONLY=true
+      - QDRANT_SERVICE_HOST=0.0.0.0
+      - QDRANT_SERVICE_PORT=${ONLYFLOW_QDRANT_GPRC_PORT}
+      - QDRANT_REST_PORT=${ONLYFLOW_QDRANT_HTTP_PORT}
+    expose:
+      - "${ONLYFLOW_QDRANT_GPRC_PORT}"
+      - "${ONLYFLOW_QDRANT_HTTP_PORT}"
+    volumes:
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}langflow_qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/${ONLYFLOW_QDRANT_HTTP_PORT}' || exit 1"]
+      <<: *x-healthcheck
+
+networks:
+  default:
+    name: onlyoffice
+    external: true
+
+volumes:
+  log_data:
+  langflow_data:
+  langflow_pg_data:
+  langflow_qdrant_data:
