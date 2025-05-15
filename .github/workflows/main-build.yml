@@ -28,7 +28,7 @@ jobs:
     strategy:
       matrix:
         platform: [linux/amd64]
-        branch: ${{ fromJson(inputs.branches) || github.event.client_payload.branches }}
+        branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -80,7 +80,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        branch: ${{ fromJson(inputs.branches) || github.event.client_payload.branches }}
+        branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches) }}
     steps:
       - name: Trigger ci-oci-docker-install Workflow
         run: |
