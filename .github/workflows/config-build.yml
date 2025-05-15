@@ -27,4 +27,4 @@ jobs:
         run: |
           gh api --method POST /repos/${{ github.repository }}/dispatches \
             -f "event_type=config-trigger-action" \
-            -F "client_payload[branches]=${{ github.ref_name }}"
+            -f "client_payload[branches]=${{ github.ref_name }}"
