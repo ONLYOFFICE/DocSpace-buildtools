@@ -2,7 +2,7 @@ name: 4testing multiarch-cron-build
 
 on:
   schedule:
-    - cron: '0 20 * * *'
+    - cron: '0 20 * * *' # Every day at 20:00 UTC
 
 jobs:
 
@@ -18,16 +18,7 @@ jobs:
       - name: List Branches
         id: list-branches
         run: |
-          all_branches=$(git ls-remote -hq | sed -n 's/^[0-9a-f]\{40\}\s\+refs\/heads\//''/p')
-          matching_branches=$(
-            {
-              echo "$all_branches" | grep '^release/v[0-9]'
-              echo "$all_branches" | grep '^hotfix/v[0-9]'
-              echo "$all_branches" | grep '^develop$'
-            } | sed 's/^/"/; s/$/"/'
-          )
-          echo "json_output=[${matching_branches//$'\n'/,}]" | sed 's/"/\\"/g' >> $GITHUB_OUTPUT
-          echo "branches=${matching_branches//$'\n'/ }" | tr -d '[]\"' >> $GITHUB_OUTPUT  
+          echo "branches=$(git ls-remote --heads origin | grep -Po 'refs/heads/\K((release|hotfix)/v[0-9][^ ]*|develop)' | xargs)" >> $GITHUB_OUTPUT
 
       - name: Determine Priority Branch
         id: priority
@@ -54,7 +45,7 @@ jobs:
         run: |
           gh api --method POST /repos/${{ github.repository }}/dispatches \
             -f "event_type=cron-trigger-action" \
-            -F "client_payload[branches]=${{ steps.list-branches.outputs.json_output }}"
+            $(echo "${{ steps.list-branches.outputs.branches }}" | xargs -n1 printf -- '-f client_payload[branches][]=%s ')
 
       - name: Dispatch Action build packages
         if: ${{ github.event_name == 'schedule' && steps.priority.outputs.target_branch != '' && (steps.changes.outputs.build_deb == 'true' || steps.changes.outputs.build_rpm == 'true') }}
