@@ -53,20 +53,6 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - name: Checkout code
-        if: github.event_name == 'pull_request'
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Determine affected distributions
-        id: determine-distros
-        if: github.event_name == 'pull_request'
-        run: |
-          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
-          echo "debian_changed=$(echo "$CHANGED_FILES" | grep -q 'install-Debian' && echo true || echo false)" >> $GITHUB_ENV
-          echo "redhat_changed=$(echo "$CHANGED_FILES" | grep -q 'install-RedHat' && echo true || echo false)" >> $GITHUB_ENV 
-
       - name: Set matrix names
         id: set-matrix
         run: |
@@ -84,20 +70,11 @@ jobs:
           }')            
 
           matrix=$(jq -c --argjson debuild "${{ github.event.inputs.deb_build||true }}" --argjson rpmbuild "${{ github.event.inputs.rpm_build||true }}" \
-          '{include:[.include[]|select(.execute and(
+          '{include:[.include[]|select(.execute or
             ($debuild and(.name|test("Debian|Ubuntu"))) or
             ($rpmbuild and(.name|test("CentOS|Fedora|RHEL")))
-          ))]}' <<< "$matrix")
+          )]}' <<< "$matrix")
 
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            matrix=$(jq -c --arg REDHAT_CHANGED "${{ env.redhat_changed }}" --arg DEBIAN_CHANGED "${{ env.debian_changed }}" \
-            '{include:[.include[]|select(.execute and(
-              ($REDHAT_CHANGED==$DEBIAN_CHANGED) or
-              ($REDHAT_CHANGED=="true" and(.name|test("CentOS|Fedora|RHEL"))) or
-              ($DEBIAN_CHANGED=="true" and(.name|test("Debian|Ubuntu")))
-            ))]}' <<< "$matrix")
-          fi
-        
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
 
   vagrant-up:
