@@ -51,13 +51,6 @@ jobs:
             os: base-ubuntu2404
             name: "ubuntu2404"
 
-          - distr: onlyoffice
-            os: base-fedora41
-            name: "fedora41"
-
-          - distr: onlyoffice
-            os: base-fedora42
-            name: "fedora42"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
