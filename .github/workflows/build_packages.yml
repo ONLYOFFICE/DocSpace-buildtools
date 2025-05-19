@@ -220,6 +220,8 @@ jobs:
     if: ${{ success() }}
     steps:
       - name: Trigger CI-OCI-Install Workflow
+        env:
+          GH_TOKEN: ${{ secrets.TOKEN }}
         run: |
           deb_build="${{ github.event.inputs.deb_build }}" rpm_build="${{ github.event.inputs.rpm_build }}"
           [[ "${{ needs.prepare.outputs.build_all }}" == "true" ]] && deb_build="true" && rpm_build="true"
