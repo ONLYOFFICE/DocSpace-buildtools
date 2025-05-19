@@ -119,3 +119,9 @@ map $SERVICE_ONLYFLOW_BACKEND $service_onlyflow_backend {
     "" 127.0.0.1:7860;
     default $SERVICE_ONLYFLOW_BACKEND;
 }
+
+map $SERVICE_AI_GATEWAY_API $service_ai_gateway_api {
+    volatile;
+    "" 127.0.0.1:8000;
+    default $SERVICE_AI_GATEWAY_API;
+}
