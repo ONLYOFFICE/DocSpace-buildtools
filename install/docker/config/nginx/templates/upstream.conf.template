@@ -66,12 +66,6 @@ map $SERVICE_IDENTITY_API $service_identity_api {
     default $SERVICE_IDENTITY_API;
 }
 
-map $SERVICE_AI $service_ai {
-    volatile;
-    "" 127.0.0.1:8000;
-    default $SERVICE_AI;
-}
-
 map $SERVICE_IDENTITY $service_identity {
     volatile;
     "" 127.0.0.1:8080;

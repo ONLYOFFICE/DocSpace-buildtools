@@ -114,8 +114,8 @@ services:
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-socket:${DOCKER_TAG}"
     container_name: ${SOCKET_HOST}
     healthcheck:
-      <<: *x-healthcheck
-      test: curl --fail http://${SERVICE_SOCKET}/health/ || exit 1
+     <<: *x-healthcheck
+     test: curl --fail http://${SERVICE_SOCKET}/health/ || exit 1
     expose:
       - ${SERVICE_PORT}
 
@@ -156,8 +156,8 @@ services:
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-ssoauth:${DOCKER_TAG}"
     container_name: ${SSOAUTH_HOST}
     healthcheck:
-      <<: *x-healthcheck
-      test: curl --fail http://${SERVICE_SSOAUTH}/health/ || exit 1
+     <<: *x-healthcheck
+     test: curl --fail http://${SERVICE_SSOAUTH}/health/ || exit 1
     expose:
       - ${SERVICE_PORT}
       - "9834"
@@ -171,7 +171,7 @@ services:
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_DOCEDITOR}/doceditor/health || exit 1
-
+  
   onlyoffice-sdk:
     <<: *x-service-base
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-sdk:${DOCKER_TAG}"
@@ -227,7 +227,6 @@ services:
       - SERVICE_PEOPLE_SERVER=${SERVICE_PEOPLE_SERVER}
       - SERVICE_SOCKET=${SERVICE_SOCKET}
       - SERVICE_IDENTITY_API=${SERVICE_IDENTITY_API}
-      - SERVICE_AI=${SERVICE_AI}
       - SERVICE_IDENTITY=${SERVICE_IDENTITY}
       - SERVICE_STUDIO_NOTIFY=${SERVICE_STUDIO_NOTIFY}
       - SERVICE_API=${SERVICE_API}

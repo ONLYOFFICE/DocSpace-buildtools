@@ -53,7 +53,6 @@ login = f"{local_ip}:5011"
 client = f"{local_ip}:5001"
 identity_auth = f"{local_ip}:8080"
 identity_api = f"{local_ip}:9090"
-ai = f"{local_ip}:8000"
 management = f"{local_ip}:5015"
 onlyflow_frontend = f"onlyoffice-langflow:3000"
 onlyflow_backend = f"onlyoffice-langflow:7860"
@@ -135,9 +134,6 @@ if identity == True:
     print(f"SERVICE_IDENTITY: {identity_auth}")
     print(f"SERVICE_IDENTITY_API: {identity_api}")
 
-if standalone == False:
-    print(f"SERVICE_AI: {ai}")
-
 # print(f"DOCSPACE_APP_URL: {portal_url}")
 
 print()
@@ -198,14 +194,14 @@ if arch_name == "x86_64" or arch_name == "AMD64":
     print("CPU Type: x86_64 -> run db.yml")
     os.environ["MYSQL_DATABASE"] = mysql_database
     subprocess.run(["docker", "compose",
-                    "-f", os.path.join(dockerDir, "db.yml"),
+                    "-f", os.path.join(dockerDir, "db.yml"), 
                     "-f", os.path.join(dockerDir, "db.dev.yml"), "up", "-d"])
 elif arch_name == "arm64":
     print("CPU Type: arm64 -> run db.yml with arm64v8 image")
     os.environ["MYSQL_IMAGE"] = "arm64v8/mysql:8.3.0-oracle"
     os.environ["MYSQL_DATABASE"] = mysql_database
-    subprocess.run(["docker", "compose",
-                    "-f", os.path.join(dockerDir, "db.yml"),
+    subprocess.run(["docker", "compose", 
+                    "-f", os.path.join(dockerDir, "db.yml"), 
                     "-f", os.path.join(dockerDir, "db.dev.yml"), "up", "-d"])
 else:
     print("Error: Unknown CPU Type:", arch_name)
@@ -334,7 +330,6 @@ os.environ["SERVICE_MANAGEMENT"] = management
 os.environ["SERVICE_CLIENT"] = client
 os.environ["SERVICE_IDENTITY"] = identity_auth
 os.environ["SERVICE_IDENTITY_API"] = identity_api
-os.environ["SERVICE_AI"] = ai
 os.environ["SERVICE_ONLYFLOW_FRONTEND"] = onlyflow_frontend
 os.environ["SERVICE_ONLYFLOW_BACKEND"] = onlyflow_backend
 os.environ["SERVICE_AI_GATEWAY_API"] = ai_gateway_api
@@ -371,9 +366,6 @@ print(f"SERVICE_ONLYFLOW_BACKEND: {onlyflow_backend}")
 if identity == True:
     print(f"SERVICE_IDENTITY: {identity_auth}")
     print(f"SERVICE_IDENTITY_API: {identity_api}")
-
-if standalone == False:
-    print(f"SERVICE_AI: {ai}")
 
 print()
 print("FORCE REBUILD BASE IMAGES:", force)
