@@ -181,6 +181,7 @@ RUN echo "--- install runtime node.22 ---" && \
         nano \
         curl \
         vim \
+        supervisor \
         python3-pip && \
         pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces && \
         echo "--- clean up ---" && \
@@ -188,10 +189,31 @@ RUN echo "--- install runtime node.22 ---" && \
         /var/lib/apt/lists/* \
         /tmp/*
     
-    COPY --from=src --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
+     COPY --from=src --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
+     # Copy docker-entrypoint.sh
+     COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
+
+    # ASC.Sdk
+    COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/ ${BUILD_PATH}/products/ASC.Sdk/sdk/
+
+    # ASC.Editors
+    COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/editor/ ${BUILD_PATH}/products/ASC.Editors/editor/
+
+    # ASC.Login
+    COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/login/ ${BUILD_PATH}/products/ASC.Login/login/
+
+    # ASC.Socket.IO
+    COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Socket.IO ${BUILD_PATH}/services/ASC.Socket.IO/
+
+    # ASC.SsoAuth
+    COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.SsoAuth ${BUILD_PATH}/services/ASC.SsoAuth/
+
+    # Copy supervisord config
+    COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
     USER onlyoffice
-    EXPOSE 5050
-    ENTRYPOINT ["python3", "docker-entrypoint.py"]
+    EXPOSE 5011 5013 5099 9834 9899
+    ENTRYPOINT ["bash", "/usr/bin/docker-entrypoint.sh"]
     
     FROM eclipse-temurin:21-jre-alpine AS javarun
     ARG BUILD_PATH
@@ -290,33 +312,6 @@ RUN echo "--- install runtime node.22 ---" && \
     ENTRYPOINT  [ "/docker-entrypoint.sh" ]
     
     CMD ["/usr/local/openresty/bin/openresty", "-g", "daemon off;"]
-
-## Sdk ##
-FROM noderun AS sdk
-WORKDIR ${BUILD_PATH}/products/ASC.Sdk/sdk
-
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/ .
-
-CMD ["server.js", "ASC.Sdk"]
-
-## Doceditor ##
-FROM noderun AS doceditor
-WORKDIR ${BUILD_PATH}/products/ASC.Editors/editor
-
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/editor/ .
-
-CMD ["server.js", "ASC.Editors"]
-
-## Login ##
-FROM noderun AS login
-WORKDIR ${BUILD_PATH}/products/ASC.Login/login
-
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/login/ .
-
-CMD ["server.js", "ASC.Login"]
 
 ## ASC.Data.Backup.BackgroundTasks ##
 FROM dotnetrun AS backup_background
@@ -419,24 +414,6 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.People/service/ .
 
 CMD ["ASC.People.dll", "ASC.People"]
-
-## ASC.Socket.IO ##
-FROM noderun AS socket
-WORKDIR ${BUILD_PATH}/services/ASC.Socket.IO/
-
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Socket.IO .
-
-CMD  ["server.js", "ASC.Socket.IO"]
-
-## ASC.SsoAuth ##
-FROM noderun AS ssoauth
-WORKDIR ${BUILD_PATH}/services/ASC.SsoAuth/
-
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=build-node --chown=onlyoffice:onlyoffice  ${SRC_PATH}/server/common/ASC.SsoAuth .
-
-CMD ["app.js", "ASC.SsoAuth"]
 
 ## ASC.Studio.Notify ##
 FROM dotnetrun AS studio_notify
