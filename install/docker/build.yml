@@ -48,11 +48,11 @@ services:
       target: people_server
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-people-server:${DOCKER_TAG}"
 
-  onlyoffice-socket:
+  onlyoffice-node-services:
     build:
       context:  ./
       dockerfile: "${DOCKERFILE}"
-      target: socket
+      target: noderun
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-socket:${DOCKER_TAG}"
 
   onlyoffice-studio-notify:
@@ -83,13 +83,6 @@ services:
       target: studio
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-studio:${DOCKER_TAG}"
 
-  onlyoffice-ssoauth:
-    build:
-      context: ./
-      dockerfile: "${DOCKERFILE}"
-      target: ssoauth
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-ssoauth:${DOCKER_TAG}"
-
   onlyoffice-bin-share:
     build:
       context: ./
@@ -103,27 +96,6 @@ services:
       dockerfile: "${DOCKERFILE}"
       target: wait_bin_share
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-wait-bin-share:${DOCKER_TAG}"
-
-  onlyoffice-doceditor:
-    build:
-      context:  ./
-      dockerfile: "${DOCKERFILE}"
-      target: doceditor
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-doceditor:${DOCKER_TAG}"
-
-  onlyoffice-sdk:
-    build:
-      context:  ./
-      dockerfile: "${DOCKERFILE}"
-      target: sdk
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-sdk:${DOCKER_TAG}"
-
-  onlyoffice-login:
-    build:
-      context:  ./
-      dockerfile: "${DOCKERFILE}"
-      target: login
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-login:${DOCKER_TAG}"
     
   onlyoffice-router:
     build:
