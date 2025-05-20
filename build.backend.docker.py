@@ -56,7 +56,7 @@ identity_api = f"{local_ip}:9090"
 management = f"{local_ip}:5015"
 onlyflow_frontend = f"onlyoffice-langflow:3000"
 onlyflow_backend = f"onlyoffice-langflow:7860"
-ai_gateway_api = f"onlyoffice-ai-gateway-api:8000"
+ai_gateway_api = f"{local_ip}:8000"
 portal_url = f"http://{local_ip}"
 
 force = False
