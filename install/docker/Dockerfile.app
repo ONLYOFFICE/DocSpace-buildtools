@@ -20,7 +20,7 @@ RUN set -eux; \
 
 ADD https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/git/refs/heads/${GIT_BRANCH} version.json
 RUN echo "--- clone resources ---" && \
-    git clone -b ${GIT_BRANCH} --depth 30  https://github.com/ONLYOFFICE/DocSpace-buildtools.git ${SRC_PATH}/buildtools && \
+    git clone -b ${GIT_BRANCH} --depth 30  https://github.com/nasrullonurullaev/DocSpace-buildtools.git ${SRC_PATH}/buildtools && \
     git clone --recurse-submodules -b ${GIT_BRANCH} --depth 30  https://github.com/ONLYOFFICE/DocSpace-Server.git ${SRC_PATH}/server && \
     git clone -b ${GIT_BRANCH} --depth 30  https://github.com/ONLYOFFICE/DocSpace-Client.git ${SRC_PATH}/client && \
     git clone -b "master" --depth 1 https://github.com/ONLYOFFICE/docspace-plugins.git ${SRC_PATH}/plugins && \
@@ -210,12 +210,6 @@ RUN echo "--- install runtime node.22 ---" && \
 
     # Copy supervisord config
     COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-    sed -i 's|\.\./\.\./\.\./buildtools/config|/app/onlyoffice/config|g' \
-       ${BUILD_PATH}/products/ASC.Sdk/sdk/config/config.json \
-       ${BUILD_PATH}/products/ASC.Editors/editor/config/config.json \
-       ${BUILD_PATH}/services/ASC.Socket.IO/config/config.json \
-       ${BUILD_PATH}/services/ASC.SsoAuth/config/config.json
 
     USER onlyoffice
     EXPOSE 5011 5013 5099 9834 9899
