@@ -211,6 +211,12 @@ RUN echo "--- install runtime node.22 ---" && \
     # Copy supervisord config
     COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+    sed -i 's|\.\./\.\./\.\./buildtools/config|/app/onlyoffice/config|g' \
+       ${BUILD_PATH}/products/ASC.Sdk/sdk/config/config.json \
+       ${BUILD_PATH}/products/ASC.Editors/editor/config/config.json \
+       ${BUILD_PATH}/services/ASC.Socket.IO/config/config.json \
+       ${BUILD_PATH}/services/ASC.SsoAuth/config/config.json
+
     USER onlyoffice
     EXPOSE 5011 5013 5099 9834 9899
     ENTRYPOINT ["bash", "/usr/bin/docker-entrypoint.sh"]
