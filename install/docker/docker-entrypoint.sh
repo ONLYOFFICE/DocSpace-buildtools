@@ -42,4 +42,10 @@ sed -i "s!\"Hostname\".*!\"Hostname\": \"${RABBIT_CONNECTION_HOST}\",!g" ${PATH_
 sed -i "s!\"Host\".*!\"Host\": \"${REDIS_CONNECTION_HOST}\",!g" ${PATH_TO_CONF}/redis.json
 sed -i "s!\"elastic\".*{!\"elastic\": {\"Scheme\": \"${ELK_SHEME}\",\"Host\": \"${ELK_HOST}\",\"Port\": \"${ELK_PORT}\",\"Threads\": \"${ELK_THREADS}\"!g" ${PATH_TO_CONF}/elastic.json
 
+sed -i 's|\.\./\.\./\.\./buildtools/config|/app/onlyoffice/config|g' \
+       /var/www/products/ASC.Sdk/sdk/config/config.json \
+       /var/www/products/ASC.Editors/editor/config/config.json \
+       /var/www/services/ASC.Socket.IO/config/config.json \
+       /var/www/services/ASC.SsoAuth/config/config.json
+
 supervisord -n
