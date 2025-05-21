@@ -187,7 +187,6 @@ PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${PRODUCT}/privkey.pem"}"
 [[ "$CERTIFICATE_FILE" != /* ]] && CERTIFICATE_FILE="$(cd "$(dirname "$CERTIFICATE_FILE")" && pwd)/$(basename "$CERTIFICATE_FILE")"
 [[ "$PRIVATEKEY_FILE" != /* ]] && PRIVATEKEY_FILE="$(cd "$(dirname "$PRIVATEKEY_FILE")" && pwd)/$(basename "$PRIVATEKEY_FILE")"
 
-
 if [ -f "${CERTIFICATE_FILE}" ]; then 
   if [ -f "${PRIVATEKEY_FILE}" ]; then
     sed -i "s~\(APP_URL_PORTAL=\).*~\1\"https://${DOMAIN}\"~g" ${DOCKERCOMPOSE}/.env
