@@ -53,7 +53,7 @@ services:
       context:  ./
       dockerfile: "${DOCKERFILE}"
       target: noderun
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-socket:${DOCKER_TAG}"
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-node:${DOCKER_TAG}"
 
   onlyoffice-studio-notify:
     build:
