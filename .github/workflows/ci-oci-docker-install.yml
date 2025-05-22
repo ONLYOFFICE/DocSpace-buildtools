@@ -39,6 +39,12 @@ jobs:
 
       - name: Check container status
         run: |
+          SERVICES=(dashboards db docspace ds fluent healthchecks identity notify opensearch proxy rabbitmq redis)
+          for SERVICE in "${SERVICES[@]}"; do YML_ARGS+=( -f "/app/onlyoffice/${SERVICE}.yml" ); done
+          for SVC in $(docker compose "${YML_ARGS[@]}" config --services); do
+            docker compose "${YML_ARGS[@]}" ps "$SVC" | grep -q ${SVC} || { echo "::error::$SVC was not created"; MISSING_COUNT=$((MISSING_COUNT+1)); }
+          done; [ "${MISSING_COUNT:=0}" -gt 0 ] && { echo "::error::$MISSING_COUNT service(s) were not created."; exit 1; }
+
           docker ps --all --format "{{.Names}}" | xargs -I {} sh -c '
               status=$(docker inspect --format="{{if .State.Health}}{{.State.Health.Status}}{{else}}no healthcheck{{end}}" {});
               case "$status" in
@@ -62,8 +68,8 @@ jobs:
               esac;
           '
           case "${{ env.container_status }}" in
-              timeout) echo "Timeout reached. Not all containers are running."; exit 1 ;;
-              red) echo "One or more containers have status 'red'. Job will fail."; exit 1 ;;
+              timeout) echo "::error:: Timeout reached. Not all containers are running."; exit 1 ;;
+              red) echo "::error:: One or more containers have status 'red'. Job will fail."; exit 1 ;;
           esac
 
       - name: Checkout repository
