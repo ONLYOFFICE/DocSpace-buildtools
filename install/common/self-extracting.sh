@@ -21,7 +21,7 @@ mv -f ${TEMP_DIR}/{docker.tar.gz,install-Docker.sh} $(dirname "$0")
 
 echo "Running the install-Docker.sh script..."
 chmod +x $(dirname "$0")/install-Docker.sh
-$(dirname "$0")/install-Docker.sh ${UPDATE}
+$(dirname "$0")/install-Docker.sh ${UPDATE} "$@"
 
 exit 0
 
