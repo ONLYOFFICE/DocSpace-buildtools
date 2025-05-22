@@ -470,7 +470,7 @@ while [ "$1" != "" ]; do
 			if [ "$2" != "" ]; then
 				CERTIFICATE_PATH="$2"
 				[[ "$CERTIFICATE_PATH" != /* ]] && CERTIFICATE_PATH="$(cd "$(dirname "$CERTIFICATE_PATH")" && pwd)/$(basename "$CERTIFICATE_PATH")"
-				[ ! -f "$CERTIFICATE_PATH" ] || { echo "Error: Certificate file not found: ${CERTIFICATE_PATH}" >&2; exit 1; }
+				[ -f "$CERTIFICATE_PATH" ] || { echo "Error: Certificate file not found: ${CERTIFICATE_PATH}" >&2; exit 1; }
 				shift
 			fi
 		;;
@@ -479,7 +479,7 @@ while [ "$1" != "" ]; do
 			if [ "$2" != "" ]; then
 				CERTIFICATE_KEY_PATH="$2"
 				[[ "$CERTIFICATE_KEY_PATH" != /* ]] && CERTIFICATE_KEY_PATH="$(cd "$(dirname "$CERTIFICATE_KEY_PATH")" && pwd)/$(basename "$CERTIFICATE_KEY_PATH")"
-				[ ! -f "$CERTIFICATE_KEY_PATH" ] || { echo "Error: Certificate key file not found: ${CERTIFICATE_KEY_PATH}" >&2; exit 1; }
+				[ -f "$CERTIFICATE_KEY_PATH" ] || { echo "Error: Certificate key file not found: ${CERTIFICATE_KEY_PATH}" >&2; exit 1; }
 				shift
 			fi
 		;;
