@@ -149,10 +149,7 @@ else
     exit 1
 fi
 
-if [ "$LOCAL_SCRIPTS" != "true" ]; then
-  curl -s -O ${DOWNLOAD_URL_PREFIX}/${SCRIPT_NAME}
-  [ "$DOCKER" == "true" ] && curl -s -O ${DOWNLOAD_URL_PREFIX}/parse-args.sh
-fi
+[ "$LOCAL_SCRIPTS" != "true" ] && curl -s -O ${DOWNLOAD_URL_PREFIX}/${SCRIPT_NAME}
 
 if [ "$ENABLE_LOGGING" = "true" ]; then
     LOG_FILE="OneClick${SCRIPT_NAME%.sh}_$(date +%Y%m%d_%H%M%S).log"
