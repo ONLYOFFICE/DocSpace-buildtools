@@ -4,12 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       branches:
-        description: 'Branches for multiarch build'
-        required: true
+        description: 'Branches for multiarch build (JSON array)'
+        required: false
         type: string
 
   repository_dispatch:
     types:
+      - cron-trigger-action
       - config-trigger-action
       - client-trigger-action
       - server-trigger-action
@@ -21,13 +22,12 @@ env:
   DOCKERFILE: "Dockerfile.app"
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         platform: [linux/amd64]
-        branch: ${{ fromJson(inputs.branches) }}
+        branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -76,18 +76,15 @@ jobs:
   trigger-oci-docker:
     name: Trigger ci-oci-docker-install Workflow
     needs: build
+    if: ${{ needs.build.result == 'success' }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        branch: ${{ fromJson(inputs.branches) }}
+        branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches) }}
     steps:
       - name: Trigger ci-oci-docker-install Workflow
+        env:
+          GH_TOKEN: ${{ secrets.TOKEN }}
         run: |
           echo "OCI docker test on branch ${{ matrix.branch }}"
-
-          curl \
-          -X POST \
-          -u "${{ secrets.USERNAME}}:${{secrets.TOKEN}}" \
-          https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/actions/workflows/103532315/dispatches \
-          -H "Accept: application/vnd.github.v3+json" \
-          -d '{"ref": "'"${{ matrix.branch }}"'"}'
+          gh api --method POST /repos/${GITHUB_REPOSITORY}/actions/workflows/103532315/dispatches -f ref='${{ matrix.branch }}'

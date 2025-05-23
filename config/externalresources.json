@@ -5,9 +5,9 @@
         "domain": "https://api.onlyoffice.com",
         "entries": {
           "docspace": "/docspace",
-          "javascript-sdk": "/docspace/javascript-sdk/get-started/basic-concepts",
-          "plugins-sdk": "/docspace/plugins-sdk/get-started/basic-concepts",
-          "apikeys": "/docspace/api-backend/get-started/how-it-works/api-keys"
+          "javascript-sdk": "/docspace/javascript-sdk/get-started",
+          "plugins-sdk": "/docspace/plugins-sdk/get-started",
+          "apikeys": "/docspace/api-backend/get-started/authentication/api-keys"
         }
       }
     },
