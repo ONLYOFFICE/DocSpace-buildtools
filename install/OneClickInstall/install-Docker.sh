@@ -914,14 +914,15 @@ create_network () {
 }
 
 read_continue_installation () {
-	[ "$NON_INTERACTIVE" = "true" ] && return 0
+	[ "$NON_INTERACTIVE" = "true" ] && INSTALLATION_CHOICE="Y" && return 0
 
 	while true; do
-        read -p "Continue installation [Y/N]? " CHOICE_INSTALLATION
-        case "$CHOICE_INSTALLATION" in
-            [yY]) return 0 ;;
+        read -p "Continue installation [Y/D/N]? " CHOICE
+        case "$CHOICE" in
+            [yY]) INSTALLATION_CHOICE="Y"; return 0 ;;
+            [dD]) INSTALLATION_CHOICE="D"; return 0 ;;
             [nN]) exit 0 ;;
-            *) echo "Please, enter Y or N" ;;
+            *) echo "Please, enter Y, D or N" ;;
         esac
     done
 }
@@ -940,15 +941,17 @@ domain_check () {
 	if [[ -n "${LOCAL_RESOLVED_DOMAINS}" ]] || [[ $(ip route get 8.8.8.8 | awk '{print $7}') != $(curl -s ifconfig.me) ]]; then
 		DOCKER_DAEMON_FILE="/etc/docker/daemon.json"
 		if ! grep -q '"dns"' "$DOCKER_DAEMON_FILE" 2>/dev/null; then
-			echo "A problem was detected for ${APP_DOMAIN_PORTAL:-${LOCAL_RESOLVED_DOMAINS}} domains when using a loopback IP address or when using NAT."
-			echo "Select 'Y' to continue installing with configuring the use of external IP in Docker via Google Public DNS."
-			echo "Select 'N' to cancel ${PACKAGE_SYSNAME^^} ${PRODUCT_NAME} installation."
+			echo "DNS issue detected for ${APP_DOMAIN_PORTAL:-$LOCAL_RESOLVED_DOMAINS} (loopback or NAT)."
+			echo "[Y] Use Google DNS | [D] Use custom DNS | [N] Cancel installation"
 			if read_continue_installation; then
-				if [[ -f "$DOCKER_DAEMON_FILE" ]]; then	
-					sed -i 's!{!& "dns": ["8.8.8.8", "8.8.4.4"],!' "$DOCKER_DAEMON_FILE"
-				else
-					echo "{\"dns\": [\"8.8.8.8\", \"8.8.4.4\"]}" | tee "$DOCKER_DAEMON_FILE" >/dev/null
-				fi
+				case "$INSTALLATION_CHOICE" in
+					Y)  jq '.dns=["8.8.8.8", "8.8.4.4"]' "$DOCKER_DAEMON_FILE" 2>/dev/null || echo '{}' |
+						jq '.dns=["8.8.8.8", "8.8.4.4"]' > "$DOCKER_DAEMON_FILE" ;;
+					D)  read -p "Enter custom DNS (e.g. 1.1.1.1,9.9.9.9): " DNS
+						jq --argjson dns "$(printf '["%s"]' "${DNS//,/\",\"}")" \
+						'.dns=$dns' "$DOCKER_DAEMON_FILE" 2>/dev/null || echo '{}' |
+						jq --argjson dns "$(printf '["%s"]' "${DNS//,/\",\"}")" '.dns=$dns' > "$DOCKER_DAEMON_FILE" ;;
+				esac
 				systemctl restart docker
 			fi
 		fi
