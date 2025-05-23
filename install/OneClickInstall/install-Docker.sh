@@ -113,6 +113,7 @@ SKIP_HARDWARE_CHECK="false"
 EXTERNAL_PORT="80"
 
 source "$(dirname "$0")/parse-args.sh" "$@"
+IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-api"
 
 uninstall() {
     read -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " REMOVE_DATA_SERVICES
