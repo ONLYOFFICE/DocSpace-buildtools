@@ -102,7 +102,7 @@ jobs:
           cd ${INSTALL_PATH}/docker && tar -czvf ${INSTALL_PATH}/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
           
           tar -cvf ${INSTALL_PATH}/offline-docspace.tar \
-          -C "${INSTALL_PATH}/OneClickInstall" install-Docker.sh \
+          -C "${INSTALL_PATH}/OneClickInstall" install-Docker.sh parse-args.sh \
           -C "${INSTALL_PATH}" docker_images.tar.xz \
           -C "${INSTALL_PATH}" docker.tar.gz
           rm -rf ${INSTALL_PATH}/docker_images.tar.xz ${INSTALL_PATH}/docker.tar.gz

@@ -7,6 +7,9 @@ TEMP_DIR=$(mktemp -d)
 
 trap 'echo "Cleaning up temporary files..."; rm -rf "${TEMP_DIR}"' EXIT
 
+SCRIPT_DIR="$(dirname "$0")"
+source "${SCRIPT_DIR}/parse-args.sh" "$@"
+
 ! type docker &> /dev/null && { echo "docker not installed"; exit 1; }
 ! type docker-compose &> /dev/null && { echo "docker-compose not installed"; exit 1; }
 
@@ -17,7 +20,7 @@ echo "Loading docker images..."
 docker load -i ${TEMP_DIR}/docker_images.tar.xz
 
 echo "Extracting OneClickInstall files to the current directory..."
-mv -f ${TEMP_DIR}/{docker.tar.gz,install-Docker.sh} $(dirname "$0")
+mv -f ${TEMP_DIR}/{docker.tar.gz,install-Docker.sh,parse-args.sh} $(dirname "$0")
 
 echo "Running the install-Docker.sh script..."
 chmod +x $(dirname "$0")/install-Docker.sh
