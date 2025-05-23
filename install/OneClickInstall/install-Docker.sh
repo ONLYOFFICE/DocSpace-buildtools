@@ -914,14 +914,15 @@ create_network () {
 }
 
 read_continue_installation () {
-	[ "$NON_INTERACTIVE" = "true" ] && return 0
+	[ "$NON_INTERACTIVE" = "true" ] && INSTALLATION_CHOICE="Y" && return 0
 
 	while true; do
-        read -p "Continue installation [Y/N]? " CHOICE_INSTALLATION
-        case "$CHOICE_INSTALLATION" in
-            [yY]) return 0 ;;
+        read -p "Continue installation [Y/C/N]? " CHOICE
+        case "$CHOICE" in
+            [yY]) INSTALLATION_CHOICE="Y"; return 0 ;;
+            [cC]) INSTALLATION_CHOICE="C"; return 0 ;;
             [nN]) exit 0 ;;
-            *) echo "Please, enter Y or N" ;;
+            *) echo "Please, enter Y, C or N" ;;
         esac
     done
 }
@@ -935,21 +936,30 @@ domain_check () {
 		if [[ -n "$IP_ADDRESS" && "$IP_ADDRESS" =~ ^(10\.|127\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.) ]]; then
 			LOCAL_RESOLVED_DOMAINS+="$DOMAIN"
 		fi
-	done <<< "${APP_DOMAIN_PORTAL:-$(dig +short -x "$(curl -s ifconfig.me)" | sed 's/\.$//')}"
-
-	if [[ -n "${LOCAL_RESOLVED_DOMAINS}" ]] || [[ $(ip route get 8.8.8.8 | awk '{print $7}') != $(curl -s ifconfig.me) ]]; then
+	done <<< "${APP_DOMAIN_PORTAL:-$(dig +short -x "$(curl -s -4 ifconfig.me)" | sed 's/\.$//')}"
+	
+	# check if the domain is a loopback IP or NAT
+	if [[ -n "${LOCAL_RESOLVED_DOMAINS}" ]] || [[ $(ip route get 8.8.8.8 | awk '{print $7}') != $(curl -s -4 ifconfig.me) ]]; then 
 		DOCKER_DAEMON_FILE="/etc/docker/daemon.json"
 		if ! grep -q '"dns"' "$DOCKER_DAEMON_FILE" 2>/dev/null; then
-			echo "A problem was detected for ${APP_DOMAIN_PORTAL:-${LOCAL_RESOLVED_DOMAINS}} domains when using a loopback IP address or when using NAT."
-			echo "Select 'Y' to continue installing with configuring the use of external IP in Docker via Google Public DNS."
-			echo "Select 'N' to cancel ${PACKAGE_SYSNAME^^} ${PRODUCT_NAME} installation."
+			echo "DNS issue detected for ${APP_DOMAIN_PORTAL:-$LOCAL_RESOLVED_DOMAINS} (loopback IP or NAT)."
+			echo "[Y] Use Google DNS | [C] Use custom DNS | [N] Cancel installation"
 			if read_continue_installation; then
-				if [[ -f "$DOCKER_DAEMON_FILE" ]]; then	
-					sed -i 's!{!& "dns": ["8.8.8.8", "8.8.4.4"],!' "$DOCKER_DAEMON_FILE"
-				else
-					echo "{\"dns\": [\"8.8.8.8\", \"8.8.4.4\"]}" | tee "$DOCKER_DAEMON_FILE" >/dev/null
+				case "$INSTALLATION_CHOICE" in
+					Y)  DNS=("8.8.8.8" "8.8.4.4") ;;
+					C)  while true; do
+							read -p "Enter custom DNS (e.g. 8.8.8.8 8.8.4.4): " INPUT; IFS=' ' read -ra DNS <<< "$INPUT"
+							for IP in "${DNS[@]}"; do 
+								[[ $IP =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || { echo "Invalid DNS: $IP"; continue 2; }
+							done && break
+						done ;;
+				esac
+				if ((${#DNS[@]})); then
+					echo "Updating Docker DNS config with: ${DNS[*]}"
+					jq -e . "${DOCKER_DAEMON_FILE}" > /dev/null 2>&1 || echo '{}' > "${DOCKER_DAEMON_FILE}"
+					echo "$(jq --argjson dns "$(printf '%s\n' "${DNS[@]}" | jq -R . | jq -s .)" '.dns = $dns' "${DOCKER_DAEMON_FILE}")" > "${DOCKER_DAEMON_FILE}"
+					systemctl restart docker || { echo "Failed to restart Docker service"; exit 1; }
 				fi
-				systemctl restart docker
 			fi
 		fi
 	fi
@@ -1417,7 +1427,7 @@ services_check_connection () {
 		reconfigure MYSQL_PORT "${MYSQL_PORT:-3306}"
 	fi
 	if [[ ! -z "$DOCUMENT_SERVER_HOST" ]]; then
-		APP_URL_PORTAL=${APP_URL_PORTAL:-"http://$(curl -s ifconfig.me):${EXTERNAL_PORT}"}
+		APP_URL_PORTAL=${APP_URL_PORTAL:-"http://$(curl -s -4 ifconfig.me):${EXTERNAL_PORT}"}
 		establish_conn ${DOCUMENT_SERVER_HOST} ${DOCUMENT_SERVER_PORT} "${PACKAGE_SYSNAME^^} Docs"
 		reconfigure DOCUMENT_SERVER_URL_EXTERNAL ${DOCUMENT_SERVER_URL_EXTERNAL}
 		reconfigure DOCUMENT_SERVER_URL_PUBLIC ${DOCUMENT_SERVER_URL_EXTERNAL}
