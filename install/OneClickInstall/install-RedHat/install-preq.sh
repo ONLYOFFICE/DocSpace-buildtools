@@ -41,6 +41,12 @@ NODE_VERSION="18"
 curl -fsSL https://rpm.nodesource.com/setup_${NODE_VERSION}.x | sed '/update -y/d' | bash - || true
 
 #add mysql repo
+# if [ "$DIST" = "fedora" ] && ! grep -q '^excludepkgs=.*mysql8.4' /etc/dnf/dnf.conf; then
+#     echo "excludepkgs=mysql8.4*" >> /etc/dnf/dnf.conf
+# fi
+if [ "$DIST" = "fedora" ]; then
+    echo "excludepkgs=mysql8.4*" >> /etc/dnf/dnf.conf
+fi
 dnf remove -y @mysql && dnf module -y reset mysql && dnf module -y disable mysql
 MYSQL_REPO_VERSION="$(curl https://repo.mysql.com | grep -oP "mysql84-community-release-${MYSQL_DISTR_NAME}${REV}-\K.*" | grep -o '^[^.]*' | sort | tail -n1)"
 yum install -y https://repo.mysql.com/mysql84-community-release-"${MYSQL_DISTR_NAME}""${REV}"-"${MYSQL_REPO_VERSION}".noarch.rpm || true

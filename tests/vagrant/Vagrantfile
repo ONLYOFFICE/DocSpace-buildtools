@@ -11,10 +11,6 @@ Vagrant.configure("2") do |config|
 
     config.vm.hostname = "host4test"
 
-    if ENV['OS'] == '41-cloud-base'
-        config.vm.disk :disk, size: "30GB", primary: true
-    end  
-
     if ENV['TEST_CASE'] != '--production-install'
        config.vm.provision "file", source: "../../../DocSpace-buildtools/install/OneClickInstall/.", destination: "/tmp/docspace/"
     end
