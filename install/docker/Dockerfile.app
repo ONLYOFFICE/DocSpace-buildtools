@@ -236,18 +236,9 @@ RUN echo "--- install runtime node.22 ---" && \
         /tmp/*
     
     COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-identity-entrypoint.sh /usr/bin/docker-identity-entrypoint.sh
-    ## ASC.Identity.Authorization ##
-    FROM javarun AS identity-authorization
-    WORKDIR ${BUILD_PATH}/services/ASC.Identity.Authorization/
-    COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Identity/authorization/authorization-container/target/*.jar ./app.jar
-    CMD ["ASC.Identity.Authorization"]
-        
-    ## ASC.Identity.Registration ##
-    FROM javarun AS identity-api
-    WORKDIR ${BUILD_PATH}/services/ASC.Identity.Registration/
-    COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Identity/registration/registration-container/target/*.jar ./app.jar
-    CMD ["ASC.Identity.RegistrationJJJ=JKJX
-    
+    COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Identity/authorization/authorization-container/target/*.jar ${BUILD_PATH}/services/ASC.Identity.Authorization/app.jar
+    COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Identity/registration/registration-container/target/*.jar ${BUILD_PATH}/services/ASC.Identity.Registration/app.jar
+
     USER onlyoffice
     ENTRYPOINT ["bash", "/usr/bin/docker-identity-entrypoint.sh"]
     
