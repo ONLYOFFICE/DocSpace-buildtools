@@ -1,11 +1,8 @@
 name: Install OneClickInstall Docker
 
 on:
-  pull_request:
-    types: [opened, reopened, synchronize]
-    paths:
-      - '.github/workflows/ci-oci-docker-install.yml'
-      - 'install/OneClickInstall/install-Docker.sh'
+  schedule:
+    - cron: '00 20 * * 0'
   push:
     branches:
       - 'hotfix/**'
@@ -26,18 +23,6 @@ jobs:
   Install-OneClickInstall-Docker:
     runs-on: ubuntu-22.04
     steps:
-      - name: Determine Branch Name
-        run: |
-          case "${{ github.event_name }}" in
-            "pull_request")
-              BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
-              ;;
-            *)
-              BRANCH_NAME="${GITHUB_REF#refs/heads/}"
-              ;;
-          esac
-          echo "BRANCH_NAME=${BRANCH_NAME:-master}" >> $GITHUB_ENV
-
       - name: Free Disk Space
         run: |
           sudo docker image prune --all --force
@@ -47,7 +32,7 @@ jobs:
           wget https://download.onlyoffice.com/docspace/docspace-enterprise-install.sh
           sed '/bash install-Docker.sh/i sed -i "1i set -x" install-Docker.sh' -i docspace-enterprise-install.sh
           sed '/bash install-Docker.sh/i sed -i "/docker-compose.*up -d/ s/$/ --quiet-pull/" install-Docker.sh' -i docspace-enterprise-install.sh
-          sudo bash docspace-enterprise-install.sh docker -docsi onlyoffice/documentserver-ee -skiphc true -noni true $([ ${{ env.BRANCH_NAME }} != "master" ] && echo "-gb ${{ env.BRANCH_NAME }} -s 4testing-") || exit $?
+          sudo bash docspace-enterprise-install.sh docker -docsi onlyoffice/documentserver-ee -skiphc true -noni true $([ ${{ github.ref_name }} != "master" ] && echo "-gb ${{ github.ref_name }} -s 4testing-") || exit $?
           
           echo -n "Waiting for all containers to start..."
           timeout 300 bash -c 'while docker ps | grep -q "starting"; do sleep 5; done' && echo "OK" || echo "container_status=timeout" >> $GITHUB_ENV
@@ -84,7 +69,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.BRANCH_NAME }}
+          ref: ${{ github.ref_name }}
 
       - name: "Checking Docker scripts for errors"
         run: |
@@ -95,13 +80,13 @@ jobs:
           awk '/\(warning\):/ {w++} /\(error\):/ {e++} END {if (w+e) printf "::warning ::ShellCheck detected %d warnings and %d errors\n", w+0, e+0}' sc_output
 
       - name: Free Disk Space
-        if: ${{ github.event.inputs.offline == 'true' }}
+        if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
           docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q) && docker volume rm $(docker volume ls -q)
-          sudo rm -rf /usr/local/lib/android /opt/ghc /usr/share/swift /usr/share/miniconda /usr/share/az* /usr/share/glade* /usr/local/lib/node_modules /usr/local/share/chromium /usr/local/share/powershell
+          curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | sudo bash
 
       - name: Creating 4testing offline self-extracting archive
-        if: ${{ github.event.inputs.offline == 'true' }}
+        if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
           INSTALL_PATH=${{ github.workspace }}/install
 
@@ -127,7 +112,7 @@ jobs:
           chmod +x ${INSTALL_PATH}/${ARTIFACT_NAME} 
 
       - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.offline == 'true' }}
+        if: ${{ success() && github.event.inputs.offline == 'true' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_OCI }}
@@ -135,7 +120,7 @@ jobs:
           aws-region: us-east-1
       
       - name: Upload 4testing offline self-extracting archive
-        if: ${{ github.event.inputs.offline == 'true' }}
+        if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
           aws s3 cp ${{ github.workspace }}/install/${{ env.ARTIFACT_NAME }} \
             ${{ secrets.AWS_BUCKET_URL_OCI }}/${{ env.ARTIFACT_NAME }} \

@@ -23,11 +23,11 @@
     <key>RunAtLoad</key>
     <false/>
 
-    <key>StandardErrorPath</key>
-    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.studionotify.err</string>
+    <!--<key>StandardErrorPath</key>
+    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.studionotify.err</string>-->
 
-    <key>StandardOutPath</key>
-    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.studionotify.log</string>
+    <!--<key>StandardOutPath</key>
+    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.studionotify.log</string>-->
 
     <key>KeepAlive</key>
     <true/>

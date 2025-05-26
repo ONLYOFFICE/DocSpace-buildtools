@@ -24,10 +24,10 @@ on:
         default: 'develop'
       deb_build:
         description: 'Trigger DEB build'
-        default: 'false'
+        default: 'true'
       rpm_build:
         description: 'Trigger RPM build'
-        default: 'false'
+        default: 'true'
 
 concurrency:
   group: ${{ github.ref }}
@@ -88,7 +88,7 @@ jobs:
         run: |
           PRODUCT_VERSION=$(grep -oP '\d+\.\d+\.\d+' <<< "${BRANCH_BUILDTOOLS//\//} ${BRANCH_CLIENT//\//} \
           ${BRANCH_SERVER//\//}" | head -n1)
-          echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.0.5}" >> $GITHUB_ENV
+          echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.1.1}" >> $GITHUB_ENV
 
       - name: Free Disk Space
         run: |
@@ -122,18 +122,25 @@ jobs:
             sudo apt install -y dpkg-sig lintian dh-make
           fi
 
+      - name: Download sources
+        run: |
+          case "${{ matrix.packageType }}" in
+            deb) SOURCE_DIR="${PACKAGE_DIRECTORY}/install/${{ matrix.packageType }}/debian/source" ;;
+            rpm) SOURCE_DIR="${PACKAGE_DIRECTORY}/install/${{ matrix.packageType }}/SPECS/SOURCES" ;;
+          esac
+          download() { wget -q -O "${SOURCE_DIR}/$3.tar.gz" "https://github.com/ONLYOFFICE/$1/archive/$2.tar.gz" && echo -e "\e[32m[OK] $3\e[0m" || echo -e "\e[31m[FAILED] $3\e[0m"; }
+          download "$PRODUCT-buildtools"  "$BRANCH_BUILDTOOLS"      buildtools &
+          download "$PRODUCT-client"      "$BRANCH_CLIENT"          client &
+          download "$PRODUCT-server"      "$BRANCH_SERVER"          server &
+          download "document-templates"   "main/community-server"   DocStore &
+          download "ASC.Web.Campaigns"    "master"                  campaigns &
+          download "$PRODUCT-plugins"     "master"                  plugins &
+          wait
+
       - name: Build DEB Packages
         if: matrix.packageType == 'deb'
         run: |
-          cd install/deb/
-          wget -q -O ./debian/source/buildtools.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-buildtools/archive/${BRANCH_BUILDTOOLS}.tar.gz" &
-          wget -q -O ./debian/source/client.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-client/archive/${BRANCH_CLIENT}.tar.gz" &
-          wget -q -O ./debian/source/server.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-server/archive/${BRANCH_SERVER}.tar.gz" &
-          wget -q -O ./debian/source/DocStore.tar.gz "https://github.com/ONLYOFFICE/document-templates/archive/main/community-server.tar.gz" &
-          wget -q -O ./debian/source/campaigns.tar.gz "https://github.com/ONLYOFFICE/ASC.Web.Campaigns/archive/master.tar.gz" &
-          wget -q -O ./debian/source/plugins.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-plugins/archive/master.tar.gz" &
-          wait
-
+          cd ${PACKAGE_DIRECTORY}/install/deb/
           rename -f -v "s/product([^\/]*)$/${PRODUCT_LOW}\$1/g" debian/*
           find debian/ -type f -exec sed -i "s/{{product}}/${PRODUCT_LOW}/g" {} ';'
           sed -i "s/{{package_header_tag_version}}/${PRODUCT_VERSION}.${BUILD_NUMBER}/g" debian/changelog debian/control
@@ -143,14 +150,7 @@ jobs:
       - name: Build RPM Packages
         if: matrix.packageType == 'rpm'
         run: |
-          cd install/rpm/SPECS
-          wget -q -O ./SOURCES/buildtools.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-buildtools/archive/${BRANCH_BUILDTOOLS}.tar.gz" &
-          wget -q -O ./SOURCES/client.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-client/archive/${BRANCH_CLIENT}.tar.gz" &
-          wget -q -O ./SOURCES/server.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-server/archive/${BRANCH_SERVER}.tar.gz" &
-          wget -q -O ./SOURCES/DocStore.tar.gz "https://github.com/ONLYOFFICE/document-templates/archive/main/community-server.tar.gz" &
-          wget -q -O ./SOURCES/campaigns.tar.gz "https://github.com/ONLYOFFICE/ASC.Web.Campaigns/archive/master.tar.gz" &
-          wget -q -O ./SOURCES/plugins.tar.gz "https://github.com/ONLYOFFICE/$PRODUCT-plugins/archive/master.tar.gz" &
-          wait
+          cd ${PACKAGE_DIRECTORY}/install/rpm/SPECS
           mv ./SOURCES/product.rpmlintrc ./SOURCES/${PRODUCT_LOW}.rpmlintrc
           sed -i -e '/BuildRequires/d' product.spec
           rpmbuild -D "packager Ascensio System SIA <support@onlyoffice.com>" \
@@ -178,23 +178,18 @@ jobs:
       - name: Upload DEB Packages
         if: matrix.packageType == 'deb'
         run: |
-          for deb_package in ${PACKAGE_DIRECTORY}/install/*.deb; do
-            curl -s --user "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" \
-                 -H "Content-Type: multipart/form-data" \
-                 --data-binary "@$deb_package" "${{ secrets.REPO_URL_4TESTING_DEB }}" \
-              && echo "Success: $(basename "$deb_package") uploaded." || echo "Error: Failed to upload $(basename "$deb_package")" &
-          done
-          wait
-        
+          find "${PACKAGE_DIRECTORY}/install" -name "*.${{ matrix.packageType }}" | xargs -P4 -I{} bash -c '
+            curl -sS --fail --retry 10 --retry-delay 10 --connect-timeout 60 --max-time 180 -H "Content-Type: multipart/form-data" \
+              -u "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" --data-binary "@$1" "${{ secrets.REPO_URL_4TESTING_DEB }}" \
+            && echo -e "\e[32m[Success] $(basename "$1")\e[0m" || echo "::warning:: [Uploading errors] $(basename "$1")"' _ {}
+
       - name: Upload RPM Packages
         if: matrix.packageType == 'rpm'
         run: |
-          for rpm_package in ${PACKAGE_DIRECTORY}/install/rpm/SPECS/RPMS/noarch/*.rpm; do
-            curl -s --user "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" \
-                 --upload-file "$rpm_package" "${{ secrets.REPO_URL_4TESTING_RPM }}" \
-              && echo "Success: $(basename "$rpm_package") uploaded." || echo "Error: Failed to upload $(basename "$rpm_package")" &
-          done
-          wait
+          find "${PACKAGE_DIRECTORY}/install/rpm/SPECS/RPMS/noarch" -name "*.${{ matrix.packageType }}" | xargs -P4 -I{} bash -c '
+            curl -sS --fail --retry 10 --retry-delay 10 --connect-timeout 60 --max-time 180 \
+              -u "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" --upload-file "$1" "${{ secrets.REPO_URL_4TESTING_RPM}}/$(basename $1)" \
+            && echo -e "\e[32m[Success] $(basename "$1")\e[0m" || echo "::warning:: [Uploading errors] $(basename "$1")"' _ {}
 
       - name: Checking the DEB package for errors
         if: matrix.packageType == 'deb'
@@ -225,20 +220,13 @@ jobs:
     if: ${{ success() }}
     steps:
       - name: Trigger CI-OCI-Install Workflow
+        env:
+          GH_TOKEN: ${{ secrets.TOKEN }}
         run: |
-          deb_build="${{ github.event.inputs.deb_build }}"
-          rpm_build="${{ github.event.inputs.rpm_build }}"
+          deb_build="${{ github.event.inputs.deb_build }}" rpm_build="${{ github.event.inputs.rpm_build }}"
           [[ "${{ needs.prepare.outputs.build_all }}" == "true" ]] && deb_build="true" && rpm_build="true"
-          curl \
-            -X POST \
-            -u "${{ secrets.USERNAME}}:${{secrets.TOKEN}}" \
-            https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/actions/workflows/85067971/dispatches \
-            -H "Accept: application/vnd.github.everest-preview+json" \
-            --data '{
-              "ref": "'"${{ github.ref_name }}"'",
-              "inputs": {
-                "deb_build": "'"${deb_build}"'",
-                "rpm_build": "'"${rpm_build}"'"
-              }
-            }'
-
+          
+          gh api --method POST /repos/${{ github.repository }}/actions/workflows/85067971/dispatches \
+            -f ref='${{ github.ref_name }}' \
+            -f inputs[deb_build]="${deb_build}" \
+            -f inputs[rpm_build]="${rpm_build}"

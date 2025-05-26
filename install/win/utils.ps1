@@ -270,7 +270,13 @@ function SetDashboardsPwd {
 
 # Sets a random IDENTITY_ENCRYPTION_SECRET property.
 function SetIdentityEncryptionSecret {
-    $IdentityEncryptionSecret = RandomString -Length 12
+    $IsUpdate = AI_GetMsiProperty OLDPRODUCTS
+    $IdentityEncryptionSecret = "secret"
+
+    if (-not $IsUpdate) {
+        $IdentityEncryptionSecret = RandomString -Length 12
+    }
+
     AI_SetMsiProperty IDENTITY_ENCRYPTION_SECRET $IdentityEncryptionSecret
 }
 
@@ -296,8 +302,8 @@ function OpenSearchSetup {
    
     $FileContent = UpdateConfig $FileContent "indices.fielddata.cache.size:.*" "indices.fielddata.cache.size: 30%"
     $FileContent = UpdateConfig $FileContent "indices.memory.index_buffer_size:.*" "indices.memory.index_buffer_size: 30%"
-    $FileContent = UpdateConfig $FileContent "#path.data:.*" "path.data: $AppIndexDir"
-    $FileContent = UpdateConfig $FileContent "#path.logs:.*" "path.logs: $LogsDir"
+    $FileContent = UpdateConfig $FileContent "#?path.data:.*" "path.data: $AppIndexDir"
+    $FileContent = UpdateConfig $FileContent "#?path.logs:.*" "path.logs: $LogsDir"
     $FileContent = UpdateConfig $FileContent "plugins.security.disabled:.*" "plugins.security.disabled: true"
 
     Set-Content -Path $ConfigFilePath -Value $FileContent
@@ -324,6 +330,7 @@ function OpenSearchSetup {
     $FileContent = UpdateConfig $FileContent "opensearch.hosts:.*" "opensearch.hosts: [http://localhost:9200]"
     $FileContent = UpdateConfig $FileContent "server.host:.*" "server.host: 127.0.0.1"
     $FileContent = UpdateConfig $FileContent "server.basePath:.*" "server.basePath: /dashboards"
+    $FileContent = UpdateConfig $FileContent "server.rewriteBasePath:.*" "server.rewriteBasePath: true"
 
     Set-Content -Path $OpenSearchDashboardsYml -Value $FileContent
 }
@@ -361,6 +368,7 @@ function MoveConfigs {
     $NginxFolder = Join-Path $AppDir "nginx"
     $ConfigSslFile = Join-Path $TargetFolder "onlyoffice-proxy-ssl.conf.tmpl"
     $ConfigFile = Join-Path $TargetFolder "onlyoffice-proxy.conf"
+    $SslScriptDir = Join-Path $AppDir "sbin\"
     $SslScriptPath = Join-Path $AppDir "sbin\docspace-ssl-setup.ps1"
     $FluentBitSourceFile = Join-Path $AppDir "config\fluent-bit.conf"
     $FluentBitDstFolder = "C:\OpenSearchStack\fluent-bit-3.2.4-win64\conf\"
@@ -370,6 +378,7 @@ function MoveConfigs {
         $Content = ReadFileContent $ConfigFile
         $SslCertPath = ExtractPath -Content $Content -RegexPattern "ssl_certificate\s+(.*?);"
         $SslCertKeyPath = ExtractPath -Content $Content -RegexPattern "ssl_certificate_key\s+(.*?);"
+        $DomainName = AI_GetMsiProperty DOMAIN_NAME
     } else {
         Write-Output "Configuration file not found!"
     }
@@ -401,8 +410,9 @@ function MoveConfigs {
     }
 
     # Run the SSL setup script if paths are valid.
-    if (Test-Path $ConfigSslFile)  {
-        $PsCommand = "& '$SslScriptPath' -f $SslCertPath $SslCertKeyPath"
+    if ((Test-Path $ConfigSslFile) -and ($SslCertPath) -and ($SslCertKeyPath)) {
+        Set-Location $SslScriptDir
+        $PsCommand = "& '$SslScriptPath' -f $DomainName $SslCertPath $SslCertKeyPath"
         Invoke-Expression $PsCommand
     } else {
         Write-Output "SSL script not executed. Missing paths or ConfigSslFile."

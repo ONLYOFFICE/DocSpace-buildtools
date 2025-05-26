@@ -46,7 +46,7 @@ addFilter(r'non-readable')
 # No one license from allowed pull AGPLv3, AGPLv3+ worked
 addFilter(r'W: invalid-license AGPLv3')
 
-# Сertain services require write access to the log directory. These services are launched under a user account that is different from the root user.
+# Certain services require write access to the log directory. These services are launched under a user account that is different from the root user.
 addFilter(r'logrotate-user-writable-log-dir')
 
 # The use of the /var/www directory is caused by its past history as the default document root
