@@ -228,13 +228,26 @@ RUN echo "--- install runtime node.22 ---" && \
         adduser -S -u 104 -h /var/www/onlyoffice -G onlyoffice onlyoffice && \
         chown onlyoffice:onlyoffice /var/log -R  && \
         chown onlyoffice:onlyoffice /var/www -R && \
-        apk add --no-cache sudo bash nano curl && \
+        chown onlyoffice:onlyoffice /run -R && \
+        apk add --no-cache sudo bash nano curl supervisor && \
         echo "--- clean up ---" && \
         rm -rf \
         /var/lib/apt/lists/* \
         /tmp/*
     
     COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-identity-entrypoint.sh /usr/bin/docker-identity-entrypoint.sh
+    ## ASC.Identity.Authorization ##
+    FROM javarun AS identity-authorization
+    WORKDIR ${BUILD_PATH}/services/ASC.Identity.Authorization/
+    COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Identity/authorization/authorization-container/target/*.jar ./app.jar
+    CMD ["ASC.Identity.Authorization"]
+        
+    ## ASC.Identity.Registration ##
+    FROM javarun AS identity-api
+    WORKDIR ${BUILD_PATH}/services/ASC.Identity.Registration/
+    COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Identity/registration/registration-container/target/*.jar ./app.jar
+    CMD ["ASC.Identity.RegistrationJJJ=JKJX
+    
     USER onlyoffice
     ENTRYPOINT ["bash", "/usr/bin/docker-identity-entrypoint.sh"]
     
@@ -462,18 +475,6 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Migration.Runner/service/ .
 
 ENTRYPOINT ["./docker-migration-entrypoint.sh"]
-
-## ASC.Identity.Authorization ##
-FROM javarun AS identity-authorization
-WORKDIR ${BUILD_PATH}/services/ASC.Identity.Authorization/
-COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Identity/authorization/authorization-container/target/*.jar ./app.jar
-CMD ["ASC.Identity.Authorization"]
-
-## ASC.Identity.Registration ##
-FROM javarun AS identity-api
-WORKDIR ${BUILD_PATH}/services/ASC.Identity.Registration/
-COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Identity/registration/registration-container/target/*.jar ./app.jar
-CMD ["ASC.Identity.Registration"]
 
 ## image for k8s bin-share ##
 FROM busybox:latest AS bin_share
