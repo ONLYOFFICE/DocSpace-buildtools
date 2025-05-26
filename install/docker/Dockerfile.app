@@ -1,5 +1,5 @@
 ARG SRC_PATH="/app/onlyoffice/src"
-ARG BUILD_PATH="/var/www"
+ARG BUILD_PATH="/var/www/onlyoffice"
 ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:9.0"
 ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:9.0-noble"
 
