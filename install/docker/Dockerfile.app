@@ -156,6 +156,51 @@ RUN echo "--- install runtime aspnet.9 ---" && \
         /tmp/*
     
 COPY --from=src --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
+
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
+
+## ASC.Data.Backup.BackgroundTasks ##
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Data.Backup.BackgroundTasks/service/  ${BUILD_PATH}/services/ASC.Data.Backup.BackgroundTasks/
+
+# ASC.ApiSystem ##
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.ApiSystem/service/  ${BUILD_PATH}/services/ASC.ApiSystem/
+
+## ASC.ClearEvents ##
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.ClearEvents/service/  ${BUILD_PATH}/services/ASC.ClearEvents/
+
+## ASC.Data.Backup ##
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Data.Backup/service/ ${BUILD_PATH}/services/ASC.Data.Backup/
+
+## ASC.Files ##
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Files/service/ ${BUILD_PATH}/products/ASC.Files/server/
+
+## ASC.Files.Service ##
+ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Files.Service/service/ ${BUILD_PATH}/products/ASC.Files/service/
+COPY --from=onlyoffice/ffvideo:7.1 --chown=onlyoffice:onlyoffice /app/src/ ${BUILD_PATH}/products/ASC.Files/service/
+
+## ASC.Notify ##
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Notify/service/ ${BUILD_PATH}/services/ASC.Notify/service/
+
+## ASC.People ##
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.People/service/ ${BUILD_PATH}/products/ASC.People/server/
+
+## ASC.Studio.Notify ##
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Studio.Notify/service/ ${BUILD_PATH}/services/ASC.Studio.Notify/service/
+
+## ASC.Web.Api ##
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Web.Api/service/ ${BUILD_PATH}/studio/ASC.Web.Api/
+
+## ASC.Web.Studio ##
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/plugins/publish/ ${BUILD_PATH}/studio/plugins
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Web.Studio/service/ ${BUILD_PATH}/studio/ASC.Web.Studio/
+
+## ASC.Web.HealthChecks.UI ##
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-healthchecks-entrypoint.sh ${BUILD_PATH}/services/ASC.Web.HealthChecks.UI/service/docker-healthchecks-entrypoint.sh
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Web.HealthChecks.UI/service/ ${BUILD_PATH}/services/ASC.Web.HealthChecks.UI/service/
+
+# Copy supervisord config
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/dotnet.conf /etc/supervisor/conf.d/supervisord.conf
     
 USER onlyoffice
 EXPOSE 5050
@@ -318,145 +363,6 @@ RUN echo "--- install runtime node.22 ---" && \
     
     CMD ["/usr/local/openresty/bin/openresty", "-g", "daemon off;"]
 
-## ASC.Data.Backup.BackgroundTasks ##
-FROM dotnetrun AS backup_background
-WORKDIR ${BUILD_PATH}/services/ASC.Data.Backup.BackgroundTasks/
-
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Data.Backup.BackgroundTasks/service/  .
-
-CMD ["ASC.Data.Backup.BackgroundTasks.dll", "ASC.Data.Backup.BackgroundTasks", "core:eventBus:subscriptionClientName=asc_event_bus_backup_queue"]
-
-# ASC.ApiSystem ##
-FROM dotnetrun AS api_system
-WORKDIR ${BUILD_PATH}/services/ASC.ApiSystem/
-
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.ApiSystem/service/  .
-
-CMD ["ASC.ApiSystem.dll", "ASC.ApiSystem"]
-
-## ASC.ClearEvents ##
-FROM dotnetrun AS clear-events
-WORKDIR ${BUILD_PATH}/services/ASC.ClearEvents/
-
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.ClearEvents/service/  .
-
-CMD ["ASC.ClearEvents.dll", "ASC.ClearEvents"]
-
-## ASC.Data.Backup ##
-FROM dotnetrun AS backup
-WORKDIR ${BUILD_PATH}/services/ASC.Data.Backup/
-
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Data.Backup/service/ .
-
-CMD ["ASC.Data.Backup.dll", "ASC.Data.Backup"]
-
-## ASC.Files ##
-FROM dotnetrun AS files
-WORKDIR ${BUILD_PATH}/products/ASC.Files/server/
-
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Files/service/ .
-
-CMD ["ASC.Files.dll", "ASC.Files"]
-
-## ASC.Files.Service ##
-FROM dotnetrun AS files_services
-ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
-WORKDIR ${BUILD_PATH}/products/ASC.Files/service/
-USER root
-
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Files.Service/service/ .
-COPY --from=onlyoffice/ffvideo:7.1 --chown=onlyoffice:onlyoffice /app/src/ /
-
-RUN <<EOF
-    #!/bin/bash
-    set -xe
-    ARCH_LINUX=$(lscpu | grep Architecture | awk '{print $2}')
-    echo "--- ADD necessary lib for arh: ${ARCH_LINUX} ---"
-    if [ "$ARCH_LINUX" = "x86_64" ] ; then
-        apt update && \
-        apt install -y \
-            libasound2t64 \
-            libdrm2 \
-            libv4l-0t64 \
-            libplacebo-dev \
-            libxcb-shape0 \
-            ocl-icd-opencl-dev 
-    fi
-    if [ "$ARCH_LINUX" = "aarch64" ] ; then
-        apt update && \
-        apt install -y \
-            libasound2t64 \
-            libv4l-0t64
-    fi 
-    rm -rf /var/lib/apt/lists/* \
-    /tmp/*
-EOF
-
-USER onlyoffice
-
-CMD ["ASC.Files.Service.dll", "ASC.Files.Service", "core:eventBus:subscriptionClientName=asc_event_bus_files_service_queue"]
-
-## ASC.Notify ##
-FROM dotnetrun AS notify
-WORKDIR ${BUILD_PATH}/services/ASC.Notify/service
-
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Notify/service/ .
-
-CMD ["ASC.Notify.dll", "ASC.Notify", "core:eventBus:subscriptionClientName=asc_event_bus_notify_queue"]
-
-## ASC.People ##
-FROM dotnetrun AS people_server
-WORKDIR ${BUILD_PATH}/products/ASC.People/server/
-
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.People/service/ .
-
-CMD ["ASC.People.dll", "ASC.People"]
-
-## ASC.Studio.Notify ##
-FROM dotnetrun AS studio_notify
-WORKDIR ${BUILD_PATH}/services/ASC.Studio.Notify/service/
-
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Studio.Notify/service/ .
-
-CMD ["ASC.Studio.Notify.dll", "ASC.Studio.Notify"]
-
-## ASC.Web.Api ##
-FROM dotnetrun AS api
-WORKDIR ${BUILD_PATH}/studio/ASC.Web.Api/
-
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Web.Api/service/ .
-
-CMD ["ASC.Web.Api.dll", "ASC.Web.Api"]
-
-## ASC.Web.Studio ##
-FROM dotnetrun AS studio
-WORKDIR ${BUILD_PATH}/studio/ASC.Web.Studio/
-
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/plugins/publish/ ${BUILD_PATH}/studio/plugins
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Web.Studio/service/ .
-
-CMD ["ASC.Web.Studio.dll", "ASC.Web.Studio", "core:eventBus:subscriptionClientName=asc_event_bus_webstudio_queue"]
-
-## ASC.Web.HealthChecks.UI ##
-FROM dotnetrun AS healthchecks
-WORKDIR ${BUILD_PATH}/services/ASC.Web.HealthChecks.UI/service
-
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-healthchecks-entrypoint.sh ./docker-healthchecks-entrypoint.sh
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Web.HealthChecks.UI/service/ .
-
-ENTRYPOINT ["./docker-healthchecks-entrypoint.sh"]
-CMD ["ASC.Web.HealthChecks.UI.dll", "ASC.Web.HealthChecks.UI"]
 
 ## ASC.Migration.Runner ##
 FROM dotnetrun AS onlyoffice-migration-runner
