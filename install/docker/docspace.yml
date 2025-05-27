@@ -171,7 +171,15 @@ services:
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_DOCEDITOR}/doceditor/health || exit 1
-  
+
+  onlyoffice-management:
+    <<: *x-service-base
+    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-management:${DOCKER_TAG}"
+    container_name: ${MANAGEMENT_HOST}
+    healthcheck:
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_MANAGEMENT}/management/health || exit 1
+   
   onlyoffice-sdk:
     <<: *x-service-base
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-sdk:${DOCKER_TAG}"
@@ -216,6 +224,7 @@ services:
       - onlyoffice-studio
       - onlyoffice-ssoauth
       - onlyoffice-doceditor
+      - onlyoffice-management
       - onlyoffice-sdk
       - onlyoffice-login
     environment:
@@ -234,6 +243,7 @@ services:
       - SERVICE_STUDIO=${SERVICE_STUDIO}
       - SERVICE_SSOAUTH=${SERVICE_SSOAUTH}
       - SERVICE_DOCEDITOR=${SERVICE_DOCEDITOR}
+      - SERVICE_MANAGEMENT=${SERVICE_MANAGEMENT}
       - SERVICE_SDK=${SERVICE_SDK}
       - SERVICE_LOGIN=${SERVICE_LOGIN}
       - SERVICE_HELTHCHECKS=${SERVICE_HELTHCHECKS}

@@ -96,7 +96,7 @@ CLIENT_PACKAGES+=("@docspace/management")
 
 for PKG in ${CLIENT_PACKAGES[@]}; do
   echo "--- build/publish ${PKG} ---"
-  yarn workspace ${PKG} ${BUILD_ARGS} $([[ "${PKG}" =~ (client|management) ]] && echo "--env lint=false")
+  yarn workspace ${PKG} ${BUILD_ARGS} $([[ "${PKG}" =~ (client) ]] && echo "--env lint=false")
   yarn workspace ${PKG} ${DEPLOY_ARGS}
 done
 
@@ -250,7 +250,9 @@ RUN echo "--- install runtime node.22 ---" && \
     COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/.next/static/chunks ${BUILD_PATH}/build/sdk/static/chunks
     COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/.next/static/css ${BUILD_PATH}/build/sdk/static/css
     COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/.next/static/media ${BUILD_PATH}/build/sdk/static/media
-    COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management ${BUILD_PATH}/management
+    COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management/.next/static/chunks ${BUILD_PATH}/build/management/static/chunks
+    COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management/.next/static/css ${BUILD_PATH}/build/management/static/css
+    COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management/.next/static/media ${BUILD_PATH}/build/management/static/media
     COPY --from=src --chown=onlyoffice:onlyoffice /etc/nginx/conf.d /etc/nginx/conf.d
     COPY --from=src --chown=onlyoffice:onlyoffice /etc/nginx/includes /etc/nginx/includes
     COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/campaigns/src/campaigns ${BUILD_PATH}/public/campaigns
@@ -278,7 +280,7 @@ RUN echo "--- install runtime node.22 ---" && \
         sed -i 's/127.0.0.1:9090/$service_identity_api/' /etc/nginx/conf.d/onlyoffice.conf && \
         sed -i 's/127.0.0.1:8080/$service_identity/' /etc/nginx/conf.d/onlyoffice.conf && \
         if [[ -z "${SERVICE_CLIENT}" ]] ; then sed -i 's/127.0.0.1:5001/$service_client/' /etc/nginx/conf.d/onlyoffice.conf; fi && \
-        if [[ -z "${SERVICE_MANAGEMENT}" ]] ; then sed -i 's/127.0.0.1:5015/$service_management/' /etc/nginx/conf.d/onlyoffice.conf; fi && \
+        sed -i 's/127.0.0.1:5015/$service_management/' /etc/nginx/conf.d/onlyoffice.conf && \
         sed -i 's/127.0.0.1:5033/$service_healthchecks/' /etc/nginx/conf.d/onlyoffice.conf && \
         sed -i 's/127.0.0.1:5601/$dashboards_host:5601/' /etc/nginx/includes/server-dashboards.conf && \
         sed -i 's/$public_root/\/var\/www\/public\//' /etc/nginx/conf.d/onlyoffice.conf && \
@@ -290,6 +292,15 @@ RUN echo "--- install runtime node.22 ---" && \
     ENTRYPOINT  [ "/docker-entrypoint.sh" ]
     
     CMD ["/usr/local/openresty/bin/openresty", "-g", "daemon off;"]
+
+## Management ##
+FROM noderun AS management
+WORKDIR ${BUILD_PATH}/products/ASC.Management/management
+
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management/ .
+
+CMD ["server.js", "ASC.Management"]
 
 ## Sdk ##
 FROM noderun AS sdk
