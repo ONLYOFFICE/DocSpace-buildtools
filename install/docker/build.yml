@@ -11,7 +11,7 @@ services:
       context: ./
       dockerfile: "${DOCKERFILE}"
       target: dotnetrun
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-studio-notify:${DOCKER_TAG}"
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-dotnet:${DOCKER_TAG}"
 
   onlyoffice-bin-share:
     build:
@@ -46,6 +46,6 @@ services:
       context:  ./
       dockerfile: "${DOCKERFILE}"
       target: javarun
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-identity-authorization:${DOCKER_TAG}"
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-java:${DOCKER_TAG}"
 
 
