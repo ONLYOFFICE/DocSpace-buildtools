@@ -47,6 +47,7 @@ Requires:       %name-files = %version-%release
 Requires:       %name-files-services = %version-%release
 Requires:       %name-healthchecks = %version-%release
 Requires:       %name-login = %version-%release
+Requires:       %name-management = %version-%release
 Requires:       %name-migration-runner = %version-%release
 Requires:       %name-notify = %version-%release
 Requires:       %name-people-server = %version-%release

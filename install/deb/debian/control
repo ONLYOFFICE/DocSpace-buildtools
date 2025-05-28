@@ -24,6 +24,7 @@ Depends: debconf, openssl,
          {{product}}-files-services (= {{package_header_tag_version}}),
          {{product}}-healthchecks (= {{package_header_tag_version}}),
          {{product}}-login (= {{package_header_tag_version}}),
+         {{product}}-management(= {{package_header_tag_version}}),
          {{product}}-migration-runner (= {{package_header_tag_version}}),
          {{product}}-notify (= {{package_header_tag_version}}),
          {{product}}-people-server (= {{package_header_tag_version}}),
@@ -235,3 +236,10 @@ Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= 16), 
 Description: {{product}}-sdk
   The service provides a Software Development Kit (SDK) with APIs and tools for custom
   integrations and plugins
+
+Package: {{product}}-management
+Architecture: all
+Multi-Arch: foreign
+Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= 16), ${misc:Depends}, ${shlibs:Depends}
+Description: {{product}}-management
+  Management

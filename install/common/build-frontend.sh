@@ -74,7 +74,7 @@ CLIENT_PACKAGES+=("@docspace/sdk")
 
 export TS_ERRORS_IGNORE=true
 for PKG in ${CLIENT_PACKAGES[@]}; do
-  yarn workspace ${PKG} ${BUILD_ARGS} $([[ "${PKG}" =~ (client|management) ]] && echo "--env lint=false")
+  yarn workspace ${PKG} ${BUILD_ARGS} $([[ "${PKG}" =~ (client) ]] && echo "--env lint=false")
   yarn workspace ${PKG} ${DEPLOY_ARGS}
 done
 

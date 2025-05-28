@@ -283,7 +283,7 @@ restart_services() {
 	SERVICES=(login api socket studio-notify notify \
 	people-server files files-services studio backup api-system \
 	clear-events backup-background ssoauth doceditor healthchecks \
-	identity-authorization identity-api sdk)
+	identity-authorization identity-api sdk management)
 	SERVICES_LIST=("${SERVICES[@]/#/${PRODUCT}-}")
 
 	systemctl enable "${SERVICES_LIST[@]}" >/dev/null 2>&1
@@ -515,6 +515,7 @@ setup_openresty(){
 					PORTS+=('5011') #ASC.Login
 					PORTS+=('5012') #ASC.Data.Backup
 					PORTS+=('5013') #ASC.Files/editor
+					PORTS+=('5015') #ASC.Management
 					PORTS+=('5027') #ASC.ClearEvents
 					PORTS+=('5032') #ASC.Data.Backup.BackgroundTasks
 					PORTS+=('5033') #ASC.Web.HealthChecks
