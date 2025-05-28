@@ -204,7 +204,7 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
     
 USER onlyoffice
 EXPOSE 5050
-ENTRYPOINT ["python3", "docker-entrypoint.py"]
+ENTRYPOINT ["bash", "/usr/bin/docker-entrypoint.sh"]
     
 FROM node:22-slim AS noderun
 ARG BUILD_PATH
