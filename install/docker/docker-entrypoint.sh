@@ -4,6 +4,7 @@ export ENV_EXTENSION="${ENV_EXTENSION:-test}"
 export PATH_TO_CONF="${PATH_TO_CONF:-/app/onlyoffice/config}"
 export LOG_DIR="${LOG_DIR:-/var/log/onlyoffice}"
 export APP_STORAGE_ROOT="${APP_STORAGE_ROOT:-/app/onlyoffice/data/}"
+export SRC_PATH="/var/www/onlyoffice"
 
 APP_CORE_BASE_DOMAIN=${APP_CORE_BASE_DOMAIN:-"localhost"}
 APP_URL_PORTAL=${APP_URL_PORTAL:-"http://127.0.0.1:8092"}
