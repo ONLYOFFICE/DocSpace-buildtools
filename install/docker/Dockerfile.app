@@ -142,6 +142,7 @@ RUN echo "--- install runtime aspnet.9 ---" && \
         adduser \
         nano \
         curl \
+        supervisor \
         vim \
         python3-pip \
         libgdiplus && \
@@ -151,6 +152,7 @@ RUN echo "--- install runtime aspnet.9 ---" && \
         chown onlyoffice:onlyoffice /app/onlyoffice -R && \
         chown onlyoffice:onlyoffice /var/log -R && \
         chown onlyoffice:onlyoffice /var/www -R && \
+        chown onlyoffice:onlyoffice /run -R && \
         echo "--- clean up ---" && \
         rm -rf /var/lib/apt/lists/* \
         /tmp/*
