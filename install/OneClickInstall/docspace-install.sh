@@ -41,49 +41,22 @@ ENABLE_LOGGING="true"
 
 while [ "$1" != "" ]; do
 	case $1 in
-		-ls | --localscripts )
-			if [ "$2" == "true" ] || [ "$2" == "false" ]; then
-				PARAMETERS="$PARAMETERS ${1}"
-				LOCAL_SCRIPTS=$2
-				shift
-			fi
-		;;
-		
-		-log | --logging )
-			if [ "$2" == "true" ] || [ "$2" == "false" ]; then
-				ENABLE_LOGGING=$2
-				shift 2
-			fi
-		;;
-		
-		-gb | --gitbranch )
-			if [ "$2" != "" ]; then
-				PARAMETERS="$PARAMETERS ${1}"
-				GIT_BRANCH=$2
-				shift
-			fi
-		;;
+        -ls | --localscripts )     [[ "$2" == "true" || "$2" == "false" ]] && PARAMETERS="$PARAMETERS ${1}" && LOCAL_SCRIPTS=$2 && shift ;;
+        -log | --logging )         [[ "$2" == "true" || "$2" == "false" ]] && ENABLE_LOGGING=$2 && shift 2 && continue ;;
+        -gb | --gitbranch )        [ -n "$2" ] && PARAMETERS="$PARAMETERS ${1}" && GIT_BRANCH=$2 && shift ;;
+        docker ) DOCKER="true"; shift ; continue ;;
+        package ) DOCKER="false"; shift ; continue ;;
+        -h | -? | --help )
+            if [ -z "$DOCKER" ]; then
+                echo "Run 'bash $FILE_NAME docker' to install Docker version of application."
+                echo "Run 'bash $FILE_NAME package' to install DEB/RPM version."
+                echo "Run 'bash $FILE_NAME docker -h' or 'bash $FILE_NAME package -h' to get more details."
+                exit 0
+            fi
+            PARAMETERS="$PARAMETERS -ht $FILE_NAME"
+        ;;
+    esac
 
-		docker )
-			DOCKER="true"
-			shift && continue
-		;;
-
-		package )
-			DOCKER="false"
-			shift && continue
-		;;
-
-		"-?" | -h | --help )
-			if [ -z "$DOCKER" ]; then
-				echo "Run 'bash $FILE_NAME docker' to install Docker version of application."
-				echo "Run 'bash $FILE_NAME package' to install DEB/RPM version."
-				echo "Run 'bash $FILE_NAME docker -h' or 'bash $FILE_NAME package -h' to get more details."
-				exit 0
-			fi
-			PARAMETERS="$PARAMETERS -ht $FILE_NAME"
-		;;
-	esac
 	PARAMETERS="$PARAMETERS ${1}"
 	shift
 done
