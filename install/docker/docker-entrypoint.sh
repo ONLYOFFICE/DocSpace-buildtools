@@ -1,6 +1,10 @@
 #!/bin/bash 
 
+ENV_EXTENSION=${ENV_EXTENSION:-"test"}
 PATH_TO_CONF=${PATH_TO_CONF:-"/app/onlyoffice/config"}
+LOG_DIR=${LOG_DIR:-"/var/log/onlyoffice"}
+APP_STORAGE_ROOT=${APP_STORAGE_ROOT:-"/app/onlyoffice/data/"}
+
 APP_CORE_BASE_DOMAIN=${APP_CORE_BASE_DOMAIN:-"localhost"}
 APP_URL_PORTAL=${APP_URL_PORTAL:-"http://127.0.0.1:8092"}
 
@@ -41,11 +45,5 @@ sed -i "s!\"portal\".*!\"portal\": \"${APP_URL_PORTAL}\"!g" ${PATH_TO_CONF}/apps
 sed -i "s!\"Hostname\".*!\"Hostname\": \"${RABBIT_CONNECTION_HOST}\",!g" ${PATH_TO_CONF}/rabbitmq.json
 sed -i "s!\"Host\".*!\"Host\": \"${REDIS_CONNECTION_HOST}\",!g" ${PATH_TO_CONF}/redis.json
 sed -i "s!\"elastic\".*{!\"elastic\": {\"Scheme\": \"${ELK_SHEME}\",\"Host\": \"${ELK_HOST}\",\"Port\": \"${ELK_PORT}\",\"Threads\": \"${ELK_THREADS}\"!g" ${PATH_TO_CONF}/elastic.json
-
-sed -i 's|\.\./\.\./\.\./buildtools/config|/app/onlyoffice/config|g' \
-       /var/www/products/ASC.Sdk/sdk/config/config.json \
-       /var/www/products/ASC.Editors/editor/config/config.json \
-       /var/www/services/ASC.Socket.IO/config/config.json \
-       /var/www/services/ASC.SsoAuth/config/config.json
 
 supervisord -n
