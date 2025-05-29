@@ -146,7 +146,7 @@ RUN echo "--- install runtime aspnet.9 ---" && \
         vim \
         python3-pip \
         libgdiplus && \
-        pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces && \
+        pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces subprocess && \
         addgroup --system --gid 107 onlyoffice && \
         adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
         chown onlyoffice:onlyoffice /app/onlyoffice -R && \
@@ -159,7 +159,7 @@ RUN echo "--- install runtime aspnet.9 ---" && \
     
 COPY --from=src --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
 
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py /usr/bin/docker-entrypoint.py
 
 ## ASC.Data.Backup.BackgroundTasks ##
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Data.Backup.BackgroundTasks/service/  ${BUILD_PATH}/services/ASC.Data.Backup.BackgroundTasks/service
@@ -206,7 +206,7 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
     
 USER onlyoffice
 EXPOSE 5050
-ENTRYPOINT ["bash", "/usr/bin/docker-entrypoint.sh"]
+ENTRYPOINT ["python3", "/usr/bin/docker-entrypoint.py"]
     
 FROM node:22-slim AS noderun
 ARG BUILD_PATH
