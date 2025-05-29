@@ -48,10 +48,6 @@ jobs:
             name: "ubuntu2404"
 
           - distr: onlyoffice
-            os: base-fedora40
-            name: "fedora40"
-
-          - distr: onlyoffice
             os: base-fedora41
             name: "fedora41"
 
