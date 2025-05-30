@@ -41,10 +41,7 @@ NODE_VERSION="18"
 curl -fsSL https://rpm.nodesource.com/setup_${NODE_VERSION}.x | sed '/update -y/d' | bash - || true
 
 #add mysql repo
-# if [ "$DIST" = "fedora" ] && ! grep -q '^excludepkgs=.*mysql8.4' /etc/dnf/dnf.conf; then
-#     echo "excludepkgs=mysql8.4*" >> /etc/dnf/dnf.conf
-# fi
-if [ "$DIST" = "fedora" ]; then
+if [ "$DIST" = "fedora" ] && ! grep -q '^excludepkgs=.*mysql8.4' /etc/dnf/dnf.conf; then
     echo "excludepkgs=mysql8.4*" >> /etc/dnf/dnf.conf
 fi
 dnf remove -y @mysql && dnf module -y reset mysql && dnf module -y disable mysql
