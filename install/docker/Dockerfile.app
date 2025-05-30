@@ -146,7 +146,7 @@ RUN echo "--- install runtime aspnet.9 ---" && \
         vim \
         python3-pip \
         libgdiplus && \
-        pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces subprocess && \
+        pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces && \
         addgroup --system --gid 107 onlyoffice && \
         adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
         chown onlyoffice:onlyoffice /app/onlyoffice -R && \
@@ -239,7 +239,7 @@ RUN echo "--- install runtime node.22 ---" && \
     
      COPY --from=src --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
      # Copy docker-entrypoint.sh
-     COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
+     COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py /usr/bin/docker-entrypoint.py
 
     # ASC.Sdk
     COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/ ${BUILD_PATH}/products/ASC.Sdk/sdk/
@@ -261,7 +261,7 @@ RUN echo "--- install runtime node.22 ---" && \
 
     USER onlyoffice
     EXPOSE 5011 5013 5099 9834 9899
-    ENTRYPOINT ["bash", "/usr/bin/docker-entrypoint.sh"]
+    ENTRYPOINT ["python3", "/usr/bin/docker-entrypoint.py"]]
     
     FROM eclipse-temurin:21-jre-alpine AS javarun
     ARG BUILD_PATH
