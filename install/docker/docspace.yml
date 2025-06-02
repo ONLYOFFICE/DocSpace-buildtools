@@ -6,6 +6,7 @@ x-healthcheck: &x-healthcheck
   timeout: 10s
 
 x-service: &x-service-base
+  env_file: "./.env"
   container_name: base
   user: "${UID}:${GID}"
   restart: always
