@@ -68,7 +68,7 @@ services:
       dockerfile: "${DOCKERFILE}"
       target: noderun
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-node:${DOCKER_TAG}"
-    container_name: ${NODE_SERVICES_HOST}
+    container_name: onlyoffice-node-services
 
   onlyoffice-dotnet-services:
     <<: *x-service-base
@@ -77,7 +77,7 @@ services:
       dockerfile: "${DOCKERFILE}"
       target: dotnetrun
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-dotnet:${DOCKER_TAG}"
-    container_name: ${DOTNET_SERVICES_HOST}
+    container_name: onlyoffice-dotnet-services
 
   onlyoffice-java-services:
     <<: *x-service-base
@@ -86,7 +86,7 @@ services:
       dockerfile: "${DOCKERFILE}"
       target: javarun
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-java:${DOCKER_TAG}"
-    container_name: ${JAVA_SERVICES_HOST}
+    container_name: onlyoffice-java-services
 
   onlyoffice-router:
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-router:${DOCKER_TAG}"
