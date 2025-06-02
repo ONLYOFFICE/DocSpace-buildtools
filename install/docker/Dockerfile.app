@@ -261,7 +261,7 @@ RUN echo "--- install runtime node.22 ---" && \
 
     USER onlyoffice
     EXPOSE 5011 5013 5099 9834 9899
-    ENTRYPOINT ["python3", "/usr/bin/docker-entrypoint.py"]]
+    ENTRYPOINT ["python3", "/usr/bin/docker-entrypoint.py"]
     
     FROM eclipse-temurin:21-jre-alpine AS javarun
     ARG BUILD_PATH
