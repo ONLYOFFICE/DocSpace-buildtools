@@ -36,7 +36,7 @@ jobs:
 
       - name: Test OCI docker scripts
         run: |
-          wget https://download.onlyoffice.com/docspace/install-Docker.sh
+          wget https://raw.githubusercontent.com/ONLYOFFICE/docspace-buildtools/${{ github.ref_name }}/install/OneClickInstall/install-Docker.sh
           sed -i "1i set -x" install-Docker.sh && sed -i "/docker-compose.*up -d/ s/$/ --quiet-pull/" install-Docker.sh
           sudo bash install-Docker.sh -skiphc true -noni true $([ ${{ github.ref_name }} != "master" ] && echo "-gb ${{ github.ref_name }} -s 4testing-") || exit $?
           
