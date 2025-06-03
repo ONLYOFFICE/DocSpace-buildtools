@@ -56,7 +56,6 @@ identity_api = f"{local_ip}:9090"
 management = f"{local_ip}:5015"
 onlyflow_frontend = f"onlyoffice-langflow:3000"
 onlyflow_backend = f"onlyoffice-langflow:7860"
-ai_gateway_api = f"{local_ip}:8000"
 portal_url = f"http://{local_ip}"
 
 force = False
@@ -332,7 +331,6 @@ os.environ["SERVICE_IDENTITY"] = identity_auth
 os.environ["SERVICE_IDENTITY_API"] = identity_api
 os.environ["SERVICE_ONLYFLOW_FRONTEND"] = onlyflow_frontend
 os.environ["SERVICE_ONLYFLOW_BACKEND"] = onlyflow_backend
-os.environ["SERVICE_AI_GATEWAY_API"] = ai_gateway_api
 os.environ["ROOT_DIR"] = dir
 os.environ["BUILD_PATH"] = "/var/www"
 os.environ["SRC_PATH"] = os.path.join(dir, "publish/services")
