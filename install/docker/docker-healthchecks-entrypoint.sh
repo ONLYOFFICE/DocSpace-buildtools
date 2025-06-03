@@ -30,6 +30,8 @@ PEOPLE_SERVER_HOST=${PEOPLE_SERVER_HOST:-"${CONTAINER_PREFIX}people-server:${SER
 STUDIO_NOTIFY_HOST=${STUDIO_NOTIFY_HOST:-"${CONTAINER_PREFIX}studio-notify:${SERVICE_PORT}"}
 API_HOST=${API_HOST:-"${CONTAINER_PREFIX}api:${SERVICE_PORT}"}
 STUDIO_HOST=${STUDIO_HOST:-"${CONTAINER_PREFIX}studio:${SERVICE_PORT}"}
+SOCKET_HOST=${SOCKET_HOST:-"${CONTAINER_PREFIX}socket:${SERVICE_PORT}"}
+SSOAUTH_HOST=${SSOAUTH_HOST:-"${CONTAINER_PREFIX}ssoauth:${SERVICE_PORT}"}
 
 sed -i "/\"Name\": \"ASC.ApiCache\"/,/{/d" ${PATH_TO_CONF}/appsettings.json
 sed -i "s!localhost:5010!${API_SYSTEM_HOST}!g" ${PATH_TO_CONF}/appsettings.json
@@ -43,5 +45,7 @@ sed -i "s!localhost:5004!${PEOPLE_SERVER_HOST}!g" ${PATH_TO_CONF}/appsettings.js
 sed -i "s!localhost:5000!${API_HOST}!g" ${PATH_TO_CONF}/appsettings.json
 sed -i "s!localhost:5006!${STUDIO_NOTIFY_HOST}!g" ${PATH_TO_CONF}/appsettings.json
 sed -i "s!localhost:5003!${STUDIO_HOST}!g" ${PATH_TO_CONF}/appsettings.json
+sed -i "s!localhost:9899!${SOCKET_HOST}!g" ${PATH_TO_CONF}/appsettings.json
+sed -i "s!localhost:9834!${SSOAUTH_HOST}!g" ${PATH_TO_CONF}/appsettings.json
      
 dotnet ${RUN_DLL} --urls=${URLS} 

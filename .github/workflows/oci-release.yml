@@ -29,13 +29,17 @@ jobs:
         run: |
           for EDITION in ENTERPRISE DEVELOPER; do
             cp "${{ env.SCRIPT_DIR }}/${{ env.PRODUCT }}-install.sh" "${{ env.SCRIPT_DIR }}/${{ env.PRODUCT }}-${EDITION,,}-install.sh"
-            sed -i "s/\(PARAMETERS -it\).*\";/\1 ${EDITION}\";/" "${{ env.SCRIPT_DIR }}/${{ env.PRODUCT }}-${EDITION,,}-install.sh"
+            sed -i "/^PARAMETERS/s|\(-it\) [^\" ]\+|\1 ${EDITION}|g" "${{ env.SCRIPT_DIR }}/${{ env.PRODUCT }}-${EDITION,,}-install.sh"
           done
 
       - name: Create Docker Tarball
         run: |
           cd ${{ env.DOCKER_DIR }}
           tar -czvf ${{ env.SCRIPT_DIR }}/docker.tar.gz \
+            --exclude='db.dev.yml' \
+            --exclude='dnsmasq.yml' \
+            --exclude='docspace.overcome.yml' \
+            --exclude='docspace.profiles.yml' \
             --exclude='config/supervisor*' \
             --exclude='config/mysql*' \
             --exclude='config/nginx/docker-entrypoint*' \
