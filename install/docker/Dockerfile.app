@@ -202,7 +202,7 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Web.HealthChecks.UI/service/ ${BUILD_PATH}/services/ASC.Web.HealthChecks.UI/service/
 
 # Copy supervisord config
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/dotnet.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/dotnet_services.conf /etc/supervisor/conf.d/supervisord.conf
     
 USER onlyoffice
 EXPOSE 5050
@@ -257,7 +257,7 @@ RUN echo "--- install runtime node.22 ---" && \
     COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.SsoAuth ${BUILD_PATH}/services/ASC.SsoAuth/
 
     # Copy supervisord config
-    COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+    COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/node_services.conf /etc/supervisor/conf.d/supervisord.conf
 
     USER onlyoffice
     EXPOSE 5011 5013 5099 9834 9899
@@ -287,7 +287,7 @@ RUN echo "--- install runtime node.22 ---" && \
     COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Identity/registration/registration-container/target/*.jar ${BUILD_PATH}/services/ASC.Identity.Registration/app.jar
 
     # Copy supervisord config
-    COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/java.conf /etc/supervisor/conf.d/supervisord.conf
+    COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/java_services.conf /etc/supervisor/conf.d/supervisord.conf
 
     USER onlyoffice
     ENTRYPOINT ["bash", "/usr/bin/docker-identity-entrypoint.sh"]
