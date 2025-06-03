@@ -287,7 +287,7 @@ RUN echo "--- install runtime node.22 ---" && \
     COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Identity/registration/registration-container/target/*.jar ${BUILD_PATH}/services/ASC.Identity.Registration/app.jar
 
     # Copy supervisord config
-    COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/java_services.conf /etc/supervisor/conf.d/supervisord.conf
+    COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/java_services.conf /etc/supervisord.conf
 
     USER onlyoffice
     ENTRYPOINT ["bash", "/usr/bin/docker-identity-entrypoint.sh"]
