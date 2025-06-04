@@ -114,8 +114,8 @@ services:
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-socket:${DOCKER_TAG}"
     container_name: ${SOCKET_HOST}
     healthcheck:
-     <<: *x-healthcheck
-     test: curl --fail http://${SERVICE_SOCKET}/health/ || exit 1
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_SOCKET}/health/ || exit 1
     expose:
       - ${SERVICE_PORT}
 
@@ -156,8 +156,8 @@ services:
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-ssoauth:${DOCKER_TAG}"
     container_name: ${SSOAUTH_HOST}
     healthcheck:
-     <<: *x-healthcheck
-     test: curl --fail http://${SERVICE_SSOAUTH}/health/ || exit 1
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_SSOAUTH}/health/ || exit 1
     expose:
       - ${SERVICE_PORT}
       - "9834"
@@ -171,7 +171,7 @@ services:
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_DOCEDITOR}/doceditor/health || exit 1
-  
+
   onlyoffice-sdk:
     <<: *x-service-base
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-sdk:${DOCKER_TAG}"
@@ -237,8 +237,6 @@ services:
       - SERVICE_SDK=${SERVICE_SDK}
       - SERVICE_LOGIN=${SERVICE_LOGIN}
       - SERVICE_HELTHCHECKS=${SERVICE_HELTHCHECKS}
-      - SERVICE_ONLYFLOW_FRONTEND=${ONLYFLOW_HOST}-frontend:${ONLYFLOW_FRONTEND_PORT}
-      - SERVICE_ONLYFLOW_BACKEND=${ONLYFLOW_HOST}-backend:${ONLYFLOW_BACKEND_PORT}
       - WRONG_PORTAL_NAME_URL=${WRONG_PORTAL_NAME_URL}
       - DOCUMENT_CONTAINER_NAME=${DOCUMENT_CONTAINER_NAME}
       - DOCUMENT_SERVER_URL_EXTERNAL=${DOCUMENT_SERVER_URL_EXTERNAL}
