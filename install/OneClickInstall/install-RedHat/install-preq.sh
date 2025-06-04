@@ -50,14 +50,14 @@ if ! rpm -q mysql-community-server; then
 fi
 
 #add opensearch repo
-curl -SL https://artifacts.opensearch.org/releases/bundle/opensearch/2.x/opensearch-2.x.repo -o /etc/yum.repos.d/opensearch-2.x.repo
-ELASTIC_VERSION="2.18.0"
+curl -SL https://artifacts.opensearch.org/releases/bundle/opensearch/3.x/opensearch-3.x.repo -o /etc/yum.repos.d/opensearch-3.x.repo
+ELASTIC_VERSION="3.0.0"
 export OPENSEARCH_INITIAL_ADMIN_PASSWORD="$(echo "${package_sysname}!A1")"
 
 #add opensearch dashboards repo
 if [ ${INSTALL_FLUENT_BIT} == "true" ]; then
-	curl -SL https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/2.x/opensearch-dashboards-2.x.repo -o /etc/yum.repos.d/opensearch-dashboards-2.x.repo
-	DASHBOARDS_VERSION="2.18.0"
+	curl -SL https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/3.x/opensearch-dashboards-3.x.repo -o /etc/yum.repos.d/opensearch-dashboards-3.x.repo
+	DASHBOARDS_VERSION="3.0.0"
 fi
 
 # add nginx repo, Fedora doesn't need it
@@ -92,7 +92,7 @@ ${package_manager} -y install $([ "$DIST" != "fedora" ] && echo "epel-release") 
 			SDL2 \
 			expect \
 			java-${JAVA_VERSION}-openjdk-headless \
-			--enablerepo=opensearch-2.x
+			--enablerepo=opensearch-3.x
 
 # Set Java ${JAVA_VERSION} as the default version
 JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | head -1)
@@ -101,7 +101,7 @@ alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && alternatives --set
 #add repo, install fluent-bit
 if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then 
 	[ "$DIST" != "fedora" ] && curl https://raw.githubusercontent.com/fluent/fluent-bit/master/install.sh | bash || yum -y install fluent-bit
-	${package_manager} -y install opensearch-dashboards-"${DASHBOARDS_VERSION}" --enablerepo=opensearch-dashboards-2.x
+	${package_manager} -y install opensearch-dashboards-"${DASHBOARDS_VERSION}" --enablerepo=opensearch-dashboards-3.x
 fi
 
 if [[ $PSQLExitCode -eq $UPDATE_AVAILABLE_CODE ]]; then
