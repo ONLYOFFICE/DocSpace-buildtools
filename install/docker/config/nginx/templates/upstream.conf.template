@@ -107,15 +107,3 @@ map $DASHBOARDS_CONTAINER_NAME $dashboards_host {
     default onlyoffice-opensearch-dashboards;
     ~^(.*)$ $1;
 }
-
-map $SERVICE_ONLYFLOW_FRONTEND $service_onlyflow_frontend {
-    volatile;
-    "" 127.0.0.1:3000;
-    default $SERVICE_ONLYFLOW_FRONTEND;
-}
-
-map $SERVICE_ONLYFLOW_BACKEND $service_onlyflow_backend {
-    volatile;
-    "" 127.0.0.1:7860;
-    default $SERVICE_ONLYFLOW_BACKEND;
-}
