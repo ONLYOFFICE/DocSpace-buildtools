@@ -100,6 +100,9 @@ for PKG in ${CLIENT_PACKAGES[@]}; do
   yarn workspace ${PKG} ${DEPLOY_ARGS}
 done
 
+echo "--- check client files ---" && \
+ls -la "${SRC_PATH}/publish/web/client" 
+
 echo "--- publish public web files ---" && \
 cp -rf public "${SRC_PATH}/publish/web/"
 echo "--- publish locales ---" && \
