@@ -101,7 +101,7 @@ for PKG in ${CLIENT_PACKAGES[@]}; do
 done
 
 echo "--- check client files ---" && \
-ls -la "${SRC_PATH}/publish/web/client" 
+ls -la "${SRC_PATH}/publish/web/client" && \
 
 echo "--- publish public web files ---" && \
 cp -rf public "${SRC_PATH}/publish/web/"
