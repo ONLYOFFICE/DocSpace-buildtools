@@ -516,37 +516,50 @@ get_tag_from_registry () {
 	mapfile -t TAGS_RESP < <(curl -s -H "${AUTH_HEADER}" -X GET "${REGISTRY_TAGS_URL}" | jq -r "${JQ_FILTER}")
 }
 
-# Требуется: curl, grep, sort  (jq не нужен)
 get_available_version() {
     local image="$1"
 
     if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
+        RAW=$(get_tag_from_registry "$image")
+        echo "DEBUG: RAW from get_tag_from_registry for $image: $RAW" >&2
+
         mapfile -t tags < <(
-            curl -fsSL "https://hub.docker.com/v2/repositories/${image}/tags?page_size=100" | grep -oP '"name":\s*"\K[^"]+'
+            printf '%s\n' "$RAW" |
+            tr -d '[]" ' |
+            tr ',' '\n' |
+            sed '/^$/d'
         )
     else
         mapfile -t tags < <(docker images --format "{{.Tag}}" "$image")
     fi
 
+    if [[ ${#tags[@]} -eq 0 && "${OFFLINE_INSTALLATION}" = "false" ]]; then
+        echo "WARN: Fallback to Docker Hub API for $image" >&2
+        mapfile -t tags < <(
+            curl -fsSL "https://hub.docker.com/v2/repositories/${image}/tags?page_size=100" |
+            grep -oP '"name":\s*"\K[^"]+'
+        )
+    fi
+
     if [ ${#tags[@]} -eq 0 ]; then
-        echo "ERROR: no tags found for '${image}'" >&2
+        echo "ERROR: no tags found for image '$image'" >&2
         kill -s TERM $PID
     fi
 
     local dev_re='^develop\.[0-9]+$'
     local ver_re='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
-
     local chosen=""
 
-    if [[ $GIT_BRANCH == 'bugfix/tag' ]]; then
+    if [[ "$GIT_BRANCH" == *develop* ]]; then
         chosen=$(printf "%s\n" "${tags[@]}" | grep -E "$dev_re" | sort -V | tail -1)
     fi
 
-    [ -z "$chosen" ] && \
+    if [ -z "$chosen" ]; then
         chosen=$(printf "%s\n" "${tags[@]}" | grep -E "$ver_re" | sort -V | tail -1)
+    fi
 
     if [ -z "$chosen" ]; then
-        echo "ERROR: suitable tag not found for '${image}'" >&2
+        echo "ERROR: suitable tag not found for image '$image'" >&2
         kill -s TERM $PID
     fi
 
