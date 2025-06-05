@@ -527,7 +527,7 @@ get_available_version () {
 	VERSION_REGEX='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
 	LATEST_TAG=""
 
-	if [[ "${GIT_BRANCH}" == "develop" ]]; then
+	if [[ "${GIT_BRANCH}" == "bugfix/tag" ]]; then
 		MATCHED_TAGS=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$DEVELOP_REGEX")
 		if [ -z "$MATCHED_TAGS" ]; then
 			echo "ERROR: No develop.* tag found for image '${1}' (available: ${TAGS_RESP[*]})" >&2
