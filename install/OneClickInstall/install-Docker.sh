@@ -517,24 +517,35 @@ get_tag_from_registry () {
 }
 
 get_available_version () {
-	[ "${OFFLINE_INSTALLATION}" = "false" ] && get_tag_from_registry ${1} || mapfile -t TAGS_RESP < <(docker images --format "{{.Tag}}" "${1}")
-
-	VERSION_REGEX='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
-	[ ${#TAGS_RESP[@]} -eq 1 ] && LATEST_TAG="${TAGS_RESP[0]}" || \
-    LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$([[ $GIT_BRANCH == "develop" && -n $STATUS ]] && echo '^develop\.[0-9]+$' || echo "$VERSION_REGEX")" | sort -V | tail -n 1)
-	LATEST_TAG=${LATEST_TAG:-${STATUS:+$(printf "%s\n" "${TAGS_RESP[@]}" | sort -V | tail -n 1)}} #Fix for 4testing develop tags
-
-	if [ ! -z "${LATEST_TAG}" ]; then
-		echo "${LATEST_TAG}" | sed "s/\"//g"
+	if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
+		mapfile -t TAGS_RESP < <(get_tag_from_registry "${1}")
 	else
-		if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
-			echo "Unable to retrieve tag from ${1} repository" >&2
-		else
-			echo "Error: The image '${1}' is not found in the local Docker registry." >&2
-		fi
-		kill -s TERM $PID
+		mapfile -t TAGS_RESP < <(docker images --format "{{.Tag}}" "${1}")
 	fi
+
+	DEVELOP_REGEX='^develop\.[0-9]+$'
+	VERSION_REGEX='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
+	LATEST_TAG=""
+
+	if [[ "${GIT_BRANCH}" == "develop" ]]; then
+		MATCHED_TAGS=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$DEVELOP_REGEX")
+		if [ -z "$MATCHED_TAGS" ]; then
+			echo "ERROR: No develop.* tag found for image '${1}' (available: ${TAGS_RESP[*]})" >&2
+			kill -s TERM $PID
+		fi
+		LATEST_TAG=$(printf "%s\n" "${MATCHED_TAGS}" | sort -V | tail -n 1)
+	else
+		MATCHED_TAGS=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$VERSION_REGEX")
+		if [ -z "$MATCHED_TAGS" ]; then
+			echo "ERROR: No version tag found for image '${1}'" >&2
+			kill -s TERM $PID
+		fi
+		LATEST_TAG=$(printf "%s\n" "${MATCHED_TAGS}" | sort -V | tail -n 1)
+	fi
+
+	echo "$LATEST_TAG"
 }
+
 
 set_docs_url_external () {
 	DOCUMENT_SERVER_URL_EXTERNAL=${DOCUMENT_SERVER_URL_EXTERNAL:-$(get_env_parameter "DOCUMENT_SERVER_URL_EXTERNAL" "${CONTAINER_NAME}")}
