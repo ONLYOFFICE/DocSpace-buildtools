@@ -102,6 +102,12 @@ jobs:
         run: |
           INSTALL_PATH=${{ github.workspace }}/install
 
+          for repo in onlyoffice/documentserver-ee onlyoffice/documentserver onlyoffice/documentserver-de; do
+            tag=$(curl -s "https://registry.hub.docker.com/v2/repositories/${repo}/tags?page_size=1" | grep -oP '"name":"\K[0-9.]+(?=")' | head -n1)
+            docker pull "${repo}:${tag}"
+            docker tag  "${repo}:${tag}" "${repo}"
+          done
+
           docker images --format "{{.Repository}}:{{.Tag}}" | grep "4testing-" | xargs -I{} bash -c '
             docker tag "$1" $(echo "${1/4testing-/}" | sed -E "s/([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+/\1/")
             docker rmi "$1"
