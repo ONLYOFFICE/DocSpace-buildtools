@@ -531,7 +531,7 @@ get_available_version() {
     dev_re='^develop\.[0-9]+$'
     ver_re='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
 
-    if [[ $GIT_BRANCH == *develop* ]]; then
+    if [[ $GIT_BRANCH == "bugfix/tag" ]]; then
         dev_tag=$(printf "%s\n" "${TAGS[@]}" | grep -E "$dev_re" | sort -V | tail -1)
     fi
     ver_tag=$(printf "%s\n" "${TAGS[@]}" | grep -E "$ver_re" | sort -V | tail -1)
