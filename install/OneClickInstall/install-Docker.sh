@@ -516,35 +516,34 @@ get_tag_from_registry () {
 	mapfile -t TAGS_RESP < <(curl -s -H "${AUTH_HEADER}" -X GET "${REGISTRY_TAGS_URL}" | jq -r "${JQ_FILTER}")
 }
 
-get_available_version () {
-	if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
-		mapfile -t TAGS_RESP < <(get_tag_from_registry "${1}")
-	else
-		mapfile -t TAGS_RESP < <(docker images --format "{{.Tag}}" "${1}")
-	fi
+get_available_version() {
+    if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
+        mapfile -t TAGS < <(get_tag_from_registry "$1" | tr ' ' '\n')
+    else
+        mapfile -t TAGS < <(docker images --format "{{.Tag}}" "$1")
+    fi
 
-	DEVELOP_REGEX='^develop\.[0-9]+$'
-	VERSION_REGEX='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
+    [ ${#TAGS[@]} -eq 0 ] && {
+        echo "ERROR: no tags found for image '$1'" >&2
+        kill -s TERM $PID
+    }
 
-	LATEST_TAG=""
-	IMAGE_NAME="${1}"
+    dev_re='^develop\.[0-9]+$'
+    ver_re='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
 
-	if [[ "${GIT_BRANCH}" == "bugfix/tag" ]]; then
-		LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$DEVELOP_REGEX" | sort -V | tail -n 1)
-		if [ -z "$LATEST_TAG" ]; then
-			echo "WARN: No develop.* tag found for ${IMAGE_NAME}, falling back to version tag" >&2
-			LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$VERSION_REGEX" | sort -V | tail -n 1)
-		fi
-	else
-		LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$VERSION_REGEX" | sort -V | tail -n 1)
-	fi
+    if [[ $GIT_BRANCH == *develop* ]]; then
+        dev_tag=$(printf "%s\n" "${TAGS[@]}" | grep -E "$dev_re" | sort -V | tail -1)
+    fi
+    ver_tag=$(printf "%s\n" "${TAGS[@]}" | grep -E "$ver_re" | sort -V | tail -1)
 
-	if [ -z "$LATEST_TAG" ]; then
-		echo "ERROR: No suitable tag found for image '${IMAGE_NAME}'" >&2
-		kill -s TERM $PID
-	fi
+    chosen_tag=${dev_tag:-$ver_tag}
 
-	echo "$LATEST_TAG"
+    [ -z "$chosen_tag" ] && {
+        echo "ERROR: suitable tag not found for image '$1'" >&2
+        kill -s TERM $PID
+    }
+
+    echo "$chosen_tag"
 }
 
 
