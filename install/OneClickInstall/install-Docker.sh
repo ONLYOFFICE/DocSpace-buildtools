@@ -550,7 +550,7 @@ get_available_version() {
     local ver_re='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
     local chosen=""
 
-    if [[ "$GIT_BRANCH" == *develop* ]]; then
+    if [[ "$GIT_BRANCH" == "bugfix/tag" ]]; then
         chosen=$(printf "%s\n" "${tags[@]}" | grep -E "$dev_re" | sort -V | tail -1)
     fi
 
