@@ -516,34 +516,41 @@ get_tag_from_registry () {
 	mapfile -t TAGS_RESP < <(curl -s -H "${AUTH_HEADER}" -X GET "${REGISTRY_TAGS_URL}" | jq -r "${JQ_FILTER}")
 }
 
+# Требуется: curl, grep, sort  (jq не нужен)
 get_available_version() {
+    local image="$1"
+
     if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
-        mapfile -t TAGS < <(get_tag_from_registry "$1" | tr ' ' '\n')
+        mapfile -t tags < <(
+            curl -fsSL "https://hub.docker.com/v2/repositories/${image}/tags?page_size=100" | grep -oP '"name":\s*"\K[^"]+'
+        )
     else
-        mapfile -t TAGS < <(docker images --format "{{.Tag}}" "$1")
+        mapfile -t tags < <(docker images --format "{{.Tag}}" "$image")
     fi
 
-    [ ${#TAGS[@]} -eq 0 ] && {
-        echo "ERROR: no tags found for image '$1'" >&2
+    if [ ${#tags[@]} -eq 0 ]; then
+        echo "ERROR: no tags found for '${image}'" >&2
         kill -s TERM $PID
-    }
-
-    dev_re='^develop\.[0-9]+$'
-    ver_re='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
-
-    if [[ $GIT_BRANCH == "bugfix/tag" ]]; then
-        dev_tag=$(printf "%s\n" "${TAGS[@]}" | grep -E "$dev_re" | sort -V | tail -1)
     fi
-    ver_tag=$(printf "%s\n" "${TAGS[@]}" | grep -E "$ver_re" | sort -V | tail -1)
 
-    chosen_tag=${dev_tag:-$ver_tag}
+    local dev_re='^develop\.[0-9]+$'
+    local ver_re='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
 
-    [ -z "$chosen_tag" ] && {
-        echo "ERROR: suitable tag not found for image '$1'" >&2
+    local chosen=""
+
+    if [[ $GIT_BRANCH == 'bugfix/tag' ]]; then
+        chosen=$(printf "%s\n" "${tags[@]}" | grep -E "$dev_re" | sort -V | tail -1)
+    fi
+
+    [ -z "$chosen" ] && \
+        chosen=$(printf "%s\n" "${tags[@]}" | grep -E "$ver_re" | sort -V | tail -1)
+
+    if [ -z "$chosen" ]; then
+        echo "ERROR: suitable tag not found for '${image}'" >&2
         kill -s TERM $PID
-    }
+    fi
 
-    echo "$chosen_tag"
+    echo "$chosen"
 }
 
 
