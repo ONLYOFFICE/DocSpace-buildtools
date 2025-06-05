@@ -3,6 +3,7 @@ from jsonpath_ng import jsonpath, parse
 from os import environ
 from multipledispatch import dispatch
 from netaddr import *
+from subprocess import call
 
 filePath = None
 saveFilePath = None
@@ -278,5 +279,4 @@ if os.path.exists(PLUGINS_DIR) and not os.path.exists(DATA_PLUGINS_DIR):
         dpd_item = os.path.join(DATA_PLUGINS_DIR, item)
         shutil.copytree(pd_item, dpd_item) if os.path.isdir(pd_item) else shutil.copy2(pd_item, dpd_item)
 
-run = RunServices(SERVICE_PORT, PATH_TO_CONF)
-run.RunService(RUN_FILE, ENV_EXTENSION, LOG_FILE)
+call("supervisord -n", shell=True)
