@@ -525,22 +525,23 @@ get_available_version () {
 
 	DEVELOP_REGEX='^develop\.[0-9]+$'
 	VERSION_REGEX='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
+
 	LATEST_TAG=""
+	IMAGE_NAME="${1}"
 
 	if [[ "${GIT_BRANCH}" == "bugfix/tag" ]]; then
-		MATCHED_TAGS=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$DEVELOP_REGEX")
-		if [ -z "$MATCHED_TAGS" ]; then
-			echo "ERROR: No develop.* tag found for image '${1}' (available: ${TAGS_RESP[*]})" >&2
-			kill -s TERM $PID
+		LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$DEVELOP_REGEX" | sort -V | tail -n 1)
+		if [ -z "$LATEST_TAG" ]; then
+			echo "WARN: No develop.* tag found for ${IMAGE_NAME}, falling back to version tag" >&2
+			LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$VERSION_REGEX" | sort -V | tail -n 1)
 		fi
-		LATEST_TAG=$(printf "%s\n" "${MATCHED_TAGS}" | sort -V | tail -n 1)
 	else
-		MATCHED_TAGS=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$VERSION_REGEX")
-		if [ -z "$MATCHED_TAGS" ]; then
-			echo "ERROR: No version tag found for image '${1}'" >&2
-			kill -s TERM $PID
-		fi
-		LATEST_TAG=$(printf "%s\n" "${MATCHED_TAGS}" | sort -V | tail -n 1)
+		LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$VERSION_REGEX" | sort -V | tail -n 1)
+	fi
+
+	if [ -z "$LATEST_TAG" ]; then
+		echo "ERROR: No suitable tag found for image '${IMAGE_NAME}'" >&2
+		kill -s TERM $PID
 	fi
 
 	echo "$LATEST_TAG"
