@@ -253,6 +253,10 @@ check_kernel () {
 	done
 }
 
+check_tag_exists() {
+    docker manifest inspect "$1:$2" >/dev/null 2>&1
+}
+
 check_hardware () {
 	AVAILABLE_DISK_SPACE=$(df -m /  | tail -1 | awk '{ print $4 }')
 
@@ -902,6 +906,24 @@ check_docker_image () {
 
 	DOCKER_TAG="${DOCKER_TAG:-$(get_available_version ${IMAGE_NAME})}"
 	reconfigure DOCKER_TAG ${DOCKER_TAG}
+	PRODUCT_REPOS=(
+		"${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-api"
+		"${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-management"
+		"${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-notify"
+		"${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-healthchecks"
+		"${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}"
+		"${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-migration-runner"
+		"${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-identity-authorization"
+		"${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-identity-api"
+	)
+
+	for repo in "${PRODUCT_REPOS[@]}"; do
+		if ! check_tag_exists "$repo" "$DOCKER_TAG"; then
+			DOCKER_TAG=$(get_available_version "$repo")
+			reconfigure DOCKER_TAG ${DOCKER_TAG}
+			break
+		fi
+	done
 	if [ "${OFFLINE_INSTALLATION}" != "false" ]; then
 		[ "$INSTALL_RABBITMQ" == "true" ]           && offline_check_docker_image ${BASE_DIR}/db.yml
 		[ "$INSTALL_RABBITMQ" == "true" ]           && offline_check_docker_image ${BASE_DIR}/rabbitmq.yml
