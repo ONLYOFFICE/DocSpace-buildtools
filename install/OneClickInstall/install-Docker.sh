@@ -521,7 +521,10 @@ get_available_version () {
 
 	VERSION_REGEX='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
 	[ ${#TAGS_RESP[@]} -eq 1 ] && LATEST_TAG="${TAGS_RESP[0]}" || \
-    LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$([[ $GIT_BRANCH == "feature/docker-offline" && -n $STATUS ]] && echo '^develop\.[0-9]+$' || echo "$VERSION_REGEX")" | sort -V | tail -n 1)
+#     LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$([[ $GIT_BRANCH == "feature/docker-offline" && -n $STATUS ]] && echo '^develop\.[0-9]+$' || echo "$VERSION_REGEX")" | sort -V | tail -n 1)
+    LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$VERSION_REGEX" | sort -V | tail -n 1)
+
+    [ -z "$LATEST_TAG" ] && LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E '^develop\.[0-9]+$' | sort -V | tail -n 1)
 	LATEST_TAG=${LATEST_TAG:-${STATUS:+$(printf "%s\n" "${TAGS_RESP[@]}" | sort -V | tail -n 1)}} #Fix for 4testing develop tags
 
 	if [ ! -z "${LATEST_TAG}" ]; then
