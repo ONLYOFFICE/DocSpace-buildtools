@@ -13,10 +13,10 @@ ARG BUILD_NUMBER=0
 ARG DEBUG_INFO="true"
 
 RUN set -eux; \
-        apt-get update; \
-        apt-get install -y --no-install-recommends \
-        git ; \
-        rm -rf /var/lib/apt/lists/*
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+    git ; \
+    rm -rf /var/lib/apt/lists/*
 
 ADD https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/git/refs/heads/${GIT_BRANCH} version.json
 RUN echo "--- clone resources ---" && \
@@ -100,6 +100,9 @@ for PKG in ${CLIENT_PACKAGES[@]}; do
   yarn workspace ${PKG} ${DEPLOY_ARGS}
 done
 
+echo "--- check client files ---" && \
+ls -la "${SRC_PATH}/publish/web/client" && \
+
 echo "--- publish public web files ---" && \
 cp -rf public "${SRC_PATH}/publish/web/"
 echo "--- publish locales ---" && \
@@ -131,42 +134,42 @@ ARG BUILD_PATH
 ARG SRC_PATH
 ENV BUILD_PATH=${BUILD_PATH}
 ENV SRC_PATH=${SRC_PATH}
-    
+
 # add defualt user and group for no-root run
 RUN echo "--- install runtime aspnet.9 ---" && \
     mkdir -p /var/log/onlyoffice && \
     mkdir -p /app/onlyoffice/data && \
     apt-get -y update && \
     apt-get install -yq \
-        sudo \
-        adduser \
-        nano \
-        curl \
-        vim \
-        python3-pip \
-        libgdiplus && \
-        pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces && \
-        addgroup --system --gid 107 onlyoffice && \
-        adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
-        chown onlyoffice:onlyoffice /app/onlyoffice -R && \
-        chown onlyoffice:onlyoffice /var/log -R && \
-        chown onlyoffice:onlyoffice /var/www -R && \
-        echo "--- clean up ---" && \
-        rm -rf /var/lib/apt/lists/* \
-        /tmp/*
-    
+    sudo \
+    adduser \
+    nano \
+    curl \
+    vim \
+    python3-pip \
+    libgdiplus && \
+    pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces && \
+    addgroup --system --gid 107 onlyoffice && \
+    adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
+    chown onlyoffice:onlyoffice /app/onlyoffice -R && \
+    chown onlyoffice:onlyoffice /var/log -R && \
+    chown onlyoffice:onlyoffice /var/www -R && \
+    echo "--- clean up ---" && \
+    rm -rf /var/lib/apt/lists/* \
+    /tmp/*
+
 COPY --from=src --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
-    
+
 USER onlyoffice
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
-    
+
 FROM node:22-slim AS noderun
 ARG BUILD_PATH
 ARG SRC_PATH 
 ENV BUILD_PATH=${BUILD_PATH}
 ENV SRC_PATH=${SRC_PATH}
-    
+
 RUN echo "--- install runtime node.22 ---" && \
     mkdir -p /var/log/onlyoffice && \
     mkdir -p /app/onlyoffice/data && \
