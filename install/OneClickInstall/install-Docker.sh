@@ -911,7 +911,6 @@ check_docker_image () {
 		"${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-management"
 		"${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-notify"
 		"${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-healthchecks"
-		"${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}"
 		"${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-migration-runner"
 		"${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-identity-authorization"
 		"${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-identity-api"
