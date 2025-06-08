@@ -23,6 +23,8 @@
 	<env name="LOG_FILE_PATH" value="{APPDIR}Logs\ASC.Identity.Authorization.log" />
 	<env name="SPRING_PROFILES_ACTIVE" value="prod" />
 	<env name="SPRING_APPLICATION_NAME" value="ASC.Identity.Authorization" />
+	<env name="SPRING_APPLICATION_SIGNATURE_SECRET" value="{MACHINE_KEY}" />
+	<env name="SPRING_APPLICATION_ENCRYPTION_SECRET" value="{IDENTITY_ENCRYPTION_SECRET}" />
 	<env name="SERVER_PORT" value="8080" />
 	<arguments>-Xrs -jar "{APPDIR}services\ASC.Identity.Authorization\service\app.jar"</arguments>
 	<log mode="roll-by-size">

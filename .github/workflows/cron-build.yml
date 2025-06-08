@@ -49,35 +49,23 @@ jobs:
           echo "build_rpm=$(echo "${CHANGED_FILES}" | grep -qE '^install/common/|^install/rpm/' && echo true || echo false)" >> $GITHUB_OUTPUT          
 
       - name: Dispatch Action main build
+        env:
+          GH_TOKEN: ${{ secrets.TOKEN }}
         run: |
-          curl \
-            -X POST \
-            -u "${{ secrets.USERNAME }}:${{ secrets.TOKEN }}" \
-            "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/actions/workflows/75421046/dispatches" \
-            -H "Accept: application/vnd.github+json" \
-            --data '{
-              "ref": "'"${{ github.ref_name }}"'",
-              "inputs": {
-                "branches": "${{ steps.list-branches.outputs.json_output }}"
-              }
-            }'   
+          gh api --method POST /repos/${{ github.repository }}/dispatches \
+            -f "event_type=cron-trigger-action" \
+            -F "client_payload[branches]=${{ steps.list-branches.outputs.json_output }}"
 
       - name: Dispatch Action build packages
         if: ${{ github.event_name == 'schedule' && steps.priority.outputs.target_branch != '' && (steps.changes.outputs.build_deb == 'true' || steps.changes.outputs.build_rpm == 'true') }}
+        env:
+          GH_TOKEN: ${{ secrets.TOKEN }}
         run: |
-          curl \
-          -X POST \
-          -u "${{ secrets.USERNAME}}:${{secrets.TOKEN}}" \
-          https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/actions/workflows/71256583/dispatches \
-          -H "Accept: application/vnd.github.everest-preview+json" \
-          --data '{
-            "ref": "'"${{ github.ref_name }}"'",
-            "inputs": {
-              "deb_build": "'"${{ steps.changes.outputs.build_deb }}"'",
-              "rpm_build": "'"${{ steps.changes.outputs.build_rpm }}"'",
-              "branch-buildtools": "'"${{ steps.priority.outputs.target_branch }}"'",
-              "branch-client": "'"${{ steps.priority.outputs.target_branch }}"'",
-              "branch-server": "'"${{ steps.priority.outputs.target_branch }}"'"
-            }
-          }'
+          gh api --method POST /repos/${{ github.repository }}/actions/workflows/71256583/dispatches \
+            -f ref='${{ github.ref_name }}' \
+            -f inputs[deb_build]='${{ steps.changes.outputs.build_deb }}' \
+            -f inputs[rpm_build]='${{ steps.changes.outputs.build_rpm }}' \
+            -f inputs[branch-buildtools]='${{ steps.priority.outputs.target_branch }}' \
+            -f inputs[branch-client]='${{ steps.priority.outputs.target_branch }}' \
+            -f inputs[branch-server]='${{ steps.priority.outputs.target_branch }}'
 

@@ -63,7 +63,6 @@
 %dir %{_sysconfdir}/onlyoffice/%{product}/openresty/
 %{buildpath}/public/
 %{buildpath}/client/
-%{buildpath}/management/
 
 %files studio-notify
 %defattr(-, onlyoffice, onlyoffice, -)
@@ -151,3 +150,17 @@
 %{_var}/www/onlyoffice/Data/Studio/webplugins/
 %dir %{_var}/www/onlyoffice/Data/
 %dir %{_var}/www/onlyoffice/Data/Studio/
+
+%files sdk
+%defattr(-, onlyoffice, onlyoffice, -)
+%{buildpath}/products/ASC.Sdk/sdk/
+/usr/lib/systemd/system/%{product}-sdk.service
+%dir %{buildpath}/products/
+%dir %{buildpath}/products/ASC.Sdk/
+
+%files management
+%defattr(-, onlyoffice, onlyoffice, -)
+%{buildpath}/products/ASC.Management/management/
+/usr/lib/systemd/system/%{product}-management.service
+%dir %{buildpath}/products/
+%dir %{buildpath}/products/ASC.Management/

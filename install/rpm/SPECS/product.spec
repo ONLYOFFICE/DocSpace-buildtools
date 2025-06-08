@@ -47,6 +47,7 @@ Requires:       %name-files = %version-%release
 Requires:       %name-files-services = %version-%release
 Requires:       %name-healthchecks = %version-%release
 Requires:       %name-login = %version-%release
+Requires:       %name-management = %version-%release
 Requires:       %name-migration-runner = %version-%release
 Requires:       %name-notify = %version-%release
 Requires:       %name-people-server = %version-%release
@@ -58,6 +59,7 @@ Requires:       %name-identity-authorization = %version-%release
 Requires:       %name-identity-api = %version-%release
 Requires:       %name-studio = %version-%release
 Requires:       %name-studio-notify = %version-%release
+Requires:       %name-sdk = %version-%release
 Requires:       openssl
 
 Conflicts:      %name-radicale
@@ -72,13 +74,14 @@ predefined permissions.
 %prep
 rm -rf %{_rpmdir}/%{_arch}/%{name}-* %{_builddir}/*
 
-tar -xf %{SOURCE0} --transform='s,^[^/]\+,buildtools,'   -C %{_builddir} 
-tar -xf %{SOURCE1} --transform='s,^[^/]\+,client,'       -C %{_builddir} 
-tar -xf %{SOURCE2} --transform='s,^[^/]\+,server,'       -C %{_builddir} 
+tar -xf %{SOURCE0} --transform='s,^[^/]\+,buildtools,'   -C %{_builddir} &
+tar -xf %{SOURCE1} --transform='s,^[^/]\+,client,'       -C %{_builddir} &
+tar -xf %{SOURCE2} --transform='s,^[^/]\+,server,'       -C %{_builddir} &
+tar -xf %{SOURCE4} --transform='s,^[^/]\+,campaigns,'    -C %{_builddir} &
+tar -xf %{SOURCE5} --transform='s,^[^/]\+,plugins,'      -C %{_builddir} &
+wait
 tar -xf %{SOURCE3} --transform='s,^[^/]\+,DocStore,'     -C %{_builddir}/server/products/ASC.Files/Server
-tar -xf %{SOURCE4} --transform='s,^[^/]\+,campaigns,'    -C %{_builddir}
-tar -xf %{SOURCE5} --transform='s,^[^/]\+,plugins,'      -C %{_builddir}
-cp %{SOURCE6} .
+cp -rf %{SOURCE6} .
 
 %include build.spec
 
@@ -99,6 +102,14 @@ getent passwd onlyoffice >/dev/null || useradd -r -g onlyoffice -s /sbin/nologin
 if [ -f /etc/nginx/conf.d/onlyoffice.conf ]; then
     rm -rf /etc/nginx/conf.d/onlyoffice*
     systemctl reload nginx
+fi
+
+%pre identity-api
+
+# (DS v3.1.0) fix encryption key generation issue
+ENCRYPTION_PATH=%{_sysconfdir}/onlyoffice/%{product}/.private/encryption
+if [ "$1" -eq 2 ] && [ ! -f "${ENCRYPTION_PATH}" ]; then
+  echo 'secret' > "${ENCRYPTION_PATH}" && chmod 600 "${ENCRYPTION_PATH}"
 fi
 
 %post 

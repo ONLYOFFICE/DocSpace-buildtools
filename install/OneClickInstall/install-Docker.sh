@@ -1,7 +1,7 @@
 #!/bin/bash
 
  #
- # (c) Copyright Ascensio System SIA 2021
+ # (c) Copyright Ascensio System SIA 2025
  #
  # This program is a free software product. You can redistribute it and/or
  # modify it under the terms of the GNU Affero General Public License (AGPL)
@@ -11,13 +11,13 @@
  # of any third-party rights.
  #
  # This program is distributed WITHOUT ANY WARRANTY; without even the implied
- # warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
+ # warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. For
  # details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
  #
  # You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
  # street, Riga, Latvia, EU, LV-1050.
  #
- # The  interactive user interfaces in modified source and object code versions
+ # The interactive user interfaces in modified source and object code versions
  # of the Program must display Appropriate Legal Notices, as required under
  # Section 5 of the GNU AGPL version 3.
  #
@@ -41,6 +41,7 @@ DOCKER_TAG=""
 INSTALLATION_TYPE="ENTERPRISE"
 IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-api"
 CONTAINER_NAME="${PACKAGE_SYSNAME}-api"
+IDENTITY_CONTAINER_NAME="${PACKAGE_SYSNAME}-identity-api"
 
 NETWORK_NAME=${PACKAGE_SYSNAME}
 
@@ -63,7 +64,6 @@ INSTALL_ELASTICSEARCH="true"
 INSTALL_FLUENT_BIT="true"
 INSTALL_PRODUCT="true"
 UNINSTALL="false"
-HUB=""
 USERNAME=""
 PASSWORD=""
 
@@ -103,503 +103,22 @@ APP_CORE_MACHINEKEY=""
 ENV_EXTENSION=""
 LETS_ENCRYPT_DOMAIN=""
 LETS_ENCRYPT_MAIL=""
+IDENTITY_ENCRYPTION_SECRET=""
 
-HELP_TARGET="install-Docker.sh"
 OFFLINE_INSTALLATION="false"
 
 SKIP_HARDWARE_CHECK="false"
 
 EXTERNAL_PORT="80"
+ARGS_SCRIPT="install-Docker-args.sh"
+DOWNLOAD_URL_PREFIX="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}"
+GIT_BRANCH=$(echo "$@" | grep -oP '(?<=-gb )\S+')
 
-while [ "$1" != "" ]; do
-	case $1 in
+if [[ -n "${GIT_BRANCH:-}" ]]; then
+  DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${PACKAGE_SYSNAME^^}/${PRODUCT}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
+fi
 
-		-u | --update )
-			if [ "$2" != "" ]; then
-				UPDATE=$2
-				shift
-			fi
-		;;
-
-		-hub | --hub )
-			if [ "$2" != "" ]; then
-				HUB=$2
-				shift
-			fi
-		;;
-
-		-un | --username )
-			if [ "$2" != "" ]; then
-				USERNAME=$2
-				shift
-			fi
-		;;
-
-		-p | --password )
-			if [ "$2" != "" ]; then
-				PASSWORD=$2
-				shift
-			fi
-		;;
-
-		-ids | --installdocspace )
-			if [ "$2" != "" ]; then
-				INSTALL_PRODUCT=$2
-				shift
-			fi
-		;;
-
-		-idocs | --installdocs )
-			if [ "$2" != "" ]; then
-				INSTALL_DOCUMENT_SERVER=$2
-				shift
-			fi
-		;;
-
-		-imysql | --installmysql )
-			if [ "$2" != "" ]; then
-				INSTALL_MYSQL_SERVER=$2
-				shift
-			fi
-		;;		
-		
-		-irbt | --installrabbitmq )
-			if [ "$2" != "" ]; then
-				INSTALL_RABBITMQ=$2
-				shift
-			fi
-		;;
-
-		-irds | --installredis )
-			if [ "$2" != "" ]; then
-				INSTALL_REDIS=$2
-				shift
-			fi
-		;;
-
-		-ht | --helptarget )
-			if [ "$2" != "" ]; then
-				HELP_TARGET=$2
-				shift
-			fi
-		;;
-
-		-mysqld | --mysqldatabase )
-			if [ "$2" != "" ]; then
-				MYSQL_DATABASE=$2
-				shift
-			fi
-		;;
-
-		-mysqlrp | --mysqlrootpassword )
-			if [ "$2" != "" ]; then
-				MYSQL_ROOT_PASSWORD=$2
-				shift
-			fi
-		;;
-
-		-mysqlu | --mysqluser )
-			if [ "$2" != "" ]; then
-				MYSQL_USER=$2
-				shift
-			fi
-		;;
-
-		-mysqlh | --mysqlhost )
-			if [ "$2" != "" ]; then
-				MYSQL_HOST=$2
-				shift
-			fi
-		;;
-
-		-mysqlport | --mysqlport )
-			if [ "$2" != "" ]; then
-				MYSQL_PORT=$2
-				shift
-			fi
-		;;
-
-		-mysqlp | --mysqlpassword )
-			if [ "$2" != "" ]; then
-				MYSQL_PASSWORD=$2
-				shift
-			fi
-		;;
-
-		-espr | --elasticprotocol )
-			if [ "$2" != "" ]; then
-				ELK_SHEME=$2
-				shift
-			fi
-		;;
-
-		-esh | --elastichost )
-			if [ "$2" != "" ]; then
-				ELK_HOST=$2
-				shift
-			fi
-		;;
-
-		-esp | --elasticport )
-			if [ "$2" != "" ]; then
-				ELK_PORT=$2
-				shift
-			fi
-		;;
-
-		-skiphc | --skiphardwarecheck )
-			if [ "$2" != "" ]; then
-				SKIP_HARDWARE_CHECK=$2
-				shift
-			fi
-		;;
-
-		-ep | --externalport )
-			if [ "$2" != "" ]; then
-				EXTERNAL_PORT=$2
-				shift
-			fi
-		;;
-
-		-dsh | --docspacehost )
-			if [ "$2" != "" ]; then
-				APP_URL_PORTAL=$2
-				shift
-			fi
-		;;
-		
-		-mk | --machinekey )
-			if [ "$2" != "" ]; then
-				APP_CORE_MACHINEKEY=$2
-				shift
-			fi
-		;;
-		
-		-env | --environment )
-			if [ "$2" != "" ]; then
-				ENV_EXTENSION=$2
-				shift
-			fi
-		;;
-
-		-s | --status )
-			if [ "$2" != "" ]; then
-				STATUS=$2
-				IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-api"
-				shift
-			fi
-		;;
-
-		-ls | --localscripts )
-			if [ "$2" != "" ]; then
-				shift
-			fi
-		;;
-		
-		-dsv | --docspaceversion )
-			if [ "$2" != "" ]; then
-				DOCKER_TAG=$2
-				shift
-			fi
-		;;
-		
-		-gb | --gitbranch )
-			if [ "$2" != "" ]; then
-				PARAMETERS="$PARAMETERS ${1}"
-				GIT_BRANCH=$2
-				shift
-			fi
-		;;
-		
-		-docsi | --docsimage )
-			if [ "$2" != "" ]; then
-				DOCUMENT_SERVER_IMAGE_NAME=$2
-				shift
-			fi
-		;;
-		
-		-docsv | --docsversion )
-			if [ "$2" != "" ]; then
-				DOCUMENT_SERVER_VERSION=$2
-				shift
-			fi
-		;;
-		
-		-docsurl | --docsurl )
-			if [ "$2" != "" ]; then
-				DOCUMENT_SERVER_URL_EXTERNAL=$2
-				shift
-			fi
-		;;
-		
-		-dbm | --databasemigration )
-			if [ "$2" != "" ]; then
-				DATABASE_MIGRATION=$2
-				shift
-			fi
-		;;
-
-		-jh | --jwtheader )
-			if [ "$2" != "" ]; then
-				DOCUMENT_SERVER_JWT_HEADER=$2
-				shift
-			fi
-		;;
-
-		-js | --jwtsecret )
-			if [ "$2" != "" ]; then
-				DOCUMENT_SERVER_JWT_SECRET=$2
-				shift
-			fi
-		;;
-
-		-it | --installation_type )
-			if [ "$2" != "" ]; then
-				INSTALLATION_TYPE="${2^^}"
-				shift
-			fi
-		;;
-
-		-ms | --makeswap )
-			if [ "$2" != "" ]; then
-				MAKESWAP=$2
-				shift
-			fi
-		;;
-
-		-ies | --installelastic )
-			if [ "$2" != "" ]; then
-				INSTALL_ELASTICSEARCH=$2
-				shift
-			fi
-		;;
-
-		-ifb | --installfluentbit )
-			if [ "$2" != "" ]; then
-				INSTALL_FLUENT_BIT=$2
-				shift
-			fi
-		;;
-
-		-rdsh | --redishost )
-			if [ "$2" != "" ]; then
-				REDIS_HOST=$2
-				shift
-			fi
-		;;
-
-		-rdsp | --redisport )
-			if [ "$2" != "" ]; then
-				REDIS_PORT=$2
-				shift
-			fi
-		;;
-
-		-rdsu | --redisusername )
-			if [ "$2" != "" ]; then
-				REDIS_USER_NAME=$2
-				shift
-			fi
-		;;
-
-		-rdspass | --redispassword )
-			if [ "$2" != "" ]; then
-				REDIS_PASSWORD=$2
-				shift
-			fi
-		;;
-
-		-rbpr | --rabbitmqprotocol )
-			if [ "$2" != "" ]; then
-				RABBIT_PROTOCOL=$2
-				shift
-			fi
-		;;
-
-		-rbth | --rabbitmqhost )
-			if [ "$2" != "" ]; then
-				RABBIT_HOST=$2
-				shift
-			fi
-		;;
-
-		-rbtp | --rabbitmqport )
-			if [ "$2" != "" ]; then
-				RABBIT_PORT=$2
-				shift
-			fi
-		;;
-
-		-rbtu | --rabbitmqusername )
-			if [ "$2" != "" ]; then
-				RABBIT_USER_NAME=$2
-				shift
-			fi
-		;;
-
-		-rbtpass | --rabbitmqpassword )
-			if [ "$2" != "" ]; then
-				RABBIT_PASSWORD=$2
-				shift
-			fi
-		;;
-
-		-rbtvh | --rabbitmqvirtualhost )
-			if [ "$2" != "" ]; then
-				RABBIT_VIRTUAL_HOST=$2
-				shift
-			fi
-		;;
-
-		-led | --letsencryptdomain )
-			if [ "$2" != "" ]; then
-				LETS_ENCRYPT_DOMAIN=$2
-				shift
-			fi
-		;;
-
-		-lem | --letsencryptmail )
-			if [ "$2" != "" ]; then
-				LETS_ENCRYPT_MAIL=$2
-				shift
-			fi
-		;;
-
-		-cf | --certfile )
-			if [ "$2" != "" ]; then
-				CERTIFICATE_PATH=$2
-				shift
-			fi
-		;;
-
-		-ckf | --certkeyfile )
-			if [ "$2" != "" ]; then
-				CERTIFICATE_KEY_PATH=$2
-				shift
-			fi
-		;;
-
-		-du | --dashboardsusername )
-			if [ "$2" != "" ]; then
-				DASHBOARDS_USERNAME=$2
-				shift
-			fi
-		;;
-
-		-dp | --dashboardspassword )
-			if [ "$2" != "" ]; then
-				DASHBOARDS_PASSWORD=$2
-				shift
-			fi
-		;;
-		
-		-noni | --noninteractive )
-			if [ "$2" != "" ]; then
-				NON_INTERACTIVE=$2
-				shift
-			fi
-		;;
-
-		-uni | --uninstall)
-			if [ "$2" != "" ]; then
-				UNINSTALL=$2
-            	shift
-			fi
-
-        ;;
-
-		-off | --offline )
-			if [ "$2" != "" ]; then
-				OFFLINE_INSTALLATION=$2
-				shift
-			fi
-		;;
-
-		-h | -? | --help )
-			echo "  Usage: bash $HELP_TARGET [PARAMETER] [[PARAMETER], ...]"
-			echo
-			echo "    Parameters:"
-			echo "      -hub, --hub                       dockerhub name"
-			echo "      -un, --username                   dockerhub username"
-			echo "      -p, --password                    dockerhub password"
-			echo "      -it, --installation_type          installation type (community|developer|enterprise)"
-			echo "      -skiphc, --skiphardwarecheck      skip hardware check (true|false)"
-			echo "      -u, --update                      use to update existing components (true|false)"
-			echo "      -ids, --installdocspace           install or update $PRODUCT (true|false)"
-			echo "      -dsv, --docspaceversion           select the $PRODUCT version"
-			echo "      -dsh, --docspacehost              $PRODUCT host"
-			echo "      -env, --environment               $PRODUCT environment"
-			echo "      -mk, --machinekey                 setting for core.machinekey"
-			echo "      -ep, --externalport               external $PRODUCT port (default value 80)"
-			echo "      -idocs, --installdocs             install or update document server (true|false)"
-			echo "      -docsi, --docsimage               document server image name"
-			echo "      -docsv, --docsversion             document server version"
-			echo "      -docsurl, --docsurl               $PACKAGE_SYSNAME docs server address (example http://$PACKAGE_SYSNAME-docs-address:8083)"
-			echo "      -jh, --jwtheader                  defines the http header that will be used to send the JWT"
-			echo "      -js, --jwtsecret                  defines the secret key to validate the JWT in the request"	
-			echo "      -irbt, --installrabbitmq          install or update rabbitmq (true|false)"	
-			echo "      -irds, --installredis             install or update redis (true|false)"
-			echo "      -imysql, --installmysql           install or update mysql (true|false)"		
-			echo "      -ies, --installelastic            install or update elasticsearch (true|false)"
-			echo "      -ifb, --installfluentbit          install or update fluent-bit (true|false)"
-			echo "      -du, --dashboardsusername         login for authorization in /dashboards/"
-			echo "      -dp, --dashboardspassword         password for authorization in /dashboards/"
-			echo "      -espr, --elasticprotocol          the protocol for the connection to elasticsearch (default value http)"
-			echo "      -esh, --elastichost               the IP address or hostname of the elasticsearch"
-			echo "      -esp, --elasticport               elasticsearch port number (default value 9200)"
-			echo "      -rdsh, --redishost                the IP address or hostname of the redis server"
-			echo "      -rdsp, --redisport                redis server port number (default value 6379)"
-			echo "      -rdsu, --redisusername            redis user name"
-			echo "      -rdspass, --redispassword         password set for redis account"
-			echo "      -rbpr, --rabbitmqprotocol         the protocol for the connection to rabbitmq server (default value amqp)"
-			echo "      -rbth, --rabbitmqhost             the IP address or hostname of the rabbitmq server"
-			echo "      -rbtp, --rabbitmqport             rabbitmq server port number (default value 5672)"
-			echo "      -rbtu, --rabbitmqusername         username for rabbitmq server account"
-			echo "      -rbtpass, --rabbitmqpassword      password set for rabbitmq server account"
-			echo "      -rbtvh, --rabbitmqvirtualhost     rabbitmq virtual host (default value \"/\")"
-			echo "      -mysqlrp, --mysqlrootpassword     mysql server root password"
-			echo "      -mysqld, --mysqldatabase          $PRODUCT database name"
-			echo "      -mysqlu, --mysqluser              $PRODUCT database user"
-			echo "      -mysqlp, --mysqlpassword          $PRODUCT database password"
-			echo "      -mysqlh, --mysqlhost              mysql server host"
-			echo "      -mysqlport, --mysqlport           mysql server port number (default value 3306)"
-			echo "      -led, --letsencryptdomain         defines the domain for Let's Encrypt certificate"
-			echo "      -lem, --letsencryptmail           defines the domain administator mail address for Let's Encrypt certificate"
-			echo "      -cf, --certfile                   path to the certificate file for the domain"
-			echo "      -ckf, --certkeyfile               path to the private key file for the certificate"
-			echo "      -off, --offline                   set the script for offline installation (true|false)"
-			echo "      -noni, --noninteractive           auto confirm all questions (true|false)"
-			echo "      -dbm, --databasemigration         database migration (true|false)"
-			echo "      -ms, --makeswap                   make swap file (true|false)"
-			echo "      -uni, --uninstall                 uninstall existing installation (true|false)"
-			echo "      -?, -h, --help                    this help"
-			echo
-			echo "    Install all the components without document server:"
-			echo "      bash $HELP_TARGET -idocs false"
-			echo
-			echo "    Install Document Server only. Skip the installation of mysql, $PRODUCT, rabbitmq, redis:"
-			echo "      bash $HELP_TARGET -ids false -idocs true -imysql false -irbt false -irds false"
-			echo
-			echo "    Update all installed components. Stop the containers that need to be updated, remove them and run the latest versions of the corresponding components."
-			echo "    The portal data should be picked up automatically:"
-			echo "      bash $HELP_TARGET -u true"
-			echo
-			echo "    Update Document Server only to version 7.2.1.34 and skip the update for all other components:"
-			echo "      bash $HELP_TARGET -u true -docsi ${PACKAGE_SYSNAME}/documentserver-ee -docsv 7.2.1.34 -idocs true -ids false -irbt false -irds false"
-			echo
-			echo "    Update $PRODUCT only to version 1.2.0 and skip the update for all other components:"
-			echo "      bash $HELP_TARGET -u true -dsv v1.2.0 -idocs false -irbt false -irds false"
-			echo
-			exit 0
-		;;
-
-		* )
-			echo "Unknown parameter $1" 1>&2
-			exit 1
-		;;
-	esac
-	shift
-done
+[[ "$LOCAL_SCRIPTS" = "true" ]] && source "./${ARGS_SCRIPT}" || source <(curl "${DOWNLOAD_URL_PREFIX}/${ARGS_SCRIPT}")
 
 uninstall() {
     read -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " REMOVE_DATA_SERVICES
@@ -635,27 +154,11 @@ uninstall() {
 
 root_checking () {
 	PID=$$
-	if [[ $EUID -ne 0 ]]; then
-		echo "To perform this action you must be logged in with root rights"
-		exit 1
-	fi
+	[[ $EUID -eq 0 ]] || { echo "To perform this action you must be logged in with root rights"; exit 1; }
 }
 
 is_command_exists () {
     type "$1" &> /dev/null
-}
-
-file_exists () {
-	if [ -z "$1" ]; then
-		echo "file path is empty"
-		exit 1;
-	fi
-
-	if [ -f "$1" ]; then
-		return 0 #true
-	else
-		return 1 #false
-	fi
 }
 
 get_random_str () {
@@ -791,7 +294,7 @@ install_package () {
 }
 
 install_docker_compose () {
-	curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/bin/docker-compose
+	curl -sL "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/bin/docker-compose
 	chmod +x /usr/bin/docker-compose
 }
 
@@ -835,42 +338,6 @@ check_ports () {
 		echo "The following TCP Ports must be available: $USED_PORTS"
 		exit 1
 	fi
-}
-
-check_docker_version () {
-	CUR_FULL_VERSION=$(docker -v | cut -d ' ' -f3 | cut -d ',' -f1)
-	CUR_VERSION=$(echo $CUR_FULL_VERSION | cut -d '-' -f1)
-	CUR_EDITION=$(echo $CUR_FULL_VERSION | cut -d '-' -f2)
-
-	if [ "${CUR_EDITION}" == "ce" ] || [ "${CUR_EDITION}" == "ee" ]; then
-		return 0
-	fi
-
-	if [ "${CUR_VERSION}" != "${CUR_EDITION}" ]; then
-		echo "Unspecific docker version"
-		exit 1
-	fi
-
-	MIN_NUM_ARR=(1 10 0)
-	CUR_NUM_ARR=();
-
-	CUR_STR_ARR=$(echo $CUR_VERSION | grep -Po "[0-9]+\.[0-9]+\.[0-9]+" | tr "." " ")
-
-	for CUR_STR_ITEM in $CUR_STR_ARR; do
-		CUR_NUM_ARR+=("$CUR_STR_ITEM")
-	done
-
-	INDEX=0
-
-	while [[ $INDEX -lt 3 ]]; do
-		if [ ${CUR_NUM_ARR[INDEX]} -lt ${MIN_NUM_ARR[INDEX]} ]; then
-			echo "The outdated Docker version has been found. Please update to the latest version."
-			exit 1
-		elif [ ${CUR_NUM_ARR[INDEX]} -gt ${MIN_NUM_ARR[INDEX]} ]; then
-			return 0
-		fi
-		(( INDEX++ ))
-	done
 }
 
 install_docker () {
@@ -934,40 +401,31 @@ install_docker () {
 	fi
 }
 
-docker_login () {
-	if [[ -n ${USERNAME} && -n ${PASSWORD}  ]]; then
-		docker login ${HUB} --username ${USERNAME} --password ${PASSWORD}
-	fi
+docker_login() {
+    if [[ -n "$USERNAME" && -n "$PASSWORD" ]]; then
+        echo "$PASSWORD" | docker login "$REGISTRY_URL" --username "$USERNAME" --password-stdin || { echo "Docker authentication failed"; exit 1; }
+    fi
 }
 
 create_network () {
-	NETWORT_EXIST=$(docker network ls | awk '{print $2;}' | { grep -x ${NETWORK_NAME} || true; })
+	NETWORK_EXIST=$(docker network ls | awk '{print $2;}' | { grep -x ${NETWORK_NAME} || true; })
 
-	if [[ -z ${NETWORT_EXIST} ]]; then
+	if [[ -z ${NETWORK_EXIST} ]]; then
 		docker network create --driver bridge ${NETWORK_NAME}
 	fi
 }
 
 read_continue_installation () {
-	if [[ "${NON_INTERACTIVE}" = "true" ]]; then
-		return 0
-	fi
+	[ "$NON_INTERACTIVE" = "true" ] && return 0
 
-	read -p "Continue installation [Y/N]? " CHOICE_INSTALLATION
-	case "$CHOICE_INSTALLATION" in
-		y|Y )
-			return 0
-		;;
-
-		n|N )
-			exit 0
-		;;
-
-		* )
-			echo "Please, enter Y or N"
-			read_continue_installation
-		;;
-	esac
+	while true; do
+        read -p "Continue installation [Y/N]? " CHOICE_INSTALLATION
+        case "$CHOICE_INSTALLATION" in
+            [yY]) return 0 ;;
+            [nN]) exit 0 ;;
+            *) echo "Please, enter Y or N" ;;
+        esac
+    done
 }
 
 domain_check () {
@@ -1031,17 +489,17 @@ get_env_parameter () {
 	echo ${VALUE//\"}
 }
 
-get_tag_from_hub () {
-	if [[ -n ${HUB} ]]; then
+get_tag_from_registry () {
+	if [[ -n ${REGISTRY_URL} ]]; then
 		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
 			CREDENTIALS=$(echo -n "$USERNAME:$PASSWORD" | base64)
 		elif [[ -f "$HOME/.docker/config.json" ]]; then
-			CREDENTIALS=$(jq -r --arg hub "${HUB}" '.auths | to_entries[] | select(.key | contains($hub)).value.auth // empty' "$HOME/.docker/config.json")
+			CREDENTIALS=$(jq -r --arg registry "${REGISTRY_URL}" '.auths | to_entries[] | select(.key | contains($registry)).value.auth // empty' "$HOME/.docker/config.json")
 		fi
 
 		AUTH_HEADER=${CREDENTIALS:+Authorization: Basic $CREDENTIALS}
 
-		HUB_URL="https://${HUB}/v2/${1/#$HUB\//}/tags/list"
+		REGISTRY_TAGS_URL="${REGISTRY_URL%/}/v2/${1}/tags/list"
 		JQ_FILTER='.tags | join("\n")'
 	else
 		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
@@ -1051,18 +509,19 @@ get_tag_from_hub () {
 			sleep 1
 		fi
 
-		HUB_URL="https://hub.docker.com/v2/repositories/${1}/tags/"
+		REGISTRY_TAGS_URL="https://hub.docker.com/v2/repositories/${1}/tags/"
 		JQ_FILTER='.results[].name // empty'
 	fi
 
-	mapfile -t TAGS_RESP < <(curl -s -H "${AUTH_HEADER}" -X GET "${HUB_URL}" | jq -r "${JQ_FILTER}")
+	mapfile -t TAGS_RESP < <(curl -s -H "${AUTH_HEADER}" -X GET "${REGISTRY_TAGS_URL}" | jq -r "${JQ_FILTER}")
 }
 
 get_available_version () {
-	[ "${OFFLINE_INSTALLATION}" = "false" ] && get_tag_from_hub ${1} || mapfile -t TAGS_RESP < <(docker images --format "{{.Tag}}" "${1}")
+	[ "${OFFLINE_INSTALLATION}" = "false" ] && get_tag_from_registry ${1} || mapfile -t TAGS_RESP < <(docker images --format "{{.Tag}}" "${1}")
 
 	VERSION_REGEX='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
-	[ ${#TAGS_RESP[@]} -eq 1 ] && LATEST_TAG="${TAGS_RESP[0]}" || LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$VERSION_REGEX" | sort -V | tail -n 1)
+	[ ${#TAGS_RESP[@]} -eq 1 ] && LATEST_TAG="${TAGS_RESP[0]}" || \
+    LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$([[ $GIT_BRANCH == "develop" && -n $STATUS ]] && echo '^develop\.[0-9]+$' || echo "$VERSION_REGEX")" | sort -V | tail -n 1)
 	LATEST_TAG=${LATEST_TAG:-${STATUS:+$(printf "%s\n" "${TAGS_RESP[@]}" | sort -V | tail -n 1)}} #Fix for 4testing develop tags
 
 	if [ ! -z "${LATEST_TAG}" ]; then
@@ -1100,9 +559,12 @@ set_jwt_header () {
 	DOCUMENT_SERVER_JWT_HEADER="${DOCUMENT_SERVER_JWT_HEADER:-"AuthorizationJwt"}"
 }
 
-set_core_machinekey () {
+set_secrets () {
 	APP_CORE_MACHINEKEY="${APP_CORE_MACHINEKEY:-$(get_env_parameter "APP_CORE_MACHINEKEY" "${CONTAINER_NAME}")}"
 	[ "$UPDATE" != "true" ] && APP_CORE_MACHINEKEY="${APP_CORE_MACHINEKEY:-$(get_random_str 12)}"
+	IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-$(get_env_parameter "IDENTITY_ENCRYPTION_SECRET" "${IDENTITY_CONTAINER_NAME}")}"
+	[ "${UPDATE}" = "true" ] && IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-"secret"}" # (DS v3.1.0) fix encryption key generation issue
+	IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-$(get_random_str 12)}"
 }
 
 set_mysql_params () {
@@ -1119,9 +581,10 @@ set_mysql_params () {
 }
 
 set_docspace_params() {
-	HUB=${HUB:-$(get_env_parameter "HUB")}
+	REGISTRY=${REGISTRY:-$(get_env_parameter "REGISTRY")}
 
 	ENV_EXTENSION=${ENV_EXTENSION:-$(get_env_parameter "ENV_EXTENSION" "${CONTAINER_NAME}")}
+	VOLUMES_DIR=${VOLUMES_DIR:-$(get_env_parameter "VOLUMES_DIR")}
 	APP_CORE_BASE_DOMAIN=${APP_CORE_BASE_DOMAIN:-$(get_env_parameter "APP_CORE_BASE_DOMAIN" "${CONTAINER_NAME}")}
 	EXTERNAL_PORT=${EXTERNAL_PORT:-$(get_env_parameter "EXTERNAL_PORT" "${CONTAINER_NAME}")}
 
@@ -1206,6 +669,11 @@ install_mysql_server () {
 	reconfigure MYSQL_ROOT_PASSWORD ${MYSQL_ROOT_PASSWORD}
 
 	if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ]; then
+		if [ -n "${VOLUMES_DIR}" ]; then
+			mkdir -p "${VOLUMES_DIR}/mysql_data"
+			chown $(docker run --rm "$(docker-compose -f ${BASE_DIR}/db.yml config | awk '/image:/ {print $2; exit}')" stat -c '%u:%g' /var/lib/mysql) "${VOLUMES_DIR}/mysql_data"
+			chmod $(docker run --rm "$(docker-compose -f ${BASE_DIR}/db.yml config | awk '/image:/ {print $2; exit}')" stat -c '%a' /var/lib/mysql) "${VOLUMES_DIR}/mysql_data"
+		fi
 		docker-compose -f $BASE_DIR/db.yml up -d --force-recreate
 	elif [ "$INSTALL_MYSQL_SERVER" == "pull" ]; then
 		docker-compose -f $BASE_DIR/db.yml pull
@@ -1240,11 +708,15 @@ install_redis () {
 
 install_elasticsearch () {
 	if [[ -z ${ELK_HOST} ]] && [ "$INSTALL_ELASTICSEARCH" == "true" ]; then
-		if [ "$(free --mega | grep -oP '\d+' | head -n 1)" -gt "12000" ]; then #RAM ~12Gb
-			sed -i 's/Xms[0-9]g/Xms4g/g; s/Xmx[0-9]g/Xmx4g/g' $BASE_DIR/opensearch.yml
-		else
-			sed -i 's/Xms[0-9]g/Xms1g/g; s/Xmx[0-9]g/Xmx1g/g' $BASE_DIR/opensearch.yml
+		if [ -n "${VOLUMES_DIR}" ]; then
+			mkdir -p "${VOLUMES_DIR}/os_data"
+			chown $(docker run --rm "$(docker-compose -f ${BASE_DIR}/opensearch.yml config | awk '/image:/ {print $2; exit}')" stat -c '%u:%g' /usr/share/opensearch/data) "${VOLUMES_DIR}/os_data"
 		fi
+
+		SAFE_MEMORY=$(( ( $(free --mega | grep -oP '\d+' | head -n 1) - 1024 ) / 2 )) # half of the remaining memory after the 1 GB reserve for the OS
+		HEAP=$(( SAFE_MEMORY < 2048 ? 1 : SAFE_MEMORY < 4096 ? 2 : 4 ))  #if <2GB → 1GB; <4GB → 2GB; otherwise → 4GB
+		sed -i "s/Xms[0-9]g/Xms${HEAP}g/g; s/Xmx[0-9]g/Xmx${HEAP}g/g" $BASE_DIR/opensearch.yml
+
 		docker-compose -f $BASE_DIR/opensearch.yml up -d
 	elif [ "$INSTALL_ELASTICSEARCH" == "pull" ]; then
 		docker-compose -f $BASE_DIR/opensearch.yml pull
@@ -1285,8 +757,9 @@ install_product () {
 		fi
 
 		reconfigure ENV_EXTENSION ${ENV_EXTENSION}
-		reconfigure IDENTITY_PROFILE "${IDENTITY_PROFILE:-"prod"}"
+		reconfigure IDENTITY_PROFILE "${IDENTITY_PROFILE:-"prod,server"}"
 		reconfigure APP_CORE_MACHINEKEY ${APP_CORE_MACHINEKEY}
+		reconfigure IDENTITY_ENCRYPTION_SECRET ${IDENTITY_ENCRYPTION_SECRET}
 		reconfigure APP_CORE_BASE_DOMAIN ${APP_CORE_BASE_DOMAIN}
 		reconfigure APP_URL_PORTAL "${APP_URL_PORTAL:-"http://${PACKAGE_SYSNAME}-router:8092"}"
 		reconfigure EXTERNAL_PORT ${EXTERNAL_PORT}
@@ -1315,7 +788,7 @@ install_product () {
 			docker run --rm --network="$(get_env_parameter "NETWORK_NAME")" mysql:${MYSQL_TAG:-latest} mysql -h "${MYSQL_HOST:-${MYSQL_CONTAINER_NAME}}" -P "${MYSQL_PORT:-3306}" -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DATABASE}" -e "TRUNCATE webstudio_index;"
 		fi
 
-		if [ ! -z "${CERTIFICATE_PATH}" ] && [ ! -z "${CERTIFICATE_KEY_PATH}" ] && [[ ! -z "${APP_DOMAIN_PORTAL}" ]]; then
+		if [ ! -z "${CERTIFICATE_PATH}" ] && [[ ! -z "${APP_DOMAIN_PORTAL}" ]]; then
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -f "${APP_DOMAIN_PORTAL}" "${CERTIFICATE_PATH}" "${CERTIFICATE_KEY_PATH}"
 		elif [ ! -z "${LETS_ENCRYPT_DOMAIN}" ] && [ ! -z "${LETS_ENCRYPT_MAIL}" ]; then
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup "${LETS_ENCRYPT_MAIL}" "${LETS_ENCRYPT_DOMAIN}"
@@ -1363,9 +836,9 @@ offline_check_docker_image() {
 	done
 }
 
-check_hub_connection() {
-	get_tag_from_hub ${IMAGE_NAME}
-	[ -z "${TAGS_RESP[*]}" ] && { echo -e "Unable to download tags from ${HUB:-hub.docker.com}.\nTry specifying another dockerhub name using -hub"; exit 1; }
+check_registry_connection() {
+	get_tag_from_registry ${IMAGE_NAME}
+	[ -z "${TAGS_RESP[*]}" ] && { echo -e "Unable to download tags from ${REGISTRY_URL:-https://hub.docker.com}.\nTry specifying another docker registry URL using -reg"; exit 1; }
 }
 
 dependency_installation() {
@@ -1390,20 +863,23 @@ dependency_installation() {
 		install_package jq
 	fi
 
-	is_command_exists docker && { check_docker_version; systemctl start docker; } || { [ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker || { echo "docker not installed"; exit 1; }; }
+	if ! is_command_exists docker || [ "$(docker --version | awk -F'[ ,.]' '{print $3}')" -lt 18 ]; then
+		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker || { echo "docker not installed or outdated version"; exit 1; }
+	else
+		systemctl start docker
+	fi
 
-	if ! is_command_exists docker-compose; then
-		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker_compose || { echo "docker-compose not installed"; exit 1; }
-	elif [ "$(docker-compose --version | grep -oP '(?<=v)\d+\.\d+'| sed 's/\.//')" -lt "21" ]; then
-		[ "$OFFLINE_INSTALLATION" = "false" ]   && install_docker_compose || { echo "docker-compose version is outdated"; exit 1; }
+	if ! is_command_exists docker-compose || [ $(docker-compose -v | awk '{sub(/^v/,"",$NF);split($NF,a,".");printf "%d%03d%03d",a[1],a[2],a[3]}') -lt 2018000 ]; then
+		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker_compose || { echo "docker-compose not installed or outdated version"; exit 1; }
 	fi
 }
 
 check_docker_image () {
-	reconfigure HUB "${HUB%/}${HUB:+/}"
+	reconfigure REGISTRY "${REGISTRY_URL:+$(sed -E 's~^https?://~~; s~/*$~~' <<< "$REGISTRY_URL")/}"
 	reconfigure STATUS ${STATUS}
 	reconfigure INSTALLATION_TYPE ${INSTALLATION_TYPE}
 	reconfigure NETWORK_NAME ${NETWORK_NAME}
+	reconfigure VOLUMES_DIR ${VOLUMES_DIR}
 	
 	reconfigure MYSQL_VERSION ${MYSQL_VERSION}
 	reconfigure ELK_VERSION ${ELK_VERSION}
@@ -1423,6 +899,7 @@ check_docker_image () {
 
 		if [ "$INSTALL_PRODUCT" == "true" ]; then
 			offline_check_docker_image ${BASE_DIR}/migration-runner.yml
+			offline_check_docker_image ${BASE_DIR}/identity.yml
 			offline_check_docker_image ${BASE_DIR}/${PRODUCT}.yml
 			offline_check_docker_image ${BASE_DIR}/notify.yml
 			offline_check_docker_image ${BASE_DIR}/healthchecks.yml
@@ -1497,7 +974,7 @@ start_installation () {
 
 	docker_login
 
-	[ "${OFFLINE_INSTALLATION}" = "false" ] && check_hub_connection
+	[ "${OFFLINE_INSTALLATION}" = "false" ] && check_registry_connection
 
 	create_network
 
@@ -1511,7 +988,7 @@ start_installation () {
 	set_jwt_secret
 	set_jwt_header
 
-	set_core_machinekey
+	set_secrets
 
 	set_mysql_params
 

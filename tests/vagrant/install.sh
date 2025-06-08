@@ -35,7 +35,7 @@ while [ "$1" != "" ]; do
     shift
 done
 
-export TERM=xterm-256color^M
+export TERM=xterm-256color
 
 function common::get_colors() {
     export LINE_SEPARATOR="-----------------------------------------"
@@ -83,83 +83,13 @@ END
 }
 
 #############################################################################################
-# Resize Fedora disk. 
-# Globals:
-#   None
-# Arguments:
-#   None
-# Outputs:
-#   None
-#############################################################################################
-function resize_fedora_disk() {
-  # Print current disk layout
-  echo "Current disk layout:"
-  lsblk
-
-  # Install required tools if they are not available
-  if ! command -v parted &> /dev/null; then
-    echo "parted not found, installing..."
-    sudo dnf install -y parted
-  fi
-
-  if ! command -v growpart &> /dev/null; then
-    echo "growpart not found, installing..."
-    sudo dnf install -y cloud-utils-growpart
-  fi
-
-  # Check Fedora version and set the correct partition number
-  if [ "$VERSION_ID" == "40" ]; then
-    PARTITION_NUMBER=2
-  elif [ "$VERSION_ID" == "41" ]; then
-    PARTITION_NUMBER=4
-  else
-    echo "Unsupported Fedora version: $VERSION_ID"
-    exit 1
-  fi
-
- # Fix GPT table to use all available space
-  echo "Fixing GPT to use all available space..."
-  echo -e "fix\n" | sudo parted /dev/sda
-
-  # Use growpart to resize the correct partition
-  echo "Resizing partition /dev/sda${PARTITION_NUMBER} using growpart..."
-  sudo growpart /dev/sda ${PARTITION_NUMBER}
-
-  # Check the filesystem type before resizing
-  FSTYPE=$(df -T | grep '/$' | awk '{print $2}')
-
-  # Resize the filesystem based on the filesystem type (xfs or ext4)
-  if [ "$FSTYPE" == "xfs" ]; then
-    echo "Resizing XFS filesystem on /dev/sda${PARTITION_NUMBER}..."
-    sudo xfs_growfs /
-  elif [ "$FSTYPE" == "ext4" ]; then
-    echo "Resizing ext4 filesystem on /dev/sda${PARTITION_NUMBER}..."
-    sudo resize2fs /dev/sda${PARTITION_NUMBER}
-  elif [ "$FSTYPE" == "btrfs" ]; then
-    echo "Resizing Btrfs filesystem on /dev/sda${PARTITION_NUMBER}..."
-    sudo btrfs filesystem resize max /
-  else
-    echo "Unsupported filesystem type: $FSTYPE"
-    exit 1
-  fi
-
-  # Print the new disk layout
-  echo "Disk layout after resizing:"
-  lsblk
-
-  # Verify new available space
-  echo "Filesystem after resizing:"
-  df -h /
-}
-
-#############################################################################################
 # Prepare vagrant boxes like: set hostname/remove postfix for DEB distributions
 # Globals:
 #   None
 # Arguments:
 #   None
 # Outputs:
-#   ☑ PREPAVE_VM: **<prepare_message>**
+#   [OK] PREPARE_VM: **<prepare_message>**
 #############################################################################################
 function prepare_vm() {
   if [ -f /etc/os-release ]; then
@@ -171,15 +101,12 @@ function prepare_vm() {
 
       debian)
           [ "$VERSION_CODENAME" == "bookworm" ] && apt-get update -y && apt install -y curl gnupg
-          apt-get remove postfix -y && echo "${COLOR_GREEN}☑ PREPAVE_VM: Postfix was removed${COLOR_RESET}"
+          apt-get remove postfix -y && echo "${COLOR_GREEN}[OK] PREPARE_VM: Postfix was removed${COLOR_RESET}"
           [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-deb
           ;;
 
       fedora)
           [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-rpm
-          if [[ "$VERSION_ID" == "40" || "$VERSION_ID" == "41" ]]; then
-              resize_fedora_disk
-          fi
           ;;
 
       centos)
@@ -188,6 +115,26 @@ function prepare_vm() {
           yum -y install centos*-release 
           ;;
 
+      rhel)
+          local REV=$(sed -E 's/[^0-9]+([0-9]+).*/\1/' /etc/redhat-release)
+          if [ "${REV}" == "9" ]; then
+              cat <<EOF | sudo tee /etc/yum.repos.d/centos-stream-9.repo
+[centos9s-baseos]
+name=CentOS Stream 9 - BaseOS
+baseurl=http://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os/
+enabled=1
+gpgcheck=0
+
+[centos9s-appstream]
+name=CentOS Stream 9 - AppStream
+baseurl=http://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/
+enabled=1
+gpgcheck=0
+EOF
+          fi
+
+          [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-rpm
+          ;;
       *)
           echo "${COLOR_RED}Failed to determine Linux dist${COLOR_RESET}"; exit 1
           ;;
@@ -201,7 +148,7 @@ function prepare_vm() {
   [ -d /tmp/docspace ] && mv /tmp/docspace/* /home/vagrant
 
   echo '127.0.0.1 host4test' | sudo tee -a /etc/hosts   
-  echo "${COLOR_GREEN}☑ PREPAVE_VM: Hostname was setting up${COLOR_RESET}"   
+  echo "${COLOR_GREEN}[OK] PREPARE_VM: Hostname was setting up${COLOR_RESET}"   
 }
 
 #############################################################################################
@@ -215,7 +162,7 @@ function prepare_vm() {
 #############################################################################################
 function install_docspace() {
   [[ "${DOWNLOAD_SCRIPTS}" == 'true' ]] && wget https://download.onlyoffice.com/docspace/docspace-install.sh || sed 's/set -e/set -xe/' -i *.sh
-  bash docspace-install.sh package ${ARGUMENTS} || { echo "Exit code non-zero. Exit with 1."; exit 1; }
+  bash docspace-install.sh package ${ARGUMENTS} -log false || { echo "Exit code non-zero. Exit with 1."; exit 1; }
   echo "Exit code 0. Continue..."
 }
 
@@ -232,28 +179,14 @@ function healthcheck_systemd_services() {
   for service in "${SERVICES_SYSTEMD[@]}"; do
     [[ "$service" == *migration* ]] && continue;
     if systemctl is-active --quiet "${service}"; then
-      echo "${COLOR_GREEN}☑ OK: Service ${service} is running${COLOR_RESET}"
+      echo "${COLOR_GREEN}[OK] Service ${service} is running${COLOR_RESET}"
     else
-      echo "${COLOR_RED}⚠ FAILED: Service ${service} is not running${COLOR_RESET}"
+      echo "${COLOR_RED}[FAILED] Service ${service} is not running${COLOR_RESET}"
+      echo "::error::Service ${service} is not running"
       SYSTEMD_SVC_FAILED="true"
     fi
   done
-}
-
-#############################################################################################
-# Set output if some services failed
-# Globals:
-#   None
-# Arguments:
-#   None
-# Outputs:
-#   ⚠ ⚠  ATTENTION: Some sevices is not running ⚠ ⚠ 
-# Returns
-# 0 if all services is start correctly, non-zero if some failed
-#############################################################################################
-function healthcheck_general_status() {
-  if [ ! -z "${SYSTEMD_SVC_FAILED}" ]; then
-    echo "${COLOR_YELLOW}⚠ ⚠  ATTENTION: Some sevices is not running ⚠ ⚠ ${COLOR_RESET}"
+  if [ -n "${SYSTEMD_SVC_FAILED}" ]; then
     exit 1
   fi
 }
@@ -301,7 +234,6 @@ main() {
   sleep 120
   services_logs
   healthcheck_systemd_services
-  healthcheck_general_status
 }
 
 main

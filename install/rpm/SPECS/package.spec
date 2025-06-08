@@ -262,3 +262,26 @@ AutoReqProv:    no
 BuildArch:      noarch
 %description    plugins
 This package includes plugins that extend DocSpace functionality
+
+%package sdk
+Packager:       %{packager}
+Summary:        Sdk
+Group:          Applications/Internet
+Requires:       %name-common = %version-%release
+Requires:       nodejs >= 16.0
+AutoReqProv:    no
+BuildArch:      noarch
+%description sdk
+The service provides a Software Development Kit (SDK) with APIs and tools for custom
+integrations and plugins
+
+%package        management
+Packager:       %{packager}
+Summary:        Management
+Group:          Applications/Internet
+Requires:       %name-common  = %version-%release
+Requires:       nodejs >= 16.0
+AutoReqProv:    no
+BuildArch:      noarch
+%description    management
+Management

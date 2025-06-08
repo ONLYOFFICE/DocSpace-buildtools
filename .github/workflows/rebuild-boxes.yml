@@ -1,52 +1,59 @@
-name: Rebuild boxes
+name: Rebuild DocSpace vagrant boxes
+
+run-name: "Rebuild DocSpace vagrant boxes version: ${{ github.event.inputs.box-version }}"
 
 on:
   workflow_dispatch:
     inputs:
-      centos9s:
-         type: boolean
-         description: 'CentOS 9 Stream'
-         default: true
-      debian12:
-         type: boolean
-         description: 'Debian 12'
-         default: true
-      ubuntu2204:
-         type: boolean
-         description: 'Ubuntu 22.04'
-         default: true
-
-env:
-    VAGRANT_TOKEN: ${{ secrets.VAGRANT_TOKEN }}
-    VAGRANT_ACCOUNT: ${{ secrets.VAGRANT_ACCOUNT }} 
+      box-version:
+         type: string
+         description: 'DocSpace version that will be installed inside box'
+         required: true
 
 jobs:
-  prepare:
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-    steps:
-
-      - name: Set matrix names
-        id: set-matrix
-        run: |
-          matrix=$(echo '{
-            "include": [
-              {"execute": '${{ github.event.inputs.centos9s || true }}', "name": "CentOS9S", "os": "centos9s", "distr": "generic"},
-              {"execute": '${{ github.event.inputs.debian12 || true }}', "name": "Debian12", "os": "debian12", "distr": "generic"},
-              {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu22.04", "os": "ubuntu2204", "distr": "generic"}
-            ]
-          }' | jq -c '{include: [.include[] | select(.execute == true)]}')
-          echo "matrix=${matrix}" >> $GITHUB_OUTPUT
-
   rebuild-boxes:
-    name: "Rebuild boxes DocSpace on ${{ matrix.name}}"
-    runs-on: ubuntu-22.04
-    needs: prepare
+    name: "Rebuild ${{ matrix.name}} ${{ github.event.inputs.box-version }}"
+    runs-on: ubuntu-latest
+    env:
+      HCP_CLIENT_ID: ${{ secrets.HCP_CLIENT_ID }}
+      HCP_CLIENT_SECRET: ${{ secrets.HCP_CLIENT_SECRET }}
+      BOX_VERSION: ${{ github.event.inputs.box-version }}
+      VAGRANT_ORG: onlyoffice
+      PRODUCT: docspace
+      OS_NAME: ${{ matrix.name }}
+      OS: ${{ matrix.os }}
+      DISTR: ${{ matrix.distr }}
     strategy:
       fail-fast: false
-      matrix: ${{fromJSON(needs.prepare.outputs.matrix)}}
+      matrix:
+        include:
+          - distr: onlyoffice
+            os: base-centos9s
+            name: "centos9s"
 
+          - distr: onlyoffice
+            os: base-debian12
+            name: "debian12"
+
+          - distr: onlyoffice
+            os: base-debian11
+            name: "debian11"
+
+          - distr: onlyoffice
+            os: base-ubuntu2204
+            name: "ubuntu2204"
+
+          - distr: onlyoffice
+            os: base-ubuntu2404
+            name: "ubuntu2404"
+
+          - distr: onlyoffice
+            os: base-fedora41
+            name: "fedora41"
+
+          - distr: onlyoffice
+            os: base-fedora42
+            name: "fedora42"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -55,20 +62,24 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
+      
+      - name: 'Download hcp CLI'
+        uses: 'hashicorp/hcp-setup-action@v0'
+        with:
+          version: 'latest'
 
       - name: Get update and install vagrant
         run: |
           set -eux
+          sudo wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          sudo echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
           sudo apt update -y
           sudo apt install vagrant virtualbox -y
-
-      - name: Login Vagrant cloud
-        run: vagrant cloud auth login --token ${VAGRANT_TOKEN}
 
       - name: Free Disk Space
         run: |
           sudo rm -rf /usr/local/lib/android /opt/ghc
-          sudo docker image prune --all --force        
+          sudo docker image prune --all --force       
 
       - name: Rebuild boxes
         uses: nick-fields/retry@v3
@@ -77,32 +88,25 @@ jobs:
           timeout_minutes: 90
           retry_on: error
           command: |
-                  set -eux
-                  
+                  set -eux   
                   cd tests/vagrant
-                  export date=$(date +%F)
                     TEST_CASE='--production-install' \
-                    DISTR='${{matrix.distr}}' \
+                    DISTR='${{ matrix.distr }}' \
                     OS='${{ matrix.os }}' \
                     DOWNLOAD_SCRIPT='-ds true' \
-                    RAM='5100' \
+                    RAM='8192' \
                     CPU='3' \
-                    ARGUMENTS="-arg '--skiphardwarecheck true --makeswap false'" \
+                    ARGUMENTS="-arg '--skiphardwarecheck true'" \
                     vagrant up
                   sleep 300
-                  vagrant package --output repacked_${{ matrix.os }}.box
-                  vagrant cloud publish \
-                    ${VAGRANT_ACCOUNT}/docspace-${{ matrix.os }} \
-                    $date virtualbox repacked_${{ matrix.os }}.box \
-                    -d "Box with pre-installed DocSpace" \
-                    --version-description "DocSpace <version>" \
-                    --release --short-description "Boxes for update testing" \
-                    --force \
-                    --no-private
+                  vagrant package --output ${PRODUCT}-${OS_NAME}.box
+                  wget https://raw.githubusercontent.com/ONLYOFFICE/ga-common/refs/heads/master/.github/scripts/vagrant_publish.sh
+                  bash ./vagrant_publish.sh
           on_retry_command: |
                 set -eux
 
                 echo "RUN CLEAN UP: Remove repacked box and destroy"
                 cd tests/vagrant
-                rm -rf repacked_${{ matrix.os }}.box
+                rm -rf ${PRODUCT}-${OS_NAME}.box
                 vagrant destroy --force
+

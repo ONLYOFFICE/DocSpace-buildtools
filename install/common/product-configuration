@@ -169,6 +169,7 @@ while [ "$1" != "" ]; do
 		-mk | --machinekey )
 			if [ "$2" != "" ]; then
 				CORE_MACHINEKEY=$2
+				echo "$CORE_MACHINEKEY" > "$APP_DIR/.private/machinekey"
 				shift
 			fi
 		;;
@@ -197,6 +198,7 @@ while [ "$1" != "" ]; do
 		-dp | --dashboadrspassword )
 			if [ "$2" != "" ]; then
 				DASHBOARDS_PASSWORD=$2
+				echo "$DASHBOARDS_PASSWORD" > "$APP_DIR/.private/dashboards-password"
 				shift
 			fi
 		;;
@@ -246,23 +248,6 @@ while [ "$1" != "" ]; do
 	shift
 done
 
-set_core_machinekey () {
-	if [[ -f $APP_DIR/.private/machinekey ]] || [[ -n $CORE_MACHINEKEY ]]; then
-		CORE_MACHINEKEY=${CORE_MACHINEKEY:-$(cat $APP_DIR/.private/machinekey)};
-	else
-		CORE_MACHINEKEY=$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12);
-		if [ "$DIST" = "RedHat" ]; then
-			echo $CORE_MACHINEKEY > $APP_DIR/.private/machinekey
-			chmod o-rwx $APP_DIR/.private/machinekey
-		fi
-	fi
-
-	save_undefined_param "${USER_CONF}" "core.machinekey" "${CORE_MACHINEKEY}"
-	save_undefined_param "${USER_CONF}" "core['base-domain']" "${APP_HOST}" "rewrite"
-	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core.machinekey" "${CORE_MACHINEKEY}"
-	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core['base-domain']" "${APP_HOST}" "rewrite"
-}
-
 install_json() {
 	if ! command -v json; then
 		echo -n "Install json package... "
@@ -298,7 +283,7 @@ restart_services() {
 	SERVICES=(login api socket studio-notify notify \
 	people-server files files-services studio backup api-system \
 	clear-events backup-background ssoauth doceditor healthchecks \
-	identity-authorization identity-api)
+	identity-authorization identity-api sdk management)
 	SERVICES_LIST=("${SERVICES[@]/#/${PRODUCT}-}")
 
 	systemctl enable "${SERVICES_LIST[@]}" >/dev/null 2>&1
@@ -411,6 +396,10 @@ change_mysql_config(){
 		fi
 
 	fi
+
+    # Restrict MySQL (port 3306) and MySQL X Plugin (port 33060) to localhost
+    sed -i "/^\[mysqld\]/!b;/bind-address/ s|.*|bind-address = 127.0.0.1|; t; a bind-address = 127.0.0.1" "${CNF_PATH}"
+    sed -i "/^\[mysqld\]/!b;/mysqlx_bind_address/ s|.*|mysqlx_bind_address = 127.0.0.1|; t; a mysqlx_bind_address = 127.0.0.1" "${CNF_PATH}"
 
     sed '/skip-networking/d' -i ${CNF_PATH} || true # ignore errors
 
@@ -526,9 +515,11 @@ setup_openresty(){
 					PORTS+=('5011') #ASC.Login
 					PORTS+=('5012') #ASC.Data.Backup
 					PORTS+=('5013') #ASC.Files/editor
+					PORTS+=('5015') #ASC.Management
 					PORTS+=('5027') #ASC.ClearEvents
 					PORTS+=('5032') #ASC.Data.Backup.BackgroundTasks
 					PORTS+=('5033') #ASC.Web.HealthChecks
+					PORTS+=('5099') #ASC.Sdk
 					PORTS+=('5100') #ASC.ApiCache
 					PORTS+=('8080') #ASC.Identity.Authorization
 					PORTS+=('9090') #ASC.Identity.API
@@ -718,20 +709,11 @@ setup_dashboards() {
 	echo -n "Configuring dashboards... "
 
 	DASHBOARDS_CONF_PATH="/etc/opensearch-dashboards/opensearch_dashboards.yml"
-
-	if [[ -n ${DASHBOARDS_PASSWORD} ]]; then
-		echo "${DASHBOARDS_PASSWORD}" > ${APP_DIR}/.private/dashboards-password
-	elif [[ -f ${APP_DIR}/.private/dashboards-password ]]; then
-		DASHBOARDS_PASSWORD=$(cat ${APP_DIR}/.private/dashboards-password);
-	else
-		DASHBOARDS_PASSWORD=$(echo "$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 20)" | tee ${APP_DIR}/.private/dashboards-password)
-	fi
-
-	chmod o-rwx $APP_DIR/.private/dashboards-password
+	DASHBOARDS_PASSWORD=${DASHBOARDS_PASSWORD:-$(generate_key "dashboards-password" 20)}
 
 	# configure login&pass for Dashboards, used by Nginx HTTP Basic Authentication
 	echo "${DASHBOARDS_USERNAME:-"onlyoffice"}:$(openssl passwd -6 -stdin <<< "${DASHBOARDS_PASSWORD}")" > /etc/openresty/.htpasswd_dashboards
-	chown ${NGINX_USER}:${NGINX_GROUP} /etc/openresty/.htpasswd_dashboards
+	chown ${NGINX_USER}:${NGINX_GROUP} /etc/openresty/.htpasswd_dashboards && chmod 640 /etc/openresty/.htpasswd_dashboards
 
 	# enable connection with opensearch
 	sed -i 's~\(opensearch\.hosts:\).*~\1 \[http://localhost:9200\]~' ${DASHBOARDS_CONF_PATH}
@@ -742,6 +724,7 @@ setup_dashboards() {
 
 	# set basePath variable to get access to Dashboards from a remote host
 	sed 's_.*\(server.basePath:\).*_\1 "/dashboards"_' -i ${DASHBOARDS_CONF_PATH}
+	sed 's_.*\(server.rewriteBasePath:\).*_\1 "true"_' -i ${DASHBOARDS_CONF_PATH}
 
 	systemctl enable opensearch-dashboards >/dev/null 2>&1
 	systemctl restart opensearch-dashboards
@@ -806,6 +789,14 @@ setup_rabbitmq() {
 	echo "OK"
 }
 
+generate_key() {
+    local FILE_NAME=$1
+    local KEY_LENGTH=${2:-12}
+    local KEY=${3:-$( [[ -f ${APP_DIR}/.private/$FILE_NAME ]] && cat ${APP_DIR}/.private/$FILE_NAME || tr -dc A-Za-z0-9 </dev/urandom | head -c $KEY_LENGTH )}
+    echo "${KEY}" | tee "${APP_DIR}/.private/$FILE_NAME"
+    chmod -R 600 ${APP_DIR}/.private
+}
+
 product_configuration(){
 	echo -n "Configuring ${PRODUCT}... "
 
@@ -826,10 +817,18 @@ product_configuration(){
 	done
 
 	echo "ENVIRONMENT=${ENVIRONMENT}" > "$APP_DIR/systemd.env"
-	echo "SPRING_PROFILES_ACTIVE=prod" >> "$APP_DIR/systemd.env"
+	echo "SPRING_PROFILES_ACTIVE=prod,server" >> "$APP_DIR/systemd.env"
 	chmod o-rwx "$APP_DIR/systemd.env"
 
-	set_core_machinekey
+	CORE_MACHINEKEY=${CORE_MACHINEKEY:-$(generate_key "machinekey")}
+	save_undefined_param "${USER_CONF}" "core.machinekey" "${CORE_MACHINEKEY}"
+	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core.machinekey" "${CORE_MACHINEKEY}"
+
+	echo "SPRING_APPLICATION_SIGNATURE_SECRET=${CORE_MACHINEKEY}" >> "$APP_DIR/systemd.env"
+	echo "SPRING_APPLICATION_ENCRYPTION_SECRET=${ENCRYPTION_SECRET:-$(generate_key "encryption")}" >> "$APP_DIR/systemd.env"
+
+	save_undefined_param "${USER_CONF}" "core['base-domain']" "${APP_HOST}" "rewrite"
+	save_undefined_param "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core['base-domain']" "${APP_HOST}" "rewrite"
 
 	echo "OK"
 }
@@ -918,5 +917,5 @@ if $PACKAGE_MANAGER opensearch >/dev/null 2>&1; then
 	ELASTIC_VERSION=$(awk '/build:/{f=1} f&&/version:/{gsub(/"/,"",$2);print $2; exit}' /usr/share/opensearch/manifest.yml 2>/dev/null || echo "2.18.0")
 	[[ ! -f "$APP_DIR/.private/opensearch-version" || $(cat "$APP_DIR/.private/opensearch-version") != *"$ELASTIC_VERSION"* ]] && $MYSQL "$DB_NAME" -e "TRUNCATE webstudio_index";
 	echo "$ELASTIC_VERSION" > $APP_DIR/.private/opensearch-version
-	chmod o-rwx $APP_DIR/.private/opensearch-version
+	chmod -R 600 $APP_DIR/.private
 fi
