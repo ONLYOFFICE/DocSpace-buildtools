@@ -113,6 +113,12 @@ jobs:
             docker rmi "$1"
           ' _ {}
 
+          export DOCKER_TMPDIR=${GITHUB_WORKSPACE}/.docker-tmp
+          mkdir -p "$DOCKER_TMPDIR"
+          echo "== Disk space before docker save =="
+          df -h /
+          docker system df
+
           sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\).*"$~\1true"~' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
 
           echo "Creating offline self-extracting archive..."
