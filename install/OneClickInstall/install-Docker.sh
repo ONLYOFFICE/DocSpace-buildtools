@@ -509,7 +509,7 @@ get_tag_from_registry () {
 			sleep 1
 		fi
 
-		REGISTRY_TAGS_URL="https://hub.docker.com/v2/repositories/${1}/tags/"
+		REGISTRY_TAGS_URL="https://hub.docker.com/v2/repositories/${1}/tags/?page_size=100"
 		JQ_FILTER='.results[].name // empty'
 	fi
 
