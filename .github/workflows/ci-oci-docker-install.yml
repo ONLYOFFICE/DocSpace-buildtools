@@ -33,6 +33,7 @@ jobs:
           sudo systemctl stop docker
           sudo mv /var/lib/docker ${GITHUB_WORKSPACE}/docker
           sudo ln -s ${GITHUB_WORKSPACE}/docker /var/lib/docker
+          sudo chown -R $USER:$USER ${GITHUB_WORKSPACE}/docker
           sudo systemctl start docker
           sudo docker system info --format 'Data root: {{.DockerRootDir}}'
 
