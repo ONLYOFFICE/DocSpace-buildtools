@@ -14,10 +14,10 @@ REM call pnpm install
 call pnpm install
 
 REM call pnpm build
-call pnpm nx run-many -t build -p @docspace/client @docspace/login @docspace/doceditor @docspace/management --parallel=4
+call pnpm nx run-many -t build -p @docspace/client @docspace/login @docspace/doceditor @docspace/management @docspace/sdk --parallel=5
 
 REM call pnpm deploy
-call pnpm nx run-many -t deploy -p @docspace/client @docspace/login @docspace/doceditor @docspace/management --parallel=4
+call pnpm nx run-many -t deploy -p @docspace/client @docspace/login @docspace/doceditor @docspace/management @docspace/sdk --parallel=5
 
 cd ..
 
