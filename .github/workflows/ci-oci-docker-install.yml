@@ -28,6 +28,14 @@ jobs:
         run: |
           sudo docker image prune --all --force
 
+      - name: Move Docker data-root to workspace
+        run: |
+          sudo systemctl stop docker
+          sudo mv /var/lib/docker ${GITHUB_WORKSPACE}/docker
+          sudo ln -s ${GITHUB_WORKSPACE}/docker /var/lib/docker
+          sudo systemctl start docker
+          sudo docker system info --format 'Data root: {{.DockerRootDir}}'
+
       - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
