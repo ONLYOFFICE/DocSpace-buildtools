@@ -105,23 +105,24 @@ jobs:
           mkdir -p "$TEMP_DIR"
           df -h "$RUNNER_TEMP"
 
-          for repo in onlyoffice/4testing-documentserver onlyoffice/4testing-documentserver-de; do
-            tag=$(curl -s "https://registry.hub.docker.com/v2/repositories/${repo}/tags?page_size=100" \
-                   | jq -r '.results[].name' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -Vr | head -n1)
+          for repo in $([ "${{ github.ref_name }}" = "master" ] && echo "onlyoffice/documentserver onlyoffice/documentserver-de" || echo "onlyoffice/4testing-documentserver onlyoffice/4testing-documentserver-de"); do
+            tag=$(curl -s "https://registry.hub.docker.com/v2/repositories/${repo}/tags?page_size=100" | jq -r '.results[].name' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -Vr | head -n1)
             echo "Pull ${repo}:${tag}"
             docker pull "${repo}:${tag}"
           done
-          
+
+          docker images --format "{{.Repository}}:{{.Tag}}" | grep "4testing-" | xargs -I{} bash -c '
+            docker tag "$1" $(echo "${1/4testing-/}" | sed -E "s/([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+/\1/")
+            docker rmi "$1"
+          ' _ {}
+
           df -h "$RUNNER_TEMP"
 
-          for img in $(docker images --format '{{.Repository}}:{{.Tag}}'); do
-            echo "  >> Saving $img"
-            docker save "$img" | xz -T0 -9e >> "$TEMP_DIR/docker_images.tar.xz"
-            docker rmi "$img" || true
-          done
-
+          docker save $(docker images --format '{{.Repository}}:{{.Tag}}') -o "$TEMP_DIR/docker_images.tar" && \
+          docker rmi $(docker images --format '{{.Repository}}:{{.Tag}}') || true
+          xz -T0 -9e "$TEMP_DIR/docker_images.tar"
+          df -h "$RUNNER_TEMP"
           mv "$TEMP_DIR/docker_images.tar.xz" "${INSTALL_PATH}/docker_images.tar.xz"
-          rm -rf "$TEMP_DIR"
 
           sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\).*"$~\1true"~' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
 
