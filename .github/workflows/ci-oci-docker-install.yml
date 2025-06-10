@@ -117,7 +117,6 @@ jobs:
           sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\).*"$~\1true"~' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
 
           echo "Creating offline self-extracting archive..."
-          docker save $(docker images --format "{{.Repository}}:{{.Tag}}") | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docker_images.tar.xz
           cd ${INSTALL_PATH}/docker && tar -czvf ${INSTALL_PATH}/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
           
           tar -cvf ${INSTALL_PATH}/offline-docspace.tar \
