@@ -104,7 +104,13 @@ jobs:
           TEMP_DIR="/mnt/docker-temp"
           mkdir -p "$TEMP_DIR"
 
-          echo "Saving Docker images one by one into $TEMP_DIR/docker_images.tar.xz"
+          for repo in onlyoffice/4testing-documentserver onlyoffice/4testing-documentserver-de; do
+            tag=$(curl -s "https://registry.hub.docker.com/v2/repositories/${repo}/tags?page_size=100" \
+                   | jq -r '.results[].name' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -Vr | head -n1)
+            echo "Pull ${repo}:${tag}"
+            docker pull "${repo}:${tag}"
+          done
+
           for img in $(docker images --format '{{.Repository}}:{{.Tag}}'); do
             echo "  >> Saving $img"
             docker save "$img" | xz -T0 -9e >> "$TEMP_DIR/docker_images.tar.xz"
