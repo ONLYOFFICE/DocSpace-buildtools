@@ -87,6 +87,9 @@ jobs:
               red) echo "::error:: One or more containers have status 'red'. Job will fail."; exit 1 ;;
           esac
 
+      - name: Make docker dir editable for checkout
+        run: sudo chown -R $USER:$USER ${GITHUB_WORKSPACE}/docker
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
