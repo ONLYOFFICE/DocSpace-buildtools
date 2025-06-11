@@ -24,6 +24,18 @@ jobs:
   Install-OneClickInstall-Docker:
     runs-on: ubuntu-22.04
     steps:
+      - name: Move Docker data to /mnt
+        run: |
+          set -eux
+          sudo systemctl stop docker
+          sudo mkdir -p /mnt/docker-data/tmp
+          echo '{
+            "data-root": "/mnt/docker-data",
+            "tmpdir":   "/mnt/docker-data/tmp"
+          }' | sudo tee /etc/docker/daemon.json
+          sudo rsync -aHAXx --delete /var/lib/docker/ /mnt/docker-data/ || true
+          sudo systemctl start docker
+
       - name: Free Disk Space
         run: |
           sudo docker image prune --all --force
