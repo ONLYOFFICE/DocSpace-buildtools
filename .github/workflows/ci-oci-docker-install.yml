@@ -105,21 +105,11 @@ jobs:
             docker rmi "${img}"
           done
 
-      - name: Move Docker tmp to /mnt
-        if: ${{ success() && github.event.inputs.offline == 'true' }}
-        run: |
-          sudo systemctl stop docker
-          sudo rm -rf /var/lib/docker/tmp
-          sudo mkdir -p /mnt/docker-tmp
-          sudo ln -s /mnt/docker-tmp /var/lib/docker/tmp
-          sudo systemctl start docker
-          echo "::notice::Docker tmp is now -> $(readlink -f /var/lib/docker/tmp)"
-
-      - name: Export images • stream-compress to /mnt
+      - name: Export images • stream-compress to $HOME
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
           set -eo pipefail
-          mkdir -p /mnt/offline
+          mkdir -p $HOME/offline
 
           echo -e "\n🧊  BEFORE save (blocks & inodes)"
           df -h /
@@ -127,12 +117,11 @@ jobs:
 
           echo -e "\n📦  docker save | xz …  (this is a long step)\n"
           docker save $(docker images --format '{{.Repository}}:{{.Tag}}') \
-            | xz -T0 -9e > /mnt/offline/docker_images.tar.xz
+            | xz -T0 -9e > $HOME/offline/docker_images.tar.xz
 
           echo -e "\n✅  AFTER save"
-          du -h /mnt/offline/docker_images.tar.xz
+          du -h $HOME/offline/docker_images.tar.xz
           df -h /
-          df -h /mnt
 
       - name: Creating 4testing offline self-extracting archive
         if: ${{ success() && github.event.inputs.offline == 'true' }}
@@ -142,7 +131,7 @@ jobs:
           docker images --format '  - {{.Repository}}:{{.Tag}}\t{{.Size}}' | sort
 
           echo "Creating offline self-extracting archive…"
-          cp /mnt/offline/docker_images.tar.xz "${INSTALL_PATH}/docker_images.tar.xz"
+          cp $HOME/offline/docker_images.tar.xz "${INSTALL_PATH}/docker_images.tar.xz"
           cd ${INSTALL_PATH}/docker && tar -czvf ${INSTALL_PATH}/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
           
           tar -cvf ${INSTALL_PATH}/offline-docspace.tar \
