@@ -104,16 +104,20 @@ jobs:
             docker rmi "$img"
           done
 
-      - name: Create loop tmp-FS on /mnt (50 GB, largefile4)
+      - name: Create loop tmp-FS on /mnt (50 GB, default inode density)
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
           set -e
           sudo truncate -s 50G /mnt/docker_tmp.img
-          sudo mkfs.ext4 -F -T largefile4 /mnt/docker_tmp.img
+          # default mkfs.ext4 (-i 16384) ⇒ ~3.2 M inode
+          sudo mkfs.ext4 -F /mnt/docker_tmp.img
           sudo mkdir -p /mnt/docker-tmp
           sudo mount -o loop /mnt/docker_tmp.img /mnt/docker-tmp
+          sudo chmod 1777 /mnt/docker-tmp        # tmp-style perms
+          echo "::group::loop-FS stats"
           df -h /mnt/docker-tmp
           df -i /mnt/docker-tmp
+          echo "::endgroup::"
 
       - name: Point Docker tmp → loop-FS
         if: ${{ success() && github.event.inputs.offline == 'true' }}
@@ -128,26 +132,20 @@ jobs:
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
           set -eo pipefail
-          mkdir -p /mnt/offline
+          sudo mkdir -p /mnt/offline
+          sudo chown $USER:$USER /mnt/offline
+
           echo -e "::group::Disk status BEFORE save"
-          df -h /
-          df -i /
-          df -h /mnt
-          df -i /mnt
+          df -h /; df -i /; df -h /mnt; df -i /mnt
           echo -e "::endgroup::"
 
           echo "📦  docker save | xz …"
-          if ! docker save $(docker images --format '{{.Repository}}:{{.Tag}}') \
-                | xz -T0 -9e > /mnt/offline/docker_images.tar.xz; then
-            echo "::error::docker save failed, dumping disk stats"
-            df -h /; df -i /; df -h /mnt; df -i /mnt
-            exit 1
-          fi
+          docker save $(docker images --format '{{.Repository}}:{{.Tag}}') \
+            | xz -T0 -9e > /mnt/offline/docker_images.tar.xz
 
           echo -e "::group::Archive stats"
           du -h /mnt/offline/docker_images.tar.xz
-          df -h /
-          df -h /mnt
+          df -h /; df -h /mnt
           echo -e "::endgroup::"
 
       - name: Creating 4testing offline self-extracting archive
