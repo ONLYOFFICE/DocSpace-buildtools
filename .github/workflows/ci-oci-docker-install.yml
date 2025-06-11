@@ -99,37 +99,54 @@ jobs:
 
       - name: Creating 4testing offline self-extracting archive
         if: ${{ success() && github.event.inputs.offline == 'true' }}
+        env:
+          TEMP_DIR: "${{ runner.temp }}/docker-tmp"
         run: |
+          set -euo pipefail
           INSTALL_PATH=${{ github.workspace }}/install
+          mkdir -p "$TEMP_DIR"
 
-          for repo in $([ "${{ github.ref_name }}" = "master" ] && echo "onlyoffice/documentserver onlyoffice/documentserver-de" || echo "onlyoffice/4testing-documentserver onlyoffice/4testing-documentserver-de"); do
-            tag=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "$repo" | cut -d: -f2 | head -n1)
-            if [ -z "$tag" ]; then
-              tag=$(curl -s "https://registry.hub.docker.com/v2/repositories/${repo}/tags?page_size=100" | jq -r '.results[].name' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -Vr | head -n1)
-            fi
-            [ -n "$tag" ] && docker pull "$repo:$tag"
+          for repo in $( [ "${{ github.ref_name }}" = "master" ] && \
+                        echo "onlyoffice/documentserver onlyoffice/documentserver-de" || \
+                        echo "onlyoffice/4testing-documentserver onlyoffice/4testing-documentserver-de" ); do
+            tag=$(curl -s "https://registry.hub.docker.com/v2/repositories/${repo}/tags?page_size=100" |
+                  jq -r '.results[].name' |
+                  grep -E '^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$' |
+                  sort -Vr | head -n1)
+            echo "Pull ${repo}:${tag}"
+            docker pull "${repo}:${tag}"
           done
 
-          docker images --format "{{.Repository}}:{{.Tag}}" | grep "4testing-" | xargs -I{} bash -c '
-            docker tag "$1" $(echo "${1/4testing-/}" | sed -E "s/([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+/\1/")
-            docker rmi "$1"
-          ' _ {}
+          export DOCKER_TMPDIR="$TEMP_DIR"
 
-          sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\).*"$~\1true"~' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
+          docker images --format '{{.Repository}}:{{.Tag}}' | grep '4testing-' | while read img; do
+            docker tag "$img" "$(echo "${img/4testing-/}" | \
+                              sed -E 's/([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+/\1/')"
+            docker rmi "$img"
+          done
 
-          echo "Creating offline self-extracting archive..."
-          docker save $(docker images --format "{{.Repository}}:{{.Tag}}") | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docker_images.tar.xz
-          cd ${INSTALL_PATH}/docker && tar -czvf ${INSTALL_PATH}/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
-          
-          tar -cvf ${INSTALL_PATH}/offline-docspace.tar \
-          -C "${INSTALL_PATH}/OneClickInstall" install-Docker.sh install-Docker-args.sh \
-          -C "${INSTALL_PATH}" docker_images.tar.xz \
-          -C "${INSTALL_PATH}" docker.tar.gz
-          rm -rf ${INSTALL_PATH}/docker_images.tar.xz ${INSTALL_PATH}/docker.tar.gz
+          sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\).*"$~\1true"~' \
+            "$INSTALL_PATH/OneClickInstall/install-Docker.sh"
 
-          echo "ARTIFACT_NAME=${ARTIFACT_NAME:=4testing-offline-docspace-installation.sh}" >> $GITHUB_ENV
-          cat ${INSTALL_PATH}/common/self-extracting.sh ${INSTALL_PATH}/offline-docspace.tar > ${INSTALL_PATH}/${ARTIFACT_NAME}
-          chmod +x ${INSTALL_PATH}/${ARTIFACT_NAME} 
+          echo "Creating offline self-extracting archive…"
+
+          docker save $(docker images --format '{{.Repository}}:{{.Tag}}') \
+            | xz -T0 -9e > "${INSTALL_PATH}/docker_images.tar.xz"
+
+          cd "$INSTALL_PATH/docker"
+          tar -czf "$INSTALL_PATH/docker.tar.gz" \
+              --exclude='config/supervisor*' *.yml .env config/
+
+          tar -cf "$INSTALL_PATH/offline-docspace.tar" \
+              -C "$INSTALL_PATH/OneClickInstall" install-Docker.sh install-Docker-args.sh \
+              -C "$INSTALL_PATH" docker_images.tar.xz docker.tar.gz
+          rm -f "$INSTALL_PATH"/docker_images.tar.xz "$INSTALL_PATH"/docker.tar.gz
+
+          ARTIFACT_NAME=${ARTIFACT_NAME:-4testing-offline-docspace-installation.sh}
+          echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$GITHUB_ENV"
+          cat "$INSTALL_PATH/common/self-extracting.sh" \
+              "$INSTALL_PATH/offline-docspace.tar" > "$INSTALL_PATH/$ARTIFACT_NAME"
+          chmod +x "$INSTALL_PATH/$ARTIFACT_NAME"
 
       - name: Configure AWS Credentials
         if: ${{ success() && github.event.inputs.offline == 'true' }}
