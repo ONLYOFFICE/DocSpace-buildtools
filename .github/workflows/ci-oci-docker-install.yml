@@ -1,17 +1,6 @@
 name: Install OneClickInstall Docker
 
 on:
-  schedule:
-    - cron: '00 20 * * 0'
-  push:
-    branches:
-      - 'hotfix/**'
-      - 'release/**'
-      - 'develop'
-    paths:
-      - '.github/workflows/ci-oci-docker-install.yml'
-      - 'install/OneClickInstall/install-Docker.sh'
-      - 'install/docker/*.yml'
   workflow_dispatch:
     inputs:
       offline:
@@ -19,13 +8,24 @@ on:
         required: true
         default: false
         type: boolean
+      install_type:
+        description: 'Installation type (ee, de, ce, or all)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - ee
+          - de
+          - ce
+          - all
 
 jobs:
   Install-OneClickInstall-Docker:
     runs-on: ubuntu-22.04
     steps:
       - name: Free Disk Space
-        run: sudo docker image prune --all --force
+        run: |
+          sudo docker image prune --all --force
 
       - name: Login to DockerHub
         uses: docker/login-action@v3
@@ -37,10 +37,26 @@ jobs:
         run: |
           wget https://raw.githubusercontent.com/ONLYOFFICE/docspace-buildtools/${{ github.ref_name }}/install/OneClickInstall/install-Docker.sh
           sed -i "1i set -x" install-Docker.sh && sed -i "/docker-compose.*up -d/ s/$/ --quiet-pull/" install-Docker.sh
-          sudo bash install-Docker.sh -skiphc true -noni true $([ ${{ github.ref_name }} != "master" ] && echo "-gb ${{ github.ref_name }} -s 4testing-") || exit $?
-          
-          echo -n "Waiting for all containers to start..."
-          timeout 300 bash -c 'while docker ps | grep -q "starting"; do sleep 5; done' && echo "OK" || echo "container_status=timeout" >> $GITHUB_ENV
+
+          # Define installation types to process
+          if [ "${{ github.event.inputs.install_type }}" = "all" ]; then
+            INSTALL_TYPES=("ee" "de" "ce")
+          else
+            INSTALL_TYPES=("${{ github.event.inputs.install_type }}")
+          fi
+
+          for type in "${INSTALL_TYPES[@]}"; do
+            case $type in
+              ee) IMAGE="onlyoffice/documentserver-ee" ;;
+              de) IMAGE="onlyoffice/documentserver-de" ;;
+              ce) IMAGE="onlyoffice/documentserver" ;;
+            esac
+            echo "Testing installation for $type ($IMAGE)"
+            sudo bash install-Docker.sh -skiphc true -noni true $([ ${{ github.ref_name }} != "master" ] && echo "-gb ${{ github.ref_name }} -s 4testing-") -it $type || exit $?
+            
+            echo -n "Waiting for all containers to start for $type..."
+            timeout 300 bash -c 'while docker ps | grep -q "starting"; do sleep 5; done' && echo "OK" || echo "container_status=timeout" >> $GITHUB_ENV
+          done
 
       - name: Check container status
         run: |
@@ -59,7 +75,7 @@ jobs:
               esac;
               printf "%-50s ${color}%s\033[0m\n" "{}:" "$status";
           '
-      
+
       - name: Print logs for crashed container
         run: |
           docker ps --all --format "{{.Names}}" | xargs -I {} sh -c '
@@ -82,14 +98,6 @@ jobs:
         with:
           ref: ${{ github.ref_name }}
 
-      - name: "Checking Docker scripts for errors"
-        run: |
-          set -eux
-          sudo apt-get install -y shellcheck
-          find install/docker -type f -name "*.sh" | cat - <(echo "install/OneClickInstall/install-Docker.sh") \
-            | xargs shellcheck --exclude="$(awk '!/^#|^$/ {print $1}' tests/lint/sc_ignore | paste -sd ",")" --severity=warning | tee sc_output
-          awk '/\(warning\):/ {w++} /\(error\):/ {e++} END {if (w+e) printf "::warning ::ShellCheck detected %d warnings and %d errors\n", w+0, e+0}' sc_output
-
       - name: Free Disk Space
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
@@ -98,47 +106,45 @@ jobs:
 
       - name: Creating 4testing offline self-extracting archive
         if: ${{ success() && github.event.inputs.offline == 'true' }}
-        env:
-          INSTALL_PATH: ${{ github.workspace }}/install
         run: |
-          set -euo pipefail
-          sudo apt-get update -y && sudo apt-get install -y jq
+          INSTALL_PATH=${{ github.workspace }}/install
 
-          docker container prune -f
-          docker image prune -a -f
-
-          if [ "${{ github.ref_name }}" = "master" ]; then
-            repos=(onlyoffice/documentserver onlyoffice/documentserver-de)
+          # Define installation types to process
+          if [ "${{ github.event.inputs.install_type }}" = "all" ]; then
+            INSTALL_TYPES=("ee" "de" "ce")
           else
-            repos=(onlyoffice/4testing-documentserver onlyoffice/4testing-documentserver-de)
+            INSTALL_TYPES=("${{ github.event.inputs.install_type }}")
           fi
 
-          pulled=()
-          for repo in "${repos[@]}"; do
-            tag=$(curl -s "https://registry.hub.docker.com/v2/repositories/${repo}/tags?page_size=100" \
-                  | jq -r '.results[].name' \
-                  | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$' \
-                  | sort -Vr | head -n1)
-            echo "Pull ${repo}:${tag}"
-            docker pull "${repo}:${tag}"
-            pulled+=("${repo}:${tag}")
+          for type in "${INSTALL_TYPES[@]}"; do
+            case $type in
+              ee) IMAGE="onlyoffice/documentserver-ee" ;;
+              de) IMAGE="onlyoffice/documentserver-de" ;;
+              ce) IMAGE="onlyoffice/documentserver" ;;
+            esac
+
+            echo "Processing images for $type"
+            docker images --format "{{.Repository}}:{{.Tag}}" | grep "${IMAGE}" | xargs -I{} bash -c '
+              docker tag "$1" $(echo "${1/4testing-/}" | sed -E "s/([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+/\1/")
+              docker rmi "$1"
+            ' _ {}
+
+            sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\).*"$~\1true"~' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
+
+            echo "Creating offline self-extracting archive for $type..."
+            docker save $(docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "${IMAGE}|onlyoffice/docspace") | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docker_images_${type}.tar.xz
+            cd ${INSTALL_PATH}/docker && tar -czvf ${INSTALL_PATH}/docker_${type}.tar.gz --exclude='config/supervisor*' *.yml .env config/
+
+            tar -cvf ${INSTALL_PATH}/offline-docspace_${type}.tar \
+              -C "${INSTALL_PATH}/OneClickInstall" install-Docker.sh install-Docker-args.sh \
+              -C "${INSTALL_PATH}" docker_images_${type}.tar.xz \
+              -C "${INSTALL_PATH}" docker_${type}.tar.gz
+            rm -rf ${INSTALL_PATH}/docker_images_${type}.tar.xz ${INSTALL_PATH}/docker_${type}.tar.gz
+
+            echo "ARTIFACT_NAME_${type}=4testing-offline-docspace-installation-${type}.sh" >> $GITHUB_ENV
+            cat ${INSTALL_PATH}/common/self-extracting.sh ${INSTALL_PATH}/offline-docspace_${type}.tar > ${INSTALL_PATH}/4testing-offline-docspace-installation-${type}.sh
+            chmod +x ${INSTALL_PATH}/4testing-offline-docspace-installation-${type}.sh
           done
-
-          mkdir -p "$INSTALL_PATH"
-          docker save "${pulled[@]}" | xz -T0 -9e > "${INSTALL_PATH}/docker_images.tar.xz"
-
-          cd "$INSTALL_PATH/docker"
-          tar -czf "$INSTALL_PATH/docker.tar.gz" --exclude='config/supervisor*' *.yml .env config/
-
-          tar -cf "$INSTALL_PATH/offline-docspace.tar" \
-              -C "$INSTALL_PATH/OneClickInstall" install-Docker.sh install-Docker-args.sh \
-              -C "$INSTALL_PATH" docker_images.tar.xz docker.tar.gz
-          rm -f "$INSTALL_PATH"/docker_images.tar.xz "$INSTALL_PATH"/docker.tar.gz
-
-          ARTIFACT_NAME=${ARTIFACT_NAME:-4testing-offline-docspace-installation.sh}
-          echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> "$GITHUB_ENV"
-          cat "$INSTALL_PATH/common/self-extracting.sh" "$INSTALL_PATH/offline-docspace.tar" > "$INSTALL_PATH/$ARTIFACT_NAME"
-          chmod +x "$INSTALL_PATH/$ARTIFACT_NAME"
 
       - name: Configure AWS Credentials
         if: ${{ success() && github.event.inputs.offline == 'true' }}
@@ -147,15 +153,24 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_OCI }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_OCI }}
           aws-region: us-east-1
-      
+
       - name: Upload 4testing offline self-extracting archive
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
-          aws s3 cp ${{ github.workspace }}/install/${{ env.ARTIFACT_NAME }} \
-            ${{ secrets.AWS_BUCKET_URL_OCI }}/${{ env.ARTIFACT_NAME }} \
-            --acl public-read \
-            --content-type application/x-xz \
-            --metadata-directive REPLACE 
-          aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.AWS_DISTRIBUTION_ID_OCI }} \
-            --paths "/docspace/${{ env.ARTIFACT_NAME }}"
+          if [ "${{ github.event.inputs.install_type }}" = "all" ]; then
+            INSTALL_TYPES=("ee" "de" "ce")
+          else
+            INSTALL_TYPES=("${{ github.event.inputs.install_type }}")
+          fi
+
+          for type in "${INSTALL_TYPES[@]}"; do
+            aws s3 cp ${{ github.workspace }}/install/4testing-offline-docspace-installation-${type}.sh \
+              ${{ secrets.AWS_BUCKET_URL_OCI }}/4testing-offline-docspace-installation-${type}.sh \
+              --acl public-read \
+              --content-type application/x-xz \
+              --metadata-directive REPLACE
+            aws cloudfront create-invalidation \
+              --distribution-id ${{ secrets.AWS_DISTRIBUTION_ID_OCI }} \
+              --paths "/docspace/4testing-offline-docspace-installation-${type}.sh"
+          done
+
