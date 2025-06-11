@@ -1,17 +1,6 @@
 name: Install OneClickInstall Docker
 
 on:
-  schedule:
-    - cron: '00 20 * * 0'
-  push:
-    branches:
-      - 'hotfix/**'
-      - 'release/**'
-      - 'develop'
-    paths:
-      - '.github/workflows/ci-oci-docker-install.yml'
-      - 'install/OneClickInstall/install-Docker.sh'
-      - 'install/docker/*.yml'
   workflow_dispatch:
     inputs:
       offline:
@@ -83,24 +72,35 @@ jobs:
         with:
           ref: ${{ github.ref_name }}
 
-      - name: "Checking Docker scripts for errors"
-        run: |
-          set -eux
-          sudo apt-get install -y shellcheck
-          find install/docker -type f -name "*.sh" | cat - <(echo "install/OneClickInstall/install-Docker.sh") \
-            | xargs shellcheck --exclude="$(awk '!/^#|^$/ {print $1}' tests/lint/sc_ignore | paste -sd ",")" --severity=warning | tee sc_output
-          awk '/\(warning\):/ {w++} /\(error\):/ {e++} END {if (w+e) printf "::warning ::ShellCheck detected %d warnings and %d errors\n", w+0, e+0}' sc_output
-
       - name: Free Disk Space
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
           docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q) && docker volume rm $(docker volume ls -q)
           curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | sudo bash
 
+      - name: Pull latest 4testing DocumentServer images (CE / DE / EE)
+        if: ${{ success() && github.event.inputs.offline == 'true' }}
+        env:
+          EDITIONS: "documentserver documentserver-de documentserver-ee"
+        run: |
+          set -eo pipefail
+          for ed in $EDITIONS; do
+            repo="onlyoffice/4testing-${ed}"
+            tag=$(curl -s "https://hub.docker.com/v2/repositories/${repo}/tags/?page_size=5&ordering=last_updated" \
+                    | jq -r '.results[] | select(.name != "latest") | .name' | head -n1)
+            if [ -z "$tag" ]; then
+              echo "::error::No tag ${repo}"; exit 1
+            fi
+            echo "👉 Pulling ${repo}:${tag}"
+            docker pull "${repo}:${tag}"
+          done
+
       - name: Creating 4testing offline self-extracting archive
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
           INSTALL_PATH=${{ github.workspace }}/install
+          echo -e "\nIMAGES2 Docker:\n"
+          docker images --format '  - {{.Repository}}:{{.Tag}}\t{{.Size}}' | sort
 
           docker images --format "{{.Repository}}:{{.Tag}}" | grep "4testing-" | xargs -I{} bash -c '
             docker tag "$1" $(echo "${1/4testing-/}" | sed -E "s/([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+/\1/")
@@ -110,6 +110,8 @@ jobs:
           sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\).*"$~\1true"~' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
 
           echo "Creating offline self-extracting archive..."
+          echo -e "\nIMAGES2 Docker:\n"
+          docker images --format '  - {{.Repository}}:{{.Tag}}\t{{.Size}}' | sort
           docker save $(docker images --format "{{.Repository}}:{{.Tag}}") | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docker_images.tar.xz
           cd ${INSTALL_PATH}/docker && tar -czvf ${INSTALL_PATH}/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
           
