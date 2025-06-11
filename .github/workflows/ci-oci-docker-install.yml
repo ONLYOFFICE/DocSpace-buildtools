@@ -105,24 +105,33 @@ jobs:
             docker rmi "${img}"
           done
 
-      - name: Export Docker images to /mnt (avoids «no space left on device»)
+      - name: Move Docker tmp to /mnt
+        if: ${{ success() && github.event.inputs.offline == 'true' }}
+        run: |
+          sudo systemctl stop docker
+          sudo rm -rf /var/lib/docker/tmp
+          sudo mkdir -p /mnt/docker-tmp
+          sudo ln -s /mnt/docker-tmp /var/lib/docker/tmp
+          sudo systemctl start docker
+          echo "::notice::Docker tmp is now -> $(readlink -f /var/lib/docker/tmp)"
+
+      - name: Export Docker images to /mnt (plenty of space)
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
           set -eo pipefail
-          mkdir -p /mnt/docker-tmp /mnt/offline
+          mkdir -p /mnt/offline
           echo -e "\n🧊  Snapshot BEFORE save:"
           docker images --format '  - {{.Repository}}:{{.Tag}}\t{{.Size}}' | sort
 
-          echo -e "\n📦  Exporting images …\n"
-          TMPDIR=/mnt/docker-tmp docker save $(docker images --format '{{.Repository}}:{{.Tag}}') \
+          echo -e "\n📦  docker save …\n"
+          docker save $(docker images --format '{{.Repository}}:{{.Tag}}') \
             --output /mnt/offline/docker_images.tar
           echo -e "\n🔧  Compressing …\n"
           xz -T0 -9e /mnt/offline/docker_images.tar
 
           echo -e "\n✅  Tar size:"
           du -h /mnt/offline/docker_images.tar.xz
-          echo -e "\n📊  Disk usage AFTER save:"
-          df -h /
+          df -h /mnt
 
       - name: Creating 4testing offline self-extracting archive
         if: ${{ success() && github.event.inputs.offline == 'true' }}
