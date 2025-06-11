@@ -1,6 +1,17 @@
 name: Install OneClickInstall Docker
 
 on:
+  schedule:
+    - cron: '00 20 * * 0'
+  push:
+    branches:
+      - 'hotfix/**'
+      - 'release/**'
+      - 'develop'
+    paths:
+      - '.github/workflows/ci-oci-docker-install.yml'
+      - 'install/OneClickInstall/install-Docker.sh'
+      - 'install/docker/*.yml'
   workflow_dispatch:
     inputs:
       offline:
@@ -27,7 +38,7 @@ jobs:
         run: |
           wget https://raw.githubusercontent.com/ONLYOFFICE/docspace-buildtools/${{ github.ref_name }}/install/OneClickInstall/install-Docker.sh
           sed -i "1i set -x" install-Docker.sh && sed -i "/docker-compose.*up -d/ s/$/ --quiet-pull/" install-Docker.sh
-          sudo bash install-Docker.sh -skiphc true -noni true $([ ${{ github.ref_name }} != "master" ] && echo "-gb ${{ github.ref_name }} -s 4testing-") || exit $?
+          sudo bash install-Docker.sh -skiphc true -it community -noni true $([ ${{ github.ref_name }} != "master" ] && echo "-gb ${{ github.ref_name }} -s 4testing-") || exit $?
           
           echo -n "Waiting for all containers to start..."
           timeout 300 bash -c 'while docker ps | grep -q "starting"; do sleep 5; done' && echo "OK" || echo "container_status=timeout" >> $GITHUB_ENV
@@ -72,123 +83,45 @@ jobs:
         with:
           ref: ${{ github.ref_name }}
 
+      - name: "Checking Docker scripts for errors"
+        run: |
+          set -eux
+          sudo apt-get install -y shellcheck
+          find install/docker -type f -name "*.sh" | cat - <(echo "install/OneClickInstall/install-Docker.sh") \
+            | xargs shellcheck --exclude="$(awk '!/^#|^$/ {print $1}' tests/lint/sc_ignore | paste -sd ",")" --severity=warning | tee sc_output
+          awk '/\(warning\):/ {w++} /\(error\):/ {e++} END {if (w+e) printf "::warning ::ShellCheck detected %d warnings and %d errors\n", w+0, e+0}' sc_output
+
       - name: Free Disk Space
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
           docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q) && docker volume rm $(docker volume ls -q)
           curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | sudo bash
 
-      - name: Pull latest 4testing DocumentServer images (CE / DE)
-        if: ${{ success() && github.event.inputs.offline == 'true' }}
-        env:
-          EDITIONS: "documentserver-de"
-        run: |
-          set -eo pipefail
-          for ed in $EDITIONS; do
-            repo="onlyoffice/4testing-${ed}"
-            tag=$(curl -s "https://hub.docker.com/v2/repositories/${repo}/tags/?page_size=5&ordering=last_updated" \
-                    | jq -r '.results[] | select(.name != "latest") | .name' | head -n1)
-            [ -z "$tag" ] && { echo "::error::No tag for ${repo}"; exit 1; }
-            echo "👉 Pulling ${repo}:${tag}"
-            docker pull "${repo}:${tag}"
-          done
-
-      - name: Retag 4testing → production names
-        if: ${{ success() && github.event.inputs.offline == 'true' }}
-        run: |
-          set -eo pipefail
-          docker images --format "{{.Repository}}:{{.Tag}}" | grep "onlyoffice/4testing-" | while read img; do
-            prod=$(echo "${img/4testing-/}" | sed -E 's/([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+/\1/')
-            echo "::notice file=retag.sh::${img} → ${prod}"
-            docker tag "$img" "$prod"
-            docker rmi "$img"
-          done
-
-      - name: Create dynamic loop tmp-FS on /mnt
-        if: ${{ success() && github.event.inputs.offline == 'true' }}
-        run: |
-          set -e
-          echo "::group::/mnt before loop-FS"
-          df -h /mnt
-          df -i /mnt
-          echo "::endgroup::"
-
-          free_gb=$(df --output=avail -BG /mnt | tail -1 | tr -dc '0-9')
-          loop_gb=$(( free_gb * 90 / 100 ))
-          [[ $loop_gb -lt 10 ]] && loop_gb=10
-          [[ $loop_gb -gt 60 ]] && loop_gb=60   # safety cap
-          echo "ℹ️  Creating ${loop_gb}G loop disk on /mnt"
-
-          sudo truncate -s ${loop_gb}G /mnt/docker_tmp.img
-          sudo mkfs.ext4 -F /mnt/docker_tmp.img
-          sudo mkdir -p /mnt/docker-tmp
-          sudo mount -o loop /mnt/docker_tmp.img /mnt/docker-tmp
-          sudo chmod 1777 /mnt/docker-tmp
-
-          echo "::group::loop-FS stats"
-          df -h /mnt/docker-tmp
-          df -i /mnt/docker-tmp
-          echo "::endgroup::"
-
-      - name: Point Docker tmp → loop-FS
-        if: ${{ success() && github.event.inputs.offline == 'true' }}
-        run: |
-          sudo systemctl stop docker
-          sudo rm -rf /var/lib/docker/tmp
-          sudo ln -s /mnt/docker-tmp /var/lib/docker/tmp
-          sudo systemctl start docker
-          echo "::notice::Docker tmp path → $(readlink -f /var/lib/docker/tmp)"
-
-      - name: Export images • stream-compress to /mnt
-        if: ${{ success() && github.event.inputs.offline == 'true' }}
-        run: |
-          set -eo pipefail
-          sudo mkdir -p /mnt/offline
-          sudo chown $USER:$USER /mnt/offline
-
-          echo "::group::Disk BEFORE save"
-          df -h /; df -i /
-          df -h /mnt; df -i /mnt
-          echo "::endgroup::"
-
-          echo "📦  docker save → xz …"
-          if ! docker save $(docker images --format '{{.Repository}}:{{.Tag}}') \
-              | xz -T0 -9e > /mnt/offline/docker_images.tar.xz; then
-            echo "::error::docker save failed — dumping disk stats"
-            df -h /; df -i /; df -h /mnt; df -i /mnt
-            exit 1
-          fi
-
-          echo "::group::Archive stats"
-          du -h /mnt/offline/docker_images.tar.xz
-          df -h /; df -h /mnt
-          echo "::endgroup::"
-
       - name: Creating 4testing offline self-extracting archive
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
-          set -eo pipefail
           INSTALL_PATH=${{ github.workspace }}/install
-          cp /mnt/offline/docker_images.tar.xz "$INSTALL_PATH/docker_images.tar.xz"
 
-          echo "::group::Images snapshot"
-          docker images --format '  - {{.Repository}}:{{.Tag}}\t{{.Size}}' | sort
-          echo "::endgroup::"
+          docker images --format "{{.Repository}}:{{.Tag}}" | grep "4testing-" | xargs -I{} bash -c '
+            docker tag "$1" $(echo "${1/4testing-/}" | sed -E "s/([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+/\1/")
+            docker rmi "$1"
+          ' _ {}
 
-          cd $INSTALL_PATH/docker
-          tar -czvf $INSTALL_PATH/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
+          sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\).*"$~\1true"~' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
 
-          tar -cvf $INSTALL_PATH/offline-docspace.tar \
-            -C "$INSTALL_PATH/OneClickInstall" install-Docker.sh install-Docker-args.sh \
-            -C "$INSTALL_PATH" docker_images.tar.xz \
-            -C "$INSTALL_PATH" docker.tar.gz
+          echo "Creating offline self-extracting archive..."
+          docker save $(docker images --format "{{.Repository}}:{{.Tag}}") | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docker_images.tar.xz
+          cd ${INSTALL_PATH}/docker && tar -czvf ${INSTALL_PATH}/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
+          
+          tar -cvf ${INSTALL_PATH}/offline-docspace.tar \
+          -C "${INSTALL_PATH}/OneClickInstall" install-Docker.sh install-Docker-args.sh \
+          -C "${INSTALL_PATH}" docker_images.tar.xz \
+          -C "${INSTALL_PATH}" docker.tar.gz
+          rm -rf ${INSTALL_PATH}/docker_images.tar.xz ${INSTALL_PATH}/docker.tar.gz
 
-          rm -f $INSTALL_PATH/docker_images.tar.xz $INSTALL_PATH/docker.tar.gz
-
-          ARTIFACT_NAME=${ARTIFACT_NAME:=4testing-offline-docspace-installation.sh}
-          echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> $GITHUB_ENV
-          cat $INSTALL_PATH/common/self-extracting.sh $INSTALL_PATH/offline-docspace.tar > $INSTALL_PATH/$ARTIFACT_NAME
-          chmod +x $INSTALL_PATH/$ARTIFACT_NAME
+          echo "ARTIFACT_NAME=${ARTIFACT_NAME:=4testing-offline-docspace-installation.sh}" >> $GITHUB_ENV
+          cat ${INSTALL_PATH}/common/self-extracting.sh ${INSTALL_PATH}/offline-docspace.tar > ${INSTALL_PATH}/${ARTIFACT_NAME}
+          chmod +x ${INSTALL_PATH}/${ARTIFACT_NAME} 
 
       - name: Configure AWS Credentials
         if: ${{ success() && github.event.inputs.offline == 'true' }}
