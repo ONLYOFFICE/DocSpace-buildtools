@@ -81,68 +81,100 @@ jobs:
       - name: Pull latest 4testing DocumentServer images (CE / DE)
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         env:
-          EDITIONS: "documentserver documentserver-de"
+          EDITIONS: "documentserver-de"
         run: |
           set -eo pipefail
           for ed in $EDITIONS; do
             repo="onlyoffice/4testing-${ed}"
             tag=$(curl -s "https://hub.docker.com/v2/repositories/${repo}/tags/?page_size=5&ordering=last_updated" \
                     | jq -r '.results[] | select(.name != "latest") | .name' | head -n1)
-            if [ -z "$tag" ]; then
-              echo "::error::No tag ${repo}"; exit 1
-            fi
+            [ -z "$tag" ] && { echo "::error::No tag for ${repo}"; exit 1; }
             echo "👉 Pulling ${repo}:${tag}"
             docker pull "${repo}:${tag}"
           done
 
-      - name: Retag 4testing images → production names
-        if: ${{ success() && github.event.inputs.offline == 'true' }}
-        run: |
-          docker images --format "{{.Repository}}:{{.Tag}}" | grep "onlyoffice/4testing-" | while read img ; do
-            prod=$(echo "${img/4testing-/}" | sed -E 's/([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+/\1/')
-            echo "::notice file=retag.sh::${img} → ${prod}"
-            docker tag "${img}" "${prod}"
-            docker rmi "${img}"
-          done
-
-      - name: Export images • stream-compress to $HOME
+      - name: Retag 4testing → production names
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
           set -eo pipefail
-          mkdir -p $HOME/offline
+          docker images --format "{{.Repository}}:{{.Tag}}" | grep "onlyoffice/4testing-" | while read img; do
+            prod=$(echo "${img/4testing-/}" | sed -E 's/([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+/\1/')
+            echo "::notice file=retag.sh::${img} → ${prod}"
+            docker tag "$img" "$prod"
+            docker rmi "$img"
+          done
 
-          echo -e "\n🧊  BEFORE save (blocks & inodes)"
+      - name: Create loop tmp-FS on /mnt (50 GB, largefile4)
+        if: ${{ success() && github.event.inputs.offline == 'true' }}
+        run: |
+          set -e
+          sudo truncate -s 50G /mnt/docker_tmp.img
+          sudo mkfs.ext4 -F -T largefile4 /mnt/docker_tmp.img
+          sudo mkdir -p /mnt/docker-tmp
+          sudo mount -o loop /mnt/docker_tmp.img /mnt/docker-tmp
+          df -h /mnt/docker-tmp
+          df -i /mnt/docker-tmp
+
+      - name: Point Docker tmp → loop-FS
+        if: ${{ success() && github.event.inputs.offline == 'true' }}
+        run: |
+          sudo systemctl stop docker
+          sudo rm -rf /var/lib/docker/tmp
+          sudo ln -s /mnt/docker-tmp /var/lib/docker/tmp
+          sudo systemctl start docker
+          echo "::notice::Docker tmp is now → $(readlink -f /var/lib/docker/tmp)"
+
+      - name: Export images • stream-compress to /mnt
+        if: ${{ success() && github.event.inputs.offline == 'true' }}
+        run: |
+          set -eo pipefail
+          mkdir -p /mnt/offline
+          echo -e "::group::Disk status BEFORE save"
           df -h /
           df -i /
+          df -h /mnt
+          df -i /mnt
+          echo -e "::endgroup::"
 
-          echo -e "\n📦  docker save | xz …  (this is a long step)\n"
-          docker save $(docker images --format '{{.Repository}}:{{.Tag}}') \
-            | xz -T0 -9e > $HOME/offline/docker_images.tar.xz
+          echo "📦  docker save | xz …"
+          if ! docker save $(docker images --format '{{.Repository}}:{{.Tag}}') \
+                | xz -T0 -9e > /mnt/offline/docker_images.tar.xz; then
+            echo "::error::docker save failed, dumping disk stats"
+            df -h /; df -i /; df -h /mnt; df -i /mnt
+            exit 1
+          fi
 
-          echo -e "\n✅  AFTER save"
-          du -h $HOME/offline/docker_images.tar.xz
+          echo -e "::group::Archive stats"
+          du -h /mnt/offline/docker_images.tar.xz
           df -h /
+          df -h /mnt
+          echo -e "::endgroup::"
 
       - name: Creating 4testing offline self-extracting archive
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
+          set -eo pipefail
           INSTALL_PATH=${{ github.workspace }}/install
-          echo -e "\nIMAGES2 Docker:\n"
+          cp /mnt/offline/docker_images.tar.xz "${INSTALL_PATH}/docker_images.tar.xz"
+
+          echo -e "::group::Docker images snapshot"
           docker images --format '  - {{.Repository}}:{{.Tag}}\t{{.Size}}' | sort
+          echo -e "::endgroup::"
 
-          echo "Creating offline self-extracting archive…"
-          cp $HOME/offline/docker_images.tar.xz "${INSTALL_PATH}/docker_images.tar.xz"
-          cd ${INSTALL_PATH}/docker && tar -czvf ${INSTALL_PATH}/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
-          
+          cd ${INSTALL_PATH}/docker
+          tar -czvf ${INSTALL_PATH}/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
+
           tar -cvf ${INSTALL_PATH}/offline-docspace.tar \
-          -C "${INSTALL_PATH}/OneClickInstall" install-Docker.sh install-Docker-args.sh \
-          -C "${INSTALL_PATH}" docker_images.tar.xz \
-          -C "${INSTALL_PATH}" docker.tar.gz
-          rm -rf ${INSTALL_PATH}/docker_images.tar.xz ${INSTALL_PATH}/docker.tar.gz
+            -C "${INSTALL_PATH}/OneClickInstall" install-Docker.sh install-Docker-args.sh \
+            -C "${INSTALL_PATH}" docker_images.tar.xz \
+            -C "${INSTALL_PATH}" docker.tar.gz
 
-          echo "ARTIFACT_NAME=${ARTIFACT_NAME:=4testing-offline-docspace-installation.sh}" >> $GITHUB_ENV
+          rm -f ${INSTALL_PATH}/docker_images.tar.xz ${INSTALL_PATH}/docker.tar.gz
+
+          ARTIFACT_NAME=${ARTIFACT_NAME:=4testing-offline-docspace-installation.sh}
+          echo "ARTIFACT_NAME=$ARTIFACT_NAME" >> $GITHUB_ENV
           cat ${INSTALL_PATH}/common/self-extracting.sh ${INSTALL_PATH}/offline-docspace.tar > ${INSTALL_PATH}/${ARTIFACT_NAME}
-          chmod +x ${INSTALL_PATH}/${ARTIFACT_NAME} 
+          chmod +x ${INSTALL_PATH}/${ARTIFACT_NAME}
 
       - name: Configure AWS Credentials
         if: ${{ success() && github.event.inputs.offline == 'true' }}
