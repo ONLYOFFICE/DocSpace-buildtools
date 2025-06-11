@@ -78,10 +78,10 @@ jobs:
           docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q) && docker volume rm $(docker volume ls -q)
           curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | sudo bash
 
-      - name: Pull latest 4testing DocumentServer images (CE / DE / EE)
+      - name: Pull latest 4testing DocumentServer images (CE / DE)
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         env:
-          EDITIONS: "documentserver documentserver-de documentserver-ee"
+          EDITIONS: "documentserver documentserver-de"
         run: |
           set -eo pipefail
           for ed in $EDITIONS; do
@@ -94,6 +94,17 @@ jobs:
             echo "👉 Pulling ${repo}:${tag}"
             docker pull "${repo}:${tag}"
           done
+
+      - name: Export Docker images to /mnt (avoids «no space left on device»)
+        if: ${{ success() && github.event.inputs.offline == 'true' }}
+        run: |
+          set -eo pipefail
+          mkdir -p /mnt/docker-tmp /mnt/offline
+          echo -e "\n📦  Exporting images … (this may take a while)\n"
+          TMPDIR=/mnt/docker-tmp docker save $(docker images --format '{{.Repository}}:{{.Tag}}') \
+            --output /mnt/offline/docker_images.tar
+          echo -e "\n🔧  Compressing …\n"
+          xz -T0 -9e /mnt/offline/docker_images.tar
 
       - name: Creating 4testing offline self-extracting archive
         if: ${{ success() && github.event.inputs.offline == 'true' }}
@@ -109,10 +120,8 @@ jobs:
 
           sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\).*"$~\1true"~' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
 
-          echo "Creating offline self-extracting archive..."
-          echo -e "\nIMAGES2 Docker:\n"
-          docker images --format '  - {{.Repository}}:{{.Tag}}\t{{.Size}}' | sort
-          docker save $(docker images --format "{{.Repository}}:{{.Tag}}") | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docker_images.tar.xz
+          echo "Creating offline self-extracting archive…"
+          cp /mnt/offline/docker_images.tar.xz "${INSTALL_PATH}/docker_images.tar.xz"
           cd ${INSTALL_PATH}/docker && tar -czvf ${INSTALL_PATH}/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
           
           tar -cvf ${INSTALL_PATH}/offline-docspace.tar \
