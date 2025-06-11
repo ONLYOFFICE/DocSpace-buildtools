@@ -95,16 +95,34 @@ jobs:
             docker pull "${repo}:${tag}"
           done
 
+      - name: Retag 4testing images → production names
+        if: ${{ success() && github.event.inputs.offline == 'true' }}
+        run: |
+          docker images --format "{{.Repository}}:{{.Tag}}" | grep "onlyoffice/4testing-" | while read img ; do
+            prod=$(echo "${img/4testing-/}" | sed -E 's/([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+/\1/')
+            echo "::notice file=retag.sh::${img} → ${prod}"
+            docker tag "${img}" "${prod}"
+            docker rmi "${img}"
+          done
+
       - name: Export Docker images to /mnt (avoids «no space left on device»)
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
           set -eo pipefail
           mkdir -p /mnt/docker-tmp /mnt/offline
-          echo -e "\n📦  Exporting images … (this may take a while)\n"
+          echo -e "\n🧊  Snapshot BEFORE save:"
+          docker images --format '  - {{.Repository}}:{{.Tag}}\t{{.Size}}' | sort
+
+          echo -e "\n📦  Exporting images …\n"
           TMPDIR=/mnt/docker-tmp docker save $(docker images --format '{{.Repository}}:{{.Tag}}') \
             --output /mnt/offline/docker_images.tar
           echo -e "\n🔧  Compressing …\n"
           xz -T0 -9e /mnt/offline/docker_images.tar
+
+          echo -e "\n✅  Tar size:"
+          du -h /mnt/offline/docker_images.tar.xz
+          echo -e "\n📊  Disk usage AFTER save:"
+          df -h /
 
       - name: Creating 4testing offline self-extracting archive
         if: ${{ success() && github.event.inputs.offline == 'true' }}
@@ -112,13 +130,6 @@ jobs:
           INSTALL_PATH=${{ github.workspace }}/install
           echo -e "\nIMAGES2 Docker:\n"
           docker images --format '  - {{.Repository}}:{{.Tag}}\t{{.Size}}' | sort
-
-          docker images --format "{{.Repository}}:{{.Tag}}" | grep "4testing-" | xargs -I{} bash -c '
-            docker tag "$1" $(echo "${1/4testing-/}" | sed -E "s/([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+/\1/")
-            docker rmi "$1"
-          ' _ {}
-
-          sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\).*"$~\1true"~' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
 
           echo "Creating offline self-extracting archive…"
           cp /mnt/offline/docker_images.tar.xz "${INSTALL_PATH}/docker_images.tar.xz"
