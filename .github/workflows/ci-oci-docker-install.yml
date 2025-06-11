@@ -115,22 +115,23 @@ jobs:
           sudo systemctl start docker
           echo "::notice::Docker tmp is now -> $(readlink -f /var/lib/docker/tmp)"
 
-      - name: Export Docker images to /mnt (plenty of space)
+      - name: Export images • stream-compress to /mnt
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
           set -eo pipefail
           mkdir -p /mnt/offline
-          echo -e "\n🧊  Snapshot BEFORE save:"
-          docker images --format '  - {{.Repository}}:{{.Tag}}\t{{.Size}}' | sort
 
-          echo -e "\n📦  docker save …\n"
+          echo -e "\n🧊  BEFORE save (blocks & inodes)"
+          df -h /
+          df -i /
+
+          echo -e "\n📦  docker save | xz …  (this is a long step)\n"
           docker save $(docker images --format '{{.Repository}}:{{.Tag}}') \
-            --output /mnt/offline/docker_images.tar
-          echo -e "\n🔧  Compressing …\n"
-          xz -T0 -9e /mnt/offline/docker_images.tar
+            | xz -T0 -9e > /mnt/offline/docker_images.tar.xz
 
-          echo -e "\n✅  Tar size:"
+          echo -e "\n✅  AFTER save"
           du -h /mnt/offline/docker_images.tar.xz
+          df -h /
           df -h /mnt
 
       - name: Creating 4testing offline self-extracting archive
