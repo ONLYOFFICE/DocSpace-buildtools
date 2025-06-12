@@ -16,7 +16,15 @@ source "$TEMP_DIR/install-Docker-args.sh" "$@"
 echo "Extracting docker images to ${TEMP_DIR}..."
 tail -n +$(awk '/^__END_OF_SHELL_SCRIPT__$/{print NR + 1; exit 0;}' "$0") "$0" | tar x -C "${TEMP_DIR}"
 
-[ "$OFFLINE_IMAGE_LOAD" != "true" ] && echo "Loading docker images..." && docker load -i "${TEMP_DIR}/docker_images.tar.xz"
+if [ "$OFFLINE_IMAGE_LOAD" != "true" ]; then
+  echo "Loading docker images..."
+  mkdir -p "${TEMP_DIR}/images"
+  tar -xf "${TEMP_DIR}/docker_images.tar" -C "${TEMP_DIR}"
+  for IMAGE_TAR in "${TEMP_DIR}/images/"*.tar.xz; do
+    echo "Loading image from $IMAGE_TAR..."
+    xz -dc "$IMAGE_TAR" | docker load
+  done
+fi
 
 echo "Extracting OneClickInstall files to the current directory..."
 mv -f ${TEMP_DIR}/{docker.tar.gz,install-Docker.sh,install-Docker-args.sh} $(dirname "$0")
