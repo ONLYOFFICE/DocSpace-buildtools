@@ -138,8 +138,8 @@ jobs:
           rm -f "${INSTALL_PATH}/docker_images.tar" "${INSTALL_PATH}/docker.tar.gz"
 
           echo "ARTIFACT_NAME=${ARTIFACT_NAME:=4testing-offline-docspace-installation.sh}" >> $GITHUB_ENV
-          cat "${INSTALL_PATH}/common/self-extracting.sh" "${INSTALL_PATH}/offline-docspace.tar" > "${INSTALL_PATH}/${ARTIFACT_NAME}"
-          chmod +x "${INSTALL_PATH}/${ARTIFACT_NAME}"
+          cat ${INSTALL_PATH}/common/self-extracting.sh ${INSTALL_PATH}/offline-docspace.tar > ${INSTALL_PATH}/${ARTIFACT_NAME}
+          chmod +x ${INSTALL_PATH}/${ARTIFACT_NAME} 
 
       - name: Configure AWS Credentials
         if: ${{ success() && github.event.inputs.offline == 'true' }}
