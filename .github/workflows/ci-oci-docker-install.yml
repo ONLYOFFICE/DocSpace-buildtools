@@ -26,8 +26,7 @@ jobs:
     steps:
       - name: Free Disk Space
         run: |
-          curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | sudo bash
-          sudo docker system prune --all --force
+          sudo docker image prune --all --force
 
       - name: Login to DockerHub
         uses: docker/login-action@v3
@@ -95,13 +94,7 @@ jobs:
       - name: Free Disk Space
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
-          ids=$(docker ps -aq)
-          [ -n "$ids" ] && docker stop $ids || true
-          [ -n "$ids" ] && docker rm -f $ids || true
-          vids=$(docker volume ls -q)
-          [ -n "$vids" ] && docker volume rm -f $vids || true
-          docker image prune -af || true
-          docker builder prune -af || true
+          docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q) && docker volume rm $(docker volume ls -q)
           curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | sudo bash
 
       - name: Creating 4testing offline self-extracting archive
