@@ -26,7 +26,8 @@ jobs:
     steps:
       - name: Free Disk Space
         run: |
-          sudo docker image prune --all --force
+          curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | sudo bash
+          sudo docker system prune --all --force
 
       - name: Login to DockerHub
         uses: docker/login-action@v3
@@ -105,25 +106,23 @@ jobs:
 
           for repo in onlyoffice/4testing-documentserver onlyoffice/4testing-documentserver-de; do
             tag=$(curl -s "https://registry.hub.docker.com/v2/repositories/${repo}/tags?page_size=100" \
-                   | jq -r '.results[].name' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -Vr | head -n1)
+                  | jq -r '.results[].name' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -Vr | head -n1)
+            [ -z "$tag" ] && { echo "::error::$repo: no tag found!"; exit 1; }
             echo "Pull ${repo}:${tag}"
             docker pull "${repo}:${tag}"
+
+            SAFE_NAME=$(echo "${repo}:${tag}" | tr '/:' '__')
+            echo "Saving ${repo}:${tag} as ${SAFE_NAME}.tar.xz"
+            docker save "${repo}:${tag}" | xz -T0 -9e > "${INSTALL_PATH}/images/${SAFE_NAME}.tar.xz"
+
+            docker rmi "${repo}:${tag}"
           done
 
-          docker images --format "{{.Repository}}:{{.Tag}}" | grep "4testing-" | xargs -I{} bash -c '
-            docker tag "$1" $(echo "${1/4testing-/}" | sed -E "s/([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+/\1/")
-            docker rmi "$1"
-          ' _ {}
+          docker image prune -af
 
           sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\).*"$~\1true"~' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
 
-          echo "Creating offline self-extracting archive..."
-          docker images --format "{{.Repository}}:{{.Tag}}" | grep -v "<none>" | while read IMAGE; do
-            SAFE_NAME=$(echo "$IMAGE" | tr '/:' '__')
-            echo "Saving $IMAGE as ${SAFE_NAME}.tar.xz"
-            docker save "$IMAGE" | xz -T0 -9e > "${INSTALL_PATH}/images/${SAFE_NAME}.tar.xz"
-          done
-
+          echo "Creating docker_images.tar..."
           tar -cf "${INSTALL_PATH}/docker_images.tar" -C "${INSTALL_PATH}" images
           rm -rf "${INSTALL_PATH}/images"
 
