@@ -19,10 +19,10 @@ services:
   onlyoffice-health-checks-ui:
     <<: *x-service-base
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-healthchecks:${DOCKER_TAG}"
-    container_name: ${HELTHCHECKS_HOST}
+    container_name: ${HEALTHCHECKS_HOST}
     healthcheck:
      <<: *x-healthcheck
-     test: curl --fail http://${SERVICE_HELTHCHECKS}/liveness/ || exit 1
+     test: curl --fail http://${SERVICE_HEALTHCHECKS}/liveness/ || exit 1
 networks:
   default:
     name: ${NETWORK_NAME}

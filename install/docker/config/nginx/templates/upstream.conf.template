@@ -84,10 +84,10 @@ map $SERVICE_SSOAUTH $service_sso {
     default $SERVICE_SSOAUTH;
 }
 
-map $SERVICE_HELTHCHECKS $service_healthchecks {
+map $SERVICE_HEALTHCHECKS $service_healthchecks {
     volatile;
     "" 127.0.0.1:5033;
-    default $SERVICE_HELTHCHECKS;
+    default $SERVICE_HEALTHCHECKS;
 }
 
 map "$DOCUMENT_SERVER_URL_EXTERNAL" "$document_server" {
