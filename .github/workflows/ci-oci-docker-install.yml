@@ -103,25 +103,27 @@ jobs:
           INSTALL_PATH=${{ github.workspace }}/install
           mkdir -p "${INSTALL_PATH}/images"
 
-          docker pull onlyoffice/4testing-documentserver-de:9.0.0.153
-
-          docker images --format "{{.Repository}}:{{.Tag}}" | grep "4testing-" | while read IMAGE; do
-            TAGGED=$(echo "$IMAGE" | sed -E 's/4testing-//; s/([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+/\1/')
-            docker tag "$IMAGE" "$TAGGED"
-            docker rmi "$IMAGE"
+          for repo in onlyoffice/4testing-documentserver onlyoffice/4testing-documentserver-de; do
+            tag=$(curl -s "https://registry.hub.docker.com/v2/repositories/${repo}/tags?page_size=100" \
+                   | jq -r '.results[].name' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -Vr | head -n1)
+            echo "Pull ${repo}:${tag}"
+            docker pull "${repo}:${tag}"
           done
+
+          docker images --format "{{.Repository}}:{{.Tag}}" | grep "4testing-" | xargs -I{} bash -c '
+            docker tag "$1" $(echo "${1/4testing-/}" | sed -E "s/([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+/\1/")
+            docker rmi "$1"
+          ' _ {}
 
           sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\).*"$~\1true"~' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
 
-          echo "Saving individual docker images with compression..."
-
+          echo "Creating offline self-extracting archive..."
           docker images --format "{{.Repository}}:{{.Tag}}" | grep -v "<none>" | while read IMAGE; do
             SAFE_NAME=$(echo "$IMAGE" | tr '/:' '__')
             echo "Saving $IMAGE as ${SAFE_NAME}.tar.xz"
             docker save "$IMAGE" | xz -T0 -9e > "${INSTALL_PATH}/images/${SAFE_NAME}.tar.xz"
           done
 
-          echo "Creating docker_images.tar..."
           tar -cf "${INSTALL_PATH}/docker_images.tar" -C "${INSTALL_PATH}" images
           rm -rf "${INSTALL_PATH}/images"
 
