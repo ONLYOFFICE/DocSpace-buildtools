@@ -232,7 +232,7 @@ while [ "$1" != "" ]; do
 			echo "      -mysqlu, --mysqluser                ${PRODUCT} database user"
 			echo "      -mysqlp, --mysqlpassword            ${PRODUCT} database password"
 			echo "      -js, --jwtsecret                    defines the secret key to validate the JWT in the request"
-			echo "      -jh. --jwtheader                    defines the http header that will be used to send the JWT"
+			echo "      -jh. --jwtheader                    defines the HTTP header that will be used to send the JWT"
 			echo "      -mk, --machinekey                   setting for core.machinekey"
 			echo "      -e, --environment                   environment"
 			echo "      -?, -h, --help                      this help"
