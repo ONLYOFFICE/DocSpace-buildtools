@@ -7,7 +7,7 @@ set -e
 db_input low {{product}}/host || true
 db_input low {{product}}/port || true
 
-db_input low {{product}}/elasticsearch-sheme || true
+db_input low {{product}}/elasticsearch-scheme || true
 db_input low {{product}}/elasticsearch-host || true
 db_input low {{product}}/elasticsearch-port || true
 
