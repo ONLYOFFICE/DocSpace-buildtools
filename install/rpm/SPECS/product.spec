@@ -125,6 +125,4 @@ fi
 
 rm -rf %{_builddir} %{buildroot} 
 
-%changelog
-*Mon Jan 16 2023 %{packager} - %{version}-%{release}
-- Initial build.
+%include changelog.spec

@@ -3,7 +3,7 @@ Upstream-Name: ONLYOFFICE-{{product}}
 Source: http://onlyoffice.com
 
 Files: *
-Copyright: 2023, Ascensio System SIA <support@onlyoffice.com>
+Copyright: 2025, Ascensio System SIA <support@onlyoffice.com>
 License: AGPL-3
  This program is a free software product. You can redistribute it and/or 
  modify it under the terms of the GNU Affero General Public License (AGPL) 
