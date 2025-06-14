@@ -51,10 +51,12 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       build_all: ${{ steps.set-matrix.outputs.build_all }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - name: Checkout repository 
+        run: |
+          git clone https://${{ secrets.GITEA_TOKEN }}@${{ secrets.GITEA_HOST }}/${{ github.repository }} -b ${{ github.ref_name }} --single-branch --depth=1
+          cd "${GITHUB_REPOSITORY#*/}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Set matrix
         id: set-matrix
@@ -69,6 +71,19 @@ jobs:
           [[ ${#package_types[@]} -eq 0 ]] && { echo "::error::No package types specified"; exit 1; }
           matrix=$(printf '%s\n' "${package_types[@]}" | jq -R . | jq -sc '{include: map({packageType: .})}')
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
+
+      - name: Changelog generation
+        run: |
+          cd ${GITHUB_REPOSITORY#*/}/install/common
+          bash changelog.sh deb; bash changelog.sh rpm
+          git add ../deb/debian/changelog ../rpm/SPECS/changelog.spec
+          if ! git diff --cached --quiet; then
+            git commit -m "Update packages changelogs"
+            git push origin HEAD:${{ github.ref_name }}
+          else
+            echo "No changes in changelog files" 
+          fi
+
   build:
     name: Build Packages
     needs: prepare
