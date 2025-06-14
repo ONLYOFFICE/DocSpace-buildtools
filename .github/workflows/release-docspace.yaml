@@ -29,3 +29,13 @@ jobs:
     secrets:
       docker-username: ${{ secrets.DOCKERHUB_USERNAME }}
       docker-usertoken: ${{ secrets.DOCKERHUB_TOKEN }}
+  
+  offline-release:
+    needs: docker-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger offline release
+        run: |
+          VERSION="${{ github.event.inputs.release_version }}"; VERSION=${VERSION%.*}
+          gh workflow run "offline-release.yml" --repo "${{ github.repository }}" --ref "${{ github.ref_name }}" \
+            --field trigger=true --field release_version=${VERSION}

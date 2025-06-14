@@ -19,6 +19,11 @@ on:
         required: true
         default: false
         type: boolean
+      4testing:
+        description: '4testing installation'
+        required: true
+        default: true
+        type: boolean
 
 jobs:
   Install-OneClickInstall-Docker:
@@ -36,9 +41,9 @@ jobs:
 
       - name: Test OCI docker scripts
         run: |
-          wget https://download.onlyoffice.com/docspace/install-Docker.sh
+          wget https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/install/OneClickInstall/install-Docker.sh
           sed -i "1i set -x" install-Docker.sh && sed -i "/docker-compose.*up -d/ s/$/ --quiet-pull/" install-Docker.sh
-          sudo bash install-Docker.sh -skiphc true -noni true $([ ${{ github.ref_name }} != "master" ] && echo "-gb ${{ github.ref_name }} -s 4testing-") || exit $?
+          sudo bash install-Docker.sh -skiphc true -noni true -gb ${{ github.ref_name }} $([ ${{ github.event.inputs.4testing }} = "true" ] && echo "-s 4testing-") || exit $?
           
           echo -n "Waiting for all containers to start..."
           timeout 300 bash -c 'while docker ps | grep -q "starting"; do sleep 5; done' && echo "OK" || echo "container_status=timeout" >> $GITHUB_ENV
