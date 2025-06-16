@@ -10,14 +10,14 @@ PUSHD %~dp0..
 echo "mode="
 
 
-REM call yarn wipe
-call yarn install
+REM call pnpm wipe
+call pnpm install
 
-REM call yarn build
-call yarn build:test
+REM call pnpm build
+call pnpm build:test
 
-REM call yarn wipe
-call yarn deploy
+REM call pnpm wipe
+call pnpm deploy
 
 
 REM copy nginx configurations to deploy folder
@@ -46,8 +46,8 @@ call ping 127.0.0.1 -n 6 > nul
 
 
 choice /t 10 /d Y /m "Do you want to start tests in sequential mode?"
-if errorlevel 2 call yarn e2e.test
-if errorlevel 1 call yarn e2e.test:sequential
+if errorlevel 2 call pnpm e2e.test
+if errorlevel 1 call pnpm e2e.test:sequential
 
 
 if NOT %errorlevel% == 0 (

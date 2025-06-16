@@ -85,7 +85,7 @@ WORKDIR ${SRC_PATH}/client
 RUN <<EOF
 #!/bin/bash
 echo "--- build/publish docspace-client node ---" && \
-yarn install
+pnpm install
 node common/scripts/before-build.js
 
 CLIENT_PACKAGES+=("@docspace/client")
@@ -96,8 +96,8 @@ CLIENT_PACKAGES+=("@docspace/management")
 
 for PKG in ${CLIENT_PACKAGES[@]}; do
   echo "--- build/publish ${PKG} ---"
-  yarn workspace ${PKG} ${BUILD_ARGS} $([[ "${PKG}" =~ (client) ]] && echo "--env lint=false")
-  yarn workspace ${PKG} ${DEPLOY_ARGS}
+  pnpm nx ${BUILD_ARGS} ${PKG} $([[ "${PKG}" =~ (client) ]] && echo "--env lint=false")
+  pnpm nx ${DEPLOY_ARGS} ${PKG}
 done
 
 echo "--- check client files ---" && \

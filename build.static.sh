@@ -25,14 +25,14 @@ pushd "$PARENT_FOLDER" > /dev/null
 
 cd client
 
-# yarn wipe
-yarn install
+# pnpm wipe
+pnpm install
 
 # Build step
-yarn build
+pnpm build
 
 # Deploy step
-yarn deploy
+pnpm deploy
 
 cd ..
 
