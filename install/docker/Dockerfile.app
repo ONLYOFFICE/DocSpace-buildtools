@@ -244,18 +244,18 @@ RUN echo "--- customize router openresty service ---" && \
 # copy static services files and config values 
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/client ${BUILD_PATH}/client
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/public ${BUILD_PATH}/public
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/editor/.next/static/chunks ${BUILD_PATH}/build/doceditor/static/chunks
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/editor/.next/static/css ${BUILD_PATH}/build/doceditor/static/css
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/editor/.next/static/media ${BUILD_PATH}/build/doceditor/static/media
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/editor/packages/doceditor/.next/static/chunks ${BUILD_PATH}/build/doceditor/static/chunks
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/editor/packages/doceditor/.next/static/css ${BUILD_PATH}/build/doceditor/static/css
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/editor/packages/doceditor/.next/static/media ${BUILD_PATH}/build/doceditor/static/media
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/login/packages/login/.next/static/chunks ${BUILD_PATH}/build/login/static/chunks
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/login/packages/login/.next/static/css ${BUILD_PATH}/build/login/static/css
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/login/packages/login/.next/static/media ${BUILD_PATH}/build/login/static/media
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/.next/static/chunks ${BUILD_PATH}/build/sdk/static/chunks
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/.next/static/css ${BUILD_PATH}/build/sdk/static/css
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/.next/static/media ${BUILD_PATH}/build/sdk/static/media
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management/.next/static/chunks ${BUILD_PATH}/build/management/static/chunks
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management/.next/static/css ${BUILD_PATH}/build/management/static/css
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management/.next/static/media ${BUILD_PATH}/build/management/static/media
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/packages/sdk/.next/static/chunks ${BUILD_PATH}/build/sdk/static/chunks
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/packages/sdk/.next/static/css ${BUILD_PATH}/build/sdk/static/css
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/packages/sdk/.next/static/media ${BUILD_PATH}/build/sdk/static/media
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management/packages/management/.next/static/chunks ${BUILD_PATH}/build/management/static/chunks
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management/packages/management/.next/static/css ${BUILD_PATH}/build/management/static/css
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management/packages/management/.next/static/media ${BUILD_PATH}/build/management/static/media
 COPY --from=src --chown=onlyoffice:onlyoffice /etc/nginx/conf.d /etc/nginx/conf.d
 COPY --from=src --chown=onlyoffice:onlyoffice /etc/nginx/includes /etc/nginx/includes
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/campaigns/src/campaigns ${BUILD_PATH}/public/campaigns
