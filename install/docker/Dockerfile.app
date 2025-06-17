@@ -84,8 +84,10 @@ COPY --from=src ${SRC_PATH}/client/ ./client
 WORKDIR ${SRC_PATH}/client
 RUN <<EOF
 #!/bin/bash
+echo "--- installing pnpm ---" && \
+npm install -g pnpm && \
 echo "--- build/publish docspace-client node ---" && \
-pnpm install
+pnpm install && \
 node common/scripts/before-build.js
 
 CLIENT_PACKAGES+=("@docspace/client")
