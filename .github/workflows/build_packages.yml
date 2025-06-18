@@ -99,8 +99,7 @@ jobs:
 
       - name: Set product version
         run: |
-          PRODUCT_VERSION=$(grep -oP '\d+\.\d+\.\d+' <<< "${BRANCH_BUILDTOOLS//\//} ${BRANCH_CLIENT//\//} \
-          ${BRANCH_SERVER//\//}" | head -n1)
+          PRODUCT_VERSION=$(grep -oP '\d+\.\d+\.\d+' <<< "${BRANCH_BUILDTOOLS//\//} ${BRANCH_CLIENT//\//} ${BRANCH_SERVER//\//}" | head -n1)
           echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.6.0}" >> $GITHUB_ENV
 
       - name: Import GPG
@@ -154,9 +153,17 @@ jobs:
         if: matrix.packageType == 'deb'
         working-directory: ${{ github.workspace }}/install/deb
         run: |
-          cd ${PACKAGE_DIRECTORY}/install/deb/
-          rename -f -v "s/product([^\/]*)$/${PRODUCT_LOW}\$1/g" debian/*
-          find debian/ -type f -exec sed -i -e "s/{{product}}/${PRODUCT_LOW}/g" -e "s/{{package_header_tag_version}}/${PRODUCT_VERSION}.${BUILD_NUMBER}/g" {} +
+          if ! grep -qF "${PRODUCT_VERSION}" debian/changelog; then
+            TMP=$(mktemp)
+            { printf '{{product}} ({{package_header_tag_version}}) unstable; urgency=medium\n\n'
+              printf '  * Upstream has been updated to version %s.\n\n' "${PRODUCT_VERSION}"
+              printf ' -- Ascensio System SIA <support@onlyoffice.com>  %s\n\n' "$(date -R)"
+              cat debian/changelog
+            } > "${TMP}" && mv "${TMP}" debian/changelog
+          fi
+          
+          rename -f -v "s/product([^\/]*)$/${PRODUCT,,}\$1/g" debian/*
+          find debian/ -type f -exec sed -i -e "s/{{product}}/${PRODUCT,,}/g" -e "s/{{package_header_tag_version}}/${PRODUCT_VERSION}.${GITHUB_RUN_NUMBER}/g" {} +
           yq -r '.files[] | .name as $n | "cat <<EOF > debian/\($n)\n" + .content + "\nEOF"' debian/files-bundle.yaml | bash
           export DEB_BUILD_OPTIONS="parallel=$(nproc)"
           dpkg-buildpackage -uc -us
@@ -165,6 +172,16 @@ jobs:
         if: matrix.packageType == 'rpm'
         working-directory: ${{ github.workspace }}/install/rpm/SPECS
         run: |
+          if ! grep -qF "${PRODUCT_VERSION}" /rpm/SPECS/changelog.spec; then
+            TMP=$(mktemp)
+            awk -v DATE="$(date '+%a %b %d %Y')" -v VERSION="${PRODUCT_VERSION}" ' /^%changelog$/ {
+                print
+                print "* " DATE " %{packager} - %{version}"
+                print "  - Upstream has been updated to version "VERSION".\n"
+                next
+              } { print } ' /rpm/SPECS/changelog.spec > ${TMP} && mv ${TMP} /rpm/SPECS/changelog.spec
+          fi
+          
           mv ./SOURCES/product.rpmlintrc ./SOURCES/${PRODUCT,,}.rpmlintrc
           sed -i -e '/BuildRequires/d' product.spec
           rpmbuild -D "packager Ascensio System SIA <support@onlyoffice.com>" \
