@@ -29,3 +29,19 @@ jobs:
     secrets:
       docker-username: ${{ secrets.DOCKERHUB_USERNAME }}
       docker-usertoken: ${{ secrets.DOCKERHUB_TOKEN }}
+  
+  offline-release:
+    needs: docker-release
+    if: ${{ needs.docker-release.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for Docker Hub tag to appear
+        run: |
+          timeout 300 bash -c 'until curl -s -o /dev/null -w "%{http_code}" "https://hub.docker.com/v2/repositories/${{ github.event.inputs.repo }}/docspace-api/tags/${{ github.event.inputs.release_version }}/" \
+          | grep -q "^200$"; do sleep 10; done' || { echo "Timeout waiting for ${{ github.event.inputs.release_version }}" >&2; exit 1; }
+
+      - name: Trigger offline release
+        env:
+          GH_TOKEN: ${{ secrets.TOKEN }}
+        run: |
+          gh workflow run "offline-release.yml" --repo "${{ github.repository }}" --ref "${{ github.ref_name }}" --field trigger=true
