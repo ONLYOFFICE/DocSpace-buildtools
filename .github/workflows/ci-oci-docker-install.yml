@@ -2,20 +2,25 @@ name: Install OneClickInstall Docker
 
 on:
   schedule:
-    - cron: '00 20 * * 0'
+    - cron: "00 20 * * 0"
   push:
     branches:
-      - 'hotfix/**'
-      - 'release/**'
-      - 'develop'
+      - "hotfix/**"
+      - "release/**"
+      - "develop"
     paths:
-      - '.github/workflows/ci-oci-docker-install.yml'
-      - 'install/OneClickInstall/install-Docker.sh'
-      - 'install/docker/*.yml'
+      - ".github/workflows/ci-oci-docker-install.yml"
+      - "install/OneClickInstall/install-Docker.sh"
+      - "install/docker/*.yml"
   workflow_dispatch:
     inputs:
+      testing:
+        description: "Use 4testing images"
+        required: true
+        default: true
+        type: boolean
       offline:
-        description: 'Publish 4testing offline archive'
+        description: "Publish 4testing offline archive"
         required: true
         default: false
         type: boolean
@@ -36,10 +41,10 @@ jobs:
 
       - name: Test OCI docker scripts
         run: |
-          wget https://raw.githubusercontent.com/ONLYOFFICE/docspace-buildtools/${{ github.ref_name }}/install/OneClickInstall/install-Docker.sh
+          wget https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/install/OneClickInstall/install-Docker.sh
           sed -i "1i set -x" install-Docker.sh && sed -i "/docker-compose.*up -d/ s/$/ --quiet-pull/" install-Docker.sh
-          sudo bash install-Docker.sh -skiphc true -noni true $([ ${{ github.ref_name }} != "master" ] && echo "-gb ${{ github.ref_name }} -s 4testing-") || exit $?
-          
+          sudo bash install-Docker.sh -skiphc true -noni true -gb ${{ github.ref_name }} $([ ${{ github.event.inputs.testing }} = "true" ] && echo "-s 4testing-") || exit $?
+
           echo -n "Waiting for all containers to start..."
           timeout 300 bash -c 'while docker ps | grep -q "starting"; do sleep 5; done' && echo "OK" || echo "container_status=timeout" >> $GITHUB_ENV
 
@@ -60,7 +65,7 @@ jobs:
               esac;
               printf "%-50s ${color}%s\033[0m\n" "{}:" "$status";
           '
-      
+
       - name: Print logs for crashed container
         run: |
           docker ps --all --format "{{.Names}}" | xargs -I {} sh -c '
@@ -112,7 +117,7 @@ jobs:
           echo "Creating offline self-extracting archive..."
           docker save $(docker images --format "{{.Repository}}:{{.Tag}}") | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docker_images.tar.xz
           cd ${INSTALL_PATH}/docker && tar -czvf ${INSTALL_PATH}/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
-          
+
           tar -cvf ${INSTALL_PATH}/offline-docspace.tar \
           -C "${INSTALL_PATH}/OneClickInstall" install-Docker.sh install-Docker-args.sh \
           -C "${INSTALL_PATH}" docker_images.tar.xz \
@@ -121,7 +126,7 @@ jobs:
 
           echo "ARTIFACT_NAME=${ARTIFACT_NAME:=4testing-offline-docspace-installation.sh}" >> $GITHUB_ENV
           cat ${INSTALL_PATH}/common/self-extracting.sh ${INSTALL_PATH}/offline-docspace.tar > ${INSTALL_PATH}/${ARTIFACT_NAME}
-          chmod +x ${INSTALL_PATH}/${ARTIFACT_NAME} 
+          chmod +x ${INSTALL_PATH}/${ARTIFACT_NAME}
 
       - name: Configure AWS Credentials
         if: ${{ success() && github.event.inputs.offline == 'true' }}
@@ -130,7 +135,7 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_OCI }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_OCI }}
           aws-region: us-east-1
-      
+
       - name: Upload 4testing offline self-extracting archive
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |

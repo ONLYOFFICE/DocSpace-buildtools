@@ -28,6 +28,8 @@ jobs:
       matrix:
         platform: [linux/amd64]
         branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches) }}
+    outputs:
+      DOCKER_TAG: ${{ steps.build.outputs.DOCKER_TAG }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -62,6 +64,7 @@ jobs:
             DOCKER_TAG=${PRODUCT_VERSION}.${{github.run_number}}
           fi
           export DOCKER_TAG
+          echo "DOCKER_TAG=${DOCKER_TAG}" >> ${GITHUB_OUTPUT}
           docker buildx bake -f build.yml \
           --set *.args.GIT_BRANCH=${{ matrix.branch }} \
           --set *.args.PRODUCT_VERSION=${PRODUCT_VERSION} \
@@ -82,9 +85,14 @@ jobs:
       matrix:
         branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches) }}
     steps:
+      - name: Wait for Docker Hub tag to appear
+        run: |
+          timeout 300 bash -c 'until curl -s -o /dev/null -w "%{http_code}" "https://hub.docker.com/v2/repositories/${{ env.REPO }}/${{ env.DOCKER_IMAGE_PREFIX }}-api/tags/${{ needs.build.outputs.DOCKER_TAG }}/" \
+          | grep -q "^200$"; do sleep 10; done' || { echo "Timeout waiting for ${{ needs.build.outputs.DOCKER_TAG }}" >&2; exit 1; }
+      
       - name: Trigger ci-oci-docker-install Workflow
         env:
           GH_TOKEN: ${{ secrets.TOKEN }}
         run: |
           echo "OCI docker test on branch ${{ matrix.branch }}"
-          gh api --method POST /repos/${GITHUB_REPOSITORY}/actions/workflows/103532315/dispatches -f ref='${{ matrix.branch }}'
+          gh workflow run "ci-oci-docker-install.yml" --repo "${{ github.repository }}" --ref "${{ matrix.branch }}" --field offline=false --field testing=true

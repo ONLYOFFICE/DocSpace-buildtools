@@ -1,9 +1,6 @@
 name: Upload offline self-extracting archive
 
 on:
-  push:
-    tags:
-      - 'v*.*.*-server'
   workflow_dispatch:
     inputs:
       trigger:
@@ -21,13 +18,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Trigger creation of an offline archive
-        if: ${{ github.event_name == 'push' || github.event.inputs.trigger == 'true' }}
+        if: ${{ github.event.inputs.trigger == 'true' }}
         env:
           GH_TOKEN: ${{ secrets.TOKEN }}
           WORKFLOW_FILE: ci-oci-docker-install.yml
         run: |
           echo "Dispatching workflow #${WORKFLOW_FILE} on ${{ github.repository }} (ref=${{ github.ref_name }})"
-          gh workflow run "${WORKFLOW_FILE}" --repo "${{ github.repository }}" --ref "${{ github.ref_name }}" --field offline=true && sleep 10
+          gh workflow run "${WORKFLOW_FILE}" --repo "${{ github.repository }}" --ref "${{ github.ref_name }}" --field offline=true --field testing=false && sleep 10
 
           RUN_ID=$(gh run list  --repo "${{ github.repository }}" --workflow "${WORKFLOW_FILE}" --branch "${{ github.ref_name }}" \
               --json databaseId,status | jq -r '.[] | select(.status == "queued" or .status == "in_progress" ) | .databaseId' | head -n1) 
@@ -42,7 +39,7 @@ jobs:
 
       - name: Set environment variables
         run: |
-          DOCKER_VERSION=$(curl -s https://hub.docker.com/v2/repositories/onlyoffice/4testing-docspace-api/tags/ | jq -r '.results[].name' | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' | sort -V | tail -n 1)
+          DOCKER_VERSION=$(curl -s https://hub.docker.com/v2/repositories/onlyoffice/docspace-api/tags/ | jq -r '.results[].name' | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' | sort -V | tail -n 1)
           echo "ARTIFACT_NAME=offline-docspace-installation.sh" >> $GITHUB_ENV
           echo "ARTIFACT_VERSION_NAME=offline-docspace-${DOCKER_VERSION}-installation.sh" >> $GITHUB_ENV
 
