@@ -3,14 +3,14 @@ services:
     build:
       context:  ./
       dockerfile: "${DOCKERFILE}"
-      target: noderun
+      target: node_services
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-node:${DOCKER_TAG}"
 
   onlyoffice-dotnet-services:
     build:
       context: ./
       dockerfile: "${DOCKERFILE}"
-      target: dotnetrun
+      target: dotnet_services
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-dotnet:${DOCKER_TAG}"
 
   onlyoffice-bin-share:
