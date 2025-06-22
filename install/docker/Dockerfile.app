@@ -1,5 +1,5 @@
 ARG SRC_PATH="/app/onlyoffice/src"
-ARG BUILD_PATH="/var/www"
+ARG BUILD_PATH="/var/www/onlyoffice"
 ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:9.0"
 ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:9.0-noble"
 
@@ -20,7 +20,7 @@ RUN set -eux; \
 
 ADD https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/git/refs/heads/${GIT_BRANCH} version.json
 RUN echo "--- clone resources ---" && \
-    git clone -b ${GIT_BRANCH} --depth 30  https://github.com/ONLYOFFICE/DocSpace-buildtools.git ${SRC_PATH}/buildtools && \
+    git clone -b ${GIT_BRANCH} --depth 30  https://github.com/nasrullonurullaev/DocSpace-buildtools.git ${SRC_PATH}/buildtools && \
     git clone --recurse-submodules -b ${GIT_BRANCH} --depth 30  https://github.com/ONLYOFFICE/DocSpace-Server.git ${SRC_PATH}/server && \
     git clone -b ${GIT_BRANCH} --depth 30  https://github.com/ONLYOFFICE/DocSpace-Client.git ${SRC_PATH}/client && \
     git clone -b "master" --depth 1 https://github.com/ONLYOFFICE/docspace-plugins.git ${SRC_PATH}/plugins && \
@@ -161,7 +161,7 @@ COPY --from=src --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/only
     
 USER onlyoffice
 EXPOSE 5050
-ENTRYPOINT ["python3", "docker-entrypoint.py"]
+ENTRYPOINT ["python3", "/usr/bin/docker-entrypoint.py"]
     
 FROM node:22-slim AS noderun
 ARG BUILD_PATH
@@ -195,7 +195,7 @@ RUN echo "--- install runtime node.22 ---" && \
     COPY --from=src --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
     USER onlyoffice
     EXPOSE 5050
-    ENTRYPOINT ["python3", "docker-entrypoint.py"]
+    ENTRYPOINT ["python3", "/usr/bin/docker-entrypoint.py"]
     
     FROM eclipse-temurin:21-jre-alpine AS javarun
     ARG BUILD_PATH
