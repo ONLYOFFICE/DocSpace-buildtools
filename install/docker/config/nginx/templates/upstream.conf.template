@@ -107,3 +107,9 @@ map $DASHBOARDS_CONTAINER_NAME $dashboards_host {
     default onlyoffice-opensearch-dashboards;
     ~^(.*)$ $1;
 }
+
+map $SERVICE_AI $service_ai {
+    volatile;
+    "" 127.0.0.1:5157;
+    default $SERVICE_AI;
+}

@@ -242,6 +242,7 @@ if skip_build == False:
         "products/ASC.Files/Server",
         "products/ASC.Files/Service",
         "products/ASC.People/Server",
+        "products/ASC.AI/Server",
         "common/services/ASC.Data.Backup",
         "common/services/ASC.Notify",
         "common/services/ASC.Studio.Notify",

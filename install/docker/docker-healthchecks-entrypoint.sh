@@ -32,6 +32,7 @@ API_HOST=${API_HOST:-"${CONTAINER_PREFIX}api:${SERVICE_PORT}"}
 STUDIO_HOST=${STUDIO_HOST:-"${CONTAINER_PREFIX}studio:${SERVICE_PORT}"}
 SOCKET_HOST=${SOCKET_HOST:-"${CONTAINER_PREFIX}socket:${SERVICE_PORT}"}
 SSOAUTH_HOST=${SSOAUTH_HOST:-"${CONTAINER_PREFIX}ssoauth:${SERVICE_PORT}"}
+AI_HOST=${AI_HOST:-"${CONTAINER_PREFIX}ai:${SERVICE_PORT}"}
 
 sed -i "/\"Name\": \"ASC.ApiCache\"/,/{/d" ${PATH_TO_CONF}/appsettings.json
 sed -i "s!localhost:5010!${API_SYSTEM_HOST}!g" ${PATH_TO_CONF}/appsettings.json
@@ -47,5 +48,6 @@ sed -i "s!localhost:5006!${STUDIO_NOTIFY_HOST}!g" ${PATH_TO_CONF}/appsettings.js
 sed -i "s!localhost:5003!${STUDIO_HOST}!g" ${PATH_TO_CONF}/appsettings.json
 sed -i "s!localhost:9899!${SOCKET_HOST}!g" ${PATH_TO_CONF}/appsettings.json
 sed -i "s!localhost:9834!${SSOAUTH_HOST}!g" ${PATH_TO_CONF}/appsettings.json
+sed -i "s!localhost:5157!${AI_HOST}!g" ${PATH_TO_CONF}/appsettings.json
      
 dotnet ${RUN_DLL} --urls=${URLS} 

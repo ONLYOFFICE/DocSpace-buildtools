@@ -80,7 +80,8 @@ RUN mkdir -p /app/onlyoffice/ && \
     rm -rf ${SRC_PATH}/web/ASC.Web.Studio/* && \
     rm -rf ${SRC_PATH}/products/ASC.Files/Service/* && \
     rm -rf ${SRC_PATH}/products/ASC.Files/Server/* && \
-    rm -rf ${SRC_PATH}/products/ASC.People/Server/* 
+    rm -rf ${SRC_PATH}/products/ASC.People/Server/* && \
+    rm -rf ${SRC_PATH}/products/ASC.AI/Server/*
 
 FROM $DOTNET_RUN as dotnetrun
 ARG BUILD_PATH
@@ -172,6 +173,7 @@ RUN chown nginx:nginx /etc/nginx/* -R && \
     sed -i 's/127.0.0.1:5004/$service_people_server/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5000/$service_api/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5003/$service_studio/' /etc/nginx/conf.d/onlyoffice.conf && \
+    sed -i 's/127.0.0.1:5157/$service_ai/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:9899/$service_socket/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:9834/$service_sso/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5013/$service_doceditor/' /etc/nginx/conf.d/onlyoffice.conf && \
@@ -290,6 +292,15 @@ COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.People
 
 CMD ["ASC.People.dll", "ASC.People"]
 
+## ASC.AI ##
+FROM dotnetrun AS ai
+WORKDIR ${BUILD_PATH}products/ASC.AI/server/
+
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
+COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.AI/service/ .
+
+CMD ["ASC.AI.dll", "ASC.AI"]
+
 ## ASC.Socket.IO ##
 FROM noderun AS socket
 WORKDIR ${BUILD_PATH}/services/ASC.Socket.IO/service/
@@ -366,12 +377,14 @@ ENV SRC_PATH=${SRC_PATH}
 
 RUN mkdir -p /app/ASC.Files/server && \
     mkdir -p /app/ASC.People/server && \
+    mkdir -p /app/ASC.AI/server && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -u 104 onlyoffice --home /var/www/onlyoffice --system -G onlyoffice
 
 COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/bin-share-docker-entrypoint.sh /app/docker-entrypoint.sh
 COPY --from=base /var/www/services/ASC.Files/service/ /app/ASC.Files/server/
 COPY --from=base /var/www/services/ASC.People/service/ /app/ASC.People/server/
+COPY --from=base /var/www/services/ASC.AI/service/ /app/ASC.AI/server/
 ENTRYPOINT ["./app/docker-entrypoint.sh"]
 
 ## image for k8s wait-bin-share ##

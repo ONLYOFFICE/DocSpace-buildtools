@@ -151,6 +151,14 @@ services:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_STUDIO}/health/ || exit 1
 
+  onlyoffice-ai:
+    <<: *x-service-base
+    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-ai:${DOCKER_TAG}"
+    container_name: ${AI_HOST}
+    healthcheck:
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_AI}/health/ || exit 1
+
   onlyoffice-ssoauth:
     <<: *x-service-base
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-ssoauth:${DOCKER_TAG}"
@@ -217,6 +225,7 @@ services:
       - onlyoffice-files
       - onlyoffice-files-services
       - onlyoffice-people-server
+      - onlyoffice-ai
       - onlyoffice-socket
       - onlyoffice-studio-notify
       - onlyoffice-api
@@ -241,6 +250,7 @@ services:
       - SERVICE_API=${SERVICE_API}
       - SERVICE_API_SYSTEM=${SERVICE_API_SYSTEM}
       - SERVICE_STUDIO=${SERVICE_STUDIO}
+      - SERVICE_AI=${SERVICE_AI}
       - SERVICE_SSOAUTH=${SERVICE_SSOAUTH}
       - SERVICE_DOCEDITOR=${SERVICE_DOCEDITOR}
       - SERVICE_MANAGEMENT=${SERVICE_MANAGEMENT}

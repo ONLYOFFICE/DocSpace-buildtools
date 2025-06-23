@@ -90,6 +90,13 @@ services:
       target: ssoauth
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-ssoauth:${DOCKER_TAG}"
 
+  onlyoffice-ai:
+    build:
+      context: ./
+      dockerfile: "${DOCKERFILE}"
+      target: ai
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-ai:${DOCKER_TAG}"
+
   onlyoffice-bin-share:
     build:
       context: ./
