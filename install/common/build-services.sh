@@ -93,9 +93,9 @@ while [ "$1" != "" ]; do
             echo -e " -st, --status \t build status Ex. all/frontend-buildtools/backend-publish/backend-dotnet-publish/backend-nodejs-publish/backend-build"
             echo -e " -sc, --self-contained \t publish the .NET runtime with your application (by default=false)"
             echo -e " -pc, --publish-configuration \t dotnet publish configuration Ex. Release/Debug"
-            echo -e " -yb, --frontend-build-args \t arguments for yarn building"
-            echo -e " -yd, --frontend-deploy-args \t arguments for yarn deploy"
-            echo -e " -dc, --debug-check \t arguments for yarn debug info configure"
+            echo -e " -yb, --frontend-build-args \t arguments for pnpm building"
+            echo -e " -yd, --frontend-deploy-args \t arguments for pnpm deploy"
+            echo -e " -dc, --debug-check \t arguments for pnpm debug info configure"
             echo -e " -mc, --migration-check \t check migration build (by default=true)"
             echo " -?, -h, --help              this help"
             echo "  Examples"
@@ -191,28 +191,28 @@ function backend-nodejs-publish {
 
 # Install FRONTEND dependencies for nodjs's projects
 function build_nodejs_frontend {
-  echo "== yarn install =="
-  yarn install
+  echo "== pnpm install =="
+  pnpm install
   # Install debug config mode
   if [[ $# -gt 0 ]]
   then
     local debug_info_check=$(echo $1 | tr '[:upper:]' '[:lower:]' | tr -d ' ')
     if [[ ${debug_info_check} == "true" ]]
     then
-      echo "== yarn debug-info =="
-	    yarn debug-info
+      echo "== pnpm debug-info =="
+	    pnpm debug-info
     fi
   fi
-  echo "== yarn ${FRONTEND_BUILD_ARGS} =="
-  yarn ${FRONTEND_BUILD_ARGS}
+  echo "== pnpm ${FRONTEND_BUILD_ARGS} =="
+  pnpm nx ${FRONTEND_BUILD_ARGS}
   
   echo "== yarn ${FRONTEND_DEPLOY_ARGS} =="
-  yarn ${FRONTEND_DEPLOY_ARGS}
+  pnpm nx ${FRONTEND_DEPLOY_ARGS}
   if [[ ${DOCKER_ENTRYPOINT} != "false" ]]
   then
     echo "== ADD ${DOCKER_ENTRYPOINT} to ASC.Login =="
     cp ${DOCKER_ENTRYPOINT} ${SRC_PATH}/buildtools/deploy/login/
-    echo "== ADD ${DOCKER_ENTRYPOINT} toASC.Editors =="
+    echo "== ADD ${DOCKER_ENTRYPOINT} to ASC.Editors =="
     cp ${DOCKER_ENTRYPOINT} ${SRC_PATH}/buildtools/deploy/editor/
   fi
 }

@@ -1,6 +1,7 @@
 node_modules
 bin
 .yarn
+.nx
 .git
 .vscode
 .github

@@ -8,7 +8,7 @@ pipeline {
 					stages {
 						stage('Frontend') {
 							steps {
-								sh 'yarn install --frozen-lockfile && yarn build'
+								sh 'pnpm install --frozen-lockfile && pnpm build'
 							}
 						}
 						stage('Backend') {
@@ -23,7 +23,7 @@ pipeline {
 					stages {
 						stage('Frontend') {
 							steps {
-								bat "yarn install --frozen-lockfile && yarn build"
+								bat "pnpm install --frozen-lockfile && pnpm build"
 							}
 						}
 						stage('Backend') {
@@ -43,7 +43,7 @@ pipeline {
 					stages {
 						stage('Components') {
 							steps {
-								sh "yarn install --frozen-lockfile && yarn build && cd ${env.WORKSPACE}/packages/components && yarn test:coverage --ci --reporters=default --reporters=jest-junit || true"
+								sh "pnpm install --frozen-lockfile && pnpm build && cd ${env.WORKSPACE}/packages/components && pnpm test:coverage --ci --reporters=default --reporters=jest-junit || true"
 							}
 							post {
 								success {
@@ -72,7 +72,7 @@ pipeline {
 					stages {
 						stage('Components') {
 							steps {
-								bat "yarn install --frozen-lockfile && yarn build && cd ${env.WORKSPACE}\\packages\\components && yarn test:coverage --ci --reporters=default --reporters=jest-junit || true"
+								bat "pnpm install --frozen-lockfile && pnpm build && cd ${env.WORKSPACE}\\packages\\components && pnpm test:coverage --ci --reporters=default --reporters=jest-junit || true"
 							}
 							post {
 								success {
