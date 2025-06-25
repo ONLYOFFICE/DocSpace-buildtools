@@ -8,78 +8,78 @@ OFFLINE_IMAGE_LOAD="false"
 
 while [ "$1" != "" ]; do
     case "$1" in
-        -u | --update )                        [ -n "$2" ] && UPDATE=$2 && shift ;;
-        -reg | --registry )                    [ -n "$2" ] && REGISTRY_URL=$2 && shift ;;
-        -un | --username )                     [ -n "$2" ] && USERNAME=$2 && shift ;;
-        -p | --password )                      [ -n "$2" ] && PASSWORD=$2 && shift ;;
-        -ids | --installdocspace )             [ -n "$2" ] && INSTALL_PRODUCT=$2 && shift ;;
-        -idocs | --installdocs )               [ -n "$2" ] && INSTALL_DOCUMENT_SERVER=$2 && shift ;;
-        -imysql | --installmysql )             [ -n "$2" ] && INSTALL_MYSQL_SERVER=$2 && shift ;;
-        -irbt | --installrabbitmq )            [ -n "$2" ] && INSTALL_RABBITMQ=$2 && shift ;;
-        -irds | --installredis )               [ -n "$2" ] && INSTALL_REDIS=$2 && shift ;;
-        -ht | --helptarget )                   [ -n "$2" ] && HELP_TARGET=$2 && shift ;;
-        -mysqld | --mysqldatabase )            [ -n "$2" ] && MYSQL_DATABASE=$2 && shift ;;
-        -mysqlrp | --mysqlrootpassword )       [ -n "$2" ] && MYSQL_ROOT_PASSWORD=$2 && shift ;;
-        -mysqlu | --mysqluser )                [ -n "$2" ] && MYSQL_USER=$2 && shift ;;
-        -mysqlh | --mysqlhost )                [ -n "$2" ] && MYSQL_HOST=$2 && shift ;;
-        -mysqlport | --mysqlport )             [ -n "$2" ] && MYSQL_PORT=$2 && shift ;;
-        -mysqlp | --mysqlpassword )            [ -n "$2" ] && MYSQL_PASSWORD=$2 && shift ;;
-        -espr | --elasticprotocol )            [ -n "$2" ] && ELK_SHEME=$2 && shift ;;
-        -esh | --elastichost )                 [ -n "$2" ] && ELK_HOST=$2 && shift ;;
-        -esp | --elasticport )                 [ -n "$2" ] && ELK_PORT=$2 && shift ;;
-        -skiphc | --skiphardwarecheck )        [ -n "$2" ] && SKIP_HARDWARE_CHECK=$2 && shift ;;
-        -ep | --externalport )                 [ -n "$2" ] && EXTERNAL_PORT=$2 && shift ;;
-        -dsh | --docspacehost )                [ -n "$2" ] && APP_URL_PORTAL=$2 && shift ;;
-        -mk | --machinekey )                   [ -n "$2" ] && APP_CORE_MACHINEKEY=$2 && shift ;;
-        -env | --environment )                 [ -n "$2" ] && ENV_EXTENSION=$2 && shift ;;
-        -s | --status )                        [ -n "$2" ] && STATUS=$2 && IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-api" && shift ;;
-        -ls | --localscripts )                                                shift ;;
-        -dsv | --docspaceversion )             [ -n "$2" ] && DOCKER_TAG=$2 && shift ;;
-        -gb | --gitbranch )                    [ -n "$2" ] && PARAMETERS="$PARAMETERS $1" && GIT_BRANCH=$2 && shift ;;
-        -docsi | --docsimage )                 [ -n "$2" ] && DOCUMENT_SERVER_IMAGE_NAME=$2 && shift ;;
-        -docsv | --docsversion )               [ -n "$2" ] && DOCUMENT_SERVER_VERSION=$2 && shift ;;
-        -docsurl | --docsurl )                 [ -n "$2" ] && DOCUMENT_SERVER_URL_EXTERNAL=$2 && shift ;;
-        -dbm | --databasemigration )           [ -n "$2" ] && DATABASE_MIGRATION=$2 && shift ;;
-        -jh | --jwtheader )                    [ -n "$2" ] && DOCUMENT_SERVER_JWT_HEADER=$2 && shift ;;
-        -js | --jwtsecret )                    [ -n "$2" ] && DOCUMENT_SERVER_JWT_SECRET=$2 && shift ;;
-        -it | --installation_type )            [ -n "$2" ] && INSTALLATION_TYPE="${2^^}" && shift ;;
-        -ms | --makeswap )                     [ -n "$2" ] && MAKESWAP=$2 && shift ;;
-        -ies | --installelastic )              [ -n "$2" ] && INSTALL_ELASTICSEARCH=$2 && shift ;;
-        -ifb | --installfluentbit )            [ -n "$2" ] && INSTALL_FLUENT_BIT=$2 && shift ;;
-        -rdsh | --redishost )                  [ -n "$2" ] && REDIS_HOST=$2 && shift ;;
-        -rdsp | --redisport )                  [ -n "$2" ] && REDIS_PORT=$2 && shift ;;
-        -rdsu | --redisusername )              [ -n "$2" ] && REDIS_USER_NAME=$2 && shift ;;
-        -rdspass | --redispassword )           [ -n "$2" ] && REDIS_PASSWORD=$2 && shift ;;
-        -rbpr | --rabbitmqprotocol )           [ -n "$2" ] && RABBIT_PROTOCOL=$2 && shift ;;
-        -rbth | --rabbitmqhost )               [ -n "$2" ] && RABBIT_HOST=$2 && shift ;;
-        -rbtp | --rabbitmqport )               [ -n "$2" ] && RABBIT_PORT=$2 && shift ;;
-        -rbtu | --rabbitmqusername )           [ -n "$2" ] && RABBIT_USER_NAME=$2 && shift ;;
-        -rbtpass | --rabbitmqpassword )        [ -n "$2" ] && RABBIT_PASSWORD=$2 && shift ;;
-        -rbtvh | --rabbitmqvirtualhost )       [ -n "$2" ] && RABBIT_VIRTUAL_HOST=$2 && shift ;;
-        -led | --letsencryptdomain )           [ -n "$2" ] && LETS_ENCRYPT_DOMAIN=$2 && shift ;;
-        -lem | --letsencryptmail )             [ -n "$2" ] && LETS_ENCRYPT_MAIL=$2 && shift ;;
-        -cf | --certfile )
+        -u       | --update              ) [ -n "$2" ] && UPDATE=$2                                                               && shift ;;
+        -reg     | --registry            ) [ -n "$2" ] && REGISTRY_URL=$2                                                         && shift ;;
+        -un      | --username            ) [ -n "$2" ] && USERNAME=$2                                                             && shift ;;
+        -p       | --password            ) [ -n "$2" ] && PASSWORD=$2                                                             && shift ;;
+        -ids     | --installdocspace     ) [ -n "$2" ] && INSTALL_PRODUCT=$2                                                      && shift ;;
+        -idocs   | --installdocs         ) [ -n "$2" ] && INSTALL_DOCUMENT_SERVER=$2                                              && shift ;;
+        -imysql  | --installmysql        ) [ -n "$2" ] && INSTALL_MYSQL_SERVER=$2                                                 && shift ;;
+        -irbt    | --installrabbitmq     ) [ -n "$2" ] && INSTALL_RABBITMQ=$2                                                     && shift ;;
+        -irds    | --installredis        ) [ -n "$2" ] && INSTALL_REDIS=$2                                                        && shift ;;
+        -ht      | --helptarget          ) [ -n "$2" ] && HELP_TARGET=$2                                                          && shift ;;
+        -mysqld  | --mysqldatabase       ) [ -n "$2" ] && MYSQL_DATABASE=$2                                                       && shift ;;
+        -mysqlrp | --mysqlrootpassword   ) [ -n "$2" ] && MYSQL_ROOT_PASSWORD=$2                                                  && shift ;;
+        -mysqlu  | --mysqluser           ) [ -n "$2" ] && MYSQL_USER=$2                                                           && shift ;;
+        -mysqlh  | --mysqlhost           ) [ -n "$2" ] && MYSQL_HOST=$2                                                           && shift ;;
+        -mysqlport| --mysqlport          ) [ -n "$2" ] && MYSQL_PORT=$2                                                           && shift ;;
+        -mysqlp  | --mysqlpassword       ) [ -n "$2" ] && MYSQL_PASSWORD=$2                                                       && shift ;;
+        -espr    | --elasticprotocol     ) [ -n "$2" ] && ELK_SHEME=$2                                                            && shift ;;
+        -esh     | --elastichost         ) [ -n "$2" ] && ELK_HOST=$2                                                             && shift ;;
+        -esp     | --elasticport         ) [ -n "$2" ] && ELK_PORT=$2                                                             && shift ;;
+        -skiphc  | --skiphardwarecheck   ) [ -n "$2" ] && SKIP_HARDWARE_CHECK=$2                                                  && shift ;;
+        -ep      | --externalport        ) [ -n "$2" ] && EXTERNAL_PORT=$2                                                        && shift ;;
+        -dsh     | --docspacehost        ) [ -n "$2" ] && APP_URL_PORTAL=$2                                                       && shift ;;
+        -mk      | --machinekey          ) [ -n "$2" ] && APP_CORE_MACHINEKEY=$2                                                  && shift ;;
+        -env     | --environment         ) [ -n "$2" ] && ENV_EXTENSION=$2                                                        && shift ;;
+        -s       | --status              ) [ -n "$2" ] && STATUS=$2 && IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-api"    && shift ;;
+        -dsv     | --docspaceversion     ) [ -n "$2" ] && DOCKER_TAG=$2                                                           && shift ;;
+        -gb      | --gitbranch           ) [ -n "$2" ] && PARAMETERS="$PARAMETERS $1" && GIT_BRANCH=$2                            && shift ;;
+        -docsi   | --docsimage           ) [ -n "$2" ] && DOCUMENT_SERVER_IMAGE_NAME=$2                                           && shift ;;
+        -docsv   | --docsversion         ) [ -n "$2" ] && DOCUMENT_SERVER_VERSION=$2                                              && shift ;;
+        -docsurl | --docsurl             ) [ -n "$2" ] && DOCUMENT_SERVER_URL_EXTERNAL=$2                                         && shift ;;
+        -dbm     | --databasemigration   ) [ -n "$2" ] && DATABASE_MIGRATION=$2                                                   && shift ;;
+        -jh      | --jwtheader           ) [ -n "$2" ] && DOCUMENT_SERVER_JWT_HEADER=$2                                           && shift ;;
+        -js      | --jwtsecret           ) [ -n "$2" ] && DOCUMENT_SERVER_JWT_SECRET=$2                                           && shift ;;
+        -it      | --installationtype    ) [ -n "$2" ] && INSTALLATION_TYPE="${2^^}"                                              && shift ;;
+        -ms      | --makeswap            ) [ -n "$2" ] && MAKESWAP=$2                                                             && shift ;;
+        -ies     | --installelastic      ) [ -n "$2" ] && INSTALL_ELASTICSEARCH=$2                                                && shift ;;
+        -ifb     | --installfluentbit    ) [ -n "$2" ] && INSTALL_FLUENT_BIT=$2                                                   && shift ;;
+        -rdsh    | --redishost           ) [ -n "$2" ] && REDIS_HOST=$2                                                           && shift ;;
+        -rdsp    | --redisport           ) [ -n "$2" ] && REDIS_PORT=$2                                                           && shift ;;
+        -rdsu    | --redisusername       ) [ -n "$2" ] && REDIS_USER_NAME=$2                                                      && shift ;;
+        -rdspass | --redispassword       ) [ -n "$2" ] && REDIS_PASSWORD=$2                                                       && shift ;;
+        -rbpr    | --rabbitmqprotocol    ) [ -n "$2" ] && RABBIT_PROTOCOL=$2                                                      && shift ;;
+        -rbth    | --rabbitmqhost        ) [ -n "$2" ] && RABBIT_HOST=$2                                                          && shift ;;
+        -rbtp    | --rabbitmqport        ) [ -n "$2" ] && RABBIT_PORT=$2                                                          && shift ;;
+        -rbtu    | --rabbitmqusername    ) [ -n "$2" ] && RABBIT_USER_NAME=$2                                                     && shift ;;
+        -rbtpass | --rabbitmqpassword    ) [ -n "$2" ] && RABBIT_PASSWORD=$2                                                      && shift ;;
+        -rbtvh   | --rabbitmqvirtualhost ) [ -n "$2" ] && RABBIT_VIRTUAL_HOST=$2                                                  && shift ;;
+        -led     | --letsencryptdomain   ) [ -n "$2" ] && LETS_ENCRYPT_DOMAIN=$2                                                  && shift ;;
+        -lem     | --letsencryptmail     ) [ -n "$2" ] && LETS_ENCRYPT_MAIL=$2                                                    && shift ;;
+        -du      | --dashboardsusername  ) [ -n "$2" ] && DASHBOARDS_USERNAME=$2                                                  && shift ;;
+        -dp      | --dashboardspassword  ) [ -n "$2" ] && DASHBOARDS_PASSWORD=$2                                                  && shift ;;
+        -noni    | --noninteractive      ) [ -n "$2" ] && NON_INTERACTIVE=$2                                                      && shift ;;
+        -uni     | --uninstall           ) [ -n "$2" ] && UNINSTALL=$2 && [ "$UNINSTALL" = "true" ] && OFFLINE_IMAGE_LOAD="true"  && shift ;;
+        -off     | --offline             ) [ -n "$2" ] && OFFLINE_INSTALLATION=$2                                                 && shift ;;
+        -ls      | --localscripts        )                                                                                           shift ;;
+        -vd      | --volumesdir          )
+            [ -n "$2" ] && VOLUMES_DIR="$2"
+            [[ "$VOLUMES_DIR" != /* ]] && VOLUMES_DIR="$(cd "$(dirname "$VOLUMES_DIR")" && pwd)/$(basename "$VOLUMES_DIR")"
+            [ -d "$VOLUMES_DIR" ] || { echo "Error: Volumes directory not found: ${VOLUMES_DIR}" >&2; exit 1; }
+            [[ "$VOLUMES_DIR" == "$BASE_DIR"* ]] && { echo "Warning: Please change the volumes directory, as $BASE_DIR will be removed during an update."; exit 1; }
+            shift
+        ;;
+        -cf      | --certfile            )
             [ -n "$2" ] && CERTIFICATE_PATH="$2"
             [[ "$CERTIFICATE_PATH" != /* ]] && CERTIFICATE_PATH="$(cd "$(dirname "$CERTIFICATE_PATH")" && pwd)/$(basename "$CERTIFICATE_PATH")"
             [ -f "$CERTIFICATE_PATH" ] || { echo "Error: Certificate file not found: ${CERTIFICATE_PATH}" >&2; exit 1; }
             shift
         ;;
-        -ckf | --certkeyfile )
+        -ckf     | --certkeyfile         )
             [ -n "$2" ] && CERTIFICATE_KEY_PATH="$2"
             [[ "$CERTIFICATE_KEY_PATH" != /* ]] && CERTIFICATE_KEY_PATH="$(cd "$(dirname "$CERTIFICATE_KEY_PATH")" && pwd)/$(basename "$CERTIFICATE_KEY_PATH")"
             [ -f "$CERTIFICATE_KEY_PATH" ] || { echo "Error: Certificate key file not found: ${CERTIFICATE_KEY_PATH}" >&2; exit 1; }
-            shift
-        ;;
-        -du | --dashboardsusername )           [ -n "$2" ] && DASHBOARDS_USERNAME=$2 && shift ;;
-        -dp | --dashboardspassword )           [ -n "$2" ] && DASHBOARDS_PASSWORD=$2 && shift ;;
-        -noni | --noninteractive )             [ -n "$2" ] && NON_INTERACTIVE=$2 && shift ;;
-        -uni | --uninstall )                   [ -n "$2" ] && UNINSTALL=$2 && [ "$UNINSTALL" = "true" ] && OFFLINE_IMAGE_LOAD="true" && shift ;;
-        -off | --offline )                     [ -n "$2" ] && OFFLINE_INSTALLATION=$2 && shift ;;
-        -vd | --volumesdir )
-            [ -n "$2" ] && VOLUMES_DIR="$2"
-            [[ "$VOLUMES_DIR" != /* ]] && VOLUMES_DIR="$(cd "$(dirname "$VOLUMES_DIR")" && pwd)/$(basename "$VOLUMES_DIR")"
-            [ -d "$VOLUMES_DIR" ] || { echo "Error: Volumes directory not found: ${VOLUMES_DIR}" >&2; exit 1; }
-            [[ "$VOLUMES_DIR" == "$BASE_DIR"* ]] && { echo "Warning: Please change the volumes directory, as $BASE_DIR will be removed during an update."; exit 1; }
             shift
         ;;
         -h | -? | --help )
