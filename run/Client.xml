@@ -1,10 +1,10 @@
 <service>
-  <id>OnlyofficeLogin</id>
-  <name>ONLYOFFICE Login SSR</name>
+  <id>OnlyofficeClient</id>
+  <name>ONLYOFFICE Client Serve</name>
   <startmode>manual</startmode>
   <executable>node</executable>
   <arguments>server.js</arguments>
-   <workingdirectory>%BASE%\..\..\client\packages\login</workingdirectory>
+   <workingdirectory>%BASE%\..\..\client\packages\client</workingdirectory>
   <log mode="none"/>
   <delayedAutoStart>true</delayedAutoStart>
   <onfailure action="none" />
