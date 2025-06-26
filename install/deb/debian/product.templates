@@ -31,7 +31,7 @@ Template: {{product}}/ds-url
 Type: string
 Description: ONLYOFFICE Docs URL:
 
-Template: {{product}}/elasticsearch-sheme
+Template: {{product}}/elasticsearch-scheme
 Type: select
 Choices: http, https
 Default: http

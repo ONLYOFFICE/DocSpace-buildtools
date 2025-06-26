@@ -24,7 +24,7 @@ while [ "$1" != "" ]; do
         -mysqlh  | --mysqlhost           ) [ -n "$2" ] && MYSQL_HOST=$2                                                           && shift ;;
         -mysqlport| --mysqlport          ) [ -n "$2" ] && MYSQL_PORT=$2                                                           && shift ;;
         -mysqlp  | --mysqlpassword       ) [ -n "$2" ] && MYSQL_PASSWORD=$2                                                       && shift ;;
-        -espr    | --elasticprotocol     ) [ -n "$2" ] && ELK_SHEME=$2                                                            && shift ;;
+        -espr    | --elasticprotocol     ) [ -n "$2" ] && ELK_SCHEME=$2                                                           && shift ;;
         -esh     | --elastichost         ) [ -n "$2" ] && ELK_HOST=$2                                                             && shift ;;
         -esp     | --elasticport         ) [ -n "$2" ] && ELK_PORT=$2                                                             && shift ;;
         -skiphc  | --skiphardwarecheck   ) [ -n "$2" ] && SKIP_HARDWARE_CHECK=$2                                                  && shift ;;
@@ -103,14 +103,14 @@ while [ "$1" != "" ]; do
             echo "      -docsi, --docsimage               document server image name"
             echo "      -docsv, --docsversion             document server version"
             echo "      -docsurl, --docsurl               $PACKAGE_SYSNAME docs server address (example http://$PACKAGE_SYSNAME-docs-address:8083)"
-            echo "      -jh, --jwtheader                  defines the http header that will be used to send the JWT"
+            echo "      -jh, --jwtheader                  defines the HTTP header that will be used to send the JWT"
             echo "      -js, --jwtsecret                  defines the secret key to validate the JWT in the request"
             echo "      -irbt, --installrabbitmq          install or update rabbitmq (true|false)"
             echo "      -irds, --installredis             install or update redis (true|false)"
             echo "      -imysql, --installmysql           install or update mysql (true|false)"
             echo "      -ies, --installelastic            install or update elasticsearch (true|false)"
             echo "      -ifb, --installfluentbit          install or update fluent-bit (true|false)"
-            echo "      -du, --dashboardsusername         login for authorization in /dashboards/"
+            echo "      -du, --dashboardsusername         username for authorization in /dashboards/"
             echo "      -dp, --dashboardspassword         password for authorization in /dashboards/"
             echo "      -espr, --elasticprotocol          the protocol for the connection to elasticsearch (default value http)"
             echo "      -esh, --elastichost               the IP address or hostname of the elasticsearch"
