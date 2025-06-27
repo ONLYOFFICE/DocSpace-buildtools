@@ -869,25 +869,39 @@ product_configuration
 if $PACKAGE_MANAGER mysql-client >/dev/null 2>&1 || $PACKAGE_MANAGER mysql-community-client >/dev/null 2>&1; then
     input_db_params
     establish_mysql_conn || exit $?
-fi 
-
-if [[ ! -z $DOCUMENT_SERVER_URL_EXTERNAL ]]; then
-    parse_external_docs_url "$DOCUMENT_SERVER_URL_EXTERNAL"
-    check_connection_external_services "$DOCUMENT_SERVER_HOST" "$DOCUMENT_SERVER_PORT" "${PACKAGE_SYSNAME^^} Docs"
-    setup_docs "EXTERNAL_DOCS_SERVER"
-elif $PACKAGE_MANAGER ${PACKAGE_SYSNAME}-documentserver >/dev/null 2>&1 || $PACKAGE_MANAGER ${PACKAGE_SYSNAME}-documentserver-de >/dev/null 2>&1 || $PACKAGE_MANAGER ${PACKAGE_SYSNAME}-documentserver-ee >/dev/null 2>&1; then
-    setup_docs "LOCAL_DOCS_SERVER"
 fi
 
 if $PACKAGE_MANAGER openresty >/dev/null 2>&1; then
-    setup_openresty
+	setup_openresty
+fi
+
+if [[ ! -z $EXTERNAL_REDIS_FLAG ]]; then
+	check_connection_external_services "$REDIS_HOST" "$REDIS_PORT" "Redis"
+	setup_redis "EXTERNAL_REDIS_SERVER"
+elif $PACKAGE_MANAGER $REDIS_PACKAGE >/dev/null 2>&1; then
+	setup_redis "LOCAL_REDIS_SERVER"
+fi
+
+if [[ ! -z $EXTERNAL_RABBITMQ_FLAG ]]; then
+	check_connection_external_services "$RABBITMQ_HOST" "$RABBITMQ_PORT" "RabbitMQ"
+	setup_rabbitmq "EXTERNAL_RABBITMQ_SERVER"
+elif $PACKAGE_MANAGER rabbitmq-server >/dev/null 2>&1; then
+	setup_rabbitmq "LOCAL_RABBITMQ_SERVER"
 fi
 
 if [[ ! -z $EXTERNAL_ELK_FLAG ]]; then
 	check_connection_external_services "$ELK_HOST" "$ELK_PORT" "Elasticsearch"
 	setup_elasticsearch "EXTERNAL_ELASTIC_SERVER" 
 elif $PACKAGE_MANAGER opensearch >/dev/null 2>&1; then
-    setup_elasticsearch "LOCAL_ELASTIC_SERVER"
+	setup_elasticsearch "LOCAL_ELASTIC_SERVER"
+fi
+
+if [[ ! -z $DOCUMENT_SERVER_URL_EXTERNAL ]]; then
+	parse_external_docs_url "$DOCUMENT_SERVER_URL_EXTERNAL"
+	check_connection_external_services "$DOCUMENT_SERVER_HOST" "$DOCUMENT_SERVER_PORT" "${PACKAGE_SYSNAME^^} Docs"
+	setup_docs "EXTERNAL_DOCS_SERVER"
+elif $PACKAGE_MANAGER ${PACKAGE_SYSNAME}-documentserver >/dev/null 2>&1 || $PACKAGE_MANAGER ${PACKAGE_SYSNAME}-documentserver-de >/dev/null 2>&1 || $PACKAGE_MANAGER ${PACKAGE_SYSNAME}-documentserver-ee >/dev/null 2>&1; then
+	setup_docs "LOCAL_DOCS_SERVER"
 fi
 
 if $PACKAGE_MANAGER opensearch-dashboards >/dev/null 2>&1; then
@@ -896,20 +910,6 @@ fi
 
 if $PACKAGE_MANAGER fluent-bit >/dev/null 2>&1; then
 	setup_fluentbit
-fi
-
-if [[ ! -z $EXTERNAL_REDIS_FLAG ]]; then
-	check_connection_external_services "$REDIS_HOST" "$REDIS_PORT" "Redis"
-	setup_redis "EXTERNAL_REDIS_SERVER"
-elif $PACKAGE_MANAGER $REDIS_PACKAGE >/dev/null 2>&1; then
-    setup_redis "LOCAL_REDIS_SERVER"
-fi
-
-if [[ ! -z $EXTERNAL_RABBITMQ_FLAG ]]; then
-	check_connection_external_services "$RABBITMQ_HOST" "$RABBITMQ_PORT" "RabbitMQ"
-    setup_rabbitmq "EXTERNAL_RABBITMQ_SERVER"
-elif $PACKAGE_MANAGER rabbitmq-server >/dev/null 2>&1; then
-    setup_rabbitmq "LOCAL_RABBITMQ_SERVER"
 fi
 
 restart_services
