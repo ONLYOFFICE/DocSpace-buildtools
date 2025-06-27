@@ -484,6 +484,15 @@ while [ "$1" != "" ]; do
 			fi
 		;;
 
+		-dhf | --dhparamfile )
+			if [ "$2" != "" ]; then
+				DHPARAM_PATH="$2"
+				[[ "$DHPARAM_PATH" != /* ]] && DHPARAM_PATH="$(cd "$(dirname "$DHPARAM_PATH")" && pwd)/$(basename "$DHPARAM_PATH")"
+				[ -f "$DHPARAM_PATH" ] || { echo "Error: DHParam file not found: ${DHPARAM_PATH}" >&2; exit 1; }
+				shift
+			fi
+		;;
+
 		-du | --dashboardsusername )
 			if [ "$2" != "" ]; then
 				DASHBOARDS_USERNAME=$2
@@ -584,6 +593,7 @@ while [ "$1" != "" ]; do
 			echo "      -lem, --letsencryptmail           defines the domain administrator mail address for Let's Encrypt certificate"
 			echo "      -cf, --certfile                   path to the certificate file for the domain"
 			echo "      -ckf, --certkeyfile               path to the private key file for the certificate"
+			echo "      -dhf, --dhparamfile               path to the dhparam file for the certificate"
 			echo "      -off, --offline                   set the script for offline installation (true|false)"
 			echo "      -noni, --noninteractive           auto confirm all questions (true|false)"
 			echo "      -dbm, --databasemigration         database migration (true|false)"
@@ -1296,8 +1306,10 @@ install_product () {
 		fi
 
 		if [ ! -z "${CERTIFICATE_PATH}" ] && [[ ! -z "${APP_DOMAIN_PORTAL}" ]]; then
+		    env ${DHPARAM_PATH:+DHPARAM_PATH="$DHPARAM_PATH"} \
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -f "${APP_DOMAIN_PORTAL}" "${CERTIFICATE_PATH}" "${CERTIFICATE_KEY_PATH}"
 		elif [ ! -z "${LETS_ENCRYPT_DOMAIN}" ] && [ ! -z "${LETS_ENCRYPT_MAIL}" ]; then
+		    env ${DHPARAM_PATH:+DHPARAM_PATH="$DHPARAM_PATH"} \
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup "${LETS_ENCRYPT_MAIL}" "${LETS_ENCRYPT_DOMAIN}"
 		#Fix for bug 70537 to ensure proper migration to version 3.0.0
 		elif [ "${UPDATE}" = "true" ] && [ -f "/etc/cron.d/${PRODUCT}-letsencrypt" ]; then
