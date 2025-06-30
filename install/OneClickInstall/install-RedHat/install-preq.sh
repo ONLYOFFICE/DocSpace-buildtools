@@ -38,7 +38,7 @@ curl -s https://packagecloud.io/install/repositories/rabbitmq/erlang/script.rpm.
 
 #add nodejs repo
 NODE_VERSION="18"
-curl -fsSL https://rpm.nodesource.com/setup_${NODE_VERSION}.x | sed '/update -y/d' | bash - || true
+curl -fsSL https://rpm.nodesource.com/setup_${NODE_VERSION}.x | bash -
 
 #add mysql repo
 dnf remove -y @mysql && dnf module -y reset mysql && dnf module -y disable mysql
@@ -83,13 +83,13 @@ curl -o /etc/yum.repos.d/openresty.repo "https://openresty.org/package/${OPENRES
 JAVA_VERSION=21
 ${package_manager} ${WEAK_OPT} -y install $([ "$DIST" != "fedora" ] && echo "epel-release") \
 			python3 \
-			nodejs ${NODEJS_OPTION} \
+			nodejs \
 			dotnet-sdk-9.0 \
 			opensearch-${ELASTIC_VERSION} \
 			mysql-community-server \
 			postgresql \
 			postgresql-server \
-			rabbitmq-server$rabbitmq_version \
+			rabbitmq-server \
 			redis \
 			SDL2 \
 			expect \
