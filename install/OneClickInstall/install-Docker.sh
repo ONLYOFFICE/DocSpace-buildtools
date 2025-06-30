@@ -801,8 +801,10 @@ install_product () {
 		fi
 
 		if [ ! -z "${CERTIFICATE_PATH}" ] && [[ ! -z "${APP_DOMAIN_PORTAL}" ]]; then
+		    env ${DHPARAM_PATH:+DHPARAM_PATH="$DHPARAM_PATH"} \
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -f "${APP_DOMAIN_PORTAL}" "${CERTIFICATE_PATH}" "${CERTIFICATE_KEY_PATH}"
 		elif [ ! -z "${LETS_ENCRYPT_DOMAIN}" ] && [ ! -z "${LETS_ENCRYPT_MAIL}" ]; then
+		    env ${DHPARAM_PATH:+DHPARAM_PATH="$DHPARAM_PATH"} \
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup "${LETS_ENCRYPT_MAIL}" "${LETS_ENCRYPT_DOMAIN}"
 		#Fix for bug 70537 to ensure proper migration to version 3.0.0
 		elif [ "${UPDATE}" = "true" ] && [ -f "/etc/cron.d/${PRODUCT}-letsencrypt" ]; then
