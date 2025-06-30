@@ -5,10 +5,8 @@ on:
     - cron: '0 20 * * *' # Every day at 20:00 UTC
 
 jobs:
-
-  select-branches:
+  trigger-builds:
     runs-on: ubuntu-latest
-
     steps:
       - name: Check out the code
         uses: actions/checkout@v2
@@ -20,25 +18,6 @@ jobs:
         run: |
           echo "branches=$(git ls-remote --heads origin | grep -Po 'refs/heads/\K((release|hotfix)/v[0-9][^ ]*|develop)' | xargs)" >> $GITHUB_OUTPUT
 
-      - name: Determine Priority Branch
-        id: priority
-        run: |
-          git fetch origin --prune
-          for branch in ${{ steps.list-branches.outputs.branches }}; do
-            if git log --since="24 hours ago" origin/$branch --pretty=format:"%h" | grep -q .; then
-              echo "target_branch=$branch" >> $GITHUB_OUTPUT
-              exit 0
-            fi
-          done
-          echo "target_branch=" >> $GITHUB_OUTPUT
-
-      - name: Check Changes
-        id: changes
-        run: |
-          CHANGED_FILES=$(git log --since="24 hours ago" --name-only --pretty=format: | sort -u)
-          echo "build_deb=$(echo "${CHANGED_FILES}" | grep -qE '^install/common/|^install/deb/' && echo true || echo false)" >> $GITHUB_OUTPUT
-          echo "build_rpm=$(echo "${CHANGED_FILES}" | grep -qE '^install/common/|^install/rpm/' && echo true || echo false)" >> $GITHUB_OUTPUT          
-
       - name: Dispatch Action main build
         env:
           GH_TOKEN: ${{ secrets.TOKEN }}
@@ -48,15 +27,20 @@ jobs:
             $(echo "${{ steps.list-branches.outputs.branches }}" | xargs -n1 printf -- '-f client_payload[branches][]=%s ')
 
       - name: Dispatch Action build packages
-        if: ${{ github.event_name == 'schedule' && steps.priority.outputs.target_branch != '' && (steps.changes.outputs.build_deb == 'true' || steps.changes.outputs.build_rpm == 'true') }}
         env:
           GH_TOKEN: ${{ secrets.TOKEN }}
+          WORKFLOW_FILE: build_packages.yml
         run: |
-          gh api --method POST /repos/${{ github.repository }}/actions/workflows/71256583/dispatches \
-            -f ref='${{ github.ref_name }}' \
-            -f inputs[deb_build]='${{ steps.changes.outputs.build_deb }}' \
-            -f inputs[rpm_build]='${{ steps.changes.outputs.build_rpm }}' \
-            -f inputs[branch-buildtools]='${{ steps.priority.outputs.target_branch }}' \
-            -f inputs[branch-client]='${{ steps.priority.outputs.target_branch }}' \
-            -f inputs[branch-server]='${{ steps.priority.outputs.target_branch }}'
+          for BRANCH in ${{ steps.list-branches.outputs.branches }}; do
+            CHANGED=$(git log origin/${BRANCH} --since="24 hours ago" --pretty=format: --name-only --diff-filter=ACM | sort -u)
+            [[ ! ${CHANGED} =~ install/(common|deb|rpm)/ ]] && continue
+
+            gh workflow run ${WORKFLOW_FILE} --repo "${{ github.repository }}" \
+              --ref=${BRANCH} \
+              --field deb_build=$([[ ${CHANGED} =~ install/(common|deb)/ ]] && echo true || echo false) \
+              --field rpm_build=$([[ ${CHANGED} =~ install/(common|rpm)/ ]] && echo true || echo false) \
+              --field branch-buildtools=${BRANCH} \
+              --field branch-client=${BRANCH} \
+              --field branch-server=${BRANCH}
+          done
 
