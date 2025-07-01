@@ -4,11 +4,11 @@ set -e
 
 PRODUCT="docspace"
 DIR="/usr/bin"
-LETSENCRYPT="/etc/letsencrypt/live";
+LETSENCRYPT="/etc/letsencrypt/live"
 OPENRESTY="/etc/openresty/conf.d"
-DHPARAM_FILE="/etc/ssl/certs/dhparam.pem"
 WEBROOT_PATH="/var/www/${PRODUCT}"
 CONFIG_DIR="/etc/onlyoffice/${PRODUCT}"
+DHPARAM_PATH=${DHPARAM_PATH:-"/etc/ssl/certs/dhparam.pem"}
 SYSTEMD_DIR=$(dirname $($(command -v dpkg-query &> /dev/null && echo "dpkg-query -L" || echo "rpm -ql") ${PRODUCT}-api | grep systemd/system/))
 
 # Check if configuration files are present
@@ -145,7 +145,7 @@ case $1 in
   ;;
 esac
 
-[[ ! -f "${DHPARAM_FILE}" ]] && openssl dhparam -out ${DHPARAM_FILE} 2048
+[[ ! -f "${DHPARAM_PATH}" ]] && openssl dhparam -out ${DHPARAM_PATH} 2048
 CERTIFICATE_FILE="${CERTIFICATE_FILE:-"${LETSENCRYPT}/${PRODUCT}/fullchain.pem"}"
 PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${PRODUCT}/privkey.pem"}"
 [[ "$CERTIFICATE_FILE" != /* ]] && CERTIFICATE_FILE="$(cd "$(dirname "$CERTIFICATE_FILE")" && pwd)/$(basename "$CERTIFICATE_FILE")"
@@ -157,7 +157,7 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
     sed -i "s/\(\"portal\":\).*/\1 \"https:\/\/${DOMAIN}\"/" ${CONFIG_DIR}/appsettings.$(grep -oP 'ENVIRONMENT=\K.*' ${CONFIG_DIR}/systemd.env).json
     sed -i "s~\(ssl_certificate \).*;~\1${CERTIFICATE_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
     sed -i "s~\(ssl_certificate_key \).*;~\1${PRIVATEKEY_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
-    sed -i "s~\(ssl_dhparam \).*;~\1${DHPARAM_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
+    sed -i "s~\(ssl_dhparam \).*;~\1${DHPARAM_PATH};~g" ${OPENRESTY}/onlyoffice-proxy.conf
 
     if [[ "${LETSENCRYPT_ENABLE}" = "true" ]]; then
       # Create and set permissions for ${PRODUCT}-renew-letsencrypt

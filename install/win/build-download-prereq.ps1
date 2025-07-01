@@ -194,13 +194,13 @@ $enterprise_prerequisites = @(
   @{  
     download_allways = $false; 
     name = "mysql-connector-odbc-8.4.0-winx64.msi";
-    link = "https://cdn.mysql.com/Downloads/Connector-ODBC/8.4/mysql-connector-odbc-8.4.0-winx64.msi";
+    link = "https://cdn.mysql.com/archives/mysql-connector-odbc-8.4/mysql-connector-odbc-8.4.0-winx64.msi";
   }
 
   @{  
     download_allways = $false; 
     name = "mysql-8.4.3-winx64.msi";
-    link = "https://cdn.mysql.com/Downloads/MySQL-8.4/mysql-8.4.3-winx64.msi";
+    link = "https://cdn.mysql.com/archives/mysql-8.4/mysql-8.4.3-winx64.msi";
   }
 
   @{  
