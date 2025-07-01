@@ -57,18 +57,17 @@ UPDATE_AVAILABLE_CODE=100
 DIST=$(rpm -qa --queryformat '%{NAME}\n' | grep -E 'centos-release|redhat-release|fedora-release' | awk -F '-' '{print $1}' | head -n 1)
 DIST=${DIST:-$(awk -F= '/^ID=/ {gsub(/"/, "", $2); print tolower($2)}' /etc/os-release)}
 [[ "$DIST" =~ ^(centos|redhat|fedora)$ ]] || DIST="centos"
-REV=$(sed -n 's/.*release\ \([0-9]*\).*/\1/p' /etc/redhat-release)
+REV=$( . /etc/os-release; echo "${VERSION_ID%%.*}" )
 REV=${REV:-"7"}
 
 REMI_DISTR_NAME="enterprise"
 RPMFUSION_DISTR_NAME="el"
 MYSQL_DISTR_NAME="el"
-OPENRESTY_DISTR_NAME="centos"
+OPENRESTY_DISTR_NAME=${DIST/redhat/rhel}
 SUPPORTED_FEDORA_FLAG="true"
 
 if [ "$DIST" == "fedora" ]; then
 	REMI_DISTR_NAME="fedora"
-	OPENRESTY_DISTR_NAME="fedora"
 	RPMFUSION_DISTR_NAME="fedora"
 	MYSQL_DISTR_NAME="fc"
 	OPENRESTY_REV=$([ "$REV" -ge 37 ] && echo 36 || echo "$REV")
