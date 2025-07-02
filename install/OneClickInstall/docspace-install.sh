@@ -44,6 +44,7 @@ while [ "$1" != "" ]; do
         -ls | --localscripts )     [[ "$2" == "true" || "$2" == "false" ]] && PARAMETERS="$PARAMETERS ${1}" && LOCAL_SCRIPTS=$2 && shift ;;
         -log | --logging )         [[ "$2" == "true" || "$2" == "false" ]] && ENABLE_LOGGING=$2 && shift 2 && continue ;;
         -gb | --gitbranch )        [ -n "$2" ] && PARAMETERS="$PARAMETERS ${1}" && GIT_BRANCH=$2 && shift ;;
+        -dsv | --docspaceversion ) [ -n "$2" ] && PARAMETERS="$PARAMETERS ${1}" && DOCKER_TAG=$2 && shift ;; # only for detect docker legacy installs
         docker ) DOCKER="true"; shift ; continue ;;
         package ) DOCKER="false"; shift ; continue ;;
         -h | -? | --help )
@@ -107,6 +108,15 @@ elif (is_command_exists dpkg && dpkg -s ${product}-api >/dev/null 2>&1) || (is_c
 fi
  
 [ -z "$DOCKER" ] && read_installation_method
+
+# Auto-detect legacy installs
+if [[ "${DOCKER}" == "true" ]] && [[ ${DOCKER_TAG} =~ ^([0-9]+\.[0-9]+\.[0-9]+)(\.[0-9]+)?$ ]]; then
+  TAG="v${BASH_REMATCH[1]}"; LATEST_TAG=$(curl -s "https://api.github.com/repos/${product_sysname^^}/${product}/releases/latest" | grep -Po '"tag_name":\s*"\K[^"]+')
+  if [[ "${TAG}" != "${LATEST_TAG}" ]] && curl -sfI "https://github.com/${product_sysname^^}/${product}-buildtools/releases/tag/${TAG}-server" >/dev/null; then
+	>&2 echo "Warning: legacy install detected (v${BASH_REMATCH[1]}) — compatibility issues or unforeseen errors may occur."
+    PARAMETERS="${PARAMETERS} -gb ${TAG}-server"; GIT_BRANCH="${TAG}-server"
+  fi
+fi
 
 DOWNLOAD_URL_PREFIX="https://download.${product_sysname}.com/${product}"
 [ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${product_sysname^^}/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
