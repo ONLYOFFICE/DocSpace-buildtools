@@ -77,7 +77,7 @@ MYSQL_PORT=""
 DATABASE_MIGRATION="true"
 
 ELK_VERSION=""
-ELK_SHEME=""
+ELK_SCHEME=""
 ELK_HOST=""
 ELK_PORT=""
 
@@ -416,14 +416,15 @@ create_network () {
 }
 
 read_continue_installation () {
-	[ "$NON_INTERACTIVE" = "true" ] && return 0
+	[ "$NON_INTERACTIVE" = "true" ] && INSTALLATION_CHOICE="Y" && return 0
 
 	while true; do
-        read -p "Continue installation [Y/N]? " CHOICE_INSTALLATION
-        case "$CHOICE_INSTALLATION" in
-            [yY]) return 0 ;;
+        read -p "Continue installation [Y/C/N]? " CHOICE
+        case "$CHOICE" in
+            [yY]) INSTALLATION_CHOICE="Y"; return 0 ;;
+            [cC]) INSTALLATION_CHOICE="C"; return 0 ;;
             [nN]) exit 0 ;;
-            *) echo "Please, enter Y or N" ;;
+            *) echo "Please, enter Y, C or N" ;;
         esac
     done
 }
@@ -437,21 +438,30 @@ domain_check () {
 		if [[ -n "$IP_ADDRESS" && "$IP_ADDRESS" =~ ^(10\.|127\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.) ]]; then
 			LOCAL_RESOLVED_DOMAINS+="$DOMAIN"
 		fi
-	done <<< "${APP_DOMAIN_PORTAL:-$(dig +short -x "$(curl -s ifconfig.me)" | sed 's/\.$//')}"
-
-	if [[ -n "${LOCAL_RESOLVED_DOMAINS}" ]] || [[ $(ip route get 8.8.8.8 | awk '{print $7}') != $(curl -s ifconfig.me) ]]; then
+	done <<< "${APP_DOMAIN_PORTAL:-$(dig +short -x "$(curl -s -4 ifconfig.me)" | sed 's/\.$//')}"
+	
+	# check if the domain is a loopback IP or NAT
+	if [[ -n "${LOCAL_RESOLVED_DOMAINS}" ]] || [[ $(ip route get 8.8.8.8 | awk '{print $7}') != $(curl -s -4 ifconfig.me) ]]; then 
 		DOCKER_DAEMON_FILE="/etc/docker/daemon.json"
 		if ! grep -q '"dns"' "$DOCKER_DAEMON_FILE" 2>/dev/null; then
-			echo "A problem was detected for ${APP_DOMAIN_PORTAL:-${LOCAL_RESOLVED_DOMAINS}} domains when using a loopback IP address or when using NAT."
-			echo "Select 'Y' to continue installing with configuring the use of external IP in Docker via Google Public DNS."
-			echo "Select 'N' to cancel ${PACKAGE_SYSNAME^^} ${PRODUCT_NAME} installation."
+			echo "DNS issue detected for ${APP_DOMAIN_PORTAL:-$LOCAL_RESOLVED_DOMAINS} (loopback IP or NAT)."
+			echo "[Y] Use Google DNS | [C] Use custom DNS | [N] Cancel installation"
 			if read_continue_installation; then
-				if [[ -f "$DOCKER_DAEMON_FILE" ]]; then	
-					sed -i 's!{!& "dns": ["8.8.8.8", "8.8.4.4"],!' "$DOCKER_DAEMON_FILE"
-				else
-					echo "{\"dns\": [\"8.8.8.8\", \"8.8.4.4\"]}" | tee "$DOCKER_DAEMON_FILE" >/dev/null
+				case "$INSTALLATION_CHOICE" in
+					Y)  DNS=("8.8.8.8" "8.8.4.4") ;;
+					C)  while true; do
+							read -p "Enter custom DNS (e.g. 8.8.8.8 8.8.4.4): " INPUT; IFS=' ' read -ra DNS <<< "$INPUT"
+							for IP in "${DNS[@]}"; do 
+								[[ $IP =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || { echo "Invalid DNS: $IP"; continue 2; }
+							done && break
+						done ;;
+				esac
+				if ((${#DNS[@]})); then
+					echo "Updating Docker DNS config with: ${DNS[*]}"
+					jq -e . "${DOCKER_DAEMON_FILE}" > /dev/null 2>&1 || echo '{}' > "${DOCKER_DAEMON_FILE}"
+					echo "$(jq --argjson dns "$(printf '%s\n' "${DNS[@]}" | jq -R . | jq -s .)" '.dns = $dns' "${DOCKER_DAEMON_FILE}")" > "${DOCKER_DAEMON_FILE}"
+					systemctl restart docker || { echo "Failed to restart Docker service"; exit 1; }
 				fi
-				systemctl restart docker
 			fi
 		fi
 	fi
@@ -509,7 +519,7 @@ get_tag_from_registry () {
 			sleep 1
 		fi
 
-		REGISTRY_TAGS_URL="https://hub.docker.com/v2/repositories/${1}/tags/"
+		REGISTRY_TAGS_URL="https://hub.docker.com/v2/repositories/${1}/tags/?page_size=100"
 		JQ_FILTER='.results[].name // empty'
 	fi
 
@@ -559,12 +569,9 @@ set_jwt_header () {
 	DOCUMENT_SERVER_JWT_HEADER="${DOCUMENT_SERVER_JWT_HEADER:-"AuthorizationJwt"}"
 }
 
-set_core_machinekey () {
+set_secrets () {
 	APP_CORE_MACHINEKEY="${APP_CORE_MACHINEKEY:-$(get_env_parameter "APP_CORE_MACHINEKEY" "${CONTAINER_NAME}")}"
 	[ "$UPDATE" != "true" ] && APP_CORE_MACHINEKEY="${APP_CORE_MACHINEKEY:-$(get_random_str 12)}"
-}
-
-set_identity_secrets () {
 	IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-$(get_env_parameter "IDENTITY_ENCRYPTION_SECRET" "${IDENTITY_CONTAINER_NAME}")}"
 	[ "${UPDATE}" = "true" ] && IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-"secret"}" # (DS v3.1.0) fix encryption key generation issue
 	IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-$(get_random_str 12)}"
@@ -592,7 +599,9 @@ set_docspace_params() {
 	EXTERNAL_PORT=${EXTERNAL_PORT:-$(get_env_parameter "EXTERNAL_PORT" "${CONTAINER_NAME}")}
 
 	PREVIOUS_ELK_VERSION=$(get_env_parameter "ELK_VERSION")
-	ELK_SHEME=${ELK_SHEME:-$(get_env_parameter "ELK_SHEME" "${CONTAINER_NAME}")}
+	ELK_SCHEME=${ELK_SCHEME:-$(get_env_parameter "ELK_SCHEME" "${CONTAINER_NAME}")}
+    # (DS v3.2.0) fallback for legacy ELK_SHEME
+    ELK_SCHEME=${ELK_SCHEME:-$(get_env_parameter "ELK_SHEME" "${CONTAINER_NAME}")}
 	ELK_HOST=${ELK_HOST:-$(get_env_parameter "ELK_HOST" "${CONTAINER_NAME}")}
 	ELK_PORT=${ELK_PORT:-$(get_env_parameter "ELK_PORT" "${CONTAINER_NAME}")}
 
@@ -734,7 +743,7 @@ install_fluent_bit () {
 		if crontab -l | grep -q "${OPENSEARCH_INDEX}"; then
 			crontab -l | grep -v "${OPENSEARCH_INDEX}" | crontab -
 		fi
-		(crontab -l 2>/dev/null; echo "0 0 */1 * * curl -s -X POST $(get_env_parameter 'ELK_SHEME')://${ELK_HOST:-127.0.0.1}:$(get_env_parameter 'ELK_PORT')/${OPENSEARCH_INDEX}/_delete_by_query -H 'Content-Type: application/json' -d '{\"query\": {\"range\": {\"@timestamp\": {\"lt\": \"now-30d\"}}}}'") | crontab -
+		(crontab -l 2>/dev/null; echo "0 0 */1 * * curl -s -X POST $(get_env_parameter 'ELK_SCHEME')://${ELK_HOST:-127.0.0.1}:$(get_env_parameter 'ELK_PORT')/${OPENSEARCH_INDEX}/_delete_by_query -H 'Content-Type: application/json' -d '{\"query\": {\"range\": {\"@timestamp\": {\"lt\": \"now-30d\"}}}}'") | crontab -
 
 		sed -i "s/OPENSEARCH_HOST/${ELK_HOST:-"${PACKAGE_SYSNAME}-opensearch"}/g" "${BASE_DIR}/config/fluent-bit.conf"
 		sed -i "s/OPENSEARCH_PORT/$(get_env_parameter "ELK_PORT")/g" ${BASE_DIR}/config/fluent-bit.conf
@@ -792,8 +801,10 @@ install_product () {
 		fi
 
 		if [ ! -z "${CERTIFICATE_PATH}" ] && [[ ! -z "${APP_DOMAIN_PORTAL}" ]]; then
+		    env ${DHPARAM_PATH:+DHPARAM_PATH="$DHPARAM_PATH"} \
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -f "${APP_DOMAIN_PORTAL}" "${CERTIFICATE_PATH}" "${CERTIFICATE_KEY_PATH}"
 		elif [ ! -z "${LETS_ENCRYPT_DOMAIN}" ] && [ ! -z "${LETS_ENCRYPT_MAIL}" ]; then
+		    env ${DHPARAM_PATH:+DHPARAM_PATH="$DHPARAM_PATH"} \
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup "${LETS_ENCRYPT_MAIL}" "${LETS_ENCRYPT_DOMAIN}"
 		#Fix for bug 70537 to ensure proper migration to version 3.0.0
 		elif [ "${UPDATE}" = "true" ] && [ -f "/etc/cron.d/${PRODUCT}-letsencrypt" ]; then
@@ -923,7 +934,7 @@ services_check_connection () {
 		reconfigure MYSQL_PORT "${MYSQL_PORT:-3306}"
 	fi
 	if [[ ! -z "$DOCUMENT_SERVER_HOST" ]]; then
-		APP_URL_PORTAL=${APP_URL_PORTAL:-"http://$(curl -s ifconfig.me):${EXTERNAL_PORT}"}
+		APP_URL_PORTAL=${APP_URL_PORTAL:-"http://$(curl -s -4 ifconfig.me):${EXTERNAL_PORT}"}
 		establish_conn ${DOCUMENT_SERVER_HOST} ${DOCUMENT_SERVER_PORT} "${PACKAGE_SYSNAME^^} Docs"
 		reconfigure DOCUMENT_SERVER_URL_EXTERNAL ${DOCUMENT_SERVER_URL_EXTERNAL}
 		reconfigure DOCUMENT_SERVER_URL_PUBLIC ${DOCUMENT_SERVER_URL_EXTERNAL}
@@ -946,7 +957,7 @@ services_check_connection () {
 	fi
 	if [[ ! -z "$ELK_HOST" ]]; then
 		establish_conn ${ELK_HOST} "${ELK_PORT:-9200}" "search engine"
-		reconfigure ELK_SHEME "${ELK_SHEME:-http}"
+		reconfigure ELK_SCHEME "${ELK_SCHEME:-http}"
 		reconfigure ELK_HOST ${ELK_HOST}
 		reconfigure ELK_PORT "${ELK_PORT:-9200}"
 	fi
@@ -991,8 +1002,7 @@ start_installation () {
 	set_jwt_secret
 	set_jwt_header
 
-	set_core_machinekey
-	set_identity_secrets
+	set_secrets
 
 	set_mysql_params
 
