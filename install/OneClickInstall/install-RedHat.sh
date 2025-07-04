@@ -29,12 +29,12 @@ while [ "$1" != "" ]; do
         -dp | --dashboardspassword )        [ -n "$2" ] && DASHBOARDS_PASSWORD=$2 && shift ;;
         -ls | --localscripts )              [ -n "$2" ] && LOCAL_SCRIPTS=$2 && shift ;;
         -skiphc | --skiphardwarecheck )     [ -n "$2" ] && SKIP_HARDWARE_CHECK=$2 && shift ;;
-        -it | --installation_type )         [ -n "$2" ] && INSTALLATION_TYPE="${2^^}" && shift ;;
+        -it | --installationtype | --installation_type ) [ -n "$2" ] && INSTALLATION_TYPE="${2^^}" && shift ;;
         -ms | --makeswap )                  [ -n "$2" ] && MAKESWAP=$2 && shift ;;
         -h | -? | --help )
             echo "  Usage $0 [PARAMETER] [[PARAMETER], ...]"
             echo "    Parameters:"
-            echo "      -it, --installation_type          installation type (community|developer|enterprise)"
+            echo "      -it, --installationtype           installation type (community|developer|enterprise)"
             echo "      -u, --update                      use to update existing components (true|false)"
             echo "      -uni, --uninstall                 uninstall existing installation (true|false)"
             echo "      -je, --jwtenabled                 specifies whether JWT validation is enabled (true|false)"
