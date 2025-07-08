@@ -46,13 +46,13 @@ help(){
 create_renew_script() {
   # Create and set permissions for docspace-renew-letsencrypt
   echo '#!/bin/bash' > "${DIR}/${PRODUCT}-renew-letsencrypt"
+  echo "echo \"[\$(date '+%F %T')] START /app/${PRODUCT}-renew-letsencrypt\" >> \"/var/log/${PRODUCT}-renew-letsencrypt.log\"" >> "${DIR}/${PRODUCT}-renew-letsencrypt"
   echo "docker-compose -f ${DOCKERCOMPOSE}/proxy-ssl.yml down" >> "${DIR}/${PRODUCT}-renew-letsencrypt"
   echo 'docker run --rm \' >> "${DIR}/${PRODUCT}-renew-letsencrypt"
   echo '    -v /etc/letsencrypt:/etc/letsencrypt \' >> "${DIR}/${PRODUCT}-renew-letsencrypt"
   echo '    -v /var/lib/letsencrypt:/var/lib/letsencrypt \' >> "${DIR}/${PRODUCT}-renew-letsencrypt"
-  echo '    certbot/certbot renew' >> "${DIR}/${PRODUCT}-renew-letsencrypt"
+  echo "    certbot/certbot renew 2>&1 | tee -a /var/log/${PRODUCT}-renew-letsencrypt.log" >> "${DIR}/${PRODUCT}-renew-letsencrypt"
   echo "docker-compose -f ${DOCKERCOMPOSE}/proxy-ssl.yml up -d" >> "${DIR}/${PRODUCT}-renew-letsencrypt"
-
   chmod a+x "${DIR}/${PRODUCT}-renew-letsencrypt"
 
   # Add cron job if /etc/cron.d directory exists
