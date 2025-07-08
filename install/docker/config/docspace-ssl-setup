@@ -44,21 +44,26 @@ help(){
 }
 
 create_renew_script() {
-  # Create and set permissions for docspace-renew-letsencrypt
-  echo '#!/bin/bash' > "${DIR}/${PRODUCT}-renew-letsencrypt"
-  echo "echo \"[\$(date '+%F %T')] START /app/${PRODUCT}-renew-letsencrypt\" >> \"/var/log/${PRODUCT}-renew-letsencrypt.log\"" >> "${DIR}/${PRODUCT}-renew-letsencrypt"
-  echo "docker-compose -f ${DOCKERCOMPOSE}/proxy-ssl.yml down" >> "${DIR}/${PRODUCT}-renew-letsencrypt"
-  echo 'docker run --rm \' >> "${DIR}/${PRODUCT}-renew-letsencrypt"
-  echo '    -v /etc/letsencrypt:/etc/letsencrypt \' >> "${DIR}/${PRODUCT}-renew-letsencrypt"
-  echo '    -v /var/lib/letsencrypt:/var/lib/letsencrypt \' >> "${DIR}/${PRODUCT}-renew-letsencrypt"
-  echo "    certbot/certbot renew 2>&1 | tee -a /var/log/${PRODUCT}-renew-letsencrypt.log" >> "${DIR}/${PRODUCT}-renew-letsencrypt"
-  echo "docker-compose -f ${DOCKERCOMPOSE}/proxy-ssl.yml up -d" >> "${DIR}/${PRODUCT}-renew-letsencrypt"
-  chmod a+x "${DIR}/${PRODUCT}-renew-letsencrypt"
-
   CRON_PATH=$(command -v crond || command -v cron) && CRON_SVC=${CRON_PATH##*/} || { echo "Error: neither crond nor cron is installed." >&2; }
   if [[ -n "${CRON_SVC}" ]]; then
     command -v systemctl &>/dev/null && systemctl enable --now "$CRON_SVC" || { command -v service &>/dev/null && service "${CRON_SVC%.service}" start; }
-    [ -d /etc/cron.d ] && echo -e "0 0 * * 0 root ${DIR}/${PRODUCT}-renew-letsencrypt" | tee /etc/cron.d/${PRODUCT}-letsencrypt || echo "Error: directory /etc/cron.d does not exist." >&2
+    if [ -d /etc/cron.weekly ]; then
+        CRON_FILE="/etc/cron.weekly/${PRODUCT}-renew-letsencrypt"
+        echo '#!/bin/bash' > ${CRON_FILE}
+        echo '#' >> ${CRON_FILE}
+        echo "# ${PRODUCT} Renew Let's Encrypt SSL Certificates" >> ${CRON_FILE}
+        echo "" >> ${CRON_FILE}
+        echo "echo \"[\$(date '+%F %T')] START /app/${PRODUCT}-renew-letsencrypt\" >> \"/var/log/${PRODUCT}-renew-letsencrypt.log\"" >> ${CRON_FILE}
+        echo "$(command -v docker-compose) -f ${DOCKERCOMPOSE}/proxy-ssl.yml down" >> ${CRON_FILE}
+        echo "$(command -v docker) run --rm \\" >> ${CRON_FILE}
+        echo "    -v /etc/letsencrypt:/etc/letsencrypt \\" >> ${CRON_FILE}
+        echo "    -v /var/lib/letsencrypt:/var/lib/letsencrypt \\" >> ${CRON_FILE}
+        echo "    certbot/certbot renew 2>&1 | tee -a /var/log/${PRODUCT}-renew-letsencrypt.log" >> ${CRON_FILE}
+        echo "$(command -v docker-compose) -f ${DOCKERCOMPOSE}/proxy-ssl.yml up -d" >> ${CRON_FILE}
+        chmod a+x "${CRON_FILE}"
+    else
+      echo "Error: directory /etc/cron.weekly does not exist." >&2
+    fi
   fi
 }
 
