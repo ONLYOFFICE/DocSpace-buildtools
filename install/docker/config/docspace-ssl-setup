@@ -55,9 +55,10 @@ create_renew_script() {
   echo "docker-compose -f ${DOCKERCOMPOSE}/proxy-ssl.yml up -d" >> "${DIR}/${PRODUCT}-renew-letsencrypt"
   chmod a+x "${DIR}/${PRODUCT}-renew-letsencrypt"
 
-  # Add cron job if /etc/cron.d directory exists
-  if [ -d /etc/cron.d ]; then
-    echo -e "@weekly root ${DIR}/${PRODUCT}-renew-letsencrypt" | tee /etc/cron.d/${PRODUCT}-letsencrypt
+  CRON_PATH=$(command -v crond || command -v cron) && CRON_SVC=${CRON_PATH##*/} || { echo "Error: neither crond nor cron is installed." >&2; }
+  if [[ -n "${CRON_SVC}" ]]; then
+    command -v systemctl &>/dev/null && systemctl enable --now "$CRON_SVC" || { command -v service &>/dev/null && service "${CRON_SVC%.service}" start; }
+    [ -d /etc/cron.d ] && echo -e "0 0 * * 0 root ${DIR}/${PRODUCT}-renew-letsencrypt" | tee /etc/cron.d/${PRODUCT}-letsencrypt || echo "Error: directory /etc/cron.d does not exist." >&2
   fi
 }
 
