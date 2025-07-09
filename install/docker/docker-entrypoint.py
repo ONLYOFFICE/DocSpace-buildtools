@@ -27,6 +27,7 @@ MYSQL_USER = os.environ["MYSQL_USER"] if environ.get("MYSQL_USER") else "onlyoff
 MYSQL_PASSWORD = os.environ["MYSQL_PASSWORD"] if environ.get("MYSQL_PASSWORD") else "onlyoffice_pass"
 MYSQL_CONNECTION_HOST = MYSQL_HOST if MYSQL_HOST else MYSQL_CONTAINER_NAME
 
+APP_CORE_SERVER_ROOT = os.environ["APP_CORE_SERVER_ROOT"] if environ.get("APP_CORE_SERVER_ROOT") else None
 APP_CORE_BASE_DOMAIN = os.environ["APP_CORE_BASE_DOMAIN"] if environ.get("APP_CORE_BASE_DOMAIN") is not None else "localhost"
 APP_CORE_MACHINEKEY = os.environ["APP_CORE_MACHINEKEY"] if environ.get("APP_CORE_MACHINEKEY") else "your_core_machinekey"
 APP_URL_PORTAL = os.environ["APP_URL_PORTAL"] if environ.get("APP_URL_PORTAL") else "http://" + ROUTER_HOST + ":8092"
@@ -224,6 +225,7 @@ filePath = "/app/onlyoffice/config/appsettings.json"
 jsonData = openJsonFile(filePath)
 #jsonUpdateValue = parseJsonValue(jsonValue)
 updateJsonData(jsonData,"$.ConnectionStrings.default.connectionString", "Server="+ MYSQL_CONNECTION_HOST +";Port="+ MYSQL_PORT +";Database="+ MYSQL_DATABASE +";User ID="+ MYSQL_USER +";Password="+ MYSQL_PASSWORD +";Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;ConnectionReset=false;AllowPublicKeyRetrieval=true",)
+updateJsonData(jsonData,"$.core.server-root", APP_CORE_SERVER_ROOT)
 updateJsonData(jsonData,"$.core.base-domain", APP_CORE_BASE_DOMAIN)
 updateJsonData(jsonData,"$.core.machinekey", APP_CORE_MACHINEKEY)
 updateJsonData(jsonData,"$.core.products.subfolder", "server")
