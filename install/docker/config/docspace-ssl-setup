@@ -97,7 +97,13 @@ check_file_format() {
     echo "Unsupported or invalid file format: $FILE" && exit 1
   fi
 }
-                                                                                                                                                              
+
+db() { 
+  eval "$(grep -E '(PRODUCT|CONTAINER_PREFIX|NETWORK_NAME|MYSQL_HOST|MYSQL_CONTAINER_NAME|MYSQL_PORT|MYSQL_USER|MYSQL_PASSWORD|MYSQL_DATABASE)=' "${DOCKERCOMPOSE}/.env" | tr -d '\r')"
+  docker run --rm --network="${NETWORK_NAME}" mysql:"$(docker images --format '{{.Tag}}' mysql | head -n1 || echo latest)" \
+      mysql -h"${MYSQL_HOST:-$MYSQL_CONTAINER_NAME}" -P"${MYSQL_PORT:-3306}" -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DATABASE}" "$@"
+}
+
 case $1 in 
   -f | --file )
     if [ -n "$2" ] && [ -n "$3" ]; then
@@ -127,13 +133,17 @@ case $1 in
     else
       sed "s#\(APP_URL_PORTAL=\).*#\1\"http://$(curl -s ifconfig.me)\"#g" -i ${DOCKERCOMPOSE}/.env
     fi
-    
+    sed -i "s~\(APP_CORE_SERVER_ROOT=\).*~\1\"\"~g" ${DOCKERCOMPOSE}/.env
     [[ -f "${DIR}/${PRODUCT}-renew-letsencrypt" ]] && rm -rf "${DIR}/${PRODUCT}-renew-letsencrypt"
 
     if docker ps -f "name=onlyoffice-proxy" --format '{{.Names}}' | grep -q "onlyoffice-proxy"; then
       if docker ps -f "name=onlyoffice-proxy" --format "{{.Ports}}" | grep -q "443"; then
         docker-compose -f ${DOCKERCOMPOSE}/proxy-ssl.yml down
       fi
+    fi
+
+    if [ -z "$(db -N -s -e "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1")" ]; then
+      db -e "UPDATE tenants_tenants SET mappeddomain='NULL' WHERE alias='localhost';"
     fi
 
     if grep -q '${CERTIFICATE_PATH}:' ${DOCKERCOMPOSE}/docspace.yml; then
@@ -195,6 +205,7 @@ PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${PRODUCT}/privkey.pem"}"
 
 if [ -f "${CERTIFICATE_FILE}" ]; then 
   if [ -f "${PRIVATEKEY_FILE}" ]; then
+    sed -i "s~\(APP_CORE_SERVER_ROOT=\).*~\1\"https://*/\"~g" ${DOCKERCOMPOSE}/.env
     sed -i "s~\(APP_URL_PORTAL=\).*~\1\"https://${DOMAIN}\"~g" ${DOCKERCOMPOSE}/.env
     sed -i "s~\(CERTIFICATE_PATH=\).*~\1\"${CERTIFICATE_FILE}\"~g" ${DOCKERCOMPOSE}/.env
     sed -i "s~\(CERTIFICATE_KEY_PATH=\).*~\1\"${PRIVATEKEY_FILE}\"~g" ${DOCKERCOMPOSE}/.env
@@ -213,7 +224,12 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
         docker-compose -f ${DOCKERCOMPOSE}/ds.yml up --force-recreate -d
       fi
     fi
-
+    
+    # fix Bug 75803 - In the "What's new..." email, the portal domain comes as localhost
+    if [ -z "$(db -N -s -e "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1")" ]; then
+      db -e "UPDATE tenants_tenants SET mappeddomain='${DOMAIN}' WHERE alias='localhost';"
+    fi
+    
     docker-compose -f ${DOCKERCOMPOSE}/proxy-ssl.yml up --force-recreate -d
     docker-compose -f ${DOCKERCOMPOSE}/docspace.yml -f ${DOCKERCOMPOSE}/notify.yml up --force-recreate -d
 
