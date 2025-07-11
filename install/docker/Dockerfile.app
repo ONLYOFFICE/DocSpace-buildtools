@@ -150,7 +150,7 @@ RUN echo "--- install runtime aspnet.9 ---" && \
     vim \
     python3-pip \
     libgdiplus && \
-    pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces && \
+    pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces requests && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     chown onlyoffice:onlyoffice /app/onlyoffice -R && \
@@ -187,7 +187,7 @@ RUN echo "--- install runtime node.22 ---" && \
     curl \
     vim \
     python3-pip && \
-    pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces && \
+    pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces requests && \
     echo "--- clean up ---" && \
     rm -rf \
     /var/lib/apt/lists/* \

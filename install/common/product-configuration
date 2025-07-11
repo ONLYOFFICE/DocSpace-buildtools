@@ -903,6 +903,9 @@ if [[ ! -z $DOCUMENT_SERVER_URL_EXTERNAL ]]; then
 	setup_docs "EXTERNAL_DOCS_SERVER"
 elif $PACKAGE_MANAGER ${PACKAGE_SYSNAME}-documentserver >/dev/null 2>&1 || $PACKAGE_MANAGER ${PACKAGE_SYSNAME}-documentserver-de >/dev/null 2>&1 || $PACKAGE_MANAGER ${PACKAGE_SYSNAME}-documentserver-ee >/dev/null 2>&1; then
 	setup_docs "LOCAL_DOCS_SERVER"
+else
+	echo "WARNING: ${PACKAGE_SYSNAME^^} Docs is not installed."
+	${JSON} "${USER_CONF}" -e 'delete this.files.docservice'
 fi
 
 if $PACKAGE_MANAGER opensearch-dashboards >/dev/null 2>&1; then
