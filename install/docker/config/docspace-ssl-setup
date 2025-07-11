@@ -53,7 +53,7 @@ create_renew_script() {
         echo '#' >> ${CRON_FILE}
         echo "# ${PRODUCT} Renew Let's Encrypt SSL Certificates" >> ${CRON_FILE}
         echo "" >> ${CRON_FILE}
-        echo "echo \"[\$(date '+%F %T')] START /app/${PRODUCT}-renew-letsencrypt\" >> \"/var/log/${PRODUCT}-renew-letsencrypt.log\"" >> ${CRON_FILE}
+        echo "echo \"[\$(date '+%F %T')] START /etc/cron.weekly/${PRODUCT}-renew-letsencrypt\" >> \"/var/log/${PRODUCT}-renew-letsencrypt.log\"" >> ${CRON_FILE}
         echo "$(command -v docker-compose) -f ${DOCKERCOMPOSE}/proxy-ssl.yml down" >> ${CRON_FILE}
         echo "$(command -v docker) run --rm \\" >> ${CRON_FILE}
         echo "    -v /etc/letsencrypt:/etc/letsencrypt \\" >> ${CRON_FILE}
