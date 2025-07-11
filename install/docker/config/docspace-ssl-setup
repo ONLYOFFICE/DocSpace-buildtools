@@ -5,8 +5,8 @@ set -e
 PRODUCT="docspace"
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 DOCKERCOMPOSE=$(dirname "$DIR")
-LETSENCRYPT="/etc/letsencrypt/live";
-DHPARAM_FILE="/etc/ssl/certs/dhparam.pem"
+LETSENCRYPT="/etc/letsencrypt/live"
+DHPARAM_PATH=${DHPARAM_PATH:-"/etc/ssl/certs/dhparam.pem"}
 WEBROOT_PATH="/letsencrypt"
 
 # Check if configuration files are present
@@ -187,7 +187,7 @@ case $1 in
   ;;
 esac
 
-[[ ! -f "${DHPARAM_FILE}" ]] && openssl dhparam -out ${DHPARAM_FILE} 2048
+[[ ! -f "${DHPARAM_PATH}" ]] && openssl dhparam -out ${DHPARAM_PATH} 2048
 CERTIFICATE_FILE="${CERTIFICATE_FILE:-"${LETSENCRYPT}/${PRODUCT}/fullchain.pem"}"
 PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${PRODUCT}/privkey.pem"}"
 [[ "$CERTIFICATE_FILE" != /* ]] && CERTIFICATE_FILE="$(cd "$(dirname "$CERTIFICATE_FILE")" && pwd)/$(basename "$CERTIFICATE_FILE")"
@@ -198,7 +198,7 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
     sed -i "s~\(APP_URL_PORTAL=\).*~\1\"https://${DOMAIN}\"~g" ${DOCKERCOMPOSE}/.env
     sed -i "s~\(CERTIFICATE_PATH=\).*~\1\"${CERTIFICATE_FILE}\"~g" ${DOCKERCOMPOSE}/.env
     sed -i "s~\(CERTIFICATE_KEY_PATH=\).*~\1\"${PRIVATEKEY_FILE}\"~g" ${DOCKERCOMPOSE}/.env
-    sed -i "s~\(DHPARAM_PATH=\).*~\1\"${DHPARAM_FILE}\"~g" ${DOCKERCOMPOSE}/.env
+    sed -i "s~\(DHPARAM_PATH=\).*~\1\"${DHPARAM_PATH}\"~g" ${DOCKERCOMPOSE}/.env
 
     if [[ "${LETSENCRYPT_ENABLE}" = "true" ]]; then
       create_renew_script
