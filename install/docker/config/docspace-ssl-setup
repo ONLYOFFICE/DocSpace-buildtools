@@ -5,8 +5,8 @@ set -e
 PRODUCT="docspace"
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 DOCKERCOMPOSE=$(dirname "$DIR")
-LETSENCRYPT="/etc/letsencrypt/live";
-DHPARAM_FILE="/etc/ssl/certs/dhparam.pem"
+LETSENCRYPT="/etc/letsencrypt/live"
+DHPARAM_PATH=${DHPARAM_PATH:-"/etc/ssl/certs/dhparam.pem"}
 WEBROOT_PATH="/letsencrypt"
 
 # Check if configuration files are present
@@ -44,20 +44,26 @@ help(){
 }
 
 create_renew_script() {
-  # Create and set permissions for docspace-renew-letsencrypt
-  echo '#!/bin/bash' > "${DIR}/${PRODUCT}-renew-letsencrypt"
-  echo "docker-compose -f ${DOCKERCOMPOSE}/proxy-ssl.yml down" >> "${DIR}/${PRODUCT}-renew-letsencrypt"
-  echo 'docker run --rm \' >> "${DIR}/${PRODUCT}-renew-letsencrypt"
-  echo '    -v /etc/letsencrypt:/etc/letsencrypt \' >> "${DIR}/${PRODUCT}-renew-letsencrypt"
-  echo '    -v /var/lib/letsencrypt:/var/lib/letsencrypt \' >> "${DIR}/${PRODUCT}-renew-letsencrypt"
-  echo '    certbot/certbot renew' >> "${DIR}/${PRODUCT}-renew-letsencrypt"
-  echo "docker-compose -f ${DOCKERCOMPOSE}/proxy-ssl.yml up -d" >> "${DIR}/${PRODUCT}-renew-letsencrypt"
-
-  chmod a+x "${DIR}/${PRODUCT}-renew-letsencrypt"
-
-  # Add cron job if /etc/cron.d directory exists
-  if [ -d /etc/cron.d ]; then
-    echo -e "@weekly root ${DIR}/${PRODUCT}-renew-letsencrypt" | tee /etc/cron.d/${PRODUCT}-letsencrypt
+  CRON_PATH=$(command -v crond || command -v cron) && CRON_SVC=${CRON_PATH##*/} || { echo "Error: neither crond nor cron is installed." >&2; }
+  if [[ -n "${CRON_SVC}" ]]; then
+    command -v systemctl &>/dev/null && systemctl enable --now "$CRON_SVC" || { command -v service &>/dev/null && service "${CRON_SVC%.service}" start; }
+    if [ -d /etc/cron.weekly ]; then
+        CRON_FILE="/etc/cron.weekly/${PRODUCT}-renew-letsencrypt"
+        echo '#!/bin/bash' > ${CRON_FILE}
+        echo '#' >> ${CRON_FILE}
+        echo "# ${PRODUCT} Renew Let's Encrypt SSL Certificates" >> ${CRON_FILE}
+        echo "" >> ${CRON_FILE}
+        echo "echo \"[\$(date '+%F %T')] START /app/${PRODUCT}-renew-letsencrypt\" >> \"/var/log/${PRODUCT}-renew-letsencrypt.log\"" >> ${CRON_FILE}
+        echo "$(command -v docker-compose) -f ${DOCKERCOMPOSE}/proxy-ssl.yml down" >> ${CRON_FILE}
+        echo "$(command -v docker) run --rm \\" >> ${CRON_FILE}
+        echo "    -v /etc/letsencrypt:/etc/letsencrypt \\" >> ${CRON_FILE}
+        echo "    -v /var/lib/letsencrypt:/var/lib/letsencrypt \\" >> ${CRON_FILE}
+        echo "    certbot/certbot renew 2>&1 | tee -a /var/log/${PRODUCT}-renew-letsencrypt.log" >> ${CRON_FILE}
+        echo "$(command -v docker-compose) -f ${DOCKERCOMPOSE}/proxy-ssl.yml up -d" >> ${CRON_FILE}
+        chmod a+x "${CRON_FILE}"
+    else
+      echo "Error: directory /etc/cron.weekly does not exist." >&2
+    fi
   fi
 }
 
@@ -181,7 +187,7 @@ case $1 in
   ;;
 esac
 
-[[ ! -f "${DHPARAM_FILE}" ]] && openssl dhparam -out ${DHPARAM_FILE} 2048
+[[ ! -f "${DHPARAM_PATH}" ]] && openssl dhparam -out ${DHPARAM_PATH} 2048
 CERTIFICATE_FILE="${CERTIFICATE_FILE:-"${LETSENCRYPT}/${PRODUCT}/fullchain.pem"}"
 PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${PRODUCT}/privkey.pem"}"
 [[ "$CERTIFICATE_FILE" != /* ]] && CERTIFICATE_FILE="$(cd "$(dirname "$CERTIFICATE_FILE")" && pwd)/$(basename "$CERTIFICATE_FILE")"
@@ -192,7 +198,7 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
     sed -i "s~\(APP_URL_PORTAL=\).*~\1\"https://${DOMAIN}\"~g" ${DOCKERCOMPOSE}/.env
     sed -i "s~\(CERTIFICATE_PATH=\).*~\1\"${CERTIFICATE_FILE}\"~g" ${DOCKERCOMPOSE}/.env
     sed -i "s~\(CERTIFICATE_KEY_PATH=\).*~\1\"${PRIVATEKEY_FILE}\"~g" ${DOCKERCOMPOSE}/.env
-    sed -i "s~\(DHPARAM_PATH=\).*~\1\"${DHPARAM_FILE}\"~g" ${DOCKERCOMPOSE}/.env
+    sed -i "s~\(DHPARAM_PATH=\).*~\1\"${DHPARAM_PATH}\"~g" ${DOCKERCOMPOSE}/.env
 
     if [[ "${LETSENCRYPT_ENABLE}" = "true" ]]; then
       create_renew_script

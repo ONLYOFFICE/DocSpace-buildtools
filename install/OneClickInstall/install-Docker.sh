@@ -1314,6 +1314,9 @@ install_product () {
 		#Fix for bug 70537 to ensure proper migration to version 3.0.0
 		elif [ "${UPDATE}" = "true" ] && [ -f "/etc/cron.d/${PRODUCT}-letsencrypt" ]; then
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -r
+		elif [[ -n "$CERTIFICATE_KEY_PATH" || -n "$CERTIFICATE_PATH" || -n "$LETS_ENCRYPT_DOMAIN" || -n "$LETS_ENCRYPT_MAIL" ]]; then
+			echo -e "\e[31mERROR:\e[0m Missing required parameters for SSL setup"
+			echo "Run 'bash $BASE_DIR/config/${PRODUCT}-ssl-setup --help' for usage information."
 		fi
 	elif [ "$INSTALL_PRODUCT" == "pull" ]; then
 		docker-compose -f $BASE_DIR/identity.yml pull
