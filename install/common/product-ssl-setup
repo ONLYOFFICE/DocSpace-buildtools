@@ -99,9 +99,8 @@ case $1 in
   -d | --default )
     echo "Return to the default proxy configuration..."
     cp -f ${OPENRESTY}/onlyoffice-proxy.conf.template ${OPENRESTY}/onlyoffice-proxy.conf
-    sed "s!\(^worker_processes\).*;!\1 $(grep processor /proc/cpuinfo | wc -l);!" -i "${OPENRESTY}/onlyoffice-proxy.conf"
-    sed "s!\(worker_connections\).*;!\1 $(ulimit -n);!" -i "${OPENRESTY}/onlyoffice-proxy.conf"
     [[ -f "${DIR}/${PRODUCT}-renew-letsencrypt" ]] && rm -rf "${DIR}/${PRODUCT}-renew-letsencrypt"
+    [[ -f "/etc/cron.weekly/${PRODUCT}-renew-letsencrypt" ]] && rm -rf "/etc/cron.weekly/${PRODUCT}-renew-letsencrypt"
     [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ] && systemctl restart openresty || service openresty restart
     sed -i "s/\(\"portal\":\).*/\1 \"http:\/\/localhost:80\"/" ${CONFIG_DIR}/appsettings.$(grep -oP 'ENVIRONMENT=\K.*' ${CONFIG_DIR}/systemd.env).json
     NODE_EXTRA_CA_CERTS_FILES=$(grep -l "NODE_EXTRA_CA_CERTS" ${CONFIG_DIR}/systemd.env ${SYSTEMD_DIR}/ds-*.service || true)
