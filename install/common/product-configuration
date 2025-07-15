@@ -274,6 +274,7 @@ save_undefined_param() {
 
 restart_services() {
 	chown -R ${PACKAGE_SYSNAME}:${PACKAGE_SYSNAME} $APP_DIR $PRODUCT_DIR $LOG_DIR /var/www/$PACKAGE_SYSNAME/Data
+	systemctl restart openresty
 
 	echo -n "Updating database... "
 	systemctl start "${PRODUCT}-migration-runner" >/dev/null 2>&1 || true
@@ -559,7 +560,6 @@ setup_openresty(){
 	[ -d "${NGINX_LOG_DIR}" ] || { mkdir -p "${NGINX_LOG_DIR}" && chown "${NGINX_USER}:${NGINX_GROUP}" "${NGINX_LOG_DIR}"; }
 	
 	systemctl enable openresty >/dev/null 2>&1
-	systemctl restart openresty
 	echo "OK"
 }
 

@@ -102,7 +102,7 @@ case $1 in
     sed "s!\(^worker_processes\).*;!\1 $(grep processor /proc/cpuinfo | wc -l);!" -i "${OPENRESTY}/onlyoffice-proxy.conf"
     sed "s!\(worker_connections\).*;!\1 $(ulimit -n);!" -i "${OPENRESTY}/onlyoffice-proxy.conf"
     [[ -f "${DIR}/${PRODUCT}-renew-letsencrypt" ]] && rm -rf "${DIR}/${PRODUCT}-renew-letsencrypt"
-    [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ] && systemctl reload openresty || service openresty reload
+    [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ] && systemctl restart openresty || service openresty restart
     sed -i "s/\(\"portal\":\).*/\1 \"http:\/\/localhost:80\"/" ${CONFIG_DIR}/appsettings.$(grep -oP 'ENVIRONMENT=\K.*' ${CONFIG_DIR}/systemd.env).json
     NODE_EXTRA_CA_CERTS_FILES=$(grep -l "NODE_EXTRA_CA_CERTS" ${CONFIG_DIR}/systemd.env ${SYSTEMD_DIR}/ds-*.service || true)
     if [ -n "${NODE_EXTRA_CA_CERTS_FILES}" ]; then
@@ -172,9 +172,9 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
             echo "echo \"[\$(date '+%F %T')] START /etc/cron.weekly/${PRODUCT}-renew-letsencrypt\" >> \"/var/log/${PRODUCT}-renew-letsencrypt.log\"" >> ${CRON_FILE}
             echo "certbot renew 2>&1 | tee -a /var/log/${PRODUCT}-renew-letsencrypt.log" >> ${CRON_FILE}
             if [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ]; then
-              echo 'systemctl reload openresty' >> ${DIR}/${PRODUCT}-renew-letsencrypt
+              echo 'systemctl restart openresty' >> ${DIR}/${PRODUCT}-renew-letsencrypt
             else 
-              echo 'service openresty reload' >> ${DIR}/${PRODUCT}-renew-letsencrypt
+              echo 'service openresty restart' >> ${DIR}/${PRODUCT}-renew-letsencrypt
             fi
             chmod a+x "${CRON_FILE}"
         else
@@ -205,7 +205,7 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
       fi
     fi
 
-    [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ] && systemctl reload openresty || service openresty reload
+    [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ] && systemctl restart openresty || service openresty restart
 
     echo "OK"
   else
