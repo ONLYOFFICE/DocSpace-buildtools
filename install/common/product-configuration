@@ -624,6 +624,11 @@ change_elasticsearch_config(){
 	local ELASTIC_SEARCH_CONF_PATH="/etc/opensearch/opensearch.yml"
 	local ELASTIC_SEARCH_JAVA_CONF_PATH="/etc/opensearch/jvm.options";
 
+	if /usr/share/opensearch/bin/opensearch-plugin list | grep -q "ingest-attachment"; then
+		/usr/share/opensearch/bin/opensearch-plugin remove -s ingest-attachment
+	fi
+		/usr/share/opensearch/bin/opensearch-plugin install -s -b ingest-attachment	
+
 	if [ -f ${ELASTIC_SEARCH_CONF_PATH}.rpmnew ]; then
 		cp -rf ${ELASTIC_SEARCH_CONF_PATH}.rpmnew ${ELASTIC_SEARCH_CONF_PATH};   
 	fi
@@ -920,13 +925,7 @@ restart_services
 # Truncate MySQL DB to make opensearch work with updated app. Strictly after restart_services ()
 if $PACKAGE_MANAGER opensearch >/dev/null 2>&1; then
 	ELASTIC_VERSION=$(awk '/build:/{f=1} f&&/version:/{gsub(/"/,"",$2);print $2; exit}' /usr/share/opensearch/manifest.yml 2>/dev/null || echo "2.18.0")
-	if [[ ! -f "$APP_DIR/.private/opensearch-version" || $(cat "$APP_DIR/.private/opensearch-version") != *"$ELASTIC_VERSION"* ]]; then
-		$MYSQL "$DB_NAME" -e "TRUNCATE webstudio_index";
-		if /usr/share/opensearch/bin/opensearch-plugin list | grep -q "ingest-attachment"; then
-			/usr/share/opensearch/bin/opensearch-plugin remove -s ingest-attachment
-		fi
-		/usr/share/opensearch/bin/opensearch-plugin install -s -b ingest-attachment	
-	fi
+	[[ ! -f "$APP_DIR/.private/opensearch-version" || $(cat "$APP_DIR/.private/opensearch-version") != *"$ELASTIC_VERSION"* ]] && $MYSQL "$DB_NAME" -e "TRUNCATE webstudio_index";
 	echo "$ELASTIC_VERSION" > $APP_DIR/.private/opensearch-version
 	chmod -R 600 $APP_DIR/.private
 fi
