@@ -38,12 +38,14 @@ curl -s https://packagecloud.io/install/repositories/rabbitmq/erlang/script.rpm.
 
 #add nodejs repo
 NODE_VERSION="18"
-curl -fsSL https://rpm.nodesource.com/setup_${NODE_VERSION}.x | sed '/update -y/d' | bash - || true
+curl -fsSL https://rpm.nodesource.com/setup_${NODE_VERSION}.x | bash -
 
 #add mysql repo
 dnf remove -y @mysql && dnf module -y reset mysql && dnf module -y disable mysql
 MYSQL_REPO_VERSION="$(curl https://repo.mysql.com | grep -oP "mysql84-community-release-${MYSQL_DISTR_NAME}${REV}-\K.*" | grep -o '^[^.]*' | sort | tail -n1)"
 yum install -y https://repo.mysql.com/mysql84-community-release-"${MYSQL_DISTR_NAME}""${REV}"-"${MYSQL_REPO_VERSION}".noarch.rpm || true
+# Disable weak deps to avoid mysql-server on Fedora
+[ "$DIST" = "fedora" ] && WEAK_OPT="--setopt=install_weak_deps=False"
 
 if ! rpm -q mysql-community-server; then
 	MYSQL_FIRST_TIME_INSTALL="true"
@@ -79,15 +81,15 @@ curl -o /etc/yum.repos.d/openresty.repo "https://openresty.org/package/${OPENRES
 [ "$DIST" == "fedora" ] && sed -i "s/\$releasever/$OPENRESTY_REV/g" /etc/yum.repos.d/openresty.repo
 
 JAVA_VERSION=21
-${package_manager} -y install $([ "$DIST" != "fedora" ] && echo "epel-release") \
+${package_manager} ${WEAK_OPT} -y install $([ "$DIST" != "fedora" ] && echo "epel-release") \
 			python3 \
-			nodejs ${NODEJS_OPTION} \
+			nodejs \
 			dotnet-sdk-9.0 \
 			opensearch-${ELASTIC_VERSION} \
 			mysql-community-server \
 			postgresql \
 			postgresql-server \
-			rabbitmq-server$rabbitmq_version \
+			rabbitmq-server \
 			redis \
 			SDL2 \
 			expect \

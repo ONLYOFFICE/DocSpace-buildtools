@@ -1,5 +1,5 @@
-import json, sys, os, netifaces, re
-from jsonpath_ng import jsonpath, parse
+import json, sys, os, netifaces, re, time, requests, threading
+from jsonpath_ng.ext import parse
 from os import environ
 from multipledispatch import dispatch
 from netaddr import *
@@ -51,7 +51,7 @@ DOCUMENT_SERVER_URL_PUBLIC = DOCUMENT_SERVER_URL_EXTERNAL if DOCUMENT_SERVER_URL
 DOCUMENT_SERVER_CONNECTION_HOST = DOCUMENT_SERVER_URL_EXTERNAL if DOCUMENT_SERVER_URL_EXTERNAL else DOCUMENT_SERVER_URL_INTERNAL
 
 ELK_CONTAINER_NAME = os.environ["ELK_CONTAINER_NAME"] if environ.get("ELK_CONTAINER_NAME") else "onlyoffice-opensearch"
-ELK_SHEME = os.environ["ELK_SHEME"] if environ.get("ELK_SHEME") else "http"
+ELK_SCHEME = os.environ["ELK_SCHEME"] if environ.get("ELK_SCHEME") else "http"
 ELK_HOST = os.environ["ELK_HOST"] if environ.get("ELK_HOST") else None
 ELK_PORT = os.environ["ELK_PORT"] if environ.get("ELK_PORT") else "9200"
 ELK_THREADS = os.environ["ELK_THREADS"] if environ.get("ELK_THREADS") else "1"
@@ -156,6 +156,66 @@ def writeJsonFile(jsonFile, jsonData, indent=4):
     
     return 1
 
+def deleteJsonPath(jsonData, jsonPath):
+    expr = parse(jsonPath)
+    matches = expr.find(jsonData)
+
+    for match in matches:
+        path = match.full_path
+        context = jsonData
+        parts = [p for p in str(path).split('.') if p]
+        for key in parts[:-1]:
+            context = context.get(key, {})
+        last_key = parts[-1]
+        if isinstance(context, dict) and last_key in context:
+            del context[last_key]
+
+    return jsonData
+
+def waitForHostAvailable(HOST_URL, TIMEOUT=30, INTERVAL=5):
+    LOG_PRIORITY = dict(CRITICAL=0, ERROR=1, WARNING=2, INFORMATION=3, DEBUG=4, TRACE=5)
+    CURRENT_PRIORITY = LOG_PRIORITY.get((os.getenv("LOG_LEVEL") or "INFORMATION").upper(), 3)
+
+    def LOG(LEVEL, MESSAGE):
+        if LOG_PRIORITY.get(LEVEL, 3) <= CURRENT_PRIORITY:
+            print(f"[{LEVEL}] {MESSAGE}", flush=True)
+
+    LOG("INFORMATION", f"Waiting for host: {HOST_URL} (timeout: {TIMEOUT} seconds)")
+
+    START_TIME = time.time()
+    while time.time() - START_TIME < TIMEOUT:
+        try:
+            RESPONSE = requests.get(HOST_URL, timeout=3)
+            if RESPONSE.status_code == 200:
+                LOG("INFORMATION", f"Host is available: {HOST_URL}")
+                return True
+            else:
+                LOG("WARNING", f"Received status {RESPONSE.status_code} from {HOST_URL}")
+        except requests.RequestException as e:
+            LOG("DEBUG", f"Connection error to {HOST_URL}: {e}")
+        time.sleep(INTERVAL)
+
+    LOG("ERROR", f"Host is not available after {TIMEOUT} seconds: {HOST_URL}")
+    return False
+
+def check_docs_connection():
+    filePath = "/app/onlyoffice/config/appsettings.json"
+    jsonData = openJsonFile(filePath)
+
+    if waitForHostAvailable(DOCUMENT_SERVER_CONNECTION_HOST):
+        updateJsonData(jsonData, "$.files.docservice.url.portal", APP_URL_PORTAL)
+        updateJsonData(jsonData, "$.files.docservice.url.public", DOCUMENT_SERVER_URL_PUBLIC)
+        updateJsonData(jsonData, "$.files.docservice.url.internal", DOCUMENT_SERVER_CONNECTION_HOST)
+        updateJsonData(jsonData, "$.files.docservice.secret.value", DOCUMENT_SERVER_JWT_SECRET)
+        updateJsonData(jsonData, "$.files.docservice.secret.header", DOCUMENT_SERVER_JWT_HEADER)
+    else:
+        deleteJsonPath(jsonData, "$.files.docservice")
+
+    writeJsonFile(filePath, jsonData)
+
+thread = threading.Thread(target=check_docs_connection, daemon=True)
+thread.start()
+
 #filePath = sys.argv[1]
 saveFilePath = filePath
 #jsonValue = sys.argv[2]
@@ -169,11 +229,6 @@ updateJsonData(jsonData,"$.core.machinekey", APP_CORE_MACHINEKEY)
 updateJsonData(jsonData,"$.core.products.subfolder", "server")
 updateJsonData(jsonData,"$.core.notify.postman", "services")
 updateJsonData(jsonData,"$.web.hub.internal", "http://" + SOCKET_HOST + ":" + SERVICE_PORT + "/")
-updateJsonData(jsonData,"$.files.docservice.url.portal", APP_URL_PORTAL)
-updateJsonData(jsonData,"$.files.docservice.url.public", DOCUMENT_SERVER_URL_PUBLIC)
-updateJsonData(jsonData,"$.files.docservice.url.internal", DOCUMENT_SERVER_CONNECTION_HOST)
-updateJsonData(jsonData,"$.files.docservice.secret.value", DOCUMENT_SERVER_JWT_SECRET)
-updateJsonData(jsonData,"$.files.docservice.secret.header", DOCUMENT_SERVER_JWT_HEADER)
 updateJsonData(jsonData,"$.core.oidc.disableValidateToken", DISABLE_VALIDATE_TOKEN)
 updateJsonData(jsonData,"$.core.oidc.showPII", DEBUG_INFO)
 updateJsonData(jsonData,"$.debug-info.enabled", DEBUG_INFO)
@@ -225,7 +280,7 @@ if OAUTH_REDIRECT_URL:
 if ENV_EXTENSION != "dev":
     filePath = "/app/onlyoffice/config/elastic.json"
     jsonData = openJsonFile(filePath)
-    jsonData["elastic"]["Scheme"] = ELK_SHEME
+    jsonData["elastic"]["Scheme"] = ELK_SCHEME
     jsonData["elastic"]["Host"] = ELK_CONNECTION_HOST
     jsonData["elastic"]["Port"] = ELK_PORT
     jsonData["elastic"]["Threads"] = ELK_THREADS

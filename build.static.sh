@@ -25,27 +25,24 @@ pushd "$PARENT_FOLDER" > /dev/null
 
 cd client
 
-# yarn wipe
-yarn install
+# pnpm install
+pnpm install
 
 # Build step
-yarn build
+pnpm build
 
-# Deploy step
-yarn deploy
+# cd ..
 
-cd ..
+# # Copy nginx configurations to deploy folder
+# mkdir -p publish/nginx/sites-enabled
+# cp -R buildtools/config/nginx/onlyoffice.conf publish/nginx/
+# ${SED_CMD} -i 's/#//g' publish/nginx/onlyoffice.conf
 
-# Copy nginx configurations to deploy folder
-mkdir -p publish/nginx/sites-enabled
-cp -R buildtools/config/nginx/onlyoffice.conf publish/nginx/
-${SED_CMD} -i 's/#//g' publish/nginx/onlyoffice.conf
+# cp -R buildtools/config/nginx/sites-enabled/* publish/nginx/sites-enabled/
 
-cp -R buildtools/config/nginx/sites-enabled/* publish/nginx/sites-enabled/
-
-# Fix paths in nginx configuration
-${SED_CMD} -i "s|ROOTPATH|$PARENT_FOLDER/publish/web/client|g" publish/nginx/sites-enabled/onlyoffice-client.conf
-${SED_CMD} -i "s|ROOTPATH|$PARENT_FOLDER/publish/web/management|g" publish/nginx/sites-enabled/onlyoffice-management.conf
+# # Fix paths in nginx configuration
+# ${SED_CMD} -i "s|ROOTPATH|$PARENT_FOLDER/publish/web/client|g" publish/nginx/sites-enabled/onlyoffice-client.conf
+# ${SED_CMD} -i "s|ROOTPATH|$PARENT_FOLDER/publish/web/management|g" publish/nginx/sites-enabled/onlyoffice-management.conf
 
 if command -v systemctl &> /dev/null; then
     sudo systemctl start nginx

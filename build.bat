@@ -13,7 +13,7 @@ if %errorlevel% == 0 (
 
 call start\stop.bat nopause
 
-echo "FRONT-END (for start run command 'yarn start' inside the root folder)"
+echo "FRONT-END (for start run command 'pnpm start' inside the root folder)"
 call build.frontend.bat nopause
 
 echo "BACK-END"
