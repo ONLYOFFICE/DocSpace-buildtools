@@ -23,7 +23,7 @@ RUN echo "--- clone resources ---" && \
     git clone -b ${GIT_BRANCH} --depth 30  https://github.com/ONLYOFFICE/DocSpace-buildtools.git ${SRC_PATH}/buildtools && \
     git clone --recurse-submodules -b ${GIT_BRANCH} --depth 30  https://github.com/ONLYOFFICE/DocSpace-Server.git ${SRC_PATH}/server && \
     git clone -b ${GIT_BRANCH} --depth 30  https://github.com/ONLYOFFICE/DocSpace-Client.git ${SRC_PATH}/client && \
-    git clone -b "master" --depth 1 https://github.com/ONLYOFFICE/docspace-plugins.git ${SRC_PATH}/plugins && \
+    git clone -b "$( [ "$GIT_BRANCH" = develop ] && echo develop || echo master )" --depth 1 https://github.com/ONLYOFFICE/docspace-plugins.git ${SRC_PATH}/plugins && \
     git clone -b "master" --depth 1 https://github.com/ONLYOFFICE/ASC.Web.Campaigns.git ${SRC_PATH}/campaigns
 
 WORKDIR ${SRC_PATH}/buildtools/config
