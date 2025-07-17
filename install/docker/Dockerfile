@@ -103,7 +103,7 @@ RUN mkdir -p /var/log/onlyoffice && \
     curl \
     vim \
     libgdiplus && \
-    pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces && \
+    pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces requests && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
@@ -131,7 +131,7 @@ RUN mkdir -p /var/log/onlyoffice && \
     curl \
     vim \
     python3-pip && \
-    pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces --break-system-packages && \
+    pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces requests --break-system-packages && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
