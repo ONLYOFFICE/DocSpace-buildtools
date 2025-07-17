@@ -57,8 +57,7 @@ jobs:
 
       - name: Free Disk Space
         run: |
-          sudo rm -rf /usr/local/lib/android /opt/ghc
-          sudo docker image prune --all --force
+          curl -fsSL https://raw.githubusercontent.com/rust-lang/rust/refs/heads/master/src/ci/scripts/free-disk-space.sh | sudo bash
 
       - name: 'Download hcp CLI'
         uses: 'hashicorp/hcp-setup-action@v0'
@@ -74,11 +73,6 @@ jobs:
           sudo echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
           sudo apt update -y
           sudo apt install vagrant virtualbox-7.0 -y
-
-      - name: Free Disk Space
-        run: |
-          sudo rm -rf /usr/local/lib/android /opt/ghc
-          sudo docker image prune --all --force       
 
       - name: Rebuild boxes
         uses: nick-fields/retry@v3

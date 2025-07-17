@@ -70,8 +70,7 @@ jobs:
 
       - name: Free Disk Space
         run: |
-          sudo rm -rf /usr/local/lib/android /opt/ghc
-          sudo docker image prune --all --force          
+          curl -fsSL https://raw.githubusercontent.com/rust-lang/rust/refs/heads/master/src/ci/scripts/free-disk-space.sh | sudo bash     
 
       - name: Get update and install vagrant
         run: |
