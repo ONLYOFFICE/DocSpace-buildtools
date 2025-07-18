@@ -61,6 +61,7 @@ dns = False
 standalone = True
 identity = False
 skip_build = False
+opensearch = False
 
 migration_type = "STANDALONE"  # SAAS
 # installation_type = "ENTERPRISE"
@@ -341,6 +342,11 @@ if identity:
     print("Run identity")
     subprocess.run(["docker-compose", "-f",
                    os.path.join(dockerDir, "build-identity.yml"), "up", "-d"])
+
+if opensearch:
+    print("Run opensearch")
+    subprocess.run(["docker-compose", "-f",
+                   os.path.join(dockerDir, "opensearch.yml"), "up", "-d"])
 
 print()
 print("Run script directory:", dir)
