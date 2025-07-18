@@ -106,6 +106,7 @@ case $1 in
     [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ] && systemctl restart openresty || service openresty restart
     json -I -f ${USER_CONF} -e "this.files.docservice.url.portal = \"http://localhost:80\""
     json -I -f ${USER_CONF} -e "delete this.core['server-root']"
+    chown onlyoffice:onlyoffice ${USER_CONF}
     
     IFS=';' read -ra CONN_ITEM <<< "$(json -f "$USER_CONF" ConnectionStrings.default.connectionString)"; 
     for ITEM in "${CONN_ITEM[@]}"; do KEY="${ITEM%%=*}"; VAL="${ITEM#*=}"; KEY="${KEY// /_}"; export "$KEY=$VAL"; done
@@ -169,6 +170,7 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
     sed -i "s~\(ssl_certificate \).*;~\1${CERTIFICATE_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
     sed -i "s~\(ssl_certificate_key \).*;~\1${PRIVATEKEY_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
     sed -i "s~\(ssl_dhparam \).*;~\1${DHPARAM_PATH};~g" ${OPENRESTY}/onlyoffice-proxy.conf
+    chown onlyoffice:onlyoffice ${USER_CONF}
 
     if [[ "${LETSENCRYPT_ENABLE}" = "true" ]]; then
       CRON_PATH=$(command -v crond || command -v cron) && CRON_SVC=${CRON_PATH##*/} || { echo "Error: neither crond nor cron is installed." >&2; }
