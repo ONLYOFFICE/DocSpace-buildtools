@@ -187,21 +187,33 @@ def waitForHostAvailable(HOST_URL, TIMEOUT=30, INTERVAL=5):
     while time.time() - START_TIME < TIMEOUT:
         try:
             RESPONSE = requests.get(HOST_URL, timeout=3)
-            if RESPONSE.status_code == 200:
-                LOG("INFORMATION", f"Host is available: {HOST_URL}")
+            if RESPONSE.ok:
+                LOG("INFORMATION", f"Host is available: {HOST_URL} ({RESPONSE.status_code})")
                 return True
             else:
                 LOG("WARNING", f"Received status {RESPONSE.status_code} from {HOST_URL}")
         except requests.RequestException as e:
             LOG("DEBUG", f"Connection error to {HOST_URL}: {e}")
+        except Exception as e:
+            LOG("CRITICAL", f"Unexpected error in check_docs_connection: {e}")
         time.sleep(INTERVAL)
 
-    LOG("ERROR", f"Host is not available after {TIMEOUT} seconds: {HOST_URL}")
+    LOG("ERROR", f"Host is not available after {TIMEOUT} seconds: {HOST_URL} ({RESPONSE.status_code})")
     return False
 
 def check_docs_connection():
     filePath = "/app/onlyoffice/config/appsettings.json"
     jsonData = openJsonFile(filePath)
+
+    MAX_RETRIES = 10
+    RETRY_INTERVAL = 30
+
+    if not waitForHostAvailable(DOCUMENT_SERVER_CONNECTION_HOST):
+        deleteJsonPath(jsonData, "$.files.docservice")
+        for _ in range(MAX_RETRIES):
+            time.sleep(RETRY_INTERVAL)
+            if waitForHostAvailable(DOCUMENT_SERVER_CONNECTION_HOST):
+                break
 
     if waitForHostAvailable(DOCUMENT_SERVER_CONNECTION_HOST):
         updateJsonData(jsonData, "$.files.docservice.url.portal", APP_URL_PORTAL)
@@ -209,13 +221,8 @@ def check_docs_connection():
         updateJsonData(jsonData, "$.files.docservice.url.internal", DOCUMENT_SERVER_CONNECTION_HOST)
         updateJsonData(jsonData, "$.files.docservice.secret.value", DOCUMENT_SERVER_JWT_SECRET)
         updateJsonData(jsonData, "$.files.docservice.secret.header", DOCUMENT_SERVER_JWT_HEADER)
-    else:
-        deleteJsonPath(jsonData, "$.files.docservice")
 
     writeJsonFile(filePath, jsonData)
-
-thread = threading.Thread(target=check_docs_connection, daemon=True)
-thread.start()
 
 #filePath = sys.argv[1]
 saveFilePath = filePath
@@ -334,6 +341,8 @@ if os.path.exists(PLUGINS_DIR) and not os.path.exists(DATA_PLUGINS_DIR):
         pd_item = os.path.join(PLUGINS_DIR, item)
         dpd_item = os.path.join(DATA_PLUGINS_DIR, item)
         shutil.copytree(pd_item, dpd_item) if os.path.isdir(pd_item) else shutil.copy2(pd_item, dpd_item)
+
+threading.Thread(target=check_docs_connection, daemon=True).start()
 
 run = RunServices(SERVICE_PORT, PATH_TO_CONF)
 run.RunService(RUN_FILE, ENV_EXTENSION, LOG_FILE)
