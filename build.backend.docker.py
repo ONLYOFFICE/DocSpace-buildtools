@@ -109,6 +109,8 @@ for opt, arg in opts:
         identity = arg if arg else True
     elif opt == "-n":
         skip_build = arg if arg else True
+    elif opt == "-o":
+        opensearch = arg if arg else True
     else:
         print("Error: Invalid '-" + opt + "' option")
         sys.exit()
@@ -130,12 +132,16 @@ if identity == True:
     print(f"SERVICE_IDENTITY: {identity_auth}")
     print(f"SERVICE_IDENTITY_API: {identity_api}")
 
+if opensearch == True:
+    print(f"SERVICE_OPENSEARCH: {opensearch}")
+
 # print(f"DOCSPACE_APP_URL: {portal_url}")
 
 print()
 print("FORCE REBUILD BASE IMAGES:", force)
 print("Run dnsmasq:", dns)
 print("Run identity:", identity)
+print("Run opensearch:", opensearch)
 print("Skip stop and build:", skip_build)
 
 if standalone == False:
