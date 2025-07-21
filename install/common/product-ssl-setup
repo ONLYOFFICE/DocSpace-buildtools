@@ -4,12 +4,14 @@ set -e
 
 PRODUCT="docspace"
 DIR="/usr/bin"
-LETSENCRYPT="/etc/letsencrypt/live";
+LETSENCRYPT="/etc/letsencrypt/live"
 OPENRESTY="/etc/openresty/conf.d"
-DHPARAM_FILE="/etc/ssl/certs/dhparam.pem"
 WEBROOT_PATH="/var/www/${PRODUCT}"
 CONFIG_DIR="/etc/onlyoffice/${PRODUCT}"
+DHPARAM_PATH=${DHPARAM_PATH:-"/etc/ssl/certs/dhparam.pem"}
 SYSTEMD_DIR=$(dirname $($(command -v dpkg-query &> /dev/null && echo "dpkg-query -L" || echo "rpm -ql") ${PRODUCT}-api | grep systemd/system/))
+ENVIRONMENT=$(grep -oP 'ENVIRONMENT=\K.*' "${CONFIG_DIR}/systemd.env")
+USER_CONF="${CONFIG_DIR}/appsettings.${ENVIRONMENT}.json"
 
 # Check if configuration files are present
 if [ ! -f "${OPENRESTY}/onlyoffice-proxy-ssl.conf.template" -a ! -f "${OPENRESTY}/onlyoffice-proxy.conf.template" ]; then
@@ -103,7 +105,16 @@ case $1 in
     sed "s!\(worker_connections\).*;!\1 $(ulimit -n);!" -i "${OPENRESTY}/onlyoffice-proxy.conf"
     [[ -f "${DIR}/${PRODUCT}-renew-letsencrypt" ]] && rm -rf "${DIR}/${PRODUCT}-renew-letsencrypt"
     [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ] && systemctl reload openresty || service openresty reload
-    sed -i "s/\(\"portal\":\).*/\1 \"http:\/\/localhost:80\"/" ${CONFIG_DIR}/appsettings.$(grep -oP 'ENVIRONMENT=\K.*' ${CONFIG_DIR}/systemd.env).json
+    json -I -f ${USER_CONF} -e "this.files.docservice.url.portal = \"http://localhost:80\""
+    json -I -f ${USER_CONF} -e "delete this.core['server-root']"
+    
+    IFS=';' read -ra CONN_ITEM <<< "$(json -f "$USER_CONF" ConnectionStrings.default.connectionString)"; 
+    for ITEM in "${CONN_ITEM[@]}"; do KEY="${ITEM%%=*}"; VAL="${ITEM#*=}"; KEY="${KEY// /_}"; export "$KEY=$VAL"; done
+    MYSQL=(mysql -h"$Server" -P"${Port:-3306}" -u"$User_ID" "-p$Password" "$Database")
+    if [ -z "$(${MYSQL[@]} -N -s -e "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1")" ]; then
+      ${MYSQL[@]} -e "UPDATE tenants_tenants SET mappeddomain='NULL' WHERE alias='localhost';"
+    fi
+    
     NODE_EXTRA_CA_CERTS_FILES=$(grep -l "NODE_EXTRA_CA_CERTS" ${CONFIG_DIR}/systemd.env ${SYSTEMD_DIR}/ds-*.service || true)
     if [ -n "${NODE_EXTRA_CA_CERTS_FILES}" ]; then
       sed -i '/NODE_EXTRA_CA_CERTS/d' ${NODE_EXTRA_CA_CERTS_FILES}
@@ -145,7 +156,7 @@ case $1 in
   ;;
 esac
 
-[[ ! -f "${DHPARAM_FILE}" ]] && openssl dhparam -out ${DHPARAM_FILE} 2048
+[[ ! -f "${DHPARAM_PATH}" ]] && openssl dhparam -out ${DHPARAM_PATH} 2048
 CERTIFICATE_FILE="${CERTIFICATE_FILE:-"${LETSENCRYPT}/${PRODUCT}/fullchain.pem"}"
 PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${PRODUCT}/privkey.pem"}"
 [[ "$CERTIFICATE_FILE" != /* ]] && CERTIFICATE_FILE="$(cd "$(dirname "$CERTIFICATE_FILE")" && pwd)/$(basename "$CERTIFICATE_FILE")"
@@ -154,10 +165,11 @@ PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${PRODUCT}/privkey.pem"}"
 if [ -f "${CERTIFICATE_FILE}" ]; then 
   if [ -f "${PRIVATEKEY_FILE}" ]; then
     cp -f ${OPENRESTY}/onlyoffice-proxy-ssl.conf.template ${OPENRESTY}/onlyoffice-proxy.conf
-    sed -i "s/\(\"portal\":\).*/\1 \"https:\/\/${DOMAIN}\"/" ${CONFIG_DIR}/appsettings.$(grep -oP 'ENVIRONMENT=\K.*' ${CONFIG_DIR}/systemd.env).json
+    json -I -f ${USER_CONF} -e "this.files.docservice.url.portal = \"https://${DOMAIN}\""
+    json -I -f ${USER_CONF} -e "this.core['server-root'] = 'https://*/'"
     sed -i "s~\(ssl_certificate \).*;~\1${CERTIFICATE_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
     sed -i "s~\(ssl_certificate_key \).*;~\1${PRIVATEKEY_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
-    sed -i "s~\(ssl_dhparam \).*;~\1${DHPARAM_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
+    sed -i "s~\(ssl_dhparam \).*;~\1${DHPARAM_PATH};~g" ${OPENRESTY}/onlyoffice-proxy.conf
 
     if [[ "${LETSENCRYPT_ENABLE}" = "true" ]]; then
       # Create and set permissions for ${PRODUCT}-renew-letsencrypt
@@ -197,6 +209,14 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
           find ${SYSTEMD_DIR} -name "ds-*.service" ! -name "ds-example.service" 2>/dev/null
         } | xargs -I % basename % | xargs systemctl restart
       fi
+    fi
+
+    # fix Bug 75803 - In the "What's new..." email, the portal domain comes as localhost
+    IFS=';' read -ra CONN_ITEM <<< "$(json -f "$USER_CONF" ConnectionStrings.default.connectionString)"; 
+    for ITEM in "${CONN_ITEM[@]}"; do KEY="${ITEM%%=*}"; VAL="${ITEM#*=}"; KEY="${KEY// /_}"; export "$KEY=$VAL"; done
+    MYSQL=(mysql -h"$Server" -P"${Port:-3306}" -u"$User_ID" "-p$Password" "$Database")
+    if [ -z "$(${MYSQL[@]} -N -s -e "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1")" ]; then
+      ${MYSQL[@]} -e "UPDATE tenants_tenants SET mappeddomain='${DOMAIN}' WHERE alias='localhost';"
     fi
 
     [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ] && systemctl reload openresty || service openresty reload

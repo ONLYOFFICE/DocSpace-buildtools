@@ -13,7 +13,7 @@ on:
 jobs:
   rebuild-boxes:
     name: "Rebuild ${{ matrix.name}} ${{ github.event.inputs.box-version }}"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       HCP_CLIENT_ID: ${{ secrets.HCP_CLIENT_ID }}
       HCP_CLIENT_SECRET: ${{ secrets.HCP_CLIENT_SECRET }}
@@ -27,17 +27,21 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - distr: generic
+            os: rhel9
+            name: "rhel9"
+
           - distr: onlyoffice
             os: base-centos9s
             name: "centos9s"
 
           - distr: onlyoffice
-            os: base-debian12
-            name: "debian12"
-
-          - distr: onlyoffice
             os: base-debian11
             name: "debian11"
+
+          - distr: onlyoffice
+            os: base-debian12
+            name: "debian12"
 
           - distr: onlyoffice
             os: base-ubuntu2204
@@ -47,22 +51,15 @@ jobs:
             os: base-ubuntu2404
             name: "ubuntu2404"
 
-          - distr: onlyoffice
-            os: base-fedora41
-            name: "fedora41"
-
-          - distr: onlyoffice
-            os: base-fedora42
-            name: "fedora42"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-      
+      - name: Free Disk Space
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/rust-lang/rust/refs/heads/master/src/ci/scripts/free-disk-space.sh | sudo bash
+          curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | sudo bash
+
       - name: 'Download hcp CLI'
         uses: 'hashicorp/hcp-setup-action@v0'
         with:
@@ -71,15 +68,12 @@ jobs:
       - name: Get update and install vagrant
         run: |
           set -eux
+          wget -q https://www.virtualbox.org/download/oracle_vbox_2016.asc -O- | sudo gpg --dearmor -o /usr/share/keyrings/virtualbox.gpg
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/virtualbox.gpg] https://download.virtualbox.org/virtualbox/debian $(. /etc/os-release && echo $UBUNTU_CODENAME) contrib" | sudo tee /etc/apt/sources.list.d/virtualbox.list
           sudo wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-          sudo echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
           sudo apt update -y
-          sudo apt install vagrant virtualbox -y
-
-      - name: Free Disk Space
-        run: |
-          sudo rm -rf /usr/local/lib/android /opt/ghc
-          sudo docker image prune --all --force       
+          sudo apt install vagrant virtualbox-7.0 -y
 
       - name: Rebuild boxes
         uses: nick-fields/retry@v3
@@ -90,14 +84,15 @@ jobs:
           command: |
                   set -eux   
                   cd tests/vagrant
-                    TEST_CASE='--production-install' \
+                    TEST_CASE='--local-install' \
                     DISTR='${{ matrix.distr }}' \
-                    OS='${{ matrix.os }}' \
-                    DOWNLOAD_SCRIPT='-ds true' \
+                    OS='${{matrix.os}}' \
                     RAM='8192' \
                     CPU='3' \
-                    ARGUMENTS="-arg '--skiphardwarecheck true'" \
-                    vagrant up
+                    DOWNLOAD_SCRIPT='-ds false' \
+                    TEST_REPO='-tr true' \
+                    ARGUMENTS="-arg '--skiphardwarecheck true --localscripts true'" \
+                    vagrant up --provider=virtualbox
                   sleep 300
                   vagrant package --output ${PRODUCT}-${OS_NAME}.box
                   wget https://raw.githubusercontent.com/ONLYOFFICE/ga-common/refs/heads/master/.github/scripts/vagrant_publish.sh

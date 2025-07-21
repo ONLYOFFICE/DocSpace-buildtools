@@ -10,14 +10,14 @@ PUSHD %~dp0..
 echo "mode="
 
 
-REM call yarn wipe
-call yarn install
+REM call pnpm wipe
+call pnpm install
 
-REM call yarn build
-call yarn build:test.translation
+REM call pnpm build
+call pnpm build:test.translation
 
-REM call yarn wipe
-call yarn deploy
+REM call pnpm wipe
+call pnpm deploy
 
 
 REM copy nginx configurations to deploy folder
@@ -44,7 +44,7 @@ call sc start nginx > nul
 REM sleep 5 seconds
 call ping 127.0.0.1 -n 6 > nul
 
-call yarn e2e.test:translation
+call pnpm e2e.test:translation
 
 exit
 

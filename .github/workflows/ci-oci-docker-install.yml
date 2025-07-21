@@ -41,9 +41,10 @@ jobs:
 
       - name: Test OCI docker scripts
         run: |
+          IS_4TESTING="${{ github.event.inputs.testing }}"
           wget https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/install/OneClickInstall/install-Docker.sh
           sed -i "1i set -x" install-Docker.sh && sed -i "/docker-compose.*up -d/ s/$/ --quiet-pull/" install-Docker.sh
-          sudo bash install-Docker.sh -skiphc true -noni true -gb ${{ github.ref_name }} $([ ${{ github.event.inputs.testing }} = "true" ] && echo "-s 4testing-") || exit $?
+          sudo bash install-Docker.sh -skiphc true -noni true -gb ${{ github.ref_name }} $([ "${IS_4TESTING:-true}" != "false" ] && echo "-s 4testing-") || exit $?
 
           echo -n "Waiting for all containers to start..."
           timeout 300 bash -c 'while docker ps | grep -q "starting"; do sleep 5; done' && echo "OK" || echo "container_status=timeout" >> $GITHUB_ENV
@@ -100,6 +101,7 @@ jobs:
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
           docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q) && docker volume rm $(docker volume ls -q)
+          curl -fsSL https://raw.githubusercontent.com/rust-lang/rust/refs/heads/master/src/ci/scripts/free-disk-space.sh | grep -Pv 'cleanDocker(?!\(\))' | sudo bash
           curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | sudo bash
 
       - name: Creating 4testing offline self-extracting archive
