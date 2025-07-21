@@ -92,7 +92,7 @@ jobs:
 
       - name: Free Disk Space
         run: |
-          curl -fsSL https://raw.githubusercontent.com/rust-lang/rust/refs/heads/master/src/ci/scripts/free-disk-space.sh | sudo bash
+          curl -fsSL https://raw.githubusercontent.com/rust-lang/rust/refs/heads/master/src/ci/scripts/free-disk-space.sh | sed 's/::[^:]*:://g' | sudo bash
           curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | sudo bash
 
       - name: Import GPG
@@ -114,7 +114,7 @@ jobs:
           JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | head -1)
           sudo update-alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && sudo update-alternatives --set java "$JAVA_PATH"
           echo "JAVA_HOME=$(dirname $(dirname "$JAVA_PATH"))" >> $GITHUB_ENV
-          sudo npm install -g json
+          sudo npm install -g json pnpm
           if [[ "${{ matrix.packageType }}" == "rpm" ]]; then
             sudo apt install -y python3-rpm python3-pip
             sudo pip install rpmlint
