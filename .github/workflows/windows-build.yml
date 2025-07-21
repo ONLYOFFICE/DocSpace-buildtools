@@ -33,7 +33,7 @@ jobs:
       - name: Checkout DocSpace Server Repository
         uses: actions/checkout@v4
         with:
-          repository: nasrullonurullaev/DocSpace-server
+          repository: ONLYOFFICE/DocSpace-server
           submodules: 'true'
           path: server
           ref: ${{ github.event.inputs.server_repo_branch }}
@@ -41,7 +41,7 @@ jobs:
       - name: Checkout DocSpace Client Repository
         uses: actions/checkout@v4
         with:
-          repository: nasrullonurullaev/DocSpace-client
+          repository: ONLYOFFICE/DocSpace-client
           submodules: 'true'
           path: client
           ref: ${{ github.event.inputs.client_repo_branch }}
@@ -49,14 +49,14 @@ jobs:
       - name: Checkout ASC.Web.Campaigns Repository
         uses: actions/checkout@v4
         with:
-          repository: nasrullonurullaev/ASC.Web.Campaigns
+          repository: ONLYOFFICE/ASC.Web.Campaigns
           path: campaigns
           ref: master
 
       - name: Checkout DocSpace Plugins Repository
         uses: actions/checkout@v4
         with:
-          repository: nasrullonurullaev/docspace-plugins
+          repository: ONLYOFFICE/docspace-plugins
           path: plugins
           ref: master
 
