@@ -57,6 +57,11 @@ UPDATE="${UPDATE:-false}"
 LOCAL_SCRIPTS="${LOCAL_SCRIPTS:-false}"
 SKIP_HARDWARE_CHECK="${SKIP_HARDWARE_CHECK:-false}"
 
+if fuser /var/lib/dpkg/lock-frontend1 &>/dev/null; then
+  echo "Waiting for /var/lib/dpkg/lock-frontend1 to be released (up to 60 seconds)..."
+   timeout 60 bash -c 'while fuser /var/lib/dpkg/lock-frontend1 &>/dev/null; do sleep 1; done'
+fi
+
 apt-get update -y --allow-releaseinfo-change;
 if [ "$(dpkg-query -W -f='${Status}' curl 2>/dev/null | grep -c "ok installed")" -eq 0 ]; then
   apt-get install -yq curl
