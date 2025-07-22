@@ -47,6 +47,9 @@ $nginx_conf_dir = "$env:SystemDrive\OpenResty\conf"
 $nginx_conf = "onlyoffice-proxy.conf"
 $nginx_conf_tmpl = "onlyoffice-proxy.conf.tmpl"
 $nginx_ssl_tmpl = "onlyoffice-proxy-ssl.conf.tmpl"
+$user_conf = "${app}\config\appsettings.$environment.json"
+$mysql = "$env:SystemDrive\Program Files\MySQL\MySQL Server 8.4\bin\mysql.exe"
+$docspace_service = "DocSpace.StudioNotifyService"
 $proxy_service = "OpenResty"
 $node_services = @(
     "DocSpace.DocEditor",
@@ -55,6 +58,20 @@ $node_services = @(
     "DocSpace.SsoAuth.Svc",
     "DsDocServiceSvc",
     "DsConverterSvc"
+)
+
+$connStr = (Get-Content $user_conf -Raw | ConvertFrom-Json).ConnectionStrings.'default'.connectionString
+$connStr -split ';' | Where-Object {$_} | ForEach-Object {
+    $k,$v = $_ -split '=',2
+    $k = ($k.Trim() -replace '\s+','_')
+    Set-Item "Env:$k" ($v.Trim())
+}
+$mysqlArgs = @(
+    "-h$env:Server",
+    "-P$($env:Port -as [int] -or 3306)",
+    "-u$env:User_ID",
+    "-p$env:Password",
+    $env:Database
 )
 
 function ConvertToPem {
@@ -195,16 +212,22 @@ if ( $args.Count -ge 2 ) {
   {
     Copy-Item "${nginx_conf_dir}\${nginx_ssl_tmpl}" -Destination "${nginx_conf_dir}\${nginx_conf}"
     if ($domain_name -ne "localhost:80") {
-      ((Get-Content -Path "${app}\config\appsettings.$environment.json" -Raw) -replace '"portal":\s*"[^"]*"', "`"portal`": `"https://$domain_name`"") | Set-Content -Path "${app}\config\appsettings.$environment.json"
+      ((Get-Content -Path $user_conf -Raw) -replace '"portal":\s*"[^"]*"', "`"portal`": `"https://$domain_name`"") | Set-Content -Path $user_conf
+      (Get-Content $user_conf -Raw) -replace '"core"\s*:\s*\{(?![^}]*"server-root")', "`"core`": {`r`n    `"server-root`": `"https://*/`"," | Set-Content -Path $user_conf
       Set-ItemProperty -Path "HKLM:\SOFTWARE\Wow6432Node\Ascensio System SIA\ONLYOFFICE DocSpace" -Name "DOMAIN_NAME" -Value $domain_name
     }
     ((Get-Content -Path "${nginx_conf_dir}\${nginx_conf}" -Raw) -replace '/usr/local/share/ca-certificates/tls.crt', "`"$ssl_cert`"") | Set-Content -Path "${nginx_conf_dir}\${nginx_conf}"
     ((Get-Content -Path "${nginx_conf_dir}\${nginx_conf}" -Raw) -replace '/etc/ssl/private/tls.key', "`"$ssl_key`"") | Set-Content -Path "${nginx_conf_dir}\${nginx_conf}"
 
+    if (-not (& "$mysql" @mysqlArgs -N -s -e "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1" 2>$null)) {
+      & "$mysql" @mysqlArgs -e `
+        "UPDATE tenants_tenants SET mappeddomain='$domain_name' WHERE alias='localhost';" 2>$null
+    }
+
     if ($letsencrypt_domain -and (Test-Path $letsencrypt_domain_dir))
     {
         $acl = Get-Acl -Path $letsencrypt_domain_dir
-        $acl.SetSecurityDescriptorSddlForm('O:LAG:S-1-5-21-4011186057-2202358572-2315966083-513D:PAI(A;;0x1200a9;;;WD)(A;;FA;;;SY)(A;OI;0x1200a9;;;LS)(A;;FA;;;BA)(A;;FA;;;LA)')
+        $acl.SetSecurityDescriptorSddlForm('O:LAG:S-1-5-21-4011186057-2202358572-2315966083-513D:PAI(A;OI;0x1200a9;;;WD)(A;;FA;;;SY)(A;OI;0x1200a9;;;LS)(A;;FA;;;BA)(A;;FA;;;LA)')
         Set-Acl -Path $acl.path -ACLObject $acl
     }
 
@@ -217,15 +240,22 @@ if ( $args.Count -ge 2 ) {
     }
   }
 
-  Restart-Service -Name $proxy_service
+  Restart-Service -Name $proxy_service, $docspace_service
 }
 
 elseif ($args[0] -eq "-d" -or $args[0] -eq "--default") {
     Copy-Item "${nginx_conf_dir}\${nginx_conf_tmpl}" -Destination "${nginx_conf_dir}\${nginx_conf}"
-    ((Get-Content -Path "${app}\config\appsettings.$environment.json" -Raw) -replace '"portal":\s*"[^"]*"', '"portal": "http://localhost:80"') | Set-Content -Path "${app}\config\appsettings.$environment.json"
+    ((Get-Content -Path $user_conf -Raw) -replace '"portal":\s*"[^"]*"', '"portal": "http://localhost:80"') | Set-Content -Path $user_conf
+    (Get-Content $user_conf -Raw) -replace '\r?\n\s*"server-root"\s*:\s*"https://\*/"\s*,?', '' | Set-Content -Path $user_conf
     [System.Environment]::SetEnvironmentVariable("NODE_EXTRA_CA_CERTS", $null, "Machine")
+
+    if (-not (& "$mysql" @mysqlArgs -N -s -e "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1" 2>$null)) {
+      & "$mysql" @mysqlArgs -e `
+        "UPDATE tenants_tenants SET mappeddomain=NULL WHERE alias='localhost';" 2>$null
+    }
+
     foreach ($service in $node_services) { Restart-Service -Name $service }
-    Restart-Service -Name $proxy_service
+    Restart-Service -Name $proxy_service, $docspace_service
     if (Test-Path "${app}\letsencrypt\letsencrypt_cron.bat") { Remove-Item -Path "${app}\letsencrypt\letsencrypt_cron.bat" -Force }
     Write-Host "Returned to the default proxy configuration."
 }

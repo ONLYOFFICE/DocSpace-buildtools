@@ -274,18 +274,13 @@ save_undefined_param() {
 
 restart_services() {
 	chown -R ${PACKAGE_SYSNAME}:${PACKAGE_SYSNAME} $APP_DIR $PRODUCT_DIR $LOG_DIR /var/www/$PACKAGE_SYSNAME/Data
+	systemctl restart openresty
 
 	echo -n "Updating database... "
 	systemctl start "${PRODUCT}-migration-runner" >/dev/null 2>&1 || true
 	timeout 60 bash -c "while systemctl is-active "${PRODUCT}-migration-runner" &>/dev/null; do sleep 5; done" && echo "OK" || echo "Timeout reached"
 
 	echo -n "Restarting services... "
-	SERVICES=(login api socket studio-notify notify \
-	people-server files files-services studio backup api-system \
-	clear-events backup-background ssoauth doceditor healthchecks \
-	identity-authorization identity-api sdk management)
-	SERVICES_LIST=("${SERVICES[@]/#/${PRODUCT}-}")
-
 	systemctl enable "${SERVICES_LIST[@]}" >/dev/null 2>&1
 	systemctl restart "${SERVICES_LIST[@]}"
 	echo "OK"
@@ -532,10 +527,13 @@ setup_openresty(){
 				;;
 			esac
 
+			EXISTING_PORTS=$(semanage port -l | awk '$1 == "http_port_t" && $2 == "tcp" { for (i=3; i<=NF; i++) print $i }' | tr ',' '\n' | tr -d ' ')
 			for PORT in ${PORTS[@]}; do
-				semanage port -a -t http_port_t -p tcp $PORT >/dev/null 2>&1 || \
-				semanage port -m -t http_port_t -p tcp $PORT >/dev/null 2>&1 || \
-				true
+				if ! grep -qx "$PORT" <<< "$EXISTING_PORTS"; then
+					semanage port -a -t http_port_t -p tcp $PORT >/dev/null 2>&1 || \
+					semanage port -m -t http_port_t -p tcp $PORT >/dev/null 2>&1 || \
+					true
+				fi
 			done
 		fi
 
@@ -563,7 +561,6 @@ setup_openresty(){
 	[ -d "${NGINX_LOG_DIR}" ] || { mkdir -p "${NGINX_LOG_DIR}" && chown "${NGINX_USER}:${NGINX_GROUP}" "${NGINX_LOG_DIR}"; }
 	
 	systemctl enable openresty >/dev/null 2>&1
-	systemctl restart openresty
 	echo "OK"
 }
 
@@ -593,7 +590,7 @@ setup_docs() {
 		chown ds:ds ${DS_CONF_DIR}/local.json
 		usermod -aG ${PACKAGE_SYSNAME} ds
 		chmod g+rwxs /var/www/${PACKAGE_SYSNAME}/Data
-		systemctl restart 'ds-*.service'
+		systemctl restart ds-converter ds-docservice ds-metrics
 	elif [ $1 == "EXTERNAL_DOCS_SERVER" ]; then
 		local APP_HOST=$(curl -s ifconfig.me)
 		local EXTERNAL_DOCS_FLAG="rewrite"
@@ -849,6 +846,16 @@ check_connection_external_services() {
 	return $HOST_RESPONCE
 }
 
+stop_services() {
+	systemctl stop "${SERVICES_LIST[@]}" 'ds-*.service' >/dev/null 2>&1
+}
+
+SERVICES=(login api socket studio-notify notify \
+people-server files files-services studio backup api-system \
+clear-events backup-background ssoauth doceditor healthchecks \
+identity-authorization identity-api sdk)
+SERVICES_LIST=("${SERVICES[@]/#/${PRODUCT}-}")
+
 if command -v yum >/dev/null 2>&1; then
 	DIST="RedHat"
 	PACKAGE_MANAGER="rpm -q"
@@ -864,6 +871,7 @@ elif command -v apt >/dev/null 2>&1; then
 	SYSTEMD_DIR="$(dirname $(dpkg-query -L ${PRODUCT}-api | grep systemd/system/))"
 fi
 
+stop_services
 install_json
 product_configuration
 
