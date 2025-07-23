@@ -67,7 +67,7 @@ services:
     build:
       context: ./
       dockerfile: "${DOCKERFILE}"
-      target: noderun
+      target: node_services
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-node:${DOCKER_TAG}"
     container_name: onlyoffice-node-services
 
@@ -76,7 +76,7 @@ services:
     build:
       context: ./
       dockerfile: "${DOCKERFILE}"
-      target: dotnetrun
+      target: dotnet_services
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-dotnet:${DOCKER_TAG}"
     container_name: onlyoffice-dotnet-services
 
@@ -85,7 +85,7 @@ services:
     build:
       context: ./
       dockerfile: "${DOCKERFILE}"
-      target: javarun
+      target: java_services
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-java:${DOCKER_TAG}"
     container_name: onlyoffice-java-services
 
