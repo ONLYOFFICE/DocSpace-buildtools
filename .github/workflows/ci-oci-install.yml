@@ -31,8 +31,12 @@ on:
           description: 'Ubuntu 24.04'
           default: true
       fedora41:
+         type: boolean
+         description: 'Fedora 41'
+         default: true
+      fedora42:
         type: boolean
-        description: 'Fedora 41'
+        description: 'Fedora 42'
         default: true
       deb_build:
         type: boolean
@@ -49,20 +53,6 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - name: Checkout code
-        if: github.event_name == 'pull_request'
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Determine affected distributions
-        id: determine-distros
-        if: github.event_name == 'pull_request'
-        run: |
-          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }})
-          echo "debian_changed=$(echo "$CHANGED_FILES" | grep -q 'install-Debian' && echo true || echo false)" >> $GITHUB_ENV
-          echo "redhat_changed=$(echo "$CHANGED_FILES" | grep -q 'install-RedHat' && echo true || echo false)" >> $GITHUB_ENV 
-
       - name: Set matrix names
         id: set-matrix
         run: |
@@ -74,25 +64,17 @@ jobs:
               {"execute": '${{ github.event.inputs.debian12 || true }}', "name": "Debian12", "os": "base-debian12", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu22.04", "os": "base-ubuntu2204", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.ubuntu2404 || true }}', "name": "Ubuntu24.04", "os": "base-ubuntu2404", "distr": "onlyoffice"},
-              {"execute": '${{ github.event.inputs.fedora41 || true }}', "name": "Fedora41", "os": "base-fedora41", "distr": "onlyoffice"}
+              {"execute": '${{ github.event.inputs.fedora41 || true }}', "name": "Fedora41", "os": "base-fedora41", "distr": "onlyoffice"},
+              {"execute": '${{ github.event.inputs.fedora42 || true }}', "name": "Fedora42", "os": "base-fedora42", "distr": "onlyoffice"}
             ]
           }')            
 
           matrix=$(jq -c --argjson debuild "${{ github.event.inputs.deb_build||true }}" --argjson rpmbuild "${{ github.event.inputs.rpm_build||true }}" \
-          '{include:[.include[]|select(.execute and(
+          '{include:[.include[]|select(.execute or
             ($debuild and(.name|test("Debian|Ubuntu"))) or
             ($rpmbuild and(.name|test("CentOS|Fedora|RHEL")))
-          ))]}' <<< "$matrix")
+          )]}' <<< "$matrix")
 
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            matrix=$(jq -c --arg REDHAT_CHANGED "${{ env.redhat_changed }}" --arg DEBIAN_CHANGED "${{ env.debian_changed }}" \
-            '{include:[.include[]|select(.execute and(
-              ($REDHAT_CHANGED==$DEBIAN_CHANGED) or
-              ($REDHAT_CHANGED=="true" and(.name|test("CentOS|Fedora|RHEL"))) or
-              ($DEBIAN_CHANGED=="true" and(.name|test("Debian|Ubuntu")))
-            ))]}' <<< "$matrix")
-          fi
-        
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
 
   vagrant-up:
@@ -115,10 +97,10 @@ jobs:
             | xargs shellcheck --exclude="$(awk '!/^#|^$/ {print $1}' tests/lint/sc_ignore | paste -sd ",")" --severity=warning | tee sc_output
           awk '/\(warning\):/ {w++} /\(error\):/ {e++} END {if (w+e) printf "::warning ::ShellCheck detected %d warnings and %d errors\n", w+0, e+0}' sc_output
 
-      - name: Set up Python 3.
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
+      - name: Free Disk Space
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/rust-lang/rust/refs/heads/master/src/ci/scripts/free-disk-space.sh | sed 's/::[^:]*:://g' | sudo bash
+          curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | sudo bash
 
       - name: Get update and install vagrant
         run: |
@@ -129,11 +111,6 @@ jobs:
           sudo echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
           sudo apt update -y
           sudo apt install vagrant virtualbox-7.0 -y
-
-      - name: Free Disk Space
-        run: |
-          sudo rm -rf /usr/local/lib/android /opt/ghc
-          sudo docker image prune --all --force
 
       - name: "Test production scripts with ${{matrix.name}}"
         if: ${{ github.event_name == 'schedule' }}

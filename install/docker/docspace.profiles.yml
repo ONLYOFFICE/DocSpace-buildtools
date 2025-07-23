@@ -237,7 +237,7 @@ services:
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-sdk:${DOCKER_TAG}"
     container_name: ${SDK_HOST}
     restart: always
-      
+
   onlyoffice-login:
     <<: [*x-service-base, *x-profiles-frontend]
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-login:${DOCKER_TAG}"

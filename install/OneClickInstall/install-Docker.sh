@@ -484,6 +484,15 @@ while [ "$1" != "" ]; do
 			fi
 		;;
 
+		-dhf | --dhparamfile )
+			if [ "$2" != "" ]; then
+				DHPARAM_PATH="$2"
+				[[ "$DHPARAM_PATH" != /* ]] && DHPARAM_PATH="$(cd "$(dirname "$DHPARAM_PATH")" && pwd)/$(basename "$DHPARAM_PATH")"
+				[ -f "$DHPARAM_PATH" ] || { echo "Error: DHParam file not found: ${DHPARAM_PATH}" >&2; exit 1; }
+				shift
+			fi
+		;;
+
 		-du | --dashboardsusername )
 			if [ "$2" != "" ]; then
 				DASHBOARDS_USERNAME=$2
@@ -584,6 +593,7 @@ while [ "$1" != "" ]; do
 			echo "      -lem, --letsencryptmail           defines the domain administrator mail address for Let's Encrypt certificate"
 			echo "      -cf, --certfile                   path to the certificate file for the domain"
 			echo "      -ckf, --certkeyfile               path to the private key file for the certificate"
+			echo "      -dhf, --dhparamfile               path to the dhparam file for the certificate"
 			echo "      -off, --offline                   set the script for offline installation (true|false)"
 			echo "      -noni, --noninteractive           auto confirm all questions (true|false)"
 			echo "      -dbm, --databasemigration         database migration (true|false)"
@@ -914,14 +924,15 @@ create_network () {
 }
 
 read_continue_installation () {
-	[ "$NON_INTERACTIVE" = "true" ] && return 0
+	[ "$NON_INTERACTIVE" = "true" ] && INSTALLATION_CHOICE="Y" && return 0
 
 	while true; do
-        read -p "Continue installation [Y/N]? " CHOICE_INSTALLATION
-        case "$CHOICE_INSTALLATION" in
-            [yY]) return 0 ;;
+        read -p "Continue installation [Y/C/N]? " CHOICE
+        case "$CHOICE" in
+            [yY]) INSTALLATION_CHOICE="Y"; return 0 ;;
+            [cC]) INSTALLATION_CHOICE="C"; return 0 ;;
             [nN]) exit 0 ;;
-            *) echo "Please, enter Y or N" ;;
+            *) echo "Please, enter Y, C or N" ;;
         esac
     done
 }
@@ -935,21 +946,30 @@ domain_check () {
 		if [[ -n "$IP_ADDRESS" && "$IP_ADDRESS" =~ ^(10\.|127\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.) ]]; then
 			LOCAL_RESOLVED_DOMAINS+="$DOMAIN"
 		fi
-	done <<< "${APP_DOMAIN_PORTAL:-$(dig +short -x "$(curl -s ifconfig.me)" | sed 's/\.$//')}"
-
-	if [[ -n "${LOCAL_RESOLVED_DOMAINS}" ]] || [[ $(ip route get 8.8.8.8 | awk '{print $7}') != $(curl -s ifconfig.me) ]]; then
+	done <<< "${APP_DOMAIN_PORTAL:-$(dig +short -x "$(curl -s -4 ifconfig.me)" | sed 's/\.$//')}"
+	
+	# check if the domain is a loopback IP or NAT
+	if [[ -n "${LOCAL_RESOLVED_DOMAINS}" ]] || [[ $(ip route get 8.8.8.8 | awk '{print $7}') != $(curl -s -4 ifconfig.me) ]]; then 
 		DOCKER_DAEMON_FILE="/etc/docker/daemon.json"
 		if ! grep -q '"dns"' "$DOCKER_DAEMON_FILE" 2>/dev/null; then
-			echo "A problem was detected for ${APP_DOMAIN_PORTAL:-${LOCAL_RESOLVED_DOMAINS}} domains when using a loopback IP address or when using NAT."
-			echo "Select 'Y' to continue installing with configuring the use of external IP in Docker via Google Public DNS."
-			echo "Select 'N' to cancel ${PACKAGE_SYSNAME^^} ${PRODUCT_NAME} installation."
+			echo "DNS issue detected for ${APP_DOMAIN_PORTAL:-$LOCAL_RESOLVED_DOMAINS} (loopback IP or NAT)."
+			echo "[Y] Use Google DNS | [C] Use custom DNS | [N] Cancel installation"
 			if read_continue_installation; then
-				if [[ -f "$DOCKER_DAEMON_FILE" ]]; then	
-					sed -i 's!{!& "dns": ["8.8.8.8", "8.8.4.4"],!' "$DOCKER_DAEMON_FILE"
-				else
-					echo "{\"dns\": [\"8.8.8.8\", \"8.8.4.4\"]}" | tee "$DOCKER_DAEMON_FILE" >/dev/null
+				case "$INSTALLATION_CHOICE" in
+					Y)  DNS=("8.8.8.8" "8.8.4.4") ;;
+					C)  while true; do
+							read -p "Enter custom DNS (e.g. 8.8.8.8 8.8.4.4): " INPUT; IFS=' ' read -ra DNS <<< "$INPUT"
+							for IP in "${DNS[@]}"; do 
+								[[ $IP =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || { echo "Invalid DNS: $IP"; continue 2; }
+							done && break
+						done ;;
+				esac
+				if ((${#DNS[@]})); then
+					echo "Updating Docker DNS config with: ${DNS[*]}"
+					jq -e . "${DOCKER_DAEMON_FILE}" > /dev/null 2>&1 || echo '{}' > "${DOCKER_DAEMON_FILE}"
+					echo "$(jq --argjson dns "$(printf '%s\n' "${DNS[@]}" | jq -R . | jq -s .)" '.dns = $dns' "${DOCKER_DAEMON_FILE}")" > "${DOCKER_DAEMON_FILE}"
+					systemctl restart docker || { echo "Failed to restart Docker service"; exit 1; }
 				fi
-				systemctl restart docker
 			fi
 		fi
 	fi
@@ -1056,12 +1076,9 @@ set_jwt_header () {
 	DOCUMENT_SERVER_JWT_HEADER="${DOCUMENT_SERVER_JWT_HEADER:-"AuthorizationJwt"}"
 }
 
-set_core_machinekey () {
+set_secrets () {
 	APP_CORE_MACHINEKEY="${APP_CORE_MACHINEKEY:-$(get_env_parameter "APP_CORE_MACHINEKEY" "${CONTAINER_NAME}")}"
 	[ "$UPDATE" != "true" ] && APP_CORE_MACHINEKEY="${APP_CORE_MACHINEKEY:-$(get_random_str 12)}"
-}
-
-set_identity_secrets () {
 	IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-$(get_env_parameter "IDENTITY_ENCRYPTION_SECRET" "${IDENTITY_CONTAINER_NAME}")}"
 	[ "${UPDATE}" = "true" ] && IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-"secret"}" # (DS v3.1.0) fix encryption key generation issue
 	IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-$(get_random_str 12)}"
@@ -1289,12 +1306,19 @@ install_product () {
 		fi
 
 		if [ ! -z "${CERTIFICATE_PATH}" ] && [[ ! -z "${APP_DOMAIN_PORTAL}" ]]; then
+		    env ${DHPARAM_PATH:+DHPARAM_PATH="$DHPARAM_PATH"} \
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -f "${APP_DOMAIN_PORTAL}" "${CERTIFICATE_PATH}" "${CERTIFICATE_KEY_PATH}"
 		elif [ ! -z "${LETS_ENCRYPT_DOMAIN}" ] && [ ! -z "${LETS_ENCRYPT_MAIL}" ]; then
+		    env ${DHPARAM_PATH:+DHPARAM_PATH="$DHPARAM_PATH"} \
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup "${LETS_ENCRYPT_MAIL}" "${LETS_ENCRYPT_DOMAIN}"
 		#Fix for bug 70537 to ensure proper migration to version 3.0.0
-		elif [ "${UPDATE}" = "true" ] && [ -f "/etc/cron.d/${PRODUCT}-letsencrypt" ]; then
+		fi
+
+		if [ "${UPDATE}" = "true" ] && [ -f "/etc/cron.d/${PRODUCT}-letsencrypt" ]; then
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -r
+		elif [[ -n "$CERTIFICATE_KEY_PATH" || -n "$CERTIFICATE_PATH" || -n "$LETS_ENCRYPT_DOMAIN" || -n "$LETS_ENCRYPT_MAIL" ]]; then
+			echo -e "\e[31mERROR:\e[0m Missing required parameters for SSL setup"
+			echo "Run 'bash $BASE_DIR/config/${PRODUCT}-ssl-setup --help' for usage information."
 		fi
 	elif [ "$INSTALL_PRODUCT" == "pull" ]; then
 		docker-compose -f $BASE_DIR/identity.yml pull
@@ -1420,7 +1444,7 @@ services_check_connection () {
 		reconfigure MYSQL_PORT "${MYSQL_PORT:-3306}"
 	fi
 	if [[ ! -z "$DOCUMENT_SERVER_HOST" ]]; then
-		APP_URL_PORTAL=${APP_URL_PORTAL:-"http://$(curl -s ifconfig.me):${EXTERNAL_PORT}"}
+		APP_URL_PORTAL=${APP_URL_PORTAL:-"http://$(curl -s -4 ifconfig.me):${EXTERNAL_PORT}"}
 		establish_conn ${DOCUMENT_SERVER_HOST} ${DOCUMENT_SERVER_PORT} "${PACKAGE_SYSNAME^^} Docs"
 		reconfigure DOCUMENT_SERVER_URL_EXTERNAL ${DOCUMENT_SERVER_URL_EXTERNAL}
 		reconfigure DOCUMENT_SERVER_URL_PUBLIC ${DOCUMENT_SERVER_URL_EXTERNAL}
@@ -1488,8 +1512,7 @@ start_installation () {
 	set_jwt_secret
 	set_jwt_header
 
-	set_core_machinekey
-	set_identity_secrets
+	set_secrets
 
 	set_mysql_params
 

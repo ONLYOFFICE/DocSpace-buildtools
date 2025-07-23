@@ -17,6 +17,7 @@
         "entries": {
           "booktrainingemail": "",
           "documentationemail": "",
+          "feedback": "https://feedback.onlyoffice.com/forums/966080-your-voice-matters?category_id=519081",
           "legalterms": "https://help.onlyoffice.co/products/files/doceditor.aspx?fileid=5048502&doc=SXhWMEVzSEYxNlVVaXJJeUVtS0kyYk14YWdXTEFUQmRWL250NllHNUFGbz0_IjUwNDg1MDIi0",
           "license": "https://www.gnu.org/licenses/agpl-3.0.en.html",
           "paymentemail": "sales@onlyoffice.com",
@@ -42,6 +43,7 @@
           "appearance": "/administration/docspace-settings.aspx#Appearance_block",
           "autobackup": "/administration/docspace-settings.aspx#AutoBackup",
           "becometranslator": "/guides/become-translator.aspx",
+          "configuringsettings": "/docspace/configuration#configuring_docspace_settings_block",
           "connectamazon": "/administration/connect-amazon-docspace.aspx",
           "connectapple": "/administration/connect-apple-docspace.aspx",
           "connectbox": "/administration/connect-box-docspace.aspx",
@@ -85,7 +87,8 @@
           "welcomepage": "/administration/docspace-settings.aspx#DocSpacetitle",
           "docspacemanagingrooms": "/docspace/administration/docspace-managing-rooms.aspx",
           "limiteddevtools": "/docspace/configuration/docspace-security-settings.aspx#limiteddevelopertoolsaccess_block",
-          "encryption": "/docspace/configuration/docspace-encryption-at-rest.aspx"
+          "encryption": "/docspace/configuration/docspace-encryption-at-rest.aspx",
+          "docspacefaq": "/docspace/faq.aspx"
         }
       }
     },

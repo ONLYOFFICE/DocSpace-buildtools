@@ -9,6 +9,10 @@ on:
 
   workflow_dispatch:
     inputs:
+      rhel9:
+         type: boolean
+         description: 'RHEL9'
+         default: true
       centos9s:
          type: boolean
          description: 'CentOS 9 Stream'
@@ -25,10 +29,14 @@ on:
          type: boolean
          description: 'Ubuntu 22.04'
          default: true
+      ubuntu2404:
+         type: boolean
+         description: 'Ubuntu 24.04'
+         default: true
 
 jobs:
   prepare:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -38,10 +46,12 @@ jobs:
         run: |
           matrix=$(echo '{
             "include": [
+              {"execute": '${{ github.event.inputs.rhel9 || true }}', "name": "RHEL9", "os": "rhel9", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.centos9s || true }}', "name": "CentOS9S", "os": "centos9s", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.debian11 || true }}', "name": "Debian11", "os": "debian11", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.debian12 || true }}', "name": "Debian12", "os": "debian12", "distr": "onlyoffice"},
-              {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu22.04", "os": "ubuntu2204", "distr": "onlyoffice"}
+              {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu22.04", "os": "ubuntu2204", "distr": "onlyoffice"},
+              {"execute": '${{ github.event.inputs.ubuntu2404 || true }}', "name": "Ubuntu22.04", "os": "ubuntu2404", "distr": "onlyoffice"}
             ]
           }' | jq -c '{include: [.include[] | select(.execute == true)]}')
           echo "matrix=${matrix}" >> $GITHUB_OUTPUT
@@ -58,21 +68,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-
       - name: Free Disk Space
         run: |
-          sudo rm -rf /usr/local/lib/android /opt/ghc
-          sudo docker image prune --all --force          
+          curl -fsSL https://raw.githubusercontent.com/rust-lang/rust/refs/heads/master/src/ci/scripts/free-disk-space.sh | sed 's/::[^:]*:://g' | sudo bash
+          curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | sudo bash
 
       - name: Get update and install vagrant
         run: |
           set -eux
+          wget -q https://www.virtualbox.org/download/oracle_vbox_2016.asc -O- | sudo gpg --dearmor -o /usr/share/keyrings/virtualbox.gpg
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/virtualbox.gpg] https://download.virtualbox.org/virtualbox/debian $(. /etc/os-release && echo $UBUNTU_CODENAME) contrib" | sudo tee /etc/apt/sources.list.d/virtualbox.list
+          sudo wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          sudo echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
           sudo apt update -y
-          sudo apt install vagrant virtualbox -y
+          sudo apt install vagrant virtualbox-7.0 -y
 
       - name: Testing with update ${{matrix.name}}
         if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
@@ -82,18 +91,17 @@ jobs:
           timeout_minutes: 60
           retry_on: error
           command: |
-                cd ./tests/vagrant
                 set -eux
-
+                cd tests/vagrant
                 TEST_CASE='--local-install' \
-                DISTR='${{matrix.distr}}' \
-                RAM='5100' \
-                CPU='3' \
+                DISTR='${{ matrix.distr }}' \
                 OS='docspace-${{ matrix.os }}' \
+                RAM='8192' \
+                CPU='3' \
                 DOWNLOAD_SCRIPT='-ds false' \
                 TEST_REPO='-tr true' \
                 ARGUMENTS="-arg '--skiphardwarecheck true --makeswap false --localscripts true --update true'" \
-                vagrant up
+                vagrant up --provider=virtualbox
                 sleep 10
                 vagrant destroy --force
           on_retry_command: |

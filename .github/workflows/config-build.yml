@@ -26,5 +26,6 @@ jobs:
           GH_TOKEN: ${{ secrets.TOKEN }}
         run: |
           gh api --method POST /repos/${{ github.repository }}/dispatches \
-            -f "event_type=config-trigger-action" \
-            -F "client_payload[branches]=${{ github.ref_name }}"
+            -H "Accept: application/vnd.github+json" \
+            -f event_type=config-trigger-action \
+            -f client_payload[branches][]="${GITHUB_REF_NAME}"

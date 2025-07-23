@@ -23,6 +23,7 @@ x-service: &x-service-base
     APP_DOTNET_ENV: ${APP_DOTNET_ENV}
     APP_KNOWN_NETWORKS: ${APP_KNOWN_NETWORKS}
     APP_KNOWN_PROXIES: ${APP_KNOWN_PROXIES}
+    APP_CORE_SERVER_ROOT: ${APP_CORE_SERVER_ROOT}
     APP_CORE_BASE_DOMAIN: ${APP_CORE_BASE_DOMAIN}
     APP_CORE_MACHINEKEY: ${APP_CORE_MACHINEKEY}
     APP_URL_PORTAL: ${APP_URL_PORTAL}
@@ -114,8 +115,8 @@ services:
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-socket:${DOCKER_TAG}"
     container_name: ${SOCKET_HOST}
     healthcheck:
-     <<: *x-healthcheck
-     test: curl --fail http://${SERVICE_SOCKET}/health/ || exit 1
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_SOCKET}/health/ || exit 1
     expose:
       - ${SERVICE_PORT}
 
@@ -156,8 +157,8 @@ services:
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-ssoauth:${DOCKER_TAG}"
     container_name: ${SSOAUTH_HOST}
     healthcheck:
-     <<: *x-healthcheck
-     test: curl --fail http://${SERVICE_SSOAUTH}/health/ || exit 1
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_SSOAUTH}/health/ || exit 1
     expose:
       - ${SERVICE_PORT}
       - "9834"
@@ -171,7 +172,7 @@ services:
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_DOCEDITOR}/doceditor/health || exit 1
-  
+
   onlyoffice-sdk:
     <<: *x-service-base
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-sdk:${DOCKER_TAG}"

@@ -28,6 +28,8 @@ jobs:
       matrix:
         platform: [linux/amd64]
         branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches) }}
+    outputs:
+      DOCKER_TAG: ${{ steps.build.outputs.DOCKER_TAG }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -41,8 +43,8 @@ jobs:
         
       - name: Free Disk Space
         run: |
-          curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | bash
-          sudo docker image prune --all --force
+          curl -fsSL https://raw.githubusercontent.com/rust-lang/rust/refs/heads/master/src/ci/scripts/free-disk-space.sh | sed 's/::[^:]*:://g' | sudo bash
+          curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | sudo bash
 
       - name: Login to DockerHub
         uses: docker/login-action@v2
@@ -62,6 +64,7 @@ jobs:
             DOCKER_TAG=${PRODUCT_VERSION}.${{github.run_number}}
           fi
           export DOCKER_TAG
+          echo "DOCKER_TAG=${DOCKER_TAG}" >> ${GITHUB_OUTPUT}
           docker buildx bake -f build.yml \
           --set *.args.GIT_BRANCH=${{ matrix.branch }} \
           --set *.args.PRODUCT_VERSION=${PRODUCT_VERSION} \
@@ -82,9 +85,32 @@ jobs:
       matrix:
         branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches) }}
     steps:
+      - name: Wait for Docker Hub tag to appear
+        shell: bash
+        env:
+          DOCKER_TAG: ${{ needs.build.outputs.DOCKER_TAG }}
+        run: |
+          SERVICES=$(curl -sSL "https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ matrix.branch }}/install/docker/build.yml" | \
+            docker compose -f- config | grep -oP 'image: [^/]*/-?\K[^:]+')
+
+          PIDS=()
+          for SVC in ${SERVICES}; do
+            ( curl -sf "https://hub.docker.com/v2/repositories/${{ env.REPO }}/${SVC}/" || { echo "::error::[FAIL]    $SVC  (repo not found)"; exit 1; }
+              timeout 300 bash -c "until curl -sf -o /dev/null -w '%{http_code}' \
+                https://hub.docker.com/v2/repositories/${{ env.REPO }}/${SVC}/tags/${{ env.DOCKER_TAG }}/ \
+                | grep -q 200; do sleep 10; done" \
+              && echo "[OK]      ${SVC}" || { echo "::error::[FAIL]    ${SVC}"; exit 1; }
+            ) &
+            PIDS+=( "$!" )
+          done
+
+          for PID in "${PIDS[@]}"; do wait "$PID" || ERROR=1; done
+          [ "${ERROR:-0}" -gt 0 ] && { echo "::error::[FAIL] Some images didn't appear or repo not found" >&2; exit 1; }
+          echo "[OK]      All images are available."
+
       - name: Trigger ci-oci-docker-install Workflow
         env:
           GH_TOKEN: ${{ secrets.TOKEN }}
         run: |
           echo "OCI docker test on branch ${{ matrix.branch }}"
-          gh api --method POST /repos/${GITHUB_REPOSITORY}/actions/workflows/103532315/dispatches -f ref='${{ matrix.branch }}'
+          gh workflow run "ci-oci-docker-install.yml" --repo "${{ github.repository }}" --ref "${{ matrix.branch }}" --field offline=false --field testing=true
