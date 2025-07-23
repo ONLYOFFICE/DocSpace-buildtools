@@ -853,7 +853,7 @@ stop_services() {
 SERVICES=(login api socket studio-notify notify \
 people-server files files-services studio backup api-system \
 clear-events backup-background ssoauth doceditor healthchecks \
-identity-authorization identity-api sdk)
+identity-authorization identity-api sdk managment)
 SERVICES_LIST=("${SERVICES[@]/#/${PRODUCT}-}")
 
 if command -v yum >/dev/null 2>&1; then
