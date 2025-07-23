@@ -15,13 +15,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v3
+        run: |
+          git clone https://${{ secrets.GITEA_TOKEN }}@${{ secrets.GITEA_HOST }}/${{ github.repository }} -b ${{ github.ref_name }} --single-branch --depth=1
 
       - name: Install yq
         run: |
           sudo wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
           sudo chmod +x /usr/local/bin/yq
       - name: Update OS list in README
+        working-directory: "${{ github.repository#*/ }}"
         run: |
           OS_LIST=$(yq -r '.jobs.prepare.steps[] | select(.name == "Set matrix names") | .run' .github/workflows/ci-oci-install.yml \
             | grep -oP '"name"\s*:\s*"\K[^"]+' \
@@ -39,6 +41,7 @@ jobs:
           ' install/OneClickInstall/README.md > README.new \
           && mv README.new install/OneClickInstall/README.md
       - name: Commit changes (if any)
+        working-directory: "${{ github.repository#*/ }}"
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
