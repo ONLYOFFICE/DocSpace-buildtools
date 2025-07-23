@@ -6,8 +6,6 @@ on:
       - 'release/**'
       - 'hotfix/**'
       - 'develop'
-    paths:
-      - '.github/workflows/build_packages.yml'
   workflow_dispatch:
     inputs:
       branch-buildtools:
@@ -71,13 +69,14 @@ jobs:
             [[ "${{ github.event.inputs.deb_build }}" == "true" ]] && package_types+=("deb")
             [[ "${{ github.event.inputs.rpm_build }}" == "true" ]] && package_types+=("rpm")
           fi
-          [[ ${#package_types[@]} -eq 0 ]] && exit 0
+          [[ ${#package_types[@]} -eq 0 ]] && echo "matrix=[]" >> $GITHUB_OUTPUT && exit 0
           matrix=$(printf '%s\n' "${package_types[@]}" | jq -R . | jq -sc '{include: map({packageType: .})}')
           echo "matrix=$matrix" >> $GITHUB_OUTPUT  
   build:
     name: Build Packages
     needs: prepare
     runs-on: ubuntu-22.04
+    if: ${{ fromJson(needs.prepare.outputs.matrix).length > 0 }}
     strategy:
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     steps:
