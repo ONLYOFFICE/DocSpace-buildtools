@@ -23,11 +23,13 @@ on:
         required: true
         default: 'develop'
       deb_build:
+        type: boolean
         description: 'Trigger DEB build'
-        default: 'true'
+        default: true
       rpm_build:
+        type: boolean
         description: 'Trigger RPM build'
-        default: 'true'
+        default: true
 
 concurrency:
   group: ${{ github.ref }}
