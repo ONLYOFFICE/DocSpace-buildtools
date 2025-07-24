@@ -847,13 +847,13 @@ check_connection_external_services() {
 }
 
 stop_services() {
-	systemctl stop "${SERVICES_LIST[@]}" 'ds-*.service' >/dev/null 2>&1
+	systemctl stop "${SERVICES_LIST[@]}" 'ds-*.service' 2>&1
 }
 
 SERVICES=(login api socket studio-notify notify \
 people-server files files-services studio backup api-system \
 clear-events backup-background ssoauth doceditor healthchecks \
-identity-authorization identity-api sdk managment)
+identity-authorization identity-api sdk management)
 SERVICES_LIST=("${SERVICES[@]/#/${PRODUCT}-}")
 
 if command -v yum >/dev/null 2>&1; then
