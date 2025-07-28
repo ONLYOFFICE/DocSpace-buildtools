@@ -1312,7 +1312,9 @@ install_product () {
 		    env ${DHPARAM_PATH:+DHPARAM_PATH="$DHPARAM_PATH"} \
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup "${LETS_ENCRYPT_MAIL}" "${LETS_ENCRYPT_DOMAIN}"
 		#Fix for bug 70537 to ensure proper migration to version 3.0.0
-		elif [ "${UPDATE}" = "true" ] && [ -f "/etc/cron.d/${PRODUCT}-letsencrypt" ]; then
+		fi
+
+		if [ "${UPDATE}" = "true" ] && [ -f "/etc/cron.d/${PRODUCT}-letsencrypt" ]; then
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -r
 		elif [[ -n "$CERTIFICATE_KEY_PATH" || -n "$CERTIFICATE_PATH" || -n "$LETS_ENCRYPT_DOMAIN" || -n "$LETS_ENCRYPT_MAIL" ]]; then
 			echo -e "\e[31mERROR:\e[0m Missing required parameters for SSL setup"
