@@ -3,6 +3,7 @@ from jsonpath_ng import jsonpath, parse
 from os import environ
 from multipledispatch import dispatch
 from netaddr import *
+from subprocess import call
 
 filePath = None
 saveFilePath = None
@@ -16,6 +17,7 @@ SERVICE_PORT = os.environ["SERVICE_PORT"] if environ.get("SERVICE_PORT") else "5
 URLS = os.environ["URLS"] if environ.get("URLS") else "http://0.0.0.0:"
 PATH_TO_CONF = os.environ["PATH_TO_CONF"] if environ.get("PATH_TO_CONF") else "/app/" + PRODUCT + "/config"
 LOG_DIR = os.environ["LOG_DIR"] if environ.get("LOG_DIR") else "/var/log/" + PRODUCT
+SRC_PATH = os.environ.get("SRC_PATH", "/var/www")
 ROUTER_HOST = os.environ["ROUTER_HOST"] if environ.get("ROUTER_HOST") else "onlyoffice-router"
 SOCKET_HOST = os.environ["SOCKET_HOST"] if environ.get("SOCKET_HOST") else "onlyoffice-socket"
 
@@ -27,7 +29,6 @@ MYSQL_USER = os.environ["MYSQL_USER"] if environ.get("MYSQL_USER") else "onlyoff
 MYSQL_PASSWORD = os.environ["MYSQL_PASSWORD"] if environ.get("MYSQL_PASSWORD") else "onlyoffice_pass"
 MYSQL_CONNECTION_HOST = MYSQL_HOST if MYSQL_HOST else MYSQL_CONTAINER_NAME
 
-APP_CORE_SERVER_ROOT = os.environ["APP_CORE_SERVER_ROOT"] if environ.get("APP_CORE_SERVER_ROOT") else None
 APP_CORE_BASE_DOMAIN = os.environ["APP_CORE_BASE_DOMAIN"] if environ.get("APP_CORE_BASE_DOMAIN") is not None else "localhost"
 APP_CORE_MACHINEKEY = os.environ["APP_CORE_MACHINEKEY"] if environ.get("APP_CORE_MACHINEKEY") else "your_core_machinekey"
 APP_URL_PORTAL = os.environ["APP_URL_PORTAL"] if environ.get("APP_URL_PORTAL") else "http://" + ROUTER_HOST + ":8092"
@@ -42,7 +43,6 @@ DISABLE_VALIDATE_TOKEN = os.environ["DISABLE_VALIDATE_TOKEN"] if environ.get("DI
 
 CERTIFICATE_PATH = os.environ.get("CERTIFICATE_PATH")
 CERTIFICATE_PARAM = "NODE_EXTRA_CA_CERTS=" + CERTIFICATE_PATH + " " if CERTIFICATE_PATH and os.path.exists(CERTIFICATE_PATH) else ""
-TLS_REJECT_UNAUTHORIZED = "NODE_TLS_REJECT_UNAUTHORIZED=1" if os.getenv("NODE_TLS_REJECT_UNAUTHORIZED", "").lower() in ("1","true","enable") else "";
 
 DOCUMENT_CONTAINER_NAME = os.environ["DOCUMENT_CONTAINER_NAME"] if environ.get("DOCUMENT_CONTAINER_NAME") else "onlyoffice-document-server"
 DOCUMENT_SERVER_JWT_SECRET = os.environ["DOCUMENT_SERVER_JWT_SECRET"] if environ.get("DOCUMENT_SERVER_JWT_SECRET") else "your_jwt_secret"
@@ -91,7 +91,7 @@ class RunServices:
         self.PATH_TO_CONF = PATH_TO_CONF
     @dispatch(str)    
     def RunService(self, RUN_FILE):
-        os.system(TLS_REJECT_UNAUTHORIZED + CERTIFICATE_PARAM + "node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
+        os.system(CERTIFICATE_PARAM + "node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
              " --app.appsettings=" + self.PATH_TO_CONF)
         return 1
         
@@ -99,7 +99,7 @@ class RunServices:
     def RunService(self, RUN_FILE, ENV_EXTENSION):
         if ENV_EXTENSION == "none":
             self.RunService(RUN_FILE)
-        os.system(TLS_REJECT_UNAUTHORIZED + CERTIFICATE_PARAM + "node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
+        os.system(CERTIFICATE_PARAM + "node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
              " --app.appsettings=" + self.PATH_TO_CONF +\
                 " --app.environment=" + ENV_EXTENSION)
         return 1
@@ -166,7 +166,6 @@ filePath = "/app/onlyoffice/config/appsettings.json"
 jsonData = openJsonFile(filePath)
 #jsonUpdateValue = parseJsonValue(jsonValue)
 updateJsonData(jsonData,"$.ConnectionStrings.default.connectionString", "Server="+ MYSQL_CONNECTION_HOST +";Port="+ MYSQL_PORT +";Database="+ MYSQL_DATABASE +";User ID="+ MYSQL_USER +";Password="+ MYSQL_PASSWORD +";Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;ConnectionReset=false;AllowPublicKeyRetrieval=true",)
-updateJsonData(jsonData,"$.core.server-root", APP_CORE_SERVER_ROOT)
 updateJsonData(jsonData,"$.core.base-domain", APP_CORE_BASE_DOMAIN)
 updateJsonData(jsonData,"$.core.machinekey", APP_CORE_MACHINEKEY)
 updateJsonData(jsonData,"$.core.products.subfolder", "server")
@@ -263,6 +262,12 @@ jsonData["Redis"].update(REDIS_USER_NAME) if REDIS_USER_NAME is not None else No
 jsonData["Redis"].update(REDIS_PASSWORD) if REDIS_PASSWORD is not None else None
 writeJsonFile(filePath, jsonData)
 
+filePath = "/var/www/services/ASC.Migration.Runner/service/appsettings.runner.json"
+jsonData = openJsonFile(filePath)
+updateJsonData(jsonData, "$.options.Providers[0].ConnectionString", "Server=" + MYSQL_CONNECTION_HOST + ";Database=" + MYSQL_DATABASE + ";User ID=" + MYSQL_USER + ";Password=" + MYSQL_PASSWORD + ";Command Timeout=100")
+updateJsonData(jsonData, "$.options.TeamlabsiteProviders[0].ConnectionString", "Server=" + MYSQL_CONNECTION_HOST + ";Database=" + MYSQL_DATABASE + ";User ID=" + MYSQL_USER + ";Password=" + MYSQL_PASSWORD + ";Command Timeout=100")
+writeJsonFile(filePath, jsonData)
+
 if LOG_LEVEL:
     filePath = "/app/onlyoffice/config/nlog.config"
     with open(filePath, 'r') as f:
@@ -281,5 +286,11 @@ if os.path.exists(PLUGINS_DIR) and not os.path.exists(DATA_PLUGINS_DIR):
         dpd_item = os.path.join(DATA_PLUGINS_DIR, item)
         shutil.copytree(pd_item, dpd_item) if os.path.isdir(pd_item) else shutil.copy2(pd_item, dpd_item)
 
-run = RunServices(SERVICE_PORT, PATH_TO_CONF)
-run.RunService(RUN_FILE, ENV_EXTENSION, LOG_FILE)
+if RUN_FILE == "supervisord -n":
+    dll = os.path.join(SRC_PATH, "services", "ASC.Migration.Runner", "service", "ASC.Migration.Runner.dll")
+    if os.path.isfile(dll):
+        call(f"dotnet {dll} standalone=true", shell=True)
+    call("supervisord -n", shell=True)
+else:
+    run = RunServices(SERVICE_PORT, PATH_TO_CONF)
+    run.RunService(RUN_FILE, ENV_EXTENSION, LOG_FILE)
