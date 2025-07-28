@@ -660,26 +660,10 @@ change_elasticsearch_config(){
 		sed -i "s/Dlog4j2.formatMsgNoLookups.*/Dlog4j2.formatMsgNoLookups=true/" ${ELASTIC_SEARCH_JAVA_CONF_PATH} 
 	fi
 
-	local TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1);
-	local MEMORY_REQUIREMENTS=12000; #RAM ~12Gb
-
-	if [ ${TOTAL_MEMORY} -gt ${MEMORY_REQUIREMENTS} ]; then
-		ELASTICSEATCH_MEMORY="4g"
-	else
-		ELASTICSEATCH_MEMORY="1g"
-	fi
-
-	if grep -qE "^[^#]*-Xms[0-9]g" "${ELASTIC_SEARCH_JAVA_CONF_PATH}"; then
-		sed -i "s/-Xms[0-9]g/-Xms${ELASTICSEATCH_MEMORY}/" "${ELASTIC_SEARCH_JAVA_CONF_PATH}"
-	else
-		echo "-Xms${ELASTICSEATCH_MEMORY}" >> "${ELASTIC_SEARCH_JAVA_CONF_PATH}"
-	fi
-
-	if grep -qE "^[^#]*-Xmx[0-9]g" "${ELASTIC_SEARCH_JAVA_CONF_PATH}"; then
-		sed -i "s/-Xmx[0-9]g/-Xmx${ELASTICSEATCH_MEMORY}/" "${ELASTIC_SEARCH_JAVA_CONF_PATH}"
-	else
-		echo "-Xmx${ELASTICSEATCH_MEMORY}" >> "${ELASTIC_SEARCH_JAVA_CONF_PATH}"
-	fi
+	local SAFE_MEMORY=$(( ( $(free --mega | grep -oP '\d+' | head -n 1) - 1024 ) / 2 )) # half of the remaining memory after the 1 GB reserve for the OS
+	local HEAP=$(( SAFE_MEMORY < 2048 ? 1 : SAFE_MEMORY < 4096 ? 2 : 4 ))  #if <2GB → 1GB; <4GB → 2GB; otherwise → 4GB
+	grep -qE "^[^#]*-Xms[0-9]g" "${ELASTIC_SEARCH_JAVA_CONF_PATH}" && sed -i "s/-Xms[0-9]g/-Xms${HEAP}/" "${ELASTIC_SEARCH_JAVA_CONF_PATH}" || echo "-Xms${HEAP}" >> "${ELASTIC_SEARCH_JAVA_CONF_PATH}"
+	grep -qE "^[^#]*-Xmx[0-9]g" "${ELASTIC_SEARCH_JAVA_CONF_PATH}" && sed -i "s/-Xmx[0-9]g/-Xmx${HEAP}/" "${ELASTIC_SEARCH_JAVA_CONF_PATH}" || echo "-Xmx${HEAP}" >> "${ELASTIC_SEARCH_JAVA_CONF_PATH}"
 
 	if [ -d /etc/opensearch/ ]; then 
 		chmod g+ws /etc/opensearch/
