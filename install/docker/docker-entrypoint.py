@@ -262,6 +262,12 @@ jsonData["Redis"].update(REDIS_USER_NAME) if REDIS_USER_NAME is not None else No
 jsonData["Redis"].update(REDIS_PASSWORD) if REDIS_PASSWORD is not None else None
 writeJsonFile(filePath, jsonData)
 
+filePath = "/var/www/services/ASC.Migration.Runner/service/appsettings.runner.json"
+jsonData = openJsonFile(filePath)
+updateJsonData(jsonData, "$.options.Providers[0].ConnectionString", "Server=" + MYSQL_CONNECTION_HOST + ";Database=" + MYSQL_DATABASE + ";User ID=" + MYSQL_USER + ";Password=" + MYSQL_PASSWORD + ";Command Timeout=100")
+updateJsonData(jsonData, "$.options.TeamlabsiteProviders[0].ConnectionString", "Server=" + MYSQL_CONNECTION_HOST + ";Database=" + MYSQL_DATABASE + ";User ID=" + MYSQL_USER + ";Password=" + MYSQL_PASSWORD + ";Command Timeout=100")
+writeJsonFile(filePath, jsonData)
+
 if LOG_LEVEL:
     filePath = "/app/onlyoffice/config/nlog.config"
     with open(filePath, 'r') as f:
