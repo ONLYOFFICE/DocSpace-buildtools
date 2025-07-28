@@ -197,24 +197,30 @@ RUN echo "--- install runtime node.22 ---" && \
     EXPOSE 5050
     ENTRYPOINT ["python3", "/usr/bin/docker-entrypoint.py"]
     
-    FROM eclipse-temurin:21-jre-alpine AS javarun
-    ARG BUILD_PATH
-    ARG SRC_PATH
-    ENV BUILD_PATH=${BUILD_PATH}
-    
-    RUN echo "--- install runtime eclipse-temurin:21 ---" && \ 
-        mkdir -p /var/log/onlyoffice && \
-        mkdir -p /var/www/onlyoffice && \
-        addgroup -S -g 107 onlyoffice && \
-        adduser -S -u 104 -h /var/www/onlyoffice -G onlyoffice onlyoffice && \
-        chown onlyoffice:onlyoffice /var/log -R  && \
-        chown onlyoffice:onlyoffice /var/www -R && \
-        apk add --no-cache sudo bash nano curl && \
-        echo "--- clean up ---" && \
-        rm -rf \
-        /var/lib/apt/lists/* \
-        /tmp/*
-    
+FROM eclipse-temurin:21-jre AS javarun
+ARG BUILD_PATH
+ARG SRC_PATH
+ENV BUILD_PATH=${BUILD_PATH}
+
+RUN echo "--- install runtime eclipse-temurin:21 ---" && \
+    mkdir -p /var/log/onlyoffice && \
+    mkdir -p /var/www/onlyoffice && \
+    groupadd -g 107 onlyoffice && \
+    useradd -u 104 -g onlyoffice -d /var/www/onlyoffice -s /bin/bash onlyoffice && \
+    chown onlyoffice:onlyoffice /var/log -R && \
+    chown onlyoffice:onlyoffice /var/www -R && \
+    chown onlyoffice:onlyoffice /run -R && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        sudo \
+        bash \
+        nano \
+        curl \
+        supervisor && \
+    echo "--- clean up ---" && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/*
+
     COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-identity-entrypoint.sh /usr/bin/docker-identity-entrypoint.sh
     USER onlyoffice
     ENTRYPOINT ["bash", "/usr/bin/docker-identity-entrypoint.sh"]
@@ -599,3 +605,15 @@ COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/A
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/node_services.conf /etc/supervisor/conf.d/supervisord.conf
 
 CMD ["supervisord -n"]
+
+## Java Services ##
+FROM noderun AS java_services
+
+# Copy docker-entrypoint.sh
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-identity-entrypoint.sh /usr/bin/docker-identity-entrypoint.sh
+    
+COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Identity/authorization/authorization-container/target/*.jar ${BUILD_PATH}/services/ASC.Identity.Authorization/app.jar
+COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Identity/registration/registration-container/target/*.jar ${BUILD_PATH}/services/ASC.Identity.Registration/app.jar
+
+# Copy supervisord config
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/java_services.conf /etc/supervisor/conf.d/supervisord.conf
