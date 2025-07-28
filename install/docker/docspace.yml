@@ -6,6 +6,7 @@ x-healthcheck: &x-healthcheck
   timeout: 10s
 
 x-service: &x-service-base
+  env_file: "./.env"
   container_name: base
   user: "${UID}:${GID}"
   restart: always
@@ -23,7 +24,6 @@ x-service: &x-service-base
     APP_DOTNET_ENV: ${APP_DOTNET_ENV}
     APP_KNOWN_NETWORKS: ${APP_KNOWN_NETWORKS}
     APP_KNOWN_PROXIES: ${APP_KNOWN_PROXIES}
-    APP_CORE_SERVER_ROOT: ${APP_CORE_SERVER_ROOT}
     APP_CORE_BASE_DOMAIN: ${APP_CORE_BASE_DOMAIN}
     APP_CORE_MACHINEKEY: ${APP_CORE_MACHINEKEY}
     APP_URL_PORTAL: ${APP_URL_PORTAL}
@@ -62,137 +62,38 @@ x-service: &x-service-base
     - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
 
 services:
-  onlyoffice-backup-background-tasks:
+  onlyoffice-dotnet-services:
     <<: *x-service-base
-    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-backup-background:${DOCKER_TAG}"
-    container_name: ${BACKUP_BACKGRUOND_TASKS_HOST}
-    healthcheck:
-      <<: *x-healthcheck
-      test: curl --fail http://${SERVICE_BACKUP_BACKGRUOND_TASKS}/health/ || exit 1
+    build:
+      context: ./
+      dockerfile: "${DOCKERFILE}"
+      target: dotnet_services
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-dotnet:${DOCKER_TAG}"
+    container_name: onlyoffice-dotnet-services
+    
+  onlyoffice-node-services:
+    <<: *x-service-base
+    build:
+      context: ./
+      dockerfile: "${DOCKERFILE}"
+      target: node_services
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-node:${DOCKER_TAG}"
+    container_name: onlyoffice-node-services
 
-  onlyoffice-backup:
+  onlyoffice-java-services:
     <<: *x-service-base
-    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-backup:${DOCKER_TAG}"
-    container_name: ${BACKUP_HOST}
-    healthcheck:
-      <<: *x-healthcheck
-      test: curl --fail http://${SERVICE_BACKUP}/health/ || exit 1
-
-  onlyoffice-clear-events:
-    <<: *x-service-base
-    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-clear-events:${DOCKER_TAG}"
-    container_name: ${CLEAR_EVENTS_HOST}
-    healthcheck:
-      <<: *x-healthcheck
-      test: curl --fail http://${SERVICE_CLEAR_EVENTS}/health/ || exit 1
-
-  onlyoffice-files:
-    <<: *x-service-base
-    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-files:${DOCKER_TAG}"
-    container_name: ${FILES_HOST}
-    healthcheck:
-      <<: *x-healthcheck
-      test: curl --fail http://${SERVICE_FILES}/health/ || exit 1
-
-  onlyoffice-files-services:
-    <<: *x-service-base
-    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-files-services:${DOCKER_TAG}"
-    container_name: ${FILES_SERVICES_HOST}
-    healthcheck:
-      <<: *x-healthcheck
-      test: curl --fail http://${SERVICE_FILES_SERVICES}/health/ || exit 1
-
-  onlyoffice-people-server:
-    <<: *x-service-base
-    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-people-server:${DOCKER_TAG}"
-    container_name: ${PEOPLE_SERVER_HOST}
-    healthcheck:
-      <<: *x-healthcheck
-      test: curl --fail http://${SERVICE_PEOPLE_SERVER}/health/ || exit 1
-
-  onlyoffice-socket:
-    <<: *x-service-base
-    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-socket:${DOCKER_TAG}"
-    container_name: ${SOCKET_HOST}
-    healthcheck:
-      <<: *x-healthcheck
-      test: curl --fail http://${SERVICE_SOCKET}/health/ || exit 1
-    expose:
-      - ${SERVICE_PORT}
-
-  onlyoffice-studio-notify:
-    <<: *x-service-base
-    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-studio-notify:${DOCKER_TAG}"
-    container_name: ${STUDIO_NOTIFY_HOST}
-    healthcheck:
-      <<: *x-healthcheck
-      test: curl --fail http://${SERVICE_STUDIO_NOTIFY}/health/ || exit 1
-
-  onlyoffice-api:
-    <<: *x-service-base
-    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-api:${DOCKER_TAG}"
-    container_name: ${API_HOST}
-    healthcheck:
-      <<: *x-healthcheck
-      test: curl --fail http://${SERVICE_API}/health/ || exit 1
-
-  onlyoffice-api-system:
-    <<: *x-service-base
-    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-api-system:${DOCKER_TAG}"
-    container_name: ${API_SYSTEM_HOST}
-    healthcheck:
-      <<: *x-healthcheck
-      test: curl --fail http://${SERVICE_API_SYSTEM}/health/ || exit 1
-
-  onlyoffice-studio:
-    <<: *x-service-base
-    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-studio:${DOCKER_TAG}"
-    container_name: ${STUDIO_HOST}
-    healthcheck:
-      <<: *x-healthcheck
-      test: curl --fail http://${SERVICE_STUDIO}/health/ || exit 1
-
-  onlyoffice-ssoauth:
-    <<: *x-service-base
-    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-ssoauth:${DOCKER_TAG}"
-    container_name: ${SSOAUTH_HOST}
-    healthcheck:
-      <<: *x-healthcheck
-      test: curl --fail http://${SERVICE_SSOAUTH}/health/ || exit 1
-    expose:
-      - ${SERVICE_PORT}
-      - "9834"
-
-  onlyoffice-doceditor:
-    <<: *x-service-base
-    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-doceditor:${DOCKER_TAG}"
-    container_name: ${DOCEDITOR_HOST}
-    expose:
-      - "5013"
-    healthcheck:
-      <<: *x-healthcheck
-      test: curl --fail http://${SERVICE_DOCEDITOR}/doceditor/health || exit 1
-
-  onlyoffice-sdk:
-    <<: *x-service-base
-    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-sdk:${DOCKER_TAG}"
-    container_name: ${SDK_HOST}
-    healthcheck:
-      <<: *x-healthcheck
-      test: curl --fail http://${SERVICE_SDK}/sdk/health || exit 1
-
-  onlyoffice-login:
-    <<: *x-service-base
-    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-login:${DOCKER_TAG}"
-    container_name: ${LOGIN_HOST}
-    expose:
-      - "5011"
-    healthcheck:
-      <<: *x-healthcheck
-      test: curl --fail http://${SERVICE_LOGIN}/login/health || exit 1
+    build:
+      context: ./
+      dockerfile: "${DOCKERFILE}"
+      target: java_services
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-java:${DOCKER_TAG}"
+    container_name: onlyoffice-java-services
 
   onlyoffice-router:
-    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-router:${DOCKER_TAG}"
+    build:
+      context: ./
+      dockerfile: "${DOCKERFILE}"
+      target: router
     container_name: ${ROUTER_HOST}
     user: "${UID}:${GID}"
     restart: always
@@ -204,21 +105,9 @@ services:
       - "8099"
       - "8092"
     depends_on:
-      - onlyoffice-backup-background-tasks
-      - onlyoffice-backup
-      - onlyoffice-clear-events
-      - onlyoffice-files
-      - onlyoffice-files-services
-      - onlyoffice-people-server
-      - onlyoffice-socket
-      - onlyoffice-studio-notify
-      - onlyoffice-api
-      - onlyoffice-api-system
-      - onlyoffice-studio
-      - onlyoffice-ssoauth
-      - onlyoffice-doceditor
-      - onlyoffice-sdk
-      - onlyoffice-login
+      - onlyoffice-dotnet-services
+      - onlyoffice-node-services
+      - onlyoffice-java-services
     environment:
       - SERVICE_BACKUP=${SERVICE_BACKUP}
       - SERVICE_FILES=${SERVICE_FILES}
