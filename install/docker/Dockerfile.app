@@ -613,7 +613,7 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
 CMD ["supervisord -n"]
 
 ## Java Services ##
-FROM noderun AS java_services
+FROM javarun AS java_services
 
 # Copy docker-entrypoint.sh
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-identity-entrypoint.sh /usr/bin/docker-identity-entrypoint.sh
