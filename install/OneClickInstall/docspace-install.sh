@@ -135,7 +135,8 @@ fi
 [ "$LOCAL_SCRIPTS" != "true" ] && curl -s -O ${DOWNLOAD_URL_PREFIX}/${SCRIPT_NAME}
 
 if [ "$ENABLE_LOGGING" = "true" ]; then
-    command -v script >/dev/null 2>&1 || { command -v dnf >/dev/null 2>&1 && dnf -y install util-linux; } || ENABLE_LOGGING="false"
+    command -v script >/dev/null 2>&1 || { command -v dnf >/dev/null 2>&1 && dnf -y install util-linux-script; }
+    command -v script >/dev/null 2>&1 || ENABLE_LOGGING="false"
     if [ "$ENABLE_LOGGING" = "true" ]; then
         LOG_FILE="OneClick${SCRIPT_NAME%.sh}_$(date +%Y%m%d_%H%M%S).log"
         touch "${LOG_FILE}" || { echo "Failed to create log file"; exit 1; }
