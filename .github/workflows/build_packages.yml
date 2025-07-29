@@ -125,7 +125,7 @@ jobs:
             deb) SOURCE_DIR="${PACKAGE_DIRECTORY}/install/${{ matrix.packageType }}/debian/source" ;;
             rpm) SOURCE_DIR="${PACKAGE_DIRECTORY}/install/${{ matrix.packageType }}/SPECS/SOURCES" ;;
           esac
-          download() { wget -q -O "${SOURCE_DIR}/$3.tar.gz" "https://github.com/ONLYOFFICE/$1/archive/$2.tar.gz" && echo -e "\e[32m[OK] $3\e[0m" || echo -e "\e[31m[FAILED] $3\e[0m"; }
+          download() { wget -q -O "${SOURCE_DIR}/$3.tar.gz" "https://codeload.github.com/ONLYOFFICE/$1/tar.gz/$2" && echo -e "\e[32m[OK] $3\e[0m" || echo -e "\e[31m[FAILED] $3\e[0m"; }
           download "$PRODUCT-buildtools"  "$BRANCH_BUILDTOOLS"      buildtools &
           download "$PRODUCT-client"      "$BRANCH_CLIENT"          client &
           download "$PRODUCT-server"      "$BRANCH_SERVER"          server &

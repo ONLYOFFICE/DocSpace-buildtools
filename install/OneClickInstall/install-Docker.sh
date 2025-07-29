@@ -646,7 +646,7 @@ download_files () {
 		if [ -z "${GIT_BRANCH}" ]; then
 			DOWNLOAD_URL="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/docker.tar.gz"
 		else
-			DOWNLOAD_URL="https://github.com/${PACKAGE_SYSNAME}/${PRODUCT}-buildtools/archive/${GIT_BRANCH}.tar.gz"
+			DOWNLOAD_URL="https://codeload.github.com/${PACKAGE_SYSNAME}/${PRODUCT}-buildtools/tar.gz/${GIT_BRANCH}"
 			STRIP_COMPONENTS="--strip-components=3 --wildcards */install/docker/*"
 		fi
 
