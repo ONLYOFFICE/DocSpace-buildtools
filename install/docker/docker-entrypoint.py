@@ -293,8 +293,11 @@ if os.path.exists(PLUGINS_DIR) and not os.path.exists(DATA_PLUGINS_DIR):
 
 if RUN_FILE == "supervisord -n":
     dll = os.path.join(SRC_PATH, "services", "ASC.Migration.Runner", "service", "ASC.Migration.Runner.dll")
-    if os.path.isfile(dll):
-        call(f"dotnet {dll} standalone=true", shell=True)
+if os.path.isfile(dll):
+    result = call(f"dotnet {dll} standalone=true", shell=True)
+    if result != 0:
+        print("Migration not applied")
+        exit(result)
     call("supervisord -n", shell=True)
 else:
     run = RunServices(SERVICE_PORT, PATH_TO_CONF)
