@@ -292,9 +292,10 @@ if os.path.exists(PLUGINS_DIR) and not os.path.exists(DATA_PLUGINS_DIR):
         shutil.copytree(pd_item, dpd_item) if os.path.isdir(pd_item) else shutil.copy2(pd_item, dpd_item)
 
 if RUN_FILE == "supervisord -n":
-    dll = os.path.join(SRC_PATH, "services", "ASC.Migration.Runner", "service", "ASC.Migration.Runner.dll")
+dll_dir = os.path.join(SRC_PATH, "services", "ASC.Migration.Runner", "service")
+dll = os.path.join(dll_dir, "ASC.Migration.Runner.dll")
 if os.path.isfile(dll):
-    result = call(f"dotnet {dll} standalone=true", shell=True)
+    result = call(f"dotnet ASC.Migration.Runner.dll standalone=true", shell=True, cwd=dll_dir)
     if result != 0:
         print("Migration not applied")
         exit(result)
