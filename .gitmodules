@@ -1,3 +1,3 @@
 [submodule "config/document-formats"]
 	path = config/document-formats
-	url = git@github.com:ONLYOFFICE/document-formats.git
+	url = https://github.com/ONLYOFFICE/document-formats
