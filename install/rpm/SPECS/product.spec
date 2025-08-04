@@ -116,9 +116,16 @@ fi
 
 %preun
 
+if [ "$1" -eq 0 ]; then
+    systemctl list-unit-files | awk '/^%{product}.*\.service/{print $1}' \
+    | xargs -r -I{} sh -c 'systemctl stop "{}" >/dev/null 2>&1 || true; systemctl disable "{}" >/dev/null 2>&1 || true'
+    systemctl daemon-reload >/dev/null 2>&1 || true
+fi
+
 %postun
 
 if [ "$1" -eq 0 ]; then
+    systemctl reset-failed >/dev/null 2>&1 || true
     rm -rf %{buildpath}
 fi
 
