@@ -6,7 +6,6 @@ x-healthcheck: &x-healthcheck
   timeout: 10s
 
 x-service: &x-service-base
-  env_file: "./.env"
   container_name: base
   user: "${UID}:${GID}"
   restart: always
@@ -27,6 +26,10 @@ x-service: &x-service-base
     APP_CORE_BASE_DOMAIN: ${APP_CORE_BASE_DOMAIN}
     APP_CORE_MACHINEKEY: ${APP_CORE_MACHINEKEY}
     APP_URL_PORTAL: ${APP_URL_PORTAL}
+    APP_STORAGE_ROOT: ${APP_STORAGE_ROOT}
+    PATH_TO_CONF: ${PATH_TO_CONF}
+    LOG_DIR: ${LOG_DIR}
+    SRC_PATH: ${SRC_PATH}
     INSTALLATION_TYPE: ${INSTALLATION_TYPE}
     OAUTH_REDIRECT_URL: ${OAUTH_REDIRECT_URL}
     DOCUMENT_SERVER_JWT_SECRET: ${DOCUMENT_SERVER_JWT_SECRET}
