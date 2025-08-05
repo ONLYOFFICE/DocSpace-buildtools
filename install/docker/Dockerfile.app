@@ -188,6 +188,7 @@ RUN echo "--- install runtime node.22 ---" && \
     curl \
     vim \
     supervisor \
+    default-mysql-client \
     python3-pip && \
     pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces && \
     echo "--- clean up ---" && \
