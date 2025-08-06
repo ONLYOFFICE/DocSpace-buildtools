@@ -92,7 +92,8 @@ RUN apt-get -y update && \
     rm -rf /var/lib/apt/lists/* && \
     rm -rf /usr/share/nginx/html/* 
 
-# copy static services files and config values 
+# copy static services files and config values
+COPY --from=base /etc/nginx/includes /etc/nginx/includes
 COPY --from=base /etc/nginx/conf.d /etc/nginx/conf.d
 COPY --from=base /etc/nginx/html /etc/nginx/html
 
