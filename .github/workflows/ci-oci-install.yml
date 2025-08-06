@@ -2,7 +2,7 @@ name: Install OneClickInstall DocSpace
 
 on:
   schedule:
-    - cron: '00 20 * * 0'
+    - cron: "00 20 * * 0"
 
   workflow_dispatch:
     inputs:

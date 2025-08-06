@@ -100,7 +100,7 @@ function prepare_vm() {
           ;;
 
       debian)
-          [ "$VERSION_CODENAME" == "bookworm" ] && apt-get update -y && apt install -y curl gnupg
+          [ "$VERSION_CODENAME" == "bookworm" ] && apt-get update -y && apt install -y gnupg
           apt-get remove postfix -y && echo "${COLOR_GREEN}[OK] PREPARE_VM: Postfix was removed${COLOR_RESET}"
           [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-deb
           ;;
@@ -143,6 +143,11 @@ EOF
       echo "${COLOR_RED}File /etc/os-release doesn't exist${COLOR_RESET}"; exit 1
   fi
 
+  # Ensure curl is installed
+  if ! command -v curl >/dev/null 2>&1; then
+    (command -v apt-get >/dev/null 2>&1 && apt-get update -y && apt-get install -y curl) || (command -v dnf >/dev/null 2>&1 && dnf install -y curl)
+  fi
+
   # Clean up home folder
   rm -rf /home/vagrant/*
   [ -d /tmp/docspace ] && mv /tmp/docspace/* /home/vagrant
@@ -161,7 +166,7 @@ EOF
 #   Script log
 #############################################################################################
 function install_docspace() {
-  [[ "${DOWNLOAD_SCRIPTS}" == 'true' ]] && wget https://download.onlyoffice.com/docspace/docspace-install.sh || sed 's/set -e/set -xe/' -i *.sh
+  [[ "${DOWNLOAD_SCRIPTS}" == 'true' ]] && curl -fsSLO https://download.onlyoffice.com/docspace/docspace-install.sh || sed 's/set -e/set -xe/' -i *.sh
   bash docspace-install.sh package ${ARGUMENTS} -log false || { echo "Exit code non-zero. Exit with 1."; exit 1; }
   echo "Exit code 0. Continue..."
 }
