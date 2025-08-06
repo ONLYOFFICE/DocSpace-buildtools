@@ -87,9 +87,9 @@ if [ "$LOCAL_SCRIPTS" = "true" ]; then
 	source install-RedHat/install-preq.sh
 	source install-RedHat/install-app.sh
 else
-	source <(curl "${DOWNLOAD_URL_PREFIX}"/tools.sh)
-	source <(curl "${DOWNLOAD_URL_PREFIX}"/bootstrap.sh)
-	source <(curl "${DOWNLOAD_URL_PREFIX}"/check-ports.sh)
-	source <(curl "${DOWNLOAD_URL_PREFIX}"/install-preq.sh)
-	source <(curl "${DOWNLOAD_URL_PREFIX}"/install-app.sh)
+	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/tools.sh)
+	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/bootstrap.sh)
+	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/check-ports.sh)
+	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/install-preq.sh)
+	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/install-app.sh)
 fi
