@@ -624,3 +624,5 @@ COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/A
 
 # Copy supervisord config
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/java_services.conf /etc/supervisor/conf.d/supervisord.conf
+
+ENTRYPOINT ["/usr/bin/supervisord", "-n"]
