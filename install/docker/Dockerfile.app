@@ -164,7 +164,7 @@ COPY --from=src --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/only
 
 USER onlyoffice
 EXPOSE 5050
-ENTRYPOINT ["python3", "/usr/bin/docker-entrypoint.py"]
+ENTRYPOINT ["python3", "docker-entrypoint.py"]
 
 FROM node:22-slim AS noderun
 ARG BUILD_PATH
@@ -188,7 +188,6 @@ RUN echo "--- install runtime node.22 ---" && \
     curl \
     vim \
     supervisor \
-    default-mysql-client \
     python3-pip && \
     pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces && \
     echo "--- clean up ---" && \
@@ -199,7 +198,7 @@ RUN echo "--- install runtime node.22 ---" && \
 COPY --from=src --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
 USER onlyoffice
 EXPOSE 5050
-ENTRYPOINT ["python3", "/usr/bin/docker-entrypoint.py"]
+ENTRYPOINT ["python3", "docker-entrypoint.py"]
 
 FROM eclipse-temurin:21-jre AS javarun
 ARG BUILD_PATH
@@ -585,6 +584,7 @@ COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/servi
 # Copy supervisord config
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/dotnet_services.conf /etc/supervisor/conf.d/supervisord.conf
 
+WORKDIR /usr/bin/
 CMD ["supervisord -n"]
 
 ## Node Services ##
@@ -611,6 +611,7 @@ COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/A
 # Copy supervisord config
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/node_services.conf /etc/supervisor/conf.d/supervisord.conf
 
+WORKDIR /usr/bin/
 CMD ["supervisord -n"]
 
 ## Java Services ##
