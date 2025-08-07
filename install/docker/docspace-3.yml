@@ -1,0 +1,166 @@
+x-healthcheck: &x-healthcheck
+  test: curl --fail http://127.0.0.1 || exit 1
+  interval: 60s
+  retries: 5
+  start_period: 20s
+  timeout: 10s
+
+x-service: &x-service-base
+  container_name: base
+  user: "${UID}:${GID}"
+  restart: always
+  expose:
+    - ${SERVICE_PORT}
+  environment:
+    MYSQL_CONTAINER_NAME: ${MYSQL_CONTAINER_NAME}
+    MYSQL_HOST: ${MYSQL_HOST}
+    MYSQL_PORT: ${MYSQL_PORT}
+    MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    MYSQL_DATABASE: ${MYSQL_DATABASE}
+    MYSQL_USER: ${MYSQL_USER}
+    MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    DATABASE_MIGRATION: ${DATABASE_MIGRATION}
+    APP_DOTNET_ENV: ${APP_DOTNET_ENV}
+    APP_KNOWN_NETWORKS: ${APP_KNOWN_NETWORKS}
+    APP_KNOWN_PROXIES: ${APP_KNOWN_PROXIES}
+    APP_CORE_SERVER_ROOT: ${APP_CORE_SERVER_ROOT}
+    APP_CORE_BASE_DOMAIN: ${APP_CORE_BASE_DOMAIN}
+    APP_CORE_MACHINEKEY: ${APP_CORE_MACHINEKEY}
+    APP_URL_PORTAL: ${APP_URL_PORTAL}
+    APP_STORAGE_ROOT: ${APP_STORAGE_ROOT}
+    PATH_TO_CONF: ${PATH_TO_CONF}
+    LOG_DIR: ${LOG_DIR}
+    SRC_PATH: ${SRC_PATH}
+    INSTALLATION_TYPE: ${INSTALLATION_TYPE}
+    OAUTH_REDIRECT_URL: ${OAUTH_REDIRECT_URL}
+    DOCUMENT_SERVER_JWT_SECRET: ${DOCUMENT_SERVER_JWT_SECRET}
+    DOCUMENT_SERVER_JWT_HEADER: ${DOCUMENT_SERVER_JWT_HEADER}
+    DOCUMENT_SERVER_URL_PUBLIC: ${DOCUMENT_SERVER_URL_PUBLIC}
+    DOCUMENT_CONTAINER_NAME: ${DOCUMENT_CONTAINER_NAME}
+    DOCUMENT_SERVER_URL_EXTERNAL: ${DOCUMENT_SERVER_URL_EXTERNAL}
+    ELK_CONTAINER_NAME: ${ELK_CONTAINER_NAME}
+    ELK_SHEME: ${ELK_SHEME}
+    ELK_HOST: ${ELK_HOST}
+    ELK_PORT: ${ELK_PORT}
+    REDIS_CONTAINER_NAME: ${REDIS_CONTAINER_NAME}
+    REDIS_HOST: ${REDIS_HOST}
+    REDIS_PORT: ${REDIS_PORT}
+    REDIS_USER_NAME: ${REDIS_USER_NAME}
+    REDIS_PASSWORD: ${REDIS_PASSWORD}
+    REDIS_DB: ${REDIS_DB}
+    RABBIT_CONTAINER_NAME: ${RABBIT_CONTAINER_NAME}
+    RABBIT_PROTOCOL: ${RABBIT_PROTOCOL}
+    RABBIT_HOST: ${RABBIT_HOST}
+    RABBIT_PORT: ${RABBIT_PORT}
+    RABBIT_VIRTUAL_HOST: ${RABBIT_VIRTUAL_HOST}
+    RABBIT_USER_NAME: ${RABBIT_USER_NAME}
+    RABBIT_PASSWORD: ${RABBIT_PASSWORD}
+    ROUTER_HOST: ${ROUTER_HOST}
+    LOG_LEVEL: ${LOG_LEVEL}
+    DEBUG_INFO: ${DEBUG_INFO}
+    CERTIFICATE_PATH: ${CERTIFICATE_PATH}
+    NODE_OPTIONS: ${NODE_OPTIONS}
+    SPRING_PROFILES_ACTIVE: ${IDENTITY_PROFILE}
+    SPRING_APPLICATION_SIGNATURE_SECRET: ${APP_CORE_MACHINEKEY}
+    SPRING_APPLICATION_ENCRYPTION_SECRET: ${IDENTITY_ENCRYPTION_SECRET}
+    IDENTITY_AUTHORIZATION_SERVER_PORT: ${IDENTITY_AUTHORIZATION_SERVER_PORT}
+    IDENTITY_API_SERVER_PORT: ${IDENTITY_API_SERVER_PORT}
+    JDBC_URL: ${MYSQL_CONTAINER_NAME}
+    JDBC_DATABASE: ${MYSQL_DATABASE}
+    JDBC_USER_NAME: ${MYSQL_USER}
+    JDBC_PASSWORD: ${MYSQL_PASSWORD}
+    REDIS_USERNAME: ${REDIS_USER_NAME}
+  volumes:
+    #- /app/onlyoffice/CommunityServer/data:/app/onlyoffice/data
+    - ${VOLUMES_DIR:+${VOLUMES_DIR}/}app_data:/app/onlyoffice/data
+    - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
+
+services:
+  onlyoffice-dotnet-services:
+    <<: *x-service-base
+    build:
+      context: ./
+      dockerfile: "${DOCKERFILE}"
+      target: dotnet_services
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-dotnet:${DOCKER_TAG}"
+    container_name: onlyoffice-dotnet-services
+    
+  onlyoffice-node-services:
+    <<: *x-service-base
+    build:
+      context: ./
+      dockerfile: "${DOCKERFILE}"
+      target: node_services
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-node:${DOCKER_TAG}"
+    container_name: onlyoffice-node-services
+
+  onlyoffice-java-services:
+    <<: *x-service-base
+    build:
+      context: ./
+      dockerfile: "${DOCKERFILE}"
+      target: java_services
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-java:${DOCKER_TAG}"
+    container_name: onlyoffice-java-services
+
+  onlyoffice-router:
+    build:
+      context: ./
+      dockerfile: "${DOCKERFILE}"
+      target: router
+    container_name: ${ROUTER_HOST}
+    user: "${UID}:${GID}"
+    restart: always
+    healthcheck:
+      <<: *x-healthcheck
+      test: nginx -t || exit 1
+    expose:
+      - "8081"
+      - "8099"
+      - "8092"
+    depends_on:
+      - onlyoffice-dotnet-services
+      - onlyoffice-node-services
+      - onlyoffice-java-services
+    environment:
+      - SERVICE_BACKUP=${SERVICE_BACKUP}
+      - SERVICE_FILES=${SERVICE_FILES}
+      - SERVICE_FILES_SERVICES=${SERVICE_FILES_SERVICES}
+      - SERVICE_CLEAR_EVENTS=${SERVICE_CLEAR_EVENTS}
+      - SERVICE_NOTIFY=${SERVICE_NOTIFY}
+      - SERVICE_PEOPLE_SERVER=${SERVICE_PEOPLE_SERVER}
+      - SERVICE_SOCKET=${SERVICE_SOCKET}
+      - SERVICE_IDENTITY_API=${SERVICE_IDENTITY_API}
+      - SERVICE_IDENTITY=${SERVICE_IDENTITY}
+      - SERVICE_STUDIO_NOTIFY=${SERVICE_STUDIO_NOTIFY}
+      - SERVICE_API=${SERVICE_API}
+      - SERVICE_API_SYSTEM=${SERVICE_API_SYSTEM}
+      - SERVICE_STUDIO=${SERVICE_STUDIO}
+      - SERVICE_SSOAUTH=${SERVICE_SSOAUTH}
+      - SERVICE_DOCEDITOR=${SERVICE_DOCEDITOR}
+      - SERVICE_SDK=${SERVICE_SDK}
+      - SERVICE_LOGIN=${SERVICE_LOGIN}
+      - SERVICE_HELTHCHECKS=${SERVICE_HELTHCHECKS}
+      - WRONG_PORTAL_NAME_URL=${WRONG_PORTAL_NAME_URL}
+      - DOCUMENT_CONTAINER_NAME=${DOCUMENT_CONTAINER_NAME}
+      - DOCUMENT_SERVER_URL_EXTERNAL=${DOCUMENT_SERVER_URL_EXTERNAL}
+      - REDIS_CONTAINER_NAME=${REDIS_CONTAINER_NAME}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DB=${REDIS_DB}
+      - SERVICE_PORT=${SERVICE_PORT}
+      - DASHBOARDS_CONTAINER_NAME=${DASHBOARDS_CONTAINER_NAME}
+      - DASHBOARDS_USERNAME=${DASHBOARDS_USERNAME}
+      - DASHBOARDS_PASSWORD=${DASHBOARDS_PASSWORD}
+    volumes:
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
+
+networks:
+  default:
+    name: ${NETWORK_NAME}
+    external: true
+
+volumes:
+  log_data:
+  app_data:
