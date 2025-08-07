@@ -535,8 +535,8 @@ ENTRYPOINT ["./app/docker-entrypoint.sh"]
 
 # Dotnet Services ##
 FROM dotnetrun AS dotnet_services
-
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py /usr/bin/docker-entrypoint.py
+WORKDIR /usr/bin/
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
 
 ## ASC.Data.Backup.BackgroundTasks ##
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Data.Backup.BackgroundTasks/service/  ${BUILD_PATH}/services/ASC.Data.Backup.BackgroundTasks/service
@@ -589,9 +589,9 @@ CMD ["supervisord -n"]
 
 ## Node Services ##
 FROM noderun AS node_services
+WORKDIR /usr/bin/
 
-# Copy docker-entrypoint.sh
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py /usr/bin/docker-entrypoint.py
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
 
 # ASC.Sdk
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/ ${BUILD_PATH}/products/ASC.Sdk/sdk/
@@ -611,7 +611,6 @@ COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/A
 # Copy supervisord config
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/node_services.conf /etc/supervisor/conf.d/supervisord.conf
 
-WORKDIR /usr/bin/
 CMD ["supervisord -n"]
 
 ## Java Services ##
