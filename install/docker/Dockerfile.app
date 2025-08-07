@@ -224,9 +224,9 @@ RUN echo "--- install runtime eclipse-temurin:21 ---" && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/*
 
-    COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-identity-entrypoint.sh /usr/bin/docker-identity-entrypoint.sh
-    USER onlyoffice
-    ENTRYPOINT ["bash", "/usr/bin/docker-identity-entrypoint.sh"]
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-identity-entrypoint.sh /usr/bin/docker-identity-entrypoint.sh
+USER onlyoffice
+ENTRYPOINT ["bash", "/usr/bin/docker-identity-entrypoint.sh"]
 
 ## Nginx image ##
 FROM openresty/openresty:focal AS router
