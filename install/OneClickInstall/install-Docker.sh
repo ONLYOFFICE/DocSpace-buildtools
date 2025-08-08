@@ -604,6 +604,7 @@ while [ "$1" != "" ]; do
 			echo "      -ckf, --certkeyfile               path to the private key file for the certificate"
 			echo "      -dhf, --dhparamfile               path to the dhparam file for the certificate"
 			echo "      -off, --offline                   set the script for offline installation (true|false)"
+			echo "      -eh, --extrahosts                   specify extra hostname resolution (DOMAIN:IP)"
 			echo "      -noni, --noninteractive           auto confirm all questions (true|false)"
 			echo "      -dbm, --databasemigration         database migration (true|false)"
 			echo "      -ms, --makeswap                   make swap file (true|false)"
