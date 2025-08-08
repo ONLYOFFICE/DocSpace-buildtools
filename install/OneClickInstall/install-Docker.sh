@@ -541,6 +541,13 @@ while [ "$1" != "" ]; do
 			fi
 		;;
 
+		-eh | --extrahosts )
+			if [ "$2" != "" ]; then
+				EXTRA_HOSTS=$2
+				shift
+			fi
+		;;
+
 
 		-h | -? | --help )
 			echo "  Usage: bash $HELP_TARGET [PARAMETER] [[PARAMETER], ...]"
@@ -1127,6 +1134,7 @@ set_docspace_params() {
 	CERTIFICATE_PATH=${CERTIFICATE_PATH:-$(get_env_parameter "CERTIFICATE_PATH")}
 	CERTIFICATE_KEY_PATH=${CERTIFICATE_KEY_PATH:-$(get_env_parameter "CERTIFICATE_KEY_PATH")}
 	DHPARAM_PATH=${DHPARAM_PATH:-$(get_env_parameter "DHPARAM_PATH")}
+	EXTRA_HOSTS=${EXTRA_HOSTS:-$(get_env_parameter "EXTRA_HOSTS")}
 }
 
 set_installation_type_data () {
@@ -1390,6 +1398,7 @@ check_docker_image () {
 	reconfigure INSTALLATION_TYPE ${INSTALLATION_TYPE}
 	reconfigure NETWORK_NAME ${NETWORK_NAME}
 	reconfigure VOLUMES_DIR ${VOLUMES_DIR}
+	reconfigure EXTRA_HOSTS ${EXTRA_HOSTS}
 	
 	reconfigure MYSQL_VERSION ${MYSQL_VERSION}
 	reconfigure ELK_VERSION ${ELK_VERSION}
