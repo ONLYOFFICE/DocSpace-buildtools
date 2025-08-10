@@ -536,56 +536,72 @@ ENTRYPOINT ["./app/docker-entrypoint.sh"]
 # Dotnet Services ##
 FROM dotnetrun AS dotnet_services
 WORKDIR /usr/bin/
+
+# Entrypoint
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
 
-## ASC.Data.Backup.BackgroundTasks ##
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Data.Backup.BackgroundTasks/service/  ${BUILD_PATH}/services/ASC.Data.Backup.BackgroundTasks/service
-
-# ASC.ApiSystem ##
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.ApiSystem/service/  ${BUILD_PATH}/services/ASC.ApiSystem/service/
-
-## ASC.ClearEvents ##
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.ClearEvents/service/  ${BUILD_PATH}/services/ASC.ClearEvents/service/
-
-## ASC.Data.Backup ##
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Data.Backup/service/ ${BUILD_PATH}/services/ASC.Data.Backup/service/
-
-## ASC.Files ##
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Files/service/ ${BUILD_PATH}/products/ASC.Files/server/
-
-## ASC.Files.Service ##
-ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Files.Service/service/ ${BUILD_PATH}/products/ASC.Files/service/
-COPY --from=onlyoffice/ffvideo:7.1 --chown=onlyoffice:onlyoffice /app/src/ ${BUILD_PATH}/products/ASC.Files/service/
-
-## ASC.Migration.Runner ##
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Migration.Runner/service/ ${BUILD_PATH}/services/ASC.Migration.Runner/service/
-
-## ASC.Notify ##
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Notify/service/ ${BUILD_PATH}/services/ASC.Notify/service/
-
-## ASC.People ##
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.People/service/ ${BUILD_PATH}/products/ASC.People/server/
-
-## ASC.Studio.Notify ##
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Studio.Notify/service/ ${BUILD_PATH}/services/ASC.Studio.Notify/service/
-
-## ASC.Web.Api ##
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Web.Api/service/ ${BUILD_PATH}/services/ASC.Web.Api/service/
-
-## ASC.Web.Studio ##
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/plugins/publish/ ${BUILD_PATH}/studio/plugins
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Web.Studio/service/ ${BUILD_PATH}/services/ASC.Web.Studio/service/
-
-## ASC.Web.HealthChecks.UI ##
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-healthchecks-entrypoint.sh ${BUILD_PATH}/services/ASC.Web.HealthChecks.UI/service/docker-healthchecks-entrypoint.sh
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Web.HealthChecks.UI/service/ ${BUILD_PATH}/services/ASC.Web.HealthChecks.UI/service/
-
-# Copy supervisord config
+# Supervisord config
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/dotnet_services.conf /etc/supervisor/conf.d/supervisord.conf
 
-WORKDIR /usr/bin/
-CMD ["supervisord -n"]
+# Common dotnet services
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice \
+  ${SRC_PATH}/publish/services/ASC.Data.Backup.BackgroundTasks/service/ \
+  ${SRC_PATH}/publish/services/ASC.ApiSystem/service/ \
+  ${SRC_PATH}/publish/services/ASC.ClearEvents/service/ \
+  ${SRC_PATH}/publish/services/ASC.Data.Backup/service/ \
+  ${SRC_PATH}/publish/services/ASC.Migration.Runner/service/ \
+  ${SRC_PATH}/publish/services/ASC.Notify/service/ \
+  ${SRC_PATH}/publish/services/ASC.Studio.Notify/service/ \
+  ${SRC_PATH}/publish/services/ASC.Web.Api/service/ \
+  ${SRC_PATH}/publish/services/ASC.Web.Studio/service/ \
+  ${SRC_PATH}/publish/services/ASC.Web.HealthChecks.UI/service/ \
+  ${BUILD_PATH}/services/
+
+# Dotnet product services
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice \
+  ${SRC_PATH}/publish/services/ASC.Files/service/ ${BUILD_PATH}/products/ASC.Files/server/
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice \
+  ${SRC_PATH}/publish/services/ASC.People/service/ ${BUILD_PATH}/products/ASC.People/server/
+
+## ASC.Files.Service ##
+USER root
+ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice \
+  ${SRC_PATH}/publish/services/ASC.Files.Service/service/ ${BUILD_PATH}/products/ASC.Files/service/
+COPY --from=onlyoffice/ffvideo:7.1 --chown=onlyoffice:onlyoffice \
+  /app/src/ ${BUILD_PATH}/products/ASC.Files/service/
+
+RUN <<EOF
+    #!/bin/bash
+    set -xe
+    ARCH_LINUX=$(lscpu | grep Architecture | awk '{print $2}')
+    echo "--- ADD necessary lib for arh: ${ARCH_LINUX} ---"
+    if [ "$ARCH_LINUX" = "x86_64" ] ; then
+        apt update && \
+        apt install -y \
+            libasound2t64 \
+            libdrm2 \
+            libv4l-0t64 \
+            libplacebo-dev \
+            libxcb-shape0 \
+            ocl-icd-opencl-dev 
+    fi
+    if [ "$ARCH_LINUX" = "aarch64" ] ; then
+        apt update && \
+        apt install -y \
+            libasound2t64 \
+            libv4l-0t64
+    fi 
+    rm -rf /var/lib/apt/lists/* \
+    /tmp/*
+EOF
+USER onlyoffice
+
+# Node build output for Web Studio
+COPY --from=build-node --chown=onlyoffice:onlyoffice \
+  ${SRC_PATH}/plugins/publish/ ${BUILD_PATH}/studio/plugins
+
+CMD ["supervisord", "-n"]
 
 ## Node Services ##
 FROM noderun AS node_services
