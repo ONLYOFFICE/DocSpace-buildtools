@@ -601,7 +601,7 @@ USER onlyoffice
 COPY --from=build-node --chown=onlyoffice:onlyoffice \
   ${SRC_PATH}/plugins/publish/ ${BUILD_PATH}/studio/plugins
 
-CMD ["supervisord", "-n"]
+CMD ["supervisord -n"]
 
 ## Node Services ##
 FROM noderun AS node_services
