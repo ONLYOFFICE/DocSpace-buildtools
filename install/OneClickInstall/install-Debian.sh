@@ -83,7 +83,7 @@ fi
 if [ "${LOCAL_SCRIPTS}" == "true" ]; then
 	source install-Debian/bootstrap.sh
 else
-	source <(curl ${DOWNLOAD_URL_PREFIX}/bootstrap.sh)
+	source <(curl -sS ${DOWNLOAD_URL_PREFIX}/bootstrap.sh)
 fi
 
 # add onlyoffice repo
@@ -102,8 +102,8 @@ if [ "${LOCAL_SCRIPTS}" == "true" ]; then
 	source install-Debian/install-preq.sh
 	source install-Debian/install-app.sh
 else
-	source <(curl "${DOWNLOAD_URL_PREFIX}"/tools.sh)
-	source <(curl "${DOWNLOAD_URL_PREFIX}"/check-ports.sh)
-	source <(curl "${DOWNLOAD_URL_PREFIX}"/install-preq.sh)
-	source <(curl "${DOWNLOAD_URL_PREFIX}"/install-app.sh)
+	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/tools.sh)
+	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/check-ports.sh)
+	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/install-preq.sh)
+	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/install-app.sh)
 fi

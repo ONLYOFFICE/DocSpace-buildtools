@@ -65,7 +65,7 @@ jobs:
           fi
           export DOCKER_TAG
           echo "DOCKER_TAG=${DOCKER_TAG}" >> ${GITHUB_OUTPUT}
-          docker buildx bake -f build.yml \
+          docker buildx bake --sbom=true --provenance=mode=max -f build.yml \
           --set *.args.GIT_BRANCH=${{ matrix.branch }} \
           --set *.args.PRODUCT_VERSION=${PRODUCT_VERSION} \
           --set *.args.BUILD_NUMBER=${BUILD_NUMBER} \

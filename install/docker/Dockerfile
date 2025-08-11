@@ -60,8 +60,11 @@ RUN mkdir -p /app/onlyoffice/ && \
     cp config/*.config /app/onlyoffice/config/ && \
     mkdir -p ${SRC_PATH}/buildtools/deploy/client && \
     mkdir -p ${SRC_PATH}/buildtools/deploy/public && \
-    mkdir -p /etc/nginx/conf.d && cp -f config/nginx/onlyoffice*.conf /etc/nginx/conf.d/ && \
-    mkdir -p /etc/nginx/includes/ && cp -f config/nginx/includes/onlyoffice*.conf /etc/nginx/includes/ && \
+    mkdir -p /etc/nginx/conf.d && \
+    cp -f config/nginx/onlyoffice*.conf /etc/nginx/conf.d/ && \
+    mkdir -p /etc/nginx/includes/ && \
+    cp -f config/nginx/includes/onlyoffice*.conf /etc/nginx/includes/ && \
+    cp -f config/nginx/includes/server-*.conf /etc/nginx/includes/ && \
     sed -i "s/\"number\".*,/\"number\": \"${PRODUCT_VERSION}.${BUILD_NUMBER}\",/g" /app/onlyoffice/config/appsettings.json && \
     sed -e 's/#//' -i /etc/nginx/conf.d/onlyoffice.conf && \
     cd ${SRC_PATH}/buildtools/install/common/ && \
