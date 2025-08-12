@@ -23,7 +23,7 @@ jobs:
           sudo wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
           sudo chmod +x /usr/local/bin/yq
       - name: Update OS list in README
-        working-directory: "${{ github.repository#*/ }}"
+        working-directory: ${{ github.event.repository.name }}
         run: |
           OS_LIST=$(yq -r '.jobs.prepare.steps[] | select(.name == "Set matrix names") | .run' .github/workflows/ci-oci-install.yml \
             | grep -oP '"name"\s*:\s*"\K[^"]+' \
@@ -41,7 +41,7 @@ jobs:
           ' install/OneClickInstall/README.md > README.new \
           && mv README.new install/OneClickInstall/README.md
       - name: Commit changes (if any)
-        working-directory: "${{ github.repository#*/ }}"
+        working-directory: ${{ github.event.repository.name }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
