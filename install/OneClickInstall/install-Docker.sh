@@ -105,16 +105,15 @@ LETS_ENCRYPT_MAIL=""
 IDENTITY_ENCRYPTION_SECRET=""
 
 OFFLINE_INSTALLATION="false"
-
 SKIP_HARDWARE_CHECK="false"
+
+SERVICES=(migration-runner identity notify "${PRODUCT}" healthchecks proxy)
+COMPOSE_FILES=($(printf '%s\n' "${SERVICES[@]}" | sed "s|^|-f ${BASE_DIR}/|; s|\$|.yml|"));
 
 EXTERNAL_PORT="80"
 ARGS_SCRIPT="install-Docker-args.sh"
 DOWNLOAD_URL_PREFIX="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}"
 GIT_BRANCH=$(echo "$@" | grep -oP '(?<=-gb )\S+')
-
-SERVICES=(migration-runner identity notify "${PRODUCT}" healthchecks proxy)
-COMPOSE_FILES=($(printf '%s\n' "${SERVICES[@]}" | sed "s|^|-f ${BASE_DIR}/|; s|\$|.yml|"));
 
 if [[ -n "${GIT_BRANCH:-}" ]]; then
   DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${PACKAGE_SYSNAME^^}/${PRODUCT}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
