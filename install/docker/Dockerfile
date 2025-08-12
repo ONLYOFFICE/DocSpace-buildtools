@@ -81,6 +81,7 @@ RUN mkdir -p /app/onlyoffice/ && \
     rm -rf ${SRC_PATH}/products/ASC.Files/Service/* && \
     rm -rf ${SRC_PATH}/products/ASC.Files/Server/* && \
     rm -rf ${SRC_PATH}/products/ASC.People/Server/* && \
+    rm -rf ${SRC_PATH}/products/ASC.AI/Service/* && \
     rm -rf ${SRC_PATH}/products/ASC.AI/Server/*
 
 FROM $DOTNET_RUN as dotnetrun
@@ -294,12 +295,21 @@ CMD ["ASC.People.dll", "ASC.People"]
 
 ## ASC.AI ##
 FROM dotnetrun AS ai
-WORKDIR ${BUILD_PATH}products/ASC.AI/server/
+WORKDIR ${BUILD_PATH}/products/ASC.AI/server/
 
 COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.AI/service/ .
 
 CMD ["ASC.AI.dll", "ASC.AI"]
+
+## ASC.AI.Service ##
+FROM dotnetrun AS ai_service
+WORKDIR ${BUILD_PATH}/products/ASC.AI/service/
+
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
+COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.AI/service/ .
+
+CMD ["ASC.AI.Service.dll", "ASC.AI.Service", "core:eventBus:subscriptionClientName=asc_event_bus_ai_service_queue"]
 
 ## ASC.Socket.IO ##
 FROM noderun AS socket

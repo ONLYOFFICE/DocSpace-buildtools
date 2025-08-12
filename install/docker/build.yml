@@ -97,6 +97,13 @@ services:
       target: ai
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-ai:${DOCKER_TAG}"
 
+  onlyoffice-ai-service:
+    build:
+      context: ./
+      dockerfile: "${DOCKERFILE}"
+      target: ai_service
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-ai-service:${DOCKER_TAG}"
+
   onlyoffice-bin-share:
     build:
       context: ./

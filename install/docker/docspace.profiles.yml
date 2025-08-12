@@ -224,6 +224,14 @@ services:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_AI}/health/ || exit 1
 
+  onlyoffice-ai-service:
+    <<: [*x-service-base, *x-profiles-backend]
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-ai-service:${DOCKER_TAG}"
+    container_name: ${AI_SERVICE_HOST}
+    healthcheck:
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_AI_SERVICE}/health/ || exit 1
+
   onlyoffice-ssoauth:
     <<: [*x-service-base, *x-profiles-backend]
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-ssoauth:${DOCKER_TAG}"
@@ -284,6 +292,7 @@ services:
       - SERVICE_API_SYSTEM=${SERVICE_API_SYSTEM}
       - SERVICE_STUDIO=${SERVICE_STUDIO}
       - SERVICE_AI=${SERVICE_AI}
+      - SERVICE_AI_SERVICE=${SERVICE_AI_SERVICE}
       - SERVICE_SSOAUTH=${SERVICE_SSOAUTH}
       - SERVICE_TELEGRAMREPORTS=${SERVICE_TELEGRAMREPORTS}
       - SERVICE_DOCEDITOR=${SERVICE_DOCEDITOR}

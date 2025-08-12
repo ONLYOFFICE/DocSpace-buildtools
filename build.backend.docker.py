@@ -250,6 +250,7 @@ if skip_build == False:
         "products/ASC.Files/Service",
         "products/ASC.People/Server",
         "products/ASC.AI/Server",
+        "products/ASC.AI/Service",
         "common/services/ASC.Data.Backup",
         "common/services/ASC.Notify",
         "common/services/ASC.Studio.Notify",

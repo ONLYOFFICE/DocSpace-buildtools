@@ -49,5 +49,6 @@ sed -i "s!localhost:5003!${STUDIO_HOST}!g" ${PATH_TO_CONF}/appsettings.json
 sed -i "s!localhost:9899!${SOCKET_HOST}!g" ${PATH_TO_CONF}/appsettings.json
 sed -i "s!localhost:9834!${SSOAUTH_HOST}!g" ${PATH_TO_CONF}/appsettings.json
 sed -i "s!localhost:5157!${AI_HOST}!g" ${PATH_TO_CONF}/appsettings.json
+sed -i "s!localhost:5124!${AI_SERVICE_HOST}!g" ${PATH_TO_CONF}/appsettings.json
      
 dotnet ${RUN_DLL} --urls=${URLS} 

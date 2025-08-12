@@ -446,6 +446,15 @@ COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/servi
 
 CMD ["ASC.AI.dll", "ASC.AI"]
 
+## ASC.AI.Service ##
+FROM dotnetrun AS ai_service
+WORKDIR ${BUILD_PATH}/products/ASC.AI/service/
+
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.AI.Service/service/ .
+
+CMD ["ASC.AI.Service.dll", "ASC.AI.Service", "core:eventBus:subscriptionClientName=asc_event_bus_ai_service_queue"] 
+
 ## ASC.Socket.IO ##
 FROM noderun AS socket
 WORKDIR ${BUILD_PATH}/services/ASC.Socket.IO/
