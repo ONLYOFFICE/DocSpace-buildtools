@@ -46,12 +46,12 @@ jobs:
         run: |
           matrix=$(echo '{
             "include": [
-              {"execute": '${{ github.event.inputs.rhel9 || true }}', "name": "RHEL9", "os": "rhel9", "distr": "onlyoffice"},
-              {"execute": '${{ github.event.inputs.centos9s || true }}', "name": "CentOS9S", "os": "centos9s", "distr": "onlyoffice"},
-              {"execute": '${{ github.event.inputs.debian11 || true }}', "name": "Debian11", "os": "debian11", "distr": "onlyoffice"},
-              {"execute": '${{ github.event.inputs.debian12 || true }}', "name": "Debian12", "os": "debian12", "distr": "onlyoffice"},
-              {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu22.04", "os": "ubuntu2204", "distr": "onlyoffice"},
-              {"execute": '${{ github.event.inputs.ubuntu2404 || true }}', "name": "Ubuntu22.04", "os": "ubuntu2404", "distr": "onlyoffice"}
+              {"execute": '${{ github.event.inputs.rhel9 || true }}', "name": "RHEL9", "os": "docspace-rhel9", "distr": "onlyoffice"},
+              {"execute": '${{ github.event.inputs.centos9s || true }}', "name": "CentOS9S", "os": "docspace-centos9s", "distr": "onlyoffice"},
+              {"execute": '${{ github.event.inputs.debian11 || true }}', "name": "Debian11", "os": "docspace-debian11", "distr": "onlyoffice"},
+              {"execute": '${{ github.event.inputs.debian12 || true }}', "name": "Debian12", "os": "docspace-debian12", "distr": "onlyoffice"},
+              {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu22.04", "os": "docspace-ubuntu2204", "distr": "onlyoffice"},
+              {"execute": '${{ github.event.inputs.ubuntu2404 || true }}', "name": "Ubuntu22.04", "os": "docspace-ubuntu2404", "distr": "onlyoffice"}
             ]
           }' | jq -c '{include: [.include[] | select(.execute == true)]}')
           echo "matrix=${matrix}" >> $GITHUB_OUTPUT
@@ -95,7 +95,7 @@ jobs:
                 cd tests/vagrant
                 TEST_CASE='--local-install' \
                 DISTR='${{ matrix.distr }}' \
-                OS='docspace-${{ matrix.os }}' \
+                OS='${{ matrix.os }}' \
                 RAM='8192' \
                 CPU='3' \
                 DOWNLOAD_SCRIPT='-ds false' \
