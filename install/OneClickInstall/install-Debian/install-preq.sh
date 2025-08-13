@@ -133,6 +133,39 @@ else
 	"${ELASTIC_PLUGIN}" list | grep -q ingest-attachment && "${ELASTIC_PLUGIN}" remove -s ingest-attachment
 fi
 
+mkdir -p /etc/systemd/system/opensearch.service.d
+cat >/etc/systemd/system/opensearch.service.d/override.conf <<EOF
+[Service]
+Environment=DISABLE_INSTALL_DEMO_CONFIG=true
+Environment=OPENSEARCH_INITIAL_ADMIN_PASSWORD=${package_sysname}!A1
+Environment=OPENSEARCH_JAVA_HOME=/usr/share/opensearch/jdk
+TimeoutStartSec=180
+EOF
+systemctl daemon-reload
+
+chown -R opensearch:opensearch /var/lib/opensearch /var/log/opensearch
+chmod -R 750 /var/lib/opensearch /var/log/opensearch
+chown root:opensearch /etc/opensearch
+chmod 750 /etc/opensearch
+
+if ! grep -q 'vm.max_map_count' /etc/sysctl.d/90-opensearch.conf 2>/dev/null; then
+  echo 'vm.max_map_count=262144' > /etc/sysctl.d/90-opensearch.conf
+  sysctl --system
+fi
+
+systemctl enable --now opensearch
+
+for i in {1..30}; do
+  if curl -sS -m 1 http://127.0.0.1:9200/ >/dev/null; then
+    echo "OpenSearch is up"; break
+  fi
+  sleep 1
+  if [ $i -eq 30 ]; then
+    echo "OpenSearch failed to respond on :9200"; systemctl status opensearch --no-pager; journalctl -u opensearch -n 60 --no-pager
+  fi
+done
+
+
 # Set Java ${JAVA_VERSION} as the default version
 JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*temurin-${JAVA_VERSION}*" | head -1)
 update-alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && update-alternatives --set java "$JAVA_PATH"
