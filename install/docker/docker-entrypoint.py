@@ -3,6 +3,7 @@ from jsonpath_ng import jsonpath, parse
 from os import environ
 from multipledispatch import dispatch
 from netaddr import *
+import fileinput
 from subprocess import call
 
 filePath = None
