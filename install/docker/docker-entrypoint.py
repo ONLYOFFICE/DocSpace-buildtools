@@ -276,6 +276,13 @@ if os.path.isfile(filePath):
     updateJsonData(jsonData, "$.options.TeamlabsiteProviders[0].ConnectionString", conn_str)
     writeJsonFile(filePath, jsonData)
 
+healthcheck_config_path = os.path.join(SRC_PATH, "services", "ASC.Web.HealthChecks.UI", "service", "appsettings.json")
+if os.path.isfile(healthcheck_config_path):
+    for line in fileinput.input(healthcheck_config_path, inplace=True):
+        line = line.replace("localhost:9899", f"{NODE_CONTAINER_NAME}:{SERVICE_SOCKET_PORT}")
+        line = line.replace("localhost:9834", f"{NODE_CONTAINER_NAME}:{SERVICE_SSOAUTH_PORT}")
+        sys.stdout.write(line)
+
 if LOG_LEVEL:
     filePath = "/app/onlyoffice/config/nlog.config"
     with open(filePath, 'r') as f:
