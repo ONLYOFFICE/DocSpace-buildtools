@@ -18,6 +18,9 @@ URLS = os.environ["URLS"] if environ.get("URLS") else "http://0.0.0.0:"
 PATH_TO_CONF = os.environ["PATH_TO_CONF"] if environ.get("PATH_TO_CONF") else "/app/" + PRODUCT + "/config"
 LOG_DIR = os.environ["LOG_DIR"] if environ.get("LOG_DIR") else "/var/log/" + PRODUCT
 SRC_PATH = os.environ.get("SRC_PATH", "/var/www")
+NODE_CONTAINER_NAME = os.environ["NODE_CONTAINER_NAME"] if os.environ.get("NODE_CONTAINER_NAME") else "onlyoffice-node-services"
+SERVICE_SOCKET_PORT = os.environ["SERVICE_SOCKET_PORT"] if os.environ.get("SERVICE_SOCKET_PORT") else "9899"
+SERVICE_SSOAUTH_PORT = os.environ["SERVICE_SSOAUTH_PORT"] if os.environ.get("SERVICE_SSOAUTH_PORT") else "9834"
 ROUTER_HOST = os.environ["ROUTER_HOST"] if environ.get("ROUTER_HOST") else "onlyoffice-router"
 SOCKET_HOST = os.environ["SOCKET_HOST"] if environ.get("SOCKET_HOST") else "onlyoffice-socket"
 
