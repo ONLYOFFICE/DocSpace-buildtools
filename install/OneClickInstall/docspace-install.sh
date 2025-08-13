@@ -135,10 +135,15 @@ fi
 [ "$LOCAL_SCRIPTS" != "true" ] && curl -s -O ${DOWNLOAD_URL_PREFIX}/${SCRIPT_NAME}
 
 if [ "$ENABLE_LOGGING" = "true" ]; then
-    LOG_FILE="OneClick${SCRIPT_NAME%.sh}_$(date +%Y%m%d_%H%M%S).log"
-    touch "${LOG_FILE}" || { echo "Failed to create log file"; exit 1; }
-    script -q -e "${LOG_FILE}" -c "bash ${SCRIPT_NAME} ${PARAMETERS}"
-    EXIT_CODE=${PIPESTATUS[0]}
+    command -v script >/dev/null 2>&1 || { command -v dnf >/dev/null 2>&1 && dnf -y install util-linux-script; }
+    if command -v script >/dev/null 2>&1; then
+        LOG_FILE="OneClick${SCRIPT_NAME%.sh}_$(date +%Y%m%d_%H%M%S).log"
+        touch "${LOG_FILE}" || { echo "Failed to create log file"; exit 1; }
+        script -q -e "${LOG_FILE}" -c "bash ${SCRIPT_NAME} ${PARAMETERS}"
+        EXIT_CODE=${PIPESTATUS[0]}
+    else
+        bash ${SCRIPT_NAME} ${PARAMETERS} || EXIT_CODE=$?
+    fi
 else
     bash ${SCRIPT_NAME} ${PARAMETERS} || EXIT_CODE=$?
 fi

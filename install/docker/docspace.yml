@@ -11,6 +11,8 @@ x-service: &x-service-base
   restart: always
   expose:
     - ${SERVICE_PORT}
+  extra_hosts:
+    - "${EXTRA_HOSTS:-placeholder.local:127.0.0.1}"
   environment:
     MYSQL_CONTAINER_NAME: ${MYSQL_CONTAINER_NAME}
     MYSQL_HOST: ${MYSQL_HOST}
@@ -23,6 +25,7 @@ x-service: &x-service-base
     APP_DOTNET_ENV: ${APP_DOTNET_ENV}
     APP_KNOWN_NETWORKS: ${APP_KNOWN_NETWORKS}
     APP_KNOWN_PROXIES: ${APP_KNOWN_PROXIES}
+    APP_CORE_SERVER_ROOT: ${APP_CORE_SERVER_ROOT}
     APP_CORE_BASE_DOMAIN: ${APP_CORE_BASE_DOMAIN}
     APP_CORE_MACHINEKEY: ${APP_CORE_MACHINEKEY}
     APP_URL_PORTAL: ${APP_URL_PORTAL}

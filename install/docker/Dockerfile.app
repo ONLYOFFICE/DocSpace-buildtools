@@ -12,6 +12,10 @@ ARG PRODUCT_VERSION=0.0.0
 ARG BUILD_NUMBER=0
 ARG DEBUG_INFO="true"
 
+ARG BUILDTOOLS_REPO="https://github.com/ONLYOFFICE/DocSpace-buildtools.git"
+ARG SERVER_REPO="https://github.com/ONLYOFFICE/DocSpace-Server.git"
+ARG CLIENT_REPO="https://github.com/ONLYOFFICE/DocSpace-Client.git"
+
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
@@ -19,12 +23,22 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*
 
 ADD https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/git/refs/heads/${GIT_BRANCH} version.json
-RUN echo "--- clone resources ---" && \
-    git clone -b ${GIT_BRANCH} --depth 30  https://github.com/ONLYOFFICE/DocSpace-buildtools.git ${SRC_PATH}/buildtools && \
-    git clone --recurse-submodules -b ${GIT_BRANCH} --depth 30  https://github.com/ONLYOFFICE/DocSpace-Server.git ${SRC_PATH}/server && \
-    git clone -b ${GIT_BRANCH} --depth 30  https://github.com/ONLYOFFICE/DocSpace-Client.git ${SRC_PATH}/client && \
-    git clone -b "master" --depth 1 https://github.com/ONLYOFFICE/docspace-plugins.git ${SRC_PATH}/plugins && \
-    git clone -b "master" --depth 1 https://github.com/ONLYOFFICE/ASC.Web.Campaigns.git ${SRC_PATH}/campaigns
+RUN <<EOF
+#!/bin/bash
+echo "--- clone resources ---"
+
+git clone -b $(echo "$(git ls-remote --exit-code --heads "${BUILDTOOLS_REPO}" "${GIT_BRANCH}"\
+ > /dev/null 2>&1 && echo "${GIT_BRANCH}" || echo "master")") --depth 30 ${BUILDTOOLS_REPO} ${SRC_PATH}/buildtools && \
+
+git clone --recurse-submodules -b $(echo "$(git ls-remote --exit-code --heads "${SERVER_REPO}" "${GIT_BRANCH}"\
+ > /dev/null 2>&1 && echo "${GIT_BRANCH}" || echo "master")") --depth 30 ${SERVER_REPO} ${SRC_PATH}/server && \
+
+git clone -b $(echo "$(git ls-remote --exit-code --heads "${CLIENT_REPO}" "${GIT_BRANCH}"\
+ > /dev/null 2>&1 && echo "${GIT_BRANCH}" || echo "master")") --depth 30 ${CLIENT_REPO} ${SRC_PATH}/client && \
+
+git clone -b "$( [ "$GIT_BRANCH" = develop ] && echo develop || echo master )" --depth 1 https://github.com/ONLYOFFICE/docspace-plugins.git ${SRC_PATH}/plugins && \
+git clone -b "master" --depth 1 https://github.com/ONLYOFFICE/ASC.Web.Campaigns.git ${SRC_PATH}/campaigns
+EOF
 
 WORKDIR ${SRC_PATH}/buildtools/config
 RUN <<EOF

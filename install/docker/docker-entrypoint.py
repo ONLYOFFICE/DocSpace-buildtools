@@ -27,6 +27,7 @@ MYSQL_USER = os.environ["MYSQL_USER"] if environ.get("MYSQL_USER") else "onlyoff
 MYSQL_PASSWORD = os.environ["MYSQL_PASSWORD"] if environ.get("MYSQL_PASSWORD") else "onlyoffice_pass"
 MYSQL_CONNECTION_HOST = MYSQL_HOST if MYSQL_HOST else MYSQL_CONTAINER_NAME
 
+APP_CORE_SERVER_ROOT = os.environ["APP_CORE_SERVER_ROOT"] if environ.get("APP_CORE_SERVER_ROOT") else None
 APP_CORE_BASE_DOMAIN = os.environ["APP_CORE_BASE_DOMAIN"] if environ.get("APP_CORE_BASE_DOMAIN") is not None else "localhost"
 APP_CORE_MACHINEKEY = os.environ["APP_CORE_MACHINEKEY"] if environ.get("APP_CORE_MACHINEKEY") else "your_core_machinekey"
 APP_URL_PORTAL = os.environ["APP_URL_PORTAL"] if environ.get("APP_URL_PORTAL") else "http://" + ROUTER_HOST + ":8092"
@@ -41,6 +42,7 @@ DISABLE_VALIDATE_TOKEN = os.environ["DISABLE_VALIDATE_TOKEN"] if environ.get("DI
 
 CERTIFICATE_PATH = os.environ.get("CERTIFICATE_PATH")
 CERTIFICATE_PARAM = "NODE_EXTRA_CA_CERTS=" + CERTIFICATE_PATH + " " if CERTIFICATE_PATH and os.path.exists(CERTIFICATE_PATH) else ""
+TLS_REJECT_UNAUTHORIZED = "NODE_TLS_REJECT_UNAUTHORIZED=1" if os.getenv("NODE_TLS_REJECT_UNAUTHORIZED", "").lower() in ("1","true","enable") else "";
 
 DOCUMENT_CONTAINER_NAME = os.environ["DOCUMENT_CONTAINER_NAME"] if environ.get("DOCUMENT_CONTAINER_NAME") else "onlyoffice-document-server"
 DOCUMENT_SERVER_JWT_SECRET = os.environ["DOCUMENT_SERVER_JWT_SECRET"] if environ.get("DOCUMENT_SERVER_JWT_SECRET") else "your_jwt_secret"
@@ -89,7 +91,7 @@ class RunServices:
         self.PATH_TO_CONF = PATH_TO_CONF
     @dispatch(str)    
     def RunService(self, RUN_FILE):
-        os.system(CERTIFICATE_PARAM + "node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
+        os.system(TLS_REJECT_UNAUTHORIZED + CERTIFICATE_PARAM + "node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
              " --app.appsettings=" + self.PATH_TO_CONF)
         return 1
         
@@ -97,7 +99,7 @@ class RunServices:
     def RunService(self, RUN_FILE, ENV_EXTENSION):
         if ENV_EXTENSION == "none":
             self.RunService(RUN_FILE)
-        os.system(CERTIFICATE_PARAM + "node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
+        os.system(TLS_REJECT_UNAUTHORIZED + CERTIFICATE_PARAM + "node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
              " --app.appsettings=" + self.PATH_TO_CONF +\
                 " --app.environment=" + ENV_EXTENSION)
         return 1
@@ -186,21 +188,33 @@ def waitForHostAvailable(HOST_URL, TIMEOUT=30, INTERVAL=5):
     while time.time() - START_TIME < TIMEOUT:
         try:
             RESPONSE = requests.get(HOST_URL, timeout=3)
-            if RESPONSE.status_code == 200:
-                LOG("INFORMATION", f"Host is available: {HOST_URL}")
+            if RESPONSE.ok:
+                LOG("INFORMATION", f"Host is available: {HOST_URL} ({RESPONSE.status_code})")
                 return True
             else:
                 LOG("WARNING", f"Received status {RESPONSE.status_code} from {HOST_URL}")
         except requests.RequestException as e:
             LOG("DEBUG", f"Connection error to {HOST_URL}: {e}")
+        except Exception as e:
+            LOG("CRITICAL", f"Unexpected error in check_docs_connection: {e}")
         time.sleep(INTERVAL)
 
-    LOG("ERROR", f"Host is not available after {TIMEOUT} seconds: {HOST_URL}")
+    LOG("ERROR", f"Host is not available after {TIMEOUT} seconds: {HOST_URL} ({RESPONSE.status_code})")
     return False
 
 def check_docs_connection():
     filePath = "/app/onlyoffice/config/appsettings.json"
     jsonData = openJsonFile(filePath)
+
+    MAX_RETRIES = 10
+    RETRY_INTERVAL = 30
+
+    if not waitForHostAvailable(DOCUMENT_SERVER_CONNECTION_HOST):
+        deleteJsonPath(jsonData, "$.files.docservice")
+        for _ in range(MAX_RETRIES):
+            time.sleep(RETRY_INTERVAL)
+            if waitForHostAvailable(DOCUMENT_SERVER_CONNECTION_HOST):
+                break
 
     if waitForHostAvailable(DOCUMENT_SERVER_CONNECTION_HOST):
         updateJsonData(jsonData, "$.files.docservice.url.portal", APP_URL_PORTAL)
@@ -208,13 +222,8 @@ def check_docs_connection():
         updateJsonData(jsonData, "$.files.docservice.url.internal", DOCUMENT_SERVER_CONNECTION_HOST)
         updateJsonData(jsonData, "$.files.docservice.secret.value", DOCUMENT_SERVER_JWT_SECRET)
         updateJsonData(jsonData, "$.files.docservice.secret.header", DOCUMENT_SERVER_JWT_HEADER)
-    else:
-        deleteJsonPath(jsonData, "$.files.docservice")
 
     writeJsonFile(filePath, jsonData)
-
-thread = threading.Thread(target=check_docs_connection, daemon=True)
-thread.start()
 
 #filePath = sys.argv[1]
 saveFilePath = filePath
@@ -224,6 +233,7 @@ filePath = "/app/onlyoffice/config/appsettings.json"
 jsonData = openJsonFile(filePath)
 #jsonUpdateValue = parseJsonValue(jsonValue)
 updateJsonData(jsonData,"$.ConnectionStrings.default.connectionString", "Server="+ MYSQL_CONNECTION_HOST +";Port="+ MYSQL_PORT +";Database="+ MYSQL_DATABASE +";User ID="+ MYSQL_USER +";Password="+ MYSQL_PASSWORD +";Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;ConnectionReset=false;AllowPublicKeyRetrieval=true",)
+updateJsonData(jsonData,"$.core.server-root", APP_CORE_SERVER_ROOT)
 updateJsonData(jsonData,"$.core.base-domain", APP_CORE_BASE_DOMAIN)
 updateJsonData(jsonData,"$.core.machinekey", APP_CORE_MACHINEKEY)
 updateJsonData(jsonData,"$.core.products.subfolder", "server")
@@ -332,6 +342,8 @@ if os.path.exists(PLUGINS_DIR) and not os.path.exists(DATA_PLUGINS_DIR):
         pd_item = os.path.join(PLUGINS_DIR, item)
         dpd_item = os.path.join(DATA_PLUGINS_DIR, item)
         shutil.copytree(pd_item, dpd_item) if os.path.isdir(pd_item) else shutil.copy2(pd_item, dpd_item)
+
+threading.Thread(target=check_docs_connection, daemon=True).start()
 
 run = RunServices(SERVICE_PORT, PATH_TO_CONF)
 run.RunService(RUN_FILE, ENV_EXTENSION, LOG_FILE)

@@ -35,7 +35,6 @@ PACKAGE_SYSNAME="onlyoffice"
 PRODUCT_NAME="DocSpace"
 PRODUCT=$(tr '[:upper:]' '[:lower:]' <<< ${PRODUCT_NAME})
 BASE_DIR="/app/$PACKAGE_SYSNAME"
-PROXY_YML="${BASE_DIR}/proxy.yml"
 STATUS=""
 DOCKER_TAG=""
 INSTALLATION_TYPE="ENTERPRISE"
@@ -106,8 +105,10 @@ LETS_ENCRYPT_MAIL=""
 IDENTITY_ENCRYPTION_SECRET=""
 
 OFFLINE_INSTALLATION="false"
-
 SKIP_HARDWARE_CHECK="false"
+
+SERVICES=(migration-runner identity notify "${PRODUCT}" healthchecks proxy)
+COMPOSE_FILES=($(printf '%s\n' "${SERVICES[@]}" | sed "s|^|-f ${BASE_DIR}/|; s|\$|.yml|"));
 
 EXTERNAL_PORT="80"
 ARGS_SCRIPT="install-Docker-args.sh"
@@ -124,12 +125,10 @@ uninstall() {
     read -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " REMOVE_DATA_SERVICES
 
 	if [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]]; then
-		SERVICES=("db" "rabbitmq" "redis" "opensearch" "dashboards" "fluent")
+		SERVICES+=("db" "rabbitmq" "redis" "opensearch" "dashboards" "fluent")
 	fi
 
-    SERVICES+=("${PRODUCT}" "ds" "identity" "proxy" "healthchecks" "notify" "migration-runner")
-
-    for SERVICE in "${SERVICES[@]}"; do
+    for SERVICE in "${SERVICES[@]}" "ds"; do
         if [[ -f "$BASE_DIR/$SERVICE.yml" ]]; then
             echo "Uninstallation of  $SERVICE and its volumes..."
             docker-compose -f "$BASE_DIR/$SERVICE.yml" down -v || echo "Failed to remove $SERVICE."
@@ -622,6 +621,7 @@ set_docspace_params() {
 	CERTIFICATE_PATH=${CERTIFICATE_PATH:-$(get_env_parameter "CERTIFICATE_PATH")}
 	CERTIFICATE_KEY_PATH=${CERTIFICATE_KEY_PATH:-$(get_env_parameter "CERTIFICATE_KEY_PATH")}
 	DHPARAM_PATH=${DHPARAM_PATH:-$(get_env_parameter "DHPARAM_PATH")}
+	EXTRA_HOSTS=${EXTRA_HOSTS:-$(get_env_parameter "EXTRA_HOSTS")}
 }
 
 set_installation_type_data () {
@@ -646,7 +646,7 @@ download_files () {
 		if [ -z "${GIT_BRANCH}" ]; then
 			DOWNLOAD_URL="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/docker.tar.gz"
 		else
-			DOWNLOAD_URL="https://github.com/${PACKAGE_SYSNAME}/${PRODUCT}-buildtools/archive/${GIT_BRANCH}.tar.gz"
+			DOWNLOAD_URL="https://codeload.github.com/${PACKAGE_SYSNAME}/${PRODUCT}-buildtools/tar.gz/${GIT_BRANCH}"
 			STRIP_COMPONENTS="--strip-components=3 --wildcards */install/docker/*"
 		fi
 
@@ -761,12 +761,7 @@ install_fluent_bit () {
 install_product () {
 	if [ "$INSTALL_PRODUCT" == "true" ]; then
 		[ "${UPDATE}" = "true" ] && LOCAL_CONTAINER_TAG="$(docker inspect --format='{{index .Config.Image}}' ${CONTAINER_NAME} | awk -F':' '{print $2}')"
-
-		if [ "${UPDATE}" = "true" ] && [ "${LOCAL_CONTAINER_TAG}" != "${DOCKER_TAG}" ]; then
-			docker-compose -f $BASE_DIR/build.yml pull
-			docker-compose -f $BASE_DIR/migration-runner.yml -f $BASE_DIR/identity.yml -f $BASE_DIR/notify.yml -f $BASE_DIR/healthchecks.yml -f ${PROXY_YML} down
-			docker-compose -f $BASE_DIR/${PRODUCT}.yml down
-		fi
+		[ "${UPDATE}" = "true" ] && [ "${LOCAL_CONTAINER_TAG}" != "${DOCKER_TAG}" ] && docker-compose "${COMPOSE_FILES[@]}" down
 
 		reconfigure ENV_EXTENSION ${ENV_EXTENSION}
 		reconfigure IDENTITY_PROFILE "${IDENTITY_PROFILE:-"prod,server"}"
@@ -787,11 +782,7 @@ install_product () {
 			timeout 30 bash -c "while [ $(docker wait ${PACKAGE_SYSNAME}-migration-runner) -ne 0 ]; do sleep 1; done;" && echo "OK" || echo "FAILED"
 		fi
 	
-		docker-compose -f $BASE_DIR/identity.yml up -d
-		docker-compose -f $BASE_DIR/${PRODUCT}.yml up -d
-		docker-compose -f ${PROXY_YML} up -d
-		docker-compose -f $BASE_DIR/notify.yml up -d
-		docker-compose -f $BASE_DIR/healthchecks.yml up -d
+		docker-compose "${COMPOSE_FILES[@]}" up -d
 
 		if [[ -n "${PREVIOUS_ELK_VERSION}" && "$(get_env_parameter "ELK_VERSION")" != "${PREVIOUS_ELK_VERSION}" ]]; then
 			docker ps -q -f name=${PACKAGE_SYSNAME}-elasticsearch | xargs -r docker stop
@@ -807,16 +798,16 @@ install_product () {
 		    env ${DHPARAM_PATH:+DHPARAM_PATH="$DHPARAM_PATH"} \
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup "${LETS_ENCRYPT_MAIL}" "${LETS_ENCRYPT_DOMAIN}"
 		#Fix for bug 70537 to ensure proper migration to version 3.0.0
-		elif [ "${UPDATE}" = "true" ] && [ -f "/etc/cron.d/${PRODUCT}-letsencrypt" ]; then
+		fi
+
+		if [ "${UPDATE}" = "true" ] && [ -f "/etc/cron.d/${PRODUCT}-letsencrypt" ]; then
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -r
+		elif [[ -n "$CERTIFICATE_KEY_PATH" || -n "$CERTIFICATE_PATH" || -n "$LETS_ENCRYPT_DOMAIN" || -n "$LETS_ENCRYPT_MAIL" ]]; then
+			echo -e "\e[31mERROR:\e[0m Missing required parameters for SSL setup"
+			echo "Run 'bash $BASE_DIR/config/${PRODUCT}-ssl-setup --help' for usage information."
 		fi
 	elif [ "$INSTALL_PRODUCT" == "pull" ]; then
-		docker-compose -f $BASE_DIR/identity.yml pull
-		docker-compose -f $BASE_DIR/migration-runner.yml pull
-		docker-compose -f $BASE_DIR/${PRODUCT}.yml pull
-		docker-compose -f ${PROXY_YML} pull
-		docker-compose -f $BASE_DIR/notify.yml pull
-		docker-compose -f $BASE_DIR/healthchecks.yml pull
+		docker-compose "${COMPOSE_FILES[@]}" pull
 	fi
 }
 
@@ -894,6 +885,7 @@ check_docker_image () {
 	reconfigure INSTALLATION_TYPE ${INSTALLATION_TYPE}
 	reconfigure NETWORK_NAME ${NETWORK_NAME}
 	reconfigure VOLUMES_DIR ${VOLUMES_DIR}
+	reconfigure EXTRA_HOSTS ${EXTRA_HOSTS}
 	
 	reconfigure MYSQL_VERSION ${MYSQL_VERSION}
 	reconfigure ELK_VERSION ${ELK_VERSION}
@@ -912,12 +904,7 @@ check_docker_image () {
 		[ "$INSTALL_DOCUMENT_SERVER" == "true" ]    && offline_check_docker_image ${BASE_DIR}/ds.yml
 
 		if [ "$INSTALL_PRODUCT" == "true" ]; then
-			offline_check_docker_image ${BASE_DIR}/migration-runner.yml
-			offline_check_docker_image ${BASE_DIR}/identity.yml
-			offline_check_docker_image ${BASE_DIR}/${PRODUCT}.yml
-			offline_check_docker_image ${BASE_DIR}/notify.yml
-			offline_check_docker_image ${BASE_DIR}/healthchecks.yml
-			offline_check_docker_image ${PROXY_YML}
+			printf '%s\n' "${SERVICES[@]}" | xargs -I{} offline_check_docker_image "$BASE_DIR/{}.yml"
 		fi
 	fi
 }

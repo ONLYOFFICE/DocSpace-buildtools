@@ -65,110 +65,110 @@ sudo bash <script-name> package -h
 ### Common flags
 > Works for both Docker and package installations
 
-| Flag                   | Value placeholder                          | Description                                        |
-|------------------------|--------------------------------------------|----------------------------------------------------|
-| `--installationtype`   | `community` \| `developer` \| `enterprise` | Choose the edition                                 |
-| `--update`             | `true` \| `false`                          | Update existing containers / packages              |
-| `--skiphardwarecheck`  | `true` \| `false`                          | Skip CPU/RAM/Disk checks                           |
-| `--makeswap`           | `true` \| `false`                          | Create a swap file automatically                   |
-| `--uninstall`          | `true` \| `false`                          | Remove an existing installation                    |
-| `--jwtheader`          | `<HEADER>`                                 | HTTP header used to pass the JWT                   |
-| `--jwtsecret`          | `<SECRET>`                                 | Secret key for JWT validation                      |
-| `--installfluentbit`   | `true` \| `false`                          | Install / update Fluent Bit                        |
-| `--dashboardsusername` | `<USER>`                                   | Username for `/dashboards/`                        |
-| `--dashboardspassword` | `<PASS>`                                   | Password for `/dashboards/`                        |
-| `--localscripts`       | `true` \| `false`                          | Run local scripts                                  |
+| Flag                   | Value placeholder                          | Default value      | Description                           |
+|------------------------|--------------------------------------------|--------------------|---------------------------------------|
+| `--installationtype`   | `community` \| `developer` \| `enterprise` | `enterprise`       | Choose the edition                    |
+| `--update`             | `true` \| `false`                          | `false`            | Update existing containers / packages |
+| `--skiphardwarecheck`  | `true` \| `false`                          | `false`            | Skip CPU/RAM/Disk checks              |
+| `--makeswap`           | `true` \| `false`                          | `true`             | Create a swap file automatically      |
+| `--uninstall`          | `true` \| `false`                          | `false`            | Remove an existing installation       |
+| `--jwtheader`          | `<HEADER>`                                 | `AuthorizationJwt` | HTTP header used to pass the JWT      |
+| `--jwtsecret`          | `<SECRET>`                                 | *(auto-generated)* | Secret key for JWT validation         |
+| `--installfluentbit`   | `true` \| `false`                          | `true`             | Install / update Fluent Bit           |
+| `--dashboardsusername` | `<USER>`                                   | `onlyoffice`       | Username for `/dashboards/`           |
+| `--dashboardspassword` | `<PASS>`                                   | *(auto-generated)* | Password for `/dashboards/`           |
+| `--localscripts`       | `true` \| `false`                          | `false`            | Run local scripts                     |
 
 ### Docker-specific flags
 > Applies only to Docker installation
 
 #### Registry & Images
-| Flag                    | Value placeholder                           | Description                                         |
-|-------------------------|---------------------------------------------|-----------------------------------------------------|
-| `--registry`            | `<URL>`                                     | Docker registry URL                                 |
-| `--username`            | `<USER>`                                    | Registry login                                      |
-| `--password`            | `<PASS>`                                    | Registry password                                   |
-| `--volumesdir`          | `<DIR>` (`/var/lib/docker/volumes`)         | Host dir for Docker volumes                         |
+| Flag                    | Value placeholder                         | Default value             | Description                    |
+|-------------------------|-------------------------------------------|---------------------------|--------------------------------|
+| `--registry`            | `<URL>`                                   | -                         | Docker registry URL            |
+| `--username`            | `<USER>`                                  | -                         | Registry login                 |
+| `--password`            | `<PASS>`                                  | -                         | Registry password              |
+| `--volumesdir`          | `<DIR>`                                   | `/var/lib/docker/volumes` | Host dir for Docker volumes    |
 
 #### DocSpace Core
-| Flag                    | Value placeholder                           | Description                                         |
-|-------------------------|---------------------------------------------|-----------------------------------------------------|
-| `--installdocspace`     | `true` \| `false`                           | Install / update DocSpace                           |
-| `--docspaceversion`     | `<VERSION>`                                 | DocSpace version                                    |
-| `--docspacehost`        | `<HOST>`                                    | Hostname / IP (`localhost`)                         |
-| `--externalport`        | `<PORT>` (`80`)                             | External HTTP port                                  |
-| `--machinekey`          | `<KEY>`                                     | `core.machinekey` value                             |
+| Flag                    | Value placeholder                         | Default value             | Description                    |
+|-------------------------|-------------------------------------------|---------------------------|--------------------------------|
+| `--installdocspace`     | `true` \| `false`                         | `true`                    | Install / update DocSpace      |
+| `--docspaceversion`     | `<VERSION>`                               | *(latest stable)*         | DocSpace version               |
+| `--docspacehost`        | `<HOST>`                                  | `localhost`               | Hostname / IP                  |
+| `--externalport`        | `<PORT>`                                  | `80`                      | External HTTP port             |
+| `--machinekey`          | `<KEY>`                                   | *(auto-generated)*        | `core.machinekey` value        |
 
 #### Document Server (ONLYOFFICE Docs)
-| Flag                    | Value placeholder                           | Description                                         |
-|-------------------------|---------------------------------------------|-----------------------------------------------------|
-| `--installdocs`         | `true` \| `false`                           | Install / update Document Server                    |
-| `--docsimage`           | `<IMAGE_NAME>`                              | Document Server image name                          |
-| `--docsversion`         | `<VERSION>`                                 | Document Server version                             |
-| `--docsurl`             | `<URL>`                                     | URL of external Docs instance                       |
+| Flag                    | Value placeholder           | Default value                  | Description                             |
+|-------------------------|-----------------------------|--------------------------------|-----------------------------------------|
+| `--installdocs`         | `true` \| `false`           | `true`                         | Install / update Document Server        |
+| `--docsimage`           | `<IMAGE_NAME>`              | `onlyoffice/documentserver-ee` | Document Server image name              |
+| `--docsversion`         | `<VERSION>`                 | *(latest stable)*              | Document Server version                 |
+| `--docsurl`             | `<URL>`                     | -                              | URL of external Docs instance           |
 
 #### MySQL
-| Flag                    | Value placeholder                           | Description                                         |
-|-------------------------|---------------------------------------------|-----------------------------------------------------|
-| `--installmysql`        | `true` \| `false`                           | Deploy MySQL container                              |
-| `--mysqlrootpassword`   | `<PASS>`                                    | Root password                                       |
-| `--mysqldatabase`       | `<DB_NAME>`                                 | DocSpace DB name                                    |
-| `--mysqluser`           | `<USER>`                                    | DB user                                             |
-| `--mysqlpassword`       | `<PASS>`                                    | DB user password                                    |
-| `--mysqlhost`           | `<HOST>`                                    | Host/IP (`localhost`)                               |
-| `--mysqlport`           | `<PORT>` (`3306`)                           | MySQL port                                          |
+| Flag                    | Value placeholder           | Default value        | Description                  |
+|-------------------------|-----------------------------|----------------------|------------------------------|
+| `--installmysql`        | `true` \| `false`           | `true`               | Deploy MySQL container       |
+| `--mysqlrootpassword`   | `<PASS>`                    | *(auto-generated)*   | Root password                |
+| `--mysqldatabase`       | `<DB_NAME>`                 | onlyoffice           | DocSpace DB name             |
+| `--mysqluser`           | `<USER>`                    | -                    | DB user                      |
+| `--mysqlpassword`       | `<PASS>`                    | *(auto-generated)*   | DB user password             |
+| `--mysqlhost`           | `<HOST>`                    | `localhost`          | Host/IP                      |
+| `--mysqlport`           | `<PORT>`                    | `3306`               | MySQL port                   |
 
 #### RabbitMQ
-| Flag                    | Value placeholder                           | Description                                         |
-|-------------------------|---------------------------------------------|-----------------------------------------------------|
-| `--installrabbitmq`     | `true` \| `false`                           | Deploy RabbitMQ container                           |
-| `--rabbitmqprotocol`    | `<PROTO>` (`amqp`)                          | Protocol                                            |
-| `--rabbitmqhost`        | `<HOST>`                                    | Host/IP                                             |
-| `--rabbitmqport`        | `<PORT>` (`5672`)                           | Port                                                |
-| `--rabbitmqusername`    | `<USER>`                                    | Username                                            |
-| `--rabbitmqpassword`    | `<PASS>`                                    | Password                                            |
-| `--rabbitmqvirtualhost` | `<VHOST>` (`/`)                             | Virtual host                                        |
+| Flag                    | Value placeholder           | Default value        | Description                  |
+|-------------------------|-----------------------------|----------------------|------------------------------|
+| `--installrabbitmq`     | `true` \| `false`           | `true`               | Deploy RabbitMQ              |
+| `--rabbitmqprotocol`    | `<PROTO>`                   | `amqp`               | Protocol                     |
+| `--rabbitmqhost`        | `<HOST>`                    | `localhost`          | Host/IP                      |
+| `--rabbitmqport`        | `<PORT>`                    | `5672`               | Port                         |
+| `--rabbitmqusername`    | `<USER>`                    | -                    | Username                     |
+| `--rabbitmqpassword`    | `<PASS>`                    | -                    | Password                     |
+| `--rabbitmqvirtualhost` | `<VHOST>`                   | `/`                  | Virtual host                 |
 
 #### Redis
-| Flag                    | Value placeholder                           | Description                                         |
-|-------------------------|---------------------------------------------|-----------------------------------------------------|
-| `--installredis`        | `true` \| `false`                           | Deploy Redis container                              |
-| `--redishost`           | `<HOST>`                                    | Host/IP                                             |
-| `--redisport`           | `<PORT>` (`6379`)                           | Port                                                |
-| `--redisusername`       | `<USER>`                                    | Username (optional)                                 |
-| `--redispassword`       | `<PASS>`                                    | Password (optional)                                 |
+| Flag                    | Value placeholder           | Default value        | Description                  |
+|-------------------------|-----------------------------|----------------------|------------------------------|
+| `--installredis`        | `true` \| `false`           | `true`               | Deploy Redis                 |
+| `--redishost`           | `<HOST>`                    | `localhost`          | Host/IP                      |
+| `--redisport`           | `<PORT>`                    | `6379`               | Port                         |
+| `--redisusername`       | `<USER>`                    | -                    | Username (optional)          |
+| `--redispassword`       | `<PASS>`                    | -                    | Password (optional)          |
 
 #### OpenSearch
-| Flag                    | Value placeholder                           | Description                                         |
-|-------------------------|---------------------------------------------|-----------------------------------------------------|
-| `--installelastic`      | `true` \| `false`                           | Deploy OpenSearch container                         |
-| `--elasticprotocol`     | `<PROTO>` (`http`)                          | Protocol                                            |
-| `--elastichost`         | `<HOST>`                                    | Host/IP                                             |
-| `--elasticport`         | `<PORT>` (`9200`)                           | Port                                                |
+| Flag                    | Value placeholder           | Default value        | Description                  |
+|-------------------------|-----------------------------|----------------------|------------------------------|
+| `--installelastic`      | `true` \| `false`           | `true`               | Deploy OpenSearch            |
+| `--elasticprotocol`     | `<PROTO>`                   | `http`               | Protocol                     |
+| `--elastichost`         | `<HOST>`                    | `localhost`          | Host/IP                      |
+| `--elasticport`         | `<PORT>`                    | `9200`               | Port                         |
 
 #### OpenSearch Dashboards
-| Flag                    | Value placeholder                           | Description                                         |
-|-------------------------|---------------------------------------------|-----------------------------------------------------|
-| `--dashboardsusername`  | `<USER>`                                    | Dashboards login                                    |
-| `--dashboardspassword`  | `<PASS>`                                    | Dashboards password                                 |
+| Flag                    | Value placeholder           | Default value        | Description                  |
+|-------------------------|-----------------------------|----------------------|------------------------------|
+| `--dashboardsusername`  | `<USER>`                    | `onlyoffice`         | Dashboards login             |
+| `--dashboardspassword`  | `<PASS>`                    | *(auto-generated)*   | Dashboards password          |
 
 #### Fluent Bit
-| Flag                    | Value placeholder                           | Description                                         |
-|-------------------------|---------------------------------------------|-----------------------------------------------------|
-| `--installfluentbit`    | `true` \| `false`                           | Deploy Fluent Bit for logs                          |
+| Flag                    | Value placeholder           | Default value        | Description                  |
+|-------------------------|-----------------------------|----------------------|------------------------------|
+| `--installfluentbit`    | `true` \| `false`           | `true`               | Deploy Fluent Bit for logs   |
 
 #### SSL / HTTPS & Let's Encrypt
-| Flag                    | Value placeholder                           | Description                                         |
-|-------------------------|---------------------------------------------|-----------------------------------------------------|
-| `--letsencryptdomain`   | `<DOMAIN>`                                  | Domain for Let's Encrypt                            |
-| `--letsencryptmail`     | `<MAIL>`                                    | Admin email                                         |
-| `--certfile`            | `<FILE>`                                    | Path to existing certificate                        |
-| `--certkeyfile`         | `<FILE>`                                    | Path to existing key                                |
+| Flag                    | Value placeholder           | Default value        | Description                  |
+|-------------------------|-----------------------------|----------------------|------------------------------|
+| `--letsencryptdomain`   | `<DOMAIN>`                  | -                    | Domain for Let's Encrypt     |
+| `--letsencryptmail`     | `<MAIL>`                    | -                    | Admin email                  |
+| `--certfile`            | `<FILE>`                    | -                    | Path to existing certificate |
+| `--certkeyfile`         | `<FILE>`                    | -                    | Path to existing key         |
 
 #### Misc
-| Flag                    | Value placeholder                           | Description                                         |
-|-------------------------|---------------------------------------------|-----------------------------------------------------|
-| `--noninteractive`      | `true` \| `false`                           | Auto-confirm prompts                                |
+| Flag                    | Value placeholder           | Default value        | Description                  |
+|-------------------------|-----------------------------|----------------------|------------------------------|
+| `--noninteractive`      | `true` \| `false`           | `false`              | Auto-confirm prompts         |
 
 
 ## 💡 Examples

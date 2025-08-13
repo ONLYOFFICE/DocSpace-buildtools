@@ -102,31 +102,31 @@ expect << EOF
 	expect "Configuring database access..."
 	
 	expect -re "Host"
-	send "\025$DS_DB_HOST\r"
+	send "$DS_DB_HOST\r"
 	
 	expect -re "Database name"
-	send "\025$DS_DB_NAME\r"
+	send "$DS_DB_NAME\r"
 	
 	expect -re "User"
-	send "\025$DS_DB_USER\r"
+	send "$DS_DB_USER\r"
 	
 	expect -re "Password"
-	send "\025$DS_DB_PWD\r"
+	send "$DS_DB_PWD\r"
 	
 	if { "${INSTALLATION_TYPE}" == "ENTERPRISE" || "${INSTALLATION_TYPE}" == "DEVELOPER" } {
 		expect "Configuring redis access..."
-		send "\025$DS_REDIS_HOST\r"
+		send "$DS_REDIS_HOST\r"
 	}
 	
 	expect "Configuring AMQP access... "
 	expect -re "Host"
-	send "\025$DS_RABBITMQ_HOST\r"
+	send "$DS_RABBITMQ_HOST\r"
 	
 	expect -re "User"
-	send "\025$DS_RABBITMQ_USER\r"
+	send "$DS_RABBITMQ_USER\r"
 	
 	expect -re "Password"
-	send "\025$DS_RABBITMQ_PWD\r"
+	send "$DS_RABBITMQ_PWD\r"
 	
 	expect eof
 	
