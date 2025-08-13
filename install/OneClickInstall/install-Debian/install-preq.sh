@@ -124,6 +124,8 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 				temurin-${JAVA_VERSION}-jre \
 				ffmpeg 
 
+systemctl enable --now rabbitmq-server
+
 if ! dpkg -l | grep -q "opensearch"; then
 	apt-get install -yq opensearch=${ELASTIC_VERSION}
 else
