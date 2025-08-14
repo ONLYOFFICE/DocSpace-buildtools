@@ -135,19 +135,19 @@ fi
 namei -l /etc/opensearch /var/lib/opensearch /var/log/opensearch
 
 mkdir -p /etc/systemd/system/opensearch.service.d
-# cat >/etc/systemd/system/opensearch.service.d/override.conf <<EOF
-# [Service]
-# Environment=DISABLE_INSTALL_DEMO_CONFIG=true
-# Environment=OPENSEARCH_INITIAL_ADMIN_PASSWORD=${package_sysname}!A1
-# Environment=OPENSEARCH_JAVA_HOME=/usr/share/opensearch/jdk
-# TimeoutStartSec=180
-# EOF
+cat >/etc/systemd/system/opensearch.service.d/override.conf <<EOF
+[Service]
+Environment=DISABLE_INSTALL_DEMO_CONFIG=true
+Environment=OPENSEARCH_INITIAL_ADMIN_PASSWORD=${package_sysname}!A1
+Environment=OPENSEARCH_JAVA_HOME=/usr/share/opensearch/jdk
+TimeoutStartSec=180
+EOF
 systemctl daemon-reload
 
-chown -R opensearch:opensearch /var/lib/opensearch /var/log/opensearch
-chmod -R 750 /var/lib/opensearch /var/log/opensearch
-chown root:opensearch /etc/opensearch
-chmod 750 /etc/opensearch
+# chown -R opensearch:opensearch /var/lib/opensearch /var/log/opensearch
+# chmod -R 750 /var/lib/opensearch /var/log/opensearch
+# chown root:opensearch /etc/opensearch
+# chmod 750 /etc/opensearch
 
 # if ! grep -q 'vm.max_map_count' /etc/sysctl.d/90-opensearch.conf 2>/dev/null; then
 #   echo 'vm.max_map_count=262144' > /etc/sysctl.d/90-opensearch.conf
