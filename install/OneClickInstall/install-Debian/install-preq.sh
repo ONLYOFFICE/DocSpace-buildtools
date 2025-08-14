@@ -133,14 +133,14 @@ else
 	"${ELASTIC_PLUGIN}" list | grep -q ingest-attachment && "${ELASTIC_PLUGIN}" remove -s ingest-attachment
 fi
 
-mkdir -p /etc/systemd/system/opensearch.service.d
-cat >/etc/systemd/system/opensearch.service.d/override.conf <<EOF
-[Service]
-Environment=OPENSEARCH_INITIAL_ADMIN_PASSWORD=${package_sysname}!A1
-Environment=OPENSEARCH_JAVA_HOME=/usr/share/opensearch/jdk
-TimeoutStartSec=180
-EOF
-systemctl daemon-reload
+# mkdir -p /etc/systemd/system/opensearch.service.d
+# cat >/etc/systemd/system/opensearch.service.d/override.conf <<EOF
+# [Service]
+# Environment=OPENSEARCH_INITIAL_ADMIN_PASSWORD=${package_sysname}!A1
+# Environment=OPENSEARCH_JAVA_HOME=/usr/share/opensearch/jdk
+# TimeoutStartSec=180
+# EOF
+# systemctl daemon-reload
 
 systemctl enable --now opensearch
 
