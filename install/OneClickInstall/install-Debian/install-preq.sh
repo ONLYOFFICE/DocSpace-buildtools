@@ -142,7 +142,7 @@ TimeoutStartSec=180
 EOF
 systemctl daemon-reload
 
-# systemctl enable --now opensearch
+systemctl enable --now opensearch
 
 
 # Set Java ${JAVA_VERSION} as the default version
