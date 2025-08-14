@@ -124,7 +124,7 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 				temurin-${JAVA_VERSION}-jre \
 				ffmpeg 
 
-systemctl enable --now rabbitmq-server
+# systemctl enable --now rabbitmq-server
 
 if ! dpkg -l | grep -q "opensearch"; then
 	apt-get install -yq opensearch=${ELASTIC_VERSION}
@@ -136,14 +136,13 @@ fi
 mkdir -p /etc/systemd/system/opensearch.service.d
 cat >/etc/systemd/system/opensearch.service.d/override.conf <<EOF
 [Service]
-Environment=DISABLE_INSTALL_DEMO_CONFIG=true
 Environment=OPENSEARCH_INITIAL_ADMIN_PASSWORD=${package_sysname}!A1
 Environment=OPENSEARCH_JAVA_HOME=/usr/share/opensearch/jdk
 TimeoutStartSec=180
 EOF
 systemctl daemon-reload
 
-systemctl enable --now opensearch
+# systemctl enable --now opensearch
 
 
 # Set Java ${JAVA_VERSION} as the default version
