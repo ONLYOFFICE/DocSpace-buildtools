@@ -13,19 +13,8 @@ cd client
 REM call pnpm install
 call pnpm install
 
-REM call pnpm build
-IF "%2"=="personal" (
-    call pnpm build:personal
-) ELSE (
-    call pnpm build
-)
-
 REM call yarn wipe
-IF "%2"=="personal" (
-    call pnpm deploy:personal
-) ELSE (
-    call pnpm deploy
-)
+call pnpm run deploy
 
 cd ..
 
