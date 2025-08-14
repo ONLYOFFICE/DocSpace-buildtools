@@ -146,6 +146,13 @@ services:
       target: onlyoffice-migration-runner
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-migration-runner:${DOCKER_TAG}"
 
+  onlyoffice-telegram:
+    build:
+      context: ./
+      dockerfile: "${DOCKERFILE}"
+      target: onlyoffice-telegram
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-telegram:${DOCKER_TAG}"
+
   onlyoffice-healthchecks:
     build:
       context:  ./

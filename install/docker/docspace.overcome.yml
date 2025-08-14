@@ -176,6 +176,20 @@ services:
     volumes:
       - ${ROOT_DIR}/server/common/Tools/ASC.Migration.Runner/${BIN_DIR}:${BUILD_PATH}/services/ASC.Migration.Runner/
 
+  onlyoffice-telegram:
+    <<: *x-profiles-local
+    image: ${Baseimage_Dotnet_Run}
+    working_dir: ${BUILD_PATH}/services/ASC.TelegramService/service/
+    command: ["ASC.TelegramService.dll", "ASC.TelegramService"]
+    volumes:
+      - ${ROOT_DIR}/server/common/services/ASC.TelegramService/${BIN_DIR}:${BUILD_PATH}/services/ASC.TelegramService/service/
+      - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
+      - ${ROOT_DIR}/buildtools/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json:/app/onlyoffice/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json
+    depends_on:
+      onlyoffice-migration-runner:
+        condition: service_completed_successfully
+
   onlyoffice-router:
     <<: *x-profiles-local
     image: ${Baseimage_Proxy_Run}
