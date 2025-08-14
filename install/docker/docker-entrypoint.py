@@ -269,7 +269,7 @@ jsonData["Redis"].update(REDIS_USER_NAME) if REDIS_USER_NAME is not None else No
 jsonData["Redis"].update(REDIS_PASSWORD) if REDIS_PASSWORD is not None else None
 writeJsonFile(filePath, jsonData)
 
-filePath = "/var/www/services/ASC.Migration.Runner/service/appsettings.runner.json"
+filePath = os.path.join(SRC_PATH, "services", "ASC.Migration.Runner", "service", "appsettings.runner.json")
 if os.path.isfile(filePath):
     jsonData = openJsonFile(filePath)
     conn_str = f"Server={MYSQL_CONNECTION_HOST};Database={MYSQL_DATABASE};User ID={MYSQL_USER};Password={MYSQL_PASSWORD};Command Timeout=100"
