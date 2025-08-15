@@ -134,6 +134,82 @@ fi
 
 systemctl enable --now rabbitmq-server
 
+#######################################
+#  AMQP / RabbitMQ DEBUG + FIX
+#######################################
+amqp_debug_and_fix() (
+  set +e
+
+  echo "===== [AMQP DEBUG] ensuring rabbitmq-server is active ====="
+  systemctl enable --now rabbitmq-server >/dev/null 2>&1
+
+  RABBIT_HOST="${RABBIT_HOST:-127.0.0.1}"
+  RABBIT_PORT="${RABBIT_PORT:-5672}"
+
+  echo "===== [AMQP DEBUG] waiting for ${RABBIT_HOST}:${RABBIT_PORT} to accept connections ====="
+  ready=""
+  for i in $(seq 1 30); do
+    (echo > /dev/tcp/${RABBIT_HOST}/${RABBIT_PORT}) >/dev/null 2>&1 && { ready=1; break; }
+    sleep 1
+  done
+
+  if [ -z "$ready" ]; then
+    echo "!!! [AMQP DEBUG] RabbitMQ не слушает ${RABBIT_HOST}:${RABBIT_PORT} спустя 30с. Диагностика:"
+    systemctl status --no-pager rabbitmq-server || true
+    journalctl -u rabbitmq-server -n 200 --no-pager || true
+
+    if ls /var/lib/rabbitmq/mnesia/*pid >/dev/null 2>&1; then
+      echo ">>> [AMQP DEBUG] найден зависший PID-файл, удаляем и перезапускаем брокер"
+      rm -f /var/lib/rabbitmq/mnesia/*pid
+      systemctl restart rabbitmq-server
+    fi
+
+    for i in $(seq 1 30); do
+      (echo > /dev/tcp/${RABBIT_HOST}/${RABBIT_PORT}) >/dev/null 2>&1 && { ready=1; break; }
+      sleep 1
+    done
+  fi
+
+  if [ -n "$ready" ]; then
+    echo "===== [AMQP DEBUG] RabbitMQ слушает ${RABBIT_HOST}:${RABBIT_PORT} ====="
+    command -v rabbitmq-diagnostics >/dev/null 2>&1 && rabbitmq-diagnostics -q ping || true
+  else
+    echo "!!! [AMQP DEBUG] RabbitMQ всё ещё недоступен на ${RABBIT_HOST}:${RABBIT_PORT}. Продолжаем установку, но DS может не подключиться."
+  fi
+
+  if [ -f /etc/onlyoffice/documentserver/local.json ]; then
+    echo "===== [AMQP DEBUG] DocumentServer local.json (rabbitmq.url) ====="
+    awk '
+      /"rabbitmq"\s*:/,/}/ {print}
+    ' /etc/onlyoffice/documentserver/local.json | sed -n "1,20p" || true
+  fi
+
+  echo "===== [AMQP DEBUG] adding systemd deps (Requires/After=rabbitmq-server) for DS units ====="
+  for svc in ds-docservice.service ds-converter.service; do
+    mkdir -p "/etc/systemd/system/${svc}.d"
+    cat > "/etc/systemd/system/${svc}.d/10-rabbitmq-dep.conf" <<'CONF'
+[Unit]
+Requires=rabbitmq-server.service
+After=rabbitmq-server.service
+CONF
+  done
+  systemctl daemon-reload
+
+  if systemctl list-unit-files | grep -q '^ds-docservice\.service'; then
+    echo "===== [AMQP DEBUG] restarting ds-docservice/ds-converter ====="
+    systemctl restart ds-docservice.service ds-converter.service
+    journalctl -u ds-docservice.service -u ds-converter.service -n 50 --no-pager || true
+  fi
+
+  echo "===== [AMQP DEBUG] done ====="
+)
+
+amqp_debug_and_fix
+#######################################
+#  /AMQP / RabbitMQ DEBUG + FIX
+#######################################
+
+
 # Set Java ${JAVA_VERSION} as the default version
 JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*temurin-${JAVA_VERSION}*" | head -1)
 update-alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && update-alternatives --set java "$JAVA_PATH"
