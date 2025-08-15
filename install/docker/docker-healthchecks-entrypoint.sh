@@ -33,6 +33,7 @@ STUDIO_HOST=${STUDIO_HOST:-"${CONTAINER_PREFIX}studio:${SERVICE_PORT}"}
 SOCKET_HOST=${SOCKET_HOST:-"${CONTAINER_PREFIX}socket:${SERVICE_PORT}"}
 SSOAUTH_HOST=${SSOAUTH_HOST:-"${CONTAINER_PREFIX}ssoauth:${SERVICE_PORT}"}
 
+sed -i "s/\(\"Default\": \).*/\1\"${LOG_LEVEL:-"warning"}\"/" "${PATH_TO_CONF}/appsettings.json"
 sed -i "/\"Name\": \"ASC.ApiCache\"/,/{/d" ${PATH_TO_CONF}/appsettings.json
 sed -i "s!localhost:5010!${API_SYSTEM_HOST}!g" ${PATH_TO_CONF}/appsettings.json
 sed -i "s!localhost:5012!${BACKUP_HOST}!g" ${PATH_TO_CONF}/appsettings.json

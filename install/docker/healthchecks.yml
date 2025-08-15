@@ -11,6 +11,8 @@ x-service:
     restart: always
     expose:
     - ${SERVICE_PORT}
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL}
     volumes:
     #- /app/onlyoffice/CommunityServer/data:/app/onlyoffice/data
     - ${VOLUMES_DIR:+${VOLUMES_DIR}/}app_data:/app/onlyoffice/data
