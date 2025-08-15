@@ -3,6 +3,8 @@ from jsonpath_ng.ext import parse
 from os import environ
 from multipledispatch import dispatch
 from netaddr import *
+import fileinput
+from subprocess import call
 
 filePath = None
 saveFilePath = None
@@ -16,6 +18,10 @@ SERVICE_PORT = os.environ["SERVICE_PORT"] if environ.get("SERVICE_PORT") else "5
 URLS = os.environ["URLS"] if environ.get("URLS") else "http://0.0.0.0:"
 PATH_TO_CONF = os.environ["PATH_TO_CONF"] if environ.get("PATH_TO_CONF") else "/app/" + PRODUCT + "/config"
 LOG_DIR = os.environ["LOG_DIR"] if environ.get("LOG_DIR") else "/var/log/" + PRODUCT
+SRC_PATH = os.environ.get("SRC_PATH", "/var/www")
+NODE_CONTAINER_NAME = os.environ["NODE_CONTAINER_NAME"] if os.environ.get("NODE_CONTAINER_NAME") else "onlyoffice-node-services"
+SERVICE_SOCKET_PORT = os.environ["SERVICE_SOCKET_PORT"] if os.environ.get("SERVICE_SOCKET_PORT") else "9899"
+SERVICE_SSOAUTH_PORT = os.environ["SERVICE_SSOAUTH_PORT"] if os.environ.get("SERVICE_SSOAUTH_PORT") else "9834"
 ROUTER_HOST = os.environ["ROUTER_HOST"] if environ.get("ROUTER_HOST") else "onlyoffice-router"
 SOCKET_HOST = os.environ["SOCKET_HOST"] if environ.get("SOCKET_HOST") else "onlyoffice-socket"
 
@@ -325,6 +331,21 @@ jsonData["Redis"].update(REDIS_USER_NAME) if REDIS_USER_NAME is not None else No
 jsonData["Redis"].update(REDIS_PASSWORD) if REDIS_PASSWORD is not None else None
 writeJsonFile(filePath, jsonData)
 
+filePath = os.path.join(SRC_PATH, "services", "ASC.Migration.Runner", "service", "appsettings.runner.json")
+if os.path.isfile(filePath):
+    jsonData = openJsonFile(filePath)
+    conn_str = f"Server={MYSQL_CONNECTION_HOST};Database={MYSQL_DATABASE};User ID={MYSQL_USER};Password={MYSQL_PASSWORD};Command Timeout=100"
+    updateJsonData(jsonData, "$.options.Providers[0].ConnectionString", conn_str)
+    updateJsonData(jsonData, "$.options.TeamlabsiteProviders[0].ConnectionString", conn_str)
+    writeJsonFile(filePath, jsonData)
+
+filePath = os.path.join(SRC_PATH, "services", "ASC.Web.HealthChecks.UI", "service", "appsettings.json")
+if os.path.isfile(filePath):
+    for line in fileinput.input(filePath, inplace=True):
+        line = line.replace("localhost:9899", f"{NODE_CONTAINER_NAME}:{SERVICE_SOCKET_PORT}")
+        line = line.replace("localhost:9834", f"{NODE_CONTAINER_NAME}:{SERVICE_SSOAUTH_PORT}")
+        sys.stdout.write(line)
+
 if LOG_LEVEL:
     filePath = "/app/onlyoffice/config/nlog.config"
     with open(filePath, 'r') as f:
@@ -345,5 +366,14 @@ if os.path.exists(PLUGINS_DIR) and not os.path.exists(DATA_PLUGINS_DIR):
 
 threading.Thread(target=check_docs_connection, daemon=True).start()
 
-run = RunServices(SERVICE_PORT, PATH_TO_CONF)
-run.RunService(RUN_FILE, ENV_EXTENSION, LOG_FILE)
+if RUN_FILE == "supervisord -n":
+    dll = os.path.join(SRC_PATH, "services", "ASC.Migration.Runner", "service", "ASC.Migration.Runner.dll")
+    if os.path.isfile(dll):
+        result = call(f"dotnet {dll} standalone=true", shell=True, cwd=os.path.dirname(dll))
+        if result != 0:
+            print("Migration not applied")
+            exit(result)
+    call("supervisord -n", shell=True)
+else:
+    run = RunServices(SERVICE_PORT, PATH_TO_CONF)
+    run.RunService(RUN_FILE, ENV_EXTENSION, LOG_FILE)
