@@ -18,13 +18,6 @@ call pnpm run build
 
 cd ..
 
-REM copy nginx configurations to deploy folder
-xcopy buildtools\config\nginx\onlyoffice.conf publish\nginx\ /E /R /Y
-powershell -Command "(gc publish\nginx\onlyoffice.conf) -replace '#', '' | Out-File -encoding ASCII publish\nginx\onlyoffice.conf"
-
-xcopy buildtools\config\nginx\sites-enabled\* publish\nginx\sites-enabled\ /E /R /Y
-xcopy buildtools\config\nginx\includes\* publish\nginx\includes\ /E /R /Y
-
 REM restart nginx
 echo service nginx stop
 call sc stop nginx > nul
