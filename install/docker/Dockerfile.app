@@ -173,7 +173,7 @@ RUN echo "--- install runtime aspnet.9 ---" && \
     rm -rf /var/lib/apt/lists/* \
     /tmp/*
 
-COPY --from=src --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
+COPY --from=src --chown=onlyoffice:onlyoffice /app/onlyoffice/config /app/onlyoffice/
 
 USER onlyoffice
 EXPOSE 5050
@@ -206,7 +206,7 @@ RUN echo "--- install runtime node.22 ---" && \
     /var/lib/apt/lists/* \
     /tmp/*
 
-COPY --from=src --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
+COPY --from=src --chown=onlyoffice:onlyoffice /app/onlyoffice/config /app/onlyoffice/
 USER onlyoffice
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
