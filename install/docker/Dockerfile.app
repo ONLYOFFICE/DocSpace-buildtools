@@ -27,7 +27,7 @@ RUN <<EOF
 #!/bin/bash
 echo "--- clone resources ---"
 
-git clone -b $(echo "$(git ls-remote --exit-code --heads "${BUILDTOOLS_REPO}" "${GIT_BRANCH}"\
+git clone --recurse-submodules -b $(echo "$(git ls-remote --exit-code --heads "${BUILDTOOLS_REPO}" "${GIT_BRANCH}"\
  > /dev/null 2>&1 && echo "${GIT_BRANCH}" || echo "master")") --depth 30 ${BUILDTOOLS_REPO} ${SRC_PATH}/buildtools && \
 
 git clone --recurse-submodules -b $(echo "$(git ls-remote --exit-code --heads "${SERVER_REPO}" "${GIT_BRANCH}"\
@@ -44,8 +44,7 @@ WORKDIR ${SRC_PATH}/buildtools/config
 RUN <<EOF
     echo "--- customize config base files ---" && \
     mkdir -p /app/onlyoffice/config/ && \
-    ls | grep -v "test" | grep -v "\.dev\." | grep -v "nginx" | xargs cp -t /app/onlyoffice/config/
-    cp *.config /app/onlyoffice/config/
+    ls | grep -Ev 'test|\.dev\.|nginx' | xargs cp -r -t /app/onlyoffice/config/
     cd ${SRC_PATH}
     mkdir -p /etc/nginx/conf.d && cp -f buildtools/config/nginx/onlyoffice*.conf /etc/nginx/conf.d/
     mkdir -p /etc/nginx/includes/ && cp -f buildtools/config/nginx/includes/onlyoffice*.conf /etc/nginx/includes/ && cp -f buildtools/config/nginx/includes/server-*.conf /etc/nginx/includes/
