@@ -1,19 +1,18 @@
-x-healthcheck:
-  &x-healthcheck
+x-healthcheck: &x-healthcheck
   test: curl --fail http://127.0.0.1 || exit 1
   interval: 60s
   retries: 5
   start_period: 20s
   timeout: 10s
-x-service: 
-    &x-service-base
-    container_name: base
-    restart: always
-    expose:
+
+x-service: &x-service-base
+  container_name: base
+  restart: always
+  expose:
     - ${SERVICE_PORT}
-    environment:
-      - LOG_LEVEL=${LOG_LEVEL}
-    volumes:
+  environment:
+    LOG_LEVEL: ${LOG_LEVEL}
+  volumes:
     #- /app/onlyoffice/CommunityServer/data:/app/onlyoffice/data
     - ${VOLUMES_DIR:+${VOLUMES_DIR}/}app_data:/app/onlyoffice/data
 
@@ -32,4 +31,3 @@ networks:
 
 volumes:
   app_data:
-  
