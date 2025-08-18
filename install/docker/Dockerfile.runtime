@@ -11,9 +11,10 @@ WORKDIR ${SRC_PATH}
 
 COPY  buildtools/config ./config
 
-RUN find config/ -maxdepth 1 -name "*.json" | grep -v test | xargs tar -cvf config.tar && \
+RUN find config/ -name "*.json" | grep -v test | xargs tar -cvf config.tar && \
     tar -C "/app/onlyoffice/" -xvf config.tar && \
     cp config/*.config /app/onlyoffice/config/ && \
+    cp -r config/document-formats /app/onlyoffice/config/document-formats && \
     mkdir -p /etc/nginx/conf.d && cp -f config/nginx/onlyoffice*.conf /etc/nginx/conf.d/ && \
     mkdir -p /etc/nginx/html && cp -f config/nginx/html/* /etc/nginx/html/ && \
     mkdir -p /etc/nginx/includes/ && cp -f config/nginx/includes/onlyoffice*.conf /etc/nginx/includes/ && \
@@ -45,7 +46,7 @@ RUN mkdir -p /var/log/onlyoffice && \
     pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces requests --break-system-packages && \
     rm -rf /var/lib/apt/lists/*
 
-COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
+COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config /app/onlyoffice/config/
 
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
@@ -72,7 +73,7 @@ RUN mkdir -p /var/log/onlyoffice && \
     pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces requests --break-system-packages && \
     rm -rf /var/lib/apt/lists/*
 
-COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
+COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config /app/onlyoffice/config/
 
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
