@@ -93,36 +93,21 @@ x-service: &x-service-base
 services:
   onlyoffice-dotnet-services:
     <<: *x-service-base
-    build:
-      context: ./
-      dockerfile: "${DOCKERFILE}"
-      target: dotnet_services
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-dotnet:${DOCKER_TAG}"
     container_name: ${DOTNET_CONTAINER_NAME}
     
   onlyoffice-node-services:
     <<: *x-service-base
-    build:
-      context: ./
-      dockerfile: "${DOCKERFILE}"
-      target: node_services
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-node:${DOCKER_TAG}"
     container_name: ${NODE_CONTAINER_NAME}
 
   onlyoffice-java-services:
     <<: *x-service-base
-    build:
-      context: ./
-      dockerfile: "${DOCKERFILE}"
-      target: java_services
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-java:${DOCKER_TAG}"
     container_name: ${JAVA_CONTAINER_NAME}
 
   onlyoffice-router:
-    build:
-      context: ./
-      dockerfile: "${DOCKERFILE}"
-      target: router
+    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-router:${DOCKER_TAG}"
     container_name: ${ROUTER_HOST}
     user: "${UID}:${GID}"
     restart: always

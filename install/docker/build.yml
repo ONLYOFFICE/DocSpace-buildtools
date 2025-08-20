@@ -167,3 +167,23 @@ services:
       target: identity-api
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-identity-api:${DOCKER_TAG}"
 
+  onlyoffice-dotnet-services:
+    build:
+      context:  ./
+      dockerfile: "${DOCKERFILE}"
+      target: dotnet-services
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-dotnet:${DOCKER_TAG}"
+
+  onlyoffice-node-services:
+    build:
+      context:  ./
+      dockerfile: "${DOCKERFILE}"
+      target: node-services
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-node:${DOCKER_TAG}"
+
+  onlyoffice-java-services:
+    build:
+      context:  ./
+      dockerfile: "${DOCKERFILE}"
+      target: java-services
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-java:${DOCKER_TAG}"

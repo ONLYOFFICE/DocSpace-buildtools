@@ -561,7 +561,7 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
 ENTRYPOINT ["./app/docker-entrypoint.sh"]
 
 # Dotnet Services ##
-FROM dotnetrun AS dotnet_services
+FROM dotnetrun AS dotnet-services
 WORKDIR /usr/bin/
 
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
@@ -616,7 +616,7 @@ COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/servi
 CMD ["supervisord -n"]
 
 ## Node Services ##
-FROM noderun AS node_services
+FROM noderun AS node-services
 WORKDIR /usr/bin/
 
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
@@ -632,7 +632,7 @@ COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/A
 CMD ["supervisord -n"]
 
 ## Java Services ##
-FROM javarun AS java_services
+FROM javarun AS java-services
 
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-identity-entrypoint.sh /usr/bin/docker-identity-entrypoint.sh
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/java_services.conf /etc/supervisor/conf.d/supervisord.conf
