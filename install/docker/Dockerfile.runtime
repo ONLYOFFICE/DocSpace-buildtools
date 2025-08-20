@@ -14,7 +14,6 @@ COPY  buildtools/config ./config
 RUN find config/ -name "*.json" | grep -v test | xargs tar -cvf config.tar && \
     tar -C "/app/onlyoffice/" -xvf config.tar && \
     cp config/*.config /app/onlyoffice/config/ && \
-    cp -r config/document-formats /app/onlyoffice/config/document-formats && \
     mkdir -p /etc/nginx/conf.d && cp -f config/nginx/onlyoffice*.conf /etc/nginx/conf.d/ && \
     mkdir -p /etc/nginx/html && cp -f config/nginx/html/* /etc/nginx/html/ && \
     mkdir -p /etc/nginx/includes/ && cp -f config/nginx/includes/onlyoffice*.conf /etc/nginx/includes/ && \
