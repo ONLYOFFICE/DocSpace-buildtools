@@ -578,30 +578,12 @@ ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Files.Service/service/ ${BUILD_PATH}/products/ASC.Files/service/
 COPY --from=onlyoffice/ffvideo:7.1 --chown=onlyoffice:onlyoffice /app/src/ ${BUILD_PATH}/products/ASC.Files/service/
 
-RUN <<EOF
-    #!/bin/bash
-    set -xe
-    ARCH_LINUX=$(lscpu | grep Architecture | awk '{print $2}')
-    echo "--- ADD necessary lib for arh: ${ARCH_LINUX} ---"
-    if [ "$ARCH_LINUX" = "x86_64" ] ; then
-        apt update && \
-        apt install -y \
-            libasound2t64 \
-            libdrm2 \
-            libv4l-0t64 \
-            libplacebo-dev \
-            libxcb-shape0 \
-            ocl-icd-opencl-dev
-    fi
-    if [ "$ARCH_LINUX" = "aarch64" ] ; then
-        apt update && \
-        apt install -y \
-            libasound2t64 \
-            libv4l-0t64
-    fi
-    rm -rf /var/lib/apt/lists/* \
-    /tmp/*
-EOF
+RUN set -eux; \
+  ARCH=$(uname -m); \
+  PKGS="libasound2t64 libv4l-0t64"; # ARM \
+  [ "$ARCH" = "x86_64" ] && PKGS="$PKGS libdrm2 libplacebo-dev libxcb-shape0 ocl-icd-opencl-dev"; \
+  apt-get update && apt-get install -y --no-install-recommends $PKGS && rm -rf /var/lib/apt/lists/* /tmp/*
+
 USER onlyoffice
 
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Migration.Runner/service/ ${BUILD_PATH}/services/ASC.Migration.Runner/service/
