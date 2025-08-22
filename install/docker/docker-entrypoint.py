@@ -18,7 +18,7 @@ SERVICE_PORT = os.environ["SERVICE_PORT"] if environ.get("SERVICE_PORT") else "5
 URLS = os.environ["URLS"] if environ.get("URLS") else "http://0.0.0.0:"
 PATH_TO_CONF = os.environ["PATH_TO_CONF"] if environ.get("PATH_TO_CONF") else "/app/" + PRODUCT + "/config"
 LOG_DIR = os.environ["LOG_DIR"] if environ.get("LOG_DIR") else "/var/log/" + PRODUCT
-SRC_PATH = os.environ.get("SRC_PATH", "/var/www")
+SRC_PATH = os.environ["SRC_PATH"] if environ.get("SRC_PATH") else "/var/www"
 NODE_CONTAINER_NAME = os.environ["NODE_CONTAINER_NAME"] if os.environ.get("NODE_CONTAINER_NAME") else "onlyoffice-node-services"
 SERVICE_SOCKET_PORT = os.environ["SERVICE_SOCKET_PORT"] if os.environ.get("SERVICE_SOCKET_PORT") else "9899"
 SERVICE_SSOAUTH_PORT = os.environ["SERVICE_SSOAUTH_PORT"] if os.environ.get("SERVICE_SSOAUTH_PORT") else "9834"
@@ -367,9 +367,13 @@ if os.path.exists(PLUGINS_DIR) and not os.path.exists(DATA_PLUGINS_DIR):
 threading.Thread(target=check_docs_connection, daemon=True).start()
 
 if RUN_FILE == "supervisord -n":
-    dll = os.path.join(SRC_PATH, "services", "ASC.Migration.Runner", "service", "ASC.Migration.Runner.dll")
-    if os.path.isfile(dll):
-        result = call(f"dotnet {dll} standalone=true", shell=True, cwd=os.path.dirname(dll))
+    os.environ["APP_STORAGE_ROOT"] = APP_STORAGE_ROOT
+    os.environ["PATH_TO_CONF"] = PATH_TO_CONF
+    os.environ["LOG_DIR"] = LOG_DIR
+    os.environ["SRC_PATH"] = SRC_PATH
+    migration_runner = os.path.join(SRC_PATH, "services", "ASC.Migration.Runner", "service", "ASC.Migration.Runner.dll")
+    if os.path.isfile(migration_runner):
+        result = call(f"dotnet {migration_runner} standalone=true", shell=True, cwd=os.path.dirname(migration_runner))
         if result != 0:
             print("Migration not applied")
             exit(result)
