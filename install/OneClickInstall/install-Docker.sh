@@ -1034,9 +1034,9 @@ get_tag_from_registry () {
 			AUTH_HEADER="Authorization: JWT $TOKEN"
 			sleep 1
 		fi
-
-		REGISTRY_TAGS_URL="https://hub.docker.com/v2/repositories/${1}/tags/"
-		JQ_FILTER='.results[].name // empty'
+		ARCH="$(uname -m | sed -E 's/^(x86_64|amd64)$/amd64/; s/^(aarch64|arm64)$/arm64/')"
+		REGISTRY_TAGS_URL="https://hub.docker.com/v2/repositories/${1}/tags?page_size=100"
+		JQ_FILTER='.results[] | select(.name | test("^(?!99\\.).*")) | select(.images[]?.architecture=="'"$ARCH"'") | .name // empty'
 	fi
 
 	mapfile -t TAGS_RESP < <(curl -s -H "${AUTH_HEADER}" -X GET "${REGISTRY_TAGS_URL}" | jq -r "${JQ_FILTER}")
