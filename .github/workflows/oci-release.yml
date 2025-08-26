@@ -71,6 +71,7 @@ jobs:
             --include="install-Debian.sh" \
             --include="install-Debian/*" \
             --include="install-Docker.sh" \
+            --include="install-Docker-args.sh" \
             --include="docker.tar.gz"
 
       - name: Invalidate AWS CloudFront cache
@@ -86,4 +87,5 @@ jobs:
             "/${{ env.PRODUCT }}/install-Debian.sh" \
             "/${{ env.PRODUCT }}/install-Debian/*" \
             "/${{ env.PRODUCT }}/install-Docker.sh" \
+            "/${{ env.PRODUCT }}/install-Docker-args.sh" \
             "/${{ env.PRODUCT }}/docker.tar.gz"

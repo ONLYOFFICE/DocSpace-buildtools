@@ -28,9 +28,9 @@ PRODUCT=${PRODUCT:-"onlyoffice"}
 ENV_EXTENSION=${ENV_EXTENSION:-"test"}
 ROUTER_HOST=${ROUTER_HOST:-"onlyoffice-router"}
 
-SHEME=${SHEME:-"http"}
+SCHEME=${SCHEME:-"http"}
 SERVICE_PORT=${SERVICE_PORT:-"5050"}
-URLS=${URLS:-"${SHEME}://0.0.0.0:${SERVICE_PORT}"}
+URLS=${URLS:-"${SCHEME}://0.0.0.0:${SERVICE_PORT}"}
 
 PATH_TO_CONF=${PATH_TO_CONF:-"/app/${PRODUCT}/config"}
 LOG_DIR=${LOG_DIR:-"/var/log/${PRODUCT}"}
@@ -41,15 +41,15 @@ MYSQL_USER=${MYSQL_USER:-"${PRODUCT}_user"}
 MYSQL_PASSWORD=${MYSQL_PASSWORD:-"${PRODUCT}_pass"}
 
 APP_CORE_BASE_DOMAIN=${APP_CORE_BASE_DOMAIN:-"localhost"}
-APP_URL_PORTAL=${APP_URL_PORTAL:-"${SHEME}://${ROUTER_HOST}:8092"}
+APP_URL_PORTAL=${APP_URL_PORTAL:-"${SCHEME}://${ROUTER_HOST}:8092"}
 
 APP_CORE_MACHINEKEY=${APP_CORE_MACHINEKEY:-"your_core_machinekey"}
 DOCUMENT_SERVER_JWT_SECRET=${DOCUMENT_SERVER_JWT_SECRET:-"your_jwt_secret"}
 DOCUMENT_SERVER_JWT_HEADER=${DOCUMENT_SERVER_JWT_HEADER:-"AuthorizationJwt"}
 DOCUMENT_SERVER_URL_PUBLIC=${DOCUMENT_SERVER_URL_PUBLIC:-"/ds-vpath/"}
-DOCUMENT_SERVER_URL_INTERNAL=${DOCUMENT_SERVER_URL_INTERNAL:-"${SHEME}://${PRODUCT}-document-server/"}
+DOCUMENT_SERVER_URL_INTERNAL=${DOCUMENT_SERVER_URL_INTERNAL:-"${SCHEME}://${PRODUCT}-document-server/"}
 
-ELK_SHEME=${ELK_SHEME:-"http"}
+ELK_SCHEME=${ELK_SCHEME:-"http"}
 ELK_HOST=${ELK_HOST:-"${PRODUCT}-opensearch"}
 ELK_PORT=${ELK_PORT:-"9200"}
 ELK_THREADS=${ELK_THREADS:-"1"}
@@ -100,7 +100,7 @@ sed -i "0,/\"value\"/s!\"value\".*,!\"value\": \"${DOCUMENT_SERVER_JWT_SECRET}\"
 sed -i "s!\"header\".*!\"header\": \"${DOCUMENT_SERVER_JWT_HEADER}\"!" ${PATH_TO_CONF}/appsettings.${ENV_EXTENSION}.json
 sed -i "s!\"core\".*{!\"migration\": {\n\"enabled\": \"${DATABASE_MIGRATION}\"\n},\n\"core\": {!g" ${PATH_TO_CONF}/appsettings.${ENV_EXTENSION}.json
 
-sed -i "s!\"Scheme\".*!\"Scheme\": \"${ELK_SHEME}\",!g" ${PATH_TO_CONF}/elastic.json
+sed -i "s!\"Scheme\".*!\"Scheme\": \"${ELK_SCHEME}\",!g" ${PATH_TO_CONF}/elastic.json
 sed -i "s!\"Host\".*!\"Host\": \"${ELK_HOST}\",!g" ${PATH_TO_CONF}/elastic.json
 sed -i "s!\"Port\".*!\"Port\": \"${ELK_PORT}\",!g" ${PATH_TO_CONF}/elastic.json
 sed -i "s!\"Threads\".*!\"Threads\": \"${ELK_THREADS}\"!g" ${PATH_TO_CONF}/elastic.json

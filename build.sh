@@ -16,8 +16,8 @@ echo "Root directory:" $dir
 
 pushd $dir
 
-echo "FRONT-END (for start run command 'yarn start' inside the root folder)"
-yarn install
+echo "FRONT-END (for start run command 'pnpm start' inside the root folder)"
+pnpm install
 
 echo "BACK-END"
 dotnet build $dir/asc.web.slnf  /fl1 /flp1:logfile=asc.web.log;verbosity=normal

@@ -2,25 +2,25 @@ name: Install OneClickInstall Docker
 
 on:
   schedule:
-    - cron: '00 20 * * 0'
+    - cron: "00 20 * * 0"
   push:
     branches:
-      - 'hotfix/**'
-      - 'release/**'
-      - 'develop'
+      - "hotfix/**"
+      - "release/**"
+      - "develop"
     paths:
-      - '.github/workflows/ci-oci-docker-install.yml'
-      - 'install/OneClickInstall/install-Docker.sh'
-      - 'install/docker/*.yml'
+      - ".github/workflows/ci-oci-docker-install.yml"
+      - "install/OneClickInstall/install-Docker.sh"
+      - "install/docker/*.yml"
   workflow_dispatch:
     inputs:
       testing:
-        description: 'Use 4testing images'
+        description: "Use 4testing images"
         required: true
         default: true
         type: boolean
       offline:
-        description: 'Publish 4testing offline archive'
+        description: "Publish 4testing offline archive"
         required: true
         default: false
         type: boolean
@@ -66,7 +66,7 @@ jobs:
               esac;
               printf "%-50s ${color}%s\033[0m\n" "{}:" "$status";
           '
-      
+
       - name: Print logs for crashed container
         run: |
           docker ps --all --format "{{.Names}}" | xargs -I {} sh -c '
@@ -101,7 +101,7 @@ jobs:
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
           docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q) && docker volume rm $(docker volume ls -q)
-          curl -fsSL https://raw.githubusercontent.com/rust-lang/rust/refs/heads/master/src/ci/scripts/free-disk-space.sh | sed 's/::[^:]*:://g' | grep -Pv 'cleanDocker(?!\(\))' | sudo bash
+          curl -fsSL https://raw.githubusercontent.com/rust-lang/rust/refs/heads/master/src/ci/scripts/free-disk-space-linux.sh | sed 's/::[^:]*:://g' | grep -Pv 'cleanDocker(?!\(\))' | sudo bash
           curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | sudo bash
 
       - name: Creating 4testing offline self-extracting archive
@@ -119,16 +119,16 @@ jobs:
           echo "Creating offline self-extracting archive..."
           docker save $(docker images --format "{{.Repository}}:{{.Tag}}") | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docker_images.tar.xz
           cd ${INSTALL_PATH}/docker && tar -czvf ${INSTALL_PATH}/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
-          
+
           tar -cvf ${INSTALL_PATH}/offline-docspace.tar \
-          -C "${INSTALL_PATH}/OneClickInstall" install-Docker.sh \
+          -C "${INSTALL_PATH}/OneClickInstall" install-Docker.sh install-Docker-args.sh \
           -C "${INSTALL_PATH}" docker_images.tar.xz \
           -C "${INSTALL_PATH}" docker.tar.gz
           rm -rf ${INSTALL_PATH}/docker_images.tar.xz ${INSTALL_PATH}/docker.tar.gz
 
           echo "ARTIFACT_NAME=${ARTIFACT_NAME:=4testing-offline-docspace-installation.sh}" >> $GITHUB_ENV
           cat ${INSTALL_PATH}/common/self-extracting.sh ${INSTALL_PATH}/offline-docspace.tar > ${INSTALL_PATH}/${ARTIFACT_NAME}
-          chmod +x ${INSTALL_PATH}/${ARTIFACT_NAME} 
+          chmod +x ${INSTALL_PATH}/${ARTIFACT_NAME}
 
       - name: Configure AWS Credentials
         if: ${{ success() && github.event.inputs.offline == 'true' }}
@@ -137,7 +137,7 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_OCI }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_OCI }}
           aws-region: us-east-1
-      
+
       - name: Upload 4testing offline self-extracting archive
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |

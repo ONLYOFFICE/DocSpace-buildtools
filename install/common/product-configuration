@@ -21,7 +21,7 @@ DB_PWD=""
 APP_HOST="localhost"
 APP_PORT="80"
 
-ELK_SHEME="http"
+ELK_SCHEME="http"
 ELK_HOST="localhost"
 ELK_PORT="9200"
 OPENSEARCH_INDEX="${PACKAGE_SYSNAME}-fluent-bit"
@@ -58,9 +58,9 @@ while [ "$1" != "" ]; do
 			fi
 		;;
 
-		-ess | --elasticsheme )
+		-ess | --elasticscheme )
 			if [ "$2" != "" ]; then
-				ELK_SHEME=$2
+				ELK_SCHEME=$2
 				shift
 			fi
 		;;
@@ -232,7 +232,7 @@ while [ "$1" != "" ]; do
 			echo "      -mysqlu, --mysqluser                ${PRODUCT} database user"
 			echo "      -mysqlp, --mysqlpassword            ${PRODUCT} database password"
 			echo "      -js, --jwtsecret                    defines the secret key to validate the JWT in the request"
-			echo "      -jh. --jwtheader                    defines the http header that will be used to send the JWT"
+			echo "      -jh. --jwtheader                    defines the HTTP header that will be used to send the JWT"
 			echo "      -mk, --machinekey                   setting for core.machinekey"
 			echo "      -e, --environment                   environment"
 			echo "      -?, -h, --help                      this help"
@@ -510,6 +510,7 @@ setup_openresty(){
 					PORTS+=('5011') #ASC.Login
 					PORTS+=('5012') #ASC.Data.Backup
 					PORTS+=('5013') #ASC.Files/editor
+					PORTS+=('5015') #ASC.Management
 					PORTS+=('5027') #ASC.ClearEvents
 					PORTS+=('5032') #ASC.Data.Backup.BackgroundTasks
 					PORTS+=('5033') #ASC.Web.HealthChecks
@@ -659,26 +660,10 @@ change_elasticsearch_config(){
 		sed -i "s/Dlog4j2.formatMsgNoLookups.*/Dlog4j2.formatMsgNoLookups=true/" ${ELASTIC_SEARCH_JAVA_CONF_PATH} 
 	fi
 
-	local TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1);
-	local MEMORY_REQUIREMENTS=12000; #RAM ~12Gb
-
-	if [ ${TOTAL_MEMORY} -gt ${MEMORY_REQUIREMENTS} ]; then
-		ELASTICSEATCH_MEMORY="4g"
-	else
-		ELASTICSEATCH_MEMORY="1g"
-	fi
-
-	if grep -qE "^[^#]*-Xms[0-9]g" "${ELASTIC_SEARCH_JAVA_CONF_PATH}"; then
-		sed -i "s/-Xms[0-9]g/-Xms${ELASTICSEATCH_MEMORY}/" "${ELASTIC_SEARCH_JAVA_CONF_PATH}"
-	else
-		echo "-Xms${ELASTICSEATCH_MEMORY}" >> "${ELASTIC_SEARCH_JAVA_CONF_PATH}"
-	fi
-
-	if grep -qE "^[^#]*-Xmx[0-9]g" "${ELASTIC_SEARCH_JAVA_CONF_PATH}"; then
-		sed -i "s/-Xmx[0-9]g/-Xmx${ELASTICSEATCH_MEMORY}/" "${ELASTIC_SEARCH_JAVA_CONF_PATH}"
-	else
-		echo "-Xmx${ELASTICSEATCH_MEMORY}" >> "${ELASTIC_SEARCH_JAVA_CONF_PATH}"
-	fi
+	local SAFE_MEMORY=$(( ( $(free --mega | grep -oP '\d+' | head -n 1) - 1024 ) / 2 )) # half of the remaining memory after the 1 GB reserve for the OS
+	local HEAP=$(( SAFE_MEMORY < 2048 ? 1 : SAFE_MEMORY < 4096 ? 2 : 4 ))g  #if <2GB → 1GB; <4GB → 2GB; otherwise → 4GB
+	grep -qE "^[^#]*-Xms[0-9]g" "${ELASTIC_SEARCH_JAVA_CONF_PATH}" && sed -i "s/-Xms[0-9]g/-Xms${HEAP}/" "${ELASTIC_SEARCH_JAVA_CONF_PATH}" || echo "-Xms${HEAP}" >> "${ELASTIC_SEARCH_JAVA_CONF_PATH}"
+	grep -qE "^[^#]*-Xmx[0-9]g" "${ELASTIC_SEARCH_JAVA_CONF_PATH}" && sed -i "s/-Xmx[0-9]g/-Xmx${HEAP}/" "${ELASTIC_SEARCH_JAVA_CONF_PATH}" || echo "-Xmx${HEAP}" >> "${ELASTIC_SEARCH_JAVA_CONF_PATH}"
 
 	if [ -d /etc/opensearch/ ]; then 
 		chmod g+ws /etc/opensearch/
@@ -690,7 +675,7 @@ setup_elasticsearch() {
 
 	#Save elasticsearch parameters in .json
 	[[ $1 == "EXTERNAL_ELASTIC_SERVER" ]] && local EXTERNAL_ELASTIC_FLAG="rewrite"
-	save_undefined_param "${APP_DIR}/elastic.${ENVIRONMENT}.json" "elastic.Scheme" "${ELK_SHEME}" "$EXTERNAL_ELASTIC_FLAG"
+	save_undefined_param "${APP_DIR}/elastic.${ENVIRONMENT}.json" "elastic.Scheme" "${ELK_SCHEME}" "$EXTERNAL_ELASTIC_FLAG"
 	save_undefined_param "${APP_DIR}/elastic.${ENVIRONMENT}.json" "elastic.Host" "${ELK_HOST}" "$EXTERNAL_ELASTIC_FLAG"
 	save_undefined_param "${APP_DIR}/elastic.${ENVIRONMENT}.json" "elastic.Port" "${ELK_PORT}" "$EXTERNAL_ELASTIC_FLAG"
 	save_undefined_param "${APP_DIR}/elastic.${ENVIRONMENT}.json" "elastic.Threads" "1" "$EXTERNAL_ELASTIC_FLAG"
@@ -734,7 +719,7 @@ setup_fluentbit() {
 	echo -n "Configuring fluent-bit... "
 
 	# Replace variables in fluent-bit config file template, force copy to conf directory
-	sed -i "s/OPENSEARCH_HOST/$ELK_HOST/g; s/OPENSEARCH_PORT/$ELK_PORT/g; s/OPENSEARCH_INDEX/$OPENSEARCH_INDEX/g; s/OPENSEARCH_SCHEME/$ELK_SHEME/g" ${APP_DIR}/fluent-bit.conf
+	sed -i "s/OPENSEARCH_HOST/$ELK_HOST/g; s/OPENSEARCH_PORT/$ELK_PORT/g; s/OPENSEARCH_INDEX/$OPENSEARCH_INDEX/g; s/OPENSEARCH_SCHEME/$ELK_SCHEME/g" ${APP_DIR}/fluent-bit.conf
 	cp -f ${APP_DIR}/fluent-bit.conf /etc/fluent-bit/fluent-bit.conf
 
 	systemctl enable fluent-bit >/dev/null 2>&1
@@ -846,13 +831,13 @@ check_connection_external_services() {
 }
 
 stop_services() {
-	systemctl stop "${SERVICES_LIST[@]}" 'ds-*.service' >/dev/null 2>&1
+	systemctl stop "${SERVICES_LIST[@]}" 'ds-*.service' 2>&1
 }
 
 SERVICES=(login api socket studio-notify notify \
 people-server files files-services studio backup api-system \
 clear-events backup-background ssoauth doceditor healthchecks \
-identity-authorization identity-api sdk)
+identity-authorization identity-api sdk management)
 SERVICES_LIST=("${SERVICES[@]/#/${PRODUCT}-}")
 
 if command -v yum >/dev/null 2>&1; then
@@ -910,6 +895,9 @@ if [[ ! -z $DOCUMENT_SERVER_URL_EXTERNAL ]]; then
 	setup_docs "EXTERNAL_DOCS_SERVER"
 elif $PACKAGE_MANAGER ${PACKAGE_SYSNAME}-documentserver >/dev/null 2>&1 || $PACKAGE_MANAGER ${PACKAGE_SYSNAME}-documentserver-de >/dev/null 2>&1 || $PACKAGE_MANAGER ${PACKAGE_SYSNAME}-documentserver-ee >/dev/null 2>&1; then
 	setup_docs "LOCAL_DOCS_SERVER"
+else
+	echo "WARNING: ${PACKAGE_SYSNAME^^} Docs is not installed."
+	${JSON} "${USER_CONF}" -e 'delete this.files.docservice'
 fi
 
 if $PACKAGE_MANAGER opensearch-dashboards >/dev/null 2>&1; then

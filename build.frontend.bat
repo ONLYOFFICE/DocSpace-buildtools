@@ -2,9 +2,9 @@ PUSHD %~dp0..
 
 cd client
 
-REM call yarn wipe
+REM call pnpm wipe
 
-call yarn install
+call pnpm install
 
 cd ..
 

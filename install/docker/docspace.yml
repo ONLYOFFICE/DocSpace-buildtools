@@ -11,6 +11,8 @@ x-service: &x-service-base
   restart: always
   expose:
     - ${SERVICE_PORT}
+  extra_hosts:
+    - "${EXTRA_HOSTS:-placeholder.local:127.0.0.1}"
   environment:
     MYSQL_CONTAINER_NAME: ${MYSQL_CONTAINER_NAME}
     MYSQL_HOST: ${MYSQL_HOST}
@@ -35,7 +37,7 @@ x-service: &x-service-base
     DOCUMENT_CONTAINER_NAME: ${DOCUMENT_CONTAINER_NAME}
     DOCUMENT_SERVER_URL_EXTERNAL: ${DOCUMENT_SERVER_URL_EXTERNAL}
     ELK_CONTAINER_NAME: ${ELK_CONTAINER_NAME}
-    ELK_SHEME: ${ELK_SHEME}
+    ELK_SCHEME: ${ELK_SCHEME}
     ELK_HOST: ${ELK_HOST}
     ELK_PORT: ${ELK_PORT}
     REDIS_CONTAINER_NAME: ${REDIS_CONTAINER_NAME}
@@ -173,6 +175,14 @@ services:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_DOCEDITOR}/doceditor/health || exit 1
 
+  onlyoffice-management:
+    <<: *x-service-base
+    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-management:${DOCKER_TAG}"
+    container_name: ${MANAGEMENT_HOST}
+    healthcheck:
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_MANAGEMENT}/management/health || exit 1
+
   onlyoffice-sdk:
     <<: *x-service-base
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-sdk:${DOCKER_TAG}"
@@ -217,6 +227,7 @@ services:
       - onlyoffice-studio
       - onlyoffice-ssoauth
       - onlyoffice-doceditor
+      - onlyoffice-management
       - onlyoffice-sdk
       - onlyoffice-login
     environment:
@@ -235,9 +246,10 @@ services:
       - SERVICE_STUDIO=${SERVICE_STUDIO}
       - SERVICE_SSOAUTH=${SERVICE_SSOAUTH}
       - SERVICE_DOCEDITOR=${SERVICE_DOCEDITOR}
+      - SERVICE_MANAGEMENT=${SERVICE_MANAGEMENT}
       - SERVICE_SDK=${SERVICE_SDK}
       - SERVICE_LOGIN=${SERVICE_LOGIN}
-      - SERVICE_HELTHCHECKS=${SERVICE_HELTHCHECKS}
+      - SERVICE_HEALTHCHECKS=${SERVICE_HEALTHCHECKS}
       - WRONG_PORTAL_NAME_URL=${WRONG_PORTAL_NAME_URL}
       - DOCUMENT_CONTAINER_NAME=${DOCUMENT_CONTAINER_NAME}
       - DOCUMENT_SERVER_URL_EXTERNAL=${DOCUMENT_SERVER_URL_EXTERNAL}

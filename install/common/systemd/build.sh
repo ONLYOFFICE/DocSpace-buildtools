@@ -74,6 +74,7 @@ SERVICE_NAME=(
 	login
 	healthchecks
 	sdk
+	management
 	)
 
 reassign_values (){
@@ -195,6 +196,12 @@ reassign_values (){
         EXEC_FILE="server.js"
         DEPENDENCY_LIST=""
     ;;
+	management )
+		SERVICE_PORT="5015"
+		WORK_DIR="${BASE_DIR}/products/ASC.Management/management/"
+		EXEC_FILE="server.js"
+		DEPENDENCY_LIST=""
+	;;
   esac
   SERVICE_NAME="$1"
   RESTART="always"
