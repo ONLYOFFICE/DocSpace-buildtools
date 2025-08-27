@@ -11,6 +11,7 @@ services:
     volumes:
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}app_data:/var/www/onlyoffice/Data
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}ds_fonts:/usr/share/fonts
     expose:
       - '80'
     extra_hosts:
@@ -33,3 +34,4 @@ networks:
 volumes:
   log_data:
   app_data:
+  ds_fonts:
