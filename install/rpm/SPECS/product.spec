@@ -20,12 +20,12 @@ Vendor:         Ascensio System SIA
 Packager:       %{packager}
 License:        AGPLv3
 
-Source0:        https://github.com/ONLYOFFICE/%{product}-buildtools/archive/master.tar.gz#/buildtools.tar.gz
-Source1:        https://github.com/ONLYOFFICE/%{product}-client/archive/master.tar.gz#/client.tar.gz
-Source2:        https://github.com/ONLYOFFICE/%{product}-server/archive/master.tar.gz#/server.tar.gz
-Source3:        https://github.com/ONLYOFFICE/document-templates/archive/main/community-server.tar.gz#/DocStore.tar.gz
-Source4:        https://github.com/ONLYOFFICE/ASC.Web.Campaigns/archive/master.tar.gz#/campaigns.tar.gz
-Source5:        https://github.com/ONLYOFFICE/%{product}-plugins/archive/master.tar.gz#/plugins.tar.gz
+Source0:        https://codeload.github.com/ONLYOFFICE/%{product}-buildtools/tar.gz/master#/buildtools.tar.gz
+Source1:        https://codeload.github.com/ONLYOFFICE/%{product}-client/tar.gz/master#/client.tar.gz
+Source2:        https://codeload.github.com/ONLYOFFICE/%{product}-server/tar.gz/master#/server.tar.gz
+Source3:        https://codeload.github.com/ONLYOFFICE/document-templates/tar.gz/main/community-server#/DocStore.tar.gz
+Source4:        https://codeload.github.com/ONLYOFFICE/ASC.Web.Campaigns/tar.gz/master#/campaigns.tar.gz
+Source5:        https://codeload.github.com/ONLYOFFICE/%{product}-plugins/tar.gz/master#/plugins.tar.gz
 Source6:        %{product}.rpmlintrc
 
 BuildRequires:  nodejs >= 18.0
@@ -116,9 +116,16 @@ fi
 
 %preun
 
+if [ "$1" -eq 0 ]; then
+    systemctl list-unit-files | awk '/^%{product}.*\.service/{print $1}' \
+    | xargs -r -I{} sh -c 'systemctl stop "{}" >/dev/null 2>&1 || true; systemctl disable "{}" >/dev/null 2>&1 || true'
+    systemctl daemon-reload >/dev/null 2>&1 || true
+fi
+
 %postun
 
 if [ "$1" -eq 0 ]; then
+    systemctl reset-failed >/dev/null 2>&1 || true
     rm -rf %{buildpath}
 fi
 

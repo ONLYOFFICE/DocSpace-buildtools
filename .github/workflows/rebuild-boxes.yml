@@ -57,7 +57,7 @@ jobs:
 
       - name: Free Disk Space
         run: |
-          curl -fsSL https://raw.githubusercontent.com/rust-lang/rust/refs/heads/master/src/ci/scripts/free-disk-space.sh | sudo bash
+          curl -fsSL https://raw.githubusercontent.com/rust-lang/rust/refs/heads/master/src/ci/scripts/free-disk-space-linux.sh | sed 's/::[^:]*:://g' | sudo bash
           curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | sudo bash
 
       - name: 'Download hcp CLI'
@@ -68,7 +68,7 @@ jobs:
       - name: Get update and install vagrant
         run: |
           set -eux
-          wget -q https://www.virtualbox.org/download/oracle_vbox_2016.asc -O- | sudo gpg --dearmor -o /usr/share/keyrings/virtualbox.gpg
+          gpg --keyserver keyserver.ubuntu.com --recv-keys A2F683C52980AECF && gpg --export A2F683C52980AECF > /usr/share/keyrings/virtualbox.gpg
           echo "deb [arch=amd64 signed-by=/usr/share/keyrings/virtualbox.gpg] https://download.virtualbox.org/virtualbox/debian $(. /etc/os-release && echo $UBUNTU_CODENAME) contrib" | sudo tee /etc/apt/sources.list.d/virtualbox.list
           sudo wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
           sudo echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list

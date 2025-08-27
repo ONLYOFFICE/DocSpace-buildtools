@@ -11,6 +11,8 @@ x-service: &x-service-base
   restart: always
   expose:
     - ${SERVICE_PORT}
+  extra_hosts:
+    - "${EXTRA_HOSTS:-placeholder.local:127.0.0.1}"
   environment:
     MYSQL_CONTAINER_NAME: ${MYSQL_CONTAINER_NAME}
     MYSQL_HOST: ${MYSQL_HOST}

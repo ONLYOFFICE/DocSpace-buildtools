@@ -62,6 +62,7 @@ while [ "$1" != "" ]; do
         -noni    | --noninteractive      ) [ -n "$2" ] && NON_INTERACTIVE=$2                                                      && shift ;;
         -uni     | --uninstall           ) [ -n "$2" ] && UNINSTALL=$2 && [ "$UNINSTALL" = "true" ] && OFFLINE_IMAGE_LOAD="true"  && shift ;;
         -off     | --offline             ) [ -n "$2" ] && OFFLINE_INSTALLATION=$2                                                 && shift ;;
+        -eh      | --extrahosts          ) [ -n "$2" ] && EXTRA_HOSTS=$2                                                          && shift ;;
         -ls      | --localscripts        )                                                                                           shift ;;
         -vd      | --volumesdir          )
             [ -n "$2" ] && VOLUMES_DIR="$2"
@@ -101,6 +102,7 @@ while [ "$1" != "" ]; do
             echo "  --skiphardwarecheck <true|false>        Skip hardware checks (RAM, disk, CPU; default: false)"
             echo "  --offline           <true|false>        Offline mode: use local images only (requires pre-pulled images)"
             echo "  --makeswap          <true|false>        Create swap file (default: true)"
+            echo "  --extrahosts        <DOMAIN:IP>         Specify extra hostname resolution"
             echo "  --volumesdir        <path>              Host dir for Docker volumes (default: /var/lib/docker/volumes)"
 
             echo 

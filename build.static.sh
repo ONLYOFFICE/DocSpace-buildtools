@@ -38,7 +38,15 @@ pnpm build
 # cp -R buildtools/config/nginx/onlyoffice.conf publish/nginx/
 # ${SED_CMD} -i 's/#//g' publish/nginx/onlyoffice.conf
 
+# # Copy nginx configurations to deploy folder
+# mkdir -p publish/nginx/sites-enabled
+# mkdir -p publish/nginx/includes/
+
+# cp -R buildtools/config/nginx/onlyoffice.conf publish/nginx/
+# ${SED_CMD} -i 's/#//g' publish/nginx/onlyoffice.conf
+
 # cp -R buildtools/config/nginx/sites-enabled/* publish/nginx/sites-enabled/
+# cp -R buildtools/config/nginx/includes/* publish/nginx/includes/
 
 # # Fix paths in nginx configuration
 # ${SED_CMD} -i "s|ROOTPATH|$PARENT_FOLDER/publish/web/client|g" publish/nginx/sites-enabled/onlyoffice-client.conf

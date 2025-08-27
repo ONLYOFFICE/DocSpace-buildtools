@@ -23,11 +23,13 @@ on:
         required: true
         default: 'develop'
       deb_build:
+        type: boolean
         description: 'Trigger DEB build'
-        default: 'true'
+        default: true
       rpm_build:
+        type: boolean
         description: 'Trigger RPM build'
-        default: 'true'
+        default: true
 
 concurrency:
   group: ${{ github.ref }}
@@ -47,29 +49,24 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
-      build_all: ${{ steps.changes.outputs.build_all }}
+      build_all: ${{ steps.set-matrix.outputs.build_all }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Determine changed
-        id: changes
-        run: |
-          git fetch --no-tags --prune --depth=2
-          echo "build_all=$(git diff --name-only HEAD~1 HEAD | grep -qE 'build_packages.yml' && echo true)" >> $GITHUB_OUTPUT
       - name: Set matrix
         id: set-matrix
         run: |
           package_types=()
-          if [[ "${{ steps.changes.outputs.build_all }}" == "true" ]]; then
-            package_types=("deb" "rpm")
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            package_types=("deb" "rpm"); echo "build_all=true" >> $GITHUB_OUTPUT
           else
             [[ "${{ github.event.inputs.deb_build }}" == "true" ]] && package_types+=("deb")
             [[ "${{ github.event.inputs.rpm_build }}" == "true" ]] && package_types+=("rpm")
           fi
-          [[ ${#package_types[@]} -eq 0 ]] && exit 0
+          [[ ${#package_types[@]} -eq 0 ]] && { echo "::error::No package types specified"; exit 1; }
           matrix=$(printf '%s\n' "${package_types[@]}" | jq -R . | jq -sc '{include: map({packageType: .})}')
           echo "matrix=$matrix" >> $GITHUB_OUTPUT  
   build:
@@ -88,11 +85,11 @@ jobs:
         run: |
           PRODUCT_VERSION=$(grep -oP '\d+\.\d+\.\d+' <<< "${BRANCH_BUILDTOOLS//\//} ${BRANCH_CLIENT//\//} \
           ${BRANCH_SERVER//\//}" | head -n1)
-          echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.2.0}" >> $GITHUB_ENV
+          echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.2.2}" >> $GITHUB_ENV
 
       - name: Free Disk Space
         run: |
-          curl -fsSL https://raw.githubusercontent.com/rust-lang/rust/refs/heads/master/src/ci/scripts/free-disk-space.sh | sudo bash
+          curl -fsSL https://raw.githubusercontent.com/rust-lang/rust/refs/heads/master/src/ci/scripts/free-disk-space-linux.sh | sed 's/::[^:]*:://g' | sudo bash
           curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | sudo bash
 
       - name: Import GPG
@@ -114,7 +111,7 @@ jobs:
           JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | head -1)
           sudo update-alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && sudo update-alternatives --set java "$JAVA_PATH"
           echo "JAVA_HOME=$(dirname $(dirname "$JAVA_PATH"))" >> $GITHUB_ENV
-          sudo npm install -g json
+          sudo npm install -g json pnpm
           if [[ "${{ matrix.packageType }}" == "rpm" ]]; then
             sudo apt install -y python3-rpm python3-pip
             sudo pip install rpmlint
@@ -128,7 +125,7 @@ jobs:
             deb) SOURCE_DIR="${PACKAGE_DIRECTORY}/install/${{ matrix.packageType }}/debian/source" ;;
             rpm) SOURCE_DIR="${PACKAGE_DIRECTORY}/install/${{ matrix.packageType }}/SPECS/SOURCES" ;;
           esac
-          download() { wget -q -O "${SOURCE_DIR}/$3.tar.gz" "https://github.com/ONLYOFFICE/$1/archive/$2.tar.gz" && echo -e "\e[32m[OK] $3\e[0m" || echo -e "\e[31m[FAILED] $3\e[0m"; }
+          download() { wget -q -O "${SOURCE_DIR}/$3.tar.gz" "https://codeload.github.com/ONLYOFFICE/$1/tar.gz/$2" && echo -e "\e[32m[OK] $3\e[0m" || echo -e "\e[31m[FAILED] $3\e[0m"; }
           download "$PRODUCT-buildtools"  "$BRANCH_BUILDTOOLS"      buildtools &
           download "$PRODUCT-client"      "$BRANCH_CLIENT"          client &
           download "$PRODUCT-server"      "$BRANCH_SERVER"          server &

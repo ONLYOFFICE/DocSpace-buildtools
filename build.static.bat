@@ -13,8 +13,10 @@ cd client
 REM call pnpm install
 call pnpm install
 
-REM call pnpm build
+REM call yarn wipe
 call pnpm run build
+
+cd ..
 
 REM restart nginx
 echo service nginx stop
@@ -27,7 +29,7 @@ echo service nginx start
 call sc start nginx > nul
 
 if NOT %errorlevel% == 0 (
-	echo Couldn't restart Onlyoffice%%~nf service			
+	echo Couldn't restart Onlyoffice%%~nf service
 )
 
 )
