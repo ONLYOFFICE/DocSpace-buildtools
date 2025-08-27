@@ -475,6 +475,37 @@
 			  "zoomRedirectUrl": "https://service.teamlab.info/oauth2.aspx"
 			}
 		}
-	}
+	},
+	{
+      "type": "ASC.FederatedLogin.LoginProviders.GithubLoginProvider, ASC.FederatedLogin",
+      "services": [
+        {
+          "type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
+        }, 
+		{
+		  "type": "ASC.FederatedLogin.LoginProviders.GithubLoginProvider, ASC.FederatedLogin"
+		}, 
+		{
+		  "key": "github",
+		  "type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
+		}, 
+		{
+		  "key": "github",
+		  "type": "ASC.FederatedLogin.LoginProviders.GithubLoginProvider, ASC.FederatedLogin"
+		}
+      ],
+	  "instanceScope": "perlifetimescope",
+	  "parameters": {
+		  "name": "github",
+		  "order": "25",
+		  "props": {
+			"githubClientId": "",
+			"githubClientSecret": ""
+		  },
+		  "additional": {
+			"githubRedirectUrl" : "https://service.teamlab.info/oauth2.aspx"
+		  }
+	  }
+    }
   ]
 }
