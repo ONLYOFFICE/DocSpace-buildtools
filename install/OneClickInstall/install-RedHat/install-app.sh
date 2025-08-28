@@ -142,18 +142,13 @@ if [ "$PRODUCT_INSTALLED" = "false" ]; then
 	${package_manager} install -y ${product} --best --allowerasing $TESTING_REPO
 	"${product}"-configuration \
 		-mysqlh "${MYSQL_SERVER_HOST}" \
+		-mysqlport "${MYSQL_SERVER_PORT}" \
 		-mysqld "${MYSQL_SERVER_DB_NAME}" \
 		-mysqlu "${MYSQL_SERVER_USER}" \
 		-mysqlp "${MYSQL_ROOT_PASS}"
 elif [[ "${PRODUCT_CHECK_UPDATE}" -eq "${UPDATE_AVAILABLE_CODE}" || "${RECONFIGURE_PRODUCT}" = "true" ]]; then
-	ENVIRONMENT=$(grep -oP 'ENVIRONMENT=\K.*' /etc/"${package_sysname}"/"${product}"/systemd.env || grep -oP 'ENVIRONMENT=\K.*' /usr/lib/systemd/system/"${product}"-api.service)
-	CONNECTION_STRING=$(json -f /etc/"${package_sysname}"/"${product}"/appsettings."$ENVIRONMENT".json ConnectionStrings.default.connectionString)
 	${package_manager} -y update "${product}" --best --allowerasing $TESTING_REPO
-	"${product}"-configuration \
-		-mysqlh "$(grep -oP 'Server=\K[^;]*' <<< "${CONNECTION_STRING}")" \
-		-mysqld "$(grep -oP 'Database=\K[^;]*' <<< "${CONNECTION_STRING}")" \
-		-mysqlu "$(grep -oP 'User ID=\K[^;]*' <<< "${CONNECTION_STRING}")" \
-		-mysqlp "$(grep -oP 'Password=\K[^;]*' <<< "${CONNECTION_STRING}")"
+	"${product}"-configuration
 fi
 
 echo ""

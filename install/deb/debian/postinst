@@ -6,6 +6,9 @@ set -e
 
 case "$1" in
 	configure)
+		args=()
+
+		# --- Base service ---
 		db_get {{product}}/host || true
 		APP_HOST="$RET"
 		db_get {{product}}/port || true
@@ -13,11 +16,11 @@ case "$1" in
 		db_get {{product}}/machinekey || true
 		CORE_MACHINEKEY="$RET"
 
-		args+=(-ash "$APP_HOST" -asp "$APP_PORT" );
+		[ -n "$APP_HOST" ] && args+=(-ash "$APP_HOST")
+		[ -n "$APP_PORT" ] && args+=(-asp "$APP_PORT")
+		[ -n "$CORE_MACHINEKEY" ] && args+=(-mk "$CORE_MACHINEKEY")
 
-		[ -z "$CORE_MACHINEKEY" ] && CORE_MACHINEKEY=$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12) && db_set {{product}}/machinekey $CORE_MACHINEKEY
-		args+=(-mk "$CORE_MACHINEKEY" )
-
+		# --- Database ---
 		db_get {{product}}/db-host || true
 		DB_HOST="$RET"
 		db_get {{product}}/db-name || true
@@ -26,44 +29,58 @@ case "$1" in
 		DB_USER="$RET"
 		db_get {{product}}/db-pwd || true
 		DB_PWD="$RET"
+		db_get {{product}}/db-port || true
+		DB_PORT="$RET"
 
-		args+=(-mysqlh "$DB_HOST" -mysqld "$DB_NAME" -mysqlu "$DB_USER" );
-		[ -n "$DB_PWD" ] && args+=(-mysqlp "$DB_PWD" );
-
-		command -v mysql >/dev/null 2>&1 || { echo "MySQL client not found"; exit 1; }
-		MYSQL="mysql -h$DB_HOST -u$DB_USER"
-		if [ -n "$DB_PWD" ]; then
-			MYSQL="$MYSQL -p$DB_PWD"
+		if [ -n "$DB_HOST" ] && [ -n "$DB_NAME" ] && [ -n "$DB_USER" ] && [ -n "$DB_PORT" ]; then
+			args+=(-mysqlh "$DB_HOST" -mysqld "$DB_NAME" -mysqlu "$DB_USER" -mysqlport "$DB_PORT")
+			[ -n "$DB_PWD" ] && args+=(-mysqlp "$DB_PWD")
+		elif [ -n "$DB_HOST$DB_NAME$DB_USER$DB_PWD$DB_PORT" ]; then
+			echo "Warning: not all database parameters are set, skipping DB config"
 		fi
 
-		$MYSQL -e ";" >/dev/null 2>&1
-		ERRCODE=$?
-		if [ $ERRCODE -ne 0 ]; then
-			systemctl mysql start >/dev/null 2>&1
-			$MYSQL -e ";" >/dev/null 2>&1 || { echo "Trying to establish MySQL connection... FAILURE"; exit 1; }
-		fi
-
+		# --- Redis ---
 		db_get {{product}}/redis-host || true
 		REDIS_HOST="$RET"
 		db_get {{product}}/redis-port || true
 		REDIS_PORT="$RET"
+		db_get {{product}}/redis-username || true
+		REDIS_USER="$RET"
+		db_get {{product}}/redis-password || true
+		REDIS_PWD="$RET"
 		db_get {{product}}/redis-db || true
-        REDIS_DB="$RET"
+		REDIS_DB="$RET"
 
-		[ -n "$REDIS_HOST" ] && args+=(-rdh "$REDIS_HOST" -rdp "$REDIS_PORT" );
-		[ -n "$REDIS_DB" ] && args+=(-rdb "$REDIS_DB")
+		if [ -n "$REDIS_HOST" ] && [ -n "$REDIS_PORT" ]; then
+			args+=(-rdh "$REDIS_HOST" -rdp "$REDIS_PORT")
+			[ -n "$REDIS_USER" ] && args+=(-rdu "$REDIS_USER")
+			[ -n "$REDIS_PWD" ] && args+=(-rdpw "$REDIS_PWD")
+			[ -n "$REDIS_DB" ] && args+=(-rdb "$REDIS_DB")
+		elif [ -n "$REDIS_HOST$REDIS_PORT$REDIS_USER$REDIS_PWD$REDIS_DB" ]; then
+			echo "Warning: not all Redis parameters are set, skipping Redis config"
+		fi
 
+		# --- RabbitMQ ---
+		db_get {{product}}/rabbitmq-protocol || true
+		RABBITMQ_SCHEME="$RET"
 		db_get {{product}}/rabbitmq-host || true
 		RABBITMQ_HOST="$RET"
-		db_get {{product}}/rabbitmq-user || true
-		RABBITMQ_USER="$RET"
 		db_get {{product}}/rabbitmq-port || true
 		RABBITMQ_PORT="$RET"
+		db_get {{product}}/rabbitmq-user || true
+		RABBITMQ_USER="$RET"
 		db_get {{product}}/rabbitmq-password || true
 		RABBITMQ_PASSWORD="$RET"
 
-		[ -n "$RABBITMQ_HOST" ] && args+=(-rbh "$RABBITMQ_HOST" -rbp "$RABBITMQ_PORT" -rbu "$RABBITMQ_USER" -rbpw "$RABBITMQ_PASSWORD" );
-		
+		if [ -n "$RABBITMQ_HOST" ] && [ -n "$RABBITMQ_PORT" ] && [ -n "$RABBITMQ_USER" ]; then
+			args+=(-rbh "$RABBITMQ_HOST" -rbp "$RABBITMQ_PORT" -rbu "$RABBITMQ_USER")
+			[ -n "$RABBITMQ_SCHEME" ] && args+=(-rbpr "$RABBITMQ_SCHEME")
+			[ -n "$RABBITMQ_PASSWORD" ] && args+=(-rbpw "$RABBITMQ_PASSWORD")
+		elif [ -n "$RABBITMQ_HOST$RABBITMQ_PORT$RABBITMQ_USER$RABBITMQ_PASSWORD$RABBITMQ_SCHEME" ]; then
+			echo "Warning: not all RabbitMQ parameters are set, skipping RabbitMQ config"
+		fi
+
+		# --- OpenSearch ---
 		db_get {{product}}/elasticsearch-scheme || true
 		ELK_SCHEME="$RET"
 		db_get {{product}}/elasticsearch-host || true
@@ -71,8 +88,13 @@ case "$1" in
 		db_get {{product}}/elasticsearch-port || true
 		ELK_PORT="$RET"
 
-		[ -n "$ELK_HOST" ] && args+=(-ess "$ELK_SCHEME" -esh "$ELK_HOST" -esp "$ELK_PORT" );
+		if [ -n "$ELK_HOST" ] && [ -n "$ELK_PORT" ]; then
+			args+=(-ess "$ELK_SCHEME" -esh "$ELK_HOST" -esp "$ELK_PORT")
+		elif [ -n "$ELK_HOST$ELK_PORT$ELK_SCHEME" ]; then
+			echo "Warning: not all OpenSearch parameters are set, skipping OpenSearch config"
+		fi
 
+		# --- External Docs ---
 		db_get {{product}}/ds-url || true
 		DOCUMENT_SERVER_URL_EXTERNAL="$RET"
 		db_get {{product}}/jwt-secret || true
@@ -84,10 +106,11 @@ case "$1" in
 			if [ -n "$DOCUMENT_SERVER_JWT_SECRET" ] && [ -n "$DOCUMENT_SERVER_JWT_HEADER" ]; then
 				args+=(-docsurl "$DOCUMENT_SERVER_URL_EXTERNAL" -js "$DOCUMENT_SERVER_JWT_SECRET" -jh "$DOCUMENT_SERVER_JWT_HEADER")
 			else
-				echo "You should provide JWT-secret and JWT-header along with ONLYOFFICE Docs URL. "
+				echo "Warning: Docs URL is set, but JWT secret/header are missing — skipping Docs config"
 			fi
 		fi
 
+		# --- Run configuration ---
 		bash /usr/bin/{{product}}-configuration "${args[@]}"
 
 		exit 0

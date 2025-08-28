@@ -36,8 +36,6 @@ BuildRequires:  unzip
 BuildRequires:  java-21-openjdk-headless
 BuildRequires:  maven
 
-BuildRoot:      %_tmppath/%name-%version-%release.%arch
-
 Requires:       %name-api = %version-%release
 Requires:       %name-api-system = %version-%release
 Requires:       %name-backup = %version-%release
@@ -97,15 +95,7 @@ cp -rf %{SOURCE0} .
 %pre common
 
 getent group onlyoffice >/dev/null || groupadd -r onlyoffice
-getent passwd onlyoffice >/dev/null || useradd -r -g onlyoffice -s /sbin/nologin onlyoffice
-
-%pre proxy
-
-# (DS v1.1.3) Removing old nginx configs to prevent conflicts before upgrading on OpenResty.
-if [ -f /etc/nginx/conf.d/onlyoffice.conf ]; then
-    rm -rf /etc/nginx/conf.d/onlyoffice*
-    systemctl reload nginx
-fi
+getent passwd onlyoffice >/dev/null || useradd -r -g onlyoffice -s /usr/sbin/nologin -d %{_sysconfdir}/onlyoffice/%{product} onlyoffice
 
 %pre identity-api
 
@@ -131,10 +121,6 @@ if [ "$1" -eq 0 ]; then
     systemctl reset-failed >/dev/null 2>&1 || true
     rm -rf %{buildpath}
 fi
-
-%clean
-
-rm -rf %{_builddir} %{buildroot} 
 
 %changelog
 *Mon Jan 16 2023 %{packager} - %{version}-%{release}

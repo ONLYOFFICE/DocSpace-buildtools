@@ -1,7 +1,5 @@
 %package        backup
-Packager:       %{packager}
 Summary:        Backup
-Group:          Applications/Internet
 Requires:       %name-common  = %version-%release 
 Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
@@ -10,17 +8,13 @@ BuildArch:      noarch
 The service which handles API requests related to backup
 
 %package        common
-Packager:       %{packager}
 Summary:        Common
-Group:          Applications/Internet
 BuildArch:      noarch
 %description    common
 A package containing configure and scripts
 
 %package        files-services
-Packager:       %{packager}
 Summary:        Files-services
-Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
 Requires:       dotnet-sdk-9.0
 Requires:       ffmpeg-free
@@ -36,9 +30,7 @@ The service which launches additional services related to file management:
  - Launcher - removes outdated files from Trash;
 
 %package        notify
-Packager:       %{packager}
 Summary:        Notify
-Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
 Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
@@ -50,9 +42,7 @@ NotifySenderService which sends messages from the base,
 and NotifyCleanerService which removes messages
 
 %package        files
-Packager:       %{packager}
 Summary:        Files
-Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
 Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
@@ -62,9 +52,7 @@ The service which handles API requests related to
 documents and launches the OFormService service
 
 %package        proxy
-Packager:       %{packager}
 Summary:        Proxy
-Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
 Requires:       openresty
 Requires:       mysql-community-client >= 5.7.0
@@ -76,9 +64,7 @@ it receives and handles requests, transmits them to other services,
 receives a response from them and returns it to the client
 
 %package        studio-notify
-Packager:       %{packager}
 Summary:        Studio-notify
-Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
 Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
@@ -88,9 +74,7 @@ The service responsible for creating notifications and
 sending them to other services, for example, TelegramService and NotifyService
 
 %package        people-server
-Packager:       %{packager}
 Summary:        People-server
-Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
 Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
@@ -99,9 +83,7 @@ BuildArch:      noarch
 The service which handles API requests related to the People module
 
 %package        socket
-Packager:       %{packager}
 Summary:        Socket
-Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
 Requires:       nodejs >= 16.0
 AutoReqProv:    no
@@ -110,9 +92,7 @@ BuildArch:      noarch
 The service which provides two-way communication between a client and a server
 
 %package        studio
-Packager:       %{packager}
 Summary:        Studio
-Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
 Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
@@ -121,9 +101,7 @@ BuildArch:      noarch
 The service which processes storage handlers and authorization pages
 
 %package        api
-Packager:       %{packager}
 Summary:        Api
-Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
 Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
@@ -134,9 +112,7 @@ handles API requests not related to backup, documents, and the People
 module, for example, requests related to settings, audit, authentication, etc.
 
 %package        api-system
-Packager:       %{packager}
 Summary:        Api-system
-Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
 Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
@@ -145,9 +121,7 @@ BuildArch:      noarch
 The service which is used for working with portals (creating, removing, etc.)
 
 %package        ssoauth
-Packager:       %{packager}
 Summary:        Ssoauth
-Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
 Requires:       nodejs >= 16.0
 AutoReqProv:    no
@@ -158,9 +132,7 @@ SAML-based single sign-on (SSO) authentication to provide a more quick,
 easy and secure way to access DocSpace for users
 
 %package        identity-authorization
-Packager:       %{packager}
 Summary:        Identity-Authorization
-Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
 Requires:       java-21-openjdk-headless
 AutoReqProv:    no
@@ -169,9 +141,7 @@ BuildArch:      noarch
 Identity-Authorization
 
 %package        identity-api
-Packager:       %{packager}
 Summary:        Identity-Api
-Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
 Requires:       java-21-openjdk-headless
 AutoReqProv:    no
@@ -180,9 +150,7 @@ BuildArch:      noarch
 Identity-Api
 
 %package        clear-events
-Packager:       %{packager}
 Summary:        Clear-events
-Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
 Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
@@ -192,9 +160,7 @@ The service responsible for clearing the login_events and audit_events tables
 by LoginHistoryLifeTime and AuditTrailLifeTime to log out users after a timeout
 
 %package        backup-background
-Packager:       %{packager}
 Summary:        Backup-background
-Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
 Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
@@ -208,9 +174,7 @@ The service which launches additional services related to backup creation:
  - BackupSchedulerService - runs backup according to a schedule;
 
 %package        doceditor
-Packager:       %{packager}
 Summary:        Doceditor
-Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
 Requires:       nodejs >= 16.0
 AutoReqProv:    no
@@ -219,9 +183,7 @@ BuildArch:      noarch
 The service which allows interaction with document-server
 
 %package        migration-runner
-Packager:       %{packager}
 Summary:        Migration-runner
-Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
 Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
@@ -232,9 +194,7 @@ A database connection is transferred to the service and
 the service creates tables and populates them with values
 
 %package        login
-Packager:       %{packager}
 Summary:        Login
-Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
 Requires:       nodejs >= 16.0
 AutoReqProv:    no
@@ -243,9 +203,7 @@ BuildArch:      noarch
 The service which is used for logging users and displaying the wizard
 
 %package        healthchecks
-Packager:       %{packager}
 Summary:        Healthchecks
-Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
 Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
@@ -254,9 +212,7 @@ BuildArch:      noarch
 The service which displays launched services
 
 %package        plugins
-Packager:       %{packager}
 Summary:        Plugins
-Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
 AutoReqProv:    no
 BuildArch:      noarch
@@ -264,9 +220,7 @@ BuildArch:      noarch
 This package includes plugins that extend DocSpace functionality
 
 %package sdk
-Packager:       %{packager}
 Summary:        Sdk
-Group:          Applications/Internet
 Requires:       %name-common = %version-%release
 Requires:       nodejs >= 16.0
 AutoReqProv:    no
@@ -276,23 +230,19 @@ The service provides a Software Development Kit (SDK) with APIs and tools for cu
 integrations and plugins
 
 %package        management
-Packager:       %{packager}
 Summary:        Management
-Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
 Requires:       nodejs >= 16.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    management
-Management
+The service responsible for DocSpace management interface
 
 %package        telegram
-Packager:       %{packager}
 Summary:        Telegram
-Group:          Applications/Internet
 Requires:       %name-common  = %version-%release
 Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    telegram
-Telegram
+Service responsible for Telegram integration
