@@ -72,7 +72,7 @@ RUN echo "--- build/publishh docspace-server .net 9.0 ---" && \
     rm -rf ${SRC_PATH}/server/*
 
 # node build
-FROM node:22.12.0 AS build-node
+FROM node:22-slim AS build-node
 ARG SRC_PATH
 ARG BUILD_ARGS="build"
 ARG DEPLOY_ARGS="deploy"
