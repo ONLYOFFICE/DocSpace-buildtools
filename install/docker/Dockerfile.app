@@ -130,6 +130,7 @@ COPY --from=src ${SRC_PATH}/plugins ${SRC_PATH}/plugins
 WORKDIR ${SRC_PATH}/buildtools/install/common
 COPY --from=src ${SRC_PATH}/buildtools/install/common/plugins-build.sh ./plugins-build.sh
 RUN echo "--- build/publish plugins ---" && \
+    apt-get update && apt-get install -y unzip && \
     bash plugins-build.sh "${SRC_PATH}/plugins"
 
 # java build
