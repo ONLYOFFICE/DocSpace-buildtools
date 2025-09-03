@@ -72,7 +72,7 @@ RUN echo "--- build/publishh docspace-server .net 9.0 ---" && \
     rm -rf ${SRC_PATH}/server/*
 
 # node build
-FROM node:22.12.0 AS build-node
+FROM node:22-slim AS build-node
 ARG SRC_PATH
 ARG BUILD_ARGS="build"
 ARG DEPLOY_ARGS="deploy"
@@ -130,6 +130,7 @@ COPY --from=src ${SRC_PATH}/plugins ${SRC_PATH}/plugins
 WORKDIR ${SRC_PATH}/buildtools/install/common
 COPY --from=src ${SRC_PATH}/buildtools/install/common/plugins-build.sh ./plugins-build.sh
 RUN echo "--- build/publish plugins ---" && \
+    apt-get update && apt-get install -y unzip && \
     bash plugins-build.sh "${SRC_PATH}/plugins"
 
 # java build

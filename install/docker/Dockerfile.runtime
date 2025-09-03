@@ -50,7 +50,7 @@ COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config /app/onlyo
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
 
-FROM node:20.11.0-slim AS noderun
+FROM node:22-slim AS noderun
 ARG BUILD_PATH
 ARG SRC_PATH 
 ENV BUILD_PATH=${BUILD_PATH}
