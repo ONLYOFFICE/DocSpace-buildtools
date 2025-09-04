@@ -146,6 +146,7 @@
         "data": "00000000-0000-0000-0000-000000000000",
         "type": "disc",
         "path": "$STORAGE_ROOT\\Studio\\{0}\\userphotos",
+		"validatorType": "ASC.Web.Core.Users.UserPhotosValidator, ASC.Web.Core",
         "virtualpath": "~/studio/{0}/userphotos",
         "contentAsAttachment": true,
         "domain": [
