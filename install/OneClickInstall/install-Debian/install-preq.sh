@@ -128,7 +128,10 @@ if ! dpkg -l | grep -q "opensearch"; then
 	apt-get install -yq opensearch=${ELASTIC_VERSION}
 else
 	ELASTIC_PLUGIN="/usr/share/opensearch/bin/opensearch-plugin"
-	"${ELASTIC_PLUGIN}" list | grep -q ingest-attachment && "${ELASTIC_PLUGIN}" remove -s ingest-attachment
+	if dpkg --compare-versions "$(dpkg-query -W -f='${Version}\n' opensearch 2>/dev/null || true)" ne "$ELASTIC_VERSION"; then
+		"${ELASTIC_PLUGIN}" list | grep -q ingest-attachment && "${ELASTIC_PLUGIN}" remove -s ingest-attachment
+		systemctl restart opensearch || true
+	fi
 fi
 
 # Set Java ${JAVA_VERSION} as the default version
