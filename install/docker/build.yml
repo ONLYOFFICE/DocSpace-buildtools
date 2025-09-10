@@ -150,7 +150,7 @@ services:
     build:
       context: ./
       dockerfile: "${DOCKERFILE}"
-      target: onlyoffice-telegram
+      target: telegram
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-telegram:${DOCKER_TAG}"
 
   onlyoffice-healthchecks:

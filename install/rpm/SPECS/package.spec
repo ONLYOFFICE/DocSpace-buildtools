@@ -285,3 +285,14 @@ AutoReqProv:    no
 BuildArch:      noarch
 %description    management
 Management
+
+%package        telegram
+Packager:       %{packager}
+Summary:        Telegram
+Group:          Applications/Internet
+Requires:       %name-common  = %version-%release
+Requires:       dotnet-sdk-9.0
+AutoReqProv:    no
+BuildArch:      noarch
+%description    telegram
+Telegram
