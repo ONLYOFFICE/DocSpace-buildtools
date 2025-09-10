@@ -20,6 +20,10 @@
 				{
 					"useCoreSettings" : "true"
 				}
+			},
+			{
+				"name": "telegram.sender",
+				"type":"ASC.Core.Notify.Senders.TelegramSender, ASC.Core.Common"
 			}
 		]
 	}
