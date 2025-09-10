@@ -517,7 +517,7 @@ ENTRYPOINT ["./docker-healthchecks-entrypoint.sh"]
 CMD ["ASC.Web.HealthChecks.UI.dll", "ASC.Web.HealthChecks.UI"]
 
 ## ASC.TelegramService ##
-FROM dotnetrun as telegram
+FROM dotnetrun AS telegram
 WORKDIR ${BUILD_PATH}/services/ASC.TelegramService/service/
 
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
