@@ -41,7 +41,7 @@ jobs:
           DOCKER_TAG: ${{ github.event.inputs.release_version }}
         run: |
           SERVICES=$(curl -sSL "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/install/docker/build.yml" | \
-            docker compose -f- config | grep -oP 'image: [^/]*/-?\K[^:]+') | grep -vE '^(dotnet|java|node)$')
+            docker compose -f- config | grep -oP 'image: [^/]*/-?\K[^:]+' | grep -vE '^(dotnet|java|node)$')
 
           PIDS=()
           for SVC in ${SERVICES}; do
