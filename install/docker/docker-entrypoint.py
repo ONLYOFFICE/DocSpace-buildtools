@@ -3,6 +3,7 @@ from jsonpath_ng.ext import parse
 from os import environ
 from multipledispatch import dispatch
 from netaddr import *
+import fileinput
 
 filePath = None
 saveFilePath = None
@@ -16,8 +17,12 @@ SERVICE_PORT = os.environ["SERVICE_PORT"] if environ.get("SERVICE_PORT") else "5
 URLS = os.environ["URLS"] if environ.get("URLS") else "http://0.0.0.0:"
 PATH_TO_CONF = os.environ["PATH_TO_CONF"] if environ.get("PATH_TO_CONF") else "/app/" + PRODUCT + "/config"
 LOG_DIR = os.environ["LOG_DIR"] if environ.get("LOG_DIR") else "/var/log/" + PRODUCT
+BUILD_PATH = os.environ["BUILD_PATH"] if environ.get("BUILD_PATH") else "/var/www"
+NODE_CONTAINER_NAME = os.environ["NODE_CONTAINER_NAME"] if os.environ.get("NODE_CONTAINER_NAME") else "onlyoffice-node-services"
+SERVICE_SOCKET_PORT = os.environ["SERVICE_SOCKET_PORT"] if os.environ.get("SERVICE_SOCKET_PORT") else SERVICE_PORT
+SERVICE_SSOAUTH_PORT = os.environ["SERVICE_SSOAUTH_PORT"] if os.environ.get("SERVICE_SSOAUTH_PORT") else SERVICE_PORT
 ROUTER_HOST = os.environ["ROUTER_HOST"] if environ.get("ROUTER_HOST") else "onlyoffice-router"
-SOCKET_HOST = os.environ["SOCKET_HOST"] if environ.get("SOCKET_HOST") else "onlyoffice-socket"
+SOCKET_HOST = os.environ.get("NODE_CONTAINER_NAME") or os.environ.get("SOCKET_HOST") or "onlyoffice-socket"
 
 MYSQL_CONTAINER_NAME = os.environ["MYSQL_CONTAINER_NAME"] if environ.get("MYSQL_CONTAINER_NAME") else "onlyoffice-mysql-server"
 MYSQL_HOST = os.environ["MYSQL_HOST"] if environ.get("MYSQL_HOST") else None
@@ -97,6 +102,10 @@ class RunServices:
         
     @dispatch(str, str)
     def RunService(self, RUN_FILE, ENV_EXTENSION):
+        if sys.argv[1] == "supervisord":
+            os.execvp(sys.argv[1], sys.argv[1:])
+            return 1
+
         if ENV_EXTENSION == "none":
             self.RunService(RUN_FILE)
         os.system(TLS_REJECT_UNAUTHORIZED + CERTIFICATE_PARAM + "node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
@@ -238,7 +247,7 @@ updateJsonData(jsonData,"$.core.base-domain", APP_CORE_BASE_DOMAIN)
 updateJsonData(jsonData,"$.core.machinekey", APP_CORE_MACHINEKEY)
 updateJsonData(jsonData,"$.core.products.subfolder", "server")
 updateJsonData(jsonData,"$.core.notify.postman", "services")
-updateJsonData(jsonData,"$.web.hub.internal", "http://" + SOCKET_HOST + ":" + SERVICE_PORT + "/")
+updateJsonData(jsonData,"$.web.hub.internal", "http://" + SOCKET_HOST + ":" + SERVICE_SOCKET_PORT + "/")
 updateJsonData(jsonData,"$.core.oidc.disableValidateToken", DISABLE_VALIDATE_TOKEN)
 updateJsonData(jsonData,"$.core.oidc.showPII", DEBUG_INFO)
 updateJsonData(jsonData,"$.debug-info.enabled", DEBUG_INFO)
@@ -298,12 +307,12 @@ if ENV_EXTENSION != "dev":
 
 filePath = "/app/onlyoffice/config/socket.json"
 jsonData = openJsonFile(filePath)
-updateJsonData(jsonData,"$.socket.port", SERVICE_PORT)
+updateJsonData(jsonData,"$.socket.port", SERVICE_SOCKET_PORT)
 writeJsonFile(filePath, jsonData)
 
 filePath = "/app/onlyoffice/config/ssoauth.json"
 jsonData = openJsonFile(filePath)
-updateJsonData(jsonData,"$.ssoauth.port", SERVICE_PORT)
+updateJsonData(jsonData,"$.ssoauth.port", SERVICE_SSOAUTH_PORT)
 writeJsonFile(filePath, jsonData)
 
 filePath = "/app/onlyoffice/config/rabbitmq.json"
@@ -324,6 +333,21 @@ updateJsonData(jsonData,"$.Redis.Database", REDIS_DB)
 jsonData["Redis"].update(REDIS_USER_NAME) if REDIS_USER_NAME is not None else None
 jsonData["Redis"].update(REDIS_PASSWORD) if REDIS_PASSWORD is not None else None
 writeJsonFile(filePath, jsonData)
+
+filePath = os.path.join(BUILD_PATH, "services", "ASC.Migration.Runner", "service", "appsettings.runner.json")
+if os.path.isfile(filePath):
+    jsonData = openJsonFile(filePath)
+    conn_str = f"Server={MYSQL_CONNECTION_HOST};Database={MYSQL_DATABASE};User ID={MYSQL_USER};Password={MYSQL_PASSWORD};Command Timeout=100"
+    updateJsonData(jsonData, "$.options.Providers[0].ConnectionString", conn_str)
+    updateJsonData(jsonData, "$.options.TeamlabsiteProviders[0].ConnectionString", conn_str)
+    writeJsonFile(filePath, jsonData)
+
+filePath = os.path.join(BUILD_PATH, "services", "ASC.Web.HealthChecks.UI", "service", "appsettings.json")
+if os.path.isfile(filePath):
+    for line in fileinput.input(filePath, inplace=True):
+        line = line.replace("localhost:9899", f"{NODE_CONTAINER_NAME}:{SERVICE_SOCKET_PORT}")
+        line = line.replace("localhost:9834", f"{NODE_CONTAINER_NAME}:{SERVICE_SSOAUTH_PORT}")
+        sys.stdout.write(line)
 
 if LOG_LEVEL:
     filePath = "/app/onlyoffice/config/nlog.config"
