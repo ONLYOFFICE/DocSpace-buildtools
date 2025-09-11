@@ -521,7 +521,7 @@ FROM dotnetrun AS telegram
 WORKDIR ${BUILD_PATH}/services/ASC.TelegramService/service/
 
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${BUILD_PATH}/publish/services/ASC.TelegramService/service/ .
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.TelegramService/service/ .
 
 CMD ["ASC.TelegramService.dll", "ASC.TelegramService", "core:eventBus:subscriptionClientName=asc_event_bus_telegram_queue"]
 
