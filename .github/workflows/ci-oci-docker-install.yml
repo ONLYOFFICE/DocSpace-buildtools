@@ -109,6 +109,13 @@ jobs:
         run: |
           INSTALL_PATH=${{ github.workspace }}/install
 
+          for repo in onlyoffice/$( [ "${{ github.ref_name }}" = "master" ] && echo documentserver || echo 4testing-documentserver ) onlyoffice/$( [ "${{ github.ref_name }}" = "master" ] && echo documentserver-de || echo 4testing-documentserver-de ); do
+            tag=$(curl -s "https://registry.hub.docker.com/v2/repositories/${repo}/tags?page_size=100" \
+                  | jq -r '.results[].name' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -Vr | head -n1)
+            [ -z "$tag" ] && exit 1
+            docker pull "${repo}:${tag}"
+          done
+
           docker images --format "{{.Repository}}:{{.Tag}}" | grep "4testing-" | xargs -I{} bash -c '
             docker tag "$1" $(echo "${1/4testing-/}" | sed -E "s/([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+/\1/")
             docker rmi "$1"
@@ -117,14 +124,16 @@ jobs:
           sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\).*"$~\1true"~' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
 
           echo "Creating offline self-extracting archive..."
+          docker save $(docker images --format "{{.Repository}}:{{.Tag}}" | grep -E 'onlyoffice/documentserver') | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docs_images.tar.xz
+          docker rmi $(docker images --format "{{.Repository}}:{{.Tag}}" | grep -E 'onlyoffice/documentserver')
           docker save $(docker images --format "{{.Repository}}:{{.Tag}}") | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docker_images.tar.xz
           cd ${INSTALL_PATH}/docker && tar -czvf ${INSTALL_PATH}/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
 
           tar -cvf ${INSTALL_PATH}/offline-docspace.tar \
           -C "${INSTALL_PATH}/OneClickInstall" install-Docker.sh install-Docker-args.sh \
-          -C "${INSTALL_PATH}" docker_images.tar.xz \
+          -C "${INSTALL_PATH}" docker_images.tar.xz docs_images.tar.xz \
           -C "${INSTALL_PATH}" docker.tar.gz
-          rm -rf ${INSTALL_PATH}/docker_images.tar.xz ${INSTALL_PATH}/docker.tar.gz
+          rm -rf ${INSTALL_PATH}/docker_images.tar.xz ${INSTALL_PATH}/docs_images.tar.xz ${INSTALL_PATH}/docker.tar.gz
 
           echo "ARTIFACT_NAME=${ARTIFACT_NAME:=4testing-offline-docspace-installation.sh}" >> $GITHUB_ENV
           cat ${INSTALL_PATH}/common/self-extracting.sh ${INSTALL_PATH}/offline-docspace.tar > ${INSTALL_PATH}/${ARTIFACT_NAME}
