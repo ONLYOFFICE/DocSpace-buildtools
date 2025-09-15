@@ -506,6 +506,37 @@
 				"telegramAuthTokenLifespan": "20"
 			}
 		}
+	},
+	{
+		"type": "ASC.FederatedLogin.LoginProviders.WeixinLoginProvider, ASC.FederatedLogin",
+		"services": [
+		  {
+			"type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
+		  },
+		  {
+			"type": "ASC.FederatedLogin.LoginProviders.WeixinLoginProvider, ASC.FederatedLogin"
+		  },
+		  {
+			"key": "weixin",
+			"type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
+		  },
+		  {
+			"key": "weixin",
+			"type": "ASC.FederatedLogin.LoginProviders.WeixinLoginProvider, ASC.FederatedLogin"
+		  }
+		],
+		"instanceScope": "perlifetimescope",
+		"parameters": {
+			"name": "weixin",
+			"order": "26",
+			"props": {
+			  "weixinClientId": "",
+			  "weixinClientSecret": ""
+			},
+			"additional": {
+			  "weixinRedirectUrl": "https://service.teamlab.info/oauth2.aspx"
+			}
+		}
 	}
   ]
 }
