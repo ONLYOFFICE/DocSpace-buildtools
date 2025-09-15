@@ -9,10 +9,6 @@ on:
 
   workflow_dispatch:
     inputs:
-      rhel9:
-         type: boolean
-         description: 'RHEL9'
-         default: true
       centos9s:
          type: boolean
          description: 'CentOS 9 Stream'
@@ -46,7 +42,6 @@ jobs:
         run: |
           matrix=$(echo '{
             "include": [
-              {"execute": '${{ github.event.inputs.rhel9 || true }}', "name": "RHEL9", "os": "rhel9", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.centos9s || true }}', "name": "CentOS9S", "os": "centos9s", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.debian11 || true }}', "name": "Debian11", "os": "debian11", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.debian12 || true }}', "name": "Debian12", "os": "debian12", "distr": "onlyoffice"},
