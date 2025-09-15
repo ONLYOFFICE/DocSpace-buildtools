@@ -194,9 +194,10 @@ def waitForHostAvailable(HOST_URL, TIMEOUT=30, INTERVAL=5):
     LOG("INFORMATION", f"Waiting for host: {HOST_URL} (timeout: {TIMEOUT} seconds)")
 
     START_TIME = time.time()
+    RESPONSE = None
     while time.time() - START_TIME < TIMEOUT:
         try:
-            RESPONSE = requests.get(HOST_URL, timeout=3)
+            RESPONSE = requests.head(HOST_URL, timeout=3, allow_redirects=True)
             if RESPONSE.ok:
                 LOG("INFORMATION", f"Host is available: {HOST_URL} ({RESPONSE.status_code})")
                 return True
@@ -205,10 +206,10 @@ def waitForHostAvailable(HOST_URL, TIMEOUT=30, INTERVAL=5):
         except requests.RequestException as e:
             LOG("DEBUG", f"Connection error to {HOST_URL}: {e}")
         except Exception as e:
-            LOG("CRITICAL", f"Unexpected error in check_docs_connection: {e}")
+            LOG("CRITICAL", f"Unexpected error in waitForHostAvailable: {e}")
         time.sleep(INTERVAL)
 
-    LOG("ERROR", f"Host is not available after {TIMEOUT} seconds: {HOST_URL} ({RESPONSE.status_code})")
+    LOG("ERROR", f"Host is not available after {TIMEOUT} seconds: {HOST_URL}{f' ({RESPONSE.status_code})' if RESPONSE else ''}")
     return False
 
 def check_docs_connection():
