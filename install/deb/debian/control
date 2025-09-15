@@ -36,7 +36,8 @@ Depends: debconf, openssl,
          {{product}}-studio-notify (= {{package_header_tag_version}}),
          {{product}}-identity-api (= {{package_header_tag_version}}),
          {{product}}-identity-authorization (= {{package_header_tag_version}}),
-         {{product}}-sdk (= {{package_header_tag_version}})
+         {{product}}-sdk (= {{package_header_tag_version}}),
+         {{product}}-telegram (= {{package_header_tag_version}}),
 Description: {{product}}
 	ONLYOFFICE {{product}} is a new way to collaborate on documents with teams, 
 	clients, partners, etc., based on the concept of rooms - special spaces with 
@@ -243,3 +244,10 @@ Multi-Arch: foreign
 Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= 16), ${misc:Depends}, ${shlibs:Depends}
 Description: {{product}}-management
   Management
+
+Package: {{product}}-telegram
+Architecture: all
+Multi-Arch: foreign
+Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-9.0, ${misc:Depends}, ${shlibs:Depends}
+Description: {{product}}-telegram
+	Telegram

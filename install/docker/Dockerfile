@@ -348,6 +348,15 @@ COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Web.He
 ENTRYPOINT ["./docker-healthchecks-entrypoint.sh"]
 CMD ["ASC.Web.HealthChecks.UI.dll", "ASC.Web.HealthChecks.UI"]
 
+## ASC.TelegramService ##
+FROM dotnetrun AS telegram
+WORKDIR ${BUILD_PATH}/services/ASC.TelegramService/service/
+
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
+COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.TelegramService/service/ .
+
+CMD ["ASC.TelegramService.dll", "ASC.TelegramService", "core:eventBus:subscriptionClientName=asc_event_bus_telegram_queue"]
+
 ## ASC.Migration.Runner ##
 FROM $DOTNET_RUN AS onlyoffice-migration-runner
 ARG BUILD_PATH
