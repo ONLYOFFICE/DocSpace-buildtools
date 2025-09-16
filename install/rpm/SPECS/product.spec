@@ -20,13 +20,14 @@ Vendor:         Ascensio System SIA
 Packager:       %{packager}
 License:        AGPLv3
 
-Source0:        https://codeload.github.com/ONLYOFFICE/%{product}-buildtools/tar.gz/master#/buildtools.tar.gz
-Source1:        https://codeload.github.com/ONLYOFFICE/%{product}-client/tar.gz/master#/client.tar.gz
-Source2:        https://codeload.github.com/ONLYOFFICE/%{product}-server/tar.gz/master#/server.tar.gz
-Source3:        https://codeload.github.com/ONLYOFFICE/document-templates/tar.gz/main/community-server#/DocStore.tar.gz
-Source4:        https://codeload.github.com/ONLYOFFICE/ASC.Web.Campaigns/tar.gz/master#/campaigns.tar.gz
-Source5:        https://codeload.github.com/ONLYOFFICE/%{product}-plugins/tar.gz/master#/plugins.tar.gz
-Source6:        %{product}.rpmlintrc
+Source0:        %{product}.rpmlintrc
+Source1:        https://codeload.github.com/ONLYOFFICE/%{product}-buildtools/tar.gz/master#/buildtools.tar.gz
+Source2:        https://codeload.github.com/ONLYOFFICE/%{product}-client/tar.gz/master#/client.tar.gz
+Source3:        https://codeload.github.com/ONLYOFFICE/%{product}-server/tar.gz/master#/server.tar.gz
+Source4:        https://codeload.github.com/ONLYOFFICE/document-templates/tar.gz/main/community-server#/DocStore.tar.gz
+Source5:        https://codeload.github.com/ONLYOFFICE/ASC.Web.Campaigns/tar.gz/master#/campaigns.tar.gz
+Source6:        https://codeload.github.com/ONLYOFFICE/%{product}-plugins/tar.gz/master#/plugins.tar.gz
+Source7:        https://codeload.github.com/ONLYOFFICE/document-formats/tar.gz/master#/document-formats.tar.gz
 
 BuildRequires:  nodejs >= 18.0
 BuildRequires:  yarn
@@ -75,14 +76,15 @@ predefined permissions.
 %prep
 rm -rf %{_rpmdir}/%{_arch}/%{name}-* %{_builddir}/*
 
-tar -xf %{SOURCE0} --transform='s,^[^/]\+,buildtools,'   -C %{_builddir} &
-tar -xf %{SOURCE1} --transform='s,^[^/]\+,client,'       -C %{_builddir} &
-tar -xf %{SOURCE2} --transform='s,^[^/]\+,server,'       -C %{_builddir} &
-tar -xf %{SOURCE4} --transform='s,^[^/]\+,campaigns,'    -C %{_builddir} &
-tar -xf %{SOURCE5} --transform='s,^[^/]\+,plugins,'      -C %{_builddir} &
+tar -xf %{SOURCE1} --transform='s,^[^/]\+,buildtools,'       -C %{_builddir} &
+tar -xf %{SOURCE2} --transform='s,^[^/]\+,client,'           -C %{_builddir} &
+tar -xf %{SOURCE3} --transform='s,^[^/]\+,server,'           -C %{_builddir} &
+tar -xf %{SOURCE5} --transform='s,^[^/]\+,campaigns,'        -C %{_builddir} &
+tar -xf %{SOURCE6} --transform='s,^[^/]\+,plugins,'          -C %{_builddir} &
 wait
-tar -xf %{SOURCE3} --transform='s,^[^/]\+,DocStore,'     -C %{_builddir}/server/products/ASC.Files/Server
-cp -rf %{SOURCE6} .
+tar -xf %{SOURCE4} --transform='s,^[^/]\+,DocStore,'         -C %{_builddir}/server/products/ASC.Files/Server
+tar -xf %{SOURCE7} --transform='s,^[^/]\+,document-formats,' -C %{_builddir}/buildtools/config
+cp -rf %{SOURCE0} .
 
 %include build.spec
 

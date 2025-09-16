@@ -132,6 +132,7 @@ jobs:
           download "document-templates"   "main/community-server"   DocStore &
           download "ASC.Web.Campaigns"    "master"                  campaigns &
           download "$PRODUCT-plugins"     "master"                  plugins &
+          download "document-formats"     "master"                  document-formats &
           wait
 
       - name: Build DEB Packages

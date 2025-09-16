@@ -44,6 +44,7 @@ check_archives:
 	$(call extract_archive,${SOURCE_PATH}/plugins.tar.gz,plugins,-C ${BUILD_PATH}) & \
 	wait; \
 	$(call extract_archive,${SOURCE_PATH}/DocStore.tar.gz,DocStore,-C ${SERVER_PATH}/products/ASC.Files/Server); \
+	$(call extract_archive,${SOURCE_PATH}/document-formats.tar.gz,document-formats,-C ${BUILDTOOLS_PATH}/config); \
 	echo "Source archives check passed."
 
 override_dh_auto_build: check_archives
