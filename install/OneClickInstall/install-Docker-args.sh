@@ -55,7 +55,7 @@ while [ "$1" != "" ]; do
         -rbtu    | --rabbitmqusername    ) [ -n "$2" ] && RABBIT_USER_NAME=$2                                                     && shift ;;
         -rbtpass | --rabbitmqpassword    ) [ -n "$2" ] && RABBIT_PASSWORD=$2                                                      && shift ;;
         -rbtvh   | --rabbitmqvirtualhost ) [ -n "$2" ] && RABBIT_VIRTUAL_HOST=$2                                                  && shift ;;
-        -led     | --letsencryptdomain   ) [ -n "$2" ] && LETS_ENCRYPT_DOMAIN=$2                                                  && shift ;;
+        -led     | --letsencryptdomain | --certdomain ) [ -n "$2" ] && LETS_ENCRYPT_DOMAIN=$2                                     && shift ;;
         -lem     | --letsencryptmail     ) [ -n "$2" ] && LETS_ENCRYPT_MAIL=$2                                                    && shift ;;
         -du      | --dashboardsusername  ) [ -n "$2" ] && DASHBOARDS_USERNAME=$2                                                  && shift ;;
         -dp      | --dashboardspassword  ) [ -n "$2" ] && DASHBOARDS_PASSWORD=$2                                                  && shift ;;
@@ -161,14 +161,15 @@ while [ "$1" != "" ]; do
             echo "  OpenSearch Dashboards:"
             echo "    --dashboardsusername    <username>           Username for OpenSearch Dashboards UI"
             echo "    --dashboardspassword    <password>           Password for Dashboards UI"
-
+            echo
+            echo "Let's Encrypt:"
+            echo "  --letsencryptdomain <domain>          Domain for Let's Encrypt (example.com / *.example.com / s1.example.com, s2.example.com)"
+            echo "  --letsencryptmail   <email>           Admin email for Let's Encrypt (e.g., admin@example.com)"
             echo 
-            echo "SSL / HTTPS & LET'S ENCRYPT:"
-            echo "  --letsencryptdomain    <domain>             Domain for Let's Encrypt (e.g., example.com)"
-            echo "  --letsencryptmail      <email>              Admin email for Let's Encrypt (e.g., admin@example.com)"
-            echo "  --certfile             <path_to_cert.pem>   Path to existing SSL cert (Let's Encrypt flags ignored)"
-            echo "  --certkeyfile          <path_to_key.pem>    Path to SSL key (with --certfile)"
-
+            echo "SSL / HTTPS:"
+            echo "  --certdomain     <domain>             Domain for existing SSL cert (example.com / *.example.com / s1.example.com, s2.example.com)"
+            echo "  --certfile       <path>               Path to SSL cert (.pem, .pfx, .der, .cer, PKCS#7)"
+            echo "  --certkeyfile    <path>               Path to SSL key (used with --certfile)"
             exit 0
         ;;
         * ) echo "Unknown parameter $1" 1>&2; exit 1 ;;
