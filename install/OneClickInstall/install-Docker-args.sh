@@ -106,7 +106,7 @@ while [ "$1" != "" ]; do
             echo "  --volumesdir        <path>              Host dir for Docker volumes (default: /var/lib/docker/volumes)"
 
             echo 
-            echo "${PRODUCT_NAME} OPTIONS:"
+            echo "${PRODUCT_NAME^^} OPTIONS:"
             echo "  --installdocspace   <true|false>        Install/update ${PRODUCT_NAME} (true to install/update)"
             echo "  --docspaceversion   <version>           ${PRODUCT_NAME} version tag (e.g., 3.2.0)"
             echo "  --docspacehost      <hostname>          Hostname or IP for ${PRODUCT_NAME} (default: localhost)"
