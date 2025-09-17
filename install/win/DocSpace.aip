@@ -100,6 +100,7 @@
     <ROW Property="ServiceName_Socket.IO" Value="DocSpace.Socket.IO"/>
     <ROW Property="ServiceName_SsoAuth" Value="DocSpace.SsoAuth.Svc"/>
     <ROW Property="ServiceName_StudioNotifyService" Value="DocSpace.StudioNotifyService"/>
+    <ROW Property="ServiceName_Telegram" Value="Docspace.Telegram"/>
     <ROW Property="ServiceName_WebApi" Value="DocSpace.WebApi"/>
     <ROW Property="ServiceName_WebHealthChecksUI" Value="DocSpace.Web.HealthChecks.UI"/>
     <ROW Property="ServiceName_WebStudio" Value="DocSpace.WebStudio"/>
@@ -136,6 +137,7 @@
     <ROW Directory="ASC.Socket.IO_Dir" Directory_Parent="services_Dir" DefaultDir="ASCSOC~1.IO|ASC.Socket.IO" DirectoryOptions="15"/>
     <ROW Directory="ASC.SsoAuth_Dir" Directory_Parent="services_Dir" DefaultDir="ASC~1.SSO|ASC.SsoAuth" DirectoryOptions="15"/>
     <ROW Directory="ASC.Studio.Notify_Dir" Directory_Parent="services_Dir" DefaultDir="ASCSTU~1.NOT|ASC.Studio.Notify" DirectoryOptions="15"/>
+    <ROW Directory="ASC.TelegramService" Directory_Parent="services_Dir" DefaultDir="ASC~1.TEL|ASC.TelegramService" DirectoryOptions="15"/>
     <ROW Directory="ASC.Web.Api_Dir" Directory_Parent="services_Dir" DefaultDir="ASCWEB~1.API|ASC.Web.Api" DirectoryOptions="15"/>
     <ROW Directory="ASC.Web.HealthChecks.UI_Dir" Directory_Parent="services_Dir" DefaultDir="ASCWEB~1.UI|ASC.Web.HealthChecks.UI" DirectoryOptions="15"/>
     <ROW Directory="ASC.Web.Studio_Dir" Directory_Parent="services_Dir" DefaultDir="ASCWEB~1.STU|ASC.Web.Studio" DirectoryOptions="15"/>
@@ -170,6 +172,7 @@
     <ROW Directory="service_5_Dir" Directory_Parent="ASC.SsoAuth_Dir" DefaultDir="service" DirectoryOptions="15"/>
     <ROW Directory="service_6_Dir" Directory_Parent="ASC.Migration.Runner_Dir" DefaultDir="service" DirectoryOptions="15"/>
     <ROW Directory="service_7_Dir" Directory_Parent="ASC.Files.Service_Dir" DefaultDir="service" DirectoryOptions="15"/>
+    <ROW Directory="service_8_Dir" Directory_Parent="ASC.TelegramService" DefaultDir="service" DirectoryOptions="15"/>
     <ROW Directory="service_9_Dir" Directory_Parent="ASC.Notify_Dir" DefaultDir="service" DirectoryOptions="15"/>
     <ROW Directory="service_Dir" Directory_Parent="ASC.ClearEvents_Dir" DefaultDir="service" DirectoryOptions="15"/>
     <ROW Directory="services_Dir" Directory_Parent="APPDIR" DefaultDir="services" DirectoryOptions="15"/>
@@ -216,6 +219,7 @@
     <ROW Component="ASC.SsoAuth" ComponentId="{0A4502F2-6D3B-491B-86B1-BDC54C78FE18}" Directory_="ASC.SsoAuth_Dir" Attributes="0"/>
     <ROW Component="ASC.Studio.Notify" ComponentId="{49CD6FD5-5B49-4CB9-8EDD-654922F11F88}" Directory_="ASC.Studio.Notify_Dir" Attributes="0"/>
     <ROW Component="ASC.Studio.Notify.exe" ComponentId="{AFB3D13A-4F5B-46E1-8819-3517A228C22B}" Directory_="service_11_Dir" Attributes="0" KeyPath="ASC.Studio.Notify.exe"/>
+    <ROW Component="ASC.TelegramService.exe" ComponentId="{D8CE48C2-A350-49C1-A26A-02194BA5E7BF}" Directory_="service_8_Dir" Attributes="0" KeyPath="ASC.TelegramService.exe"/>
     <ROW Component="ASC.Web.Api" ComponentId="{CFFB4D5A-23D0-4BD6-BB8D-A62FCE92B883}" Directory_="ASC.Web.Api_Dir" Attributes="0"/>
     <ROW Component="ASC.Web.Api.exe" ComponentId="{E726DF21-2E7E-4C62-8F6E-C63C65B041EC}" Directory_="service_15_Dir" Attributes="0" KeyPath="ASC.Web.Api.exe"/>
     <ROW Component="ASC.Web.HealthChecks.UI" ComponentId="{77802297-A251-40DC-9C14-DC5EFEFCC6A4}" Directory_="ASC.Web.HealthChecks.UI_Dir" Attributes="0"/>
@@ -306,6 +310,7 @@
     <ROW Feature="SocketIO" Feature_Parent="NodeJSServices" Title="Node.js SocketIO Service" Description="Feature contains Node.js SocketIO service" Display="9" Level="1" Directory_="APPDIR" Attributes="0"/>
     <ROW Feature="SsoAuth" Feature_Parent="NodeJSServices" Title="Node.js SsoAuth Service" Description="Feature contains Node.js SsoAuth service" Display="7" Level="1" Directory_="APPDIR" Attributes="0"/>
     <ROW Feature="StudioNotify" Feature_Parent="DotnetServices" Title=".NET StudioNotify Service" Description="Feature contains .NET StudioNotify service" Display="11" Level="1" Directory_="APPDIR" Attributes="0"/>
+    <ROW Feature="Telegram" Feature_Parent="DotnetServices" Title=".NET Telegram Service" Description="Description" Display="39" Level="1" Directory_="APPDIR" Attributes="0"/>
     <ROW Feature="WebApi" Feature_Parent="DotnetServices" Title=".NET WebApi Service" Description="Feature contains .NET WebApi service" Display="7" Level="1" Directory_="APPDIR" Attributes="0"/>
     <ROW Feature="WebHealthChecksUI" Feature_Parent="DotnetServices" Title=".NET WebHealthChecksUI Service" Description="Feature contains .NET WebHealthChecksUI service" Display="33" Level="1" Directory_="APPDIR" Attributes="0"/>
     <ROW Feature="WebStudio" Feature_Parent="DotnetServices" Title=".NET WebStudio Service" Description="Feature contains .NET WebStudio service" Display="5" Level="1" Directory_="APPDIR" Attributes="0"/>
@@ -335,6 +340,7 @@
     <ROW File="Identity.Authorization.exe" Component_="Identity.Authorization.exe" FileName="IDENTI~1.EXE|Identity.Authorization.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\Identity.Authorization.exe" SelfReg="false" DigSign="true"/>
     <ROW File="Identity.Registration.exe" Component_="Identity.Registration.exe" FileName="IDENTI~3.EXE|Identity.Registration.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\Identity.Registration.exe" SelfReg="false" DigSign="true"/>
     <ROW File="Management.exe" Component_="Management.exe" FileName="MANAGE~1.EXE|Management.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\Tools\Management.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="ASC.TelegramService.exe" Component_="ASC.TelegramService.exe" FileName="ASCTEL~1.EXE|ASC.TelegramService.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.ASC.TelegramService\service\ASC.TelegramService.exe" SelfReg="false" DigSign="true"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.BootstrOptComponent">
     <ROW BootstrOptKey="GlobalOptions" DownloadFolder="[AppDataFolder][|Manufacturer]\[|ProductName]\prerequisites" Options="2"/>
@@ -1234,6 +1240,7 @@
     <ROW Feature_="Sdk" Component_="config_1"/>
     <ROW Feature_="Sdk" Component_="Sdk.exe"/>
     <ROW Feature_="Management" Component_="Management.exe"/>
+    <ROW Feature_="Telegram" Component_="ASC.TelegramService.exe"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
     <ROW Name="icon.exe" SourcePath="Resources\icon.ico" Index="0"/>
@@ -1505,6 +1512,7 @@
     <ROW MsiServiceConfig="ServiceName_Socket.IO" Name="[ServiceName_Socket.IO]" Event="1" ConfigType="3" Argument="1" Component_="Socket.IO.exe"/>
     <ROW MsiServiceConfig="ServiceName_SsoAuth" Name="[ServiceName_SsoAuth]" Event="1" ConfigType="3" Argument="1" Component_="SsoAuth.exe"/>
     <ROW MsiServiceConfig="ServiceName_StudioNotifyService" Name="[ServiceName_StudioNotifyService]" Event="1" ConfigType="3" Argument="1" Component_="ASC.Studio.Notify.exe"/>
+    <ROW MsiServiceConfig="ServiceName_Telegram" Name="[ServiceName_Telegram]" Event="1" ConfigType="3" Argument="1" Component_="ASC.TelegramService.exe"/>
     <ROW MsiServiceConfig="ServiceName_WebApi" Name="[ServiceName_WebApi]" Event="1" ConfigType="3" Argument="1" Component_="ASC.Web.Api.exe"/>
     <ROW MsiServiceConfig="ServiceName_WebHealthChecksUI" Name="[ServiceName_WebHealthChecksUI]" Event="1" ConfigType="3" Argument="1" Component_="ASC.Web.HealthChecks.UI.exe"/>
     <ROW MsiServiceConfig="ServiceName_WebStudio" Name="[ServiceName_WebStudio]" Event="1" ConfigType="3" Argument="1" Component_="ASC.Web.Studio.exe"/>
@@ -1527,6 +1535,7 @@
     <ROW MsiServiceConfigFailureActions="ServiceName_Socket.IO" Name="[ServiceName_Socket.IO]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="Socket.IO.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_SsoAuth" Name="[ServiceName_SsoAuth]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="SsoAuth.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_StudioNotifyService" Name="[ServiceName_StudioNotifyService]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.Studio.Notify.exe"/>
+    <ROW MsiServiceConfigFailureActions="ServiceName_Telegram" Name="[ServiceName_Telegram]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.TelegramService.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_WebApi" Name="[ServiceName_WebApi]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.Web.Api.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_WebHealthChecksUI" Name="[ServiceName_WebHealthChecksUI]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.Web.HealthChecks.UI.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_WebStudio" Name="[ServiceName_WebStudio]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.Web.Studio.exe"/>
@@ -1549,6 +1558,7 @@
     <ROW ServiceControl="ServiceName_Socket.IO" Name="[ServiceName_Socket.IO]" Event="161" Wait="0" Component_="Socket.IO.exe"/>
     <ROW ServiceControl="ServiceName_SsoAuth" Name="[ServiceName_SsoAuth]" Event="161" Wait="0" Component_="SsoAuth.exe"/>
     <ROW ServiceControl="ServiceName_StudioNotifyService" Name="[ServiceName_StudioNotifyService]" Event="161" Wait="0" Component_="ASC.Studio.Notify.exe"/>
+    <ROW ServiceControl="ServiceName_Telegram" Name="[ServiceName_Telegram]" Event="161" Wait="0" Component_="ASC.TelegramService.exe"/>
     <ROW ServiceControl="ServiceName_WebApi" Name="[ServiceName_WebApi]" Event="161" Wait="0" Component_="ASC.Web.Api.exe"/>
     <ROW ServiceControl="ServiceName_WebHealthChecksUI" Name="[ServiceName_WebHealthChecksUI]" Event="161" Wait="0" Component_="ASC.Web.HealthChecks.UI.exe"/>
     <ROW ServiceControl="ServiceName_WebStudio" Name="[ServiceName_WebStudio]" Event="161" Wait="0" Component_="ASC.Web.Studio.exe"/>
@@ -1571,6 +1581,7 @@
     <ROW ServiceInstall="ServiceName_Socket.IO" Name="[ServiceName_Socket.IO]" DisplayName="[ShortProductName] Socket.IO" ServiceType="16" StartType="2" ErrorControl="1" Component_="Socket.IO.exe" Description="[ShortProductName] Socket.IO"/>
     <ROW ServiceInstall="ServiceName_SsoAuth" Name="[ServiceName_SsoAuth]" DisplayName="[ShortProductName] SsoAuth.Svc" ServiceType="16" StartType="2" ErrorControl="1" Component_="SsoAuth.exe" Description="[ShortProductName] SsoAuth.Svc"/>
     <ROW ServiceInstall="ServiceName_StudioNotifyService" Name="[ServiceName_StudioNotifyService]" DisplayName="[ShortProductName] StudioNotifyService" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5006 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_StudioNotifyService] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER]" Component_="ASC.Studio.Notify.exe" Description="[ShortProductName] StudioNotifyService"/>
+    <ROW ServiceInstall="ServiceName_Telegram" Name="[ServiceName_Telegram]" DisplayName="[ShortProductName] Telegram" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5075 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_Telegram]--core:products:folder=&quot;[APPDIR]products&quot; --core:eventBus:subscriptionClientName=asc_event_bus_telegram_queue" Component_="ASC.TelegramService.exe" Description="[ShortProductName] Telegram"/>
     <ROW ServiceInstall="ServiceName_WebApi" Name="[ServiceName_WebApi]" DisplayName="[ShortProductName] WebApi" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5000 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_WebApi] [SUBFOLDER_SERVER]" Component_="ASC.Web.Api.exe" Description="[ShortProductName] WebApi"/>
     <ROW ServiceInstall="ServiceName_WebHealthChecksUI" Name="[ServiceName_WebHealthChecksUI]" DisplayName="[ShortProductName] Web.HealthChecks.UI" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5033 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_WebHealthChecksUI]" Component_="ASC.Web.HealthChecks.UI.exe" Description="[ShortProductName] Web.HealthChecks.UI"/>
     <ROW ServiceInstall="ServiceName_WebStudio" Name="[ServiceName_WebStudio]" DisplayName="[ShortProductName] WebStudio" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5003 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_WebStudio] [SUBFOLDER_SERVER]" Component_="ASC.Web.Studio.exe" Description="[ShortProductName] WebStudio"/>
