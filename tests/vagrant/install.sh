@@ -92,6 +92,14 @@ END
 #   [OK] PREPARE_VM: **<prepare_message>**
 #############################################################################################
 function prepare_vm() {
+  # Ensure curl and gpg are installed
+  if ! command -v curl >/dev/null 2>&1; then
+    (command -v apt-get >/dev/null 2>&1 && apt-get update -y && apt-get install -y curl) || (command -v dnf >/dev/null 2>&1 && dnf install -y curl)
+  fi
+  if ! command -v gpg >/dev/null 2>&1; then
+    (command -v apt-get >/dev/null 2>&1 && apt-get update -y && apt-get install -y gnupg) || (command -v dnf >/dev/null 2>&1 && dnf install -y gnupg2)
+  fi
+
   if [ -f /etc/os-release ]; then
     source /etc/os-release
     case $ID in
@@ -141,11 +149,6 @@ EOF
     esac
   else
       echo "${COLOR_RED}File /etc/os-release doesn't exist${COLOR_RESET}"; exit 1
-  fi
-
-  # Ensure curl is installed
-  if ! command -v curl >/dev/null 2>&1; then
-    (command -v apt-get >/dev/null 2>&1 && apt-get update -y && apt-get install -y curl) || (command -v dnf >/dev/null 2>&1 && dnf install -y curl)
   fi
 
   # Clean up home folder
