@@ -17,6 +17,10 @@ on:
          type: boolean
          description: 'CentOS 9 Stream'
          default: true
+      debian13:
+         type: boolean
+         description: 'Debian 13'
+         default: true
       debian12:
          type: boolean
          description: 'Debian 12'
@@ -50,6 +54,7 @@ jobs:
               {"execute": '${{ github.event.inputs.centos9s || true }}', "name": "CentOS9S", "os": "centos9s", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.debian11 || true }}', "name": "Debian11", "os": "debian11", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.debian12 || true }}', "name": "Debian12", "os": "debian12", "distr": "onlyoffice"},
+              {"execute": '${{ github.event.inputs.debian13 || true }}', "name": "Debian13", "os": "debian13", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu22.04", "os": "ubuntu2204", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.ubuntu2404 || true }}', "name": "Ubuntu24.04", "os": "ubuntu2404", "distr": "onlyoffice"}
             ]
