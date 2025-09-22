@@ -56,13 +56,12 @@ jobs:
             name: "ubuntu2404"
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Free Disk Space
         run: |
-          curl -fsSL https://raw.githubusercontent.com/rust-lang/rust/refs/heads/master/src/ci/scripts/free-disk-space-linux.sh | sed 's/::[^:]*:://g' | sudo bash
-          curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | sudo bash
+          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ matrix.branch }}/.github/scripts/free-disk-space-linux.sh | sudo bash
+
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: 'Download hcp CLI'
         uses: 'hashicorp/hcp-setup-action@v0'
