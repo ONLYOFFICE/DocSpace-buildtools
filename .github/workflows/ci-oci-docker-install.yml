@@ -101,8 +101,7 @@ jobs:
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
           docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q) && docker volume rm $(docker volume ls -q)
-          curl -fsSL https://raw.githubusercontent.com/rust-lang/rust/refs/heads/master/src/ci/scripts/free-disk-space-linux.sh | sed 's/::[^:]*:://g' | grep -Pv 'cleanDocker(?!\(\))' | sudo bash
-          curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | sudo bash
+          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/free-disk-space-linux.sh | CLEAN_DOCKER=0 sudo bash
 
       - name: Creating 4testing offline self-extracting archive
         if: ${{ success() && github.event.inputs.offline == 'true' }}
