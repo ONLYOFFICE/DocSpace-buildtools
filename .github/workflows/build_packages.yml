@@ -79,6 +79,10 @@ jobs:
     strategy:
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     steps:
+      - name: Free Disk Space
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${BRANCH_BUILDTOOLS}/.github/scripts/free-disk-space-linux.sh | sudo bash
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -89,11 +93,6 @@ jobs:
           PRODUCT_VERSION=$(grep -oP '\d+\.\d+\.\d+' <<< "${BRANCH_BUILDTOOLS//\//} ${BRANCH_CLIENT//\//} \
           ${BRANCH_SERVER//\//}" | head -n1)
           echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.1.1}" >> $GITHUB_ENV
-
-      - name: Free Disk Space
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/rust-lang/rust/refs/heads/master/src/ci/scripts/free-disk-space-linux.sh | sed 's/::[^:]*:://g' | sudo bash
-          curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | sudo bash
 
       - name: Import GPG
         uses: crazy-max/ghaction-import-gpg@v6
