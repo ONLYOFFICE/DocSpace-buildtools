@@ -95,35 +95,13 @@ COPY --from=src ${SRC_PATH}/buildtools/config ./buildtools/config
 COPY --from=src ${SRC_PATH}/client/ ./client
 
 WORKDIR ${SRC_PATH}/client
-RUN <<EOF
-#!/bin/bash
-echo "--- installing pnpm ---" && \
-npm install -g pnpm && \
-echo "--- build/publish docspace-client node ---" && \
-pnpm install && \
-node common/scripts/before-build.js
-
-CLIENT_PACKAGES+=("@docspace/client")
-CLIENT_PACKAGES+=("@docspace/login")
-CLIENT_PACKAGES+=("@docspace/doceditor")
-CLIENT_PACKAGES+=("@docspace/sdk")
-CLIENT_PACKAGES+=("@docspace/management")
-
-for PKG in ${CLIENT_PACKAGES[@]}; do
-  echo "--- build/publish ${PKG} ---"
-  pnpm nx ${BUILD_ARGS} ${PKG} $([[ "${PKG}" =~ (client) ]] && echo "--env lint=false")
-  pnpm nx ${DEPLOY_ARGS} ${PKG}
-done
-
-echo "--- check client files ---" && \
-ls -la "${SRC_PATH}/publish/web/client" && \
-
-echo "--- publish public web files ---" && \
-cp -rf public "${SRC_PATH}/publish/web/"
-echo "--- publish locales ---" && \
-node common/scripts/minify-common-locales.js
-rm -rf ${SRC_PATH}/client/*
-EOF
+RUN echo "--- installing pnpm ---" && \
+    npm install -g pnpm && \
+    echo "--- build/publish docspace-client node ---" && \
+    pnpm install && \
+    pnpm ${BUILD_ARGS} && \
+    pnpm run ${DEPLOY_ARGS} && \
+    rm -rf ${SRC_PATH}/client/*
 
 # build plugins
 COPY --from=src ${SRC_PATH}/plugins ${SRC_PATH}/plugins
