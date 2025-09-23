@@ -239,7 +239,7 @@ main() {
   prepare_vm
   check_hw
   install_docspace
-  sleep 120
+  sleep 180
   services_logs
   healthcheck_systemd_services
 }
