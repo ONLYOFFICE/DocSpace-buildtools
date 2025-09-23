@@ -1,6 +1,6 @@
 name: Rebuild DocSpace vagrant boxes
 
-run-name: "Rebuild DocSpace vagrant boxes version: ${{ github.event.inputs.box-version }}"
+run-name: "Rebuild DocSpace vagrant boxes version: ${{ github.event.inputs.box-version }} (OS: ${{ github.event.inputs.os-name }})"
 
 on:
   workflow_dispatch:
@@ -9,11 +9,73 @@ on:
          type: string
          description: 'DocSpace version that will be installed inside box'
          required: true
+      os-name:
+        type: string
+        description: 'Select distros'
+        required: true
+        default: |
+          rhel9,
+          centos9s,
+          debian11,
+          debian12,
+          debian13,
+          ubuntu2204,
+          ubuntu2404
 
 jobs:
-  rebuild-boxes:
-    name: "Rebuild ${{ matrix.name}} ${{ github.event.inputs.box-version }}"
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.mk.outputs.matrix }}
+    steps:
+      - name: Ensure jq
+        run: |
+          command -v jq >/dev/null 2>&1 || { sudo apt-get update -y && sudo apt-get install -y jq; }
+
+      - name: Build matrix from input
+        id: mk
+        shell: bash
+        run: |
+          set -euo pipefail
+          OS_INPUT="${{ github.event.inputs.os-name }}"
+
+          MAP=$(cat <<'JSON'
+          {
+            "rhel9":     {"distr":"generic","os":"rhel9"},
+            "centos9s":  {"distr":"onlyoffice","os":"base-centos9s"},
+            "debian11":  {"distr":"onlyoffice","os":"base-debian11"},
+            "debian12":  {"distr":"onlyoffice","os":"base-debian12"},
+            "debian13":  {"distr":"onlyoffice","os":"base-debian13"},
+            "ubuntu2204":{"distr":"onlyoffice","os":"base-ubuntu2204"},
+            "ubuntu2404":{"distr":"onlyoffice","os":"base-ubuntu2404"}
+          }
+          JSON
+          )
+
+          MATRIX="$(jq -cn --arg input "$OS_INPUT" --argjson map "$MAP" '
+            def norm: gsub("[\n\r]+"; ",") | gsub("\\s+"; "");
+            ($input | norm) as $inp
+            | ( if $inp == "all"
+                then ($map | keys)
+                else ($inp | split(",") | map(select(length>0)) | unique)
+              end ) as $keys
+            | [ $keys[] as $k
+                | select($map | has($k))
+                | ({name:$k} + $map[$k])
+              ]
+            | {include: .}
+          ')"
+
+          test "$(jq '.include|length' <<<"$MATRIX")" -gt 0 || { echo "No valid OS selected."; exit 1; }
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+
+  vagrant-up:
+    name: "Rebuild DocSpace ${{ matrix.name }}"
+    needs: prepare
     runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     env:
       HCP_CLIENT_ID: ${{ secrets.HCP_CLIENT_ID }}
       HCP_CLIENT_SECRET: ${{ secrets.HCP_CLIENT_SECRET }}
@@ -23,38 +85,6 @@ jobs:
       OS_NAME: ${{ matrix.name }}
       OS: ${{ matrix.os }}
       DISTR: ${{ matrix.distr }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - distr: generic
-            os: rhel9
-            name: "rhel9"
-
-          - distr: onlyoffice
-            os: base-centos9s
-            name: "centos9s"
-
-          - distr: onlyoffice
-            os: base-debian11
-            name: "debian11"
-
-          - distr: onlyoffice
-            os: base-debian12
-            name: "debian12"
-
-          - distr: onlyoffice
-            os: base-debian13
-            name: "debian13"
-
-          - distr: onlyoffice
-            os: base-ubuntu2204
-            name: "ubuntu2204"
-
-          - distr: onlyoffice
-            os: base-ubuntu2404
-            name: "ubuntu2404"
-
     steps:
       - name: Free Disk Space
         run: |
