@@ -57,10 +57,8 @@ cleanPackages() {
     google-chrome-stable microsoft-edge-stable
     azure-cli google-cloud-sdk google-cloud-cli powershell
   )
-  APT="sudo apt-get -o DPkg::Lock::Timeout=60 -y -qq"
-  $APT remove --fix-missing "${pkgs[@]}" || true
-  $APT autoremove || true
-  $APT clean || true
+  APT="sudo apt-get -o=Dpkg::Use-Pty=0 -o=DPkg::Lock::Timeout=60 -o=DPkg::Options::=--force-all -y -qq"
+  $APT purge --auto-remove "${pkgs[@]}" || true
   sudo rm -rf /var/lib/apt/lists/* /var/cache/apt/* || true
 }
 
