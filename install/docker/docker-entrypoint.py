@@ -205,6 +205,7 @@ def waitForHostAvailable(HOST_URL, TIMEOUT=10, INTERVAL=3, MAX_RETRIES=5, RETRY_
         if LOG_PRIORITY.get(LEVEL, 3) <= CURRENT_PRIORITY:
             print(f"[{LEVEL}] {MESSAGE}", flush=True)
 
+    ATTEMPT = 0
     while True:
         ATTEMPT += 1
         LOG("INFORMATION", f"Waiting for host: {HOST_URL} (timeout: {TIMEOUT} seconds, attempt {ATTEMPT}/{MAX_RETRIES})")
@@ -243,11 +244,10 @@ def waitForHostAvailable(HOST_URL, TIMEOUT=10, INTERVAL=3, MAX_RETRIES=5, RETRY_
             LOG("CRITICAL", f"Unexpected error creating session: {e}")
 
         if ATTEMPT < MAX_RETRIES:
-            LOG("WARNING", f"Host is not available yet, retrying in {RETRY_INTERVAL} seconds...")
+            LOG("WARNING", f"{HOST_URL} is not available yet, retrying in {RETRY_INTERVAL} seconds...")
             time.sleep(RETRY_INTERVAL)
         else:
-            LOG("ERROR", f"Host is not available after {TIMEOUT} seconds × {MAX_RETRIES} attempts: "
-                        f"{HOST_URL}{f' ({RESPONSE.status_code})' if RESPONSE else ''}")
+            LOG("ERROR", f"{HOST_URL} is not available after {MAX_RETRIES} attempts {f' ({RESPONSE.status_code})' if RESPONSE else ''}")
             return False
 
 def check_docs_connection():
