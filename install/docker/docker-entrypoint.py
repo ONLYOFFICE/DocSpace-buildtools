@@ -322,7 +322,7 @@ if OAUTH_REDIRECT_URL:
     for component in jsonData['components']:
         if 'parameters' in component and 'additional' in component['parameters']:
             for key, value in component['parameters']['additional'].items():
-                if re.search(r'.*RedirectUrl$', key) and value:
+                if ( re.search(r'.*RedirectUrl$', key)  and key != "weixinRedirectUrl" and value): 
                     component['parameters']['additional'][key] = OAUTH_REDIRECT_URL
                     
     writeJsonFile(filePath, jsonData)
