@@ -39,7 +39,7 @@
           "administrationguides": "/docspace/configuration/docspace-developer-tools-settings.aspx#webhooks_block",
           "administratormessage": "/docspace/configuration/docspace-security-settings.aspx#administratormessagesettings_block",
           "alternativeurl": "/docspace/configuration/docspace-customization-settings.aspx#dnssettings_block",
-          "appearance": "/administration/docspace-settings.aspx#Appearance_block",
+          "appearance": "/docspace/configuration/docspace-customization-settings.aspx#appearance_block",
           "autobackup": "/docspace/configuration/docspace-backup-restore-settings.aspx#automaticbackup_block",
           "becometranslator": "/guides/become-translator.aspx",
           "configuringsettings": "/docspace/configuration/docspace-wallet-settings.aspx",
