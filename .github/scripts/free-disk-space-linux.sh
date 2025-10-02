@@ -16,7 +16,7 @@ export DEBIAN_FRONTEND=noninteractive
 : "${CLEAN_SWAP:=1}"       # disable and delete swapfile
 : "${CLEAN_DIRS:=1}"       # remove large unused dirs/binaries
 : "${CLEAN_LOGS:=1}"       # truncate logs, clean /tmp
-: "${CLEAN_DEV_CACHES:=1}" # also remove dev caches (~/.cache, npm, pip, cargo, …)
+: "${CLEAN_DEV_CACHES:=1}" # also remove dev caches (~/.cache, npm, pip, cargo, ...)
 
 # ======= Utils =======
 rm_rf(){ echo "[DEL] $*"; sudo rm -rf "$@" & }

@@ -106,7 +106,7 @@ case "$1" in
 			if [ -n "$DOCUMENT_SERVER_JWT_SECRET" ] && [ -n "$DOCUMENT_SERVER_JWT_HEADER" ]; then
 				args+=(-docsurl "$DOCUMENT_SERVER_URL_EXTERNAL" -js "$DOCUMENT_SERVER_JWT_SECRET" -jh "$DOCUMENT_SERVER_JWT_HEADER")
 			else
-				echo "Warning: Docs URL is set, but JWT secret/header are missing — skipping Docs config"
+				echo "Warning: Docs URL is set, but JWT secret/header are missing - skipping Docs config"
 			fi
 		fi
 
