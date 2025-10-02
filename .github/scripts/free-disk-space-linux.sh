@@ -9,6 +9,7 @@ export LC_ALL=C
 export DEBIAN_FRONTEND=noninteractive
 
 # ======= Configurable flags =======
+: "${VBOX_SAFE:=0}"        # 1 = keep VirtualBox deps
 : "${SHOW_TOP_HOGS:=0}"    # 1 = run du to find largest dirs
 : "${CLEAN_PACKAGES:=0}"   # remove big preinstalled packages
 : "${CLEAN_DOCKER:=1}"     # prune docker/containerd
@@ -53,17 +54,29 @@ cleanSwap() {
 }
 
 removeDirs() {
-  rm_rf \
-    /usr/lib/jvm/temurin-* /usr/lib/llvm-* /usr/lib/clang /usr/include/clang \
-    /usr/lib/gcc /usr/include/c++ \
-    /opt/google/chrome /opt/microsoft/msedge /usr/lib/firefox* \
-    /usr/lib/google-cloud-sdk /opt/az /opt/microsoft/powershell \
-    /var/lib/snapd /snap /usr/lib/{postgresql,mysql} /var/lib/{postgresql,mysql} \
-    /usr/local/{aws-sam-cli,julia*,lib/android,.ghcup} \
-    /usr/local/share/{chromedriver-*,chromium,cmake-*,edge_driver,emacs,gecko_driver,icons,vcpkg,vim} \
-    /usr/share/{apache-maven-*,gradle-*,kotlinc,miniconda,php,ri,swift,az_*} \
-    /usr/local/bin/{azcopy,bicep,cmake*,cpack,ctest,helm,kind,kustomize,minikube,packer,phpunit,pulumi*,stack} \
-    /usr/local/lib/node_modules /opt/hostedtoolcache/*
+  if [[ "${VBOX_SAFE}" == "1" ]]; then
+    rm_rf \
+      /opt/google/chrome /opt/microsoft/msedge /usr/lib/firefox* \
+      /usr/lib/google-cloud-sdk /opt/az /opt/microsoft/powershell \
+      /var/lib/snapd /snap /usr/lib/{postgresql,mysql} /var/lib/{postgresql,mysql} \
+      /usr/local/{aws-sam-cli,julia*,lib/android,.ghcup} \
+      /usr/local/share/{chromedriver-*,chromium,edge_driver,emacs,gecko_driver,icons,vcpkg,vim} \
+      /usr/share/{apache-maven-*,gradle-*,kotlinc,miniconda,php,ri,swift,az_*} \
+      /usr/local/bin/{azcopy,bicep,helm,kind,kustomize,minikube,packer,phpunit,pulumi*,stack} \
+      /usr/local/lib/node_modules
+  else
+    rm_rf \
+      /usr/lib/jvm/temurin-* /usr/lib/llvm-* /usr/lib/clang /usr/include/clang \
+      /usr/lib/gcc /usr/include/c++ \
+      /opt/google/chrome /opt/microsoft/msedge /usr/lib/firefox* \
+      /usr/lib/google-cloud-sdk /opt/az /opt/microsoft/powershell \
+      /var/lib/snapd /snap /usr/lib/{postgresql,mysql} /var/lib/{postgresql,mysql} \
+      /usr/local/{aws-sam-cli,julia*,lib/android,.ghcup} \
+      /usr/local/share/{chromedriver-*,chromium,cmake-*,edge_driver,emacs,gecko_driver,icons,vcpkg,vim} \
+      /usr/share/{apache-maven-*,gradle-*,kotlinc,miniconda,php,ri,swift,az_*} \
+      /usr/local/bin/{azcopy,bicep,cmake*,cpack,ctest,helm,kind,kustomize,minikube,packer,phpunit,pulumi*,stack} \
+      /usr/local/lib/node_modules /opt/hostedtoolcache/*
+  fi
   wait
 }
 
