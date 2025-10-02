@@ -62,7 +62,7 @@ removeDirs() {
       /usr/local/{aws-sam-cli,julia*,lib/android,.ghcup} \
       /usr/local/share/{chromedriver-*,chromium,edge_driver,emacs,gecko_driver,icons,vcpkg,vim} \
       /usr/share/{apache-maven-*,gradle-*,kotlinc,miniconda,php,ri,swift,az_*} \
-      /usr/local/bin/{azcopy,bicep,helm,kind,kustomize,minikube,packer,phpunit,pulumi*,stack} \
+      /usr/local/bin/{azcopy,bicep,helm,kind,kustomize,minikube,packer,phpunit,pulumi*,stack,node,npm} \
       /usr/local/lib/node_modules
   else
     rm_rf \
@@ -74,7 +74,7 @@ removeDirs() {
       /usr/local/{aws-sam-cli,julia*,lib/android,.ghcup} \
       /usr/local/share/{chromedriver-*,chromium,cmake-*,edge_driver,emacs,gecko_driver,icons,vcpkg,vim} \
       /usr/share/{apache-maven-*,gradle-*,kotlinc,miniconda,php,ri,swift,az_*} \
-      /usr/local/bin/{azcopy,bicep,cmake*,cpack,ctest,helm,kind,kustomize,minikube,packer,phpunit,pulumi*,stack} \
+      /usr/local/bin/{azcopy,bicep,cmake*,cpack,ctest,helm,kind,kustomize,minikube,packer,phpunit,pulumi*,stack,node,npm} \
       /usr/local/lib/node_modules /opt/hostedtoolcache/*
   fi
   wait

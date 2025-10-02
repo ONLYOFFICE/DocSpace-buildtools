@@ -85,7 +85,7 @@ The service which handles API requests related to the People module
 %package        socket
 Summary:        Socket
 Requires:       %name-common  = %version-%release
-Requires:       nodejs >= 16.0
+Requires:       nodejs >= 22.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    socket
@@ -123,7 +123,7 @@ The service which is used for working with portals (creating, removing, etc.)
 %package        ssoauth
 Summary:        Ssoauth
 Requires:       %name-common  = %version-%release
-Requires:       nodejs >= 16.0
+Requires:       nodejs >= 22.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    ssoauth
@@ -176,7 +176,7 @@ The service which launches additional services related to backup creation:
 %package        doceditor
 Summary:        Doceditor
 Requires:       %name-common  = %version-%release
-Requires:       nodejs >= 16.0
+Requires:       nodejs >= 22.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    doceditor
@@ -196,7 +196,7 @@ the service creates tables and populates them with values
 %package        login
 Summary:        Login
 Requires:       %name-common  = %version-%release
-Requires:       nodejs >= 16.0
+Requires:       nodejs >= 22.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    login
@@ -222,7 +222,7 @@ This package includes plugins that extend DocSpace functionality
 %package sdk
 Summary:        Sdk
 Requires:       %name-common = %version-%release
-Requires:       nodejs >= 16.0
+Requires:       nodejs >= 22.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description sdk
@@ -232,7 +232,7 @@ integrations and plugins
 %package        management
 Summary:        Management
 Requires:       %name-common  = %version-%release
-Requires:       nodejs >= 16.0
+Requires:       nodejs >= 22.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    management

@@ -29,7 +29,7 @@ Source5:        https://codeload.github.com/ONLYOFFICE/ASC.Web.Campaigns/tar.gz/
 Source6:        https://codeload.github.com/ONLYOFFICE/%{product}-plugins/tar.gz/master#/plugins.tar.gz
 Source7:        https://codeload.github.com/ONLYOFFICE/document-formats/tar.gz/master#/document-formats.tar.gz
 
-BuildRequires:  nodejs >= 18.0
+BuildRequires:  nodejs >= 22.0
 BuildRequires:  yarn
 BuildRequires:  dotnet-sdk-9.0
 BuildRequires:  unzip

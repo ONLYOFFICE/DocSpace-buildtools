@@ -43,7 +43,7 @@ if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then
 fi
 
 # add nodejs repo
-NODE_VERSION="18"
+NODE_VERSION="22"
 curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
 
 #add dotnet repo
