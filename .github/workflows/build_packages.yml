@@ -89,7 +89,7 @@ jobs:
         run: |
           PRODUCT_VERSION=$(grep -oP '\d+\.\d+\.\d+' <<< "${BRANCH_BUILDTOOLS//\//} ${BRANCH_CLIENT//\//} \
           ${BRANCH_SERVER//\//}" | head -n1)
-          echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.2.2}" >> $GITHUB_ENV
+          echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.5.0}" >> $GITHUB_ENV
 
       - name: Import GPG
         uses: crazy-max/ghaction-import-gpg@v6
@@ -105,7 +105,7 @@ jobs:
           sudo chmod 644 /usr/share/keyrings/yarnkey.gpg
           echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian/ stable main" | \
           sudo tee /etc/apt/sources.list.d/yarn.list
-          curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+          curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash -
           sudo apt install -y dotnet-sdk-9.0 yarn nodejs rename unzip maven openjdk-21-jdk-headless
           JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | head -1)
           sudo update-alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && sudo update-alternatives --set java "$JAVA_PATH"
