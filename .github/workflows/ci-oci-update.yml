@@ -17,6 +17,10 @@ on:
          type: boolean
          description: 'CentOS 9 Stream'
          default: true
+      debian13:
+         type: boolean
+         description: 'Debian 13'
+         default: true
       debian12:
          type: boolean
          description: 'Debian 12'
@@ -50,8 +54,9 @@ jobs:
               {"execute": '${{ github.event.inputs.centos9s || true }}', "name": "CentOS9S", "os": "centos9s", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.debian11 || true }}', "name": "Debian11", "os": "debian11", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.debian12 || true }}', "name": "Debian12", "os": "debian12", "distr": "onlyoffice"},
+              {"execute": '${{ github.event.inputs.debian13 || true }}', "name": "Debian13", "os": "debian13", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu22.04", "os": "ubuntu2204", "distr": "onlyoffice"},
-              {"execute": '${{ github.event.inputs.ubuntu2404 || true }}', "name": "Ubuntu22.04", "os": "ubuntu2404", "distr": "onlyoffice"}
+              {"execute": '${{ github.event.inputs.ubuntu2404 || true }}', "name": "Ubuntu24.04", "os": "ubuntu2404", "distr": "onlyoffice"}
             ]
           }' | jq -c '{include: [.include[] | select(.execute == true)]}')
           echo "matrix=${matrix}" >> $GITHUB_OUTPUT
@@ -65,13 +70,12 @@ jobs:
       matrix: ${{fromJSON(needs.prepare.outputs.matrix)}}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Free Disk Space
         run: |
-          curl -fsSL https://raw.githubusercontent.com/rust-lang/rust/refs/heads/master/src/ci/scripts/free-disk-space-linux.sh | sed 's/::[^:]*:://g' | sudo bash
-          curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | sudo bash
+          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/free-disk-space-linux.sh | sudo VBOX_SAFE=1 bash
+
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Get update and install vagrant
         run: |

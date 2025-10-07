@@ -31,20 +31,21 @@ jobs:
     outputs:
       DOCKER_TAG: ${{ steps.build.outputs.DOCKER_TAG }}
     steps:
+      - name: Free Disk Space
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ matrix.branch }}/.github/scripts/free-disk-space-linux.sh | sudo bash
+
       - name: Checkout
         uses: actions/checkout@v3
         with:
           ref: ${{ matrix.branch }}
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
+
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v2
-        
-      - name: Free Disk Space
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/rust-lang/rust/refs/heads/master/src/ci/scripts/free-disk-space-linux.sh | sed 's/::[^:]*:://g' | sudo bash
-          curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | sudo bash
 
       - name: Login to DockerHub
         uses: docker/login-action@v2
@@ -70,7 +71,6 @@ jobs:
           --set *.args.PRODUCT_VERSION=${PRODUCT_VERSION} \
           --set *.args.BUILD_NUMBER=${BUILD_NUMBER} \
           --set *.platform=linux/amd64 \
-          --set *.args.PRODUCT_VERSION=${PRODUCT_VERSION} \
           --set *.args.BUILD_NUMBER=${{github.run_number}} \
           --push
 
@@ -90,23 +90,9 @@ jobs:
         env:
           DOCKER_TAG: ${{ needs.build.outputs.DOCKER_TAG }}
         run: |
-          SERVICES=$(curl -sSL "https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ matrix.branch }}/install/docker/build.yml" | \
-            docker compose -f- config | grep -oP 'image: [^/]*/-?\K[^:]+')
-
-          PIDS=()
-          for SVC in ${SERVICES}; do
-            ( curl -sf "https://hub.docker.com/v2/repositories/${{ env.REPO }}/${SVC}/" || { echo "::error::[FAIL]    $SVC  (repo not found)"; exit 1; }
-              timeout 300 bash -c "until curl -sf -o /dev/null -w '%{http_code}' \
-                https://hub.docker.com/v2/repositories/${{ env.REPO }}/${SVC}/tags/${{ env.DOCKER_TAG }}/ \
-                | grep -q 200; do sleep 10; done" \
-              && echo "[OK]      ${SVC}" || { echo "::error::[FAIL]    ${SVC}"; exit 1; }
-            ) &
-            PIDS+=( "$!" )
-          done
-
-          for PID in "${PIDS[@]}"; do wait "$PID" || ERROR=1; done
-          [ "${ERROR:-0}" -gt 0 ] && { echo "::error::[FAIL] Some images didn't appear or repo not found" >&2; exit 1; }
-          echo "[OK]      All images are available."
+          echo "Waiting for images with tag ${{ env.DOCKER_TAG }} to appear on Docker Hub..."
+          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ matrix.branch }}/.github/scripts/docker-images-availability.sh \
+            | sudo GITHUB_REPOSITORY=${{ github.repository }} BRANCH=${{ matrix.branch }} DOCKER_REPOSITORY=${{ env.REPO }} DOCKER_PREFIX=${{ env.DOCKER_IMAGE_PREFIX }} DOCKER_TAG=${{ env.DOCKER_TAG }} bash
 
       - name: Trigger ci-oci-docker-install Workflow
         env:

@@ -13,7 +13,7 @@ SOURCE_PATH=${CURDIR}/debian/source
 BUILD_PATH=${CURDIR}/debian/build
 BUILDTOOLS_PATH=${BUILD_PATH}/buildtools
 SERVER_PATH=${BUILD_PATH}/server
-CLENT_PATH=${BUILD_PATH}/client
+CLIENT_PATH=${BUILD_PATH}/client
 
 override_dh_auto_clean:
 	@echo "RULES.$@"
@@ -27,7 +27,6 @@ override_dh_auto_configure:
 	@echo "RULES.$@"
 	dh_testdir 
 	dh_auto_configure
-	dh_lintian
 
 extract_archive = \
 	[ -f "$1" ] || { echo "Error: $2.tar.gz archive not found in ${SOURCE_PATH}"; exit 1; }; tar -xf "$1" $3 --transform='s,^[^/]\+,$2,'
@@ -44,6 +43,7 @@ check_archives:
 	$(call extract_archive,${SOURCE_PATH}/plugins.tar.gz,plugins,-C ${BUILD_PATH}) & \
 	wait; \
 	$(call extract_archive,${SOURCE_PATH}/DocStore.tar.gz,DocStore,-C ${SERVER_PATH}/products/ASC.Files/Server); \
+	$(call extract_archive,${SOURCE_PATH}/document-formats.tar.gz,document-formats,-C ${BUILDTOOLS_PATH}/config); \
 	echo "Source archives check passed."
 
 override_dh_auto_build: check_archives

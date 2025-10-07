@@ -27,6 +27,7 @@ dotnet publish "%PathToRepository%\products\ASC.Files\service\ASC.Files.Service.
 dotnet publish "%PathToRepository%\common\services\ASC.Notify\ASC.Notify.csproj" -c Release -r win-x64 --self-contained false -o "%PathToAppFolder%\services\ASC.Notify\service"
 dotnet publish "%PathToRepository%\common\services\ASC.Studio.Notify\ASC.Studio.Notify.csproj" -c Release -r win-x64 --self-contained false -o "%PathToAppFolder%\services\ASC.Studio.Notify\service"
 dotnet publish "%PathToRepository%\common\services\ASC.Data.Backup.BackgroundTasks\ASC.Data.Backup.BackgroundTasks.csproj" -c Release -r win-x64 --self-contained false -o "%PathToAppFolder%\services\ASC.Data.Backup.BackgroundTasks\service"
+dotnet publish "%PathToRepository%\common\services\ASC.TelegramService\ASC.TelegramService.csproj" -c Release -r win-x64 --self-contained false -o "%PathToAppFolder%\services\ASC.TelegramService\service"
 dotnet publish "%PathToRepository%\common\services\ASC.ClearEvents\ASC.ClearEvents.csproj" -c Release -r win-x64 --self-contained false -o "%PathToAppFolder%\services\ASC.ClearEvents\service"
 dotnet publish "%PathToRepository%\web\ASC.Web.Api\ASC.Web.Api.csproj" -c Release -r win-x64 --self-contained false -o "%PathToAppFolder%\services\ASC.Web.Api\service"
 dotnet publish "%PathToRepository%\web\ASC.Web.Studio\ASC.Web.Studio.csproj" -c Release -r win-x64 --self-contained false -o "%PathToAppFolder%\services\ASC.Web.Studio\service"

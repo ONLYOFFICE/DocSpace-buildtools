@@ -3,32 +3,32 @@ name: Build packages
 on:
   push:
     branches:
-      - 'release/**'
-      - 'hotfix/**'
-      - 'develop'
+      - "release/**"
+      - "hotfix/**"
+      - "develop"
     paths:
-      - '.github/workflows/build_packages.yml'
+      - ".github/workflows/build_packages.yml"
   workflow_dispatch:
     inputs:
       branch-buildtools:
-        description: 'Branch for buildtools repository'
+        description: "Branch for buildtools repository"
         required: true
-        default: 'develop'
+        default: "develop"
       branch-client:
-        description: 'Branch for client repository'
+        description: "Branch for client repository"
         required: true
-        default: 'develop'
+        default: "develop"
       branch-server:
-        description: 'Branch for server repository'
+        description: "Branch for server repository"
         required: true
-        default: 'develop'
+        default: "develop"
       deb_build:
         type: boolean
-        description: 'Trigger DEB build'
+        description: "Trigger DEB build"
         default: true
       rpm_build:
         type: boolean
-        description: 'Trigger RPM build'
+        description: "Trigger RPM build"
         default: true
 
 concurrency:
@@ -68,7 +68,7 @@ jobs:
           fi
           [[ ${#package_types[@]} -eq 0 ]] && { echo "::error::No package types specified"; exit 1; }
           matrix=$(printf '%s\n' "${package_types[@]}" | jq -R . | jq -sc '{include: map({packageType: .})}')
-          echo "matrix=$matrix" >> $GITHUB_OUTPUT  
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
   build:
     name: Build Packages
     needs: prepare
@@ -76,6 +76,10 @@ jobs:
     strategy:
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     steps:
+      - name: Free Disk Space
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${BRANCH_BUILDTOOLS}/.github/scripts/free-disk-space-linux.sh | sudo bash
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -86,11 +90,6 @@ jobs:
           PRODUCT_VERSION=$(grep -oP '\d+\.\d+\.\d+' <<< "${BRANCH_BUILDTOOLS//\//} ${BRANCH_CLIENT//\//} \
           ${BRANCH_SERVER//\//}" | head -n1)
           echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.2.2}" >> $GITHUB_ENV
-
-      - name: Free Disk Space
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/rust-lang/rust/refs/heads/master/src/ci/scripts/free-disk-space-linux.sh | sed 's/::[^:]*:://g' | sudo bash
-          curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | sudo bash
 
       - name: Import GPG
         uses: crazy-max/ghaction-import-gpg@v6
@@ -132,6 +131,7 @@ jobs:
           download "document-templates"   "main/community-server"   DocStore &
           download "ASC.Web.Campaigns"    "master"                  campaigns &
           download "$PRODUCT-plugins"     "master"                  plugins &
+          download "document-formats"     "master"                  document-formats &
           wait
 
       - name: Build DEB Packages
@@ -170,7 +170,7 @@ jobs:
               -D "_gpg_path $HOME/.gnupg" \
               -D "_gpg_name ${{ secrets.GPG_KEY_NAME }}" \
               -D "_gpg_sign_cmd_extra_args --pinentry-mode loopback --passphrase ${{ secrets.GPG_PRIVATE_KEY_PASS }}" \
-              --addsign ${PACKAGE_DIRECTORY}/install/rpm/SPECS/RPMS/noarch/*.rpm 
+              --addsign ${PACKAGE_DIRECTORY}/install/rpm/SPECS/RPMS/noarch/*.rpm
 
       - name: Upload DEB Packages
         if: matrix.packageType == 'deb'
@@ -209,7 +209,7 @@ jobs:
           if grep -qE '(W:|E:)' RPM_LINT; then
             echo "::warning Noticerpm=rpmlint::$(cat RPM_LINT | awk '/W:/ { ws += 1 } /E:/ { es += 1 } END { print "Warnings:", ws, "Errors:", es }')"
           fi
-      
+
   trigger_oci:
     name: Trigger ci-oci-install Workflow
     needs: [prepare, build]
@@ -222,7 +222,7 @@ jobs:
         run: |
           deb_build="${{ github.event.inputs.deb_build }}" rpm_build="${{ github.event.inputs.rpm_build }}"
           [[ "${{ needs.prepare.outputs.build_all }}" == "true" ]] && deb_build="true" && rpm_build="true"
-          
+
           gh api --method POST /repos/${{ github.repository }}/actions/workflows/85067971/dispatches \
             -f ref='${{ github.ref_name }}' \
             -f inputs[deb_build]="${deb_build}" \

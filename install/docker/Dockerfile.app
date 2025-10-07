@@ -95,35 +95,13 @@ COPY --from=src ${SRC_PATH}/buildtools/config ./buildtools/config
 COPY --from=src ${SRC_PATH}/client/ ./client
 
 WORKDIR ${SRC_PATH}/client
-RUN <<EOF
-#!/bin/bash
-echo "--- installing pnpm ---" && \
-npm install -g pnpm && \
-echo "--- build/publish docspace-client node ---" && \
-pnpm install && \
-node common/scripts/before-build.js
-
-CLIENT_PACKAGES+=("@docspace/client")
-CLIENT_PACKAGES+=("@docspace/login")
-CLIENT_PACKAGES+=("@docspace/doceditor")
-CLIENT_PACKAGES+=("@docspace/sdk")
-CLIENT_PACKAGES+=("@docspace/management")
-
-for PKG in ${CLIENT_PACKAGES[@]}; do
-  echo "--- build/publish ${PKG} ---"
-  pnpm nx ${BUILD_ARGS} ${PKG} $([[ "${PKG}" =~ (client) ]] && echo "--env lint=false")
-  pnpm nx ${DEPLOY_ARGS} ${PKG}
-done
-
-echo "--- check client files ---" && \
-ls -la "${SRC_PATH}/publish/web/client" && \
-
-echo "--- publish public web files ---" && \
-cp -rf public "${SRC_PATH}/publish/web/"
-echo "--- publish locales ---" && \
-node common/scripts/minify-common-locales.js
-rm -rf ${SRC_PATH}/client/*
-EOF
+RUN echo "--- installing pnpm ---" && \
+    npm install -g pnpm && \
+    echo "--- build/publish docspace-client node ---" && \
+    pnpm install && \
+    pnpm ${BUILD_ARGS} && \
+    pnpm run ${DEPLOY_ARGS} && \
+    rm -rf ${SRC_PATH}/client/*
 
 # build plugins
 COPY --from=src ${SRC_PATH}/plugins ${SRC_PATH}/plugins
@@ -134,7 +112,7 @@ RUN echo "--- build/publish plugins ---" && \
     bash plugins-build.sh "${SRC_PATH}/plugins"
 
 # java build
-FROM maven:3.9 AS java-build
+FROM maven:3.9-eclipse-temurin-21 AS java-build
 ARG SRC_PATH
 
 WORKDIR ${SRC_PATH}/server/common/ASC.Identity/
@@ -516,6 +494,15 @@ COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/servi
 ENTRYPOINT ["./docker-healthchecks-entrypoint.sh"]
 CMD ["ASC.Web.HealthChecks.UI.dll", "ASC.Web.HealthChecks.UI"]
 
+## ASC.TelegramService ##
+FROM dotnetrun AS telegram
+WORKDIR ${BUILD_PATH}/services/ASC.TelegramService/service/
+
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.TelegramService/service/ .
+
+CMD ["ASC.TelegramService.dll", "ASC.TelegramService", "core:eventBus:subscriptionClientName=asc_event_bus_telegram_queue"]
+
 ## ASC.Migration.Runner ##
 FROM dotnetrun AS onlyoffice-migration-runner
 WORKDIR ${BUILD_PATH}/services/ASC.Migration.Runner/
@@ -594,6 +581,7 @@ COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/servi
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Notify/service/ ${BUILD_PATH}/services/ASC.Notify/service/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.People/service/ ${BUILD_PATH}/products/ASC.People/server/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Studio.Notify/service/ ${BUILD_PATH}/services/ASC.Studio.Notify/service/
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.TelegramService/service/ ${BUILD_PATH}/services/ASC.TelegramService/service/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Web.Api/service/ ${BUILD_PATH}/services/ASC.Web.Api/service/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Web.HealthChecks.UI/service/ ${BUILD_PATH}/services/ASC.Web.HealthChecks.UI/service/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Web.Studio/service/ ${BUILD_PATH}/services/ASC.Web.Studio/service/

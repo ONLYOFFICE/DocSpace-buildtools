@@ -164,3 +164,9 @@
 /usr/lib/systemd/system/%{product}-management.service
 %dir %{buildpath}/products/
 %dir %{buildpath}/products/ASC.Management/
+
+%files telegram
+%defattr(-, onlyoffice, onlyoffice, -)
+%{buildpath}/services/ASC.TelegramService/
+/usr/lib/systemd/system/%{product}-telegram.service
+%dir %{buildpath}/services/
