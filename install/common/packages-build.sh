@@ -47,7 +47,7 @@ json -I -f "${BUILDTOOLS_PATH}/config/apisystem.json" \
 json -I -f "${CLENT_PATH}/public/scripts/config.json" \
     -e "this.wrongPortalNameUrl=\"\""
 sed 's_\(minlevel=\)"[^"]*"_\1"Warn"_g' -i "${BUILDTOOLS_PATH}/config/nlog.config"
-sed 's/teamlab.info/onlyoffice.com/g' -i ${BUILDTOOLS_PATH}/config/autofac.consumers.json
+sed -i '/weixinRedirectUrl/!s/teamlab.info/onlyoffice.com/g' ${BUILDTOOLS_PATH}/config/autofac.consumers.json
 
 # Configuring proxy and router
 sed -e 's_etc/nginx_etc/openresty_g' \

@@ -11,6 +11,7 @@ on:
         default: |
           debian11,
           debian12,
+          debian13,
           ubuntu2204,
           ubuntu2404,
           rhel9,
@@ -41,6 +42,7 @@ jobs:
               "centos9s":   ["CentOS 9s",    "onlyoffice",   "base-centos9s"],
               "debian11":   ["Debian 11",    "onlyoffice",   "base-debian11"],
               "debian12":   ["Debian 12",    "onlyoffice",   "base-debian12"],
+              "debian13":   ["Debian 13",    "onlyoffice",   "base-debian13"],
               "ubuntu2204": ["Ubuntu 22.04", "onlyoffice",   "base-ubuntu2204"],
               "ubuntu2404": ["Ubuntu 24.04", "onlyoffice",   "base-ubuntu2404"],
               "fedora41":   ["Fedora 41",    "onlyoffice",   "base-fedora41"],
@@ -76,13 +78,12 @@ jobs:
       matrix: ${{fromJSON(needs.prepare.outputs.matrix)}}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Free Disk Space
         run: |
-          curl -fsSL https://raw.githubusercontent.com/rust-lang/rust/refs/heads/master/src/ci/scripts/free-disk-space-linux.sh | sed 's/::[^:]*:://g' | sudo bash
-          curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | sudo bash
+          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/free-disk-space-linux.sh | sudo VBOX_SAFE=1 bash
+
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: "Checking scripts for errors"
         run: |

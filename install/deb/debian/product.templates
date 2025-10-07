@@ -1,92 +1,97 @@
 Template: {{product}}/host
 Type: string
-Default: localhost
-Description: {{product}} host:
+Description: {{product}} host address
 
 Template: {{product}}/port
 Type: string
-Default: 80
-Description: {{product}} listening port:
+Description: {{product}} port number
 
 Template: {{product}}/db-host
 Type: string
-Default: localhost
-Description: Database host:
+Description: Database host address
+
+Template: {{product}}/db-port
+Type: string
+Description: Database port number
 
 Template: {{product}}/db-user
 Type: string
-Default: root
-Description: Database user:
+Description: Database username
 
 Template: {{product}}/db-pwd
 Type: password
-Description: Database password:
+Description: Database user password
 
 Template: {{product}}/db-name
 Type: string
-Default: onlyoffice
-Description: Database name:
+Description: Database name
 
 Template: {{product}}/ds-url
 Type: string
-Description: ONLYOFFICE Docs URL:
+Description: External Docs server URL (e.g., http://docs.example.com:8083)
 
 Template: {{product}}/elasticsearch-scheme
 Type: select
 Choices: http, https
-Default: http
-Description: Elasticsearch protocol:
+Description: OpenSearch protocol
 
 Template: {{product}}/elasticsearch-host
 Type: string
-Description: Elasticsearch host:
+Description: OpenSearch host address
 
 Template: {{product}}/elasticsearch-port
 Type: string
-Default: 9200
-Description: Elasticsearch port:
+Description: OpenSearch port number
 
 Template: {{product}}/redis-host
 Type: string
-Description: Redis host:
+Description: Redis host address
 
 Template: {{product}}/redis-port
 Type: string
-Default: 6379
-Description: Redis port:
+Description: Redis port number
+
+Template: {{product}}/redis-username
+Type: string
+Description: Redis username (optional)
+
+Template: {{product}}/redis-password
+Type: password
+Description: Redis password (optional)
 
 Template: {{product}}/redis-db
 Type: string
-Default: 0
-Description: Redis database index:
+Description: Redis database index
+
+Template: {{product}}/rabbitmq-protocol
+Type: select
+Choices: amqp, amqps
+Description: RabbitMQ protocol
 
 Template: {{product}}/rabbitmq-host
 Type: string
-Description: RabbitMQ host:
+Description: RabbitMQ host address
 
 Template: {{product}}/rabbitmq-port
 Type: string
-Default: 5672
-Description: RabbitMQ port:
+Description: RabbitMQ port number
 
 Template: {{product}}/rabbitmq-user
 Type: string
-Default: guest
-Description: RabbitMQ user:
+Description: RabbitMQ username
 
 Template: {{product}}/rabbitmq-password
 Type: string
-Default: guest
-Description: RabbitMQ password:
+Description: RabbitMQ user password
 
 Template: {{product}}/machinekey
 Type: string
-Description: Enter your own machinekey:
+Description: Machine key for encryption 
 
 Template: {{product}}/jwt-header
 Type: string
-Description: Enter JWT header:
+Description: JWT header name
 
 Template: {{product}}/jwt-secret
 Type: string
-Description: Enter JWT secret:
+Description: JWT secret key

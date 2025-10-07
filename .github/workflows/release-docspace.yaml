@@ -40,23 +40,9 @@ jobs:
         env:
           DOCKER_TAG: ${{ github.event.inputs.release_version }}
         run: |
-          SERVICES=$(curl -sSL "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/install/docker/build.yml" | \
-            docker compose -f- config | grep -oP 'image: [^/]*/-?\K[^:]+')
-
-          PIDS=()
-          for SVC in ${SERVICES}; do
-            ( curl -sf "https://hub.docker.com/v2/repositories/${{ github.event.inputs.repo }}/${SVC}/" || { echo "::error::[FAIL]    $SVC  (repo not found)"; exit 1; }
-              timeout 300 bash -c "until curl -sf -o /dev/null -w '%{http_code}' \
-                https://hub.docker.com/v2/repositories/${{ github.event.inputs.repo }}/${SVC}/tags/${{ env.DOCKER_TAG }}/ \
-                | grep -q 200; do sleep 10; done" \
-              && echo "[OK]      ${SVC}" || { echo "::error::[FAIL]    ${SVC}"; exit 1; }
-            ) &
-            PIDS+=( "$!" )
-          done
-
-          for PID in "${PIDS[@]}"; do wait "$PID" || ERROR=1; done
-          [ "${ERROR:-0}" -gt 0 ] && { echo "::error::[FAIL] Some images didn't appear or repo not found" >&2; exit 1; }
-          echo "[OK]      All images are available."
+          echo "Waiting for images with tag ${{ env.DOCKER_TAG }} to appear on Docker Hub..."
+          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/docker-images-availability.sh \
+            | sudo GITHUB_REPOSITORY=${{ github.repository }} BRANCH=${{ github.ref_name }} DOCKER_REPOSITORY=${{ github.event.inputs.repo }} DOCKER_PREFIX=docspace DOCKER_TAG=${{ env.DOCKER_TAG }} bash
 
       - name: Trigger offline release
         env:

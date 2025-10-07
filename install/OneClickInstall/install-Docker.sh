@@ -517,9 +517,9 @@ get_tag_from_registry () {
 			AUTH_HEADER="Authorization: JWT $TOKEN"
 			sleep 1
 		fi
-
-		REGISTRY_TAGS_URL="https://hub.docker.com/v2/repositories/${1}/tags/?page_size=100"
-		JQ_FILTER='.results[].name // empty'
+		ARCH="$(uname -m | sed -E 's/^(x86_64|amd64)$/amd64/; s/^(aarch64|arm64)$/arm64/')"
+		REGISTRY_TAGS_URL="https://hub.docker.com/v2/repositories/${1}/tags?page_size=100"
+		JQ_FILTER='.results[] | select(.name | test("^(?!99\\.).*")) | select(.images[]?.architecture=="'"$ARCH"'") | .name // empty'
 	fi
 
 	mapfile -t TAGS_RESP < <(curl -s -H "${AUTH_HEADER}" -X GET "${REGISTRY_TAGS_URL}" | jq -r "${JQ_FILTER}")
@@ -797,14 +797,14 @@ install_product () {
 		elif [ ! -z "${LETS_ENCRYPT_DOMAIN}" ] && [ ! -z "${LETS_ENCRYPT_MAIL}" ]; then
 		    env ${DHPARAM_PATH:+DHPARAM_PATH="$DHPARAM_PATH"} \
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup "${LETS_ENCRYPT_MAIL}" "${LETS_ENCRYPT_DOMAIN}"
-		#Fix for bug 70537 to ensure proper migration to version 3.0.0
-		fi
-
-		if [ "${UPDATE}" = "true" ] && [ -f "/etc/cron.d/${PRODUCT}-letsencrypt" ]; then
-			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -r
-		elif [[ -n "$CERTIFICATE_KEY_PATH" || -n "$CERTIFICATE_PATH" || -n "$LETS_ENCRYPT_DOMAIN" || -n "$LETS_ENCRYPT_MAIL" ]]; then
+		elif [[ -n "${CERTIFICATE_KEY_PATH}${CERTIFICATE_PATH}${LETS_ENCRYPT_DOMAIN}${LETS_ENCRYPT_MAIL}" ]]; then
 			echo -e "\e[31mERROR:\e[0m Missing required parameters for SSL setup"
 			echo "Run 'bash $BASE_DIR/config/${PRODUCT}-ssl-setup --help' for usage information."
+		fi
+
+		#Fix for bug 70537 to ensure proper migration to version 3.0.0
+		if [ "${UPDATE}" = "true" ] && [ -f "/etc/cron.weekly/${PRODUCT}-letsencrypt" ]; then
+			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -r
 		fi
 	elif [ "$INSTALL_PRODUCT" == "pull" ]; then
 		docker-compose "${COMPOSE_FILES[@]}" pull
