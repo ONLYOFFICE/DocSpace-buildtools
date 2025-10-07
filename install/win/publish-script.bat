@@ -35,23 +35,23 @@ dotnet publish "%PathToRepository%\web\ASC.Web.HealthChecks.UI\ASC.Web.HealthChe
 
 rem backend services (Nodejs) in directory 'services'
 mkdir "%PathToAppFolder%\services\ASC.Socket.IO\service"
-xcopy "%PathToRepository%\common\ASC.Socket.IO" "%PathToAppFolder%\services\ASC.Socket.IO\service" /s /y /b /i
+robocopy "%PathToRepository%\common\ASC.Socket.IO" "%PathToAppFolder%\services\ASC.Socket.IO\service" /E /COPYALL /R:1 /W:1
 
 mkdir "%PathToAppFolder%\services\ASC.SsoAuth\service"
-xcopy "%PathToRepository%\common\ASC.SsoAuth" "%PathToAppFolder%\services\ASC.SsoAuth\service" /s /y /b /i
+robocopy "%PathToRepository%\common\ASC.SsoAuth" "%PathToAppFolder%\services\ASC.SsoAuth\service" /E /COPYALL /R:1 /W:1
 
 rem backend services (Nodejs) in directory 'products'
 mkdir "%PathToAppFolder%\products\ASC.Login\login"
-xcopy "%PathToRepository%\..\publish\web\login" "%PathToAppFolder%\products\ASC.Login\login" /s /y /b /i
+robocopy "%PathToRepository%\..\publish\web\login" "%PathToAppFolder%\products\ASC.Login\login" /E /COPYALL /R:1 /W:1
 
 mkdir "%PathToAppFolder%\products\ASC.Files\editor"
-xcopy "%PathToRepository%\..\publish\web\editor" "%PathToAppFolder%\products\ASC.Files\editor" /s /y /b /i
+robocopy "%PathToRepository%\..\publish\web\editor" "%PathToAppFolder%\products\ASC.Files\editor" /E /COPYALL /R:1 /W:1
 
 mkdir "%PathToAppFolder%\products\ASC.Sdk\sdk"
-xcopy "%PathToRepository%\..\publish\web\sdk" "%PathToAppFolder%\products\ASC.Sdk\sdk" /s /y /b /i
+robocopy "%PathToRepository%\..\publish\web\sdk" "%PathToAppFolder%\products\ASC.Sdk\sdk" /E /COPYALL /R:1 /W:1
 
 mkdir "%PathToAppFolder%\products\ASC.Management\management"
-xcopy "%PathToRepository%\..\publish\web\management" "%PathToAppFolder%\products\ASC.Management\management" /s /y /b /i
+robocopy "%PathToRepository%\..\publish\web\management" "%PathToAppFolder%\products\ASC.Management\management" /E /COPYALL /R:1 /W:1
 
 rem backend services (Java) in directory 'services'
 mkdir "%PathToAppFolder%\services\ASC.Identity.Authorization\service"

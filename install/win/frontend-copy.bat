@@ -16,9 +16,10 @@ if defined SecondArg (
 	set PathToAppFolder=%FirstArg%\publish
 )
 
-xcopy "%PathToRepository%\publish\web\public" "%PathToAppFolder%\public" /s /y /b /i
-xcopy "%PathToRepository%\campaigns\src\campaigns" "%PathToAppFolder%\public\campaigns" /s /y /b /i
-xcopy "%PathToRepository%\publish\web\management" "%PathToAppFolder%\management" /s /y /b /i
-xcopy "%PathToRepository%\publish\web\client" "%PathToAppFolder%\client" /s /y /b /i
-xcopy "%PathToRepository%\buildtools\config\nginx" "%PathToAppFolder%\nginx\conf" /s /y /b /i
-xcopy "%PathToRepository%\buildtools\config\*" "%PathToAppFolder%\config" /y /b /i
+robocopy "%PathToRepository%\publish\web\public" "%PathToAppFolder%\public" /E /COPYALL /R:1 /W:1
+robocopy "%PathToRepository%\campaigns\src\campaigns" "%PathToAppFolder%\public\campaigns" /E /COPYALL /R:1 /W:1
+robocopy "%PathToRepository%\publish\web\management" "%PathToAppFolder%\management" /E /COPYALL /R:1 /W:1
+robocopy "%PathToRepository%\publish\web\client" "%PathToAppFolder%\client" /E /COPYALL /R:1 /W:1
+robocopy "%PathToRepository%\buildtools\config\nginx" "%PathToAppFolder%\nginx\conf" /E /COPYALL /R:1 /W:1
+robocopy "%PathToRepository%\buildtools\config" "%PathToAppFolder%\config" /E /COPYALL /R:1 /W:1
+exit /b 0
