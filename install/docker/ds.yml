@@ -15,6 +15,7 @@ services:
       - REDIS_SERVER_PASS=${REDIS_PASSWORD}
       - REDIS_SERVER_DB=${REDIS_DB}
     volumes:
+      #- ${CERTIFICATE_PATH}:/var/www/onlyoffice/Data/certs/extra-ca-certs.pem
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}app_data:/var/www/onlyoffice/Data
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}ds_fonts:/usr/share/fonts

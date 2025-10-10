@@ -154,9 +154,9 @@ case $1 in
       db -e "UPDATE tenants_tenants SET mappeddomain='NULL' WHERE alias='localhost';"
     fi
 
-    if grep -q '${CERTIFICATE_PATH}:' ${DOCKERCOMPOSE}/docspace.yml; then
+    if grep -q '^[[:space:]]*-[[:space:]]*.*${CERTIFICATE_PATH}' ${DOCKERCOMPOSE}/docspace.yml; then
       sed -i '/USE_UNAUTHORIZED_STORAGE/d' ${DOCKERCOMPOSE}/ds.yml
-      sed -i '/${CERTIFICATE_PATH}:/d' ${DOCKERCOMPOSE}/docspace.yml ${DOCKERCOMPOSE}/ds.yml
+      sed -i 's/^\([[:space:]]*\)-\(.*${CERTIFICATE_PATH}.*\)/\1#-\2/' ${DOCKERCOMPOSE}/docspace.yml ${DOCKERCOMPOSE}/ds.yml
       docker-compose -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-doceditor onlyoffice-sdk onlyoffice-login onlyoffice-socket onlyoffice-ssoauth
       docker-compose -f ${DOCKERCOMPOSE}/ds.yml up --force-recreate -d
     fi
@@ -233,14 +233,25 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
     if [[ "${LETSENCRYPT_ENABLE}" = "true" ]]; then
       create_renew_script
     else
-      CERTIFICATE_SUBJECT=$(openssl x509 -subject -noout -in "${CERTIFICATE_FILE}" | sed -n 's/^.*CN *= *\([^,]*\).*$/\1/p' | awk -F. '{print $(NF-1)"."$NF}')
-      CERTIFICATE_ISSUER=$(openssl x509 -issuer -noout -in "${CERTIFICATE_FILE}" | sed -n 's/^.*CN *= *\([^,]*\).*$/\1/p' | awk -F. '{print $(NF-1)"."$NF}')
-      
-      #Checking whether the certificate is self-signed
-      if [[ -n "$CERTIFICATE_SUBJECT" && -n "$CERTIFICATE_ISSUER" && "$CERTIFICATE_SUBJECT" == "$CERTIFICATE_ISSUER" ]]; then
-        sed -i '/app_data:\/.*/a \    - ${CERTIFICATE_PATH}:${CERTIFICATE_PATH}' ${DOCKERCOMPOSE}/docspace.yml
-        sed -i '/app_data:\/.*/a \      - ${CERTIFICATE_PATH}:/var/www/onlyoffice/Data/certs/extra-ca-certs.pem' ${DOCKERCOMPOSE}/ds.yml
-        docker-compose -f ${DOCKERCOMPOSE}/ds.yml up --force-recreate -d
+      CONTAINER_NAME=$(docker ps --format '{{.Image}} {{.Names}}' | grep "docspace-api:" | awk '{print $2}')
+      TEMP_PATH="/tmp/$(basename "${CERTIFICATE_FILE}")"
+
+      # Checking whether the certificate chain is trusted
+      if [ -n "$CONTAINER_NAME" ]; then
+        docker cp "${CERTIFICATE_FILE}" "${CONTAINER_NAME}:${TEMP_PATH}" >/dev/null 2>&1
+        echo -n "Checking certificate trust inside ${CONTAINER_NAME}... "
+        docker exec "${CONTAINER_NAME}" openssl verify -CAfile /etc/ssl/certs/ca-certificates.crt \
+          -untrusted "${TEMP_PATH}" "${TEMP_PATH}" >/dev/null 2>&1 && echo "true" && CERT_TRUST_REQUIRED=false || echo "false" && CERT_TRUST_REQUIRED=true
+        docker exec "${CONTAINER_NAME}" rm -f "${TEMP_PATH}" >/dev/null 2>&1
+      else
+        echo -n "Checking certificate trust on host... "
+        openssl verify -CAfile /etc/ssl/certs/ca-certificates.crt -untrusted "${CERTIFICATE_FILE}" "${CERTIFICATE_FILE}" >/dev/null 2>&1 \
+          && echo "true" && CERT_TRUST_REQUIRED=false || echo "false" && CERT_TRUST_REQUIRED=true
+      fi
+
+      if [ "$CERT_TRUST_REQUIRED" = true ]; then
+        sed -i 's/^\([[:space:]]*\)#-\(.*${CERTIFICATE_PATH}.*\)/\1-\2/' ${DOCKERCOMPOSE}/docspace.yml ${DOCKERCOMPOSE}/ds.yml
+        docker-compose -f "${DOCKERCOMPOSE}/ds.yml" up --force-recreate -d
       fi
     fi
     
