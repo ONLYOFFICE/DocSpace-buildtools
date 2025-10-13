@@ -1675,7 +1675,7 @@
     <ATTRIBUTE name="ImpersonateUser" value="true"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.SynchronizedFolderComponent">
-    <ROW Directory_="APPDIR" SourcePath="Files" Feature="MainFeature" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store|\products|\services" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="APPDIR" SourcePath="Files" Feature="MainFeature" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store|\products" ExcludeFlags="6" FileAddOptions="4"/>
     <ROW Directory_="editor_Dir" SourcePath="Files\products\ASC.Files\editor" Feature="DocEditor" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
     <ROW Directory_="server_2_Dir" SourcePath="Files\products\ASC.Files\server" Feature="File" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
     <ROW Directory_="ASC.Login_Dir" SourcePath="Files\products\ASC.Login" Feature="Login" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
