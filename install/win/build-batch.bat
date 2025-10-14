@@ -110,6 +110,7 @@ REM echo ######## Remove AWSTarget from nlog.config ########
 ::delete nginx configs
 del /f /q buildtools\install\win\Files\nginx\conf\onlyoffice-login.conf
 del /f /q buildtools\install\win\Files\nginx\conf\onlyoffice-story.conf
+del /f /q buildtools\install\win\Files\nginx\conf\onlyoffice-management.conf
 
 ::Remove unused services from HealthCheck | Bug 64516
 %sed% -i "/\"Name\": \"ASC.ApiCache\"/,/{/d" buildtools\install\win\Files\services\ASC.Web.HealthChecks.UI\service\appsettings.json
