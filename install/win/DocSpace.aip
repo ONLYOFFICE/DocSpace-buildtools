@@ -129,6 +129,8 @@
     <ROW Directory="ASC.Data.Backup_Dir" Directory_Parent="services_Dir" DefaultDir="ASCDAT~1.BAC|ASC.Data.Backup" DirectoryOptions="15"/>
     <ROW Directory="ASC.Files.Service_Dir" Directory_Parent="services_Dir" DefaultDir="ASCFIL~1.SER|ASC.Files.Service" DirectoryOptions="15"/>
     <ROW Directory="ASC.Files_Dir" Directory_Parent="products_Dir" DefaultDir="ASC~1.FIL|ASC.Files" DirectoryOptions="15"/>
+    <ROW Directory="ASC.Identity.Authorization_Dir" Directory_Parent="services_Dir" DefaultDir="ASCIDE~1.AUT|ASC.Identity.Authorization" DirectoryOptions="15"/>
+    <ROW Directory="ASC.Identity.Registration_Dir" Directory_Parent="services_Dir" DefaultDir="ASCIDE~1.REG|ASC.Identity.Registration" DirectoryOptions="15"/>
     <ROW Directory="ASC.Login_Dir" Directory_Parent="products_Dir" DefaultDir="ASC~1.LOG|ASC.Login" DirectoryOptions="15"/>
     <ROW Directory="ASC.Management_Dir" Directory_Parent="products_Dir" DefaultDir="ASC~1.MAN|ASC.Management" DirectoryOptions="15"/>
     <ROW Directory="ASC.Migration.Runner_Dir" Directory_Parent="services_Dir" DefaultDir="ASCMIG~1.RUN|ASC.Migration.Runner" DirectoryOptions="15"/>
@@ -211,6 +213,8 @@
     <ROW Component="ASC.Files.Service" ComponentId="{10E5C648-6B24-40DB-926A-4E26E7ABBE7E}" Directory_="ASC.Files.Service_Dir" Attributes="0"/>
     <ROW Component="ASC.Files.Service.exe" ComponentId="{14D153CC-E7A6-4818-A310-9CE1F332DCDA}" Directory_="service_7_Dir" Attributes="0" KeyPath="ASC.Files.Service.exe"/>
     <ROW Component="ASC.Files.exe" ComponentId="{4D48DD81-BABF-4E1C-A216-C72C1EA8428B}" Directory_="server_2_Dir" Attributes="0" KeyPath="ASC.Files.exe"/>
+    <ROW Component="ASC.Identity.Authorization" ComponentId="{45519D5F-BC4D-47A7-85B7-48A8384A6474}" Directory_="ASC.Identity.Authorization_Dir" Attributes="0"/>
+    <ROW Component="ASC.Identity.Registration" ComponentId="{E1C4D1A9-57B1-4842-A6F8-969CBE58CEF4}" Directory_="ASC.Identity.Registration_Dir" Attributes="0"/>
     <ROW Component="ASC.Login" ComponentId="{323B1636-C7E9-4DA2-8575-92D939FA381F}" Directory_="ASC.Login_Dir" Attributes="0"/>
     <ROW Component="ASC.Management" ComponentId="{27D4CFD4-20C3-4141-837E-B04F2EB7DC91}" Directory_="ASC.Management_Dir" Attributes="0"/>
     <ROW Component="ASC.Migration.Runner" ComponentId="{C03F968B-6259-4CE7-89C7-3236EDD2170C}" Directory_="ASC.Migration.Runner_Dir" Attributes="0"/>
@@ -995,6 +999,22 @@
     <ROW Directory_="ASC.Management_Dir" Component_="ASC.Management" ManualDelete="false"/>
     <ROW Directory_="ASC.People_Dir" Component_="ASC.People" ManualDelete="false"/>
     <ROW Directory_="ASC.Sdk_Dir" Component_="ASC.Sdk" ManualDelete="false"/>
+    <ROW Directory_="ASC.ApiSystem_Dir" Component_="ASC.ApiSystem.exe" ManualDelete="false"/>
+    <ROW Directory_="ASC.ClearEvents_Dir" Component_="ASC.ClearEvents" ManualDelete="false"/>
+    <ROW Directory_="ASC.Data.Backup.BackgroundTasks_Dir" Component_="ASC.Data.Backup.BackgroundTasks" ManualDelete="false"/>
+    <ROW Directory_="ASC.Data.Backup_Dir" Component_="ASC.Data.Backup" ManualDelete="false"/>
+    <ROW Directory_="ASC.Files.Service_Dir" Component_="ASC.Files.Service" ManualDelete="false"/>
+    <ROW Directory_="ASC.Migration.Runner_Dir" Component_="ASC.Migration.Runner" ManualDelete="false"/>
+    <ROW Directory_="ASC.Notify_Dir" Component_="ASC.Notify" ManualDelete="false"/>
+    <ROW Directory_="ASC.Socket.IO_Dir" Component_="ASC.Socket.IO" ManualDelete="false"/>
+    <ROW Directory_="ASC.SsoAuth_Dir" Component_="ASC.SsoAuth" ManualDelete="false"/>
+    <ROW Directory_="ASC.Studio.Notify_Dir" Component_="ASC.Studio.Notify" ManualDelete="false"/>
+    <ROW Directory_="ASC.TelegramService" Component_="ASC.TelegramService.exe" ManualDelete="false"/>
+    <ROW Directory_="ASC.Web.Api_Dir" Component_="ASC.Web.Api" ManualDelete="false"/>
+    <ROW Directory_="ASC.Web.HealthChecks.UI_Dir" Component_="ASC.Web.HealthChecks.UI" ManualDelete="false"/>
+    <ROW Directory_="ASC.Web.Studio_Dir" Component_="ASC.Web.Studio" ManualDelete="false"/>
+    <ROW Directory_="ASC.Identity.Authorization_Dir" Component_="ASC.Identity.Authorization" ManualDelete="false"/>
+    <ROW Directory_="ASC.Identity.Registration_Dir" Component_="ASC.Identity.Registration" ManualDelete="false"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCustActComponent">
     <ROW Action="AI_AppSearchEx" Type="1" Source="Prereq.dll" Target="DoAppSearchEx"/>
@@ -1112,7 +1132,7 @@
     <ROW Action="OpenSearchSetup" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_38"/>
     <ROW Action="PostgreSQLConfigure" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_34"/>
     <ROW Action="RedisSetup" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_39"/>
-    <ROW Action="SET_APPDIR" Type="307" Source="APPDIR" Target="[ProgramFilesFolder][Manufacturer]\[ProductName]" MultiBuildTarget="DefaultBuild:[ProgramFilesFolder][INSTALL_ROOT_FOLDER_NAME]\DocSpace#ExeBuild:[ProgramFilesFolder][INSTALL_ROOT_FOLDER_NAME]\DocSpace#ExeBuild_1:[ProgramFilesFolder][INSTALL_ROOT_FOLDER_NAME]\DocSpace"/>
+    <ROW Action="SET_APPDIR" Type="307" Source="APPDIR" Target="[ProgramFilesFolder][Manufacturer]\[ProductName]" MultiBuildTarget="DefaultBuild:[WindowsVolume]\DocSpace#ExeBuild:[WindowsVolume]\DocSpace#ExeBuild_1:[WindowsVolume]\DocSpace"/>
     <ROW Action="SET_SHORTCUTDIR" Type="307" Source="SHORTCUTDIR" Target="[ProgramMenuFolder][ProductName]" MultiBuildTarget="DefaultBuild:[ProgramMenuFolder][INSTALL_ROOT_FOLDER_NAME]\DocSpace#ExeBuild:[ProgramMenuFolder][INSTALL_ROOT_FOLDER_NAME]\DocSpace#ExeBuild_1:[ProgramMenuFolder][INSTALL_ROOT_FOLDER_NAME]\DocSpace"/>
     <ROW Action="SET_TARGETDIR_TO_APPDIR" Type="51" Source="TARGETDIR" Target="[APPDIR]"/>
     <ROW Action="SetDashboardsPwd" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_37"/>
@@ -1198,7 +1218,7 @@
     <ROW Feature_="WebHealthChecksUI" Component_="temp_ASC.Web.HealthChecks.UI"/>
     <ROW Feature_="Login" Component_="ASC.Login"/>
     <ROW Feature_="Login" Component_="login"/>
-    <ROW Feature_="Login" Component_="Login.exe"/>
+    <ROW Feature_="MainFeature" Component_="Login.exe"/>
     <ROW Feature_="MigrationRunner" Component_="ASC.Migration.Runner"/>
     <ROW Feature_="MigrationRunner" Component_="ASC.Migration.Runner.exe"/>
     <ROW Feature_="MigrationRunner" Component_="service_ASC.Migration.Runner"/>
@@ -1214,11 +1234,11 @@
     <ROW Feature_="SocketIO" Component_="ASC.Socket.IO"/>
     <ROW Feature_="SocketIO" Component_="config_socketio"/>
     <ROW Feature_="SocketIO" Component_="service_ASC.Socket.IO"/>
-    <ROW Feature_="SocketIO" Component_="Socket.IO.exe"/>
+    <ROW Feature_="MainFeature" Component_="Socket.IO.exe"/>
     <ROW Feature_="SsoAuth" Component_="ASC.SsoAuth"/>
     <ROW Feature_="SsoAuth" Component_="config_ssoauth"/>
     <ROW Feature_="SsoAuth" Component_="service_ASC.SsoAuth"/>
-    <ROW Feature_="SsoAuth" Component_="SsoAuth.exe"/>
+    <ROW Feature_="MainFeature" Component_="SsoAuth.exe"/>
     <ROW Feature_="StudioNotify" Component_="ASC.Studio.Notify"/>
     <ROW Feature_="StudioNotify" Component_="ASC.Studio.Notify.exe"/>
     <ROW Feature_="StudioNotify" Component_="service_ASC.Studio.Notify"/>
@@ -1238,7 +1258,7 @@
     <ROW Feature_="Proxy" Component_="temp_nginx"/>
     <ROW Feature_="Proxy" Component_="Proxy.exe"/>
     <ROW Feature_="DocEditor" Component_="ASC.Files.Editor"/>
-    <ROW Feature_="DocEditor" Component_="DocEditor.exe"/>
+    <ROW Feature_="MainFeature" Component_="DocEditor.exe"/>
     <ROW Feature_="DocEditor" Component_="editor"/>
     <ROW Feature_="NodeJSServices" Component_="tools"/>
     <ROW Feature_="MainFeature" Component_="AppPath"/>
@@ -1246,14 +1266,16 @@
     <ROW Feature_="DocumentServer.EE" Component_="DocumentServer.EE"/>
     <ROW Feature_="DocumentServer.DE" Component_="DocumentServer.DE"/>
     <ROW Feature_="MainFeature" Component_="MACHINE_KEY"/>
+    <ROW Feature_="MainFeature" Component_="ASC.Identity.Authorization"/>
+    <ROW Feature_="MainFeature" Component_="ASC.Identity.Registration"/>
     <ROW Feature_="MainFeature" Component_="Identity.Authorization.exe"/>
     <ROW Feature_="MainFeature" Component_="Identity.Registration.exe"/>
     <ROW Feature_="MainFeature" Component_="IDENTITY_ENCRYPTION_SECRET"/>
     <ROW Feature_="Sdk" Component_="ASC.Sdk"/>
     <ROW Feature_="Sdk" Component_="config_1"/>
-    <ROW Feature_="Sdk" Component_="Sdk.exe"/>
+    <ROW Feature_="MainFeature" Component_="Sdk.exe"/>
     <ROW Feature_="Management" Component_="ASC.Management"/>
-    <ROW Feature_="Management" Component_="Management.exe"/>
+    <ROW Feature_="MainFeature" Component_="Management.exe"/>
     <ROW Feature_="Telegram" Component_="ASC.TelegramService.exe"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
@@ -1675,13 +1697,29 @@
     <ATTRIBUTE name="ImpersonateUser" value="true"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.SynchronizedFolderComponent">
-    <ROW Directory_="APPDIR" SourcePath="Files" Feature="MainFeature" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store|\products" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="APPDIR" SourcePath="Files" Feature="MainFeature" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store|\products|\services" ExcludeFlags="6" FileAddOptions="4"/>
     <ROW Directory_="editor_Dir" SourcePath="Files\products\ASC.Files\editor" Feature="DocEditor" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
     <ROW Directory_="server_2_Dir" SourcePath="Files\products\ASC.Files\server" Feature="File" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
     <ROW Directory_="ASC.Login_Dir" SourcePath="Files\products\ASC.Login" Feature="Login" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
     <ROW Directory_="ASC.Management_Dir" SourcePath="Files\products\ASC.Management" Feature="Management" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
     <ROW Directory_="ASC.People_Dir" SourcePath="Files\products\ASC.People" Feature="People" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
     <ROW Directory_="ASC.Sdk_Dir" SourcePath="Files\products\ASC.Sdk" Feature="Sdk" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.ApiSystem_Dir" SourcePath="Files\services\ASC.ApiSystem" Feature="ApiSystem" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.ClearEvents_Dir" SourcePath="Files\services\ASC.ClearEvents" Feature="ClearEvents" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Data.Backup_Dir" SourcePath="Files\services\ASC.Data.Backup" Feature="DataBackup" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Data.Backup.BackgroundTasks_Dir" SourcePath="Files\services\ASC.Data.Backup.BackgroundTasks" Feature="BackgroundTasks" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Files.Service_Dir" SourcePath="Files\services\ASC.Files.Service" Feature="Files" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Migration.Runner_Dir" SourcePath="Files\services\ASC.Migration.Runner" Feature="MigrationRunner" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Notify_Dir" SourcePath="Files\services\ASC.Notify" Feature="Notify" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Socket.IO_Dir" SourcePath="Files\services\ASC.Socket.IO" Feature="SocketIO" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.SsoAuth_Dir" SourcePath="Files\services\ASC.SsoAuth" Feature="SsoAuth" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Studio.Notify_Dir" SourcePath="Files\services\ASC.Studio.Notify" Feature="StudioNotify" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.TelegramService" SourcePath="Files\services\ASC.TelegramService" Feature="Telegram" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Web.Api_Dir" SourcePath="Files\services\ASC.Web.Api" Feature="WebApi" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Web.HealthChecks.UI_Dir" SourcePath="Files\services\ASC.Web.HealthChecks.UI" Feature="WebHealthChecksUI" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Web.Studio_Dir" SourcePath="Files\services\ASC.Web.Studio" Feature="WebStudio" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Identity.Authorization_Dir" SourcePath="Files\services\ASC.Identity.Authorization" Feature="MainFeature" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Identity.Registration_Dir" SourcePath="Files\services\ASC.Identity.Registration" Feature="MainFeature" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.TxtUpdateComponent">
     <ROW Name="ReplaceAppDir" TxtUpdateSet="xml" FindPattern="{APPDIR}" ReplacePattern="[APPDIR]" Options="2" Order="0" FileEncoding="-1"/>
