@@ -101,7 +101,7 @@ del /f /q buildtools\install\win\Files\config\*.dev.json
 %sed% "s_\(\"showPII\":\).*_\1 \"false\"_g" -i buildtools\install\win\Files\config\appsettings.json
 
 ::redirectUrl value replacement
-%sed% "s/teamlab.info/onlyoffice.com/g" -i buildtools\install\win\Files\config\autofac.consumers.json
+%sed% "/weixinRedirectUrl/!s/teamlab.info/onlyoffice.com/g" -i buildtools\install\win\Files\config\autofac.consumers.json
 %sed% "s_\(\"wrongPortalNameUrl\":\).*,_\1 \"\",_g" -i buildtools\install\win\Files\public\scripts\config.json
 
 REM echo ######## Remove AWSTarget from nlog.config ########
@@ -110,6 +110,7 @@ REM echo ######## Remove AWSTarget from nlog.config ########
 ::delete nginx configs
 del /f /q buildtools\install\win\Files\nginx\conf\onlyoffice-login.conf
 del /f /q buildtools\install\win\Files\nginx\conf\onlyoffice-story.conf
+del /f /q buildtools\install\win\Files\nginx\conf\onlyoffice-management.conf
 
 ::Remove unused services from HealthCheck | Bug 64516
 %sed% -i "/\"Name\": \"ASC.ApiCache\"/,/{/d" buildtools\install\win\Files\services\ASC.Web.HealthChecks.UI\service\appsettings.json

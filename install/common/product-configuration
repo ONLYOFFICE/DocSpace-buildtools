@@ -430,7 +430,7 @@ change_elasticsearch_config(){
 	sed -i '/-XX:+HeapDumpOnOutOfMemoryError/d' "$ELASTIC_SEARCH_JAVA_CONF_PATH"
 
 	local SAFE_MEMORY=$(( ( $(free --mega | grep -oP '\d+' | head -n 1) - 1024 ) / 2 )) # half of the remaining memory after the 1 GB reserve for the OS
-	local HEAP=$(( SAFE_MEMORY < 2048 ? 1 : SAFE_MEMORY < 4096 ? 2 : 4 ))g #if <2GB → 1GB; <4GB → 2GB; otherwise → 4GB
+	local HEAP=$(( SAFE_MEMORY < 2048 ? 1 : SAFE_MEMORY < 4096 ? 2 : 4 ))g #if <2GB -> 1GB; <4GB -> 2GB; otherwise -> 4GB
 	grep -qE "^[^#]*-Xms[0-9]g" "${ELASTIC_SEARCH_JAVA_CONF_PATH}" && sed -i "s/-Xms[0-9]g/-Xms${HEAP}/" "${ELASTIC_SEARCH_JAVA_CONF_PATH}" || echo "-Xms${HEAP}" >> "${ELASTIC_SEARCH_JAVA_CONF_PATH}"
 	grep -qE "^[^#]*-Xmx[0-9]g" "${ELASTIC_SEARCH_JAVA_CONF_PATH}" && sed -i "s/-Xmx[0-9]g/-Xmx${HEAP}/" "${ELASTIC_SEARCH_JAVA_CONF_PATH}" || echo "-Xmx${HEAP}" >> "${ELASTIC_SEARCH_JAVA_CONF_PATH}"
 

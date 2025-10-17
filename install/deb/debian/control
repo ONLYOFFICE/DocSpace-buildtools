@@ -2,7 +2,7 @@ Source: {{product}}
 Section: web
 Priority: optional
 Maintainer: Ascensio System SIA <support@onlyoffice.com>
-Build-Depends: debhelper (>= 10), po-debconf, nodejs (>=18), dotnet-sdk-9.0, yarn, unzip, maven, 
+Build-Depends: debhelper (>= 10), po-debconf, nodejs (>=22), dotnet-sdk-9.0, yarn, unzip, maven, 
 	openjdk-21-jdk-headless | temurin-21-jdk | jdk-21 | jdk-21-headless | zulu21-jdk-headless | java-21-amazon-corretto-jdk
 Standards-Version: {{package_header_tag_version}}
 Homepage: https://www.onlyoffice.com/
@@ -102,7 +102,7 @@ Description: {{product}}-people-server
 Package: {{product}}-socket
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= 16), ${misc:Depends}, ${shlibs:Depends}
+Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= 22), ${misc:Depends}, ${shlibs:Depends}
 Recommends: redis-server
 Description: {{product}}-socket
 	The service which provides two-way communication between a client and a server
@@ -151,7 +151,7 @@ Description: {{product}}-proxy
 Package: {{product}}-ssoauth
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= 16), ${misc:Depends}, ${shlibs:Depends}
+Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= 22), ${misc:Depends}, ${shlibs:Depends}
 Description: {{product}}-ssoauth
 	The service responsible for enabling and configuring 
 	SAML-based single sign-on (SSO) authentication to provide a more quick, 
@@ -205,14 +205,14 @@ Description: {{product}}-migration-runner
 Package: {{product}}-doceditor
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= 16), ${misc:Depends}, ${shlibs:Depends}
+Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= 22), ${misc:Depends}, ${shlibs:Depends}
 Description: {{product}}-doceditor
 	The service which allows interaction with documentserver
 
 Package: {{product}}-login
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= 16), ${misc:Depends}, ${shlibs:Depends}
+Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= 22), ${misc:Depends}, ${shlibs:Depends}
 Description: {{product}}-login
 	The service which is used for logging users and displaying the wizard
 
@@ -233,7 +233,7 @@ Description: {{product}}-plugins
 Package: {{product}}-sdk
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= 16), ${misc:Depends}, ${shlibs:Depends}
+Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= 22), ${misc:Depends}, ${shlibs:Depends}
 Description: {{product}}-sdk
   The service provides a Software Development Kit (SDK) with APIs and tools for custom
   integrations and plugins
@@ -241,7 +241,7 @@ Description: {{product}}-sdk
 Package: {{product}}-management
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= 16), ${misc:Depends}, ${shlibs:Depends}
+Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= 22), ${misc:Depends}, ${shlibs:Depends}
 Description: {{product}}-management
   The service responsible for DocSpace management interface
 

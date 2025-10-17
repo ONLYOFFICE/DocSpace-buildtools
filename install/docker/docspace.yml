@@ -59,6 +59,7 @@ x-service: &x-service-base
     CERTIFICATE_PATH: ${CERTIFICATE_PATH}
     NODE_OPTIONS: ${NODE_OPTIONS}
   volumes:
+    #- ${CERTIFICATE_PATH}:${CERTIFICATE_PATH}
     #- /app/onlyoffice/CommunityServer/data:/app/onlyoffice/data
     - ${VOLUMES_DIR:+${VOLUMES_DIR}/}app_data:/app/onlyoffice/data
     - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
