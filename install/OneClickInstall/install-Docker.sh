@@ -110,7 +110,8 @@ SKIP_HARDWARE_CHECK="false"
 SERVICES=(migration-runner identity notify "${PRODUCT}" healthchecks proxy)
 COMPOSE_FILES=($(printf '%s\n' "${SERVICES[@]}" | sed "s|^|-f ${BASE_DIR}/|; s|\$|.yml|"));
 
-EXTERNAL_PORT="80"
+HTTP_PORT="80"
+HTTPS_PORT="443"
 ARGS_SCRIPT="install-Docker-args.sh"
 DOWNLOAD_URL_PREFIX="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}"
 GIT_BRANCH=$(echo "$@" | grep -oP '(?<=-gb )\S+')
@@ -302,39 +303,25 @@ check_ports () {
 	ARRAY_PORTS=()
 	USED_PORTS=""
 
-	if [ "${EXTERNAL_PORT//[0-9]}" = "" ]; then
-		for RESERVED_PORT in "${RESERVED_PORTS[@]}"
-		do
-			if [ "$RESERVED_PORT" -eq "$EXTERNAL_PORT" ] ; then
-				echo "External port $EXTERNAL_PORT is reserved. Select another port"
-				exit 1
-			fi
+	for VAR in HTTP_PORT HTTPS_PORT; do
+		[[ -z "${!VAR}" ]] && continue; PORT="${!VAR}"
+		[[ $PORT =~ ^[0-9]+$ ]] || { echo "The value $PORT assigned to $VAR is invalid"; exit 1; }
+		for RESERVED in "${RESERVED_PORTS[@]}"; do
+			(( PORT == RESERVED )) && { echo "The port $PORT specified for $VAR is reserved. Select another port"; exit 1; }
 		done
-	else
-		echo "Invalid external port $EXTERNAL_PORT"
-		exit 1
-	fi
+	done
 
-	if [ "$INSTALL_PRODUCT" == "true" ]; then
-		ARRAY_PORTS+=("$EXTERNAL_PORT")
-	fi
-
-	for PORT in "${ARRAY_PORTS[@]}"
-	do
-		REGEXP=":$PORT$"
-		CHECK_RESULT=$(netstat -lnt | awk '{print $4}' | { grep $REGEXP || true; })
-
-		if [[ $CHECK_RESULT != "" ]]; then
-			if [[ $USED_PORTS != "" ]]; then
-				USED_PORTS="$USED_PORTS, $PORT"
-			else
-				USED_PORTS="$PORT"
-			fi
+	[[ -n "$HTTP_PORT" && -n "$HTTPS_PORT" && "$HTTP_PORT" == "$HTTPS_PORT" ]] && { echo "HTTP_PORT and HTTPS_PORT cannot be the same. Please specify different ports."; exit 1; }
+	[ "$INSTALL_PRODUCT" == "true" ] && ARRAY_PORTS+=("$HTTP_PORT" "$HTTPS_PORT" "${RESERVED_PORTS[@]}")
+	for PORT in "${ARRAY_PORTS[@]}"; do
+		if netstat -lnt | awk '{print $4}' | grep -q ":$PORT\$"; then
+			USED_PORTS="${USED_PORTS:+$USED_PORTS, }$PORT"
 		fi
 	done
 
-	if [[ $USED_PORTS != "" ]]; then
+	if [[ -n "$USED_PORTS" ]]; then
 		echo "The following TCP Ports must be available: $USED_PORTS"
+		echo "If you want to perform an update, add the flag '--update true'"
 		exit 1
 	fi
 }
@@ -465,7 +452,7 @@ domain_check () {
 		fi
 	fi
 
-	APP_URL_PORTAL=${APP_DOMAIN_PORTAL:+http://${APP_DOMAIN_PORTAL}:${EXTERNAL_PORT}}
+	APP_URL_PORTAL=${APP_DOMAIN_PORTAL:+http://${APP_DOMAIN_PORTAL}:${HTTP_PORT}}
 }
 
 establish_conn() {
@@ -595,7 +582,8 @@ set_docspace_params() {
 	ENV_EXTENSION=${ENV_EXTENSION:-$(get_env_parameter "ENV_EXTENSION" "${CONTAINER_NAME}")}
 	VOLUMES_DIR=${VOLUMES_DIR:-$(get_env_parameter "VOLUMES_DIR")}
 	APP_CORE_BASE_DOMAIN=${APP_CORE_BASE_DOMAIN:-$(get_env_parameter "APP_CORE_BASE_DOMAIN" "${CONTAINER_NAME}")}
-	EXTERNAL_PORT=${EXTERNAL_PORT:-$(get_env_parameter "EXTERNAL_PORT" "${CONTAINER_NAME}")}
+	HTTP_PORT=${HTTP_PORT:-$(get_env_parameter "HTTP_PORT")} && HTTP_PORT=${HTTP_PORT:-$(get_env_parameter "EXTERNAL_PORT")}
+	HTTPS_PORT=${HTTPS_PORT:-$(get_env_parameter "HTTPS_PORT")}
 
 	PREVIOUS_ELK_VERSION=$(get_env_parameter "ELK_VERSION")
 	ELK_SCHEME=${ELK_SCHEME:-$(get_env_parameter "ELK_SCHEME" "${CONTAINER_NAME}")}
@@ -769,7 +757,8 @@ install_product () {
 		reconfigure IDENTITY_ENCRYPTION_SECRET ${IDENTITY_ENCRYPTION_SECRET}
 		reconfigure APP_CORE_BASE_DOMAIN ${APP_CORE_BASE_DOMAIN}
 		reconfigure APP_URL_PORTAL "${APP_URL_PORTAL:-"http://${PACKAGE_SYSNAME}-router:8092"}"
-		reconfigure EXTERNAL_PORT ${EXTERNAL_PORT}
+		reconfigure HTTP_PORT ${HTTP_PORT}
+		reconfigure HTTPS_PORT ${HTTPS_PORT}
 
 		if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ] && [[ -n $(docker ps -q --filter "name=${PACKAGE_SYSNAME}-mysql-server") ]]; then
 			echo -n "Waiting for MySQL container to become healthy..."
@@ -921,7 +910,7 @@ services_check_connection () {
 		reconfigure MYSQL_PORT "${MYSQL_PORT:-3306}"
 	fi
 	if [[ ! -z "$DOCUMENT_SERVER_HOST" ]]; then
-		APP_URL_PORTAL=${APP_URL_PORTAL:-"http://$(curl -s -4 ifconfig.me):${EXTERNAL_PORT}"}
+		APP_URL_PORTAL=${APP_URL_PORTAL:-"http://$(curl -s -4 ifconfig.me):${HTTP_PORT}"}
 		establish_conn ${DOCUMENT_SERVER_HOST} ${DOCUMENT_SERVER_PORT} "${PACKAGE_SYSNAME^^} Docs"
 		reconfigure DOCUMENT_SERVER_URL_EXTERNAL ${DOCUMENT_SERVER_URL_EXTERNAL}
 		reconfigure DOCUMENT_SERVER_URL_PUBLIC ${DOCUMENT_SERVER_URL_EXTERNAL}

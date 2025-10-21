@@ -20,6 +20,8 @@ else
   echo "Error: configuration files not found." && exit 1
 fi
 
+eval "$(grep -E '^(HTTP_PORT|HTTPS_PORT)=' "${DOCKERCOMPOSE}/.env" | tr -d '\r')"
+
 help(){
   echo 
   echo "This script provided to automatically setup SSL Certificates for DocSpace"
@@ -44,6 +46,11 @@ help(){
   echo "    Example:"
   echo "      docspace-ssl-setup --file example.com /etc/ssl/example.crt /etc/ssl/example.key"
   echo "      docspace-ssl-setup --file example.com /etc/ssl/example.pfx"
+  echo 
+  echo "Change ports (defaults: HTTP 80, HTTPS 443):"
+  echo "  Examples:"
+  echo "    docspace-ssl-setup --httpport 8080 --httpsport 8443 --file docspace.example.com /path/cert.pem /path/key.pem"
+  echo "    docspace-ssl-setup --httpport 8080 --default"
   echo 
   echo "Return to the default proxy configuration using the -d or --default parameter:"
   echo "  docspace-ssl-setup --default"
@@ -112,6 +119,22 @@ db() {
       mysql -h"${MYSQL_HOST:-$MYSQL_CONTAINER_NAME}" -P"${MYSQL_PORT:-3306}" -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DATABASE}" "$@"
 }
 
+PARSED_ARGS=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --httpport )  [ -n "$2" ] && HTTP_PORT="$2";  shift 2 ;;
+    --httpsport ) [ -n "$2" ] && HTTPS_PORT="$2"; shift 2 ;;
+    * ) PARSED_ARGS+=("$1"); shift ;;
+  esac
+done
+set -- "${PARSED_ARGS[@]}"
+
+[[ "${HTTP_PORT}"  =~ ^[0-9]+$ ]] || { echo "Error: invalid HTTP port '${HTTP_PORT}'."  >&2; exit 1; }
+[[ "${HTTPS_PORT}" =~ ^[0-9]+$ ]] || { echo "Error: invalid HTTPS port '${HTTPS_PORT}'." >&2; exit 1; }
+
+sed -i "s~\(HTTP_PORT=\).*~\1\"${HTTP_PORT}\"~g"  ${DOCKERCOMPOSE}/.env
+sed -i "s~\(HTTPS_PORT=\).*~\1\"${HTTPS_PORT}\"~g" ${DOCKERCOMPOSE}/.env
+
 case $1 in 
   -f | --file )
     if [ -n "$2" ] && [ -n "$3" ]; then
@@ -139,13 +162,13 @@ case $1 in
     if [ -z "$(awk -F '=' '/^\s*DOCUMENT_SERVER_URL_EXTERNAL/{gsub(/^[[:space:]]*"|"[[:space:]]*$/, "", $2); print $2}' ${DOCKERCOMPOSE}/.env)" ]; then
       sed "s#\(APP_URL_PORTAL=\).*#\1\"http://onlyoffice-router:8092\"#g" -i ${DOCKERCOMPOSE}/.env
     else
-      sed "s#\(APP_URL_PORTAL=\).*#\1\"http://$(curl -s ifconfig.me)\"#g" -i ${DOCKERCOMPOSE}/.env
+      sed "s#^\(APP_URL_PORTAL=\).*#\1\"http://$(curl -s ifconfig.me)$( [ \"$HTTP_PORT\" != \"80\" ] && echo \":$HTTP_PORT\")\"#g" -i ${DOCKERCOMPOSE}/.env
     fi
     sed -i "s~\(APP_CORE_SERVER_ROOT=\).*~\1\"\"~g" ${DOCKERCOMPOSE}/.env
     [[ -f "${CRON_FILE}" ]] && rm -rf "${CRON_FILE}"
 
     if docker ps -f "name=onlyoffice-proxy" --format '{{.Names}}' | grep -q "onlyoffice-proxy"; then
-      if docker ps -f "name=onlyoffice-proxy" --format "{{.Ports}}" | grep -q "443"; then
+      if docker ps -f "name=onlyoffice-proxy" --format "{{.Ports}}" | grep -q ":${HTTPS_PORT}->443/"; then
         docker-compose -f ${DOCKERCOMPOSE}/proxy-ssl.yml down
       fi
     fi
@@ -224,8 +247,8 @@ PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${PRODUCT}/privkey.pem"}"
 
 if [ -f "${CERTIFICATE_FILE}" ]; then 
   if [ -f "${PRIVATEKEY_FILE}" ]; then
-    sed -i "s~\(APP_CORE_SERVER_ROOT=\).*~\1\"https://*/\"~g" ${DOCKERCOMPOSE}/.env
-    sed -i "s~\(APP_URL_PORTAL=\).*~\1\"https://${DOMAIN}\"~g" ${DOCKERCOMPOSE}/.env
+    sed -i "s~^\(APP_CORE_SERVER_ROOT=\).*~\1\"https://*$( [ \"$HTTPS_PORT\" != \"443\" ] && echo \":$HTTPS_PORT\")/\"~g" ${DOCKERCOMPOSE}/.env
+    sed -i "s~^\(APP_URL_PORTAL=\).*~\1\"https://${DOMAIN}$( [ \"$HTTPS_PORT\" != \"443\" ] && echo \":$HTTPS_PORT\")\"~g" ${DOCKERCOMPOSE}/.env
     sed -i "s~\(CERTIFICATE_PATH=\).*~\1\"${CERTIFICATE_FILE}\"~g" ${DOCKERCOMPOSE}/.env
     sed -i "s~\(CERTIFICATE_KEY_PATH=\).*~\1\"${PRIVATEKEY_FILE}\"~g" ${DOCKERCOMPOSE}/.env
     sed -i "s~\(DHPARAM_PATH=\).*~\1\"${DHPARAM_PATH}\"~g" ${DOCKERCOMPOSE}/.env
@@ -238,7 +261,7 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
       TEMP_PATH="/tmp/$(basename "${CERTIFICATE_FILE}")"
 
       # Checking whether the certificate chain is trusted
-      if [ "$CONTAINER_STATUS" = "healty" ]; then
+      if [ "$CONTAINER_STATUS" = "healthy" ]; then
         docker cp "$(readlink -f "${CERTIFICATE_FILE}")" "${CONTAINER_NAME}:${TEMP_PATH}" >/dev/null
         echo -n "Checking certificate trust inside ${CONTAINER_NAME}... "
         docker exec "${CONTAINER_NAME}" openssl verify -CAfile /etc/ssl/certs/ca-certificates.crt -untrusted "${TEMP_PATH}" "${TEMP_PATH}" >/dev/null \
