@@ -17,7 +17,7 @@ services:
     extra_hosts:
       - "${EXTRA_HOSTS:-placeholder.local:127.0.0.1}"
     ports:
-      - ${EXTERNAL_PORT}:80
+      - ${HTTP_PORT}:80
     environment:
       - ROUTER_HOST=${ROUTER_HOST}
     volumes:
