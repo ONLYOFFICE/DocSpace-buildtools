@@ -118,7 +118,7 @@ RUN echo "--- build/publish plugins ---" && \
     bash plugins-build.sh "${SRC_PATH}/plugins"
 
 # java build
-FROM maven:3.9 AS java-build
+FROM maven:3.9-eclipse-temurin-21 AS java-build
 ARG SRC_PATH
 
 WORKDIR ${SRC_PATH}/server/common/ASC.Identity/
