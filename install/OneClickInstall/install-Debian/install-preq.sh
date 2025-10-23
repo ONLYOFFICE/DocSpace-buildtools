@@ -97,7 +97,7 @@ fi
 
 # fix Bug 77825 - MySQL repo GPG key expired
 if [ -f "/etc/apt/sources.list.d/mysql.list" ]; then
-	sed -E -i 's/\[trusted=(no|yes) /\[trusted=yes /; /\[trusted=yes /! s/\[signed-by=(.*)\]/[trusted=yes signed-by=\1]/' /etc/apt/sources.list.d/mysql.list
+	sed -E -i 's/\[trusted=(no|yes) /\[trusted=yes /; /\[trusted=yes /! s/\[signed-by=(.*)\]/[trusted=yes signed-by=\1]/; s/^(deb-src)/#\1/' /etc/apt/sources.list.d/mysql.list
 fi
 
 if [ "$DIST" = "ubuntu" ]; then	
