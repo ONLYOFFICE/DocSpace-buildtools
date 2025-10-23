@@ -87,4 +87,5 @@ cp -rf %{_builddir}/buildtools/config/nginx/onlyoffice*.conf "%{buildroot}%{_sys
 cp -rf %{_builddir}/buildtools/config/nginx/includes/*.conf "%{buildroot}%{_sysconfdir}/openresty/includes/"
 cp -rf %{_builddir}/buildtools/config/nginx/html/*.html "%{buildroot}%{_sysconfdir}/openresty/html/"
 cp -rf %{_builddir}/buildtools/config/* "%{buildroot}%{_sysconfdir}/onlyoffice/%{product}/"
+find   %{_builddir}/buildtools/config -mindepth 1 -maxdepth 1 ! -name nginx ! -name openresty -exec cp -r {} "%{buildroot}%{_sysconfdir}/onlyoffice/%{product}/" \;
 cp -rf %{_builddir}/buildtools/install/docker/config/fluent-bit.conf "%{buildroot}%{_sysconfdir}/onlyoffice/%{product}/"
