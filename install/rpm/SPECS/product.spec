@@ -20,22 +20,21 @@ Vendor:         Ascensio System SIA
 Packager:       %{packager}
 License:        AGPLv3
 
-Source0:        https://codeload.github.com/ONLYOFFICE/%{product}-buildtools/tar.gz/master#/buildtools.tar.gz
-Source1:        https://codeload.github.com/ONLYOFFICE/%{product}-client/tar.gz/master#/client.tar.gz
-Source2:        https://codeload.github.com/ONLYOFFICE/%{product}-server/tar.gz/master#/server.tar.gz
-Source3:        https://codeload.github.com/ONLYOFFICE/document-templates/tar.gz/main/community-server#/DocStore.tar.gz
-Source4:        https://codeload.github.com/ONLYOFFICE/ASC.Web.Campaigns/tar.gz/master#/campaigns.tar.gz
-Source5:        https://codeload.github.com/ONLYOFFICE/%{product}-plugins/tar.gz/master#/plugins.tar.gz
-Source6:        %{product}.rpmlintrc
+Source0:        %{product}.rpmlintrc
+Source1:        https://codeload.github.com/ONLYOFFICE/%{product}-buildtools/tar.gz/master#/buildtools.tar.gz
+Source2:        https://codeload.github.com/ONLYOFFICE/%{product}-client/tar.gz/master#/client.tar.gz
+Source3:        https://codeload.github.com/ONLYOFFICE/%{product}-server/tar.gz/master#/server.tar.gz
+Source4:        https://codeload.github.com/ONLYOFFICE/document-templates/tar.gz/main/community-server#/DocStore.tar.gz
+Source5:        https://codeload.github.com/ONLYOFFICE/ASC.Web.Campaigns/tar.gz/master#/campaigns.tar.gz
+Source6:        https://codeload.github.com/ONLYOFFICE/%{product}-plugins/tar.gz/master#/plugins.tar.gz
+Source7:        https://codeload.github.com/ONLYOFFICE/document-formats/tar.gz/master#/document-formats.tar.gz
 
-BuildRequires:  nodejs >= 18.0
+BuildRequires:  nodejs >= 22.0
 BuildRequires:  yarn
 BuildRequires:  dotnet-sdk-9.0
 BuildRequires:  unzip
 BuildRequires:  java-21-openjdk-headless
 BuildRequires:  maven
-
-BuildRoot:      %_tmppath/%name-%version-%release.%arch
 
 Requires:       %name-api = %version-%release
 Requires:       %name-api-system = %version-%release
@@ -55,6 +54,7 @@ Requires:       %name-proxy = %version-%release
 Requires:       %name-plugins = %version-%release
 Requires:       %name-socket = %version-%release
 Requires:       %name-ssoauth = %version-%release
+Requires:       %name-telegram = %version-%release
 Requires:       %name-identity-authorization = %version-%release
 Requires:       %name-identity-api = %version-%release
 Requires:       %name-studio = %version-%release
@@ -74,14 +74,15 @@ predefined permissions.
 %prep
 rm -rf %{_rpmdir}/%{_arch}/%{name}-* %{_builddir}/*
 
-tar -xf %{SOURCE0} --transform='s,^[^/]\+,buildtools,'   -C %{_builddir} &
-tar -xf %{SOURCE1} --transform='s,^[^/]\+,client,'       -C %{_builddir} &
-tar -xf %{SOURCE2} --transform='s,^[^/]\+,server,'       -C %{_builddir} &
-tar -xf %{SOURCE4} --transform='s,^[^/]\+,campaigns,'    -C %{_builddir} &
-tar -xf %{SOURCE5} --transform='s,^[^/]\+,plugins,'      -C %{_builddir} &
+tar -xf %{SOURCE1} --transform='s,^[^/]\+,buildtools,'       -C %{_builddir} &
+tar -xf %{SOURCE2} --transform='s,^[^/]\+,client,'           -C %{_builddir} &
+tar -xf %{SOURCE3} --transform='s,^[^/]\+,server,'           -C %{_builddir} &
+tar -xf %{SOURCE5} --transform='s,^[^/]\+,campaigns,'        -C %{_builddir} &
+tar -xf %{SOURCE6} --transform='s,^[^/]\+,plugins,'          -C %{_builddir} &
 wait
-tar -xf %{SOURCE3} --transform='s,^[^/]\+,DocStore,'     -C %{_builddir}/server/products/ASC.Files/Server
-cp -rf %{SOURCE6} .
+tar -xf %{SOURCE4} --transform='s,^[^/]\+,DocStore,'         -C %{_builddir}/server/products/ASC.Files/Server
+tar -xf %{SOURCE7} --transform='s,^[^/]\+,document-formats,' -C %{_builddir}/buildtools/config
+cp -rf %{SOURCE0} .
 
 %include build.spec
 
@@ -94,15 +95,7 @@ cp -rf %{SOURCE6} .
 %pre common
 
 getent group onlyoffice >/dev/null || groupadd -r onlyoffice
-getent passwd onlyoffice >/dev/null || useradd -r -g onlyoffice -s /sbin/nologin onlyoffice
-
-%pre proxy
-
-# (DS v1.1.3) Removing old nginx configs to prevent conflicts before upgrading on OpenResty.
-if [ -f /etc/nginx/conf.d/onlyoffice.conf ]; then
-    rm -rf /etc/nginx/conf.d/onlyoffice*
-    systemctl reload nginx
-fi
+getent passwd onlyoffice >/dev/null || useradd -r -g onlyoffice -s /usr/sbin/nologin -d %{_sysconfdir}/onlyoffice/%{product} onlyoffice
 
 %pre identity-api
 
@@ -128,10 +121,6 @@ if [ "$1" -eq 0 ]; then
     systemctl reset-failed >/dev/null 2>&1 || true
     rm -rf %{buildpath}
 fi
-
-%clean
-
-rm -rf %{_builddir} %{buildroot} 
 
 %changelog
 *Mon Jan 16 2023 %{packager} - %{version}-%{release}

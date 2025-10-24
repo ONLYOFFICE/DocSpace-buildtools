@@ -3,32 +3,32 @@ name: Build packages
 on:
   push:
     branches:
-      - 'release/**'
-      - 'hotfix/**'
-      - 'develop'
+      - "release/**"
+      - "hotfix/**"
+      - "develop"
     paths:
-      - '.github/workflows/build_packages.yml'
+      - ".github/workflows/build_packages.yml"
   workflow_dispatch:
     inputs:
       branch-buildtools:
-        description: 'Branch for buildtools repository'
+        description: "Branch for buildtools repository"
         required: true
-        default: 'develop'
+        default: "develop"
       branch-client:
-        description: 'Branch for client repository'
+        description: "Branch for client repository"
         required: true
-        default: 'develop'
+        default: "develop"
       branch-server:
-        description: 'Branch for server repository'
+        description: "Branch for server repository"
         required: true
-        default: 'develop'
+        default: "develop"
       deb_build:
         type: boolean
-        description: 'Trigger DEB build'
+        description: "Trigger DEB build"
         default: true
       rpm_build:
         type: boolean
-        description: 'Trigger RPM build'
+        description: "Trigger RPM build"
         default: true
 
 concurrency:
@@ -68,14 +68,18 @@ jobs:
           fi
           [[ ${#package_types[@]} -eq 0 ]] && { echo "::error::No package types specified"; exit 1; }
           matrix=$(printf '%s\n' "${package_types[@]}" | jq -R . | jq -sc '{include: map({packageType: .})}')
-          echo "matrix=$matrix" >> $GITHUB_OUTPUT  
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
   build:
     name: Build Packages
     needs: prepare
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     strategy:
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     steps:
+      - name: Free Disk Space
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${BRANCH_BUILDTOOLS}/.github/scripts/free-disk-space-linux.sh | sudo bash
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -85,12 +89,7 @@ jobs:
         run: |
           PRODUCT_VERSION=$(grep -oP '\d+\.\d+\.\d+' <<< "${BRANCH_BUILDTOOLS//\//} ${BRANCH_CLIENT//\//} \
           ${BRANCH_SERVER//\//}" | head -n1)
-          echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.2.2}" >> $GITHUB_ENV
-
-      - name: Free Disk Space
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/rust-lang/rust/refs/heads/master/src/ci/scripts/free-disk-space-linux.sh | sed 's/::[^:]*:://g' | sudo bash
-          curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | sudo bash
+          echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.5.0}" >> $GITHUB_ENV
 
       - name: Import GPG
         uses: crazy-max/ghaction-import-gpg@v6
@@ -106,7 +105,8 @@ jobs:
           sudo chmod 644 /usr/share/keyrings/yarnkey.gpg
           echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian/ stable main" | \
           sudo tee /etc/apt/sources.list.d/yarn.list
-          curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+          curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash -
+          sudo add-apt-repository -y ppa:dotnet/backports
           sudo apt install -y dotnet-sdk-9.0 yarn nodejs rename unzip maven openjdk-21-jdk-headless
           JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | head -1)
           sudo update-alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && sudo update-alternatives --set java "$JAVA_PATH"
@@ -116,7 +116,9 @@ jobs:
             sudo apt install -y python3-rpm python3-pip
             sudo pip install rpmlint
           else
-            sudo apt install -y dpkg-sig lintian dh-make
+            sudo apt install -y build-essential lintian dh-make
+            DPKG_SIG_VERSION=$(wget -qO- https://archive.ubuntu.com/ubuntu/pool/universe/d/dpkg-sig/ | grep -oP '(?<=href=")dpkg-sig_[^"]+_all\.deb' | sort -Vr | head -1)
+            wget -q https://archive.ubuntu.com/ubuntu/pool/universe/d/dpkg-sig/${DPKG_SIG_VERSION} && sudo apt -y install ./${DPKG_SIG_VERSION}
           fi
 
       - name: Download sources
@@ -132,6 +134,7 @@ jobs:
           download "document-templates"   "main/community-server"   DocStore &
           download "ASC.Web.Campaigns"    "master"                  campaigns &
           download "$PRODUCT-plugins"     "master"                  plugins &
+          download "document-formats"     "master"                  document-formats &
           wait
 
       - name: Build DEB Packages
@@ -140,7 +143,7 @@ jobs:
           cd ${PACKAGE_DIRECTORY}/install/deb/
           rename -f -v "s/product([^\/]*)$/${PRODUCT_LOW}\$1/g" debian/*
           find debian/ -type f -exec sed -i "s/{{product}}/${PRODUCT_LOW}/g" {} ';'
-          sed -i "s/{{package_header_tag_version}}/${PRODUCT_VERSION}.${BUILD_NUMBER}/g" debian/changelog debian/control
+          find debian/ -type f -exec sed -i "s/{{package_header_tag_version}}/${PRODUCT_VERSION}.${BUILD_NUMBER}/g" {} +
           export DEB_BUILD_OPTIONS="parallel=$(nproc)"
           dpkg-buildpackage -uc -us
 
@@ -170,7 +173,7 @@ jobs:
               -D "_gpg_path $HOME/.gnupg" \
               -D "_gpg_name ${{ secrets.GPG_KEY_NAME }}" \
               -D "_gpg_sign_cmd_extra_args --pinentry-mode loopback --passphrase ${{ secrets.GPG_PRIVATE_KEY_PASS }}" \
-              --addsign ${PACKAGE_DIRECTORY}/install/rpm/SPECS/RPMS/noarch/*.rpm 
+              --addsign ${PACKAGE_DIRECTORY}/install/rpm/SPECS/RPMS/noarch/*.rpm
 
       - name: Upload DEB Packages
         if: matrix.packageType == 'deb'
@@ -209,11 +212,11 @@ jobs:
           if grep -qE '(W:|E:)' RPM_LINT; then
             echo "::warning Noticerpm=rpmlint::$(cat RPM_LINT | awk '/W:/ { ws += 1 } /E:/ { es += 1 } END { print "Warnings:", ws, "Errors:", es }')"
           fi
-      
+
   trigger_oci:
     name: Trigger ci-oci-install Workflow
     needs: [prepare, build]
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     if: ${{ success() }}
     steps:
       - name: Trigger CI-OCI-Install Workflow
@@ -222,7 +225,7 @@ jobs:
         run: |
           deb_build="${{ github.event.inputs.deb_build }}" rpm_build="${{ github.event.inputs.rpm_build }}"
           [[ "${{ needs.prepare.outputs.build_all }}" == "true" ]] && deb_build="true" && rpm_build="true"
-          
+
           gh api --method POST /repos/${{ github.repository }}/actions/workflows/85067971/dispatches \
             -f ref='${{ github.ref_name }}' \
             -f inputs[deb_build]="${deb_build}" \

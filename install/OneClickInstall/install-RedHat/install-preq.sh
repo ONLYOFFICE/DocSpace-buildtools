@@ -37,7 +37,7 @@ curl -fsSL https://packagecloud.io/install/repositories/rabbitmq/rabbitmq-server
 curl -fsSL https://packagecloud.io/install/repositories/rabbitmq/erlang/script.rpm.sh | bash
 
 #add nodejs repo
-NODE_VERSION="18"
+NODE_VERSION="22"
 curl -fsSL https://rpm.nodesource.com/setup_${NODE_VERSION}.x | bash -
 
 #add mysql repo

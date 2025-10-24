@@ -3,6 +3,7 @@ from jsonpath_ng.ext import parse
 from os import environ
 from multipledispatch import dispatch
 from netaddr import *
+import fileinput
 
 filePath = None
 saveFilePath = None
@@ -16,8 +17,12 @@ SERVICE_PORT = os.environ["SERVICE_PORT"] if environ.get("SERVICE_PORT") else "5
 URLS = os.environ["URLS"] if environ.get("URLS") else "http://0.0.0.0:"
 PATH_TO_CONF = os.environ["PATH_TO_CONF"] if environ.get("PATH_TO_CONF") else "/app/" + PRODUCT + "/config"
 LOG_DIR = os.environ["LOG_DIR"] if environ.get("LOG_DIR") else "/var/log/" + PRODUCT
+BUILD_PATH = os.environ["BUILD_PATH"] if environ.get("BUILD_PATH") else "/var/www"
+NODE_CONTAINER_NAME = os.environ["NODE_CONTAINER_NAME"] if os.environ.get("NODE_CONTAINER_NAME") else "onlyoffice-node-services"
+SERVICE_SOCKET_PORT = os.environ["SERVICE_SOCKET_PORT"] if os.environ.get("SERVICE_SOCKET_PORT") else SERVICE_PORT
+SERVICE_SSOAUTH_PORT = os.environ["SERVICE_SSOAUTH_PORT"] if os.environ.get("SERVICE_SSOAUTH_PORT") else SERVICE_PORT
 ROUTER_HOST = os.environ["ROUTER_HOST"] if environ.get("ROUTER_HOST") else "onlyoffice-router"
-SOCKET_HOST = os.environ["SOCKET_HOST"] if environ.get("SOCKET_HOST") else "onlyoffice-socket"
+SOCKET_HOST = os.environ.get("NODE_CONTAINER_NAME") or os.environ.get("SOCKET_HOST") or "onlyoffice-socket"
 
 MYSQL_CONTAINER_NAME = os.environ["MYSQL_CONTAINER_NAME"] if environ.get("MYSQL_CONTAINER_NAME") else "onlyoffice-mysql-server"
 MYSQL_HOST = os.environ["MYSQL_HOST"] if environ.get("MYSQL_HOST") else None
@@ -97,6 +102,10 @@ class RunServices:
         
     @dispatch(str, str)
     def RunService(self, RUN_FILE, ENV_EXTENSION):
+        if sys.argv[1] == "supervisord":
+            os.execvp(sys.argv[1], sys.argv[1:])
+            return 1
+
         if ENV_EXTENSION == "none":
             self.RunService(RUN_FILE)
         os.system(TLS_REJECT_UNAUTHORIZED + CERTIFICATE_PARAM + "node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
@@ -174,7 +183,21 @@ def deleteJsonPath(jsonData, jsonPath):
 
     return jsonData
 
-def waitForHostAvailable(HOST_URL, TIMEOUT=30, INTERVAL=5):
+def waitForHostAvailable(HOST_URL, TIMEOUT=10, INTERVAL=3, MAX_RETRIES=5, RETRY_INTERVAL=15):
+    """
+    Check if HOST_URL is reachable.
+
+    Args:
+        HOST_URL (str): Host address (e.g. http://document-server:8083).
+        TIMEOUT (int): Max seconds to wait in one attempt.
+        INTERVAL (int): Delay between requests inside one attempt.
+        MAX_RETRIES (int): Number of extra attempts if host is still unavailable.
+        RETRY_INTERVAL (int): Delay between attempts.
+
+    Returns:
+        bool: True if host becomes available, otherwise False.
+    """
+
     LOG_PRIORITY = dict(CRITICAL=0, ERROR=1, WARNING=2, INFORMATION=3, DEBUG=4, TRACE=5)
     CURRENT_PRIORITY = LOG_PRIORITY.get((os.getenv("LOG_LEVEL") or "INFORMATION").upper(), 3)
 
@@ -182,46 +205,63 @@ def waitForHostAvailable(HOST_URL, TIMEOUT=30, INTERVAL=5):
         if LOG_PRIORITY.get(LEVEL, 3) <= CURRENT_PRIORITY:
             print(f"[{LEVEL}] {MESSAGE}", flush=True)
 
-    LOG("INFORMATION", f"Waiting for host: {HOST_URL} (timeout: {TIMEOUT} seconds)")
+    ATTEMPT = 0
+    while True:
+        ATTEMPT += 1
+        LOG("INFORMATION", f"Waiting for host: {HOST_URL} (timeout: {TIMEOUT} seconds, attempt {ATTEMPT}/{MAX_RETRIES})")
 
-    START_TIME = time.time()
-    while time.time() - START_TIME < TIMEOUT:
+        START_TIME = time.time()
+        RESPONSE = None
+
         try:
-            RESPONSE = requests.get(HOST_URL, timeout=3)
-            if RESPONSE.ok:
-                LOG("INFORMATION", f"Host is available: {HOST_URL} ({RESPONSE.status_code})")
-                return True
-            else:
-                LOG("WARNING", f"Received status {RESPONSE.status_code} from {HOST_URL}")
-        except requests.RequestException as e:
-            LOG("DEBUG", f"Connection error to {HOST_URL}: {e}")
-        except Exception as e:
-            LOG("CRITICAL", f"Unexpected error in check_docs_connection: {e}")
-        time.sleep(INTERVAL)
+            with requests.Session() as SESS:
+                while time.time() - START_TIME < TIMEOUT:
+                    try:
+                        RESPONSE = SESS.head(HOST_URL, timeout=3, allow_redirects=True)
+                        if RESPONSE is not None and not RESPONSE.ok:
+                            RESPONSE = SESS.get(HOST_URL, timeout=3, allow_redirects=True, stream=True)
+                            try:
+                                RESPONSE.close()
+                            except Exception:
+                                pass
 
-    LOG("ERROR", f"Host is not available after {TIMEOUT} seconds: {HOST_URL} ({RESPONSE.status_code})")
-    return False
+                        if RESPONSE is not None and RESPONSE.ok:
+                            LOG("INFORMATION", f"Host is available: {HOST_URL} ({RESPONSE.status_code})")
+                            return True
+
+                        if RESPONSE is not None:
+                            LOG("WARNING", f"Received status {RESPONSE.status_code} from {HOST_URL}")
+                        else:
+                            LOG("WARNING", f"No response from {HOST_URL}")
+
+                    except requests.RequestException as e:
+                        LOG("DEBUG", f"Connection error to {HOST_URL}: {e}")
+                    except Exception as e:
+                        LOG("CRITICAL", f"Unexpected error in waitForHostAvailable: {e}")
+
+                    time.sleep(INTERVAL)
+        except Exception as e:
+            LOG("CRITICAL", f"Unexpected error creating session: {e}")
+
+        if ATTEMPT < MAX_RETRIES:
+            LOG("WARNING", f"{HOST_URL} is not available yet, retrying in {RETRY_INTERVAL} seconds...")
+            time.sleep(RETRY_INTERVAL)
+        else:
+            LOG("ERROR", f"{HOST_URL} is not available after {MAX_RETRIES} attempts {f' ({RESPONSE.status_code})' if RESPONSE else ''}")
+            return False
 
 def check_docs_connection():
     filePath = "/app/onlyoffice/config/appsettings.json"
     jsonData = openJsonFile(filePath)
 
-    MAX_RETRIES = 10
-    RETRY_INTERVAL = 30
+    updateJsonData(jsonData, "$.files.docservice.url.portal", APP_URL_PORTAL)
+    updateJsonData(jsonData, "$.files.docservice.url.public", DOCUMENT_SERVER_URL_PUBLIC)
+    updateJsonData(jsonData, "$.files.docservice.url.internal", DOCUMENT_SERVER_CONNECTION_HOST)
+    updateJsonData(jsonData, "$.files.docservice.secret.value", DOCUMENT_SERVER_JWT_SECRET)
+    updateJsonData(jsonData, "$.files.docservice.secret.header", DOCUMENT_SERVER_JWT_HEADER)
 
-    if not waitForHostAvailable(DOCUMENT_SERVER_CONNECTION_HOST):
+    if not waitForHostAvailable(DOCUMENT_SERVER_CONNECTION_HOST, TIMEOUT=10, INTERVAL=3, MAX_RETRIES=5, RETRY_INTERVAL=15):
         deleteJsonPath(jsonData, "$.files.docservice")
-        for _ in range(MAX_RETRIES):
-            time.sleep(RETRY_INTERVAL)
-            if waitForHostAvailable(DOCUMENT_SERVER_CONNECTION_HOST):
-                break
-
-    if waitForHostAvailable(DOCUMENT_SERVER_CONNECTION_HOST):
-        updateJsonData(jsonData, "$.files.docservice.url.portal", APP_URL_PORTAL)
-        updateJsonData(jsonData, "$.files.docservice.url.public", DOCUMENT_SERVER_URL_PUBLIC)
-        updateJsonData(jsonData, "$.files.docservice.url.internal", DOCUMENT_SERVER_CONNECTION_HOST)
-        updateJsonData(jsonData, "$.files.docservice.secret.value", DOCUMENT_SERVER_JWT_SECRET)
-        updateJsonData(jsonData, "$.files.docservice.secret.header", DOCUMENT_SERVER_JWT_HEADER)
 
     writeJsonFile(filePath, jsonData)
 
@@ -238,7 +278,7 @@ updateJsonData(jsonData,"$.core.base-domain", APP_CORE_BASE_DOMAIN)
 updateJsonData(jsonData,"$.core.machinekey", APP_CORE_MACHINEKEY)
 updateJsonData(jsonData,"$.core.products.subfolder", "server")
 updateJsonData(jsonData,"$.core.notify.postman", "services")
-updateJsonData(jsonData,"$.web.hub.internal", "http://" + SOCKET_HOST + ":" + SERVICE_PORT + "/")
+updateJsonData(jsonData,"$.web.hub.internal", "http://" + SOCKET_HOST + ":" + SERVICE_SOCKET_PORT + "/")
 updateJsonData(jsonData,"$.core.oidc.disableValidateToken", DISABLE_VALIDATE_TOKEN)
 updateJsonData(jsonData,"$.core.oidc.showPII", DEBUG_INFO)
 updateJsonData(jsonData,"$.debug-info.enabled", DEBUG_INFO)
@@ -282,7 +322,7 @@ if OAUTH_REDIRECT_URL:
     for component in jsonData['components']:
         if 'parameters' in component and 'additional' in component['parameters']:
             for key, value in component['parameters']['additional'].items():
-                if re.search(r'.*RedirectUrl$', key) and value:
+                if ( re.search(r'.*RedirectUrl$', key)  and key != "weixinRedirectUrl" and value): 
                     component['parameters']['additional'][key] = OAUTH_REDIRECT_URL
                     
     writeJsonFile(filePath, jsonData)
@@ -298,12 +338,12 @@ if ENV_EXTENSION != "dev":
 
 filePath = "/app/onlyoffice/config/socket.json"
 jsonData = openJsonFile(filePath)
-updateJsonData(jsonData,"$.socket.port", SERVICE_PORT)
+updateJsonData(jsonData,"$.socket.port", SERVICE_SOCKET_PORT)
 writeJsonFile(filePath, jsonData)
 
 filePath = "/app/onlyoffice/config/ssoauth.json"
 jsonData = openJsonFile(filePath)
-updateJsonData(jsonData,"$.ssoauth.port", SERVICE_PORT)
+updateJsonData(jsonData,"$.ssoauth.port", SERVICE_SSOAUTH_PORT)
 writeJsonFile(filePath, jsonData)
 
 filePath = "/app/onlyoffice/config/rabbitmq.json"
@@ -324,6 +364,21 @@ updateJsonData(jsonData,"$.Redis.Database", REDIS_DB)
 jsonData["Redis"].update(REDIS_USER_NAME) if REDIS_USER_NAME is not None else None
 jsonData["Redis"].update(REDIS_PASSWORD) if REDIS_PASSWORD is not None else None
 writeJsonFile(filePath, jsonData)
+
+filePath = os.path.join(BUILD_PATH, "services", "ASC.Migration.Runner", "service", "appsettings.runner.json")
+if os.path.isfile(filePath):
+    jsonData = openJsonFile(filePath)
+    conn_str = f"Server={MYSQL_CONNECTION_HOST};Database={MYSQL_DATABASE};User ID={MYSQL_USER};Password={MYSQL_PASSWORD};Command Timeout=100"
+    updateJsonData(jsonData, "$.options.Providers[0].ConnectionString", conn_str)
+    updateJsonData(jsonData, "$.options.TeamlabsiteProviders[0].ConnectionString", conn_str)
+    writeJsonFile(filePath, jsonData)
+
+filePath = os.path.join(BUILD_PATH, "services", "ASC.Web.HealthChecks.UI", "service", "appsettings.json")
+if os.path.isfile(filePath):
+    for line in fileinput.input(filePath, inplace=True):
+        line = line.replace("localhost:9899", f"{NODE_CONTAINER_NAME}:{SERVICE_SOCKET_PORT}")
+        line = line.replace("localhost:9834", f"{NODE_CONTAINER_NAME}:{SERVICE_SSOAUTH_PORT}")
+        sys.stdout.write(line)
 
 if LOG_LEVEL:
     filePath = "/app/onlyoffice/config/nlog.config"

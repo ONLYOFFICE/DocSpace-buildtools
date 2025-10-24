@@ -30,7 +30,7 @@ jobs:
               --json databaseId,status | jq -r '.[] | select(.status == "queued" or .status == "in_progress" ) | .databaseId' | head -n1) 
           [ -z "$RUN_ID" ] && { echo "::error::[FAILED] Could not find a queued/in_progress run."; exit 1; }
 
-          echo "Monitoring run #${RUN_ID}…"
+          echo "Monitoring run #${RUN_ID}..."
           if gh run watch "${RUN_ID}" --repo "${{ github.repository }}" --interval 60 --exit-status; then
             echo "Workflow #${RUN_ID} finished successfully."
           else

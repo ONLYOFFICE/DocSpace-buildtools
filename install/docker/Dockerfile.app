@@ -95,35 +95,13 @@ COPY --from=src ${SRC_PATH}/buildtools/config ./buildtools/config
 COPY --from=src ${SRC_PATH}/client/ ./client
 
 WORKDIR ${SRC_PATH}/client
-RUN <<EOF
-#!/bin/bash
-echo "--- installing pnpm ---" && \
-npm install -g pnpm && \
-echo "--- build/publish docspace-client node ---" && \
-pnpm install && \
-node common/scripts/before-build.js
-
-CLIENT_PACKAGES+=("@docspace/client")
-CLIENT_PACKAGES+=("@docspace/login")
-CLIENT_PACKAGES+=("@docspace/doceditor")
-CLIENT_PACKAGES+=("@docspace/sdk")
-CLIENT_PACKAGES+=("@docspace/management")
-
-for PKG in ${CLIENT_PACKAGES[@]}; do
-  echo "--- build/publish ${PKG} ---"
-  pnpm nx ${BUILD_ARGS} ${PKG} $([[ "${PKG}" =~ (client) ]] && echo "--env lint=false")
-  pnpm nx ${DEPLOY_ARGS} ${PKG}
-done
-
-echo "--- check client files ---" && \
-ls -la "${SRC_PATH}/publish/web/client" && \
-
-echo "--- publish public web files ---" && \
-cp -rf public "${SRC_PATH}/publish/web/"
-echo "--- publish locales ---" && \
-node common/scripts/minify-common-locales.js
-rm -rf ${SRC_PATH}/client/*
-EOF
+RUN echo "--- installing pnpm ---" && \
+    npm install -g pnpm && \
+    echo "--- build/publish docspace-client node ---" && \
+    pnpm install && \
+    pnpm ${BUILD_ARGS} && \
+    pnpm run ${DEPLOY_ARGS} && \
+    rm -rf ${SRC_PATH}/client/*
 
 # build plugins
 COPY --from=src ${SRC_PATH}/plugins ${SRC_PATH}/plugins
@@ -134,7 +112,7 @@ RUN echo "--- build/publish plugins ---" && \
     bash plugins-build.sh "${SRC_PATH}/plugins"
 
 # java build
-FROM maven:3.9 AS java-build
+FROM maven:3.9-eclipse-temurin-21 AS java-build
 ARG SRC_PATH
 
 WORKDIR ${SRC_PATH}/server/common/ASC.Identity/
@@ -161,6 +139,7 @@ RUN echo "--- install runtime aspnet.9 ---" && \
     adduser \
     nano \
     curl \
+    supervisor \
     vim \
     python3-pip \
     libgdiplus && \
@@ -170,6 +149,7 @@ RUN echo "--- install runtime aspnet.9 ---" && \
     chown onlyoffice:onlyoffice /app/onlyoffice -R && \
     chown onlyoffice:onlyoffice /var/log -R && \
     chown onlyoffice:onlyoffice /var/www -R && \
+    chown onlyoffice:onlyoffice /run -R && \
     echo "--- clean up ---" && \
     rm -rf /var/lib/apt/lists/* \
     /tmp/*
@@ -194,12 +174,14 @@ RUN echo "--- install runtime node.22 ---" && \
     chown onlyoffice:onlyoffice /app/onlyoffice -R && \
     chown onlyoffice:onlyoffice /var/log -R  && \
     chown onlyoffice:onlyoffice /var/www -R && \
+    chown onlyoffice:onlyoffice /run -R && \
     apt-get -y update && \
     apt-get install -yq \ 
     sudo \
     nano \
     curl \
     vim \
+    supervisor \
     python3-pip && \
     pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces requests && \
     echo "--- clean up ---" && \
@@ -212,23 +194,29 @@ USER onlyoffice
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
 
-FROM eclipse-temurin:21-jre-alpine AS javarun
+FROM eclipse-temurin:21-jre AS javarun
 ARG BUILD_PATH
 ARG SRC_PATH
 ENV BUILD_PATH=${BUILD_PATH}
 
-RUN echo "--- install runtime eclipse-temurin:21 ---" && \ 
+RUN echo "--- install runtime eclipse-temurin:21 ---" && \
     mkdir -p /var/log/onlyoffice && \
     mkdir -p /var/www/onlyoffice && \
-    addgroup -S -g 107 onlyoffice && \
-    adduser -S -u 104 -h /var/www/onlyoffice -G onlyoffice onlyoffice && \
-    chown onlyoffice:onlyoffice /var/log -R  && \
+    groupadd -g 107 onlyoffice && \
+    useradd -u 104 -g onlyoffice -d /var/www/onlyoffice -s /bin/bash onlyoffice && \
+    chown onlyoffice:onlyoffice /var/log -R && \
     chown onlyoffice:onlyoffice /var/www -R && \
-    apk add --no-cache sudo bash nano curl && \
+    chown onlyoffice:onlyoffice /run -R && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+    sudo \
+    bash \
+    nano \
+    curl \
+    supervisor && \
     echo "--- clean up ---" && \
-    rm -rf \
-    /var/lib/apt/lists/* \
-    /tmp/*
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/*
 
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-identity-entrypoint.sh /usr/bin/docker-identity-entrypoint.sh
 USER onlyoffice
@@ -525,6 +513,15 @@ COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/servi
 ENTRYPOINT ["./docker-healthchecks-entrypoint.sh"]
 CMD ["ASC.Web.HealthChecks.UI.dll", "ASC.Web.HealthChecks.UI"]
 
+## ASC.TelegramService ##
+FROM dotnetrun AS telegram
+WORKDIR ${BUILD_PATH}/services/ASC.TelegramService/service/
+
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.TelegramService/service/ .
+
+CMD ["ASC.TelegramService.dll", "ASC.TelegramService", "core:eventBus:subscriptionClientName=asc_event_bus_telegram_queue"]
+
 ## ASC.Migration.Runner ##
 FROM dotnetrun AS onlyoffice-migration-runner
 WORKDIR ${BUILD_PATH}/services/ASC.Migration.Runner/
@@ -570,3 +567,77 @@ RUN addgroup --system --gid 107 onlyoffice && \
 USER onlyoffice
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/wait-bin-share-docker-entrypoint.sh /app/docker-entrypoint.sh
 ENTRYPOINT ["./app/docker-entrypoint.sh"]
+
+# Dotnet Services ##
+FROM dotnetrun AS dotnet-services
+ENV APP_STORAGE_ROOT=/app/onlyoffice/data/
+ENV LOG_DIR=/var/log/onlyoffice
+ENV PATH_TO_CONF=/app/onlyoffice/config
+
+WORKDIR /usr/bin/
+
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/dotnet_services.conf /etc/supervisor/conf.d/supervisord.conf
+
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.ApiSystem/service/  ${BUILD_PATH}/services/ASC.ApiSystem/service/
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.ClearEvents/service/  ${BUILD_PATH}/services/ASC.ClearEvents/service/
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Data.Backup/service/ ${BUILD_PATH}/services/ASC.Data.Backup/service/
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Data.Backup.BackgroundTasks/service/  ${BUILD_PATH}/services/ASC.Data.Backup.BackgroundTasks/service
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Files/service/ ${BUILD_PATH}/products/ASC.Files/server/
+
+USER root
+ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Files.Service/service/ ${BUILD_PATH}/products/ASC.Files/service/
+COPY --from=onlyoffice/ffvideo:7.1 --chown=onlyoffice:onlyoffice /app/src/ ${BUILD_PATH}/products/ASC.Files/service/
+
+RUN set -eux; \
+  ARCH=$(uname -m); \
+  PKGS="libasound2t64 libv4l-0t64"; \
+  [ "$ARCH" = "x86_64" ] && PKGS="$PKGS libdrm2 libplacebo-dev libxcb-shape0 ocl-icd-opencl-dev"; \
+  apt-get update && apt-get install -y --no-install-recommends $PKGS && rm -rf /var/lib/apt/lists/* /tmp/*
+
+USER onlyoffice
+
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Migration.Runner/service/ ${BUILD_PATH}/services/ASC.Migration.Runner/service/
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Notify/service/ ${BUILD_PATH}/services/ASC.Notify/service/
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.People/service/ ${BUILD_PATH}/products/ASC.People/server/
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Studio.Notify/service/ ${BUILD_PATH}/services/ASC.Studio.Notify/service/
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.TelegramService/service/ ${BUILD_PATH}/services/ASC.TelegramService/service/
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Web.Api/service/ ${BUILD_PATH}/services/ASC.Web.Api/service/
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Web.HealthChecks.UI/service/ ${BUILD_PATH}/services/ASC.Web.HealthChecks.UI/service/
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Web.Studio/service/ ${BUILD_PATH}/services/ASC.Web.Studio/service/
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/plugins/publish/ ${BUILD_PATH}/studio/plugins
+
+CMD ["supervisord", "-n"]
+
+## Node Services ##
+FROM noderun AS node-services
+ENV APP_STORAGE_ROOT=/app/onlyoffice/data/
+ENV LOG_DIR=/var/log/onlyoffice
+ENV PATH_TO_CONF=/app/onlyoffice/config
+
+WORKDIR /usr/bin/
+
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/node_services.conf /etc/supervisor/conf.d/supervisord.conf
+
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/editor/ ${BUILD_PATH}/products/ASC.Editors/editor/
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/login/ ${BUILD_PATH}/products/ASC.Login/login/
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management/ ${BUILD_PATH}/products/ASC.Management/management/
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/ ${BUILD_PATH}/products/ASC.Sdk/sdk/
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Socket.IO ${BUILD_PATH}/services/ASC.Socket.IO/
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.SsoAuth ${BUILD_PATH}/services/ASC.SsoAuth/
+
+CMD ["supervisord", "-n"]
+
+## Java Services ##
+FROM javarun AS java-services
+ENV LOG_DIR=/var/log/onlyoffice
+
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-identity-entrypoint.sh /usr/bin/docker-identity-entrypoint.sh
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/java_services.conf /etc/supervisor/conf.d/supervisord.conf
+
+COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Identity/authorization/authorization-container/target/*.jar ${BUILD_PATH}/services/ASC.Identity.Authorization/app.jar
+COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Identity/registration/registration-container/target/*.jar ${BUILD_PATH}/services/ASC.Identity.Registration/app.jar
+
+ENTRYPOINT ["/usr/bin/supervisord", "-n"]

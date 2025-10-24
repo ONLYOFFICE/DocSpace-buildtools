@@ -257,6 +257,7 @@ if skip_build == False:
         "common/services/ASC.Data.Backup.BackgroundTasks",
         "common/services/ASC.ClearEvents",
         "common/services/ASC.ApiSystem",
+        "common/services/ASC.TelegramService",
     ]
 
     for service in BACKEND_DOTNETCORE_SERVICES:

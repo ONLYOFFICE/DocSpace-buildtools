@@ -262,6 +262,14 @@ services:
     expose:
       - "5011"
 
+  onlyoffice-telegram:
+    <<: [*x-service-base, *x-profiles-backend]
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-telegram:${DOCKER_TAG}"
+    container_name: ${TELEGRAM_HOST}
+    healthcheck:
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_TELEGRAM}/health/ || exit 1
+
   onlyoffice-router:
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-router:${DOCKER_TAG}"
     profiles: ["prod", "backend", frontend]
@@ -295,6 +303,7 @@ services:
       - SERVICE_AI_SERVICE=${SERVICE_AI_SERVICE}
       - SERVICE_SSOAUTH=${SERVICE_SSOAUTH}
       - SERVICE_TELEGRAMREPORTS=${SERVICE_TELEGRAMREPORTS}
+      - SERVICE_TELEGRAM=${SERVICE_TELEGRAM}
       - SERVICE_DOCEDITOR=${SERVICE_DOCEDITOR}
       - SERVICE_SDK=${SERVICE_SDK}
       - SERVICE_LOGIN=${SERVICE_LOGIN}

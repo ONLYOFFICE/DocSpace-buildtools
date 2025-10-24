@@ -40,6 +40,7 @@ jobs:
             !in_block {print}
           ' install/OneClickInstall/README.md > README.new \
           && mv README.new install/OneClickInstall/README.md
+          rm os_block.tmp
       - name: Commit changes (if any)
         working-directory: ${{ github.event.repository.name }}
         run: |
