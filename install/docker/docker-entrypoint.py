@@ -381,12 +381,10 @@ if os.path.isfile(filePath):
         sys.stdout.write(line)
 
 if LOG_LEVEL:
-    filePath = "/app/onlyoffice/config/nlog.config"
-    with open(filePath, 'r') as f:
-        configData = f.read()
-    configData = re.sub(r'(minlevel=")(\w+)(")', '\\1' + LOG_LEVEL + '\\3', configData)
-    with open(filePath, 'w') as f:
-        f.write(configData)
+    NLOG_PATH = "/app/onlyoffice/config/nlog.config"
+    with open(NLOG_PATH) as f: NLOG = f.read()
+    NLOG = re.sub(r'^(?!.*ZiggyCreatures)(.*minlevel=")\w+(")', rf'\1{LOG_LEVEL}\2', NLOG, flags=re.M)
+    open(NLOG_PATH, "w").write(NLOG)
 
 PLUGINS_DIR = "/var/www/studio/plugins/"
 DATA_PLUGINS_DIR = "/app/onlyoffice/data/Studio/webplugins/"
