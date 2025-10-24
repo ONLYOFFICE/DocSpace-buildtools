@@ -107,6 +107,9 @@ del /f /q buildtools\install\win\Files\config\*.dev.json
 %sed% "/weixinRedirectUrl/!s/teamlab.info/onlyoffice.com/g" -i buildtools\install\win\Files\config\autofac.consumers.json
 %sed% "s_\(\"wrongPortalNameUrl\":\).*,_\1 \"\",_g" -i buildtools\install\win\Files\public\scripts\config.json
 
+::fix Bug 77834
+%sed% "/ZiggyCreatures/! s/minlevel=[^ >]*/minlevel=\"Warn\"/g" -i buildtools\install\win\Files\config\nlog.config
+
 REM echo ######## Remove AWSTarget from nlog.config ########
 %sed% -i "/<target type=\"AWSTarget\" name=\"aws\"/,/<\/target>/d; /<target type=\"AWSTarget\" name=\"aws_sql\"/,/<\/target>/d" buildtools\install\win\Files\config\nlog.config
 
