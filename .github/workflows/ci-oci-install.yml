@@ -16,7 +16,6 @@ on:
           ubuntu2404,
           rhel9,
           centos9s,
-          fedora41,
           fedora42
       deb_build:
         type: boolean
@@ -45,7 +44,6 @@ jobs:
               "debian13":   ["Debian 13",    "onlyoffice",   "base-debian13"],
               "ubuntu2204": ["Ubuntu 22.04", "onlyoffice",   "base-ubuntu2204"],
               "ubuntu2404": ["Ubuntu 24.04", "onlyoffice",   "base-ubuntu2404"],
-              "fedora41":   ["Fedora 41",    "onlyoffice",   "base-fedora41"],
               "fedora42":   ["Fedora 42",    "onlyoffice",   "base-fedora42"]
             }
         run: |
