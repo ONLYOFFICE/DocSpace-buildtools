@@ -5,7 +5,8 @@ set -x
 PACKAGE_TYPE=$1
 BUILD_PATH=$2
 PRODUCT=$3
-CLENT_PATH=${BUILD_PATH}/client
+VERSION=$4
+CLIENT_PATH=${BUILD_PATH}/client
 SERVER_PATH=${BUILD_PATH}/server
 BUILDTOOLS_PATH=${BUILD_PATH}/buildtools
 
@@ -41,12 +42,13 @@ json -I -f "${BUILDTOOLS_PATH}/config/appsettings.json" \
      -e "this['debug-info'].enabled=\"false\"" \
      -e "this.web.samesite=\"None\"" \
      -e "this.core.oidc.disableValidateToken=\"false\"" \
-     -e "this.core.oidc.showPII=\"false\""
+     -e "this.core.oidc.showPII=\"false\"" \
+     -e "this.version.number=\"${VERSION}\""
 json -I -f "${BUILDTOOLS_PATH}/config/apisystem.json" \
     -e "this.core.notify.postman=\"services\""
-json -I -f "${CLENT_PATH}/public/scripts/config.json" \
+json -I -f "${CLIENT_PATH}/public/scripts/config.json" \
     -e "this.wrongPortalNameUrl=\"\""
-sed 's_\(minlevel=\)"[^"]*"_\1"Warn"_g' -i "${BUILDTOOLS_PATH}/config/nlog.config"
+sed -i '/ZiggyCreatures/! s_\(minlevel=\)"[^"]*"_\1"Warn"_g' "${BUILDTOOLS_PATH}/config/nlog.config"
 sed -i '/weixinRedirectUrl/!s/teamlab.info/onlyoffice.com/g' ${BUILDTOOLS_PATH}/config/autofac.consumers.json
 
 # Configuring proxy and router

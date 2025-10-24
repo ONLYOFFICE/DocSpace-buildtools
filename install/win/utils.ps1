@@ -383,6 +383,9 @@ function MoveConfigs {
         Write-Output "Configuration file not found!"
     }
 
+    # Remove existing onlyoffice* config files before copying.
+    Get-ChildItem -Path $TargetFolder -Filter "onlyoffice*" -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+
     # Move nginx configuration files.
     if (Test-Path $SourceFolder) {
         # Ensure target folder exists.

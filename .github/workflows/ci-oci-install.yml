@@ -16,7 +16,6 @@ on:
           ubuntu2404,
           rhel9,
           centos9s,
-          fedora41,
           fedora42
       deb_build:
         type: boolean
@@ -45,7 +44,6 @@ jobs:
               "debian13":   ["Debian 13",    "onlyoffice",   "base-debian13"],
               "ubuntu2204": ["Ubuntu 22.04", "onlyoffice",   "base-ubuntu2204"],
               "ubuntu2404": ["Ubuntu 24.04", "onlyoffice",   "base-ubuntu2404"],
-              "fedora41":   ["Fedora 41",    "onlyoffice",   "base-fedora41"],
               "fedora42":   ["Fedora 42",    "onlyoffice",   "base-fedora42"]
             }
         run: |
@@ -101,7 +99,9 @@ jobs:
           sudo wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
           sudo echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
           sudo apt update -y
-          sudo apt-get install -y vagrant virtualbox-7.1
+          sudo apt-get install -y vagrant
+          # Temporary install VBox 7.1.12 via curl (.deb) to avoid SSH/NAT issues in 7.1.14
+          curl -fsSL "https://download.virtualbox.org/virtualbox/7.1.12/virtualbox-7.1_7.1.12-169651~Ubuntu~jammy_amd64.deb" -o /tmp/vbox.deb && sudo apt-get install -y /tmp/vbox.deb
 
       - name: "Test production scripts with ${{matrix.name}}"
         if: ${{ github.event_name == 'schedule' }}

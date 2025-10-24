@@ -143,7 +143,7 @@ jobs:
           cd ${PACKAGE_DIRECTORY}/install/deb/
           rename -f -v "s/product([^\/]*)$/${PRODUCT_LOW}\$1/g" debian/*
           find debian/ -type f -exec sed -i "s/{{product}}/${PRODUCT_LOW}/g" {} ';'
-          sed -i "s/{{package_header_tag_version}}/${PRODUCT_VERSION}.${BUILD_NUMBER}/g" debian/changelog debian/control
+          find debian/ -type f -exec sed -i "s/{{package_header_tag_version}}/${PRODUCT_VERSION}.${BUILD_NUMBER}/g" {} +
           export DEB_BUILD_OPTIONS="parallel=$(nproc)"
           dpkg-buildpackage -uc -us
 

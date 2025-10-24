@@ -91,6 +91,9 @@ REM echo ######## Delete test and dev configs ########
 del /f /q buildtools\install\win\Files\config\*.test.json
 del /f /q buildtools\install\win\Files\config\*.dev.json
 
+::add product version to config
+%sed% "s/\"number\": *\"[0-9.]*\"/\"number\": \"%BUILD_VERSION%.%BUILD_NUMBER%\"/" -i buildtools\install\win\Files\config\appsettings.json
+
 ::default logging to warning
 %sed% "s_\(\"Default\":\).*,_\1 \"Warning\",_g" -i buildtools\install\win\Files\config\appsettings.json
 %sed% "s_\(\"logLevel\":\).*_\1 \"warning\"_g" -i buildtools\install\win\Files\config\appsettings.services.json

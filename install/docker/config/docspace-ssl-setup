@@ -238,7 +238,7 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
       TEMP_PATH="/tmp/$(basename "${CERTIFICATE_FILE}")"
 
       # Checking whether the certificate chain is trusted
-      if [ "$CONTAINER_STATUS" = "healty" ]; then
+      if [ "$CONTAINER_STATUS" = "healthy" ]; then
         docker cp "$(readlink -f "${CERTIFICATE_FILE}")" "${CONTAINER_NAME}:${TEMP_PATH}" >/dev/null
         echo -n "Checking certificate trust inside ${CONTAINER_NAME}... "
         docker exec "${CONTAINER_NAME}" openssl verify -CAfile /etc/ssl/certs/ca-certificates.crt -untrusted "${TEMP_PATH}" "${TEMP_PATH}" >/dev/null \
