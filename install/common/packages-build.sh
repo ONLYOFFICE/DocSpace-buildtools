@@ -67,8 +67,7 @@ sed -e '/.pid/d' \
     -e 's_etc/nginx_etc/openresty_g' \
     -e 's/\.log/-openresty.log/g' \
     -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/templates/nginx.conf.template
-mv -f ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy-ssl.conf ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy-ssl.conf.template
-cp -rf ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy.conf ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy.conf.template
+rename -f -v 's/\.conf$/.conf.template/' ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy*.conf
 
 # Configuring fluent-bit
 sed -i "s#\(/var/log/onlyoffice/\)#\1${PRODUCT}/#" ${BUILDTOOLS_PATH}/install/docker/config/fluent-bit.conf 
