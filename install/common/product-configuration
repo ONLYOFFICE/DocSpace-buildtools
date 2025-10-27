@@ -132,7 +132,7 @@ json_configuration() {
 env_configuration() {
 	local FILE=$1 KEY=$2 VALUE=$3
 	if grep -q "^${KEY}=" "$FILE"; then
-		sed -i "s|^${KEY}=.*|${KEY}=${VALUE//|/\\|}|" "$FILE"
+		sed -i "s|^${KEY}=.*|${KEY}=$(printf '%q' "$VALUE")|" "$FILE"
 	else
 		printf '%s=%s\n' "$KEY" "$VALUE" >> "$FILE"
 	fi
