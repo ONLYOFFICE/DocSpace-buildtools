@@ -48,7 +48,7 @@ json -I -f "${BUILDTOOLS_PATH}/config/apisystem.json" \
     -e "this.core.notify.postman=\"services\""
 json -I -f "${CLIENT_PATH}/public/scripts/config.json" \
     -e "this.wrongPortalNameUrl=\"\""
-sed 's_\(minlevel=\)"[^"]*"_\1"Warn"_g' -i "${BUILDTOOLS_PATH}/config/nlog.config"
+sed -i '/ZiggyCreatures/! s_\(minlevel=\)"[^"]*"_\1"Warn"_g' "${BUILDTOOLS_PATH}/config/nlog.config"
 sed -i '/weixinRedirectUrl/!s/teamlab.info/onlyoffice.com/g' ${BUILDTOOLS_PATH}/config/autofac.consumers.json
 
 # Configuring proxy and router
