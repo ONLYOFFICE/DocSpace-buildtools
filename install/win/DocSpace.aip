@@ -522,12 +522,6 @@
     <ROW Action="AI_TxtUpdaterInstall" Description="Generating actions to configure text files updates" DescriptionLocId="ActionText.Description.AI_TxtUpdaterInstall"/>
     <ROW Action="AI_TxtUpdaterRollback" Description="Rolling back text file changes." DescriptionLocId="ActionText.Description.AI_TxtUpdaterRollback" Template="Rolling back text file changes." TemplateLocId="ActionText.Template.AI_TxtUpdaterRollback"/>
     <ROW Action="AI_VerifyPrereq" Description="Verifying prerequisites" DescriptionLocId="ActionText.Description.AI_VerifyPrereq" Template="[1] was not installed correctly." TemplateLocId="ActionText.Template.AI_VerifyPrereq"/>
-    <ROW Action="AI_XmlCommit" Description="Committing XML file configurations." DescriptionLocId="ActionText.Description.AI_XmlCommit" Template="Committing XML file configurations." TemplateLocId="ActionText.Template.AI_XmlCommit"/>
-    <ROW Action="AI_XmlConfig" Description="Executing XML file configurations" DescriptionLocId="ActionText.Description.AI_XmlConfig" Template="Configuring XML file: &quot;[1]&quot;" TemplateLocId="ActionText.Template.AI_XmlConfig"/>
-    <ROW Action="AI_XmlInstall" Description="Generating actions to configure XML files" DescriptionLocId="ActionText.Description.AI_XmlInstall"/>
-    <ROW Action="AI_XmlRemove" Description="Executing XML file configurations" DescriptionLocId="ActionText.Description.AI_XmlRemove" Template="Configuring XML file: &quot;[1]&quot;" TemplateLocId="ActionText.Template.AI_XmlRemove"/>
-    <ROW Action="AI_XmlRollback" Description="Rolling back XML file configurations." DescriptionLocId="ActionText.Description.AI_XmlRollback" Template="Rolling back XML file configurations." TemplateLocId="ActionText.Template.AI_XmlRollback"/>
-    <ROW Action="AI_XmlUninstall" Description="Generating actions to configure XML files" DescriptionLocId="ActionText.Description.AI_XmlUninstall"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiAppSearchComponent">
     <ROW Property="AI_SETUPEXEPATH" Signature_="AI_EXE_PATH_LM" Builds="DefaultBuild;ExeBuild;ExeBuild_1"/>
@@ -580,7 +574,6 @@
     <ROW Name="userAccounts.dll" SourcePath="&lt;AI_CUSTACTS&gt;userAccounts.dll"/>
     <ROW Name="utils.ps1_1" SourcePath="utils.ps1"/>
     <ROW Name="viewer.exe" SourcePath="&lt;AI_CUSTACTS&gt;viewer.exe" DigSign="true"/>
-    <ROW Name="xmlCfg.dll" SourcePath="&lt;AI_CUSTACTS&gt;xmlCfg.dll"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiConditionComponent">
     <ROW Feature_="DocumentServer" Level="4" Condition="DOCUMENT_SERVER_INSTALL_NONE = 1"/>
@@ -998,8 +991,6 @@
     <ROW Action="AI_DATA_SETTER_11" Type="51" Source="CustomActionData" Target="MySQL84"/>
     <ROW Action="AI_DATA_SETTER_12" Type="51" Source="CustomActionData" Target="OpenSearch"/>
     <ROW Action="AI_DATA_SETTER_13" Type="51" Source="StartOpenSearchService" Target="OpenSearch"/>
-    <ROW Action="AI_DATA_SETTER_14" Type="51" Source="CustomActionData" Target="[~]"/>
-    <ROW Action="AI_DATA_SETTER_15" Type="51" Source="CustomActionData" Target="[~]"/>
     <ROW Action="AI_DATA_SETTER_16" Type="51" Source="StopRedisService" Target="Redis"/>
     <ROW Action="AI_DATA_SETTER_17" Type="51" Source="CustomActionData" Target="[RedisServerConnectionError] |[ProductName] Setup |MB_OK,MB_ICONWARNING,MB_DEFBUTTON1||[CLIENTPROCESSID]"/>
     <ROW Action="AI_DATA_SETTER_18" Type="51" Source="CustomActionData" Target="[RabbitMQServerConnectionError] |[ProductName] Setup |MB_OK,MB_ICONWARNING,MB_DEFBUTTON1||[CLIENTPROCESSID]"/>
@@ -1088,12 +1079,6 @@
     <ROW Action="AI_TxtUpdaterInstall" Type="1" Source="TxtUpdater.dll" Target="OnTxtUpdaterInstall"/>
     <ROW Action="AI_TxtUpdaterRollback" Type="11521" Source="TxtUpdater.dll" Target="OnTxtUpdaterRollback" WithoutSeq="true"/>
     <ROW Action="AI_VerifyPrereq" Type="1" Source="Prereq.dll" Target="VerifyPrereq"/>
-    <ROW Action="AI_XmlCommit" Type="11777" Source="xmlCfg.dll" Target="OnXmlCommit" WithoutSeq="true"/>
-    <ROW Action="AI_XmlConfig" Type="11265" Source="xmlCfg.dll" Target="OnXmlConfig" WithoutSeq="true"/>
-    <ROW Action="AI_XmlInstall" Type="1" Source="xmlCfg.dll" Target="OnXmlInstall" AdditionalSeq="AI_DATA_SETTER_14"/>
-    <ROW Action="AI_XmlRemove" Type="11265" Source="xmlCfg.dll" Target="OnXmlRemove" WithoutSeq="true"/>
-    <ROW Action="AI_XmlRollback" Type="11521" Source="xmlCfg.dll" Target="OnXmlRollback" WithoutSeq="true"/>
-    <ROW Action="AI_XmlUninstall" Type="1" Source="xmlCfg.dll" Target="OnXmlUninstall" AdditionalSeq="AI_DATA_SETTER_15"/>
     <ROW Action="DetectMySQLService" Type="1" Source="aicustact.dll" Target="DetectProcess" Options="3" AdditionalSeq="AI_DATA_SETTER_9"/>
     <ROW Action="MoveConfigs" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_40"/>
     <ROW Action="MySQLConfigure" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_33"/>
@@ -1273,11 +1258,11 @@
     <ROW Action="AI_DATA_SETTER_2" Sequence="1398"/>
     <ROW Action="AI_ProcessFailActions" Sequence="5848"/>
     <ROW Action="AI_DATA_SETTER_3" Sequence="5847"/>
-    <ROW Action="AI_TxtUpdaterInstall" Sequence="5105"/>
-    <ROW Action="AI_JsonInstall" Condition="(REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5104"/>
-    <ROW Action="AI_DATA_SETTER_7" Condition="(REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5103"/>
-    <ROW Action="AI_JsonUninstall" Condition="(REMOVE)" Sequence="3104"/>
-    <ROW Action="AI_DATA_SETTER_8" Condition="(REMOVE)" Sequence="3103"/>
+    <ROW Action="AI_TxtUpdaterInstall" Sequence="5103"/>
+    <ROW Action="AI_JsonInstall" Condition="(REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5102"/>
+    <ROW Action="AI_DATA_SETTER_7" Condition="(REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5101"/>
+    <ROW Action="AI_JsonUninstall" Condition="(REMOVE)" Sequence="3102"/>
+    <ROW Action="AI_DATA_SETTER_8" Condition="(REMOVE)" Sequence="3101"/>
     <ROW Action="StopMySQLService" Condition="( NOT Installed AND NOT OLDPRODUCTS ) AND ( AI_PROCESS_STATE &lt;&gt; &quot;Not Found&quot; )" Sequence="1613"/>
     <ROW Action="AI_DATA_SETTER_10" Condition="( NOT Installed AND NOT OLDPRODUCTS ) AND ( AI_PROCESS_STATE &lt;&gt; &quot;Not Found&quot; )" Sequence="1612"/>
     <ROW Action="DetectMySQLService" Condition="( ( NOT Installed AND NOT OLDPRODUCTS ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1611"/>
@@ -1295,10 +1280,6 @@
     <ROW Action="AI_ConfigureChainer" Condition="((UILevel = 2) OR (UILevel = 3)) AND (NOT UPGRADINGPRODUCTCODE)" Sequence="6598"/>
     <ROW Action="AI_LaunchChainer" Condition="AI_PREREQ_CHAINER AND (NOT UPGRADINGPRODUCTCODE)" Sequence="6599"/>
     <ROW Action="AI_VerifyPrereq" Sequence="1101"/>
-    <ROW Action="AI_XmlInstall" Condition="(REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5102"/>
-    <ROW Action="AI_DATA_SETTER_14" Condition="(REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5101"/>
-    <ROW Action="AI_XmlUninstall" Condition="(REMOVE)" Sequence="3102"/>
-    <ROW Action="AI_DATA_SETTER_15" Condition="(REMOVE)" Sequence="3101"/>
     <ROW Action="AI_ConfigPermissions" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="5852"/>
     <ROW Action="AI_DATA_SETTER_4" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="5851"/>
     <ROW Action="MsiUnpublishAssemblies" Condition="Installed" Sequence="1638" SeqType="0" MsiKey="MsiUnpublishAssemblies"/>
@@ -1706,20 +1687,5 @@
     <ROW Key="htpasswd_dashboards" Component="conf" FileName=".htpasswd_dashboards" Directory="conf_Dir" Options="17"/>
     <ROW Key="serverdashboards.conf" Component="includes" FileName="server-dashboards.conf" Directory="includes_Dir" Options="17"/>
     <ROW Key="xml" Component="tools" FileName="*.xml" Directory="tools_Dir" Options="17"/>
-  </COMPONENT>
-  <COMPONENT cid="caphyon.advinst.msicomp.XmlAttributeComponent">
-    <ROW XmlAttribute="minlevel" XmlElement="logger" Name="minlevel" Flags="14" Order="0" Value="Warn"/>
-    <ROW XmlAttribute="minlevel_1" XmlElement="logger_1" Name="minlevel" Flags="14" Order="0" Value="Warn"/>
-    <ROW XmlAttribute="minlevel_2" XmlElement="logger_2" Name="minlevel" Flags="14" Order="0" Value="Warn"/>
-  </COMPONENT>
-  <COMPONENT cid="caphyon.advinst.msicomp.XmlElementComponent">
-    <ROW XmlElement="logger" ParentElement="rules" Name="logger" Condition="1" Order="0" Flags="22" UpdateIndexInParent="0"/>
-    <ROW XmlElement="logger_1" ParentElement="rules" Name="logger" Condition="1" Order="1" Flags="22" UpdateIndexInParent="0"/>
-    <ROW XmlElement="logger_2" ParentElement="rules" Name="logger" Condition="1" Order="2" Flags="22" UpdateIndexInParent="0"/>
-    <ROW XmlElement="nlog" Name="nlog" Condition="1" Order="0" Flags="30" UpdateIndexInParent="0"/>
-    <ROW XmlElement="rules" ParentElement="nlog" Name="rules" Condition="1" Order="0" Flags="2" UpdateIndexInParent="0"/>
-  </COMPONENT>
-  <COMPONENT cid="caphyon.advinst.msicomp.XmlFileComponent">
-    <ROW XmlFile="nlog.config" FileName="NLOG~1.CON|nlog.config" DirProperty="config_Dir" Component="config" RootElement="nlog" Flags="25" Version="1.0" Encoding="UTF-8" IndentUnits="2"/>
   </COMPONENT>
 </DOCUMENT>
