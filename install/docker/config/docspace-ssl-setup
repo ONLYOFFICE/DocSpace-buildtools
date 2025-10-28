@@ -116,7 +116,7 @@ db() {
       mysql -h"${MYSQL_HOST:-$MYSQL_CONTAINER_NAME}" -P"${MYSQL_PORT:-3306}" -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DATABASE}" "$@"
 }
 
-eval "$(grep -E '^(HTTPS_PORT)=' "${DOCKERCOMPOSE}/.env" | tr -d '\r')"
+eval "$(grep -E '^[[:space:]]*HTTPS_PORT[[:space:]]*=' "$DOCKERCOMPOSE/.env" | head -n1 | sed 's/^[[:space:]]*//' | tr -d '\r')"
 [[ $1 == --httpsport && -n $2 ]] && { HTTPS_PORT="$2"; shift 2; }
 [[ $HTTPS_PORT =~ ^[0-9]+$ ]] || { echo "Error: invalid HTTPS port '$HTTPS_PORT'." >&2; exit 1; }
 sed -i "s/^HTTPS_PORT=.*/HTTPS_PORT=\"$HTTPS_PORT\"/" "${DOCKERCOMPOSE}/.env"
