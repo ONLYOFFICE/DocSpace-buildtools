@@ -13,4 +13,10 @@ if [ -f ${PROXY_CONF} ]; then
     cp -rf ${PROXY_CONF} ${PROXY_CONF}.save
 fi
 
+# (DS v3.5.0) Remove management config if exists
+MANAGEMENT_CONF="/etc/openresty/conf.d/onlyoffice-management.conf"
+if [ -f ${MANAGEMENT_CONF} ]; then
+    rm -f ${MANAGEMENT_CONF}
+fi
+
 exit 0

@@ -309,7 +309,7 @@ setup_openresty(){
 		if command -v getenforce >/dev/null 2>&1; then
 			case "$(getenforce)" in
 				enforcing|permissive)
-					PORTS=(5000 5001 5003 5004 5005 5006 5007 5009 5010 5011 5012 5013 5027 5032 5033 5075 5099 5100 8080 9090 9834 9899)
+					PORTS=(5000 5001 5003 5004 5005 5006 5007 5009 5010 5011 5012 5013 5015 5027 5032 5033 5075 5099 5100 8080 9090 9834 9899)
 					setsebool -P httpd_can_network_connect on
 					EXISTING_PORTS="$(semanage port -l | awk '$1=="http_port_t" && $2=="tcp"{for(i=3;i<=NF;i++)print $i}' | tr ',' '\n' | tr -d ' ')"
 					for PORT in "${PORTS[@]}"; do
