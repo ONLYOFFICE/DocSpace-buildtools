@@ -45,6 +45,10 @@ help(){
   echo "      docspace-ssl-setup --file example.com /etc/ssl/example.crt /etc/ssl/example.key"
   echo "      docspace-ssl-setup --file example.com /etc/ssl/example.pfx"
   echo 
+  echo "Using a custom HTTPS port (default: 443):"
+  echo "  Example:"
+  echo "    docspace-ssl-setup --httpsport 8443 --file docspace.example.com /path/cert.pem /path/key.pem"
+  echo 
   echo "Return to the default proxy configuration using the -d or --default parameter:"
   echo "  docspace-ssl-setup --default"
   echo ""
@@ -112,6 +116,11 @@ db() {
       mysql -h"${MYSQL_HOST:-$MYSQL_CONTAINER_NAME}" -P"${MYSQL_PORT:-3306}" -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DATABASE}" "$@"
 }
 
+eval "$(grep -E '^(HTTPS_PORT)=' "${DOCKERCOMPOSE}/.env" | tr -d '\r')"
+[[ $1 == --httpsport && -n $2 ]] && { HTTPS_PORT="$2"; shift 2; }
+[[ $HTTPS_PORT =~ ^[0-9]+$ ]] || { echo "Error: invalid HTTPS port '$HTTPS_PORT'." >&2; exit 1; }
+sed -i "s/^HTTPS_PORT=.*/HTTPS_PORT=\"$HTTPS_PORT\"/" "${DOCKERCOMPOSE}/.env"
+
 case $1 in 
   -f | --file )
     if [ -n "$2" ] && [ -n "$3" ]; then
@@ -145,7 +154,7 @@ case $1 in
     [[ -f "${CRON_FILE}" ]] && rm -rf "${CRON_FILE}"
 
     if docker ps -f "name=onlyoffice-proxy" --format '{{.Names}}' | grep -q "onlyoffice-proxy"; then
-      if docker ps -f "name=onlyoffice-proxy" --format "{{.Ports}}" | grep -q "443"; then
+      if docker ps -f "name=onlyoffice-proxy" --format "{{.Ports}}" | grep -q ":${HTTPS_PORT}->443/"; then
         docker-compose -f ${DOCKERCOMPOSE}/proxy-ssl.yml down
       fi
     fi
@@ -224,8 +233,8 @@ PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${PRODUCT}/privkey.pem"}"
 
 if [ -f "${CERTIFICATE_FILE}" ]; then 
   if [ -f "${PRIVATEKEY_FILE}" ]; then
-    sed -i "s~\(APP_CORE_SERVER_ROOT=\).*~\1\"https://*/\"~g" ${DOCKERCOMPOSE}/.env
-    sed -i "s~\(APP_URL_PORTAL=\).*~\1\"https://${DOMAIN}\"~g" ${DOCKERCOMPOSE}/.env
+    sed -i "s~^\(APP_CORE_SERVER_ROOT=\).*~\1\"https://*$( [ \"$HTTPS_PORT\" != \"443\" ] && echo \":$HTTPS_PORT\")/\"~g" ${DOCKERCOMPOSE}/.env
+    sed -i "s~^\(APP_URL_PORTAL=\).*~\1\"https://${DOMAIN}$( [ \"$HTTPS_PORT\" != \"443\" ] && echo \":$HTTPS_PORT\")\"~g" ${DOCKERCOMPOSE}/.env
     sed -i "s~\(CERTIFICATE_PATH=\).*~\1\"${CERTIFICATE_FILE}\"~g" ${DOCKERCOMPOSE}/.env
     sed -i "s~\(CERTIFICATE_KEY_PATH=\).*~\1\"${PRIVATEKEY_FILE}\"~g" ${DOCKERCOMPOSE}/.env
     sed -i "s~\(DHPARAM_PATH=\).*~\1\"${DHPARAM_PATH}\"~g" ${DOCKERCOMPOSE}/.env

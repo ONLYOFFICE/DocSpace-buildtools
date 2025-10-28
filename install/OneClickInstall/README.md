@@ -97,6 +97,7 @@ sudo bash <script-name> package -h
 | `--docspaceversion`     | `<VERSION>`                               | *(latest stable)*         | DocSpace version               |
 | `--docspacehost`        | `<HOST>`                                  | `localhost`               | Hostname / IP                  |
 | `--externalport`        | `<PORT>`                                  | `80`                      | External HTTP port             |
+| `--httpsport`           | `<PORT>`                                  | `443`                     | External HTTPS port            |
 | `--machinekey`          | `<KEY>`                                   | *(auto-generated)*        | `core.machinekey` value        |
 
 #### Document Server (ONLYOFFICE Docs)
@@ -317,6 +318,22 @@ sudo bash docspace-install.sh \
   --redispassword redis-pass \
   --elastichost search.example.com \
   --elasticprotocol https
+```
+17. Install on HTTPS 8443 with Let's Encrypt
+```bash
+sudo bash docspace-install.sh \
+  --docspacehost portal.example.com \
+  --httpsport 8443 \
+  --letsencryptdomain portal.example.com \
+  --letsencryptmail admin@example.com
+```
+18. Switch to HTTPS on a non-standard port with your own certs
+```bash
+sudo bash docspace-install.sh \
+  --docspacehost portal.example.com \
+  --httpsport 8443 \
+  --certfile /path/fullchain.pem \
+  --certkeyfile /path/privkey.pem
 ```
 
 ## 🖥 System Requirements
