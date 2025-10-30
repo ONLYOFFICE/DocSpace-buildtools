@@ -2,12 +2,17 @@
 set -xe
 
 SRC_PATH=${1:-"/plugins"}
+MAX_JOBS=${MAX_JOBS:-4}
 
-for PLUGIN_DIR in $(ls -d ${SRC_PATH}/*); do
-  [[ -f ${PLUGIN_DIR}/yarn.lock || -f ${PLUGIN_DIR}/package.json ]] || continue
-  PLUGIN_NAME=$(basename ${PLUGIN_DIR})
-  echo "Building plugin: ${PLUGIN_NAME}"
-  cd ${PLUGIN_DIR} && yarn install && yarn run build
-  mkdir -p "${SRC_PATH}/publish/${PLUGIN_NAME}"
-  unzip "${PLUGIN_DIR}/dist/plugin.zip" -d "${SRC_PATH}/publish/${PLUGIN_NAME}"
-done
+find "$SRC_PATH" -mindepth 1 -maxdepth 1 -type d \( -exec test -f "{}/yarn.lock" \; -o -exec test -f "{}/package.json" \; \) -print | \
+xargs -P "$MAX_JOBS" -I{} bash -c '
+  PLUGIN_DIR="$1"; PLUGIN_NAME=$(basename "$PLUGIN_DIR")
+  echo "=== Building plugin: $PLUGIN_NAME ==="
+  cd "$PLUGIN_DIR" || { echo "::error:: Cannot cd to $PLUGIN_DIR"; exit 0; }
+
+  yarn install --no-cache || { echo "::error:: Yarn install failed for $PLUGIN_NAME"; exit 0; }
+  yarn run build || { echo "::error:: Build failed for $PLUGIN_NAME"; exit 0; }
+
+  mkdir -p "$SRC_PATH/publish/$PLUGIN_NAME"
+  unzip -qo "$PLUGIN_DIR/dist/plugin.zip" -d "$SRC_PATH/publish/$PLUGIN_NAME" || echo "::error:: No plugin.zip found for $PLUGIN_NAME"
+' _ {}
