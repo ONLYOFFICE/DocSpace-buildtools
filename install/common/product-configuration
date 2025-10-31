@@ -278,11 +278,8 @@ setup_openresty(){
 
 	cp -rf "${APP_DIR}/openresty/nginx.conf.template" "${OPENRESTY_CONF}"
 	[ ! -f "${PROXY_CONF}" ] && cp -rf "${PROXY_CONF}.template" "${PROXY_CONF}"
+	[ -f "${PROXY_CONF}.save" ] && { cp -rf "${PROXY_CONF}.save" "${PROXY_CONF}" && rm -f "${PROXY_CONF}.save"; }
 	[ ! -f "${OPENRESTY_DIR}/mime.types" ] && cp -rf "$(dirname "${OPENRESTY_CONF}")/mime.types" "${OPENRESTY_DIR}"
-
-	sed -i "s/\(listen .*:\)\([0-9]\{2,5\}\b\)\( default_server\)\?\(;\)/\1${APP_PORT}\3\4/" "${PROXY_CONF}"
-	sed -i "s!\(^worker_processes\).*;!\1 ${NGINX_WORKER_PROCESSES:-$(grep -c '^processor' /proc/cpuinfo)};!" "${OPENRESTY_CONF}"
-	sed -i "s!\(worker_connections\).*;!\1 ${NGINX_WORKER_CONNECTIONS:-$(ulimit -n)};!" "${OPENRESTY_CONF}"
 
 	DOMAIN="$(json -f "${USER_CONF}" files.docservice.url.portal | awk -F[/:] '{print ($1=="https")?$4:""}')"
 	CERTIFICATE_PATH="$(grep -oP 'ssl_certificate\s+\K\S+' "${PROXY_CONF}" | tr -d ';')"
@@ -290,10 +287,15 @@ setup_openresty(){
 	# (DS v3.0.0) Fix the problem related to environment change
 	[[ -f "${APP_DIR}/appsettings.production.json" ]] && DOMAIN="${DOMAIN:-$(json -f "${APP_DIR}/appsettings.production.json" files.docservice.url.portal | awk -F[/:] '{print ($1=="https")?$4:""}')}"
 	if [ -n "${DOMAIN}" ] && [ -n "${CERTIFICATE_PATH}" ] && [ -n "${CERTIFICATE_KEY_PATH}" ]; then
-		"/usr/bin/${PRODUCT}-ssl-setup" -f "${DOMAIN}" "${CERTIFICATE_PATH}" "${CERTIFICATE_KEY_PATH}"
+		echo -n "Configuring SSL... "
+		"/usr/bin/${PRODUCT}-ssl-setup" -f "${DOMAIN}" "${CERTIFICATE_PATH}" "${CERTIFICATE_KEY_PATH}" > /dev/null 2>&1
 	else
 		cp -rf "${PROXY_CONF}.template" "${PROXY_CONF}"
+		sed -i "s/\(listen .*:\)\([0-9]\{2,5\}\b\)\( default_server\)\?\(;\)/\1${APP_PORT}\3\4/" "${PROXY_CONF}"
 	fi
+
+	sed -i "s!\(^worker_processes\).*;!\1 ${NGINX_WORKER_PROCESSES:-$(grep -c '^processor' /proc/cpuinfo)};!" "${OPENRESTY_CONF}"
+	sed -i "s!\(worker_connections\).*;!\1 ${NGINX_WORKER_CONNECTIONS:-$(ulimit -n)};!" "${OPENRESTY_CONF}"
 
 	if [ "$DIST" = "RedHat" ]; then
 		# Remove default nginx settings [error] port 80 is already in use
@@ -308,7 +310,7 @@ setup_openresty(){
 		if command -v getenforce >/dev/null 2>&1; then
 			case "$(getenforce)" in
 				enforcing|permissive)
-					PORTS=(5000 5001 5003 5004 5005 5006 5007 5009 5010 5011 5012 5013 5027 5032 5033 5075 5099 5100 8080 9090 9834 9899)
+					PORTS=(5000 5001 5003 5004 5005 5006 5007 5009 5010 5011 5012 5013 5015 5027 5032 5033 5075 5099 5100 8080 9090 9834 9899)
 					setsebool -P httpd_can_network_connect on
 					EXISTING_PORTS="$(semanage port -l | awk '$1=="http_port_t" && $2=="tcp"{for(i=3;i<=NF;i++)print $i}' | tr ',' '\n' | tr -d ' ')"
 					for PORT in "${PORTS[@]}"; do
@@ -667,10 +669,6 @@ if $PACKAGE_MANAGER mysql-client >/dev/null 2>&1 || $PACKAGE_MANAGER mysql-commu
 	establish_mysql_conn || exit $?
 fi
 
-if $PACKAGE_MANAGER openresty >/dev/null 2>&1; then
-	setup_openresty
-fi
-
 # Identifying whether dependencies are local or external
 : "${REDIS_HOST:=$(json -f "${APP_DIR}/redis.${ENVIRONMENT}.json" Redis.Hosts.0.Host 2>/dev/null)}"
 : "${RABBITMQ_HOST:=$(json -f "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" RabbitMQ.Hostname 2>/dev/null)}"
@@ -723,6 +721,10 @@ fi
 
 if $PACKAGE_MANAGER fluent-bit >/dev/null 2>&1; then
 	setup_fluentbit
+fi
+
+if $PACKAGE_MANAGER openresty >/dev/null 2>&1; then
+	setup_openresty
 fi
 
 restart_services
