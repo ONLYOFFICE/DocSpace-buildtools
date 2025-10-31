@@ -568,6 +568,8 @@ setup_rabbitmq() {
 
 	if [ $1 == "LOCAL_RABBITMQ_SERVER" ]; then
 		systemctl enable rabbitmq-server >/dev/null 2>&1
+		sed -ri 's|^NODE_IP_ADDRESS=.*|NODE_IP_ADDRESS=127.0.0.1|' /etc/rabbitmq/rabbitmq-env.conf || echo 'NODE_IP_ADDRESS=127.0.0.1' >> /etc/rabbitmq/rabbitmq-env.conf
+		grep -q 'inet_dist_use_interface' /etc/rabbitmq/rabbitmq-env.conf 2>/dev/null || echo 'RABBITMQ_SERVER_ERL_ARGS="-kernel inet_dist_use_interface {127,0,0,1}"' >> /etc/rabbitmq/rabbitmq-env.conf
 		systemctl restart rabbitmq-server
 	fi
 
