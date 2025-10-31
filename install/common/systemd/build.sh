@@ -215,6 +215,7 @@ reassign_values (){
   unset SYSTEMD_ENVIRONMENT
   if [[ "${EXEC_FILE}" == *".js" ]]; then
 	SERVICE_TYPE="simple"
+	SYSTEMD_ENVIRONMENT="HOST=127.0.0.1"
 	EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE} --app.port=${SERVICE_PORT} --app.appsettings=${PATH_TO_CONF} --app.environment=\${ENVIRONMENT}"
   elif [[ "${EXEC_FILE}" == *".jar" ]]; then
 	SYSTEMD_ENVIRONMENT="SPRING_APPLICATION_NAME=${SPRING_APPLICATION_NAME} SERVER_PORT=${SERVICE_PORT} LOG_FILE_PATH=${LOG_DIR}/${SERVICE_NAME}.log"
