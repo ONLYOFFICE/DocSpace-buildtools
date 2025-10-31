@@ -145,12 +145,26 @@ services_logs() {
   done
 }
 
+ports_audit() {
+  echo "$LINE_SEPARATOR"
+  echo "${COLOR_YELLOW}Listening ports (non-local = EXPOSED)${COLOR_RESET}"
+  echo "$LINE_SEPARATOR"
+  ss -lntupH | awk -v red="${COLOR_RED}" -v green="${COLOR_GREEN}" -v reset="${COLOR_RESET}" '
+  function pname(s){ if (match(s,/"[^"]+"/)) return substr(s,RSTART+1,RLENGTH-2); else return s }
+  function pidv(s){ if (match(s,/pid=[0-9]+/)) return substr(s,RSTART+4,RLENGTH-4); else return "-" }
+  function is_local(addr){ return (addr ~ /(^127\.|\[::1\]:|\[::ffff:127\.)/) }
+  BEGIN { printf "%-4s %-22s %-7s %-22s %s\n","PROT","LOCAL","PID","PROC","SCOPE" }
+  { scope = is_local($5) ? green "LOCAL" reset : red "EXPOSED" reset;
+    printf "%-4s %-22s %-7s %-22s %s\n", $1, $5, pidv($7), pname($7), scope }'
+}
+
 main() {
   get_colors
   prepare_vm
   check_hw
   install_docspace
   sleep 180
+  ports_audit
   services_logs
   healthcheck_systemd_services
 }
