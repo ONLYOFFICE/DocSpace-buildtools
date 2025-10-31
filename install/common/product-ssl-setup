@@ -197,9 +197,9 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
             echo "echo \"[\$(date '+%F %T')] START /etc/cron.weekly/${PRODUCT}-renew-letsencrypt\" >> \"/var/log/${PRODUCT}-renew-letsencrypt.log\"" >> ${CRON_FILE}
             echo "certbot renew 2>&1 | tee -a /var/log/${PRODUCT}-renew-letsencrypt.log" >> ${CRON_FILE}
             if [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ]; then
-              echo 'systemctl restart openresty' >> ${DIR}/${PRODUCT}-renew-letsencrypt
+              echo 'systemctl restart openresty' >> "${CRON_FILE}"
             else 
-              echo 'service openresty restart' >> ${DIR}/${PRODUCT}-renew-letsencrypt
+              echo 'service openresty restart' >> "${CRON_FILE}"
             fi
             chmod a+x "${CRON_FILE}"
         else

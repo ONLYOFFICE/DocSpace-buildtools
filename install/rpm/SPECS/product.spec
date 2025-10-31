@@ -105,6 +105,14 @@ if [ "$1" -eq 2 ] && [ ! -f "${ENCRYPTION_PATH}" ]; then
   echo 'secret' > "${ENCRYPTION_PATH}" && chmod 600 "${ENCRYPTION_PATH}"
 fi
 
+%pre proxy
+
+# (DS v3.5.0) fix SSL reset error when updating packages
+PROXY_CONF="/etc/openresty/conf.d/onlyoffice-proxy.conf"
+if [ -f ${PROXY_CONF} ]; then
+    cp -rf ${PROXY_CONF} ${PROXY_CONF}.save
+fi
+
 %post 
 
 %preun
