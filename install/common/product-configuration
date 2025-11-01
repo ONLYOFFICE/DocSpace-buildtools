@@ -549,14 +549,14 @@ setup_redis() {
 setup_rabbitmq() {
 	echo -n "Configuring rabbitmq... "
 
-	: "${RABBITMQ_HOST:=$(json -f "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" RabbitMQ.Hostname 2>/dev/null)}
-	: "${RABBITMQ_PORT:=$(json -f "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" RabbitMQ.Port 2>/dev/null)}
-	: "${RABBITMQ_USER:=$(json -f "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" RabbitMQ.UserName 2>/dev/null)}
-	: "${RABBITMQ_PASSWORD:=$(json -f "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" RabbitMQ.Password 2>/dev/null)}
-	: "${RABBITMQ_URI:=$(json -f "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" RabbitMQ.Uri 2>/dev/null)}
-	: "${RABBITMQ_PROTOCOL:=${RABBITMQ_URI%%://*}}
+	: "${RABBITMQ_HOST:=$(json -f "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" RabbitMQ.Hostname 2>/dev/null)}"
+	: "${RABBITMQ_PORT:=$(json -f "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" RabbitMQ.Port 2>/dev/null)}"
+	: "${RABBITMQ_USER:=$(json -f "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" RabbitMQ.UserName 2>/dev/null)}"
+	: "${RABBITMQ_PASSWORD:=$(json -f "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" RabbitMQ.Password 2>/dev/null)}"
+	: "${RABBITMQ_URI:=$(json -f "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" RabbitMQ.Uri 2>/dev/null)}"
+	: "${RABBITMQ_PROTOCOL:=${RABBITMQ_URI%%://*}}"
 	: "${RABBITMQ_PROTOCOL:=amqp}" "${RABBITMQ_HOST:=localhost}" "${RABBITMQ_PORT:=5672}" "${RABBITMQ_USER:=guest}" "${RABBITMQ_PASSWORD:=guest}"
-	: "${RABBITMQ_URI:=${RABBITMQ_PROTOCOL}://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/}}"
+	: "${RABBITMQ_URI:=${RABBITMQ_PROTOCOL}://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/}"
 
 	json_configuration "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" "RabbitMQ.Hostname" "${RABBITMQ_HOST}"
 	json_configuration "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" "RabbitMQ.UserName" "${RABBITMQ_USER}"
