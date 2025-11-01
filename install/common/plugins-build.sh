@@ -3,11 +3,14 @@ set -xe
 
 SRC_PATH=${1:-"/plugins"}
 
-for PLUGIN_DIR in $(ls -d ${SRC_PATH}/*); do
-  [[ -f ${PLUGIN_DIR}/yarn.lock || -f ${PLUGIN_DIR}/package.json ]] || continue
-  PLUGIN_NAME=$(basename ${PLUGIN_DIR})
-  echo "Building plugin: ${PLUGIN_NAME}"
-  cd ${PLUGIN_DIR} && yarn install && yarn run build
-  mkdir -p "${SRC_PATH}/publish/${PLUGIN_NAME}"
-  unzip "${PLUGIN_DIR}/dist/plugin.zip" -d "${SRC_PATH}/publish/${PLUGIN_NAME}"
+find "$SRC_PATH" -mindepth 2 -maxdepth 2 -type f -name "package.json" -printf '%h\n' | while read -r PLUGIN_DIR; do
+  PLUGIN_NAME=$(grep -oP '"name"\s*:\s*"\K([^"\\]|\\.)+(?="\s*[},])' "$PLUGIN_DIR/package.json")
+  echo "=== Building plugin: $PLUGIN_NAME ==="
+  cd "$PLUGIN_DIR" || { echo "::error:: Cannot cd to $PLUGIN_DIR"; exit 1; }
+
+  yarn install --no-cache || { echo "::error:: Yarn install failed for $PLUGIN_NAME"; exit 1; }
+  yarn run build || { echo "::error:: Build failed for $PLUGIN_NAME"; exit 1; }
+
+  mkdir -p "$SRC_PATH/publish/$PLUGIN_NAME"
+  unzip -qo "$PLUGIN_DIR/dist/plugin.zip" -d "$SRC_PATH/publish/$PLUGIN_NAME" || echo "::error:: No plugin.zip found for $PLUGIN_NAME"
 done

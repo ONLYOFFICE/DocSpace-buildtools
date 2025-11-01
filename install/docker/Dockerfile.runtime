@@ -11,12 +11,13 @@ WORKDIR ${SRC_PATH}
 
 COPY  buildtools/config ./config
 
-RUN find config/ -maxdepth 1 -name "*.json" | grep -v test | xargs tar -cvf config.tar && \
+RUN find config/ -name "*.json" | grep -v test | xargs tar -cvf config.tar && \
     tar -C "/app/onlyoffice/" -xvf config.tar && \
     cp config/*.config /app/onlyoffice/config/ && \
     mkdir -p /etc/nginx/conf.d && cp -f config/nginx/onlyoffice*.conf /etc/nginx/conf.d/ && \
     mkdir -p /etc/nginx/html && cp -f config/nginx/html/* /etc/nginx/html/ && \
     mkdir -p /etc/nginx/includes/ && cp -f config/nginx/includes/onlyoffice*.conf /etc/nginx/includes/ && \
+    cp -f config/nginx/includes/server-*.conf /etc/nginx/includes/ && \
     sed -i "s/\"number\".*,/\"number\": \"${PRODUCT_VERSION}.${BUILD_NUMBER}\",/g" /app/onlyoffice/config/appsettings.json && \
     sed -e 's/#//' -i /etc/nginx/conf.d/onlyoffice.conf
 
@@ -41,15 +42,15 @@ RUN mkdir -p /var/log/onlyoffice && \
     curl \
     vim \
     libgdiplus && \
-    pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces --break-system-packages && \
+    pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces requests --break-system-packages && \
     rm -rf /var/lib/apt/lists/*
 
-COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
+COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config /app/onlyoffice/config/
 
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
 
-FROM node:20.11.0-slim AS noderun
+FROM node:22-slim AS noderun
 ARG BUILD_PATH
 ARG SRC_PATH 
 ENV BUILD_PATH=${BUILD_PATH}
@@ -68,10 +69,10 @@ RUN mkdir -p /var/log/onlyoffice && \
     curl \
     vim \
     python3-pip && \
-    pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces --break-system-packages && \
+    pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces requests --break-system-packages && \
     rm -rf /var/lib/apt/lists/*
 
-COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
+COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config /app/onlyoffice/config/
 
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
@@ -91,7 +92,8 @@ RUN apt-get -y update && \
     rm -rf /var/lib/apt/lists/* && \
     rm -rf /usr/share/nginx/html/* 
 
-# copy static services files and config values 
+# copy static services files and config values
+COPY --from=base /etc/nginx/includes /etc/nginx/includes
 COPY --from=base /etc/nginx/conf.d /etc/nginx/conf.d
 COPY --from=base /etc/nginx/html /etc/nginx/html
 

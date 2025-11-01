@@ -1,8 +1,9 @@
-import json, sys, os, netifaces, re
-from jsonpath_ng import jsonpath, parse
+import json, sys, os, netifaces, re, time, requests, threading
+from jsonpath_ng.ext import parse
 from os import environ
 from multipledispatch import dispatch
 from netaddr import *
+import fileinput
 
 filePath = None
 saveFilePath = None
@@ -16,8 +17,12 @@ SERVICE_PORT = os.environ["SERVICE_PORT"] if environ.get("SERVICE_PORT") else "5
 URLS = os.environ["URLS"] if environ.get("URLS") else "http://0.0.0.0:"
 PATH_TO_CONF = os.environ["PATH_TO_CONF"] if environ.get("PATH_TO_CONF") else "/app/" + PRODUCT + "/config"
 LOG_DIR = os.environ["LOG_DIR"] if environ.get("LOG_DIR") else "/var/log/" + PRODUCT
+BUILD_PATH = os.environ["BUILD_PATH"] if environ.get("BUILD_PATH") else "/var/www"
+NODE_CONTAINER_NAME = os.environ["NODE_CONTAINER_NAME"] if os.environ.get("NODE_CONTAINER_NAME") else "onlyoffice-node-services"
+SERVICE_SOCKET_PORT = os.environ["SERVICE_SOCKET_PORT"] if os.environ.get("SERVICE_SOCKET_PORT") else SERVICE_PORT
+SERVICE_SSOAUTH_PORT = os.environ["SERVICE_SSOAUTH_PORT"] if os.environ.get("SERVICE_SSOAUTH_PORT") else SERVICE_PORT
 ROUTER_HOST = os.environ["ROUTER_HOST"] if environ.get("ROUTER_HOST") else "onlyoffice-router"
-SOCKET_HOST = os.environ["SOCKET_HOST"] if environ.get("SOCKET_HOST") else "onlyoffice-socket"
+SOCKET_HOST = os.environ.get("NODE_CONTAINER_NAME") or os.environ.get("SOCKET_HOST") or "onlyoffice-socket"
 
 MYSQL_CONTAINER_NAME = os.environ["MYSQL_CONTAINER_NAME"] if environ.get("MYSQL_CONTAINER_NAME") else "onlyoffice-mysql-server"
 MYSQL_HOST = os.environ["MYSQL_HOST"] if environ.get("MYSQL_HOST") else None
@@ -53,7 +58,7 @@ DOCUMENT_SERVER_URL_PUBLIC = DOCUMENT_SERVER_URL_EXTERNAL if DOCUMENT_SERVER_URL
 DOCUMENT_SERVER_CONNECTION_HOST = DOCUMENT_SERVER_URL_EXTERNAL if DOCUMENT_SERVER_URL_EXTERNAL else DOCUMENT_SERVER_URL_INTERNAL
 
 ELK_CONTAINER_NAME = os.environ["ELK_CONTAINER_NAME"] if environ.get("ELK_CONTAINER_NAME") else "onlyoffice-opensearch"
-ELK_SHEME = os.environ["ELK_SHEME"] if environ.get("ELK_SHEME") else "http"
+ELK_SCHEME = os.environ["ELK_SCHEME"] if environ.get("ELK_SCHEME") else "http"
 ELK_HOST = os.environ["ELK_HOST"] if environ.get("ELK_HOST") else None
 ELK_PORT = os.environ["ELK_PORT"] if environ.get("ELK_PORT") else "9200"
 ELK_THREADS = os.environ["ELK_THREADS"] if environ.get("ELK_THREADS") else "1"
@@ -97,6 +102,10 @@ class RunServices:
         
     @dispatch(str, str)
     def RunService(self, RUN_FILE, ENV_EXTENSION):
+        if sys.argv[1] == "supervisord":
+            os.execvp(sys.argv[1], sys.argv[1:])
+            return 1
+
         if ENV_EXTENSION == "none":
             self.RunService(RUN_FILE)
         os.system(TLS_REJECT_UNAUTHORIZED + CERTIFICATE_PARAM + "node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
@@ -158,6 +167,104 @@ def writeJsonFile(jsonFile, jsonData, indent=4):
     
     return 1
 
+def deleteJsonPath(jsonData, jsonPath):
+    expr = parse(jsonPath)
+    matches = expr.find(jsonData)
+
+    for match in matches:
+        path = match.full_path
+        context = jsonData
+        parts = [p for p in str(path).split('.') if p]
+        for key in parts[:-1]:
+            context = context.get(key, {})
+        last_key = parts[-1]
+        if isinstance(context, dict) and last_key in context:
+            del context[last_key]
+
+    return jsonData
+
+def waitForHostAvailable(HOST_URL, TIMEOUT=10, INTERVAL=3, MAX_RETRIES=5, RETRY_INTERVAL=15):
+    """
+    Check if HOST_URL is reachable.
+
+    Args:
+        HOST_URL (str): Host address (e.g. http://document-server:8083).
+        TIMEOUT (int): Max seconds to wait in one attempt.
+        INTERVAL (int): Delay between requests inside one attempt.
+        MAX_RETRIES (int): Number of extra attempts if host is still unavailable.
+        RETRY_INTERVAL (int): Delay between attempts.
+
+    Returns:
+        bool: True if host becomes available, otherwise False.
+    """
+
+    LOG_PRIORITY = dict(CRITICAL=0, ERROR=1, WARNING=2, INFORMATION=3, DEBUG=4, TRACE=5)
+    CURRENT_PRIORITY = LOG_PRIORITY.get((os.getenv("LOG_LEVEL") or "INFORMATION").upper(), 3)
+
+    def LOG(LEVEL, MESSAGE):
+        if LOG_PRIORITY.get(LEVEL, 3) <= CURRENT_PRIORITY:
+            print(f"[{LEVEL}] {MESSAGE}", flush=True)
+
+    ATTEMPT = 0
+    while True:
+        ATTEMPT += 1
+        LOG("INFORMATION", f"Waiting for host: {HOST_URL} (timeout: {TIMEOUT} seconds, attempt {ATTEMPT}/{MAX_RETRIES})")
+
+        START_TIME = time.time()
+        RESPONSE = None
+
+        try:
+            with requests.Session() as SESS:
+                while time.time() - START_TIME < TIMEOUT:
+                    try:
+                        RESPONSE = SESS.head(HOST_URL, timeout=3, allow_redirects=True)
+                        if RESPONSE is not None and not RESPONSE.ok:
+                            RESPONSE = SESS.get(HOST_URL, timeout=3, allow_redirects=True, stream=True)
+                            try:
+                                RESPONSE.close()
+                            except Exception:
+                                pass
+
+                        if RESPONSE is not None and RESPONSE.ok:
+                            LOG("INFORMATION", f"Host is available: {HOST_URL} ({RESPONSE.status_code})")
+                            return True
+
+                        if RESPONSE is not None:
+                            LOG("WARNING", f"Received status {RESPONSE.status_code} from {HOST_URL}")
+                        else:
+                            LOG("WARNING", f"No response from {HOST_URL}")
+
+                    except requests.RequestException as e:
+                        LOG("DEBUG", f"Connection error to {HOST_URL}: {e}")
+                    except Exception as e:
+                        LOG("CRITICAL", f"Unexpected error in waitForHostAvailable: {e}")
+
+                    time.sleep(INTERVAL)
+        except Exception as e:
+            LOG("CRITICAL", f"Unexpected error creating session: {e}")
+
+        if ATTEMPT < MAX_RETRIES:
+            LOG("WARNING", f"{HOST_URL} is not available yet, retrying in {RETRY_INTERVAL} seconds...")
+            time.sleep(RETRY_INTERVAL)
+        else:
+            LOG("ERROR", f"{HOST_URL} is not available after {MAX_RETRIES} attempts {f' ({RESPONSE.status_code})' if RESPONSE else ''}")
+            return False
+
+def check_docs_connection():
+    filePath = "/app/onlyoffice/config/appsettings.json"
+    jsonData = openJsonFile(filePath)
+
+    updateJsonData(jsonData, "$.files.docservice.url.portal", APP_URL_PORTAL)
+    updateJsonData(jsonData, "$.files.docservice.url.public", DOCUMENT_SERVER_URL_PUBLIC)
+    updateJsonData(jsonData, "$.files.docservice.url.internal", DOCUMENT_SERVER_CONNECTION_HOST)
+    updateJsonData(jsonData, "$.files.docservice.secret.value", DOCUMENT_SERVER_JWT_SECRET)
+    updateJsonData(jsonData, "$.files.docservice.secret.header", DOCUMENT_SERVER_JWT_HEADER)
+
+    if not waitForHostAvailable(DOCUMENT_SERVER_CONNECTION_HOST, TIMEOUT=10, INTERVAL=3, MAX_RETRIES=5, RETRY_INTERVAL=15):
+        deleteJsonPath(jsonData, "$.files.docservice")
+
+    writeJsonFile(filePath, jsonData)
+
 #filePath = sys.argv[1]
 saveFilePath = filePath
 #jsonValue = sys.argv[2]
@@ -171,12 +278,7 @@ updateJsonData(jsonData,"$.core.base-domain", APP_CORE_BASE_DOMAIN)
 updateJsonData(jsonData,"$.core.machinekey", APP_CORE_MACHINEKEY)
 updateJsonData(jsonData,"$.core.products.subfolder", "server")
 updateJsonData(jsonData,"$.core.notify.postman", "services")
-updateJsonData(jsonData,"$.web.hub.internal", "http://" + SOCKET_HOST + ":" + SERVICE_PORT + "/")
-updateJsonData(jsonData,"$.files.docservice.url.portal", APP_URL_PORTAL)
-updateJsonData(jsonData,"$.files.docservice.url.public", DOCUMENT_SERVER_URL_PUBLIC)
-updateJsonData(jsonData,"$.files.docservice.url.internal", DOCUMENT_SERVER_CONNECTION_HOST)
-updateJsonData(jsonData,"$.files.docservice.secret.value", DOCUMENT_SERVER_JWT_SECRET)
-updateJsonData(jsonData,"$.files.docservice.secret.header", DOCUMENT_SERVER_JWT_HEADER)
+updateJsonData(jsonData,"$.web.hub.internal", "http://" + SOCKET_HOST + ":" + SERVICE_SOCKET_PORT + "/")
 updateJsonData(jsonData,"$.core.oidc.disableValidateToken", DISABLE_VALIDATE_TOKEN)
 updateJsonData(jsonData,"$.core.oidc.showPII", DEBUG_INFO)
 updateJsonData(jsonData,"$.debug-info.enabled", DEBUG_INFO)
@@ -220,7 +322,7 @@ if OAUTH_REDIRECT_URL:
     for component in jsonData['components']:
         if 'parameters' in component and 'additional' in component['parameters']:
             for key, value in component['parameters']['additional'].items():
-                if re.search(r'.*RedirectUrl$', key) and value:
+                if ( re.search(r'.*RedirectUrl$', key)  and key != "weixinRedirectUrl" and value): 
                     component['parameters']['additional'][key] = OAUTH_REDIRECT_URL
                     
     writeJsonFile(filePath, jsonData)
@@ -228,7 +330,7 @@ if OAUTH_REDIRECT_URL:
 if ENV_EXTENSION != "dev":
     filePath = "/app/onlyoffice/config/elastic.json"
     jsonData = openJsonFile(filePath)
-    jsonData["elastic"]["Scheme"] = ELK_SHEME
+    jsonData["elastic"]["Scheme"] = ELK_SCHEME
     jsonData["elastic"]["Host"] = ELK_CONNECTION_HOST
     jsonData["elastic"]["Port"] = ELK_PORT
     jsonData["elastic"]["Threads"] = ELK_THREADS
@@ -236,12 +338,12 @@ if ENV_EXTENSION != "dev":
 
 filePath = "/app/onlyoffice/config/socket.json"
 jsonData = openJsonFile(filePath)
-updateJsonData(jsonData,"$.socket.port", SERVICE_PORT)
+updateJsonData(jsonData,"$.socket.port", SERVICE_SOCKET_PORT)
 writeJsonFile(filePath, jsonData)
 
 filePath = "/app/onlyoffice/config/ssoauth.json"
 jsonData = openJsonFile(filePath)
-updateJsonData(jsonData,"$.ssoauth.port", SERVICE_PORT)
+updateJsonData(jsonData,"$.ssoauth.port", SERVICE_SSOAUTH_PORT)
 writeJsonFile(filePath, jsonData)
 
 filePath = "/app/onlyoffice/config/rabbitmq.json"
@@ -263,13 +365,26 @@ jsonData["Redis"].update(REDIS_USER_NAME) if REDIS_USER_NAME is not None else No
 jsonData["Redis"].update(REDIS_PASSWORD) if REDIS_PASSWORD is not None else None
 writeJsonFile(filePath, jsonData)
 
+filePath = os.path.join(BUILD_PATH, "services", "ASC.Migration.Runner", "service", "appsettings.runner.json")
+if os.path.isfile(filePath):
+    jsonData = openJsonFile(filePath)
+    conn_str = f"Server={MYSQL_CONNECTION_HOST};Database={MYSQL_DATABASE};User ID={MYSQL_USER};Password={MYSQL_PASSWORD};Command Timeout=100"
+    updateJsonData(jsonData, "$.options.Providers[0].ConnectionString", conn_str)
+    updateJsonData(jsonData, "$.options.TeamlabsiteProviders[0].ConnectionString", conn_str)
+    writeJsonFile(filePath, jsonData)
+
+filePath = os.path.join(BUILD_PATH, "services", "ASC.Web.HealthChecks.UI", "service", "appsettings.json")
+if os.path.isfile(filePath):
+    for line in fileinput.input(filePath, inplace=True):
+        line = line.replace("localhost:9899", f"{NODE_CONTAINER_NAME}:{SERVICE_SOCKET_PORT}")
+        line = line.replace("localhost:9834", f"{NODE_CONTAINER_NAME}:{SERVICE_SSOAUTH_PORT}")
+        sys.stdout.write(line)
+
 if LOG_LEVEL:
-    filePath = "/app/onlyoffice/config/nlog.config"
-    with open(filePath, 'r') as f:
-        configData = f.read()
-    configData = re.sub(r'(minlevel=")(\w+)(")', '\\1' + LOG_LEVEL + '\\3', configData)
-    with open(filePath, 'w') as f:
-        f.write(configData)
+    NLOG_PATH = "/app/onlyoffice/config/nlog.config"
+    with open(NLOG_PATH) as f: NLOG = f.read()
+    NLOG = re.sub(r'^(?!.*ZiggyCreatures)(.*minlevel=")\w+(")', rf'\1{LOG_LEVEL}\2', NLOG, flags=re.M)
+    open(NLOG_PATH, "w").write(NLOG)
 
 PLUGINS_DIR = "/var/www/studio/plugins/"
 DATA_PLUGINS_DIR = "/app/onlyoffice/data/Studio/webplugins/"
@@ -280,6 +395,8 @@ if os.path.exists(PLUGINS_DIR) and not os.path.exists(DATA_PLUGINS_DIR):
         pd_item = os.path.join(PLUGINS_DIR, item)
         dpd_item = os.path.join(DATA_PLUGINS_DIR, item)
         shutil.copytree(pd_item, dpd_item) if os.path.isdir(pd_item) else shutil.copy2(pd_item, dpd_item)
+
+threading.Thread(target=check_docs_connection, daemon=True).start()
 
 run = RunServices(SERVICE_PORT, PATH_TO_CONF)
 run.RunService(RUN_FILE, ENV_EXTENSION, LOG_FILE)

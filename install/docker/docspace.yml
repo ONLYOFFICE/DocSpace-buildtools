@@ -11,6 +11,8 @@ x-service: &x-service-base
   restart: always
   expose:
     - ${SERVICE_PORT}
+  extra_hosts:
+    - "${EXTRA_HOSTS:-placeholder.local:127.0.0.1}"
   environment:
     MYSQL_CONTAINER_NAME: ${MYSQL_CONTAINER_NAME}
     MYSQL_HOST: ${MYSQL_HOST}
@@ -35,7 +37,7 @@ x-service: &x-service-base
     DOCUMENT_CONTAINER_NAME: ${DOCUMENT_CONTAINER_NAME}
     DOCUMENT_SERVER_URL_EXTERNAL: ${DOCUMENT_SERVER_URL_EXTERNAL}
     ELK_CONTAINER_NAME: ${ELK_CONTAINER_NAME}
-    ELK_SHEME: ${ELK_SHEME}
+    ELK_SCHEME: ${ELK_SCHEME}
     ELK_HOST: ${ELK_HOST}
     ELK_PORT: ${ELK_PORT}
     REDIS_CONTAINER_NAME: ${REDIS_CONTAINER_NAME}
@@ -57,6 +59,7 @@ x-service: &x-service-base
     CERTIFICATE_PATH: ${CERTIFICATE_PATH}
     NODE_OPTIONS: ${NODE_OPTIONS}
   volumes:
+    #- ${CERTIFICATE_PATH}:${CERTIFICATE_PATH}
     #- /app/onlyoffice/CommunityServer/data:/app/onlyoffice/data
     - ${VOLUMES_DIR:+${VOLUMES_DIR}/}app_data:/app/onlyoffice/data
     - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
@@ -173,6 +176,14 @@ services:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_DOCEDITOR}/doceditor/health || exit 1
 
+  onlyoffice-management:
+    <<: *x-service-base
+    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-management:${DOCKER_TAG}"
+    container_name: ${MANAGEMENT_HOST}
+    healthcheck:
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_MANAGEMENT}/management/health || exit 1
+
   onlyoffice-sdk:
     <<: *x-service-base
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-sdk:${DOCKER_TAG}"
@@ -190,6 +201,14 @@ services:
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_LOGIN}/login/health || exit 1
+
+  onlyoffice-telegram:
+    <<: *x-service-base
+    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-telegram:${DOCKER_TAG}"
+    container_name: ${TELEGRAM_HOST}
+    healthcheck:
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_TELEGRAM}/health/ || exit 1
 
   onlyoffice-router:
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-router:${DOCKER_TAG}"
@@ -217,8 +236,10 @@ services:
       - onlyoffice-studio
       - onlyoffice-ssoauth
       - onlyoffice-doceditor
+      - onlyoffice-management
       - onlyoffice-sdk
       - onlyoffice-login
+      - onlyoffice-telegram
     environment:
       - SERVICE_BACKUP=${SERVICE_BACKUP}
       - SERVICE_FILES=${SERVICE_FILES}
@@ -235,15 +256,18 @@ services:
       - SERVICE_STUDIO=${SERVICE_STUDIO}
       - SERVICE_SSOAUTH=${SERVICE_SSOAUTH}
       - SERVICE_DOCEDITOR=${SERVICE_DOCEDITOR}
+      - SERVICE_MANAGEMENT=${SERVICE_MANAGEMENT}
       - SERVICE_SDK=${SERVICE_SDK}
       - SERVICE_LOGIN=${SERVICE_LOGIN}
-      - SERVICE_HELTHCHECKS=${SERVICE_HELTHCHECKS}
+      - SERVICE_HEALTHCHECKS=${SERVICE_HEALTHCHECKS}
+      - SERVICE_TELEGRAM=${SERVICE_TELEGRAM}
       - WRONG_PORTAL_NAME_URL=${WRONG_PORTAL_NAME_URL}
       - DOCUMENT_CONTAINER_NAME=${DOCUMENT_CONTAINER_NAME}
       - DOCUMENT_SERVER_URL_EXTERNAL=${DOCUMENT_SERVER_URL_EXTERNAL}
       - REDIS_CONTAINER_NAME=${REDIS_CONTAINER_NAME}
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
+      - REDIS_USER_NAME=${REDIS_USER_NAME}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - REDIS_DB=${REDIS_DB}
       - SERVICE_PORT=${SERVICE_PORT}

@@ -48,6 +48,8 @@ copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\L
 copy buildtools\install\win\tools\Login.xml "buildtools\install\win\Files\tools\Login.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\Sdk.exe" /y
 copy buildtools\install\win\tools\Sdk.xml "buildtools\install\win\Files\tools\Sdk.xml" /y
+copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\Management.exe" /y
+copy buildtools\install\win\tools\Management.xml "buildtools\install\win\Files\tools\Management.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\OpenSearch\tools\OpenSearch.exe" /y
 copy buildtools\install\win\tools\OpenSearch.xml "buildtools\install\win\OpenSearch\tools\OpenSearch.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\OpenSearchStack\tools\OpenSearchDashboards.exe" /y
@@ -89,6 +91,9 @@ REM echo ######## Delete test and dev configs ########
 del /f /q buildtools\install\win\Files\config\*.test.json
 del /f /q buildtools\install\win\Files\config\*.dev.json
 
+::add product version to config
+%sed% "s/\"number\": *\"[0-9.]*\"/\"number\": \"%BUILD_VERSION%.%BUILD_NUMBER%\"/" -i buildtools\install\win\Files\config\appsettings.json
+
 ::default logging to warning
 %sed% "s_\(\"Default\":\).*,_\1 \"Warning\",_g" -i buildtools\install\win\Files\config\appsettings.json
 %sed% "s_\(\"logLevel\":\).*_\1 \"warning\"_g" -i buildtools\install\win\Files\config\appsettings.services.json
@@ -99,8 +104,11 @@ del /f /q buildtools\install\win\Files\config\*.dev.json
 %sed% "s_\(\"showPII\":\).*_\1 \"false\"_g" -i buildtools\install\win\Files\config\appsettings.json
 
 ::redirectUrl value replacement
-%sed% "s/teamlab.info/onlyoffice.com/g" -i buildtools\install\win\Files\config\autofac.consumers.json
+%sed% "/weixinRedirectUrl/!s/teamlab.info/onlyoffice.com/g" -i buildtools\install\win\Files\config\autofac.consumers.json
 %sed% "s_\(\"wrongPortalNameUrl\":\).*,_\1 \"\",_g" -i buildtools\install\win\Files\public\scripts\config.json
+
+::fix Bug 77834
+%sed% "/ZiggyCreatures/! s/minlevel=[^ >]*/minlevel=\"Warn\"/g" -i buildtools\install\win\Files\config\nlog.config
 
 REM echo ######## Remove AWSTarget from nlog.config ########
 %sed% -i "/<target type=\"AWSTarget\" name=\"aws\"/,/<\/target>/d; /<target type=\"AWSTarget\" name=\"aws_sql\"/,/<\/target>/d" buildtools\install\win\Files\config\nlog.config
@@ -108,6 +116,7 @@ REM echo ######## Remove AWSTarget from nlog.config ########
 ::delete nginx configs
 del /f /q buildtools\install\win\Files\nginx\conf\onlyoffice-login.conf
 del /f /q buildtools\install\win\Files\nginx\conf\onlyoffice-story.conf
+del /f /q buildtools\install\win\Files\nginx\conf\onlyoffice-management.conf
 
 ::Remove unused services from HealthCheck | Bug 64516
 %sed% -i "/\"Name\": \"ASC.ApiCache\"/,/{/d" buildtools\install\win\Files\services\ASC.Web.HealthChecks.UI\service\appsettings.json

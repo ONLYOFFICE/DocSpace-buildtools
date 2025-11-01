@@ -35,7 +35,6 @@ PACKAGE_SYSNAME="onlyoffice"
 PRODUCT_NAME="DocSpace"
 PRODUCT=$(tr '[:upper:]' '[:lower:]' <<< ${PRODUCT_NAME})
 BASE_DIR="/app/$PACKAGE_SYSNAME"
-PROXY_YML="${BASE_DIR}/proxy.yml"
 STATUS=""
 DOCKER_TAG=""
 INSTALLATION_TYPE="ENTERPRISE"
@@ -77,7 +76,7 @@ MYSQL_PORT=""
 DATABASE_MIGRATION="true"
 
 ELK_VERSION=""
-ELK_SHEME=""
+ELK_SCHEME=""
 ELK_HOST=""
 ELK_PORT=""
 
@@ -105,539 +104,31 @@ LETS_ENCRYPT_DOMAIN=""
 LETS_ENCRYPT_MAIL=""
 IDENTITY_ENCRYPTION_SECRET=""
 
-HELP_TARGET="install-Docker.sh"
 OFFLINE_INSTALLATION="false"
-
 SKIP_HARDWARE_CHECK="false"
 
+SERVICES=(migration-runner identity notify "${PRODUCT}" healthchecks proxy)
+COMPOSE_FILES=($(printf '%s\n' "${SERVICES[@]}" | sed "s|^|-f ${BASE_DIR}/|; s|\$|.yml|"));
+
 EXTERNAL_PORT="80"
+ARGS_SCRIPT="install-Docker-args.sh"
+DOWNLOAD_URL_PREFIX="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}"
+GIT_BRANCH=$(echo "$@" | grep -oP '(?<=-gb )\S+')
 
-while [ "$1" != "" ]; do
-	case $1 in
+if [[ -n "${GIT_BRANCH:-}" ]]; then
+  DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${PACKAGE_SYSNAME^^}/${PRODUCT}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
+fi
 
-		-u | --update )
-			if [ "$2" != "" ]; then
-				UPDATE=$2
-				shift
-			fi
-		;;
-
-		-reg | --registry )
-			if [ "$2" != "" ]; then
-				REGISTRY_URL=$2
-				shift
-			fi
-		;;
-
-		-un | --username )
-			if [ "$2" != "" ]; then
-				USERNAME=$2
-				shift
-			fi
-		;;
-
-		-p | --password )
-			if [ "$2" != "" ]; then
-				PASSWORD=$2
-				shift
-			fi
-		;;
-
-		-ids | --installdocspace )
-			if [ "$2" != "" ]; then
-				INSTALL_PRODUCT=$2
-				shift
-			fi
-		;;
-
-		-idocs | --installdocs )
-			if [ "$2" != "" ]; then
-				INSTALL_DOCUMENT_SERVER=$2
-				shift
-			fi
-		;;
-
-		-imysql | --installmysql )
-			if [ "$2" != "" ]; then
-				INSTALL_MYSQL_SERVER=$2
-				shift
-			fi
-		;;		
-		
-		-irbt | --installrabbitmq )
-			if [ "$2" != "" ]; then
-				INSTALL_RABBITMQ=$2
-				shift
-			fi
-		;;
-
-		-irds | --installredis )
-			if [ "$2" != "" ]; then
-				INSTALL_REDIS=$2
-				shift
-			fi
-		;;
-
-		-ht | --helptarget )
-			if [ "$2" != "" ]; then
-				HELP_TARGET=$2
-				shift
-			fi
-		;;
-
-		-mysqld | --mysqldatabase )
-			if [ "$2" != "" ]; then
-				MYSQL_DATABASE=$2
-				shift
-			fi
-		;;
-
-		-mysqlrp | --mysqlrootpassword )
-			if [ "$2" != "" ]; then
-				MYSQL_ROOT_PASSWORD=$2
-				shift
-			fi
-		;;
-
-		-mysqlu | --mysqluser )
-			if [ "$2" != "" ]; then
-				MYSQL_USER=$2
-				shift
-			fi
-		;;
-
-		-mysqlh | --mysqlhost )
-			if [ "$2" != "" ]; then
-				MYSQL_HOST=$2
-				shift
-			fi
-		;;
-
-		-mysqlport | --mysqlport )
-			if [ "$2" != "" ]; then
-				MYSQL_PORT=$2
-				shift
-			fi
-		;;
-
-		-mysqlp | --mysqlpassword )
-			if [ "$2" != "" ]; then
-				MYSQL_PASSWORD=$2
-				shift
-			fi
-		;;
-
-		-espr | --elasticprotocol )
-			if [ "$2" != "" ]; then
-				ELK_SHEME=$2
-				shift
-			fi
-		;;
-
-		-esh | --elastichost )
-			if [ "$2" != "" ]; then
-				ELK_HOST=$2
-				shift
-			fi
-		;;
-
-		-esp | --elasticport )
-			if [ "$2" != "" ]; then
-				ELK_PORT=$2
-				shift
-			fi
-		;;
-
-		-skiphc | --skiphardwarecheck )
-			if [ "$2" != "" ]; then
-				SKIP_HARDWARE_CHECK=$2
-				shift
-			fi
-		;;
-
-		-ep | --externalport )
-			if [ "$2" != "" ]; then
-				EXTERNAL_PORT=$2
-				shift
-			fi
-		;;
-
-		-dsh | --docspacehost )
-			if [ "$2" != "" ]; then
-				APP_URL_PORTAL=$2
-				shift
-			fi
-		;;
-		
-		-mk | --machinekey )
-			if [ "$2" != "" ]; then
-				APP_CORE_MACHINEKEY=$2
-				shift
-			fi
-		;;
-		
-		-env | --environment )
-			if [ "$2" != "" ]; then
-				ENV_EXTENSION=$2
-				shift
-			fi
-		;;
-
-		-s | --status )
-			if [ "$2" != "" ]; then
-				STATUS=$2
-				IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-api"
-				shift
-			fi
-		;;
-
-		-ls | --localscripts )
-			if [ "$2" != "" ]; then
-				shift
-			fi
-		;;
-		
-		-dsv | --docspaceversion )
-			if [ "$2" != "" ]; then
-				DOCKER_TAG=$2
-				shift
-			fi
-		;;
-		
-		-gb | --gitbranch )
-			if [ "$2" != "" ]; then
-				PARAMETERS="$PARAMETERS ${1}"
-				GIT_BRANCH=$2
-				shift
-			fi
-		;;
-		
-		-docsi | --docsimage )
-			if [ "$2" != "" ]; then
-				DOCUMENT_SERVER_IMAGE_NAME=$2
-				shift
-			fi
-		;;
-		
-		-docsv | --docsversion )
-			if [ "$2" != "" ]; then
-				DOCUMENT_SERVER_VERSION=$2
-				shift
-			fi
-		;;
-		
-		-docsurl | --docsurl )
-			if [ "$2" != "" ]; then
-				DOCUMENT_SERVER_URL_EXTERNAL=$2
-				shift
-			fi
-		;;
-		
-		-dbm | --databasemigration )
-			if [ "$2" != "" ]; then
-				DATABASE_MIGRATION=$2
-				shift
-			fi
-		;;
-
-		-jh | --jwtheader )
-			if [ "$2" != "" ]; then
-				DOCUMENT_SERVER_JWT_HEADER=$2
-				shift
-			fi
-		;;
-
-		-js | --jwtsecret )
-			if [ "$2" != "" ]; then
-				DOCUMENT_SERVER_JWT_SECRET=$2
-				shift
-			fi
-		;;
-
-		-it | --installation_type )
-			if [ "$2" != "" ]; then
-				INSTALLATION_TYPE="${2^^}"
-				shift
-			fi
-		;;
-
-		-ms | --makeswap )
-			if [ "$2" != "" ]; then
-				MAKESWAP=$2
-				shift
-			fi
-		;;
-
-		-ies | --installelastic )
-			if [ "$2" != "" ]; then
-				INSTALL_ELASTICSEARCH=$2
-				shift
-			fi
-		;;
-
-		-ifb | --installfluentbit )
-			if [ "$2" != "" ]; then
-				INSTALL_FLUENT_BIT=$2
-				shift
-			fi
-		;;
-
-		-rdsh | --redishost )
-			if [ "$2" != "" ]; then
-				REDIS_HOST=$2
-				shift
-			fi
-		;;
-
-		-rdsp | --redisport )
-			if [ "$2" != "" ]; then
-				REDIS_PORT=$2
-				shift
-			fi
-		;;
-
-		-rdsu | --redisusername )
-			if [ "$2" != "" ]; then
-				REDIS_USER_NAME=$2
-				shift
-			fi
-		;;
-
-		-rdspass | --redispassword )
-			if [ "$2" != "" ]; then
-				REDIS_PASSWORD=$2
-				shift
-			fi
-		;;
-
-		-rbpr | --rabbitmqprotocol )
-			if [ "$2" != "" ]; then
-				RABBIT_PROTOCOL=$2
-				shift
-			fi
-		;;
-
-		-rbth | --rabbitmqhost )
-			if [ "$2" != "" ]; then
-				RABBIT_HOST=$2
-				shift
-			fi
-		;;
-
-		-rbtp | --rabbitmqport )
-			if [ "$2" != "" ]; then
-				RABBIT_PORT=$2
-				shift
-			fi
-		;;
-
-		-rbtu | --rabbitmqusername )
-			if [ "$2" != "" ]; then
-				RABBIT_USER_NAME=$2
-				shift
-			fi
-		;;
-
-		-rbtpass | --rabbitmqpassword )
-			if [ "$2" != "" ]; then
-				RABBIT_PASSWORD=$2
-				shift
-			fi
-		;;
-
-		-rbtvh | --rabbitmqvirtualhost )
-			if [ "$2" != "" ]; then
-				RABBIT_VIRTUAL_HOST=$2
-				shift
-			fi
-		;;
-
-		-led | --letsencryptdomain )
-			if [ "$2" != "" ]; then
-				LETS_ENCRYPT_DOMAIN=$2
-				shift
-			fi
-		;;
-
-		-lem | --letsencryptmail )
-			if [ "$2" != "" ]; then
-				LETS_ENCRYPT_MAIL=$2
-				shift
-			fi
-		;;
-
-		-cf | --certfile )
-			if [ "$2" != "" ]; then
-				CERTIFICATE_PATH="$2"
-				[[ "$CERTIFICATE_PATH" != /* ]] && CERTIFICATE_PATH="$(cd "$(dirname "$CERTIFICATE_PATH")" && pwd)/$(basename "$CERTIFICATE_PATH")"
-				[ -f "$CERTIFICATE_PATH" ] || { echo "Error: Certificate file not found: ${CERTIFICATE_PATH}" >&2; exit 1; }
-				shift
-			fi
-		;;
-
-		-ckf | --certkeyfile )
-			if [ "$2" != "" ]; then
-				CERTIFICATE_KEY_PATH="$2"
-				[[ "$CERTIFICATE_KEY_PATH" != /* ]] && CERTIFICATE_KEY_PATH="$(cd "$(dirname "$CERTIFICATE_KEY_PATH")" && pwd)/$(basename "$CERTIFICATE_KEY_PATH")"
-				[ -f "$CERTIFICATE_KEY_PATH" ] || { echo "Error: Certificate key file not found: ${CERTIFICATE_KEY_PATH}" >&2; exit 1; }
-				shift
-			fi
-		;;
-
-		-dhf | --dhparamfile )
-			if [ "$2" != "" ]; then
-				DHPARAM_PATH="$2"
-				[[ "$DHPARAM_PATH" != /* ]] && DHPARAM_PATH="$(cd "$(dirname "$DHPARAM_PATH")" && pwd)/$(basename "$DHPARAM_PATH")"
-				[ -f "$DHPARAM_PATH" ] || { echo "Error: DHParam file not found: ${DHPARAM_PATH}" >&2; exit 1; }
-				shift
-			fi
-		;;
-
-		-du | --dashboardsusername )
-			if [ "$2" != "" ]; then
-				DASHBOARDS_USERNAME=$2
-				shift
-			fi
-		;;
-
-		-dp | --dashboardspassword )
-			if [ "$2" != "" ]; then
-				DASHBOARDS_PASSWORD=$2
-				shift
-			fi
-		;;
-		
-		-noni | --noninteractive )
-			if [ "$2" != "" ]; then
-				NON_INTERACTIVE=$2
-				shift
-			fi
-		;;
-
-		-uni | --uninstall)
-			if [ "$2" != "" ]; then
-				UNINSTALL=$2
-            	shift
-			fi
-
-        ;;
-
-		-off | --offline )
-			if [ "$2" != "" ]; then
-				OFFLINE_INSTALLATION=$2
-				shift
-			fi
-		;;
-
-		-vd | --volumesdir )
-			if [ "$2" != "" ]; then
-				VOLUMES_DIR=$2
-				[[ "$VOLUMES_DIR" != /* ]] && VOLUMES_DIR="$(cd "$(dirname "$VOLUMES_DIR")" && pwd)/$(basename "$VOLUMES_DIR")"
-				[ ! -d "$VOLUMES_DIR" ] || { echo "Error: Volumes directory not found: ${VOLUMES_DIR}" >&2; exit 1; }
-				[[ "$VOLUMES_DIR" == "$BASE_DIR"* ]] && { echo "Warning: Please change the volumes directory, as $BASE_DIR will be removed during an update."; exit 1; }
-				shift
-			fi
-		;;
-
-
-		-h | -? | --help )
-			echo "  Usage: bash $HELP_TARGET [PARAMETER] [[PARAMETER], ...]"
-			echo
-			echo "    Parameters:"
-			echo "      -reg, --registry                  docker registry URL (e.g., https://myregistry.com:5000)"
-			echo "      -un, --username                   docker registry login"
-			echo "      -p, --password                    docker registry password"
-			echo "      -it, --installation_type          installation type (community|developer|enterprise)"
-			echo "      -skiphc, --skiphardwarecheck      skip hardware check (true|false)"
-			echo "      -u, --update                      use to update existing components (true|false)"
-			echo "      -ids, --installdocspace           install or update $PRODUCT (true|false)"
-			echo "      -dsv, --docspaceversion           select the $PRODUCT version"
-			echo "      -dsh, --docspacehost              $PRODUCT host"
-			echo "      -env, --environment               $PRODUCT environment"
-			echo "      -mk, --machinekey                 setting for core.machinekey"
-			echo "      -ep, --externalport               external $PRODUCT port (default value 80)"
-			echo "      -vd, --volumesdir                 directory for storing Docker volumes (default value /var/lib/docker/volumes)"
-			echo "      -idocs, --installdocs             install or update document server (true|false)"
-			echo "      -docsi, --docsimage               document server image name"
-			echo "      -docsv, --docsversion             document server version"
-			echo "      -docsurl, --docsurl               $PACKAGE_SYSNAME docs server address (example http://$PACKAGE_SYSNAME-docs-address:8083)"
-			echo "      -jh, --jwtheader                  defines the http header that will be used to send the JWT"
-			echo "      -js, --jwtsecret                  defines the secret key to validate the JWT in the request"	
-			echo "      -irbt, --installrabbitmq          install or update rabbitmq (true|false)"	
-			echo "      -irds, --installredis             install or update redis (true|false)"
-			echo "      -imysql, --installmysql           install or update mysql (true|false)"		
-			echo "      -ies, --installelastic            install or update elasticsearch (true|false)"
-			echo "      -ifb, --installfluentbit          install or update fluent-bit (true|false)"
-			echo "      -du, --dashboardsusername         login for authorization in /dashboards/"
-			echo "      -dp, --dashboardspassword         password for authorization in /dashboards/"
-			echo "      -espr, --elasticprotocol          the protocol for the connection to elasticsearch (default value http)"
-			echo "      -esh, --elastichost               the IP address or hostname of the elasticsearch"
-			echo "      -esp, --elasticport               elasticsearch port number (default value 9200)"
-			echo "      -rdsh, --redishost                the IP address or hostname of the redis server"
-			echo "      -rdsp, --redisport                redis server port number (default value 6379)"
-			echo "      -rdsu, --redisusername            redis user name"
-			echo "      -rdspass, --redispassword         password set for redis account"
-			echo "      -rbpr, --rabbitmqprotocol         the protocol for the connection to rabbitmq server (default value amqp)"
-			echo "      -rbth, --rabbitmqhost             the IP address or hostname of the rabbitmq server"
-			echo "      -rbtp, --rabbitmqport             rabbitmq server port number (default value 5672)"
-			echo "      -rbtu, --rabbitmqusername         username for rabbitmq server account"
-			echo "      -rbtpass, --rabbitmqpassword      password set for rabbitmq server account"
-			echo "      -rbtvh, --rabbitmqvirtualhost     rabbitmq virtual host (default value \"/\")"
-			echo "      -mysqlrp, --mysqlrootpassword     mysql server root password"
-			echo "      -mysqld, --mysqldatabase          $PRODUCT database name"
-			echo "      -mysqlu, --mysqluser              $PRODUCT database user"
-			echo "      -mysqlp, --mysqlpassword          $PRODUCT database password"
-			echo "      -mysqlh, --mysqlhost              mysql server host"
-			echo "      -mysqlport, --mysqlport           mysql server port number (default value 3306)"
-			echo "      -led, --letsencryptdomain         defines the domain for Let's Encrypt certificate"
-			echo "      -lem, --letsencryptmail           defines the domain administrator mail address for Let's Encrypt certificate"
-			echo "      -cf, --certfile                   path to the certificate file for the domain"
-			echo "      -ckf, --certkeyfile               path to the private key file for the certificate"
-			echo "      -dhf, --dhparamfile               path to the dhparam file for the certificate"
-			echo "      -off, --offline                   set the script for offline installation (true|false)"
-			echo "      -noni, --noninteractive           auto confirm all questions (true|false)"
-			echo "      -dbm, --databasemigration         database migration (true|false)"
-			echo "      -ms, --makeswap                   make swap file (true|false)"
-			echo "      -uni, --uninstall                 uninstall existing installation (true|false)"
-			echo "      -?, -h, --help                    this help"
-			echo
-			echo "    Install all the components without document server:"
-			echo "      bash $HELP_TARGET -idocs false"
-			echo
-			echo "    Install Document Server only. Skip the installation of mysql, $PRODUCT, rabbitmq, redis:"
-			echo "      bash $HELP_TARGET -ids false -idocs true -imysql false -irbt false -irds false"
-			echo
-			echo "    Update all installed components. Stop the containers that need to be updated, remove them and run the latest versions of the corresponding components."
-			echo "    The portal data should be picked up automatically:"
-			echo "      bash $HELP_TARGET -u true"
-			echo
-			echo "    Update Document Server only to version 7.2.1.34 and skip the update for all other components:"
-			echo "      bash $HELP_TARGET -u true -docsi ${PACKAGE_SYSNAME}/documentserver-ee -docsv 7.2.1.34 -idocs true -ids false -irbt false -irds false"
-			echo
-			echo "    Update $PRODUCT only to version 1.2.0 and skip the update for all other components:"
-			echo "      bash $HELP_TARGET -u true -dsv v1.2.0 -idocs false -irbt false -irds false"
-			echo
-			exit 0
-		;;
-
-		* )
-			echo "Unknown parameter $1" 1>&2
-			exit 1
-		;;
-	esac
-	shift
-done
+[[ "$LOCAL_SCRIPTS" = "true" ]] && source "./${ARGS_SCRIPT}" || source <(curl "${DOWNLOAD_URL_PREFIX}/${ARGS_SCRIPT}")
 
 uninstall() {
     read -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " REMOVE_DATA_SERVICES
 
 	if [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]]; then
-		SERVICES=("db" "rabbitmq" "redis" "opensearch" "dashboards" "fluent")
+		SERVICES+=("db" "rabbitmq" "redis" "opensearch" "dashboards" "fluent")
 	fi
 
-    SERVICES+=("${PRODUCT}" "ds" "identity" "proxy" "healthchecks" "notify" "migration-runner")
-
-    for SERVICE in "${SERVICES[@]}"; do
+    for SERVICE in "${SERVICES[@]}" "ds"; do
         if [[ -f "$BASE_DIR/$SERVICE.yml" ]]; then
             echo "Uninstallation of  $SERVICE and its volumes..."
             docker-compose -f "$BASE_DIR/$SERVICE.yml" down -v || echo "Failed to remove $SERVICE."
@@ -1026,9 +517,9 @@ get_tag_from_registry () {
 			AUTH_HEADER="Authorization: JWT $TOKEN"
 			sleep 1
 		fi
-
-		REGISTRY_TAGS_URL="https://hub.docker.com/v2/repositories/${1}/tags/"
-		JQ_FILTER='.results[].name // empty'
+		ARCH="$(uname -m | sed -E 's/^(x86_64|amd64)$/amd64/; s/^(aarch64|arm64)$/arm64/')"
+		REGISTRY_TAGS_URL="https://hub.docker.com/v2/repositories/${1}/tags?page_size=100"
+		JQ_FILTER='.results[] | select(.name | test("^(?!99\\.).*")) | select(.images[]?.architecture=="'"$ARCH"'") | .name // empty'
 	fi
 
 	mapfile -t TAGS_RESP < <(curl -s -H "${AUTH_HEADER}" -X GET "${REGISTRY_TAGS_URL}" | jq -r "${JQ_FILTER}")
@@ -1038,7 +529,8 @@ get_available_version () {
 	[ "${OFFLINE_INSTALLATION}" = "false" ] && get_tag_from_registry ${1} || mapfile -t TAGS_RESP < <(docker images --format "{{.Tag}}" "${1}")
 
 	VERSION_REGEX='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
-	[ ${#TAGS_RESP[@]} -eq 1 ] && LATEST_TAG="${TAGS_RESP[0]}" || LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$VERSION_REGEX" | sort -V | tail -n 1)
+	[ ${#TAGS_RESP[@]} -eq 1 ] && LATEST_TAG="${TAGS_RESP[0]}" || \
+    LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$([[ $GIT_BRANCH == "develop" && -n $STATUS ]] && echo '^develop\.[0-9]+$' || echo "$VERSION_REGEX")" | sort -V | tail -n 1)
 	LATEST_TAG=${LATEST_TAG:-${STATUS:+$(printf "%s\n" "${TAGS_RESP[@]}" | sort -V | tail -n 1)}} #Fix for 4testing develop tags
 
 	if [ ! -z "${LATEST_TAG}" ]; then
@@ -1106,7 +598,9 @@ set_docspace_params() {
 	EXTERNAL_PORT=${EXTERNAL_PORT:-$(get_env_parameter "EXTERNAL_PORT" "${CONTAINER_NAME}")}
 
 	PREVIOUS_ELK_VERSION=$(get_env_parameter "ELK_VERSION")
-	ELK_SHEME=${ELK_SHEME:-$(get_env_parameter "ELK_SHEME" "${CONTAINER_NAME}")}
+	ELK_SCHEME=${ELK_SCHEME:-$(get_env_parameter "ELK_SCHEME" "${CONTAINER_NAME}")}
+    # (DS v3.2.0) fallback for legacy ELK_SHEME
+    ELK_SCHEME=${ELK_SCHEME:-$(get_env_parameter "ELK_SHEME" "${CONTAINER_NAME}")}
 	ELK_HOST=${ELK_HOST:-$(get_env_parameter "ELK_HOST" "${CONTAINER_NAME}")}
 	ELK_PORT=${ELK_PORT:-$(get_env_parameter "ELK_PORT" "${CONTAINER_NAME}")}
 
@@ -1127,6 +621,7 @@ set_docspace_params() {
 	CERTIFICATE_PATH=${CERTIFICATE_PATH:-$(get_env_parameter "CERTIFICATE_PATH")}
 	CERTIFICATE_KEY_PATH=${CERTIFICATE_KEY_PATH:-$(get_env_parameter "CERTIFICATE_KEY_PATH")}
 	DHPARAM_PATH=${DHPARAM_PATH:-$(get_env_parameter "DHPARAM_PATH")}
+	EXTRA_HOSTS=${EXTRA_HOSTS:-$(get_env_parameter "EXTRA_HOSTS")}
 }
 
 set_installation_type_data () {
@@ -1151,7 +646,7 @@ download_files () {
 		if [ -z "${GIT_BRANCH}" ]; then
 			DOWNLOAD_URL="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/docker.tar.gz"
 		else
-			DOWNLOAD_URL="https://github.com/${PACKAGE_SYSNAME}/${PRODUCT}-buildtools/archive/${GIT_BRANCH}.tar.gz"
+			DOWNLOAD_URL="https://codeload.github.com/${PACKAGE_SYSNAME}/${PRODUCT}-buildtools/tar.gz/${GIT_BRANCH}"
 			STRIP_COMPONENTS="--strip-components=3 --wildcards */install/docker/*"
 		fi
 
@@ -1248,7 +743,7 @@ install_fluent_bit () {
 		if crontab -l | grep -q "${OPENSEARCH_INDEX}"; then
 			crontab -l | grep -v "${OPENSEARCH_INDEX}" | crontab -
 		fi
-		(crontab -l 2>/dev/null; echo "0 0 */1 * * curl -s -X POST $(get_env_parameter 'ELK_SHEME')://${ELK_HOST:-127.0.0.1}:$(get_env_parameter 'ELK_PORT')/${OPENSEARCH_INDEX}/_delete_by_query -H 'Content-Type: application/json' -d '{\"query\": {\"range\": {\"@timestamp\": {\"lt\": \"now-30d\"}}}}'") | crontab -
+		(crontab -l 2>/dev/null; echo "0 0 */1 * * curl -s -X POST $(get_env_parameter 'ELK_SCHEME')://${ELK_HOST:-127.0.0.1}:$(get_env_parameter 'ELK_PORT')/${OPENSEARCH_INDEX}/_delete_by_query -H 'Content-Type: application/json' -d '{\"query\": {\"range\": {\"@timestamp\": {\"lt\": \"now-30d\"}}}}'") | crontab -
 
 		sed -i "s/OPENSEARCH_HOST/${ELK_HOST:-"${PACKAGE_SYSNAME}-opensearch"}/g" "${BASE_DIR}/config/fluent-bit.conf"
 		sed -i "s/OPENSEARCH_PORT/$(get_env_parameter "ELK_PORT")/g" ${BASE_DIR}/config/fluent-bit.conf
@@ -1266,12 +761,7 @@ install_fluent_bit () {
 install_product () {
 	if [ "$INSTALL_PRODUCT" == "true" ]; then
 		[ "${UPDATE}" = "true" ] && LOCAL_CONTAINER_TAG="$(docker inspect --format='{{index .Config.Image}}' ${CONTAINER_NAME} | awk -F':' '{print $2}')"
-
-		if [ "${UPDATE}" = "true" ] && [ "${LOCAL_CONTAINER_TAG}" != "${DOCKER_TAG}" ]; then
-			docker-compose -f $BASE_DIR/build.yml pull
-			docker-compose -f $BASE_DIR/migration-runner.yml -f $BASE_DIR/identity.yml -f $BASE_DIR/notify.yml -f $BASE_DIR/healthchecks.yml -f ${PROXY_YML} down
-			docker-compose -f $BASE_DIR/${PRODUCT}.yml down
-		fi
+		[ "${UPDATE}" = "true" ] && [ "${LOCAL_CONTAINER_TAG}" != "${DOCKER_TAG}" ] && docker-compose "${COMPOSE_FILES[@]}" down
 
 		reconfigure ENV_EXTENSION ${ENV_EXTENSION}
 		reconfigure IDENTITY_PROFILE "${IDENTITY_PROFILE:-"prod,server"}"
@@ -1292,11 +782,7 @@ install_product () {
 			timeout 30 bash -c "while [ $(docker wait ${PACKAGE_SYSNAME}-migration-runner) -ne 0 ]; do sleep 1; done;" && echo "OK" || echo "FAILED"
 		fi
 	
-		docker-compose -f $BASE_DIR/identity.yml up -d
-		docker-compose -f $BASE_DIR/${PRODUCT}.yml up -d
-		docker-compose -f ${PROXY_YML} up -d
-		docker-compose -f $BASE_DIR/notify.yml up -d
-		docker-compose -f $BASE_DIR/healthchecks.yml up -d
+		docker-compose "${COMPOSE_FILES[@]}" up -d
 
 		if [[ -n "${PREVIOUS_ELK_VERSION}" && "$(get_env_parameter "ELK_VERSION")" != "${PREVIOUS_ELK_VERSION}" ]]; then
 			docker ps -q -f name=${PACKAGE_SYSNAME}-elasticsearch | xargs -r docker stop
@@ -1311,22 +797,17 @@ install_product () {
 		elif [ ! -z "${LETS_ENCRYPT_DOMAIN}" ] && [ ! -z "${LETS_ENCRYPT_MAIL}" ]; then
 		    env ${DHPARAM_PATH:+DHPARAM_PATH="$DHPARAM_PATH"} \
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup "${LETS_ENCRYPT_MAIL}" "${LETS_ENCRYPT_DOMAIN}"
-		#Fix for bug 70537 to ensure proper migration to version 3.0.0
-		fi
-
-		if [ "${UPDATE}" = "true" ] && [ -f "/etc/cron.d/${PRODUCT}-letsencrypt" ]; then
-			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -r
-		elif [[ -n "$CERTIFICATE_KEY_PATH" || -n "$CERTIFICATE_PATH" || -n "$LETS_ENCRYPT_DOMAIN" || -n "$LETS_ENCRYPT_MAIL" ]]; then
+		elif [[ -n "${CERTIFICATE_KEY_PATH}${CERTIFICATE_PATH}${LETS_ENCRYPT_DOMAIN}${LETS_ENCRYPT_MAIL}" ]]; then
 			echo -e "\e[31mERROR:\e[0m Missing required parameters for SSL setup"
 			echo "Run 'bash $BASE_DIR/config/${PRODUCT}-ssl-setup --help' for usage information."
 		fi
+
+		#Fix for bug 70537 to ensure proper migration to version 3.0.0
+		if [ "${UPDATE}" = "true" ] && [ -f "/etc/cron.weekly/${PRODUCT}-letsencrypt" ]; then
+			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -r
+		fi
 	elif [ "$INSTALL_PRODUCT" == "pull" ]; then
-		docker-compose -f $BASE_DIR/identity.yml pull
-		docker-compose -f $BASE_DIR/migration-runner.yml pull
-		docker-compose -f $BASE_DIR/${PRODUCT}.yml pull
-		docker-compose -f ${PROXY_YML} pull
-		docker-compose -f $BASE_DIR/notify.yml pull
-		docker-compose -f $BASE_DIR/healthchecks.yml pull
+		docker-compose "${COMPOSE_FILES[@]}" pull
 	fi
 }
 
@@ -1404,6 +885,7 @@ check_docker_image () {
 	reconfigure INSTALLATION_TYPE ${INSTALLATION_TYPE}
 	reconfigure NETWORK_NAME ${NETWORK_NAME}
 	reconfigure VOLUMES_DIR ${VOLUMES_DIR}
+	reconfigure EXTRA_HOSTS ${EXTRA_HOSTS}
 	
 	reconfigure MYSQL_VERSION ${MYSQL_VERSION}
 	reconfigure ELK_VERSION ${ELK_VERSION}
@@ -1422,12 +904,7 @@ check_docker_image () {
 		[ "$INSTALL_DOCUMENT_SERVER" == "true" ]    && offline_check_docker_image ${BASE_DIR}/ds.yml
 
 		if [ "$INSTALL_PRODUCT" == "true" ]; then
-			offline_check_docker_image ${BASE_DIR}/migration-runner.yml
-			offline_check_docker_image ${BASE_DIR}/identity.yml
-			offline_check_docker_image ${BASE_DIR}/${PRODUCT}.yml
-			offline_check_docker_image ${BASE_DIR}/notify.yml
-			offline_check_docker_image ${BASE_DIR}/healthchecks.yml
-			offline_check_docker_image ${PROXY_YML}
+			printf '%s\n' "${SERVICES[@]}" | xargs -I{} offline_check_docker_image "$BASE_DIR/{}.yml"
 		fi
 	fi
 }
@@ -1467,7 +944,7 @@ services_check_connection () {
 	fi
 	if [[ ! -z "$ELK_HOST" ]]; then
 		establish_conn ${ELK_HOST} "${ELK_PORT:-9200}" "search engine"
-		reconfigure ELK_SHEME "${ELK_SHEME:-http}"
+		reconfigure ELK_SCHEME "${ELK_SCHEME:-http}"
 		reconfigure ELK_HOST ${ELK_HOST}
 		reconfigure ELK_PORT "${ELK_PORT:-9200}"
 	fi

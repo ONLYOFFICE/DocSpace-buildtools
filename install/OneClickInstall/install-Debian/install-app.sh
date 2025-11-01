@@ -46,13 +46,13 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
 		su - postgres -s /bin/bash -c "psql -c \"CREATE DATABASE ${DS_DB_NAME} OWNER ${DS_DB_USER};\""
 	fi
 
-	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/ds-port select "$DS_PORT" | sudo debconf-set-selections
-	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/db-pwd select "$DS_DB_PWD" | sudo debconf-set-selections
-	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/db-user select "$DS_DB_USER" | sudo debconf-set-selections
-	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/db-name select "$DS_DB_NAME" | sudo debconf-set-selections
-	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/jwt-enabled select "${DS_JWT_ENABLED}" | sudo debconf-set-selections
-	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/jwt-secret select "${DS_JWT_SECRET}" | sudo debconf-set-selections
-	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/jwt-header select "${DS_JWT_HEADER}" | sudo debconf-set-selections
+	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/ds-port select "$DS_PORT" | debconf-set-selections
+	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/db-pwd select "$DS_DB_PWD" | debconf-set-selections
+	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/db-user select "$DS_DB_USER" | debconf-set-selections
+	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/db-name select "$DS_DB_NAME" | debconf-set-selections
+	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/jwt-enabled select "${DS_JWT_ENABLED}" | debconf-set-selections
+	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/jwt-secret select "${DS_JWT_SECRET}" | debconf-set-selections
+	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/jwt-header select "${DS_JWT_HEADER}" | debconf-set-selections
 	
 	apt-get install -yq "${ds_pkg_name}"
 fi
@@ -62,12 +62,21 @@ if [ "$MAKESWAP" == "true" ]; then
 fi
 
 if [ "$PRODUCT_INSTALLED" = "false" ]; then
-	echo "${product}" "${product}"/db-pwd select "$MYSQL_SERVER_PASS" | sudo debconf-set-selections
-	echo "${product}" "${product}"/db-user select "$MYSQL_SERVER_USER" | sudo debconf-set-selections
-	echo "${product}" "${product}"/db-name select "$MYSQL_SERVER_DB_NAME" | sudo debconf-set-selections
-	
-	apt-get install -y "${product}" || true #Fix error 'Failed to fetch'
-	apt-get install -y "${product}"
+	echo "${product}" "${product}"/db-host select "$MYSQL_SERVER_HOST" | debconf-set-selections
+	echo "${product}" "${product}"/db-port select "$MYSQL_SERVER_PORT" | debconf-set-selections
+	echo "${product}" "${product}"/db-name select "$MYSQL_SERVER_DB_NAME" | debconf-set-selections
+	echo "${product}" "${product}"/db-user select "$MYSQL_SERVER_USER" | debconf-set-selections
+	echo "${product}" "${product}"/db-pwd select "$MYSQL_SERVER_PASS" | debconf-set-selections
+
+	if apt-get install -y "${product}"; then
+		# Clear the password in debconf for a successful update when using external MySQL
+		if [ "$(echo "GET ${PRODUCT}/db-pwd" | debconf-communicate "$PRODUCT" | awk '{print $2}')" = "$MYSQL_SERVER_PASS" ]; then
+			printf "SET ${product}/db-host\nSET ${product}/db-name\nSET ${product}/db-user\nSET ${product}/db-pwd\nSET ${product}/db-port\n" | debconf-communicate ${product} >/dev/null
+		fi
+	else
+		echo "Error: installation of ${product} failed."
+		exit 1
+	fi
 elif [ "$UPDATE" = "true" ] && [ "$PRODUCT_INSTALLED" = "true" ]; then
 	CURRENT_VERSION=$(dpkg-query -W -f='${Version}' "${product}" 2>/dev/null)
 	AVAILABLE_VERSIONS=$(apt show "${product}" 2>/dev/null | grep -E '^Version:' | awk '{print $2}')

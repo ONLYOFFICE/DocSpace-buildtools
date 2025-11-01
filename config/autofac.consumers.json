@@ -475,6 +475,68 @@
 			  "zoomRedirectUrl": "https://service.teamlab.info/oauth2.aspx"
 			}
 		}
+	},
+	{
+		"type": "ASC.FederatedLogin.LoginProviders.TelegramLoginProvider, ASC.FederatedLogin",
+		"services": [
+			{
+				"type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
+			},
+			{
+				"type": "ASC.FederatedLogin.LoginProviders.TelegramLoginProvider, ASC.FederatedLogin"
+			},
+			{
+				"key": "telegram",
+				"type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
+			},
+			{
+				"key": "telegram",
+				"type": "ASC.FederatedLogin.LoginProviders.TelegramLoginProvider, ASC.FederatedLogin"
+			}
+		],
+		"instanceScope": "perlifetimescope",
+		"parameters": {
+			"name": "telegram",
+			"order": 25,
+			"props": {
+				"telegramBotToken": "",
+				"telegramBotName": ""
+			},
+			"additional": {
+				"telegramAuthTokenLifespan": "20"
+			}
+		}
+	},
+	{
+		"type": "ASC.FederatedLogin.LoginProviders.WeixinLoginProvider, ASC.FederatedLogin",
+		"services": [
+		  {
+			"type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
+		  },
+		  {
+			"type": "ASC.FederatedLogin.LoginProviders.WeixinLoginProvider, ASC.FederatedLogin"
+		  },
+		  {
+			"key": "weixin",
+			"type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
+		  },
+		  {
+			"key": "weixin",
+			"type": "ASC.FederatedLogin.LoginProviders.WeixinLoginProvider, ASC.FederatedLogin"
+		  }
+		],
+		"instanceScope": "perlifetimescope",
+		"parameters": {
+			"name": "weixin",
+			"order": "26",
+			"props": {
+			  "weixinClientId": "",
+			  "weixinClientSecret": ""
+			},
+			"additional": {
+			  "weixinRedirectUrl": "https://service.teamlab.info/oauth2.aspx"
+			}
+		}
 	}
   ]
 }

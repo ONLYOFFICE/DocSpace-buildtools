@@ -8,7 +8,7 @@ run_script install/common/build-backend.sh --srcpath %{_builddir}
 run_script install/common/publish-backend.sh --srcpath %{_builddir}/server
 run_script install/common/plugins-build.sh %{_builddir}/plugins
 run_script install/common/systemd/build.sh -pm "rpm"
-run_script install/common/packages-build.sh rpm %{_builddir} %{product}
+run_script install/common/packages-build.sh rpm %{_builddir} %{product} "%{version}.%{release}"
 
 find %{_builddir}/server/publish/ \
      %{_builddir}/server/ASC.Migration.Runner \

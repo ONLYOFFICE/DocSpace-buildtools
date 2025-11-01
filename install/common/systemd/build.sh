@@ -74,6 +74,8 @@ SERVICE_NAME=(
 	login
 	healthchecks
 	sdk
+	management
+	telegram
 	)
 
 reassign_values (){
@@ -195,6 +197,18 @@ reassign_values (){
         EXEC_FILE="server.js"
         DEPENDENCY_LIST=""
     ;;
+	management )
+		SERVICE_PORT="5015"
+		WORK_DIR="${BASE_DIR}/products/ASC.Management/management/"
+		EXEC_FILE="server.js"
+		DEPENDENCY_LIST=""
+	;;
+	telegram )
+		SERVICE_PORT="5075"
+		WORK_DIR="${BASE_DIR}/services/ASC.TelegramService/"
+		EXEC_FILE="ASC.TelegramService.dll"
+		CORE_EVENT_BUS=" --core:eventBus:subscriptionClientName=asc_event_bus_telegram_queue"
+	;;
   esac
   SERVICE_NAME="$1"
   RESTART="always"

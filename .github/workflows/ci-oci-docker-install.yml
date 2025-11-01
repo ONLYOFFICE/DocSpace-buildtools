@@ -2,25 +2,25 @@ name: Install OneClickInstall Docker
 
 on:
   schedule:
-    - cron: '00 20 * * 0'
+    - cron: "00 20 * * 0"
   push:
     branches:
-      - 'hotfix/**'
-      - 'release/**'
-      - 'develop'
+      - "hotfix/**"
+      - "release/**"
+      - "develop"
     paths:
-      - '.github/workflows/ci-oci-docker-install.yml'
-      - 'install/OneClickInstall/install-Docker.sh'
-      - 'install/docker/*.yml'
+      - ".github/workflows/ci-oci-docker-install.yml"
+      - "install/OneClickInstall/install-Docker.sh"
+      - "install/docker/*.yml"
   workflow_dispatch:
     inputs:
       testing:
-        description: 'Use 4testing images'
+        description: "Use 4testing images"
         required: true
         default: true
         type: boolean
       offline:
-        description: 'Publish 4testing offline archive'
+        description: "Publish 4testing offline archive"
         required: true
         default: false
         type: boolean
@@ -32,6 +32,7 @@ jobs:
       - name: Free Disk Space
         run: |
           sudo docker image prune --all --force
+          sudo rm -rf /usr/local/lib/android || true
 
       - name: Login to DockerHub
         uses: docker/login-action@v3
@@ -66,7 +67,7 @@ jobs:
               esac;
               printf "%-50s ${color}%s\033[0m\n" "{}:" "$status";
           '
-      
+
       - name: Print logs for crashed container
         run: |
           docker ps --all --format "{{.Names}}" | xargs -I {} sh -c '
@@ -108,6 +109,13 @@ jobs:
         run: |
           INSTALL_PATH=${{ github.workspace }}/install
 
+          for repo in onlyoffice/$( [ "${{ github.ref_name }}" = "master" ] && echo documentserver || echo 4testing-documentserver ) onlyoffice/$( [ "${{ github.ref_name }}" = "master" ] && echo documentserver-de || echo 4testing-documentserver-de ); do
+            tag=$(curl -s "https://registry.hub.docker.com/v2/repositories/${repo}/tags?page_size=100" \
+                  | jq -r '.results[].name' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -Vr | head -n1)
+            [ -z "$tag" ] && exit 1
+            docker pull "${repo}:${tag}"
+          done
+
           docker images --format "{{.Repository}}:{{.Tag}}" | grep "4testing-" | xargs -I{} bash -c '
             docker tag "$1" $(echo "${1/4testing-/}" | sed -E "s/([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+/\1/")
             docker rmi "$1"
@@ -116,18 +124,20 @@ jobs:
           sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\).*"$~\1true"~' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
 
           echo "Creating offline self-extracting archive..."
+          docker save $(docker images --format "{{.Repository}}:{{.Tag}}" | grep -E 'onlyoffice/documentserver') | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docs_images.tar.xz
+          docker rmi $(docker images --format "{{.Repository}}:{{.Tag}}" | grep -E 'onlyoffice/documentserver')
           docker save $(docker images --format "{{.Repository}}:{{.Tag}}") | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docker_images.tar.xz
           cd ${INSTALL_PATH}/docker && tar -czvf ${INSTALL_PATH}/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
-          
+
           tar -cvf ${INSTALL_PATH}/offline-docspace.tar \
-          -C "${INSTALL_PATH}/OneClickInstall" install-Docker.sh \
-          -C "${INSTALL_PATH}" docker_images.tar.xz \
+          -C "${INSTALL_PATH}/OneClickInstall" install-Docker.sh install-Docker-args.sh \
+          -C "${INSTALL_PATH}" docker_images.tar.xz docs_images.tar.xz \
           -C "${INSTALL_PATH}" docker.tar.gz
-          rm -rf ${INSTALL_PATH}/docker_images.tar.xz ${INSTALL_PATH}/docker.tar.gz
+          rm -rf ${INSTALL_PATH}/docker_images.tar.xz ${INSTALL_PATH}/docs_images.tar.xz ${INSTALL_PATH}/docker.tar.gz
 
           echo "ARTIFACT_NAME=${ARTIFACT_NAME:=4testing-offline-docspace-installation.sh}" >> $GITHUB_ENV
           cat ${INSTALL_PATH}/common/self-extracting.sh ${INSTALL_PATH}/offline-docspace.tar > ${INSTALL_PATH}/${ARTIFACT_NAME}
-          chmod +x ${INSTALL_PATH}/${ARTIFACT_NAME} 
+          chmod +x ${INSTALL_PATH}/${ARTIFACT_NAME}
 
       - name: Configure AWS Credentials
         if: ${{ success() && github.event.inputs.offline == 'true' }}
@@ -136,7 +146,7 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_OCI }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_OCI }}
           aws-region: us-east-1
-      
+
       - name: Upload 4testing offline self-extracting archive
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |

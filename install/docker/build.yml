@@ -118,6 +118,13 @@ services:
       target: sdk
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-sdk:${DOCKER_TAG}"
 
+  onlyoffice-management:
+    build:
+      context:  ./
+      dockerfile: "${DOCKERFILE}"
+      target: management
+    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-management:${DOCKER_TAG}"
+
   onlyoffice-login:
     build:
       context:  ./
@@ -138,6 +145,13 @@ services:
       dockerfile: "${DOCKERFILE}"
       target: onlyoffice-migration-runner
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-migration-runner:${DOCKER_TAG}"
+
+  onlyoffice-telegram:
+    build:
+      context: ./
+      dockerfile: "${DOCKERFILE}"
+      target: telegram
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-telegram:${DOCKER_TAG}"
 
   onlyoffice-healthchecks:
     build:
@@ -160,3 +174,23 @@ services:
       target: identity-api
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-identity-api:${DOCKER_TAG}"
 
+  onlyoffice-dotnet-services:
+    build:
+      context:  ./
+      dockerfile: "${DOCKERFILE}"
+      target: dotnet-services
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-dotnet:${DOCKER_TAG}"
+
+  onlyoffice-java-services:
+    build:
+      context:  ./
+      dockerfile: "${DOCKERFILE}"
+      target: java-services
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-java:${DOCKER_TAG}"
+
+  onlyoffice-node-services:
+    build:
+      context:  ./
+      dockerfile: "${DOCKERFILE}"
+      target: node-services
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-node:${DOCKER_TAG}"

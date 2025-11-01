@@ -19,23 +19,30 @@ if [ ! -f "${OPENRESTY}/onlyoffice-proxy-ssl.conf.template" -a ! -f "${OPENRESTY
 fi
 
 help(){
-  echo ""
+  echo 
   echo "This script provided to automatically setup SSL Certificates for DocSpace"
   echo "Automatically get Let's Encrypt SSL Certificates:"
   echo "  docspace-ssl-setup EMAIL DOMAIN"
   echo "    EMAIL         Email used for registration and recovery contact."
-  echo "                  Use comma to register multiple emails, ex:"
-  echo "                  u1@example.com,u2@example.com."
-  echo "    DOMAIN        Domain name to apply"
-  echo "                  Use comma to register multiple domains, ex:"
-  echo "                  example.com,s1.example.com,s2.example.com."
-  echo ""
+  echo "                  Use commas to specify multiple emails."
+  echo "    DOMAIN        Domain name(s) to apply the certificate to."
+  echo "                  Multiple domains: use commas to specify several domains."
+  echo "                  Wildcard domains (no auto-renew): require DNS-01 challenge and ability to create DNS TXT records."
+  echo 
+  echo "    Example:"
+  echo "      docspace-ssl-setup u1@example.com,u2@example.com example.com,s1.example.com,s2.example.com"
+  echo "      docspace-ssl-setup support@example.com example.com,*.example.com"
+  echo 
   echo "Using your own certificates via the -f or --file parameter:"
   echo "  docspace-ssl-setup --file DOMAIN CERTIFICATE [PRIVATEKEY]"
   echo "    DOMAIN        Main domain name to apply."
   echo "    CERTIFICATE   Path to the certificate file for the domain (PEM, PFX, DER, CER, PKCS#7)."
   echo "    PRIVATEKEY    (Optional) Path to private key (required unless PFX)."
-  echo ""
+  echo "                  Required for PEM, DER, and CER formats."
+  echo "    Example:"
+  echo "      docspace-ssl-setup --file example.com /etc/ssl/example.crt /etc/ssl/example.key"
+  echo "      docspace-ssl-setup --file example.com /etc/ssl/example.pfx"
+  echo 
   echo "Return to the default proxy configuration using the -d or --default parameter:"
   echo "  docspace-ssl-setup --default"
   echo ""
@@ -132,7 +139,8 @@ case $1 in
     if [ "$#" -ge "2" ]; then
       MAIL=$1
       DOMAINS=$2
-      DOMAIN=$(cut -d ',' -f 1 <<< "$DOMAINS")
+      DOMAIN=${DOMAINS%%,*}; DOMAIN=${DOMAIN#\*\.}
+      [[ ,$DOMAINS, == *,$DOMAIN,* ]] || DOMAINS+=",${DOMAIN}"
       LETSENCRYPT_ENABLE="true"
 
       # Install certbot if not already installed
@@ -147,9 +155,13 @@ case $1 in
 
       echo "Generating Let's Encrypt SSL Certificates..."
 
-      # Request and generate Let's Encrypt SSL certificate
-      echo certbot certonly --expand --webroot -w ${WEBROOT_PATH} --key-type rsa --cert-name ${PRODUCT} --noninteractive --agree-tos --email ${MAIL} -d ${DOMAINS[@]} > /var/log/le-start.log
-      certbot certonly --expand --webroot -w ${WEBROOT_PATH} --key-type rsa --cert-name ${PRODUCT} --noninteractive --agree-tos --email ${MAIL} -d ${DOMAINS[@]} > /var/log/le-new.log
+      if [[ "${DOMAINS}" =~ \*\.[^,]* ]]; then
+        CERTBOT_CMD=(certbot certonly --manual --preferred-challenges dns --key-type rsa --cert-name "${PRODUCT}" --agree-tos --email "${MAIL}" -d "${DOMAINS[@]}")
+      else
+        CERTBOT_CMD=(certbot certonly --expand --webroot -w "${WEBROOT_PATH}" --key-type rsa --cert-name "${PRODUCT}" --noninteractive --agree-tos --email "${MAIL}" -d "${DOMAINS[@]}")
+      fi
+      echo "${CERTBOT_CMD[@]}" > /var/log/le-start.log
+      "${CERTBOT_CMD[@]}" | tee /var/log/le-new.log
     else
       help
     fi
@@ -185,9 +197,9 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
             echo "echo \"[\$(date '+%F %T')] START /etc/cron.weekly/${PRODUCT}-renew-letsencrypt\" >> \"/var/log/${PRODUCT}-renew-letsencrypt.log\"" >> ${CRON_FILE}
             echo "certbot renew 2>&1 | tee -a /var/log/${PRODUCT}-renew-letsencrypt.log" >> ${CRON_FILE}
             if [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ]; then
-              echo 'systemctl restart openresty' >> ${DIR}/${PRODUCT}-renew-letsencrypt
+              echo 'systemctl restart openresty' >> "${CRON_FILE}"
             else 
-              echo 'service openresty restart' >> ${DIR}/${PRODUCT}-renew-letsencrypt
+              echo 'service openresty restart' >> "${CRON_FILE}"
             fi
             chmod a+x "${CRON_FILE}"
         else

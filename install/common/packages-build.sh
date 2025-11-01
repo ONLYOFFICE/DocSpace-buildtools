@@ -5,7 +5,8 @@ set -x
 PACKAGE_TYPE=$1
 BUILD_PATH=$2
 PRODUCT=$3
-CLENT_PATH=${BUILD_PATH}/client
+VERSION=$4
+CLIENT_PATH=${BUILD_PATH}/client
 SERVER_PATH=${BUILD_PATH}/server
 BUILDTOOLS_PATH=${BUILD_PATH}/buildtools
 
@@ -17,7 +18,7 @@ done
 find ${BUILD_PATH}/**/publish/ \
         -depth -type f -regex '.*\(eslintrc.*\|npmignore\|gitignore\|gitattributes\|gitmodules\|un~\|DS_Store\)' -exec rm -f {} \;
 find ${BUILDTOOLS_PATH}/config -type f -regex '.*\.\(test\|dev\)\..*' -delete
-rm -f ${BUILDTOOLS_PATH}/config/nginx/onlyoffice-login.conf
+rm -f ${BUILDTOOLS_PATH}/config/nginx/onlyoffice-{login,management}.conf
 
 # Renaming files
 find ${BUILDTOOLS_PATH}/install/common -type f -exec rename -f -v "s/product([^\/]*)$/${PRODUCT}\$1/g" {} ';'
@@ -41,13 +42,14 @@ json -I -f "${BUILDTOOLS_PATH}/config/appsettings.json" \
      -e "this['debug-info'].enabled=\"false\"" \
      -e "this.web.samesite=\"None\"" \
      -e "this.core.oidc.disableValidateToken=\"false\"" \
-     -e "this.core.oidc.showPII=\"false\""
+     -e "this.core.oidc.showPII=\"false\"" \
+     -e "this.version.number=\"${VERSION}\""
 json -I -f "${BUILDTOOLS_PATH}/config/apisystem.json" \
     -e "this.core.notify.postman=\"services\""
-json -I -f "${CLENT_PATH}/public/scripts/config.json" \
+json -I -f "${CLIENT_PATH}/public/scripts/config.json" \
     -e "this.wrongPortalNameUrl=\"\""
-sed 's_\(minlevel=\)"[^"]*"_\1"Warn"_g' -i "${BUILDTOOLS_PATH}/config/nlog.config"
-sed 's/teamlab.info/onlyoffice.com/g' -i ${BUILDTOOLS_PATH}/config/autofac.consumers.json
+sed -i '/ZiggyCreatures/! s_\(minlevel=\)"[^"]*"_\1"Warn"_g' "${BUILDTOOLS_PATH}/config/nlog.config"
+sed -i '/weixinRedirectUrl/!s/teamlab.info/onlyoffice.com/g' ${BUILDTOOLS_PATH}/config/autofac.consumers.json
 
 # Configuring proxy and router
 sed -e 's_etc/nginx_etc/openresty_g' \
@@ -65,8 +67,7 @@ sed -e '/.pid/d' \
     -e 's_etc/nginx_etc/openresty_g' \
     -e 's/\.log/-openresty.log/g' \
     -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/templates/nginx.conf.template
-mv -f ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy-ssl.conf ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy-ssl.conf.template
-cp -rf ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy.conf ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy.conf.template
+rename -f -v 's/\.conf$/.conf.template/' ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy*.conf
 
 # Configuring fluent-bit
 sed -i "s#\(/var/log/onlyoffice/\)#\1${PRODUCT}/#" ${BUILDTOOLS_PATH}/install/docker/config/fluent-bit.conf 

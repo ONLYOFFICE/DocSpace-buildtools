@@ -1,0 +1,38 @@
+{
+    "core": {
+        "base-domain": "localhost",
+        "cors": "*",
+        "notify": {
+            "postman": "log",
+            "from": "Cloud Office Applications"
+        }
+    },
+    "apisystem" : {
+        "url" : "http://localhost:8092/apisystem"
+    },
+    "auth" : {
+        "allowskip" : {
+            "default" : false
+        }
+    },
+    "regions": {
+        "us": {
+            "ConnectionStrings": {
+                "default": {
+                    "name": "default",
+                    "connectionString": "Server=localhost;Database=docspace;User ID=dev;Password=dev;Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;AllowPublicKeyRetrieval=True;ConnectionReset=false",
+                    "providerName": "MySql.Data.MySqlClient"
+                }
+            }
+        },
+        "eu": {
+            "ConnectionStrings": {
+                "default": {
+                    "name": "default",
+                    "connectionString": "Server=localhost;Database=docspace;User ID=dev;Password=dev;Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;AllowPublicKeyRetrieval=True;ConnectionReset=false",
+                    "providerName": "MySql.Data.MySqlClient"
+                }
+            }
+        }
+    }
+}

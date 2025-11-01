@@ -20,7 +20,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 [Run]
 Filename: "{#BASE_DIR}\bin\mysqld.exe"; Parameters: "--initialize-insecure"; Flags: runhidden waituntilterminated
 Filename: "cmd"; Parameters: "/C move /Y ""{tmp}\my.ini"" ""{#DATA_DIR}\my.ini"""; Flags: runhidden waituntilterminated
-Filename: "{#BASE_DIR}\bin\mysqld.exe"; Parameters: "--install MySQL84"; Flags: runhidden waituntilterminated
+Filename: "{#BASE_DIR}\bin\mysqld.exe"; Parameters: "--install MySQL84 --defaults-file=""{#DATA_DIR}\my.ini"""; Flags: runhidden waituntilterminated
 Filename: "net"; Parameters: "start MySQL84"; Flags: runhidden waituntilterminated
 Filename: "{#BASE_DIR}\bin\mysql.exe"; Parameters: "-u root -e ""ALTER USER 'root'@'localhost' IDENTIFIED BY '{param:DB_PWD}';"""; Flags: runhidden waituntilterminated
 
