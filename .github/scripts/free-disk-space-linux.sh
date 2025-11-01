@@ -65,7 +65,6 @@ cleanPackages() {
   $APT autoremove || true
   $APT clean || true
   sudo rm -rf /var/lib/apt/lists/* /var/cache/apt/* || true
-=======
 : "${CLEAN_DEV_CACHES:=1}" # also remove dev caches (~/.cache, npm, pip, cargo, ...)
 
 # ======= Utils =======
@@ -85,7 +84,6 @@ cleanPackages(){
   sudo rm -rf /var/lib/apt/lists/* /var/cache/apt/* || true
   printLine "="; echo "Top-20 packages by size after cleanup:"
   dpkg-query -Wf='${Installed-Size}\t${Package}\n' | sort -n | tail -n 20
->>>>>>> release/v3.5.0
 }
 
 cleanDocker() {
