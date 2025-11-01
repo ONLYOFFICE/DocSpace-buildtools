@@ -105,29 +105,6 @@ cleanSwap() {
 }
 
 removeDirs() {
-<<<<<<< HEAD
-  local dirs=(
-    /usr/local/aws-sam-cli /usr/local/julia* /usr/local/lib/android
-    /usr/local/share/chromedriver-* /usr/local/share/chromium
-    /usr/local/share/cmake-* /usr/local/share/edge_driver
-    /usr/local/share/emacs /usr/local/share/gecko_driver
-    /usr/local/share/icons /usr/local/share/powershell
-    /usr/local/share/vcpkg /usr/local/share/vim
-    /usr/share/apache-maven-* /usr/share/gradle-*
-    /usr/share/kotlinc /usr/share/miniconda /usr/share/php
-    /usr/share/ri /usr/share/swift
-    /usr/local/bin/azcopy /usr/local/bin/bicep
-    /usr/local/bin/cmake* /usr/local/bin/cpack /usr/local/bin/ctest
-    /usr/local/bin/helm /usr/local/bin/kind /usr/local/bin/kustomize
-    /usr/local/bin/minikube /usr/local/bin/packer /usr/local/bin/phpunit
-    /usr/local/bin/pulumi* /usr/local/bin/stack /usr/local/.ghcup
-    /opt/az /usr/share/az_* /usr/local/lib/node_modules
-    /opt/microsoft/powershell /opt/hostedtoolcache/*
-  )
-  for d in "${dirs[@]}"; do
-    rm_rf "$d"
-  done
-=======
   if [[ "${VBOX_SAFE}" == "1" ]]; then
     rm_rf \
       /opt/google/chrome /opt/microsoft/msedge /usr/lib/firefox* \
@@ -151,21 +128,10 @@ removeDirs() {
       /usr/local/bin/{azcopy,bicep,cmake*,cpack,ctest,helm,kind,kustomize,minikube,packer,phpunit,pulumi*,stack,node,npm} \
       /usr/local/lib/node_modules /opt/hostedtoolcache/*
   fi
->>>>>>> release/v3.5.0
   wait
 }
 
 cleanLogsTmp() {
-<<<<<<< HEAD
-  sudo rm -rf /var/log/journal/* /var/log/*.log || true
-  sudo find /var/log -type f -exec truncate -s 0 {} \; 2>/dev/null || true
-  rm_rf /tmp/* /var/tmp/*
-  wait
-}
-
-cleanDevCaches() {
-  rm_rf "$HOME/.cache" "$HOME/.npm" "$HOME/.yarn" "$HOME/.cargo/registry" "$HOME/.cargo/git" \
-=======
   sudo bash -c '
     rm -rf /var/log/journal/* /var/log/*.log /tmp/* /var/tmp/*;
     find /var/log -type f -exec truncate -s 0 {} +
@@ -175,56 +141,24 @@ cleanDevCaches() {
 cleanDevCaches() {
   rm_rf "$HOME/.cache" "$HOME/.npm" "$HOME/.yarn" \
         "$HOME/.cargo/registry" "$HOME/.cargo/git" \
->>>>>>> release/v3.5.0
         "$HOME/.gradle" "$HOME/.m2/repository" "$HOME/.pip/cache"
   wait
 }
 
-<<<<<<< HEAD
-topHogs() {
-  du -h --max-depth=1 /usr /opt /var /home 2>/dev/null | sort -rh | head -n 20
-}
-
-# ======= Run =======
-AVAILABLE_INITIAL=$(getAvailableSpace)
-
-printLine "="
-echo "BEFORE CLEAN-UP"
-df -h
-printLine "="
-[[ "$SHOW_TOP_HOGS" == "1" ]] && topHogs
-
-pids=()
-
-[[ "$CLEAN_PACKAGES"   == "1" ]] && { ( execAndMeasure cleanPackages  "Packages"   ) & pids+=($!); }
-=======
 # ======= Run =======
 AVAILABLE_INITIAL=$(getAvailableSpace)
 printLine "="; echo "BEFORE CLEAN-UP"; df -h; printLine "="
 [[ "$SHOW_TOP_HOGS" == "1" ]] && topHogs
 pids=()
 [[ "$CLEAN_PACKAGES" == "1" ]] && execAndMeasure cleanPackages "Packages"
->>>>>>> release/v3.5.0
 [[ "$CLEAN_DOCKER"     == "1" ]] && { ( execAndMeasure cleanDocker    "Docker"     ) & pids+=($!); }
 [[ "$CLEAN_SWAP"       == "1" ]] && { ( execAndMeasure cleanSwap      "Swap"       ) & pids+=($!); }
 [[ "$CLEAN_DIRS"       == "1" ]] && { ( execAndMeasure removeDirs     "Dirs"       ) & pids+=($!); }
 [[ "$CLEAN_LOGS"       == "1" ]] && { ( execAndMeasure cleanLogsTmp   "Logs/tmp"   ) & pids+=($!); }
 [[ "$CLEAN_DEV_CACHES" == "1" ]] && { ( execAndMeasure cleanDevCaches "Dev caches" ) & pids+=($!); }
-<<<<<<< HEAD
-
-for pid in "${pids[@]}"; do
-  wait "$pid"
-done
-
-printLine "="
-echo "AFTER CLEAN-UP"
-df -h
-printLine "="
-=======
 wait "${pids[@]}"
 
 printLine "="; echo "AFTER CLEAN-UP"; df -h; printLine "="
->>>>>>> release/v3.5.0
 [[ "$SHOW_TOP_HOGS" == "1" ]] && topHogs
 
 printSavedSpace "$AVAILABLE_INITIAL" "TOTAL"
