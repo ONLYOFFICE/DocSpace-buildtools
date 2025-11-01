@@ -623,18 +623,18 @@ product_configuration(){
 # Function below checks if there is a connection to the external service. 0 - OK, connection established
 check_connection_external_services() {
 	exec {FD}<> /dev/tcp/$1/$2 && exec {FD}>&-
-	HOST_RESPONCE=$?
+	HOST_RESPONSE=$?
 
-	if [[ $HOST_RESPONCE -ne 0 ]]; then
+	if [[ $HOST_RESPONSE -ne 0 ]]; then
 		echo -e "$3 external server is not responding: $1:$2"
-		return $HOST_RESPONCE
+		return $HOST_RESPONSE
 	fi
 
-	return $HOST_RESPONCE
+	return $HOST_RESPONSE
 }
 
 stop_services() {
-	echo -n "Stoping services... "
+	echo -n "Stopping services... "
 	systemctl stop "${SERVICES_LIST[@]}" 'ds-*.service' 2>&1
 	echo "OK"
 }
