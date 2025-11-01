@@ -9,9 +9,6 @@ export LC_ALL=C
 export DEBIAN_FRONTEND=noninteractive
 
 # ======= Configurable flags =======
-: "${DRY_RUN:=0}"          # 1 = dry run (don't delete anything)
-: "${SHOW_TOP_HOGS:=0}"    # 1 = run du to find largest dirs
-: "${CLEAN_PACKAGES:=1}"   # remove big preinstalled packages
 : "${VBOX_SAFE:=0}"        # 1 = keep VirtualBox deps
 : "${SHOW_TOP_HOGS:=0}"    # 1 = run du to find largest dirs
 : "${CLEAN_PACKAGES:=0}"   # remove big preinstalled packages
@@ -19,52 +16,6 @@ export DEBIAN_FRONTEND=noninteractive
 : "${CLEAN_SWAP:=1}"       # disable and delete swapfile
 : "${CLEAN_DIRS:=1}"       # remove large unused dirs/binaries
 : "${CLEAN_LOGS:=1}"       # truncate logs, clean /tmp
-: "${CLEAN_DEV_CACHES:=0}" # also remove dev caches (~/.cache, npm, pip, cargo, …)
-
-# ======= Utils =======
-printLine() { printf '%*s\n' 80 | tr ' ' "$1"; }
-
-getAvailableSpace() {
-  df --output=avail -B1 -l / | awk 'NR==2{print $1}'
-}
-formatByteCount() {
-  numfmt --to=iec-i --suffix=B "$1"
-}
-printSavedSpace() {
-  local before=$1 title=$2 after saved
-  after=$(getAvailableSpace)
-  saved=$((after - before))
-  ((saved < 0)) && saved=0
-  printLine "*"
-  echo "=> ${title}: Saved $(formatByteCount "$saved")"
-  printLine "*"
-}
-execAndMeasure() {
-  local fn=$1 title=$2
-  local before; before=$(getAvailableSpace)
-  $fn
-  printSavedSpace "$before" "$title"
-}
-rm_rf() {
-  printf '[DEL] %s\n' "$*"
-  if [[ "$DRY_RUN" != "1" ]]; then
-    sudo rm -rf "$@" &
-  fi
-}
-
-# ======= Cleanup functions =======
-cleanPackages() {
-  local pkgs=(
-    '^aspnetcore-.*' '^dotnet-.*' '^llvm-.*' '^mongodb-.*'
-    'firefox' 'libgl1-mesa-dri' 'mono-devel' 'php.*'
-    google-chrome-stable microsoft-edge-stable
-    azure-cli google-cloud-sdk google-cloud-cli powershell
-  )
-  APT="sudo apt-get -o DPkg::Lock::Timeout=60 -y -qq"
-  $APT remove --fix-missing "${pkgs[@]}" || true
-  $APT autoremove || true
-  $APT clean || true
-  sudo rm -rf /var/lib/apt/lists/* /var/cache/apt/* || true
 : "${CLEAN_DEV_CACHES:=1}" # also remove dev caches (~/.cache, npm, pip, cargo, ...)
 
 # ======= Utils =======
