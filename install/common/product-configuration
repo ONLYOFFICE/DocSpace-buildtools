@@ -568,6 +568,11 @@ setup_rabbitmq() {
 
 	if [ $1 == "LOCAL_RABBITMQ_SERVER" ]; then
 		systemctl enable rabbitmq-server >/dev/null 2>&1
+		RABBITMQ_ENV="/etc/rabbitmq/rabbitmq-env.conf"
+		printf '%s\n' 'listeners.tcp.default = 127.0.0.1:5672' > /etc/rabbitmq/conf.d/99-bind-loopback.conf
+		grep -q '^ERL_EPMD_ADDRESS=' "$RABBITMQ_ENV" && sed -ri 's|^ERL_EPMD_ADDRESS=.*|ERL_EPMD_ADDRESS=127.0.0.1|' "$RABBITMQ_ENV" || echo 'ERL_EPMD_ADDRESS=127.0.0.1' >> "$RABBITMQ_ENV"
+		grep -q '^RABBITMQ_SERVER_ERL_ARGS=' "$RABBITMQ_ENV" && sed -ri 's|^RABBITMQ_SERVER_ERL_ARGS=.*|RABBITMQ_SERVER_ERL_ARGS="-kernel inet_dist_use_interface {127,0,0,1}"|' "$RABBITMQ_ENV" \
+			|| echo 'RABBITMQ_SERVER_ERL_ARGS="-kernel inet_dist_use_interface {127,0,0,1}"' >> "$RABBITMQ_ENV"
 		systemctl restart rabbitmq-server
 	fi
 
