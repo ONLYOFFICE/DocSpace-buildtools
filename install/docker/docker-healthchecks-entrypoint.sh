@@ -33,6 +33,7 @@ STUDIO_HOST=${STUDIO_HOST:-"${CONTAINER_PREFIX}studio:${SERVICE_PORT}"}
 SOCKET_HOST=${SOCKET_HOST:-"${CONTAINER_PREFIX}socket:${SERVICE_PORT}"}
 SSOAUTH_HOST=${SSOAUTH_HOST:-"${CONTAINER_PREFIX}ssoauth:${SERVICE_PORT}"}
 TELEGRAM_HOST=${TELEGRAM_HOST:-"${CONTAINER_PREFIX}telegram:${SERVICE_PORT}"}
+AI_HOST=${AI_HOST:-"${CONTAINER_PREFIX}ai:${SERVICE_PORT}"}
 
 sed -i "s/\(\"Default\": \).*/\1\"${LOG_LEVEL:-"warning"}\"/" "${PATH_TO_CONF}/appsettings.json"
 sed -i "/\"Name\": \"ASC.ApiCache\"/,/{/d" ${PATH_TO_CONF}/appsettings.json
@@ -50,5 +51,7 @@ sed -i "s!localhost:5003!${STUDIO_HOST}!g" ${PATH_TO_CONF}/appsettings.json
 sed -i "s!localhost:9899!${SOCKET_HOST}!g" ${PATH_TO_CONF}/appsettings.json
 sed -i "s!localhost:9834!${SSOAUTH_HOST}!g" ${PATH_TO_CONF}/appsettings.json
 sed -i "s!localhost:5075!${TELEGRAM_HOST}!g" ${PATH_TO_CONF}/appsettings.json
+sed -i "s!localhost:5157!${AI_HOST}!g" ${PATH_TO_CONF}/appsettings.json
+sed -i "s!localhost:5124!${AI_SERVICE_HOST}!g" ${PATH_TO_CONF}/appsettings.json
      
 dotnet ${RUN_DLL} --urls=${URLS} 

@@ -28,6 +28,9 @@ for /D %%d in ("%PathToRepository%\*") do (
         popd
         
         set "folderName=%%~nxd"
+        if /I "!folderName!"=="archives" (
+            set "folderName=zip-archives"
+        )
         set "distDir=%%d\dist"
         set "targetDir=%PathToAppFolder%\!folderName!"
         echo !distDir!
