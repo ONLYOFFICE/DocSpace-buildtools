@@ -164,8 +164,8 @@ main() {
   check_hw
   install_docspace
   sleep 180
-  ports_audit
   services_logs
+  ports_audit
   healthcheck_systemd_services
 }
 

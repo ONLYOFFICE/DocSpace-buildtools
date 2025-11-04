@@ -366,6 +366,8 @@ setup_docs() {
 		DS_CONF_DIR="/etc/${PACKAGE_SYSNAME}/documentserver"
 		DOCUMENT_SERVER_PORT=$(grep -oP '(?<=:)\d+(?=\s)' ${DS_CONF_DIR}/nginx/ds.conf)
 		sed 's/\(listen .*:\)\([0-9]\{2,5\}\b\)\( default_server\)\?\(;\)/\1'${DOCUMENT_SERVER_PORT}'\3\4/' -i ${DS_CONF_DIR}/nginx/ds.conf 
+		grep -qE '^\s*listen\s+0\.0\.0\.0:' ${DS_CONF_DIR}/nginx/ds.conf && sed -ri 's|(^\s*listen\s+)0\.0\.0\.0:|\1127.0.0.1:|' ${DS_CONF_DIR}/nginx/ds.conf
+		grep -qE '^\s*listen\s+\[::\]:' ${DS_CONF_DIR}/nginx/ds.conf && sed -ri 's|(^\s*listen\s+)\[::\]:|\1[::1]:|' ${DS_CONF_DIR}/nginx/ds.conf
 		: "${DOCUMENT_SERVER_JWT_SECRET:=$(json -f ${DS_CONF_DIR}/local.json services.CoAuthoring.secret.inbox.string 2>/dev/null)}"
 		: "${DOCUMENT_SERVER_JWT_HEADER:=$(json -f ${DS_CONF_DIR}/local.json services.CoAuthoring.token.inbox.header 2>/dev/null)}"
 
@@ -439,6 +441,9 @@ change_elasticsearch_config(){
 	grep -qE "^[^#]*-Xms[0-9]g" "${ELASTIC_SEARCH_JAVA_CONF_PATH}" && sed -i "s/-Xms[0-9]g/-Xms${HEAP}/" "${ELASTIC_SEARCH_JAVA_CONF_PATH}" || echo "-Xms${HEAP}" >> "${ELASTIC_SEARCH_JAVA_CONF_PATH}"
 	grep -qE "^[^#]*-Xmx[0-9]g" "${ELASTIC_SEARCH_JAVA_CONF_PATH}" && sed -i "s/-Xmx[0-9]g/-Xmx${HEAP}/" "${ELASTIC_SEARCH_JAVA_CONF_PATH}" || echo "-Xmx${HEAP}" >> "${ELASTIC_SEARCH_JAVA_CONF_PATH}"
 
+	grep -q "^network.host:" "$ELASTIC_SEARCH_CONF_PATH" && sed -i -E "s|^(network\.host:).*|\1 127.0.0.1|" "$ELASTIC_SEARCH_CONF_PATH" || echo "network.host: 127.0.0.1" >> "$ELASTIC_SEARCH_CONF_PATH"
+	grep -q "^discovery.type:" "$ELASTIC_SEARCH_CONF_PATH" && sed -i -E "s|^(discovery\.type:).*|\1 single-node|" "$ELASTIC_SEARCH_CONF_PATH" || echo "discovery.type: single-node" >> "$ELASTIC_SEARCH_CONF_PATH"
+
 	[ -d /etc/opensearch/ ] && chmod g+ws /etc/opensearch/
 }
 
@@ -487,6 +492,7 @@ setup_dashboards() {
 	# set basePath variable to get access to Dashboards from a remote host
 	sed 's_.*\(server.basePath:\).*_\1 "/dashboards"_' -i ${DASHBOARDS_CONF_PATH}
 	sed 's_.*\(server.rewriteBasePath:\).*_\1 "true"_' -i ${DASHBOARDS_CONF_PATH}
+	grep -q '^server.host:' ${DASHBOARDS_CONF_PATH} && sed -ri 's|^server\.host:.*|server.host: "127.0.0.1"|' ${DASHBOARDS_CONF_PATH} || echo 'server.host: "127.0.0.1"' >> ${DASHBOARDS_CONF_PATH}
 
 	systemctl enable opensearch-dashboards >/dev/null 2>&1
 	systemctl restart opensearch-dashboards
@@ -567,13 +573,24 @@ setup_rabbitmq() {
 	env_configuration "$APP_DIR/systemd.env" RABBIT_URI "${RABBITMQ_URI}"
 
 	if [ $1 == "LOCAL_RABBITMQ_SERVER" ]; then
-		systemctl enable rabbitmq-server >/dev/null 2>&1
-		RABBITMQ_ENV="/etc/rabbitmq/rabbitmq-env.conf"
-		printf '%s\n' 'listeners.tcp.default = 127.0.0.1:5672' > /etc/rabbitmq/conf.d/99-bind-loopback.conf
-		grep -q '^ERL_EPMD_ADDRESS=' "$RABBITMQ_ENV" && sed -ri 's|^ERL_EPMD_ADDRESS=.*|ERL_EPMD_ADDRESS=127.0.0.1|' "$RABBITMQ_ENV" || echo 'ERL_EPMD_ADDRESS=127.0.0.1' >> "$RABBITMQ_ENV"
-		grep -q '^RABBITMQ_SERVER_ERL_ARGS=' "$RABBITMQ_ENV" && sed -ri 's|^RABBITMQ_SERVER_ERL_ARGS=.*|RABBITMQ_SERVER_ERL_ARGS="-kernel inet_dist_use_interface {127,0,0,1}"|' "$RABBITMQ_ENV" \
-			|| echo 'RABBITMQ_SERVER_ERL_ARGS="-kernel inet_dist_use_interface {127,0,0,1}"' >> "$RABBITMQ_ENV"
-		systemctl restart rabbitmq-server
+    mkdir -p /etc/systemd/system/epmd.socket.d
+    cat >/etc/systemd/system/epmd.socket.d/override.conf <<'EOE'
+[Socket]
+ListenStream=
+ListenStream=127.0.0.1:4369
+EOE
+
+    RABBITMQ_ENV="/etc/rabbitmq/rabbitmq-env.conf"
+    touch "$RABBITMQ_ENV"
+    grep -q '^ERL_EPMD_ADDRESS=' "$RABBITMQ_ENV" && sed -ri 's|^ERL_EPMD_ADDRESS=.*|ERL_EPMD_ADDRESS=127.0.0.1|' "$RABBITMQ_ENV" || echo 'ERL_EPMD_ADDRESS=127.0.0.1' >> "$RABBITMQ_ENV"
+    grep -q '^RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=' "$RABBITMQ_ENV" \
+      && sed -ri 's|^RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=.*|RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS="-kernel inet_dist_use_interface {127,0,0,1}"|' "$RABBITMQ_ENV" \
+      || echo 'RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS="-kernel inet_dist_use_interface {127,0,0,1}"' >> "$RABBITMQ_ENV"
+    grep -q '^NODENAME=' "$RABBITMQ_ENV" && sed -ri 's|^NODENAME=.*|NODENAME=rabbit@localhost|' "$RABBITMQ_ENV" || echo 'NODENAME=rabbit@localhost' >> "$RABBITMQ_ENV"
+
+    systemctl daemon-reload
+    systemctl restart epmd.socket
+    systemctl restart rabbitmq-server
 	fi
 
 	echo "OK"
