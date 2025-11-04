@@ -108,7 +108,7 @@ install_docspace() {
 }
 
 healthcheck_systemd_services() {
-  printf "%s %sSystemd services health%s\n" "$LINE_SEPARATOR" "$COLOR_YELLOW" "$COLOR_RESET"
+  echo -e "$LINE_SEPARATOR\n${COLOR_YELLOW}Systemd services health${COLOR_RESET}\n$LINE_SEPARATOR"
   for service in "${SERVICES_SYSTEMD[@]}"; do
     [[ "$service" == *migration* ]] && continue;
     if systemctl is-active --quiet "${service}"; then
@@ -147,9 +147,7 @@ services_logs() {
 }
 
 ports_audit() {
-  echo "$LINE_SEPARATOR"
-  echo "${COLOR_YELLOW}Listening ports (non-local = EXPOSED)${COLOR_RESET}"
-  echo "$LINE_SEPARATOR"
+  echo -e "$LINE_SEPARATOR\n${COLOR_YELLOW}Listening ports (non-local = EXPOSED)${COLOR_RESET}\n$LINE_SEPARATOR"
   ss -lntupH | awk -v red="${COLOR_RED}" -v green="${COLOR_GREEN}" -v reset="${COLOR_RESET}" '
   function pname(s){ if (match(s,/"[^"]+"/)) return substr(s,RSTART+1,RLENGTH-2); else return s }
   function pidv(s){ if (match(s,/pid=[0-9]+/)) return substr(s,RSTART+4,RLENGTH-4); else return "-" }

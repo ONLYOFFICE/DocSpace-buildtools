@@ -50,7 +50,6 @@ DOTNET_RUN="/usr/bin/dotnet"
 NODE_RUN="/usr/bin/node"
 JAVA_RUN="/usr/bin/java -jar"
 APP_URLS="http://127.0.0.1"
-APP_HOST="${APP_URLS#*://}"
 SYSTEMD_ENVIRONMENT_FILE="${PATH_TO_CONF}/systemd.env"
 CORE=" --core:products:folder=${BASE_DIR}/products --core:products:subfolder=server"
 
@@ -216,10 +215,10 @@ reassign_values (){
   unset SYSTEMD_ENVIRONMENT
   if [[ "${EXEC_FILE}" == *".js" ]]; then
 	SERVICE_TYPE="simple"
-	SYSTEMD_ENVIRONMENT="HOST=${APP_HOST} PORT=${SERVICE_PORT}"
-	EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE} --hostname ${APP_HOST} --host ${APP_HOST} --port ${SERVICE_PORT} --app.host=${APP_HOST} --app.port=${SERVICE_PORT} --app.appsettings=${PATH_TO_CONF} --app.environment=\${ENVIRONMENT}"
+	SYSTEMD_ENVIRONMENT="HOST=${APP_URLS#*://} PORT=${SERVICE_PORT}"
+	EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE} --hostname ${APP_URLS#*://} --host ${APP_URLS#*://} --port ${SERVICE_PORT} --app.host=${APP_URLS#*://} --app.port=${SERVICE_PORT} --app.appsettings=${PATH_TO_CONF} --app.environment=\${ENVIRONMENT}"
   elif [[ "${EXEC_FILE}" == *".jar" ]]; then
-	SYSTEMD_ENVIRONMENT="SPRING_APPLICATION_NAME=${SPRING_APPLICATION_NAME} SERVER_PORT=${SERVICE_PORT} SERVER_ADDRESS=${APP_HOST} MANAGEMENT_SERVER_ADDRESS=${APP_HOST} LOG_FILE_PATH=${LOG_DIR}/${SERVICE_NAME}.log"
+	SYSTEMD_ENVIRONMENT="SPRING_APPLICATION_NAME=${SPRING_APPLICATION_NAME} SERVER_PORT=${SERVICE_PORT} LOG_FILE_PATH=${LOG_DIR}/${SERVICE_NAME}.log"
 	SERVICE_TYPE="notify"
 	EXEC_START="${JAVA_RUN} ${WORK_DIR}${EXEC_FILE}"
   elif [[ "${SERVICE_NAME}" = "migration-runner" ]]; then
