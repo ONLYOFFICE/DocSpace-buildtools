@@ -108,6 +108,7 @@ install_docspace() {
 }
 
 healthcheck_systemd_services() {
+  printf "%s %sSystemd services health%s\n" "$LINE_SEPARATOR" "$COLOR_YELLOW" "$COLOR_RESET"
   for service in "${SERVICES_SYSTEMD[@]}"; do
     [[ "$service" == *migration* ]] && continue;
     if systemctl is-active --quiet "${service}"; then
