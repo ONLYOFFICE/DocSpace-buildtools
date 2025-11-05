@@ -5,7 +5,9 @@ on:
     paths:
       - '.github/workflows/ci-oci-install.yml'
     branches:
-      - master
+      - 'release/*'
+      - 'hotfix/*'
+  workflow_dispatch:
 
 permissions:
   contents: write
