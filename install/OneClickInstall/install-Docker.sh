@@ -760,8 +760,20 @@ install_fluent_bit () {
 
 install_product () {
 	if [ "$INSTALL_PRODUCT" == "true" ]; then
-		[ "${UPDATE}" = "true" ] && LOCAL_CONTAINER_TAG="$(docker inspect --format='{{index .Config.Image}}' ${CONTAINER_NAME} | awk -F':' '{print $2}')"
-		[ "${UPDATE}" = "true" ] && [ "${LOCAL_CONTAINER_TAG}" != "${DOCKER_TAG}" ] && docker-compose "${COMPOSE_FILES[@]}" down
+		if [ "${UPDATE}" = "true" ]; then
+			get_tag() { docker inspect --format='{{index .Config.Image}}' "$1" 2>/dev/null | awk -F':' '{print $2}'; }
+
+			LOCAL_CONTAINER_TAG="$(get_tag "${CONTAINER_NAME}")"
+			LOCAL_CONTAINER_TAG="${LOCAL_CONTAINER_TAG:-$(get_tag "${PACKAGE_SYSNAME}-dotnet-services")}"
+			echo "Updating images from tag ${LOCAL_CONTAINER_TAG}"
+
+			if [ "$LOCAL_CONTAINER_TAG" != "$DOCKER_TAG" ]; then
+				docker ps -a --format '{{.Names}}' | grep -q "^$CONTAINER_NAME$" \
+					&& docker-compose "${COMPOSE_FILES[@]}" down
+				docker ps -a --format '{{.Names}}' | grep -q "^${PACKAGE_SYSNAME}-dotnet-services$" \
+					&& { docker-compose -f "$BASE_DIR/docspace-stack.yml" down; docker-compose -f "$BASE_DIR/proxy.yml" down; }
+			fi
+		fi
 
 		reconfigure ENV_EXTENSION ${ENV_EXTENSION}
 		reconfigure IDENTITY_PROFILE "${IDENTITY_PROFILE:-"prod,server"}"
@@ -775,14 +787,21 @@ install_product () {
 			echo -n "Waiting for MySQL container to become healthy..."
 			(timeout 30 bash -c "while ! docker inspect --format '{{json .State.Health.Status }}' ${PACKAGE_SYSNAME}-mysql-server | grep -q 'healthy'; do sleep 1; done") && echo "OK" || (echo "FAILED")
 		fi
-		
-		docker-compose -f $BASE_DIR/migration-runner.yml up -d
-		if [[ -n $(docker ps -q --filter "name=${PACKAGE_SYSNAME}-migration-runner") ]]; then
-			echo -n "Waiting for database migration to complete..."
-			timeout 30 bash -c "while [ $(docker wait ${PACKAGE_SYSNAME}-migration-runner) -ne 0 ]; do sleep 1; done;" && echo "OK" || echo "FAILED"
+
+		if [[ "$STACK_MODE" == "true" ]]; then
+			echo "Installing in stack mode (docspace-stack.yml)..."
+			docker-compose -f "$BASE_DIR/docspace-stack.yml" up -d
+			docker-compose -f "$BASE_DIR/proxy.yml" up -d
+		else
+			docker-compose -f "$BASE_DIR/migration-runner.yml" up -d
+
+			if [[ -n $(docker ps -q --filter "name=${PACKAGE_SYSNAME}-migration-runner") ]]; then
+				echo -n "Waiting for database migration to complete..."
+				timeout 30 bash -c "while [ $(docker wait ${PACKAGE_SYSNAME}-migration-runner) -ne 0 ]; do sleep 1; done;" && echo "OK" || echo "FAILED"
+			fi
+
+			docker-compose "${COMPOSE_FILES[@]}" up -d
 		fi
-	
-		docker-compose "${COMPOSE_FILES[@]}" up -d
 
 		if [[ -n "${PREVIOUS_ELK_VERSION}" && "$(get_env_parameter "ELK_VERSION")" != "${PREVIOUS_ELK_VERSION}" ]]; then
 			docker ps -q -f name=${PACKAGE_SYSNAME}-elasticsearch | xargs -r docker stop
