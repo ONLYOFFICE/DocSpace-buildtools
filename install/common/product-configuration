@@ -574,32 +574,20 @@ setup_rabbitmq() {
 
 	if [ $1 == "LOCAL_RABBITMQ_SERVER" ]; then
 	mkdir -p /etc/systemd/system/epmd.socket.d
-
 	if systemctl list-unit-files | grep -q '^epmd.socket'; then
 cat >/etc/systemd/system/epmd.socket.d/override.conf <<'EOE'
 [Socket]
 ListenStream=
 ListenStream=127.0.0.1:4369
 EOE
-		systemctl daemon-reload
 		systemctl restart epmd.socket || true
 	fi
-
 	RABBITMQ_ENV="/etc/rabbitmq/rabbitmq-env.conf"
 	touch "$RABBITMQ_ENV"
-	grep -q '^ERL_EPMD_ADDRESS=' "$RABBITMQ_ENV" \
-		&& sed -ri 's|^ERL_EPMD_ADDRESS=.*|ERL_EPMD_ADDRESS=127.0.0.1|' "$RABBITMQ_ENV" \
-		|| echo 'ERL_EPMD_ADDRESS=127.0.0.1' >> "$RABBITMQ_ENV"
-
-	grep -q '^RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=' "$RABBITMQ_ENV" \
-		&& sed -ri 's|^RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=.*|RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS="-kernel inet_dist_use_interface {127,0,0,1}"|' "$RABBITMQ_ENV" \
+	grep -q '^ERL_EPMD_ADDRESS=' "$RABBITMQ_ENV" && sed -ri 's|^ERL_EPMD_ADDRESS=.*|ERL_EPMD_ADDRESS=127.0.0.1|' "$RABBITMQ_ENV" || echo 'ERL_EPMD_ADDRESS=127.0.0.1' >> "$RABBITMQ_ENV"
+	grep -q '^RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=' "$RABBITMQ_ENV" && sed -ri 's|^RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=.*|RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS="-kernel inet_dist_use_interface {127,0,0,1}"|' "$RABBITMQ_ENV" \
 		|| echo 'RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS="-kernel inet_dist_use_interface {127,0,0,1}"' >> "$RABBITMQ_ENV"
-
-	grep -q '^NODENAME=' "$RABBITMQ_ENV" \
-		&& sed -ri 's|^NODENAME=.*|NODENAME=rabbit@localhost|' "$RABBITMQ_ENV" \
-		|| echo 'NODENAME=rabbit@localhost' >> "$RABBITMQ_ENV"
-
-	systemctl daemon-reload
+	grep -q '^NODENAME=' "$RABBITMQ_ENV" && sed -ri 's|^NODENAME=.*|NODENAME=rabbit@localhost|' "$RABBITMQ_ENV" || echo 'NODENAME=rabbit@localhost' >> "$RABBITMQ_ENV"
 	systemctl restart rabbitmq-server
 	fi
 
