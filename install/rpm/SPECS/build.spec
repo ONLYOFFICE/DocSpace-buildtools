@@ -1,19 +1,8 @@
 %build
-run_script() { start=$(date +%s); bash "$@"; end=$(date +%s); echo "::notice::$1 completed in $((end - start)) seconds"; }
+cd %{_builddir}/buildtools/install/common
+bash systemd/build.sh -pm "rpm"
+bash plugins-build.sh %{_builddir}/plugins
+bash packages-build.sh rpm %{_builddir} %{product} "%{version}.%{release}"
 
-cd %{_builddir}/buildtools
-
-run_script install/common/build-frontend.sh --srcpath %{_builddir} -di "false"
-run_script install/common/build-backend.sh --srcpath %{_builddir}
-run_script install/common/publish-backend.sh --srcpath %{_builddir}/server
-run_script install/common/plugins-build.sh %{_builddir}/plugins
-run_script install/common/systemd/build.sh -pm "rpm"
-run_script install/common/packages-build.sh rpm %{_builddir} %{product} "%{version}.%{release}"
-
-find %{_builddir}/server/publish/ \
-     %{_builddir}/server/ASC.Migration.Runner \
-     -depth -type f -regex '.*\(dll\|dylib\|so\)$' -exec chmod 755 {} \;
-
-find %{_builddir}/server/publish/ \
-     %{_builddir}/server/ASC.Migration.Runner \
-     -depth -type f -regex '.*\(so\)$' -exec strip {} \;
+find %{_builddir}/publish/ -type f -regex '.*\.so$' -exec chmod 755 {} \; -exec strip {} \;
+find %{_builddir}/publish/ -type f -regex '.*\.\(dll\|dylib\)$' -exec chmod 755 {} \;
