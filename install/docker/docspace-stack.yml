@@ -1,4 +1,4 @@
-x-healthcheck: &x-healthcheck
+x-healthcheck-stack: &x-healthcheck-stack
   test: ["CMD-SHELL", "supervisorctl status | grep -v 'ASC.Migration.Runner' | grep -qv RUNNING && exit 1 || exit 0"]
   interval: 60s
   retries: 5
@@ -84,7 +84,7 @@ x-service: &x-service-base
     - ${VOLUMES_DIR:+${VOLUMES_DIR}/}app_data:/app/onlyoffice/data
     - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
   healthcheck:
-    <<: *x-healthcheck
+    <<: *x-healthcheck-stack
 
 services:
   onlyoffice-dotnet-services:
@@ -108,7 +108,7 @@ services:
     user: "${UID}:${GID}"
     restart: always
     healthcheck:
-      <<: *x-healthcheck
+      <<: *x-healthcheck-stack
       test: nginx -t || exit 1
     expose:
       - "8081"
