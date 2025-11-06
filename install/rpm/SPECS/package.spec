@@ -246,3 +246,21 @@ AutoReqProv:    no
 BuildArch:      noarch
 %description    telegram
 Service responsible for Telegram integration
+
+%package        ai
+Summary:        AI
+Requires:       %name-common  = %version-%release
+Requires:       dotnet-sdk-9.0
+AutoReqProv:    no
+BuildArch:      noarch
+%description    ai
+Service responsible for AI integration
+
+%package        ai-service
+Summary:        AI Service
+Requires:       %name-common  = %version-%release
+Requires:       dotnet-sdk-9.0
+AutoReqProv:    no
+BuildArch:      noarch
+%description    ai-service
+Service responsible for AI integration
