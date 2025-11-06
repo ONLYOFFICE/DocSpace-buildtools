@@ -23,7 +23,6 @@
 %defattr(-, onlyoffice, onlyoffice, -)
 %config %attr(640, onlyoffice, onlyoffice) %{_sysconfdir}/onlyoffice/%{product}/*
 %exclude %{_sysconfdir}/onlyoffice/%{product}/openresty
-%exclude %{_sysconfdir}/onlyoffice/%{product}/nginx
 %attr(740, onlyoffice, onlyoffice) %{_sysconfdir}/onlyoffice/%{product}/document-formats/
 %{_docdir}/%{name}-%{version}-%{release}/
 %{_var}/log/onlyoffice/%{product}/
