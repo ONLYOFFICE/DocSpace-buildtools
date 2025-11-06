@@ -171,3 +171,17 @@
 %{buildpath}/services/ASC.TelegramService/
 /usr/lib/systemd/system/%{product}-telegram.service
 %dir %{buildpath}/services/
+
+%files ai
+%defattr(-, onlyoffice, onlyoffice, -)
+%{buildpath}/products/ASC.AI/server/
+/usr/lib/systemd/system/%{product}-ai.service
+%dir %{buildpath}/products/
+%dir %{buildpath}/products/ASC.AI/
+
+%files ai-service
+%defattr(-, onlyoffice, onlyoffice, -)
+%{buildpath}/products/ASC.AI/service/
+/usr/lib/systemd/system/%{product}-ai-service.service
+%dir %{buildpath}/products/
+%dir %{buildpath}/products/ASC.AI/
