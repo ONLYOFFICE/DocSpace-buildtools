@@ -1,2 +1,2 @@
-debian/build/server/publish/products/ASC.Files/server     var/www/{{product}}/products/ASC.Files
-debian/build/server/products/ASC.Files/Server/DocStore    var/www/{{product}}/products/ASC.Files/server
+debian/build/publish/services/ASC.Files/service/*         var/www/{{product}}/products/ASC.Files/server/
+debian/build/DocStore                                     var/www/{{product}}/products/ASC.Files/server

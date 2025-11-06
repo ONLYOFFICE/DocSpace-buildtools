@@ -6,6 +6,6 @@ debian/build/buildtools/install/docker/config/nginx/onlyoffice*              etc
 debian/build/buildtools/config/nginx/onlyoffice*.conf                        etc/openresty/conf.d
 debian/build/buildtools/install/docker/config/nginx/letsencrypt*             etc/openresty/includes
 debian/build/buildtools/config/nginx/includes/*.conf                         etc/openresty/includes
-debian/build/publish/web/public/*                                            var/www/{{product}}/public
-debian/build/campaigns/src/campaigns/*                                       var/www/{{product}}/public/campaigns
-debian/build/publish/web/client/*                                            var/www/{{product}}/client
+debian/build/publish/web/public                                              var/www/{{product}}
+debian/build/campaigns/src/campaigns                                         var/www/{{product}}/public
+debian/build/publish/web/client                                              var/www/{{product}}

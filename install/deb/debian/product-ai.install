@@ -1,1 +1,1 @@
-debian/build/server/publish/products/ASC.AI/server var/www/{{product}}/products/ASC.AI
+debian/build/publish/services/ASC.AI/service/* var/www/{{product}}/products/ASC.AI/server/
