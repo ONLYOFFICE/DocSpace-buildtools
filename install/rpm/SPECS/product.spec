@@ -36,6 +36,8 @@ BuildRequires:  unzip
 BuildRequires:  java-21-openjdk-headless
 BuildRequires:  maven
 
+Requires:       %name-ai = %version-%release
+Requires:       %name-ai-service = %version-%release
 Requires:       %name-api = %version-%release
 Requires:       %name-api-system = %version-%release
 Requires:       %name-backup = %version-%release
