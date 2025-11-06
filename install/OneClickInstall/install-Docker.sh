@@ -767,11 +767,11 @@ install_product () {
 	if [ "$INSTALL_PRODUCT" == "true" ]; then
 		if [ "${UPDATE}" = "true" ]; then
 			LOCAL_CONTAINER_TAG="$(docker inspect --format='{{index .Config.Image}}' "${CONTAINER_NAME}" 2>/dev/null | awk -F':' '{print $2}';)"
-			echo "Updating images from tag ${LOCAL_CONTAINER_TAG}"
+			echo "Updating images from tag ${LOCAL_CONTAINER_TAG} to ${DOCKER_TAG}..."
 
 			if [ "$LOCAL_CONTAINER_TAG" != "$DOCKER_TAG" ]; then
 				if [ "$STACK_MODE" = "true" ]; then
-					docker-compose -f "$BASE_DIR/docspace-stack.yml" down; docker-compose -f "$BASE_DIR/proxy.yml" down
+					docker-compose -f $BASE_DIR/docspace-stack.yml -f $BASE_DIR/proxy.yml down
 				else
 					docker-compose "${COMPOSE_FILES[@]}" down
 				fi
@@ -791,8 +791,7 @@ install_product () {
 			(timeout 30 bash -c "while ! docker inspect --format '{{json .State.Health.Status }}' ${PACKAGE_SYSNAME}-mysql-server | grep -q 'healthy'; do sleep 1; done") && echo "OK" || (echo "FAILED")
 		fi
 
-		if [[ "$STACK_MODE" == "true" ]]; then
-			echo "Installing in stack mode (docspace-stack.yml)..."
+		if [ "$STACK_MODE" = "true" ]; then
 			docker-compose -f "$BASE_DIR/docspace-stack.yml" up -d
 			docker-compose -f "$BASE_DIR/proxy.yml" up -d
 		else
