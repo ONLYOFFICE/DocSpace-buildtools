@@ -573,8 +573,8 @@ setup_rabbitmq() {
 	env_configuration "$APP_DIR/systemd.env" RABBIT_URI "${RABBITMQ_URI}"
 
 	if [ $1 == "LOCAL_RABBITMQ_SERVER" ]; then
-  	  systemctl enable rabbitmq-server >/dev/null 2>&1
-	  systemctl restart rabbitmq-server
+		systemctl enable rabbitmq-server >/dev/null 2>&1
+		systemctl restart rabbitmq-server
 	fi
 
 	echo "OK"
