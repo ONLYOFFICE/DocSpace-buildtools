@@ -625,7 +625,12 @@ set_docspace_params() {
 }
 
 set_installation_type_data () {
-	is_command_exists docker && UPDATE=${UPDATE:-$(test -n "$(docker ps -aqf name=${CONTAINER_NAME})" && echo true)}
+	if is_command_exists docker; then
+		if [ -n "$(docker ps -a -q -f "name=^${PACKAGE_SYSNAME}-dotnet-services$")" ]; then
+			STACK_MODE=true; CONTAINER_NAME="${PACKAGE_SYSNAME}-dotnet-services"
+		fi
+		UPDATE=${UPDATE:-$(test -n "$(docker ps -aqf name=${CONTAINER_NAME})" && echo true)}
+	fi
 	if [ -z "${DOCUMENT_SERVER_IMAGE_NAME}" ]; then
 		DOCUMENT_SERVER_IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}documentserver"
 		case "${INSTALLATION_TYPE}" in
@@ -761,17 +766,15 @@ install_fluent_bit () {
 install_product () {
 	if [ "$INSTALL_PRODUCT" == "true" ]; then
 		if [ "${UPDATE}" = "true" ]; then
-			get_tag() { docker inspect --format='{{index .Config.Image}}' "$1" 2>/dev/null | awk -F':' '{print $2}'; }
-
-			LOCAL_CONTAINER_TAG="$(get_tag "${CONTAINER_NAME}")"
-			LOCAL_CONTAINER_TAG="${LOCAL_CONTAINER_TAG:-$(get_tag "${PACKAGE_SYSNAME}-dotnet-services")}"
+			LOCAL_CONTAINER_TAG="$(docker inspect --format='{{index .Config.Image}}' "${CONTAINER_NAME}" 2>/dev/null | awk -F':' '{print $2}';)"
 			echo "Updating images from tag ${LOCAL_CONTAINER_TAG}"
 
 			if [ "$LOCAL_CONTAINER_TAG" != "$DOCKER_TAG" ]; then
-				docker ps -a --format '{{.Names}}' | grep -q "^$CONTAINER_NAME$" \
-					&& docker-compose "${COMPOSE_FILES[@]}" down
-				docker ps -a --format '{{.Names}}' | grep -q "^${PACKAGE_SYSNAME}-dotnet-services$" \
-					&& { docker-compose -f "$BASE_DIR/docspace-stack.yml" down; docker-compose -f "$BASE_DIR/proxy.yml" down; }
+				if [ "$STACK_MODE" = "true" ]; then
+					docker-compose -f "$BASE_DIR/docspace-stack.yml" down; docker-compose -f "$BASE_DIR/proxy.yml" down
+				else
+					docker-compose "${COMPOSE_FILES[@]}" down
+				fi
 			fi
 		fi
 
