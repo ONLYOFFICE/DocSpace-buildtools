@@ -5,13 +5,13 @@ Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    backup
-The service which handles API requests related to backup
+The service which handles API requests related to backup.
 
 %package        common
 Summary:        Common
 BuildArch:      noarch
 %description    common
-A package containing configure and scripts
+A package containing configs and scripts.
 
 %package        files-services
 Summary:        Files-services
@@ -36,10 +36,9 @@ Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    notify
-The service which launches additional services
-related to notifications about DocSpace events:
-NotifySenderService which sends messages from the base,
-and NotifyCleanerService which removes messages
+The service which launches additional services related to notifications
+about DocSpace events: NotifySenderService which sends messages from the
+base, and NotifyCleanerService which removes messages.
 
 %package        files
 Summary:        Files
@@ -48,8 +47,8 @@ Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    files
-The service which handles API requests related to
-documents and launches the OFormService service
+The REST API server for working with documents. The service which handles
+API requests related to documents and launches the OFormService service.
 
 %package        proxy
 Summary:        Proxy
@@ -61,7 +60,7 @@ BuildArch:      noarch
 %description    proxy
 The service which is used as a web server and reverse proxy, 
 it receives and handles requests, transmits them to other services, 
-receives a response from them and returns it to the client
+receives a response from them and returns it to the client.
 
 %package        studio-notify
 Summary:        Studio-notify
@@ -71,7 +70,7 @@ AutoReqProv:    no
 BuildArch:      noarch
 %description    studio-notify
 The service responsible for creating notifications and
-sending them to other services, for example, TelegramService and NotifyService
+sending them to other services, for example, TelegramService and NotifyService.
 
 %package        people-server
 Summary:        People-server
@@ -80,7 +79,7 @@ Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    people-server
-The service which handles API requests related to the People module
+The service which handles API requests related to the People module.
 
 %package        socket
 Summary:        Socket
@@ -89,7 +88,7 @@ Requires:       nodejs >= 22.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    socket
-The service which provides two-way communication between a client and a server
+The service which provides two-way communication between a web browser and the server.
 
 %package        studio
 Summary:        Studio
@@ -98,7 +97,7 @@ Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    studio
-The service which processes storage handlers and authorization pages
+The service which processes storage handlers.
 
 %package        api
 Summary:        Api
@@ -118,7 +117,7 @@ Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    api-system
-The service which is used for working with portals (creating, removing, etc.)
+The service which is used for working with portals (creating, removing portals, etc.)
 
 %package        ssoauth
 Summary:        Ssoauth
@@ -129,7 +128,7 @@ BuildArch:      noarch
 %description    ssoauth
 The service responsible for enabling and configuring 
 SAML-based single sign-on (SSO) authentication to provide a more quick, 
-easy and secure way to access DocSpace for users
+easy and secure way to access DocSpace for users.
 
 %package        identity-authorization
 Summary:        Identity-Authorization
@@ -138,7 +137,8 @@ Requires:       java-21-openjdk-headless
 AutoReqProv:    no
 BuildArch:      noarch
 %description    identity-authorization
-Identity-Authorization
+The service responsible for authentication methods used to access
+DocSpace, e.g., the OAuth technology.
 
 %package        identity-api
 Summary:        Identity-Api
@@ -147,7 +147,8 @@ Requires:       java-21-openjdk-headless
 AutoReqProv:    no
 BuildArch:      noarch
 %description    identity-api
-Identity-Api
+The service responsible for managing user identities and authentication
+within DocSpace by using the OAuth technology.
 
 %package        clear-events
 Summary:        Clear-events
@@ -156,8 +157,9 @@ Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    clear-events
-The service responsible for clearing the login_events and audit_events tables 
-by LoginHistoryLifeTime and AuditTrailLifeTime to log out users after a timeout
+The service responsible for clearing the login_events and audit_events
+tables by LoginHistoryLifeTime and AuditTrailLifeTime to log out users
+after a timeout.
 
 %package        backup-background
 Summary:        Backup-background
@@ -180,7 +182,7 @@ Requires:       nodejs >= 22.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    doceditor
-The service which allows interaction with document-server
+The service which allows interaction with document-server.
 
 %package        migration-runner
 Summary:        Migration-runner
@@ -191,7 +193,7 @@ BuildArch:      noarch
 %description    migration-runner
 The service responsible for the database creation.
 A database connection is transferred to the service and
-the service creates tables and populates them with values
+the service creates tables and populates them with values.
 
 %package        login
 Summary:        Login
@@ -200,7 +202,7 @@ Requires:       nodejs >= 22.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    login
-The service which is used for logging users and displaying the wizard
+The service which is used for logging users and displaying the wizard.
 
 %package        healthchecks
 Summary:        Healthchecks
@@ -209,7 +211,7 @@ Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    healthchecks
-The service which displays launched services
+The service which displays launched services.
 
 %package        plugins
 Summary:        Plugins
@@ -217,7 +219,7 @@ Requires:       %name-common  = %version-%release
 AutoReqProv:    no
 BuildArch:      noarch
 %description    plugins
-This package includes plugins that extend DocSpace functionality
+This package includes plugins that extend DocSpace functionality.
 
 %package sdk
 Summary:        Sdk
@@ -226,8 +228,8 @@ Requires:       nodejs >= 22.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description sdk
-The service provides a Software Development Kit (SDK) with APIs and tools for custom
-integrations and plugins
+The service which allows integrating DocSpace into your own web
+application by using JavaScript SDK.
 
 %package        management
 Summary:        Management
@@ -236,7 +238,7 @@ Requires:       nodejs >= 22.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    management
-The service responsible for DocSpace management interface
+The service responsible for creating and managing several spaces.
 
 %package        telegram
 Summary:        Telegram
@@ -245,7 +247,7 @@ Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    telegram
-Service responsible for Telegram integration
+The service which is used for receiving DocSpace notifications via Telegram.
 
 %package        ai
 Summary:        AI
@@ -254,7 +256,8 @@ Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    ai
-Service responsible for AI integration
+The REST API server for working with AI features. The service which
+handles API requests related to AI.
 
 %package        ai-service
 Summary:        AI Service
@@ -263,4 +266,6 @@ Requires:       dotnet-sdk-9.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    ai-service
-Service responsible for AI integration
+The service for background tasks related with AI. It vectorizes documents
+from the knowledge base for subsequent semantic search and performs
+chat/message export.
