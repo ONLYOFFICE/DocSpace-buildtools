@@ -1,2 +1,0 @@
-debian/build/publish/services/ASC.Files/service/*         var/www/{{product}}/products/ASC.Files/server/
-debian/build/DocStore                                     var/www/{{product}}/products/ASC.Files/server
