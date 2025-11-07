@@ -1,3 +1,0 @@
-debian/build/buildtools/config/*                                       etc/onlyoffice/{{product}}
-debian/build/buildtools/install/common/{{product}}-configuration       usr/bin
-debian/build/buildtools/install/docker/config/fluent-bit.conf          etc/onlyoffice/{{product}}
