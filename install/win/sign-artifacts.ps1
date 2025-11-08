@@ -2,7 +2,7 @@
 $signtool = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool.exe"
 
 # Path to folder
-$folderPath = Join-Path (Get-Location) "Files"
+$folderPath = Join-Path (Get-Location) "buildtools\install\win\Files"
 $timestampUrl = "http://timestamp.digicert.com"
 
 Write-Host "Folder path: $folderPath"
