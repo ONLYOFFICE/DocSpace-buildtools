@@ -38,6 +38,7 @@
           "accessrights": "/userguides/docspace-gettingstarted.aspx#AccessRights_block",
           "administrationguides": "/docspace/configuration/docspace-developer-tools-settings.aspx#webhooks_block",
           "administratormessage": "/docspace/configuration/docspace-security-settings.aspx#administratormessagesettings_block",
+          "aisettings": "/docspace/configuration/docspace-ai-settings.aspx",
           "alternativeurl": "/docspace/configuration/docspace-customization-settings.aspx#dnssettings_block",
           "appearance": "/docspace/configuration/docspace-customization-settings.aspx#appearance_block",
           "autobackup": "/docspace/configuration/docspace-backup-restore-settings.aspx#automaticbackup_block",
