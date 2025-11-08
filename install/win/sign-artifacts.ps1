@@ -1,5 +1,5 @@
 # Path to signtool
-$signtool = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe"
+$signtool = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.17763.0\x64\signtool.exe"
 
 # Path to folder
 $folderPath = Join-Path (Get-Location) "buildtools\install\win\Files"
