@@ -574,6 +574,9 @@ setup_rabbitmq() {
 	env_configuration "$APP_DIR/systemd.env" RABBIT_URI "${RABBITMQ_URI}"
 
 	if [ $1 == "LOCAL_RABBITMQ_SERVER" ]; then
+		printf 'listeners.tcp.default = 127.0.0.1:%s\n' "${RABBITMQ_PORT:-5672}" > /etc/rabbitmq/rabbitmq.conf
+		printf '%s\n%s\n%s\n' 'ERL_EPMD_ADDRESS=127.0.0.1' 'NODE_IP_ADDRESS=127.0.0.1' \
+		  'RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS="-kernel inet_dist_use_interface {127,0,0,1} inet_dist_listen_min 25672 inet_dist_listen_max 25672"' > /etc/rabbitmq/rabbitmq-env.conf
 		systemctl enable rabbitmq-server >/dev/null 2>&1
 		systemctl restart rabbitmq-server
 	fi
