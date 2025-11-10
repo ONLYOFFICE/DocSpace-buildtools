@@ -14,6 +14,9 @@ Get-ChildItem $repo -Directory | ForEach-Object {
         $name = (Get-Content $pkg | ConvertFrom-Json).name
         $zip = "$($_.FullName)\dist\plugin.zip"
         $target = "$app\$name"
+	
+	Write-Host "SevenZip path: $env:sevenzip"
+	Test-Path $env:sevenzip
 
         if (Test-Path $zip) {
             New-Item -ItemType Directory -Force -Path $target | Out-Null
