@@ -2,6 +2,7 @@ param($FirstArg, $SecondArg)
 
 $repo = $FirstArg
 $app = if ($SecondArg) { $SecondArg } else { "$FirstArg\publish" }
+$sevenzip = $env:sevenzip.Trim('"')
 
 Get-ChildItem $repo -Directory | ForEach-Object {
     $pkg = "$($_.FullName)\package.json"
@@ -14,13 +15,10 @@ Get-ChildItem $repo -Directory | ForEach-Object {
         $name = (Get-Content $pkg | ConvertFrom-Json).name
         $zip = "$($_.FullName)\dist\plugin.zip"
         $target = "$app\$name"
-	
-	Write-Host "SevenZip path: $env:sevenzip"
-	Test-Path $env:sevenzip
 
         if (Test-Path $zip) {
             New-Item -ItemType Directory -Force -Path $target | Out-Null
-            & $env:sevenzip x "$zip" "-o$target" -y
+            & "$sevenzip" x "$zip" "-o$target" -y
         } else {
             Write-Host "plugin.zip not found in $($_.Name)"
         }
