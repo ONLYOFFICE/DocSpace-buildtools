@@ -25,3 +25,4 @@ Get-ChildItem $repo -Directory | ForEach-Object {
             Write-Host "plugin.zip not found in $($_.Name)"
         }
     }
+}
