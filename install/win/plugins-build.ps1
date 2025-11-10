@@ -20,9 +20,8 @@ Get-ChildItem $repo -Directory | ForEach-Object {
 
         if (Test-Path $zip) {
             New-Item -ItemType Directory -Force -Path $target | Out-Null
-            & "$env:sevenzip" x "$zip" "-o$target" -y
+            & $env:sevenzip x "$zip" "-o$target" -y
         } else {
             Write-Host "plugin.zip not found in $($_.Name)"
         }
     }
-}
