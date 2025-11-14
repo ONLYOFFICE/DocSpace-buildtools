@@ -85,7 +85,7 @@ JAVA_VERSION=21
 ${package_manager} ${WEAK_OPT} -y install $([ "$DIST" != "fedora" ] && echo "epel-release") \
 			python3 \
 			nodejs \
-			dotnet-sdk-9.0 \
+			dotnet-sdk-10.0 \
 			opensearch-${ELASTIC_VERSION} \
 			mysql-community-server \
 			postgresql \
