@@ -27,9 +27,12 @@ ARG SRC_PATH
 ENV BUILD_PATH=${BUILD_PATH}
 ENV SRC_PATH=${SRC_PATH}
 
-# add defualt user and group for no-root run
+# add default user and group for no-root run
 RUN mkdir -p /var/log/onlyoffice && \
     mkdir -p /app/onlyoffice/data && \
+	apt-get -y update && \
+    apt-get install -yq \
+    adduser && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     chown onlyoffice:onlyoffice /app/onlyoffice -R && \
