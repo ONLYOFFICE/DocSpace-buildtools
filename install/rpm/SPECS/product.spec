@@ -31,7 +31,7 @@ Source7:        https://codeload.github.com/ONLYOFFICE/document-formats/tar.gz/m
 
 BuildRequires:  nodejs >= 22.0
 BuildRequires:  yarn
-BuildRequires:  dotnet-sdk-9.0
+BuildRequires:  dotnet-sdk-10.0
 BuildRequires:  unzip
 BuildRequires:  java-21-openjdk-headless
 BuildRequires:  maven
