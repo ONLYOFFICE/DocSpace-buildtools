@@ -60,8 +60,11 @@ RUN mkdir -p /app/onlyoffice/ && \
     cp config/*.config /app/onlyoffice/config/ && \
     mkdir -p ${SRC_PATH}/buildtools/deploy/client && \
     mkdir -p ${SRC_PATH}/buildtools/deploy/public && \
-    mkdir -p /etc/nginx/conf.d && cp -f config/nginx/onlyoffice*.conf /etc/nginx/conf.d/ && \
-    mkdir -p /etc/nginx/includes/ && cp -f config/nginx/includes/onlyoffice*.conf /etc/nginx/includes/ && \
+    mkdir -p /etc/nginx/conf.d && \
+    cp -f config/nginx/onlyoffice*.conf /etc/nginx/conf.d/ && \
+    mkdir -p /etc/nginx/includes/ && \
+    cp -f config/nginx/includes/onlyoffice*.conf /etc/nginx/includes/ && \
+    cp -f config/nginx/includes/server-*.conf /etc/nginx/includes/ && \
     sed -i "s/\"number\".*,/\"number\": \"${PRODUCT_VERSION}.${BUILD_NUMBER}\",/g" /app/onlyoffice/config/appsettings.json && \
     sed -e 's/#//' -i /etc/nginx/conf.d/onlyoffice.conf && \
     cd ${SRC_PATH}/buildtools/install/common/ && \
@@ -103,7 +106,7 @@ RUN mkdir -p /var/log/onlyoffice && \
     curl \
     vim \
     libgdiplus && \
-    pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces && \
+    pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces requests && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
@@ -112,7 +115,7 @@ COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onl
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
 
-FROM node:20.11.0-slim as noderun
+FROM node:22-slim as noderun
 ARG BUILD_PATH
 ARG SRC_PATH 
 ENV BUILD_PATH=${BUILD_PATH}
@@ -131,7 +134,7 @@ RUN mkdir -p /var/log/onlyoffice && \
     curl \
     vim \
     python3-pip && \
-    pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces --break-system-packages && \
+    pip3 install --upgrade jsonpath-ng multipledispatch netaddr netifaces requests --break-system-packages && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config/* /app/onlyoffice/config/
@@ -344,6 +347,15 @@ COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Web.He
 
 ENTRYPOINT ["./docker-healthchecks-entrypoint.sh"]
 CMD ["ASC.Web.HealthChecks.UI.dll", "ASC.Web.HealthChecks.UI"]
+
+## ASC.TelegramService ##
+FROM dotnetrun AS telegram
+WORKDIR ${BUILD_PATH}/services/ASC.TelegramService/service/
+
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
+COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.TelegramService/service/ .
+
+CMD ["ASC.TelegramService.dll", "ASC.TelegramService", "core:eventBus:subscriptionClientName=asc_event_bus_telegram_queue"]
 
 ## ASC.Migration.Runner ##
 FROM $DOTNET_RUN AS onlyoffice-migration-runner

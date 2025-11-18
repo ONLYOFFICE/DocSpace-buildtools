@@ -92,6 +92,14 @@ END
 #   [OK] PREPARE_VM: **<prepare_message>**
 #############################################################################################
 function prepare_vm() {
+  # Ensure curl and gpg are installed
+  if ! command -v curl >/dev/null 2>&1; then
+    (command -v apt-get >/dev/null 2>&1 && apt-get update -y && apt-get install -y curl) || (command -v dnf >/dev/null 2>&1 && dnf install -y curl)
+  fi
+  if ! command -v gpg >/dev/null 2>&1; then
+    (command -v apt-get >/dev/null 2>&1 && apt-get update -y && apt-get install -y gnupg) || (command -v dnf >/dev/null 2>&1 && dnf install -y gnupg2)
+  fi
+
   if [ -f /etc/os-release ]; then
     source /etc/os-release
     case $ID in
@@ -100,7 +108,7 @@ function prepare_vm() {
           ;;
 
       debian)
-          [ "$VERSION_CODENAME" == "bookworm" ] && apt-get update -y && apt install -y curl gnupg
+          [ "$VERSION_CODENAME" == "bookworm" ] && apt-get update -y && apt install -y gnupg
           apt-get remove postfix -y && echo "${COLOR_GREEN}[OK] PREPARE_VM: Postfix was removed${COLOR_RESET}"
           [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-deb
           ;;
@@ -161,7 +169,7 @@ EOF
 #   Script log
 #############################################################################################
 function install_docspace() {
-  [[ "${DOWNLOAD_SCRIPTS}" == 'true' ]] && wget https://download.onlyoffice.com/docspace/docspace-install.sh || sed 's/set -e/set -xe/' -i *.sh
+  [[ "${DOWNLOAD_SCRIPTS}" == 'true' ]] && curl -fsSLO https://download.onlyoffice.com/docspace/docspace-install.sh || sed 's/set -e/set -xe/' -i *.sh
   bash docspace-install.sh package ${ARGUMENTS} -log false || { echo "Exit code non-zero. Exit with 1."; exit 1; }
   echo "Exit code 0. Continue..."
 }
@@ -231,7 +239,7 @@ main() {
   prepare_vm
   check_hw
   install_docspace
-  sleep 120
+  sleep 180
   services_logs
   healthcheck_systemd_services
 }

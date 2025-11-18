@@ -1,6 +1,6 @@
 name: Rebuild DocSpace vagrant boxes
 
-run-name: "Rebuild DocSpace vagrant boxes version: ${{ github.event.inputs.box-version }}"
+run-name: "Rebuild DocSpace vagrant boxes version: ${{ github.event.inputs.box-version }} (OS: ${{ github.event.inputs.os-name }})"
 
 on:
   workflow_dispatch:
@@ -9,11 +9,73 @@ on:
          type: string
          description: 'DocSpace version that will be installed inside box'
          required: true
+      os-name:
+        type: string
+        description: 'Select distros'
+        required: true
+        default: |
+          rhel9,
+          centos9s,
+          debian11,
+          debian12,
+          debian13,
+          ubuntu2204,
+          ubuntu2404
 
 jobs:
-  rebuild-boxes:
-    name: "Rebuild ${{ matrix.name}} ${{ github.event.inputs.box-version }}"
+  prepare:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.mk.outputs.matrix }}
+    steps:
+      - name: Ensure jq
+        run: |
+          command -v jq >/dev/null 2>&1 || { sudo apt-get update -y && sudo apt-get install -y jq; }
+
+      - name: Build matrix from input
+        id: mk
+        shell: bash
+        run: |
+          set -euo pipefail
+          OS_INPUT="${{ github.event.inputs.os-name }}"
+
+          MAP=$(cat <<'JSON'
+          {
+            "rhel9":     {"distr":"generic","os":"rhel9"},
+            "centos9s":  {"distr":"onlyoffice","os":"base-centos9s"},
+            "debian11":  {"distr":"onlyoffice","os":"base-debian11"},
+            "debian12":  {"distr":"onlyoffice","os":"base-debian12"},
+            "debian13":  {"distr":"onlyoffice","os":"base-debian13"},
+            "ubuntu2204":{"distr":"onlyoffice","os":"base-ubuntu2204"},
+            "ubuntu2404":{"distr":"onlyoffice","os":"base-ubuntu2404"}
+          }
+          JSON
+          )
+
+          MATRIX="$(jq -cn --arg input "$OS_INPUT" --argjson map "$MAP" '
+            def norm: gsub("[\n\r]+"; ",") | gsub("\\s+"; "");
+            ($input | norm) as $inp
+            | ( if $inp == "all"
+                then ($map | keys)
+                else ($inp | split(",") | map(select(length>0)) | unique)
+              end ) as $keys
+            | [ $keys[] as $k
+                | select($map | has($k))
+                | ({name:$k} + $map[$k])
+              ]
+            | {include: .}
+          ')"
+
+          test "$(jq '.include|length' <<<"$MATRIX")" -gt 0 || { echo "No valid OS selected."; exit 1; }
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+
+  vagrant-up:
+    name: "Rebuild DocSpace ${{ matrix.name }}"
+    needs: prepare
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     env:
       HCP_CLIENT_ID: ${{ secrets.HCP_CLIENT_ID }}
       HCP_CLIENT_SECRET: ${{ secrets.HCP_CLIENT_SECRET }}
@@ -23,47 +85,14 @@ jobs:
       OS_NAME: ${{ matrix.name }}
       OS: ${{ matrix.os }}
       DISTR: ${{ matrix.distr }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - distr: onlyoffice
-            os: base-centos9s
-            name: "centos9s"
-
-          - distr: onlyoffice
-            os: base-debian12
-            name: "debian12"
-
-          - distr: onlyoffice
-            os: base-debian11
-            name: "debian11"
-
-          - distr: onlyoffice
-            os: base-ubuntu2204
-            name: "ubuntu2204"
-
-          - distr: onlyoffice
-            os: base-ubuntu2404
-            name: "ubuntu2404"
-
-          - distr: onlyoffice
-            os: base-fedora40
-            name: "fedora40"
-
-          - distr: onlyoffice
-            os: base-fedora41
-            name: "fedora41"
-
     steps:
+      - name: Free Disk Space
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/free-disk-space-linux.sh | sudo bash
+
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-      
       - name: 'Download hcp CLI'
         uses: 'hashicorp/hcp-setup-action@v0'
         with:
@@ -72,15 +101,12 @@ jobs:
       - name: Get update and install vagrant
         run: |
           set -eux
+          gpg --keyserver keyserver.ubuntu.com --recv-keys A2F683C52980AECF && gpg --export A2F683C52980AECF > /usr/share/keyrings/virtualbox.gpg
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/virtualbox.gpg] https://download.virtualbox.org/virtualbox/debian $(. /etc/os-release && echo $UBUNTU_CODENAME) contrib" | sudo tee /etc/apt/sources.list.d/virtualbox.list
           sudo wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-          sudo echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
           sudo apt update -y
-          sudo apt install vagrant virtualbox -y
-
-      - name: Free Disk Space
-        run: |
-          sudo rm -rf /usr/local/lib/android /opt/ghc
-          sudo docker image prune --all --force       
+          sudo apt install vagrant virtualbox-7.0 -y
 
       - name: Rebuild boxes
         uses: nick-fields/retry@v3
@@ -91,14 +117,15 @@ jobs:
           command: |
                   set -eux   
                   cd tests/vagrant
-                    TEST_CASE='--production-install' \
+                    TEST_CASE='--local-install' \
                     DISTR='${{ matrix.distr }}' \
-                    OS='${{ matrix.os }}' \
-                    DOWNLOAD_SCRIPT='-ds true' \
+                    OS='${{matrix.os}}' \
                     RAM='8192' \
                     CPU='3' \
-                    ARGUMENTS="-arg '--skiphardwarecheck true'" \
-                    vagrant up
+                    DOWNLOAD_SCRIPT='-ds false' \
+                    TEST_REPO='-tr true' \
+                    ARGUMENTS="-arg '--skiphardwarecheck true --localscripts true'" \
+                    vagrant up --provider=virtualbox
                   sleep 300
                   vagrant package --output ${PRODUCT}-${OS_NAME}.box
                   wget https://raw.githubusercontent.com/ONLYOFFICE/ga-common/refs/heads/master/.github/scripts/vagrant_publish.sh

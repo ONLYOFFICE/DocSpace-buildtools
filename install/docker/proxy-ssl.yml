@@ -14,6 +14,8 @@ services:
     healthcheck:
      <<: *x-healthcheck
      test: nginx -t || exit 1
+    extra_hosts:
+      - "${EXTRA_HOSTS:-placeholder.local:127.0.0.1}"
     ports:
       - 80:80
       - 443:443/tcp

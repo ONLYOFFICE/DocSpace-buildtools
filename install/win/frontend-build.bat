@@ -8,27 +8,26 @@ set DEBUG_INFO=%~2
 
 pushd %~s1
 
-  call yarn install
-  if "%DEBUG_INFO%"=="true" yarn debug-info
+  call pnpm install
 
   call node common\scripts\before-build.js
 
   set TS_ERRORS_IGNORE=true
 
-  call yarn workspace @docspace/client build --env lint=false
-  call yarn workspace @docspace/client deploy
+  call pnpm nx build @docspace/client --env lint=false
+  call pnpm nx deploy @docspace/client 
 
-  call yarn workspace @docspace/management build --env lint=false
-  call yarn workspace @docspace/management deploy
+  call pnpm nx build @docspace/login
+  call pnpm nx deploy @docspace/login
 
-  call yarn workspace @docspace/login build
-  call yarn workspace @docspace/login deploy
+  call pnpm nx build @docspace/doceditor
+  call pnpm nx deploy @docspace/doceditor
 
-  call yarn workspace @docspace/doceditor build
-  call yarn workspace @docspace/doceditor deploy
+  call pnpm nx build @docspace/management
+  call pnpm nx deploy @docspace/management
 
-  call yarn workspace @docspace/sdk build
-  call yarn workspace @docspace/sdk deploy
+  call pnpm nx build @docspace/sdk
+  call pnpm nx deploy @docspace/sdk
 
   xcopy /E /I /Y public "..\publish\web\public\"
   call node common\scripts\minify-common-locales.js

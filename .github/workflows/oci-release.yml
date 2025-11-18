@@ -36,6 +36,10 @@ jobs:
         run: |
           cd ${{ env.DOCKER_DIR }}
           tar -czvf ${{ env.SCRIPT_DIR }}/docker.tar.gz \
+            --exclude='db.dev.yml' \
+            --exclude='dnsmasq.yml' \
+            --exclude='docspace.overcome.yml' \
+            --exclude='docspace.profiles.yml' \
             --exclude='config/supervisor*' \
             --exclude='config/mysql*' \
             --exclude='config/nginx/docker-entrypoint*' \
@@ -67,6 +71,7 @@ jobs:
             --include="install-Debian.sh" \
             --include="install-Debian/*" \
             --include="install-Docker.sh" \
+            --include="install-Docker-args.sh" \
             --include="docker.tar.gz"
 
       - name: Invalidate AWS CloudFront cache
@@ -82,4 +87,5 @@ jobs:
             "/${{ env.PRODUCT }}/install-Debian.sh" \
             "/${{ env.PRODUCT }}/install-Debian/*" \
             "/${{ env.PRODUCT }}/install-Docker.sh" \
+            "/${{ env.PRODUCT }}/install-Docker-args.sh" \
             "/${{ env.PRODUCT }}/docker.tar.gz"

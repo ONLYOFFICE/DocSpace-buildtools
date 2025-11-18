@@ -3,31 +3,33 @@ name: Build packages
 on:
   push:
     branches:
-      - 'release/**'
-      - 'hotfix/**'
-      - 'develop'
+      - "release/**"
+      - "hotfix/**"
+      - "develop"
     paths:
-      - '.github/workflows/build_packages.yml'
+      - ".github/workflows/build_packages.yml"
   workflow_dispatch:
     inputs:
       branch-buildtools:
-        description: 'Branch for buildtools repository'
+        description: "Branch for buildtools repository"
         required: true
-        default: 'develop'
+        default: "develop"
       branch-client:
-        description: 'Branch for client repository'
+        description: "Branch for client repository"
         required: true
-        default: 'develop'
+        default: "develop"
       branch-server:
-        description: 'Branch for server repository'
+        description: "Branch for server repository"
         required: true
-        default: 'develop'
+        default: "develop"
       deb_build:
-        description: 'Trigger DEB build'
-        default: 'true'
+        type: boolean
+        description: "Trigger DEB build"
+        default: true
       rpm_build:
-        description: 'Trigger RPM build'
-        default: 'true'
+        type: boolean
+        description: "Trigger RPM build"
+        default: true
 
 concurrency:
   group: ${{ github.ref }}
@@ -47,31 +49,26 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
-      build_all: ${{ steps.changes.outputs.build_all }}
+      build_all: ${{ steps.set-matrix.outputs.build_all }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Determine changed
-        id: changes
-        run: |
-          git fetch --no-tags --prune --depth=2
-          echo "build_all=$(git diff --name-only HEAD~1 HEAD | grep -qE 'build_packages.yml' && echo true)" >> $GITHUB_OUTPUT
       - name: Set matrix
         id: set-matrix
         run: |
           package_types=()
-          if [[ "${{ steps.changes.outputs.build_all }}" == "true" ]]; then
-            package_types=("deb" "rpm")
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            package_types=("deb" "rpm"); echo "build_all=true" >> $GITHUB_OUTPUT
           else
             [[ "${{ github.event.inputs.deb_build }}" == "true" ]] && package_types+=("deb")
             [[ "${{ github.event.inputs.rpm_build }}" == "true" ]] && package_types+=("rpm")
           fi
-          [[ ${#package_types[@]} -eq 0 ]] && exit 0
+          [[ ${#package_types[@]} -eq 0 ]] && { echo "::error::No package types specified"; exit 1; }
           matrix=$(printf '%s\n' "${package_types[@]}" | jq -R . | jq -sc '{include: map({packageType: .})}')
-          echo "matrix=$matrix" >> $GITHUB_OUTPUT  
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
   build:
     name: Build Packages
     needs: prepare
@@ -79,6 +76,10 @@ jobs:
     strategy:
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     steps:
+      - name: Free Disk Space
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${BRANCH_BUILDTOOLS}/.github/scripts/free-disk-space-linux.sh | sudo bash
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -88,12 +89,7 @@ jobs:
         run: |
           PRODUCT_VERSION=$(grep -oP '\d+\.\d+\.\d+' <<< "${BRANCH_BUILDTOOLS//\//} ${BRANCH_CLIENT//\//} \
           ${BRANCH_SERVER//\//}" | head -n1)
-          echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.1.1}" >> $GITHUB_ENV
-
-      - name: Free Disk Space
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/apache/arrow/refs/heads/main/ci/scripts/util_free_space.sh | bash
-          sudo docker image prune --all --force
+          echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.2.2}" >> $GITHUB_ENV
 
       - name: Import GPG
         uses: crazy-max/ghaction-import-gpg@v6
@@ -114,7 +110,7 @@ jobs:
           JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | head -1)
           sudo update-alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && sudo update-alternatives --set java "$JAVA_PATH"
           echo "JAVA_HOME=$(dirname $(dirname "$JAVA_PATH"))" >> $GITHUB_ENV
-          sudo npm install -g json
+          sudo npm install -g json pnpm
           if [[ "${{ matrix.packageType }}" == "rpm" ]]; then
             sudo apt install -y python3-rpm python3-pip
             sudo pip install rpmlint
@@ -128,13 +124,14 @@ jobs:
             deb) SOURCE_DIR="${PACKAGE_DIRECTORY}/install/${{ matrix.packageType }}/debian/source" ;;
             rpm) SOURCE_DIR="${PACKAGE_DIRECTORY}/install/${{ matrix.packageType }}/SPECS/SOURCES" ;;
           esac
-          download() { wget -q -O "${SOURCE_DIR}/$3.tar.gz" "https://github.com/ONLYOFFICE/$1/archive/$2.tar.gz" && echo -e "\e[32m[OK] $3\e[0m" || echo -e "\e[31m[FAILED] $3\e[0m"; }
+          download() { wget -q -O "${SOURCE_DIR}/$3.tar.gz" "https://codeload.github.com/ONLYOFFICE/$1/tar.gz/$2" && echo -e "\e[32m[OK] $3\e[0m" || echo -e "\e[31m[FAILED] $3\e[0m"; }
           download "$PRODUCT-buildtools"  "$BRANCH_BUILDTOOLS"      buildtools &
           download "$PRODUCT-client"      "$BRANCH_CLIENT"          client &
           download "$PRODUCT-server"      "$BRANCH_SERVER"          server &
           download "document-templates"   "main/community-server"   DocStore &
           download "ASC.Web.Campaigns"    "master"                  campaigns &
           download "$PRODUCT-plugins"     "master"                  plugins &
+          download "document-formats"     "master"                  document-formats &
           wait
 
       - name: Build DEB Packages
@@ -173,7 +170,7 @@ jobs:
               -D "_gpg_path $HOME/.gnupg" \
               -D "_gpg_name ${{ secrets.GPG_KEY_NAME }}" \
               -D "_gpg_sign_cmd_extra_args --pinentry-mode loopback --passphrase ${{ secrets.GPG_PRIVATE_KEY_PASS }}" \
-              --addsign ${PACKAGE_DIRECTORY}/install/rpm/SPECS/RPMS/noarch/*.rpm 
+              --addsign ${PACKAGE_DIRECTORY}/install/rpm/SPECS/RPMS/noarch/*.rpm
 
       - name: Upload DEB Packages
         if: matrix.packageType == 'deb'
@@ -212,7 +209,7 @@ jobs:
           if grep -qE '(W:|E:)' RPM_LINT; then
             echo "::warning Noticerpm=rpmlint::$(cat RPM_LINT | awk '/W:/ { ws += 1 } /E:/ { es += 1 } END { print "Warnings:", ws, "Errors:", es }')"
           fi
-      
+
   trigger_oci:
     name: Trigger ci-oci-install Workflow
     needs: [prepare, build]
@@ -225,7 +222,7 @@ jobs:
         run: |
           deb_build="${{ github.event.inputs.deb_build }}" rpm_build="${{ github.event.inputs.rpm_build }}"
           [[ "${{ needs.prepare.outputs.build_all }}" == "true" ]] && deb_build="true" && rpm_build="true"
-          
+
           gh api --method POST /repos/${{ github.repository }}/actions/workflows/85067971/dispatches \
             -f ref='${{ github.ref_name }}' \
             -f inputs[deb_build]="${deb_build}" \

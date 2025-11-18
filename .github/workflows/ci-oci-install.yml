@@ -2,42 +2,22 @@ name: Install OneClickInstall DocSpace
 
 on:
   schedule:
-    - cron: '00 20 * * 0'
+    - cron: "00 20 * * 0"
 
   workflow_dispatch:
     inputs:
-      rhel9:
-        type: boolean
-        description: 'RHEL 9'
-        default: true
-      centos9s:
-         type: boolean
-         description: 'CentOS 9 Stream'
-         default: true
-      debian11:
-         type: boolean
-         description: 'Debian 11'
-         default: true
-      debian12:
-         type: boolean
-         description: 'Debian 12'
-         default: true
-      ubuntu2204:
-         type: boolean
-         description: 'Ubuntu 22.04'
-         default: true
-      ubuntu2404:
-          type: boolean
-          description: 'Ubuntu 24.04'
-          default: true
-      fedora40:
-         type: boolean
-         description: 'Fedora 40'
-         default: true
-      fedora41:
-        type: boolean
-        description: 'Fedora 41'
-        default: true
+      os:
+        description: Select distros (only without deb/rpm flags)
+        default: |
+          debian11,
+          debian12,
+          debian13,
+          ubuntu2204,
+          ubuntu2404,
+          rhel9,
+          centos9s,
+          fedora41,
+          fedora42
       deb_build:
         type: boolean
         description: "Run tests on DEB-based distros"
@@ -55,25 +35,37 @@ jobs:
     steps:
       - name: Set matrix names
         id: set-matrix
+        env:
+          OS_MAP: |
+            {
+              "rhel9":      ["RHEL 9",       "generic",      "rhel9"],
+              "centos9s":   ["CentOS 9s",    "onlyoffice",   "base-centos9s"],
+              "debian11":   ["Debian 11",    "onlyoffice",   "base-debian11"],
+              "debian12":   ["Debian 12",    "onlyoffice",   "base-debian12"],
+              "debian13":   ["Debian 13",    "onlyoffice",   "base-debian13"],
+              "ubuntu2204": ["Ubuntu 22.04", "onlyoffice",   "base-ubuntu2204"],
+              "ubuntu2404": ["Ubuntu 24.04", "onlyoffice",   "base-ubuntu2404"],
+              "fedora41":   ["Fedora 41",    "onlyoffice",   "base-fedora41"],
+              "fedora42":   ["Fedora 42",    "onlyoffice",   "base-fedora42"]
+            }
         run: |
-          matrix=$(echo '{
-            "include": [
-              {"execute": '${{ github.event.inputs.rhel9 || true }}', "name": "RHEL 9", "os": "rhel9", "distr": "generic"},
-              {"execute": '${{ github.event.inputs.centos9s || true }}', "name": "CentOS9s", "os": "base-centos9s", "distr": "onlyoffice"},
-              {"execute": '${{ github.event.inputs.debian11 || true }}', "name": "Debian11", "os": "base-debian11", "distr": "onlyoffice"},
-              {"execute": '${{ github.event.inputs.debian12 || true }}', "name": "Debian12", "os": "base-debian12", "distr": "onlyoffice"},
-              {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu22.04", "os": "base-ubuntu2204", "distr": "onlyoffice"},
-              {"execute": '${{ github.event.inputs.ubuntu2404 || true }}', "name": "Ubuntu24.04", "os": "base-ubuntu2404", "distr": "onlyoffice"},
-              {"execute": '${{ github.event.inputs.fedora40 || true }}', "name": "Fedora40", "os": "base-fedora40", "distr": "onlyoffice"},
-              {"execute": '${{ github.event.inputs.fedora41 || true }}', "name": "Fedora41", "os": "base-fedora41", "distr": "onlyoffice"}
-            ]
-          }')            
+          OS_INPUT="${{ github.event.inputs.os }}"
+          declare -A os_set=()
+          if [[ "${{ github.event.inputs.deb_build }}" != "true" && "${{ github.event.inputs.rpm_build }}" != "true" ]]; then
+            for os in ${OS_INPUT//,/ }; do
+              os_trimmed="$(echo "$os" | xargs)"
+              [[ -n "$os_trimmed" ]] && os_set["$os_trimmed"]=1
+            done
+          fi
 
-          matrix=$(jq -c --argjson debuild "${{ github.event.inputs.deb_build||true }}" --argjson rpmbuild "${{ github.event.inputs.rpm_build||true }}" \
-          '{include:[.include[]|select(.execute or
-            ($debuild and(.name|test("Debian|Ubuntu"))) or
-            ($rpmbuild and(.name|test("CentOS|Fedora|RHEL")))
-          )]}' <<< "$matrix")
+          [[ "${{ github.event.inputs.deb_build }}" == "true" ]] && \
+            for os in $(jq -r 'to_entries[] | select(.value[0] | test("Debian|Ubuntu")) | .key' <<< "$OS_MAP"); do os_set["$os"]=1; done
+
+          [[ "${{ github.event.inputs.rpm_build }}" == "true" ]] && \
+            for os in $(jq -r 'to_entries[] | select(.value[0] | test("CentOS|Fedora|RHEL")) | .key' <<< "$OS_MAP"); do os_set["$os"]=1; done
+
+          matrix=$(jq -c -n --argjson map "$OS_MAP" --argjson list "$(printf '%s\n' "${!os_set[@]}" | sort -u | jq -R . | jq -s .)" \
+            '{include: $list | map({name:  $map[.][0],os:    ($map[.][2] // .),distr: $map[.][1]})}')
 
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
 
@@ -86,6 +78,10 @@ jobs:
       matrix: ${{fromJSON(needs.prepare.outputs.matrix)}}
 
     steps:
+      - name: Free Disk Space
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/free-disk-space-linux.sh | sudo bash
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -97,25 +93,15 @@ jobs:
             | xargs shellcheck --exclude="$(awk '!/^#|^$/ {print $1}' tests/lint/sc_ignore | paste -sd ",")" --severity=warning | tee sc_output
           awk '/\(warning\):/ {w++} /\(error\):/ {e++} END {if (w+e) printf "::warning ::ShellCheck detected %d warnings and %d errors\n", w+0, e+0}' sc_output
 
-      - name: Set up Python 3.
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-
       - name: Get update and install vagrant
         run: |
           set -eux
-          wget -q https://www.virtualbox.org/download/oracle_vbox_2016.asc -O- | sudo gpg --dearmor -o /usr/share/keyrings/virtualbox.gpg
+          gpg --keyserver keyserver.ubuntu.com --recv-keys A2F683C52980AECF && gpg --export A2F683C52980AECF > /usr/share/keyrings/virtualbox.gpg
           echo "deb [arch=amd64 signed-by=/usr/share/keyrings/virtualbox.gpg] https://download.virtualbox.org/virtualbox/debian $(. /etc/os-release && echo $UBUNTU_CODENAME) contrib" | sudo tee /etc/apt/sources.list.d/virtualbox.list
           sudo wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
           sudo echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
           sudo apt update -y
-          sudo apt install vagrant virtualbox-7.0 -y
-
-      - name: Free Disk Space
-        run: |
-          sudo rm -rf /usr/local/lib/android /opt/ghc
-          sudo docker image prune --all --force
+          sudo apt-get install -y vagrant virtualbox-7.1
 
       - name: "Test production scripts with ${{matrix.name}}"
         if: ${{ github.event_name == 'schedule' }}

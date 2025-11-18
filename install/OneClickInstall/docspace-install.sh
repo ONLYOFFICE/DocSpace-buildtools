@@ -41,49 +41,23 @@ ENABLE_LOGGING="true"
 
 while [ "$1" != "" ]; do
 	case $1 in
-		-ls | --localscripts )
-			if [ "$2" == "true" ] || [ "$2" == "false" ]; then
-				PARAMETERS="$PARAMETERS ${1}"
-				LOCAL_SCRIPTS=$2
-				shift
-			fi
-		;;
-		
-		-log | --logging )
-			if [ "$2" == "true" ] || [ "$2" == "false" ]; then
-				ENABLE_LOGGING=$2
-				shift 2
-			fi
-		;;
-		
-		-gb | --gitbranch )
-			if [ "$2" != "" ]; then
-				PARAMETERS="$PARAMETERS ${1}"
-				GIT_BRANCH=$2
-				shift
-			fi
-		;;
+        -ls | --localscripts )     [[ "$2" == "true" || "$2" == "false" ]] && PARAMETERS="$PARAMETERS ${1}" && LOCAL_SCRIPTS=$2 && shift ;;
+        -log | --logging )         [[ "$2" == "true" || "$2" == "false" ]] && ENABLE_LOGGING=$2 && shift 2 && continue ;;
+        -gb | --gitbranch )        [ -n "$2" ] && PARAMETERS="$PARAMETERS ${1}" && GIT_BRANCH=$2 && shift ;;
+        -dsv | --docspaceversion ) [ -n "$2" ] && PARAMETERS="$PARAMETERS ${1}" && DOCKER_TAG=$2 && shift ;; # only for detect docker legacy installs
+        docker ) DOCKER="true"; shift ; continue ;;
+        package ) DOCKER="false"; shift ; continue ;;
+        -h | -? | --help )
+            if [ -z "$DOCKER" ]; then
+                echo "Run 'bash $FILE_NAME docker' to install Docker version of application."
+                echo "Run 'bash $FILE_NAME package' to install DEB/RPM version."
+                echo "Run 'bash $FILE_NAME docker -h' or 'bash $FILE_NAME package -h' to get more details."
+                exit 0
+            fi
+            PARAMETERS="$PARAMETERS -ht $FILE_NAME"
+        ;;
+    esac
 
-		docker )
-			DOCKER="true"
-			shift && continue
-		;;
-
-		package )
-			DOCKER="false"
-			shift && continue
-		;;
-
-		"-?" | -h | --help )
-			if [ -z "$DOCKER" ]; then
-				echo "Run 'bash $FILE_NAME docker' to install Docker version of application."
-				echo "Run 'bash $FILE_NAME package' to install DEB/RPM version."
-				echo "Run 'bash $FILE_NAME docker -h' or 'bash $FILE_NAME package -h' to get more details."
-				exit 0
-			fi
-			PARAMETERS="$PARAMETERS -ht $FILE_NAME"
-		;;
-	esac
 	PARAMETERS="$PARAMETERS ${1}"
 	shift
 done
@@ -135,6 +109,15 @@ fi
  
 [ -z "$DOCKER" ] && read_installation_method
 
+# Auto-detect legacy installs
+if [[ "${DOCKER}" == "true" ]] && [[ ${DOCKER_TAG} =~ ^([0-9]+\.[0-9]+\.[0-9]+)(\.[0-9]+)?$ ]]; then
+  TAG="v${BASH_REMATCH[1]}"; LATEST_TAG=$(curl -s "https://api.github.com/repos/${product_sysname^^}/${product}/releases/latest" | grep -Po '"tag_name":\s*"\K[^"]+')
+  if [[ "${TAG}" != "${LATEST_TAG}" ]] && curl -sfI "https://github.com/${product_sysname^^}/${product}-buildtools/releases/tag/${TAG}-server" >/dev/null; then
+	>&2 echo "Warning: legacy install detected (v${BASH_REMATCH[1]}) — compatibility issues or unforeseen errors may occur."
+    PARAMETERS="${PARAMETERS} -gb ${TAG}-server"; GIT_BRANCH="${TAG}-server"
+  fi
+fi
+
 DOWNLOAD_URL_PREFIX="https://download.${product_sysname}.com/${product}"
 [ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${product_sysname^^}/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
 
@@ -152,10 +135,15 @@ fi
 [ "$LOCAL_SCRIPTS" != "true" ] && curl -s -O ${DOWNLOAD_URL_PREFIX}/${SCRIPT_NAME}
 
 if [ "$ENABLE_LOGGING" = "true" ]; then
-    LOG_FILE="OneClick${SCRIPT_NAME%.sh}_$(date +%Y%m%d_%H%M%S).log"
-    touch "${LOG_FILE}" || { echo "Failed to create log file"; exit 1; }
-    script -q -e "${LOG_FILE}" -c "bash ${SCRIPT_NAME} ${PARAMETERS}"
-    EXIT_CODE=${PIPESTATUS[0]}
+    command -v script >/dev/null 2>&1 || { command -v dnf >/dev/null 2>&1 && dnf -y install util-linux-script; }
+    if command -v script >/dev/null 2>&1; then
+        LOG_FILE="OneClick${SCRIPT_NAME%.sh}_$(date +%Y%m%d_%H%M%S).log"
+        touch "${LOG_FILE}" || { echo "Failed to create log file"; exit 1; }
+        script -q -e "${LOG_FILE}" -c "bash ${SCRIPT_NAME} ${PARAMETERS}"
+        EXIT_CODE=${PIPESTATUS[0]}
+    else
+        bash ${SCRIPT_NAME} ${PARAMETERS} || EXIT_CODE=$?
+    fi
 else
     bash ${SCRIPT_NAME} ${PARAMETERS} || EXIT_CODE=$?
 fi

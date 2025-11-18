@@ -48,6 +48,8 @@ copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\L
 copy buildtools\install\win\tools\Login.xml "buildtools\install\win\Files\tools\Login.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\Sdk.exe" /y
 copy buildtools\install\win\tools\Sdk.xml "buildtools\install\win\Files\tools\Sdk.xml" /y
+copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\Management.exe" /y
+copy buildtools\install\win\tools\Management.xml "buildtools\install\win\Files\tools\Management.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\OpenSearch\tools\OpenSearch.exe" /y
 copy buildtools\install\win\tools\OpenSearch.xml "buildtools\install\win\OpenSearch\tools\OpenSearch.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\OpenSearchStack\tools\OpenSearchDashboards.exe" /y
