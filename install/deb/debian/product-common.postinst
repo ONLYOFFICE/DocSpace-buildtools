@@ -4,19 +4,9 @@
 
 set -e
 
-if ! cat /etc/passwd | grep -q "onlyoffice:"; then
-	adduser --quiet --home /var/www/{{product}} --system --group onlyoffice
-fi
-		
-if ! cat /etc/group | grep -q "nginx:"; then
-	addgroup --quiet --system nginx
-fi
-		
-if ! cat /etc/passwd | grep -q "nginx:"; then
-	adduser --quiet --group --no-create-home --home /nonexistent --system nginx
-	usermod -aG nginx nginx
-fi
-
+getent passwd onlyoffice >/dev/null || adduser --quiet --home /var/www/{{product}} --system --group onlyoffice
+getent group nginx >/dev/null || addgroup --quiet --system nginx
+getent passwd nginx >/dev/null || adduser --quiet --system --no-create-home --home /nonexistent --group nginx
 usermod -aG onlyoffice,nginx onlyoffice
 
 #DEBHELPER#

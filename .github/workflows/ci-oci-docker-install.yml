@@ -102,14 +102,15 @@ jobs:
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
           docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q) && docker volume rm $(docker volume ls -q)
-          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/free-disk-space-linux.sh | CLEAN_DOCKER=0 sudo bash
+          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/free-disk-space-linux.sh | sudo CLEAN_DOCKER=0 bash
 
       - name: Creating 4testing offline self-extracting archive
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
           INSTALL_PATH=${{ github.workspace }}/install
+          IS_4TESTING="${{ github.event.inputs.testing }}"
 
-          for repo in onlyoffice/$( [ "${{ github.ref_name }}" = "master" ] && echo documentserver || echo 4testing-documentserver ) onlyoffice/$( [ "${{ github.ref_name }}" = "master" ] && echo documentserver-de || echo 4testing-documentserver-de ); do
+          for repo in onlyoffice/$( [ "${IS_4TESTING:-true}" != "false" ] && echo 4testing- )documentserver{,-de}; do
             tag=$(curl -s "https://registry.hub.docker.com/v2/repositories/${repo}/tags?page_size=100" \
                   | jq -r '.results[].name' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -Vr | head -n1)
             [ -z "$tag" ] && exit 1

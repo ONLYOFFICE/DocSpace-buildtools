@@ -1,7 +1,7 @@
 ARG SRC_PATH="/app/onlyoffice/src"
 ARG BUILD_PATH="/var/www"
-ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:9.0"
-ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:9.0-noble"
+ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:10.0"
+ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:10.0-noble"
 
 # Image resources
 FROM python:3.12-slim AS src
@@ -65,7 +65,7 @@ ARG SRC_PATH
 WORKDIR ${SRC_PATH}/server
 COPY --from=src ${SRC_PATH}/server/ .
 
-RUN echo "--- build/publishh docspace-server .net 9.0 ---" && \
+RUN echo "--- build/publishh docspace-server .net 10.0 ---" && \
     dotnet build ASC.Web.slnf && \
     dotnet build ASC.Migrations.sln --property:OutputPath=${SRC_PATH}/publish/services/ASC.Migration.Runner/service/ && \
     dotnet publish ASC.Web.slnf -p PublishProfile=ReleaseProfile && \

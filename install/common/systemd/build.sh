@@ -76,6 +76,8 @@ SERVICE_NAME=(
 	sdk
 	management
 	telegram
+	ai
+	ai-service
 	)
 
 reassign_values (){
@@ -208,6 +210,17 @@ reassign_values (){
 		WORK_DIR="${BASE_DIR}/services/ASC.TelegramService/"
 		EXEC_FILE="ASC.TelegramService.dll"
 		CORE_EVENT_BUS=" --core:eventBus:subscriptionClientName=asc_event_bus_telegram_queue"
+	;;
+	ai )
+		SERVICE_PORT="5157"
+		WORK_DIR="${BASE_DIR}/products/ASC.AI/server/"
+		EXEC_FILE="ASC.AI.dll"
+	;;
+	ai-service )
+		SERVICE_PORT="5124"
+		WORK_DIR="${BASE_DIR}/products/ASC.AI/service/"
+		EXEC_FILE="ASC.AI.Service.dll"
+		CORE_EVENT_BUS=" --core:eventBus:subscriptionClientName=asc_event_bus_ai_service_queue"
 	;;
   esac
   SERVICE_NAME="$1"

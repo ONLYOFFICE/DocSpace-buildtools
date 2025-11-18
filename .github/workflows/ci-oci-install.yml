@@ -56,10 +56,10 @@ jobs:
             done
           fi
 
-          [[ "${{ github.event.inputs.deb_build }}" == "true" ]] && \
+          [[ "${{ github.event_name }}" == "schedule" || "${{ github.event.inputs.deb_build }}" == "true" ]] && \
             for os in $(jq -r 'to_entries[] | select(.value[0] | test("Debian|Ubuntu")) | .key' <<< "$OS_MAP"); do os_set["$os"]=1; done
 
-          [[ "${{ github.event.inputs.rpm_build }}" == "true" ]] && \
+          [[ "${{ github.event_name }}" == "schedule" || "${{ github.event.inputs.rpm_build }}" == "true" ]] && \
             for os in $(jq -r 'to_entries[] | select(.value[0] | test("CentOS|Fedora|RHEL")) | .key' <<< "$OS_MAP"); do os_set["$os"]=1; done
 
           matrix=$(jq -c -n --argjson map "$OS_MAP" --argjson list "$(printf '%s\n' "${!os_set[@]}" | sort -u | jq -R . | jq -s .)" \

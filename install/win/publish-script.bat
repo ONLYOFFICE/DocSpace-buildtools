@@ -19,6 +19,8 @@ if defined SecondArg (
 rem backend services (dotnet) in directory 'products'
 dotnet publish "%PathToRepository%\products\ASC.Files\server\ASC.Files.csproj" -c Release -r win-x64 --self-contained false -o "%PathToAppFolder%\products\ASC.Files\server"
 dotnet publish "%PathToRepository%\products\ASC.People\server\ASC.People.csproj" -c Release -r win-x64 --self-contained false -o "%PathToAppFolder%\products\ASC.People\server"
+dotnet publish "%PathToRepository%\products\ASC.AI\server\ASC.AI.csproj" -c Release -r win-x64 --self-contained false -o "%PathToAppFolder%\products\ASC.AI\server"
+dotnet publish "%PathToRepository%\products\ASC.AI\service\ASC.AI.Service.csproj" -c Release -r win-x64 --self-contained false -o "%PathToAppFolder%\products\ASC.AI\service"
 
 rem backend services (dotnet) in directory 'services'
 dotnet publish "%PathToRepository%\common\services\ASC.ApiSystem\ASC.ApiSystem.csproj" -c Release -r win-x64 --self-contained false -o "%PathToAppFolder%\services\ASC.ApiSystem\service"
