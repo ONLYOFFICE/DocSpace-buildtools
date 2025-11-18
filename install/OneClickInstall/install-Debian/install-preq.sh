@@ -43,7 +43,7 @@ if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then
 fi
 
 # add nodejs repo
-NODE_VERSION="18"
+NODE_VERSION="22"
 curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
 
 #add dotnet repo
@@ -95,6 +95,11 @@ elif dpkg -l | grep -q "mysql-apt-config" && [ "$(apt-cache policy mysql-apt-con
 	rm -f "${MYSQL_PACKAGE_NAME}"
 fi
 
+# fix Bug 77825 - MySQL repo GPG key expired
+if [ -f "/etc/apt/sources.list.d/mysql.list" ]; then
+	sed -E -i 's/\[trusted=(no|yes) /\[trusted=yes /; /\[trusted=yes /! s/\[signed-by=(.*)\]/[trusted=yes signed-by=\1]/; s/^(deb-src)/#\1/' /etc/apt/sources.list.d/mysql.list
+fi
+
 if [ "$DIST" = "ubuntu" ]; then	
 	curl -fsSL https://packages.redis.io/gpg | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/redis.gpg --import
 	echo "deb [signed-by=/usr/share/keyrings/redis.gpg] https://packages.redis.io/deb ${DISTRIB_CODENAME} main" | tee /etc/apt/sources.list.d/redis.list
@@ -124,7 +129,7 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 				nodejs \
 				gcc \
 				make \
-				dotnet-sdk-9.0 \
+				dotnet-sdk-10.0 \
 				mysql-server \
 				mysql-client \
 				postgresql \

@@ -158,6 +158,34 @@ services:
       onlyoffice-migration-runner:
         condition: service_completed_successfully
 
+  onlyoffice-ai:
+    <<: *x-profiles-local
+    image: ${Baseimage_Dotnet_Run}
+    working_dir: ${BUILD_PATH}/products/ASC.AI/server/
+    command: ["ASC.AI.dll", "ASC.AI"]
+    volumes:
+      - ${ROOT_DIR}/server/products/ASC.AI/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.AI/server/
+      - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
+      - ${ROOT_DIR}/buildtools/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json:/app/onlyoffice/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json
+    depends_on:
+      onlyoffice-migration-runner:
+        condition: service_completed_successfully
+
+  onlyoffice-ai-service:
+    <<: *x-profiles-local
+    image: ${Baseimage_Dotnet_Run}
+    working_dir: ${BUILD_PATH}/products/ASC.AI/service/
+    command: ["ASC.AI.Service.dll", "ASC.AI.Service", "core:eventBus:subscriptionClientName=asc_event_bus_ai_service_queue"]
+    volumes:
+      - ${ROOT_DIR}/server/products/ASC.AI/Service/${BIN_DIR}:${BUILD_PATH}/products/ASC.AI/service/
+      - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
+      - ${ROOT_DIR}/buildtools/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json:/app/onlyoffice/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json
+    depends_on:
+      onlyoffice-migration-runner:
+        condition: service_completed_successfully 
+
   onlyoffice-ssoauth:
     <<: *x-profiles-local
     image: ${Baseimage_Nodejs_Run}

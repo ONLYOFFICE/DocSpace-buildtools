@@ -29,13 +29,15 @@ Source5:        https://codeload.github.com/ONLYOFFICE/ASC.Web.Campaigns/tar.gz/
 Source6:        https://codeload.github.com/ONLYOFFICE/%{product}-plugins/tar.gz/master#/plugins.tar.gz
 Source7:        https://codeload.github.com/ONLYOFFICE/document-formats/tar.gz/master#/document-formats.tar.gz
 
-BuildRequires:  nodejs >= 18.0
+BuildRequires:  nodejs >= 22.0
 BuildRequires:  yarn
-BuildRequires:  dotnet-sdk-9.0
+BuildRequires:  dotnet-sdk-10.0
 BuildRequires:  unzip
 BuildRequires:  java-21-openjdk-headless
 BuildRequires:  maven
 
+Requires:       %name-ai = %version-%release
+Requires:       %name-ai-service = %version-%release
 Requires:       %name-api = %version-%release
 Requires:       %name-api-system = %version-%release
 Requires:       %name-backup = %version-%release
@@ -77,10 +79,10 @@ rm -rf %{_rpmdir}/%{_arch}/%{name}-* %{_builddir}/*
 tar -xf %{SOURCE1} --transform='s,^[^/]\+,buildtools,'       -C %{_builddir} &
 tar -xf %{SOURCE2} --transform='s,^[^/]\+,client,'           -C %{_builddir} &
 tar -xf %{SOURCE3} --transform='s,^[^/]\+,server,'           -C %{_builddir} &
+tar -xf %{SOURCE4} --transform='s,^[^/]\+,DocStore,'         -C %{_builddir} &
 tar -xf %{SOURCE5} --transform='s,^[^/]\+,campaigns,'        -C %{_builddir} &
 tar -xf %{SOURCE6} --transform='s,^[^/]\+,plugins,'          -C %{_builddir} &
 wait
-tar -xf %{SOURCE4} --transform='s,^[^/]\+,DocStore,'         -C %{_builddir}/server/products/ASC.Files/Server
 tar -xf %{SOURCE7} --transform='s,^[^/]\+,document-formats,' -C %{_builddir}/buildtools/config
 cp -rf %{SOURCE0} .
 
@@ -103,6 +105,14 @@ getent passwd onlyoffice >/dev/null || useradd -r -g onlyoffice -s /usr/sbin/nol
 ENCRYPTION_PATH=%{_sysconfdir}/onlyoffice/%{product}/.private/encryption
 if [ "$1" -eq 2 ] && [ ! -f "${ENCRYPTION_PATH}" ]; then
   echo 'secret' > "${ENCRYPTION_PATH}" && chmod 600 "${ENCRYPTION_PATH}"
+fi
+
+%pre proxy
+
+# (DS v3.5.0) fix SSL reset error when updating packages
+PROXY_CONF="/etc/openresty/conf.d/onlyoffice-proxy.conf"
+if [ -f ${PROXY_CONF} ]; then
+    cp -rf ${PROXY_CONF} ${PROXY_CONF}.save
 fi
 
 %post 

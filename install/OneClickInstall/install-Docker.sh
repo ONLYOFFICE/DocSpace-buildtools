@@ -113,7 +113,7 @@ COMPOSE_FILES=($(printf '%s\n' "${SERVICES[@]}" | sed "s|^|-f ${BASE_DIR}/|; s|\
 EXTERNAL_PORT="80"
 ARGS_SCRIPT="install-Docker-args.sh"
 DOWNLOAD_URL_PREFIX="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}"
-GIT_BRANCH=$(echo "$@" | grep -oP '(?<=-gb )\S+')
+GIT_BRANCH=$(echo "$@" | grep -oP '(?<=-gb )\S+' | tail -n 1)
 
 if [[ -n "${GIT_BRANCH:-}" ]]; then
   DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${PACKAGE_SYSNAME^^}/${PRODUCT}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
@@ -803,7 +803,7 @@ install_product () {
 		fi
 
 		#Fix for bug 70537 to ensure proper migration to version 3.0.0
-		if [ "${UPDATE}" = "true" ] && [ -f "/etc/cron.d/${PRODUCT}-letsencrypt" ]; then
+		if [ "${UPDATE}" = "true" ] && [ -f "/etc/cron.weekly/${PRODUCT}-letsencrypt" ]; then
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -r
 		fi
 	elif [ "$INSTALL_PRODUCT" == "pull" ]; then

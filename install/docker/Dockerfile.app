@@ -1,7 +1,7 @@
 ARG SRC_PATH="/app/onlyoffice/src"
 ARG BUILD_PATH="/var/www"
-ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:9.0"
-ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:9.0-noble"
+ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:10.0"
+ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:10.0-noble"
 
 # Image resources
 FROM python:3.12-slim AS src
@@ -65,7 +65,7 @@ ARG SRC_PATH
 WORKDIR ${SRC_PATH}/server
 COPY --from=src ${SRC_PATH}/server/ .
 
-RUN echo "--- build/publishh docspace-server .net 9.0 ---" && \
+RUN echo "--- build/publishh docspace-server .net 10.0 ---" && \
     dotnet build ASC.Web.slnf && \
     dotnet build ASC.Migrations.sln --property:OutputPath=${SRC_PATH}/publish/services/ASC.Migration.Runner/service/ && \
     dotnet publish ASC.Web.slnf -p PublishProfile=ReleaseProfile && \
@@ -279,7 +279,8 @@ RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.
     sed -i 's/127.0.0.1:5004/$service_people_server/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5000/$service_api/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5003/$service_studio/' /etc/nginx/conf.d/onlyoffice.conf && \
-    sed -i 's/127.0.0.1:9899/$service_socket/' /etc/nginx/conf.d/onlyoffice.conf && \
+    sed -i 's/127.0.0.1:5157/$service_ai/' /etc/nginx/conf.d/onlyoffice.conf && \
+        sed -i 's/127.0.0.1:9899/$service_socket/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:9834/$service_sso/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5013/$service_doceditor/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5099/$service_sdk/' /etc/nginx/conf.d/onlyoffice.conf && \
@@ -438,6 +439,24 @@ COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/servi
 
 CMD ["ASC.People.dll", "ASC.People"]
 
+## ASC.AI ##
+FROM dotnetrun AS ai
+WORKDIR ${BUILD_PATH}/products/ASC.AI/server/
+
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.AI/service/ .
+
+CMD ["ASC.AI.dll", "ASC.AI"]
+
+## ASC.AI.Service ##
+FROM dotnetrun AS ai_service
+WORKDIR ${BUILD_PATH}/products/ASC.AI/service/
+
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.AI.Service/service/ .
+
+CMD ["ASC.AI.Service.dll", "ASC.AI.Service", "core:eventBus:subscriptionClientName=asc_event_bus_ai_service_queue"] 
+
 ## ASC.Socket.IO ##
 FROM noderun AS socket
 WORKDIR ${BUILD_PATH}/services/ASC.Socket.IO/
@@ -529,12 +548,14 @@ FROM busybox:latest AS bin_share
 ARG SRC_PATH
 RUN mkdir -p /app/ASC.Files/server && \
     mkdir -p /app/ASC.People/server && \
+    mkdir -p /app/ASC.AI/server && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -u 104 onlyoffice --home /var/www/onlyoffice --system -G onlyoffice
 USER onlyoffice
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/bin-share-docker-entrypoint.sh /app/docker-entrypoint.sh
 COPY --from=files --chown=onlyoffice:onlyoffice /var/www/products/ASC.Files/server/ /app/ASC.Files/server/
 COPY --from=people_server --chown=onlyoffice:onlyoffice /var/www/products/ASC.People/server/ /app/ASC.People/server/
+COPY --from=ai --chown=onlyoffice:onlyoffice /var/www/products/ASC.AI/server/ /app/ASC.AI/server/
 ENTRYPOINT ["./app/docker-entrypoint.sh"]
 
 ## image for k8s wait-bin-share ##

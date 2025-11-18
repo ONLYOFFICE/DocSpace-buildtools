@@ -61,6 +61,7 @@ dns = False
 standalone = True
 identity = False
 skip_build = False
+opensearch = False
 
 migration_type = "STANDALONE"  # SAAS
 # installation_type = "ENTERPRISE"
@@ -108,6 +109,8 @@ for opt, arg in opts:
         identity = arg if arg else True
     elif opt == "-n":
         skip_build = arg if arg else True
+    elif opt == "-o":
+        opensearch = arg if arg else True
     else:
         print("Error: Invalid '-" + opt + "' option")
         sys.exit()
@@ -129,12 +132,16 @@ if identity == True:
     print(f"SERVICE_IDENTITY: {identity_auth}")
     print(f"SERVICE_IDENTITY_API: {identity_api}")
 
+if opensearch == True:
+    print(f"SERVICE_OPENSEARCH: {opensearch}")
+
 # print(f"DOCSPACE_APP_URL: {portal_url}")
 
 print()
 print("FORCE REBUILD BASE IMAGES:", force)
 print("Run dnsmasq:", dns)
 print("Run identity:", identity)
+print("Run opensearch:", opensearch)
 print("Skip stop and build:", skip_build)
 
 if standalone == False:
@@ -242,6 +249,8 @@ if skip_build == False:
         "products/ASC.Files/Server",
         "products/ASC.Files/Service",
         "products/ASC.People/Server",
+        "products/ASC.AI/Server",
+        "products/ASC.AI/Service",
         "common/services/ASC.Data.Backup",
         "common/services/ASC.Notify",
         "common/services/ASC.Studio.Notify",
@@ -341,6 +350,11 @@ if identity:
     print("Run identity")
     subprocess.run(["docker-compose", "-f",
                    os.path.join(dockerDir, "build-identity.yml"), "up", "-d"])
+
+if opensearch:
+    print("Run opensearch")
+    subprocess.run(["docker-compose", "-f",
+                   os.path.join(dockerDir, "opensearch.yml"), "up", "-d"])
 
 print()
 print("Run script directory:", dir)

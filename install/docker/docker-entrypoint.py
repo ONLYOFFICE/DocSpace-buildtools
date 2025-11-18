@@ -1,4 +1,4 @@
-import json, sys, os, netifaces, re, time, requests, threading
+import json, sys, os, netifaces, re, time, requests, threading, shutil
 from jsonpath_ng.ext import parse
 from os import environ
 from multipledispatch import dispatch
@@ -183,7 +183,21 @@ def deleteJsonPath(jsonData, jsonPath):
 
     return jsonData
 
-def waitForHostAvailable(HOST_URL, TIMEOUT=30, INTERVAL=5):
+def waitForHostAvailable(HOST_URL, TIMEOUT=10, INTERVAL=3, MAX_RETRIES=5, RETRY_INTERVAL=15):
+    """
+    Check if HOST_URL is reachable.
+
+    Args:
+        HOST_URL (str): Host address (e.g. http://document-server:8083).
+        TIMEOUT (int): Max seconds to wait in one attempt.
+        INTERVAL (int): Delay between requests inside one attempt.
+        MAX_RETRIES (int): Number of extra attempts if host is still unavailable.
+        RETRY_INTERVAL (int): Delay between attempts.
+
+    Returns:
+        bool: True if host becomes available, otherwise False.
+    """
+
     LOG_PRIORITY = dict(CRITICAL=0, ERROR=1, WARNING=2, INFORMATION=3, DEBUG=4, TRACE=5)
     CURRENT_PRIORITY = LOG_PRIORITY.get((os.getenv("LOG_LEVEL") or "INFORMATION").upper(), 3)
 
@@ -191,47 +205,150 @@ def waitForHostAvailable(HOST_URL, TIMEOUT=30, INTERVAL=5):
         if LOG_PRIORITY.get(LEVEL, 3) <= CURRENT_PRIORITY:
             print(f"[{LEVEL}] {MESSAGE}", flush=True)
 
-    LOG("INFORMATION", f"Waiting for host: {HOST_URL} (timeout: {TIMEOUT} seconds)")
+    ATTEMPT = 0
+    while True:
+        ATTEMPT += 1
+        LOG("INFORMATION", f"Waiting for host: {HOST_URL} (timeout: {TIMEOUT} seconds, attempt {ATTEMPT}/{MAX_RETRIES})")
 
-    START_TIME = time.time()
-    RESPONSE = None
-    while time.time() - START_TIME < TIMEOUT:
+        START_TIME = time.time()
+        RESPONSE = None
+
         try:
-            RESPONSE = requests.head(HOST_URL, timeout=3, allow_redirects=True)
-            if RESPONSE.ok:
-                LOG("INFORMATION", f"Host is available: {HOST_URL} ({RESPONSE.status_code})")
-                return True
-            else:
-                LOG("WARNING", f"Received status {RESPONSE.status_code} from {HOST_URL}")
-        except requests.RequestException as e:
-            LOG("DEBUG", f"Connection error to {HOST_URL}: {e}")
-        except Exception as e:
-            LOG("CRITICAL", f"Unexpected error in waitForHostAvailable: {e}")
-        time.sleep(INTERVAL)
+            with requests.Session() as SESS:
+                while time.time() - START_TIME < TIMEOUT:
+                    try:
+                        RESPONSE = SESS.head(HOST_URL, timeout=3, allow_redirects=True)
+                        if RESPONSE is not None and not RESPONSE.ok:
+                            RESPONSE = SESS.get(HOST_URL, timeout=3, allow_redirects=True, stream=True)
+                            try:
+                                RESPONSE.close()
+                            except Exception:
+                                pass
 
-    LOG("ERROR", f"Host is not available after {TIMEOUT} seconds: {HOST_URL}{f' ({RESPONSE.status_code})' if RESPONSE else ''}")
-    return False
+                        if RESPONSE is not None and RESPONSE.ok:
+                            LOG("INFORMATION", f"Host is available: {HOST_URL} ({RESPONSE.status_code})")
+                            return True
+
+                        if RESPONSE is not None:
+                            LOG("WARNING", f"Received status {RESPONSE.status_code} from {HOST_URL}")
+                        else:
+                            LOG("WARNING", f"No response from {HOST_URL}")
+
+                    except requests.RequestException as e:
+                        LOG("DEBUG", f"Connection error to {HOST_URL}: {e}")
+                    except Exception as e:
+                        LOG("CRITICAL", f"Unexpected error in waitForHostAvailable: {e}")
+
+                    time.sleep(INTERVAL)
+        except Exception as e:
+            LOG("CRITICAL", f"Unexpected error creating session: {e}")
+
+        if ATTEMPT < MAX_RETRIES:
+            LOG("WARNING", f"{HOST_URL} is not available yet, retrying in {RETRY_INTERVAL} seconds...")
+            time.sleep(RETRY_INTERVAL)
+        else:
+            LOG("ERROR", f"{HOST_URL} is not available after {MAX_RETRIES} attempts {f' ({RESPONSE.status_code})' if RESPONSE else ''}")
+            return False
+
+def maintain_plugins():
+    LOG_PRIORITY = dict(CRITICAL=0, ERROR=1, WARNING=2, INFORMATION=3, DEBUG=4, TRACE=5)
+    CURRENT_PRIORITY = LOG_PRIORITY.get((os.getenv("LOG_LEVEL") or "INFORMATION").upper(), 3)
+
+    def LOG(LEVEL, MESSAGE):
+        if LOG_PRIORITY.get(LEVEL, 3) <= CURRENT_PRIORITY:
+            print(f"[{LEVEL}] {MESSAGE}", flush=True)
+
+    LOG("INFORMATION", "Plugins maintenance started...")
+
+    os.makedirs(USER_PLUGINS_DIR, exist_ok=True)
+
+    INSTALLED_PLUGINS = {}
+    if os.path.exists(USER_STATE_FILE):
+        for LINE in open(USER_STATE_FILE):
+            PARTS = LINE.strip().split()
+            if len(PARTS) == 2:
+                INSTALLED_PLUGINS[PARTS[0]] = PARTS[1]
+            else:
+                LOG("error", f"Invalid line in {USER_STATE_FILE}: '{LINE.strip()}'")
+
+    LOG("DEBUG", f"Loaded installed plugins: {INSTALLED_PLUGINS}")
+
+    RELEASE_PLUGINS = {}
+    for PLUGIN in os.listdir(RELEASE_PLUGINS_DIR):
+        CONFIG_PATH = f"{RELEASE_PLUGINS_DIR}{PLUGIN}/config.json"
+        if os.path.exists(CONFIG_PATH):
+            try:
+                CONFIG = json.load(open(CONFIG_PATH))
+                VERSION = CONFIG.get("version")
+                RELEASE_PLUGINS[PLUGIN] = VERSION
+            except Exception as e:
+                LOG("error", f"Failed to parse {CONFIG_PATH}: {e}")
+
+    LOG("DEBUG", f"Release plugins summary: {RELEASE_PLUGINS}")
+
+    ANY_INSTALLED = ANY_UPDATED = False
+
+    for PLUGIN, RELEASE_VERSION in RELEASE_PLUGINS.items():
+        USER_DIR = f"{USER_PLUGINS_DIR}{PLUGIN}"
+        RELEASE_DIR = f"{RELEASE_PLUGINS_DIR}{PLUGIN}"
+
+        LOG("DEBUG", f"Processing {PLUGIN}: release={RELEASE_VERSION}, installed={INSTALLED_PLUGINS.get(PLUGIN)}")
+
+        if PLUGIN in INSTALLED_PLUGINS:
+            if not os.path.isdir(USER_DIR):
+                LOG("INFORMATION", f"Removed by user: {PLUGIN}")
+                continue
+
+            if INSTALLED_PLUGINS[PLUGIN] != RELEASE_VERSION:
+                ANY_UPDATED = True
+                LOG("INFORMATION", f"Updating {PLUGIN}: {INSTALLED_PLUGINS[PLUGIN]} -> {RELEASE_VERSION}")
+                try:
+                    shutil.rmtree(USER_DIR)
+                    shutil.copytree(RELEASE_DIR, USER_DIR)
+                    INSTALLED_PLUGINS[PLUGIN] = RELEASE_VERSION
+                except Exception as e:
+                    LOG("ERROR", f"Failed to update {PLUGIN}: {e}")
+            else:
+                LOG("DEBUG", f"No update needed for {PLUGIN}")
+        else:
+            if os.path.exists(USER_DIR):
+                LOG("DEBUG", f"Cleaning orphan directory {USER_DIR}")
+                try:
+                    shutil.rmtree(USER_DIR)
+                except Exception as e:
+                    LOG("ERROR", f"Failed to cleanup {PLUGIN}: {e}")
+                    continue
+
+            ANY_INSTALLED = True
+            LOG("INFORMATION", f"Installing new plugin: {PLUGIN}")
+            try:
+                shutil.copytree(RELEASE_DIR, USER_DIR)
+                INSTALLED_PLUGINS[PLUGIN] = RELEASE_VERSION
+            except Exception as e:
+                LOG("ERROR", f"Failed to install {PLUGIN}: {e}")
+
+    try:
+        with open(USER_STATE_FILE, "w") as FILE:
+            FILE.write("\n".join(f"{PLUGIN} {VERSION}" for PLUGIN, VERSION in INSTALLED_PLUGINS.items()))
+        LOG("DEBUG", f"Plugins state saved to {USER_STATE_FILE}")
+    except Exception as e:
+        LOG("DEBUG", f"Failed to write {USER_STATE_FILE}: {e}")
+
+    RESULT = (ANY_INSTALLED and "Plugins installed successfully." or ANY_UPDATED and "Plugins updated successfully." or "Plugins are up to date.")
+    LOG("INFORMATION", RESULT)
 
 def check_docs_connection():
     filePath = "/app/onlyoffice/config/appsettings.json"
     jsonData = openJsonFile(filePath)
 
-    MAX_RETRIES = 10
-    RETRY_INTERVAL = 30
+    updateJsonData(jsonData, "$.files.docservice.url.portal", APP_URL_PORTAL)
+    updateJsonData(jsonData, "$.files.docservice.url.public", DOCUMENT_SERVER_URL_PUBLIC)
+    updateJsonData(jsonData, "$.files.docservice.url.internal", DOCUMENT_SERVER_CONNECTION_HOST)
+    updateJsonData(jsonData, "$.files.docservice.secret.value", DOCUMENT_SERVER_JWT_SECRET)
+    updateJsonData(jsonData, "$.files.docservice.secret.header", DOCUMENT_SERVER_JWT_HEADER)
 
-    if not waitForHostAvailable(DOCUMENT_SERVER_CONNECTION_HOST):
+    if not waitForHostAvailable(DOCUMENT_SERVER_CONNECTION_HOST, TIMEOUT=10, INTERVAL=3, MAX_RETRIES=5, RETRY_INTERVAL=15):
         deleteJsonPath(jsonData, "$.files.docservice")
-        for _ in range(MAX_RETRIES):
-            time.sleep(RETRY_INTERVAL)
-            if waitForHostAvailable(DOCUMENT_SERVER_CONNECTION_HOST):
-                break
-
-    if waitForHostAvailable(DOCUMENT_SERVER_CONNECTION_HOST):
-        updateJsonData(jsonData, "$.files.docservice.url.portal", APP_URL_PORTAL)
-        updateJsonData(jsonData, "$.files.docservice.url.public", DOCUMENT_SERVER_URL_PUBLIC)
-        updateJsonData(jsonData, "$.files.docservice.url.internal", DOCUMENT_SERVER_CONNECTION_HOST)
-        updateJsonData(jsonData, "$.files.docservice.secret.value", DOCUMENT_SERVER_JWT_SECRET)
-        updateJsonData(jsonData, "$.files.docservice.secret.header", DOCUMENT_SERVER_JWT_HEADER)
 
     writeJsonFile(filePath, jsonData)
 
@@ -292,7 +409,7 @@ if OAUTH_REDIRECT_URL:
     for component in jsonData['components']:
         if 'parameters' in component and 'additional' in component['parameters']:
             for key, value in component['parameters']['additional'].items():
-                if re.search(r'.*RedirectUrl$', key) and value:
+                if ( re.search(r'.*RedirectUrl$', key)  and key != "weixinRedirectUrl" and value): 
                     component['parameters']['additional'][key] = OAUTH_REDIRECT_URL
                     
     writeJsonFile(filePath, jsonData)
@@ -351,22 +468,17 @@ if os.path.isfile(filePath):
         sys.stdout.write(line)
 
 if LOG_LEVEL:
-    filePath = "/app/onlyoffice/config/nlog.config"
-    with open(filePath, 'r') as f:
-        configData = f.read()
-    configData = re.sub(r'(minlevel=")(\w+)(")', '\\1' + LOG_LEVEL + '\\3', configData)
-    with open(filePath, 'w') as f:
-        f.write(configData)
+    NLOG_PATH = "/app/onlyoffice/config/nlog.config"
+    with open(NLOG_PATH) as f: NLOG = f.read()
+    NLOG = re.sub(r'^(?!.*ZiggyCreatures)(.*minlevel=")\w+(")', rf'\1{LOG_LEVEL}\2', NLOG, flags=re.M)
+    open(NLOG_PATH, "w").write(NLOG)
 
-PLUGINS_DIR = "/var/www/studio/plugins/"
-DATA_PLUGINS_DIR = "/app/onlyoffice/data/Studio/webplugins/"
-if os.path.exists(PLUGINS_DIR) and not os.path.exists(DATA_PLUGINS_DIR):
-    os.makedirs(DATA_PLUGINS_DIR, exist_ok=True)
-    import shutil
-    for item in os.listdir(PLUGINS_DIR):
-        pd_item = os.path.join(PLUGINS_DIR, item)
-        dpd_item = os.path.join(DATA_PLUGINS_DIR, item)
-        shutil.copytree(pd_item, dpd_item) if os.path.isdir(pd_item) else shutil.copy2(pd_item, dpd_item)
+RELEASE_PLUGINS_DIR = "/var/www/studio/plugins/"
+USER_PLUGINS_DIR = "/app/onlyoffice/data/Studio/webplugins/"
+USER_STATE_FILE = USER_PLUGINS_DIR + ".plugins.state"
+
+if os.path.isdir(RELEASE_PLUGINS_DIR):
+    maintain_plugins()
 
 threading.Thread(target=check_docs_connection, daemon=True).start()
 

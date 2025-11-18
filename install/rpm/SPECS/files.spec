@@ -23,7 +23,7 @@
 %defattr(-, onlyoffice, onlyoffice, -)
 %config %attr(640, onlyoffice, onlyoffice) %{_sysconfdir}/onlyoffice/%{product}/*
 %exclude %{_sysconfdir}/onlyoffice/%{product}/openresty
-%exclude %{_sysconfdir}/onlyoffice/%{product}/nginx
+%attr(740, onlyoffice, onlyoffice) %{_sysconfdir}/onlyoffice/%{product}/document-formats/
 %{_docdir}/%{name}-%{version}-%{release}/
 %{_var}/log/onlyoffice/%{product}/
 %dir %{_sysconfdir}/onlyoffice/
@@ -170,3 +170,17 @@
 %{buildpath}/services/ASC.TelegramService/
 /usr/lib/systemd/system/%{product}-telegram.service
 %dir %{buildpath}/services/
+
+%files ai
+%defattr(-, onlyoffice, onlyoffice, -)
+%{buildpath}/products/ASC.AI/server/
+/usr/lib/systemd/system/%{product}-ai.service
+%dir %{buildpath}/products/
+%dir %{buildpath}/products/ASC.AI/
+
+%files ai-service
+%defattr(-, onlyoffice, onlyoffice, -)
+%{buildpath}/products/ASC.AI/service/
+/usr/lib/systemd/system/%{product}-ai-service.service
+%dir %{buildpath}/products/
+%dir %{buildpath}/products/ASC.AI/

@@ -1,7 +1,7 @@
 ARG SRC_PATH="/app/onlyoffice/src"
 ARG BUILD_PATH="/var/www"
-ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:9.0"
-ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:9.0"
+ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:10.0"
+ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:10.0"
 
 FROM alpine:latest AS base
 ARG SRC_PATH
@@ -27,9 +27,12 @@ ARG SRC_PATH
 ENV BUILD_PATH=${BUILD_PATH}
 ENV SRC_PATH=${SRC_PATH}
 
-# add defualt user and group for no-root run
+# add default user and group for no-root run
 RUN mkdir -p /var/log/onlyoffice && \
     mkdir -p /app/onlyoffice/data && \
+	apt-get -y update && \
+    apt-get install -yq \
+    adduser && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     chown onlyoffice:onlyoffice /app/onlyoffice -R && \
@@ -120,6 +123,7 @@ RUN chown onlyoffice:onlyoffice /etc/nginx/* -R && \
     sed -i 's/127.0.0.1:5004/$service_people_server/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5000/$service_api/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5003/$service_studio/' /etc/nginx/conf.d/onlyoffice.conf && \
+    sed -i 's/127.0.0.1:5157/$service_ai/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:9899/$service_socket/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:9834/$service_sso/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5013/$service_doceditor/' /etc/nginx/conf.d/onlyoffice.conf && \

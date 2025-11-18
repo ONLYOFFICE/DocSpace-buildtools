@@ -43,7 +43,7 @@
         "data": "00000000-0000-0000-0000-000000000000",
         "type": "disc",
         "path": "$STORAGE_ROOT\\Products\\Files\\logos\\{0}",
-		"validatorType": "ASC.Files.Core.VirtualRooms.RoomLogoValidator, ASC.Files.Core",
+		    "validatorType": "ASC.Files.Core.VirtualRooms.RoomLogoValidator, ASC.Files.Core",
         "domain": [
           {
             "name": "logos_temp",
@@ -53,6 +53,12 @@
             "path": "$STORAGE_ROOT\\Products\\Files\\logos\\{0}\\temp"
           }
         ]
+      },
+      {
+        "name": "mcp_icons",
+        "data": "00000000-0000-0000-0000-000000000000",
+        "type": "disc",
+        "path": "$STORAGE_ROOT\\Products\\Ai\\mcp\\{0}"
       },
       {
         "name": "files_template",
@@ -146,7 +152,7 @@
         "data": "00000000-0000-0000-0000-000000000000",
         "type": "disc",
         "path": "$STORAGE_ROOT\\Studio\\{0}\\userphotos",
-		"validatorType": "ASC.Web.Core.Users.UserPhotosValidator, ASC.Web.Core",
+	    "validatorType": "ASC.Files.Core.VirtualRooms.UserPhotosValidator, ASC.Files.Core",
         "virtualpath": "~/studio/{0}/userphotos",
         "contentAsAttachment": true,
         "domain": [
