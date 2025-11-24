@@ -171,6 +171,16 @@ services:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_AI_SERVICE}/health/ || exit 1  
 
+  onlyoffice-mcp:
+    image: "onlyoffice/docspace-mcp:latest"
+    container_name: onlyoffice-mcp
+    restart: always
+    environment:
+      DOCSPACE_INTERNAL: "true"
+      DOCSPACE_TRANSPORT: "http"
+      DOCSPACE_HOST: "0.0.0.0"
+      DOCSPACE_PORT: "5158"
+
   onlyoffice-ssoauth:
     <<: *x-service-base
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-ssoauth:${DOCKER_TAG}"
