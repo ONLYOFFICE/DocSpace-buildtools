@@ -184,3 +184,10 @@
 /usr/lib/systemd/system/%{product}-ai-service.service
 %dir %{buildpath}/products/
 %dir %{buildpath}/products/ASC.AI/
+
+%files mcp
+%defattr(-, onlyoffice, onlyoffice, -)
+%{buildpath}/products/ASC.AI/mcp/
+/usr/lib/systemd/system/%{product}-mcp.service
+%dir %{buildpath}/products/
+%dir %{buildpath}/products/ASC.AI/

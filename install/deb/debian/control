@@ -40,6 +40,7 @@ Depends: debconf, openssl,
          {{product}}-telegram (= {{package_header_tag_version}}),
          {{product}}-ai (= {{package_header_tag_version}}),
          {{product}}-ai-service (= {{package_header_tag_version}}),
+         {{product}}-mcp (= {{package_header_tag_version}}),
 Description: {{product}}
 	ONLYOFFICE {{product}} is a new way to collaborate on documents with teams, 
 	clients, partners, etc., based on the concept of rooms - special spaces with 
@@ -272,3 +273,11 @@ Description: {{product}}-ai-service
 	The service for background tasks related with AI. It vectorizes documents
 	from the knowledge base for subsequent semantic search and performs
 	chat/message export.
+
+Package: {{product}}-mcp
+Architecture: all
+Multi-Arch: foreign
+Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= 22~), ${misc:Depends}, ${shlibs:Depends}
+Description: {{product}}-mcp
+	The service which handles Model Context Protocol communication
+	between AI and external tools.

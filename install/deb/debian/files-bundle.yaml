@@ -7,6 +7,10 @@ files:
     content: |
       debian/build/publish/services/ASC.AI/service/* var/www/{{product}}/products/ASC.AI/server/
 
+  - name: "{{product}}-mcp.install"
+    content: |
+      debian/build/publish/services/ASC.AI.MCP/service/* var/www/{{product}}/products/ASC.AI/mcp
+
   - name: "{{product}}-api-system.install"
     content: |
       debian/build/publish/services/ASC.ApiSystem/service/* var/www/{{product}}/services/ASC.ApiSystem

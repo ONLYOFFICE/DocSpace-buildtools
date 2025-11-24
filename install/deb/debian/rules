@@ -42,6 +42,7 @@ check_archives:
 	$(call extract_archive,${SOURCE_PATH}/DocStore.tar.gz,DocStore,-C ${BUILD_PATH}) & \
 	$(call extract_archive,${SOURCE_PATH}/campaigns.tar.gz,campaigns,-C ${BUILD_PATH}) & \
 	$(call extract_archive,${SOURCE_PATH}/plugins.tar.gz,plugins,-C ${BUILD_PATH}) & \
+	$(call extract_archive,${SOURCE_PATH}/mcp.tar.gz,mcp,-C ${BUILD_PATH}) & \
 	wait; \
 	$(call extract_archive,${SOURCE_PATH}/document-formats.tar.gz,document-formats,-C ${BUILDTOOLS_PATH}/config); \
 	echo "Source archives check passed."
