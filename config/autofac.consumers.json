@@ -22,6 +22,7 @@
 	  "parameters": {
 		  "name": "appleID",
 		  "order": "13",
+		  "paid": false,
 		  "props": {
 			"appleIdClientId": "",
 			"appleIdClientIdMobile": "",
@@ -56,6 +57,7 @@
 	  "parameters": {
 		  "name": "box",
 		  "order": "3",
+		  "paid": false,
 		  "props": {
 			"boxClientId": "",
 			"boxClientSecret": ""
@@ -87,6 +89,7 @@
 	  "parameters": {
 		  "name": "dropbox",
 		  "order": "2",
+		  "paid": false,
 		  "props": {
 			"dropboxClientId": "",
 			"dropboxClientSecret": ""
@@ -118,6 +121,7 @@
 	  "parameters": {
 		  "name": "facebook",
 		  "order": "6",
+		  "paid": false,
 		  "props": {
 			"facebookClientId": "",
 			"facebookClientSecret": ""
@@ -149,6 +153,7 @@
 	  "parameters": {
 		  "name": "twitter",
 		  "order": "6",
+		  "paid": false,
 		  "props": {
 			"twitterKey": "",
 			"twitterSecret": ""
@@ -180,6 +185,7 @@
 	  "parameters": {
 		  "name": "firebase",
 		  "order": "12",
+		  "paid": false,
 		  "props": {
 			"firebase_apiKey": "",
 			"firebase_projectId": "",
@@ -210,6 +216,7 @@
 	  "parameters": {
 		  "name": "google",
 		  "order": "5",
+		  "paid": false,
 		  "props": {
 			"googleClientId": "",
 			"googleClientSecret": ""
@@ -241,6 +248,7 @@
 	  "parameters": {
 		  "name": "linkedin",
 		  "order": "8",
+		  "paid": false,
 		  "props": {
 			"linkedInKey": "",
 			"linkedInSecret": ""
@@ -272,6 +280,7 @@
 	  "parameters": {
 		  "name": "skydrive",
 		  "order": "4",
+		  "paid": false,
 		  "props": {
 			"skydriveappkey": "",
 			"skydriveappsecret": ""
@@ -303,6 +312,7 @@
 	  "parameters": {
 		  "name": "microsoft",
 		  "order": "4",
+		  "paid": false,
 		  "props": {
 			"microsoftClientId": "",
 			"microsoftClientSecret": ""
@@ -334,6 +344,7 @@
 	  "parameters": {
 		  "name": "twilio",
 		  "order": "9",
+		  "paid": false,
 		  "props": {
 			"twilioAccountSid": "",
 			"twilioAuthToken": "",
@@ -363,6 +374,7 @@
 	  "parameters": {
 		  "name": "s3",
 		  "order": "20",
+		  "paid": true,
 		  "props": {
 			"acesskey": "",
 			"secretaccesskey": ""
@@ -402,6 +414,7 @@
 	  "parameters": {
 		  "name": "googlecloud",
 		  "order": "21",
+		  "paid": true,
 		  "props": {
 			"json": ""
 		  },
@@ -433,6 +446,7 @@
 	  "parameters": {
 		  "name": "rackspace",
 		  "order": "22",
+		  "paid": true,
 		  "props": {
 			"username": "",
 			"apiKey": ""
@@ -467,6 +481,7 @@
 		"parameters": {
 			"name": "zoom",
 			"order": "24",
+			"paid": false,
 			"props": {
 			  "zoomClientId": "",
 			  "zoomClientSecret": ""
@@ -498,6 +513,7 @@
 		"parameters": {
 			"name": "telegram",
 			"order": 25,
+			"paid": false,
 			"props": {
 				"telegramBotToken": "",
 				"telegramBotName": ""
@@ -523,12 +539,13 @@
 		  {
 			"key": "weixin",
 			"type": "ASC.FederatedLogin.LoginProviders.WeixinLoginProvider, ASC.FederatedLogin"
-		  }
+	}
 		],
 		"instanceScope": "perlifetimescope",
 		"parameters": {
 			"name": "weixin",
 			"order": "26",
+			"paid": false,
 			"props": {
 			  "weixinClientId": "",
 			  "weixinClientSecret": ""
