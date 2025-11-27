@@ -280,6 +280,41 @@ function SetIdentityEncryptionSecret {
     AI_SetMsiProperty IDENTITY_ENCRYPTION_SECRET $IdentityEncryptionSecret
 }
 
+# Starts All Services
+function StartServices {
+    $services = @(
+        "DocSpace.AI",
+        "DocSpace.AI.Service",
+        "DocSpace.ApiSystemService",
+        "DocSpace.Data.Backup.BackgroundTasks",
+        "DocSpace.BackupService",
+        "DocSpace.ClearEvents",
+        "DocSpace.DocEditor",
+        "DocSpace.FileServer",
+        "DocSpace.FileService",
+        "DocSpace.Identity.Authorization",
+        "DocSpace.Identity.Registration",
+        "DocSpace.Login",
+        "DocSpace.MCP",
+        "DocSpace.Management",
+        "DocSpace.MigrationRunner",
+        "DocSpace.NotifyService",
+        "DocSpace.PeopleServer",
+        "DocSpace.Sdk",
+        "DocSpace.Socket.IO",
+        "DocSpace.SsoAuth.Svc",
+        "DocSpace.StudioNotifyService",
+        "Docspace.Telegram",
+        "DocSpace.WebApi",
+        "DocSpace.Web.HealthChecks.UI",
+        "DocSpace.WebStudio"
+)
+
+    foreach ($svc in $services) {
+        sc.exe start $svc > $null 2>&1
+    }
+}
+
 # Function to set up OpenSearch.
 function OpenSearchSetup {
     $AppDir = AI_GetMsiProperty APPDIR

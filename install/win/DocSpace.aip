@@ -1009,6 +1009,7 @@
     <ROW Action="AI_DATA_SETTER_11" Type="51" Source="CustomActionData" Target="MySQL84"/>
     <ROW Action="AI_DATA_SETTER_12" Type="51" Source="CustomActionData" Target="OpenSearch"/>
     <ROW Action="AI_DATA_SETTER_13" Type="51" Source="StartOpenSearchService" Target="OpenSearch"/>
+    <ROW Action="AI_DATA_SETTER_14" Type="51" Source="CustomActionData" Target="AEYAbABhAGcAcwACADEAAQBQAGEAcgBhAG0AcwACAFMAdABhAHIAdABTAGUAcgB2AGkAYwBlAHMAAQBTAGMAcgBpAHAAdABTAHIAYwBCAGkAbgBhAHIAeQBSAG8AdwBJAGQAAgB1AHQAaQBsAHMALgBwAHMAMQBfADE="/>
     <ROW Action="AI_DATA_SETTER_16" Type="51" Source="StopRedisService" Target="Redis"/>
     <ROW Action="AI_DATA_SETTER_17" Type="51" Source="CustomActionData" Target="[RedisServerConnectionError] |[ProductName] Setup |MB_OK,MB_ICONWARNING,MB_DEFBUTTON1||[CLIENTPROCESSID]"/>
     <ROW Action="AI_DATA_SETTER_18" Type="51" Source="CustomActionData" Target="[RabbitMQServerConnectionError] |[ProductName] Setup |MB_OK,MB_ICONWARNING,MB_DEFBUTTON1||[CLIENTPROCESSID]"/>
@@ -1117,6 +1118,7 @@
     <ROW Action="Set_DS_JWT_HEADER" Type="51" Source="DOCUMENT_SERVER_JWT_HEADER" Target="[JWT_HEADER]"/>
     <ROW Action="Set_DS_JWT_SECRET" Type="51" Source="DOCUMENT_SERVER_JWT_SECRET" Target="[JWT_SECRET]"/>
     <ROW Action="Set_LICENSE_PATH" Type="51" Source="LICENSE_PATH" Target="[APPDIR]\Data\license.lic"/>
+    <ROW Action="StartAllServices" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_14"/>
     <ROW Action="StartFluentBitService" Type="1" Source="aicustact.dll" Target="StartWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_30"/>
     <ROW Action="StartMigrationRunner" Type="3074" Source="viewer.exe" Target="/EnforcedRunAsAdmin /RunAsAdmin /HideWindow /dir &quot;[APPDIR]services\ASC.Migration.Runner\service&quot; &quot;[APPDIR]services\ASC.Migration.Runner\service\ASC.Migration.Runner.exe&quot; standalone=true" Options="1"/>
     <ROW Action="StartMySQLService" Type="1" Source="aicustact.dll" Target="StartWinService" Options="1" AdditionalSeq="AI_DATA_SETTER_11"/>
@@ -1342,6 +1344,8 @@
     <ROW Action="AI_DATA_SETTER_34" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1609"/>
     <ROW Action="Set_APPDIR_FORWARD_SLASH" Sequence="1635"/>
     <ROW Action="AI_DATA_SETTER_6" Sequence="1634"/>
+    <ROW Action="StartAllServices" Condition="( NOT Installed )" Sequence="6610"/>
+    <ROW Action="AI_DATA_SETTER_14" Condition="( NOT Installed )" Sequence="6609"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstallUISequenceComponent">
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>
@@ -1549,30 +1553,30 @@
     <ROW MsiServiceConfigFailureActions="ServiceName_WebStudio" Name="[ServiceName_WebStudio]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.Web.Studio.exe"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiServCtrlComponent">
-    <ROW ServiceControl="ServiceName_AI" Name="[ServiceName_AI]" Event="161" Wait="0" Component_="ASC.AI.exe"/>
-    <ROW ServiceControl="ServiceName_AI_Service" Name="[ServiceName_AI_Service]" Event="161" Wait="0" Component_="ASC.AI.Service.exe"/>
-    <ROW ServiceControl="ServiceName_ApiSystemService" Name="[ServiceName_ApiSystemService]" Event="161" Wait="0" Component_="ASC.ApiSystem.exe"/>
-    <ROW ServiceControl="ServiceName_BackgroundTasks" Name="[ServiceName_BackgroundTasks]" Event="161" Wait="0" Component_="ASC.Data.Backup.BackgroundTasks.exe"/>
-    <ROW ServiceControl="ServiceName_BackupService" Name="[ServiceName_BackupService]" Event="161" Wait="0" Component_="ASC.Data.Backup.exe"/>
-    <ROW ServiceControl="ServiceName_ClearEvents" Name="[ServiceName_ClearEvents]" Event="161" Wait="0" Component_="ASC.ClearEvents.exe"/>
-    <ROW ServiceControl="ServiceName_DocEditor" Name="[ServiceName_DocEditor]" Event="161" Wait="0" Component_="DocEditor.exe"/>
-    <ROW ServiceControl="ServiceName_FileServer" Name="[ServiceName_FileServer]" Event="161" Wait="0" Component_="ASC.Files.exe"/>
-    <ROW ServiceControl="ServiceName_FileService" Name="[ServiceName_FileService]" Event="161" Wait="0" Component_="ASC.Files.Service.exe"/>
-    <ROW ServiceControl="ServiceName_Identity.Authorization" Name="[ServiceName_Identity.Authorization]" Event="161" Wait="0" Component_="Identity.Authorization.exe"/>
-    <ROW ServiceControl="ServiceName_Identity.Registration" Name="[ServiceName_Identity.Registration]" Event="161" Wait="0" Component_="Identity.Registration.exe"/>
-    <ROW ServiceControl="ServiceName_Login" Name="[ServiceName_Login]" Event="161" Wait="0" Component_="Login.exe"/>
-    <ROW ServiceControl="ServiceName_MCP" Name="[ServiceName_MCP]" Event="161" Wait="0" Component_="MCP.exe"/>
-    <ROW ServiceControl="ServiceName_Management" Name="[ServiceName_Management]" Event="161" Wait="0" Component_="Management.exe"/>
-    <ROW ServiceControl="ServiceName_NotifyService" Name="[ServiceName_NotifyService]" Event="161" Wait="0" Component_="ASC.Notify.exe"/>
-    <ROW ServiceControl="ServiceName_PeopleServer" Name="[ServiceName_PeopleServer]" Event="161" Wait="0" Component_="ASC.People.exe"/>
-    <ROW ServiceControl="ServiceName_Sdk" Name="[ServiceName_Sdk]" Event="161" Wait="0" Component_="Sdk.exe"/>
-    <ROW ServiceControl="ServiceName_Socket.IO" Name="[ServiceName_Socket.IO]" Event="161" Wait="0" Component_="Socket.IO.exe"/>
-    <ROW ServiceControl="ServiceName_SsoAuth" Name="[ServiceName_SsoAuth]" Event="161" Wait="0" Component_="SsoAuth.exe"/>
-    <ROW ServiceControl="ServiceName_StudioNotifyService" Name="[ServiceName_StudioNotifyService]" Event="161" Wait="0" Component_="ASC.Studio.Notify.exe"/>
-    <ROW ServiceControl="ServiceName_Telegram" Name="[ServiceName_Telegram]" Event="161" Wait="0" Component_="ASC.TelegramService.exe"/>
-    <ROW ServiceControl="ServiceName_WebApi" Name="[ServiceName_WebApi]" Event="161" Wait="0" Component_="ASC.Web.Api.exe"/>
-    <ROW ServiceControl="ServiceName_WebHealthChecksUI" Name="[ServiceName_WebHealthChecksUI]" Event="161" Wait="0" Component_="ASC.Web.HealthChecks.UI.exe"/>
-    <ROW ServiceControl="ServiceName_WebStudio" Name="[ServiceName_WebStudio]" Event="161" Wait="0" Component_="ASC.Web.Studio.exe"/>
+    <ROW ServiceControl="ServiceName_AI" Name="[ServiceName_AI]" Event="160" Wait="0" Component_="ASC.AI.exe"/>
+    <ROW ServiceControl="ServiceName_AI_Service" Name="[ServiceName_AI_Service]" Event="160" Wait="0" Component_="ASC.AI.Service.exe"/>
+    <ROW ServiceControl="ServiceName_ApiSystemService" Name="[ServiceName_ApiSystemService]" Event="160" Wait="0" Component_="ASC.ApiSystem.exe"/>
+    <ROW ServiceControl="ServiceName_BackgroundTasks" Name="[ServiceName_BackgroundTasks]" Event="160" Wait="0" Component_="ASC.Data.Backup.BackgroundTasks.exe"/>
+    <ROW ServiceControl="ServiceName_BackupService" Name="[ServiceName_BackupService]" Event="160" Wait="0" Component_="ASC.Data.Backup.exe"/>
+    <ROW ServiceControl="ServiceName_ClearEvents" Name="[ServiceName_ClearEvents]" Event="160" Wait="0" Component_="ASC.ClearEvents.exe"/>
+    <ROW ServiceControl="ServiceName_DocEditor" Name="[ServiceName_DocEditor]" Event="160" Wait="0" Component_="DocEditor.exe"/>
+    <ROW ServiceControl="ServiceName_FileServer" Name="[ServiceName_FileServer]" Event="160" Wait="0" Component_="ASC.Files.exe"/>
+    <ROW ServiceControl="ServiceName_FileService" Name="[ServiceName_FileService]" Event="160" Wait="0" Component_="ASC.Files.Service.exe"/>
+    <ROW ServiceControl="ServiceName_Identity.Authorization" Name="[ServiceName_Identity.Authorization]" Event="160" Wait="0" Component_="Identity.Authorization.exe"/>
+    <ROW ServiceControl="ServiceName_Identity.Registration" Name="[ServiceName_Identity.Registration]" Event="160" Wait="0" Component_="Identity.Registration.exe"/>
+    <ROW ServiceControl="ServiceName_Login" Name="[ServiceName_Login]" Event="160" Wait="0" Component_="Login.exe"/>
+    <ROW ServiceControl="ServiceName_MCP" Name="[ServiceName_MCP]" Event="160" Wait="0" Component_="MCP.exe"/>
+    <ROW ServiceControl="ServiceName_Management" Name="[ServiceName_Management]" Event="160" Wait="0" Component_="Management.exe"/>
+    <ROW ServiceControl="ServiceName_NotifyService" Name="[ServiceName_NotifyService]" Event="160" Wait="0" Component_="ASC.Notify.exe"/>
+    <ROW ServiceControl="ServiceName_PeopleServer" Name="[ServiceName_PeopleServer]" Event="160" Wait="0" Component_="ASC.People.exe"/>
+    <ROW ServiceControl="ServiceName_Sdk" Name="[ServiceName_Sdk]" Event="160" Wait="0" Component_="Sdk.exe"/>
+    <ROW ServiceControl="ServiceName_Socket.IO" Name="[ServiceName_Socket.IO]" Event="160" Wait="0" Component_="Socket.IO.exe"/>
+    <ROW ServiceControl="ServiceName_SsoAuth" Name="[ServiceName_SsoAuth]" Event="160" Wait="0" Component_="SsoAuth.exe"/>
+    <ROW ServiceControl="ServiceName_StudioNotifyService" Name="[ServiceName_StudioNotifyService]" Event="160" Wait="0" Component_="ASC.Studio.Notify.exe"/>
+    <ROW ServiceControl="ServiceName_Telegram" Name="[ServiceName_Telegram]" Event="160" Wait="0" Component_="ASC.TelegramService.exe"/>
+    <ROW ServiceControl="ServiceName_WebApi" Name="[ServiceName_WebApi]" Event="160" Wait="0" Component_="ASC.Web.Api.exe"/>
+    <ROW ServiceControl="ServiceName_WebHealthChecksUI" Name="[ServiceName_WebHealthChecksUI]" Event="160" Wait="0" Component_="ASC.Web.HealthChecks.UI.exe"/>
+    <ROW ServiceControl="ServiceName_WebStudio" Name="[ServiceName_WebStudio]" Event="160" Wait="0" Component_="ASC.Web.Studio.exe"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiServInstComponent">
     <ROW ServiceInstall="ServiceName_AI" Name="[ServiceName_AI]" DisplayName="[ShortProductName] AI" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5157 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_AI] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER]" Component_="ASC.AI.exe" Description="[ShortProductName] AI"/>
