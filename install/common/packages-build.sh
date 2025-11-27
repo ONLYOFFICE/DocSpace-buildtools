@@ -37,7 +37,7 @@ echo "::notice::Backend build completed in $((BACKEND_END_TIMER - BACKEND_START_
 cd "${BUILD_PATH}/mcp"
 pnpm install && pnpm run build-app
 mkdir -p "${PUBLISH_DIR}/services/ASC.AI.MCP/service"
-cp -a bin node_modules package.json pnpm-lock.yaml "${PUBLISH_DIR}/services/ASC.AI.MCP/service/"
+cp -a bin "${PUBLISH_DIR}/services/ASC.AI.MCP/service/"
 
 # Deleting unused files
 find ${PUBLISH_DIR} -type d -name "runtimes" | \
