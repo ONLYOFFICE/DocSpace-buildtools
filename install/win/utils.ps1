@@ -311,7 +311,7 @@ function StartServices {
 )
 
     foreach ($svc in $services) {
-        sc.exe start $svc > $null 2>&1
+        Start-Process "sc.exe" -ArgumentList "start `"$svc`"" -WindowStyle Hidden
     }
 }
 
