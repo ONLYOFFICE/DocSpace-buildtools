@@ -135,6 +135,7 @@ jobs:
           download "ASC.Web.Campaigns"    "master"                  campaigns &
           download "$PRODUCT-plugins"     "master"                  plugins &
           download "document-formats"     "master"                  document-formats &
+          download "docspace-mcp"         "main"                    mcp &
           wait
 
       - name: Build DEB Packages

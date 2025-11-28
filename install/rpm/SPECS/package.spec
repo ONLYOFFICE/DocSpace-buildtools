@@ -269,3 +269,13 @@ BuildArch:      noarch
 The service for background tasks related with AI. It vectorizes documents
 from the knowledge base for subsequent semantic search and performs
 chat/message export.
+
+%package        mcp
+Summary:        MCP
+Requires:       %name-common  = %version-%release
+Requires:       nodejs >= 22
+AutoReqProv:    no
+BuildArch:      noarch
+%description    mcp
+The service which handles Model Context Protocol (MCP) communication
+between AI and external tools.
