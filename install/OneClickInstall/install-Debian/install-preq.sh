@@ -129,7 +129,6 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 				nodejs \
 				gcc \
 				make \
-				dotnet-sdk-10.0 \
 				mysql-server \
 				mysql-client \
 				postgresql \
@@ -137,6 +136,24 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 				rabbitmq-server \
 				temurin-${JAVA_VERSION}-jre \
 				ffmpeg 
+
+# Temporary fallback dotnet-sdk-10.0 on Debian 11 and Ubuntu 24.04
+DOTNET_VERSION="10.0.100"
+if ! apt-get install -yq dotnet-sdk-10.0; then
+	curl -fsSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh
+	bash /tmp/dotnet-install.sh --version "${DOTNET_VERSION}" --install-dir /usr/share/dotnet
+	ln -sf /usr/share/dotnet/dotnet /usr/bin/dotnet
+	mkdir -p /tmp/dotnet-sdk-10.0/DEBIAN
+	cat > /tmp/dotnet-sdk-10.0/DEBIAN/control <<EOF_DOTNET
+Package: dotnet-sdk-10.0
+Version: ${DOTNET_VERSION}-0
+Architecture: amd64
+Description: Provides .NET 10 SDK required by ${product_name}.
+EOF_DOTNET
+	dpkg-deb --build /tmp/dotnet-sdk-10.0 /tmp/dotnet-sdk-10.0.deb
+	dpkg -i /tmp/dotnet-sdk-10.0.deb
+	rm -rf /tmp/dotnet-sdk-10.0 /tmp/dotnet-sdk-10.0.deb
+fi
 
 if ! dpkg -l | grep -q "opensearch"; then
 	apt-get install -yq opensearch=${ELASTIC_VERSION}
