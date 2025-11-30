@@ -297,7 +297,6 @@ function StartServices {
         "DocSpace.Login",
         "DocSpace.MCP",
         "DocSpace.Management",
-        "DocSpace.MigrationRunner",
         "DocSpace.NotifyService",
         "DocSpace.PeopleServer",
         "DocSpace.Sdk",
@@ -312,6 +311,7 @@ function StartServices {
 
     foreach ($svc in $services) {
         Start-Process "sc.exe" -ArgumentList "start `"$svc`"" -WindowStyle Hidden
+        Start-Sleep -Seconds 3
     }
 }
 
