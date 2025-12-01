@@ -277,5 +277,5 @@ Requires:       nodejs >= 22
 AutoReqProv:    no
 BuildArch:      noarch
 %description    mcp
-The service which handles Model Context Protocol (MCP) communication
-between AI and external tools.
+The server that operates using the Model Context Protocol, which provides AI
+with functionality for working in DocSpace.

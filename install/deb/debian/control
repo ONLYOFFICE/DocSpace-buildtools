@@ -279,5 +279,5 @@ Architecture: all
 Multi-Arch: foreign
 Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= 22~), ${misc:Depends}, ${shlibs:Depends}
 Description: {{product}}-mcp
-	The service which handles Model Context Protocol communication
-	between AI and external tools.
+	The server that operates using the Model Context Protocol, which provides
+	AI with functionality for working in DocSpace.
