@@ -16,6 +16,7 @@ on:
           ubuntu2404,
           rhel9,
           centos9s,
+          centos10,
           fedora42
       deb_build:
         type: boolean
@@ -39,6 +40,7 @@ jobs:
             {
               "rhel9":      ["RHEL 9",       "generic",      "rhel9"],
               "centos9s":   ["CentOS 9s",    "onlyoffice",   "base-centos9s"],
+              "centos10":   ["CentOS 10",    "onlyoffice",   "base-centos10"],
               "debian11":   ["Debian 11",    "onlyoffice",   "base-debian11"],
               "debian12":   ["Debian 12",    "onlyoffice",   "base-debian12"],
               "debian13":   ["Debian 13",    "onlyoffice",   "base-debian13"],

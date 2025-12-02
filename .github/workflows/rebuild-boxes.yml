@@ -16,6 +16,7 @@ on:
         default: |
           rhel9,
           centos9s,
+          centos10,
           debian11,
           debian12,
           debian13,
@@ -43,6 +44,7 @@ jobs:
           {
             "rhel9":     {"distr":"generic","os":"rhel9"},
             "centos9s":  {"distr":"onlyoffice","os":"base-centos9s"},
+            "centos10":  {"distr":"onlyoffice","os":"base-centos10"},
             "debian11":  {"distr":"onlyoffice","os":"base-debian11"},
             "debian12":  {"distr":"onlyoffice","os":"base-debian12"},
             "debian13":  {"distr":"onlyoffice","os":"base-debian13"},
