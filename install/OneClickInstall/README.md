@@ -338,6 +338,7 @@ The installation scripts support the following operating systems, which are **re
 <!-- OS-SUPPORT-LIST-START -->
 - RHEL 9
 - CentOS 9s
+- CentOS 10
 - Debian 11
 - Debian 12
 - Debian 13
