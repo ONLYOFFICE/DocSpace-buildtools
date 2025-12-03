@@ -71,7 +71,9 @@ json -I -f "${BUILDTOOLS_PATH}/config/appsettings.json" \
      -e "this.web.samesite=\"None\"" \
      -e "this.core.oidc.disableValidateToken=\"false\"" \
      -e "this.core.oidc.showPII=\"false\"" \
-     -e "this.version.number=\"${VERSION}\""
+     -e "this.version.number=\"${VERSION}\"" \
+     -e "this.ai.mcp[0].endpoint='http://localhost:5158/mcp'"
+
 json -I -f "${BUILDTOOLS_PATH}/config/apisystem.json" \
     -e "this.core.notify.postman=\"services\""
 json -I -f "${CLIENT_PATH}/public/scripts/config.json" \
