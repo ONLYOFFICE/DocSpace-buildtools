@@ -23,6 +23,7 @@ SERVICE_SOCKET_PORT = os.environ["SERVICE_SOCKET_PORT"] if os.environ.get("SERVI
 SERVICE_SSOAUTH_PORT = os.environ["SERVICE_SSOAUTH_PORT"] if os.environ.get("SERVICE_SSOAUTH_PORT") else SERVICE_PORT
 ROUTER_HOST = os.environ["ROUTER_HOST"] if environ.get("ROUTER_HOST") else "onlyoffice-router"
 SOCKET_HOST = os.environ.get("NODE_CONTAINER_NAME") or os.environ.get("SOCKET_HOST") or "onlyoffice-socket"
+MCP_ENDPOINT = os.environ.get("MCP_ENDPOINT") or os.environ.get("MCP_ENDPOINT") or "http://onlyoffice-mcp:5158/mcp"
 
 MYSQL_CONTAINER_NAME = os.environ["MYSQL_CONTAINER_NAME"] if environ.get("MYSQL_CONTAINER_NAME") else "onlyoffice-mysql-server"
 MYSQL_HOST = os.environ["MYSQL_HOST"] if environ.get("MYSQL_HOST") else None
@@ -370,6 +371,9 @@ updateJsonData(jsonData,"$.core.oidc.disableValidateToken", DISABLE_VALIDATE_TOK
 updateJsonData(jsonData,"$.core.oidc.showPII", DEBUG_INFO)
 updateJsonData(jsonData,"$.debug-info.enabled", DEBUG_INFO)
 updateJsonData(jsonData,"$.web.samesite", SAMESITE)
+
+if MCP_ENDPOINT:
+    updateJsonData(jsonData, "$.ai.mcp.[0].endpoint", MCP_ENDPOINT)
 
 ip_address = netifaces.ifaddresses('eth0').get(netifaces.AF_INET)[0].get('addr')
 netmask = netifaces.ifaddresses('eth0').get(netifaces.AF_INET)[0].get('netmask')
