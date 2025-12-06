@@ -138,21 +138,17 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 				ffmpeg 
 
 # Temporary fallback dotnet-sdk-10.0 on Debian 11 and Ubuntu 24.04
-DOTNET_VERSION="10.0.100"
-if ! apt-get install -yq dotnet-sdk-10.0; then
-	curl -fsSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh
-	bash /tmp/dotnet-install.sh --version "${DOTNET_VERSION}" --install-dir /usr/share/dotnet
-	ln -sf /usr/share/dotnet/dotnet /usr/bin/dotnet
-	mkdir -p /tmp/dotnet-sdk-10.0/DEBIAN
-	cat > /tmp/dotnet-sdk-10.0/DEBIAN/control <<EOF_DOTNET
-Package: dotnet-sdk-10.0
-Version: ${DOTNET_VERSION}-0
-Architecture: amd64
-Description: Provides .NET 10 SDK required by ${product_name}.
-EOF_DOTNET
-	dpkg-deb --build /tmp/dotnet-sdk-10.0 /tmp/dotnet-sdk-10.0.deb
-	dpkg -i /tmp/dotnet-sdk-10.0.deb
-	rm -rf /tmp/dotnet-sdk-10.0 /tmp/dotnet-sdk-10.0.deb
+DOTNET_VERSION="10.0.100"; DOTNET_PKG="dotnet-sdk-${DOTNET_VERSION%.*}"
+if ! apt-get install -yq "${DOTNET_PKG}"; then
+  curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --version "${DOTNET_VERSION}" --install-dir /usr/share/dotnet
+  ln -sf /usr/share/dotnet/dotnet /usr/bin/dotnet
+
+  DOTNET_PKGDIR="/tmp/${DOTNET_PKG}"; mkdir -p "${DOTNET_PKGDIR}/DEBIAN"
+  printf "Package: %s\nVersion: %s\nArchitecture: amd64\nMaintainer: local\nDescription: Provides .NET %s SDK\n" \
+	"${DOTNET_PKG}" "${DOTNET_VERSION}" "${DOTNET_VERSION%%.*}" > "${DOTNET_PKGDIR}/DEBIAN/control"
+
+  dpkg-deb --build "${DOTNET_PKGDIR}" "/tmp/${DOTNET_PKG}.deb" && dpkg -i "/tmp/${DOTNET_PKG}.deb"
+  rm -rf "${DOTNET_PKGDIR}" "/tmp/${DOTNET_PKG}.deb"
 fi
 
 if ! dpkg -l | grep -q "opensearch"; then
