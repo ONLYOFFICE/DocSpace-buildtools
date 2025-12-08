@@ -10,7 +10,6 @@
         }
       }
     },
-
     "common": {
       "default": {
         "entries": {
@@ -24,13 +23,11 @@
         }
       }
     },
-
     "forum": {
       "default": {
         "domain": "https://forum.onlyoffice.com"
       }
     },
-
     "helpcenter": {
       "default": {
         "domain": "https://helpcenter.onlyoffice.com/{de|fr|es|it}",
@@ -90,11 +87,11 @@
           "pluginsSdk": "/docspace/configuration/docspace-integration-settings.aspx#plugins_block",
           "smtp": "/docspace/configuration/docspace-integration-settings.aspx#smtpsettings_block",
           "apikeys": "/docspace/configuration/docspace-developer-tools-settings.aspx#apikeys_block",
-          "dataImport": "/docspace/configuration/docspace-data-import-settings.aspx"
+          "dataImport": "/docspace/configuration/docspace-data-import-settings.aspx",
+          "documentService": "/docspace/configuration/docspace-integration-settings.aspx#documentservicesettings_block"
         }
       }
     },
-
     "integrations": {
       "default": {
         "entries": {
@@ -106,7 +103,6 @@
         }
       }
     },
-
     "site": {
       "default": {
         "domain": "https://www.onlyoffice.com/{ru|de|fr|es|it|pt|cs|nl|ja|zh}",
@@ -145,7 +141,6 @@
         }
       }
     },
-
     "socialnetworks": {
       "default": {
         "entries": {
@@ -157,7 +152,6 @@
         }
       }
     },
-
     "support": {
       "default": {
         "domain": "https://helpdesk.onlyoffice.com",
@@ -166,7 +160,6 @@
         }
       }
     },
-
     "videoguides": {
       "default": {
         "domain": "https://helpcenter.onlyoffice.com/{ru|de|fr|es|it}/video.aspx",
