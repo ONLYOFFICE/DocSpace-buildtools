@@ -29,7 +29,7 @@ jobs:
         platform: [linux/amd64]
         branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches) }}
     outputs:
-      DOCKER_TAG: ${{ steps.build.outputs.DOCKER_TAG }}
+      DOCKER_TAG: ${{ steps.prepare.outputs.DOCKER_TAG }}
     steps:
       - name: Free Disk Space
         run: |
@@ -45,36 +45,46 @@ jobs:
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          
-      - name: Build 4testing
-        id: build
+
+      - name: Prepare build variables
+        id: prepare
         run: |
-          cd .${DOCKER_PATH}
-          if [ "${{ matrix.branch }}" = "develop" ]; then
-            PRODUCT_VERSION="develop"
-            DOCKER_TAG=${PRODUCT_VERSION}.${{ github.run_number }}
-          else
-            PRODUCT_VERSION=$(echo "${{ matrix.branch }}" | sed '/^release\b\|^hotfix\b\|^feature\b/s/release.*\/\|hotfix.*\/\|feature.*\///; s/-git-action$//; s/^v//') 
-            DOCKER_TAG=${PRODUCT_VERSION}.${{github.run_number}}
-          fi
-          export DOCKER_TAG
-          echo "DOCKER_TAG=${DOCKER_TAG}" >> ${GITHUB_OUTPUT}
-          docker buildx bake --sbom=true --provenance=mode=max -f build.yml \
-          --set *.args.GIT_BRANCH=${{ matrix.branch }} \
-          --set *.args.PRODUCT_VERSION=${PRODUCT_VERSION} \
-          --set *.args.BUILD_NUMBER=${BUILD_NUMBER} \
-          --set *.platform=linux/amd64 \
-          --set *.args.BUILD_NUMBER=${{github.run_number}} \
-          --push
+          PRODUCT_VERSION=$(echo "${{ matrix.branch }}" | sed '/^release\b\|^hotfix\b\|^feature\b/s/release.*\/\|hotfix.*\/\|feature.*\///; s/-git-action$//; s/^v//')
+          [ "${PRODUCT_VERSION}" = "develop" ] && PRODUCT_VERSION="develop"
+          echo "DOCKER_TAG=${PRODUCT_VERSION}.${{ github.run_number }}" | tee -a "${GITHUB_ENV}" | tee -a "${GITHUB_OUTPUT}"
+          echo "BAKE_ARGS=--sbom=true --provenance=mode=max --set *.args.GIT_BRANCH=${{ matrix.branch }} \
+            --set *.args.PRODUCT_VERSION=${PRODUCT_VERSION} --set *.args.BUILD_NUMBER=${{ github.run_number }} \
+            --set *.platform=linux/amd64 --push" >> $GITHUB_ENV
 
         shell: bash
+
+      - name: Build dotnet-services
+        run: |
+          cd .${DOCKER_PATH}
+          docker buildx bake -f build.hcl dotnet-services ${{ env.BAKE_ARGS }}
+          printf '%.0s=' {1..80}; echo -e "\nDISK SPACE AFTER BUILD DOTNET SERVICES"; df -h; docker system df; printf '%.0s=' {1..80}; echo
+          docker buildx prune -a -f; docker system prune -a -f --volumes
+          
+      - name: Build node-services
+        run: |
+          cd .${DOCKER_PATH}
+          docker buildx bake -f build.hcl node-services ${{ env.BAKE_ARGS }}
+          printf '%.0s=' {1..80}; echo -e "\nDISK SPACE AFTER BUILD NODE SERVICES"; df -h; docker system df; printf '%.0s=' {1..80}; echo
+          docker buildx prune -a -f; docker system prune -a -f --volumes
+
+      - name: Build java-services
+        run: |
+          cd .${DOCKER_PATH}
+          docker buildx bake -f build.hcl java-services ${{ env.BAKE_ARGS }}
+          printf '%.0s=' {1..80}; echo -e "\nDISK SPACE AFTER BUILD JAVA SERVICES"; df -h; docker system df; printf '%.0s=' {1..80}; echo
+          docker buildx prune -a -f; docker system prune -a -f --volumes
 
   trigger-oci-docker:
     name: Trigger ci-oci-docker-install Workflow
