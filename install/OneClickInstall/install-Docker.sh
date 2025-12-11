@@ -119,7 +119,7 @@ if [[ -n "${GIT_BRANCH:-}" ]]; then
   DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${PACKAGE_SYSNAME^^}/${PRODUCT}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
 fi
 
-[[ "$LOCAL_SCRIPTS" = "true" ]] && source "./${ARGS_SCRIPT}" || source <(curl "${DOWNLOAD_URL_PREFIX}/${ARGS_SCRIPT}")
+[[ "$LOCAL_SCRIPTS" = "true" ]] || [[ "$OFFLINE_INSTALLATION" = "true" ]] && source "./${ARGS_SCRIPT}" || source <(curl "${DOWNLOAD_URL_PREFIX}/${ARGS_SCRIPT}")
 
 uninstall() {
     read -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " REMOVE_DATA_SERVICES
@@ -858,7 +858,7 @@ make_swap () {
 offline_check_docker_image() {
 	[ ! -f "$1" ] && { echo "Error: File '$1' does not exist."; exit 1; }
 	docker-compose -f "$1" config | grep -oP 'image:\s*\K\S+' | while IFS= read -r IMAGE_TAG; do
-		docker images "${IMAGE_TAG}" | grep -q "${IMAGE_TAG%%:*}" || { echo "Error: The image '${IMAGE_TAG}' is not found in the local Docker registry."; kill -s TERM $PID; }
+		docker images --format="{{.Repository}}:{{.Tag}}" "${IMAGE_TAG}"  | grep -q "${IMAGE_TAG%%:*}" || { echo "Error: The image '${IMAGE_TAG}' is not found in the local Docker registry."; kill -s TERM $PID; }
 	done
 }
 
@@ -925,7 +925,7 @@ check_docker_image () {
 		[ "$INSTALL_DOCUMENT_SERVER" == "true" ]    && offline_check_docker_image ${BASE_DIR}/ds.yml
 
 		if [ "$INSTALL_PRODUCT" == "true" ]; then
-			printf '%s\n' "${SERVICES[@]}" | xargs -I{} offline_check_docker_image "$BASE_DIR/{}.yml"
+			for SVC in "${SERVICES[@]}"; do offline_check_docker_image "${BASE_DIR}/${SVC}.yml"; done
 		fi
 	fi
 }
