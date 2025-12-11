@@ -135,6 +135,4 @@ if [ "$1" -eq 0 ]; then
     rm -rf %{buildpath}
 fi
 
-%changelog
-*Mon Jan 16 2023 %{packager} - %{version}-%{release}
-- Initial build.
+%include changelog.spec
