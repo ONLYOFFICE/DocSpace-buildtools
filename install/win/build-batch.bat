@@ -10,6 +10,7 @@ REM echo ######## Extracting and preparing files to build ########
 xcopy "buildtools\install\win\opensearch-%opensearch_version%\plugins\opensearch-security" "buildtools\install\win\OpenSearch\plugins\opensearch-security" /s /y /b /i
 xcopy "buildtools\install\win\opensearch-%opensearch_version%\plugins\opensearch-job-scheduler" "buildtools\install\win\OpenSearch\plugins\opensearch-job-scheduler" /s /y /b /i
 xcopy "buildtools\install\win\opensearch-%opensearch_version%\plugins\opensearch-index-management" "buildtools\install\win\OpenSearch\plugins\opensearch-index-management" /s /y /b /i
+xcopy "buildtools\install\win\opensearch-%opensearch_version%\plugins\opensearch-knn" "buildtools\install\win\OpenSearch\plugins\opensearch-knn" /s /y /b /i
 rmdir buildtools\install\win\opensearch-%opensearch_version%\plugins /s /q
 xcopy "buildtools\install\win\opensearch-%opensearch_version%" "buildtools\install\win\OpenSearch" /s /y /b /i
 rmdir buildtools\install\win\opensearch-%opensearch_version% /s /q
@@ -36,6 +37,7 @@ md buildtools\install\win\Files\services\ASC.Web.Api\service\temp
 md buildtools\install\win\Files\services\ASC.Web.Studio\service\temp
 md buildtools\install\win\Files\services\ASC.Web.HealthChecks.UI\service\temp
 xcopy "plugins\publish\*" "buildtools\install\win\Files\Data\Studio\webplugins" /s /e /y /i
+xcopy "mcp\bin\*" "buildtools\install\win\Files\products\ASC.AI\mcp" /s /e /y /i
 copy buildtools\install\win\WinSW.NET4.exe "buildtools\install\win\OpenResty\tools\OpenResty.exe" /y
 copy buildtools\install\win\tools\OpenResty.xml "buildtools\install\win\OpenResty\tools\OpenResty.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\Socket.IO.exe" /y
@@ -48,6 +50,8 @@ copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\L
 copy buildtools\install\win\tools\Login.xml "buildtools\install\win\Files\tools\Login.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\Sdk.exe" /y
 copy buildtools\install\win\tools\Sdk.xml "buildtools\install\win\Files\tools\Sdk.xml" /y
+copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\MCP.exe" /y
+copy buildtools\install\win\tools\MCP.xml "buildtools\install\win\Files\tools\MCP.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\Management.exe" /y
 copy buildtools\install\win\tools\Management.xml "buildtools\install\win\Files\tools\Management.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\OpenSearch\tools\OpenSearch.exe" /y

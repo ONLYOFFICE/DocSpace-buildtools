@@ -1,0 +1,129 @@
+files:
+  - name: "{{product}}-ai-service.install"
+    content: |
+      debian/build/publish/services/ASC.AI.Service/service var/www/{{product}}/products/ASC.AI
+
+  - name: "{{product}}-ai.install"
+    content: |
+      debian/build/publish/services/ASC.AI/service/* var/www/{{product}}/products/ASC.AI/server/
+
+  - name: "{{product}}-mcp.install"
+    content: |
+      debian/build/publish/services/ASC.AI.MCP/service/* var/www/{{product}}/products/ASC.AI/mcp
+
+  - name: "{{product}}-api-system.install"
+    content: |
+      debian/build/publish/services/ASC.ApiSystem/service/* var/www/{{product}}/services/ASC.ApiSystem
+
+  - name: "{{product}}-api.install"
+    content: |
+      debian/build/publish/services/ASC.Web.Api/service/* var/www/{{product}}/studio/ASC.Web.Api
+
+  - name: "{{product}}-backup-background.install"
+    content: |
+      debian/build/publish/services/ASC.Data.Backup.BackgroundTasks/service/* var/www/{{product}}/services/ASC.Data.Backup.BackgroundTasks
+
+  - name: "{{product}}-backup.install"
+    content: |
+      debian/build/publish/services/ASC.Data.Backup/service/* var/www/{{product}}/services/ASC.Data.Backup
+
+  - name: "{{product}}-clear-events.install"
+    content: |
+      debian/build/publish/services/ASC.ClearEvents/service/* var/www/{{product}}/services/ASC.ClearEvents
+
+  - name: "{{product}}-common.install"
+    content: |
+      debian/build/buildtools/config/* etc/onlyoffice/{{product}}
+      debian/build/buildtools/install/common/{{product}}-configuration usr/bin
+      debian/build/buildtools/install/docker/config/fluent-bit.conf etc/onlyoffice/{{product}}
+
+  - name: "{{product}}-common.dirs"
+    content: |
+      /var/log/onlyoffice/{{product}}
+      /etc/onlyoffice/{{product}}/.private
+
+  - name: "{{product}}-doceditor.install"
+    content: |
+      debian/build/publish/web/editor var/www/{{product}}/products/ASC.Files
+
+  - name: "{{product}}-files-services.install"
+    content: |
+      debian/build/publish/services/ASC.Files.Service/service var/www/{{product}}/products/ASC.Files
+
+  - name: "{{product}}-files.install"
+    content: |
+      debian/build/publish/services/ASC.Files/service/* var/www/{{product}}/products/ASC.Files/server/
+      debian/build/DocStore var/www/{{product}}/products/ASC.Files/server
+
+  - name: "{{product}}-healthchecks.install"
+    content: |
+      debian/build/publish/services/ASC.Web.HealthChecks.UI/service/* var/www/{{product}}/services/ASC.Web.HealthChecks.UI
+
+  - name: "{{product}}-identity-api.install"
+    content: |
+      debian/build/publish/services/ASC.Identity.Registration/app.jar var/www/{{product}}/services/ASC.Identity.Registration
+
+  - name: "{{product}}-identity-authorization.install"
+    content: |
+      debian/build/publish/services/ASC.Identity.Authorization/app.jar var/www/{{product}}/services/ASC.Identity.Authorization
+
+  - name: "{{product}}-login.install"
+    content: |
+      debian/build/publish/web/login var/www/{{product}}/products/ASC.Login
+
+  - name: "{{product}}-management.install"
+    content: |
+      debian/build/publish/web/management var/www/{{product}}/products/ASC.Management
+
+  - name: "{{product}}-migration-runner.install"
+    content: |
+      debian/build/publish/services/ASC.Migration.Runner/service/* var/www/{{product}}/services/ASC.Migration.Runner
+
+  - name: "{{product}}-notify.install"
+    content: |
+      debian/build/publish/services/ASC.Notify/service/* var/www/{{product}}/services/ASC.Notify
+
+  - name: "{{product}}-people-server.install"
+    content: |
+      debian/build/publish/services/ASC.People/service/* var/www/{{product}}/products/ASC.People/server/
+
+  - name: "{{product}}-plugins.install"
+    content: |
+      debian/build/plugins/publish/* var/www/onlyoffice/Data/Studio/webplugins
+
+  - name: "{{product}}-proxy.install"
+    content: |
+      debian/build/buildtools/install/common/{{product}}-ssl-setup usr/bin
+      debian/build/buildtools/install/docker/config/nginx/templates/*.template etc/onlyoffice/{{product}}/openresty
+      debian/build/buildtools/config/nginx/html/*.html etc/openresty/html
+      debian/build/buildtools/install/docker/config/nginx/onlyoffice* etc/openresty/conf.d
+      debian/build/buildtools/config/nginx/onlyoffice*.conf etc/openresty/conf.d
+      debian/build/buildtools/install/docker/config/nginx/letsencrypt* etc/openresty/includes
+      debian/build/buildtools/config/nginx/includes/*.conf etc/openresty/includes
+      debian/build/publish/web/public var/www/{{product}}
+      debian/build/campaigns/src/campaigns var/www/{{product}}/public
+      debian/build/publish/web/client var/www/{{product}}
+
+  - name: "{{product}}-sdk.install"
+    content: |
+      debian/build/publish/web/sdk var/www/{{product}}/products/ASC.Sdk
+
+  - name: "{{product}}-socket.install"
+    content: |
+      debian/build/publish/services/ASC.Socket.IO var/www/{{product}}/services
+
+  - name: "{{product}}-ssoauth.install"
+    content: |
+      debian/build/publish/services/ASC.SsoAuth var/www/{{product}}/services
+
+  - name: "{{product}}-studio-notify.install"
+    content: |
+      debian/build/publish/services/ASC.Studio.Notify/service/* var/www/{{product}}/services/ASC.Studio.Notify
+
+  - name: "{{product}}-studio.install"
+    content: |
+      debian/build/publish/services/ASC.Web.Studio/service/* var/www/{{product}}/studio/ASC.Web.Studio
+
+  - name: "{{product}}-telegram.install"
+    content: |
+      debian/build/publish/services/ASC.TelegramService/service/* var/www/{{product}}/services/ASC.TelegramService

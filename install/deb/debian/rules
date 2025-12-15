@@ -39,20 +39,17 @@ check_archives:
 	$(call extract_archive,${SOURCE_PATH}/buildtools.tar.gz,buildtools,-C ${BUILD_PATH}) & \
 	$(call extract_archive,${SOURCE_PATH}/server.tar.gz,server,-C ${BUILD_PATH}) & \
 	$(call extract_archive,${SOURCE_PATH}/client.tar.gz,client,-C ${BUILD_PATH}) & \
+	$(call extract_archive,${SOURCE_PATH}/DocStore.tar.gz,DocStore,-C ${BUILD_PATH}) & \
 	$(call extract_archive,${SOURCE_PATH}/campaigns.tar.gz,campaigns,-C ${BUILD_PATH}) & \
 	$(call extract_archive,${SOURCE_PATH}/plugins.tar.gz,plugins,-C ${BUILD_PATH}) & \
+	$(call extract_archive,${SOURCE_PATH}/mcp.tar.gz,mcp,-C ${BUILD_PATH}) & \
 	wait; \
-	$(call extract_archive,${SOURCE_PATH}/DocStore.tar.gz,DocStore,-C ${SERVER_PATH}/products/ASC.Files/Server); \
 	$(call extract_archive,${SOURCE_PATH}/document-formats.tar.gz,document-formats,-C ${BUILDTOOLS_PATH}/config); \
 	echo "Source archives check passed."
 
 override_dh_auto_build: check_archives
-	cd ${BUILDTOOLS_PATH}/install/common/systemd; \
-	bash build.sh -bp "${CURDIR}/debian/"; \
 	cd ${BUILDTOOLS_PATH}/install/common; \
-	bash build-frontend.sh -sp ${BUILD_PATH} -di "false"; \
-	bash build-backend.sh -sp ${BUILD_PATH}; \
-	bash publish-backend.sh -sp ${SERVER_PATH}; \
+	bash systemd/build.sh -bp "${CURDIR}/debian/"; \
 	bash plugins-build.sh ${BUILD_PATH}/plugins; \
 	bash packages-build.sh deb ${BUILD_PATH} ${PRODUCT} "{{package_header_tag_version}}"
 

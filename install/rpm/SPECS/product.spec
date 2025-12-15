@@ -28,14 +28,18 @@ Source4:        https://codeload.github.com/ONLYOFFICE/document-templates/tar.gz
 Source5:        https://codeload.github.com/ONLYOFFICE/ASC.Web.Campaigns/tar.gz/master#/campaigns.tar.gz
 Source6:        https://codeload.github.com/ONLYOFFICE/%{product}-plugins/tar.gz/master#/plugins.tar.gz
 Source7:        https://codeload.github.com/ONLYOFFICE/document-formats/tar.gz/master#/document-formats.tar.gz
+Source8:        https://codeload.github.com/ONLYOFFICE/%{product}-mcp/tar.gz/main#/mcp.tar.gz
 
 BuildRequires:  nodejs >= 22.0
 BuildRequires:  yarn
-BuildRequires:  dotnet-sdk-9.0
+BuildRequires:  dotnet-sdk-10.0
 BuildRequires:  unzip
 BuildRequires:  java-21-openjdk-headless
 BuildRequires:  maven
 
+Requires:       %name-ai = %version-%release
+Requires:       %name-ai-service = %version-%release
+Requires:       %name-mcp = %version-%release
 Requires:       %name-api = %version-%release
 Requires:       %name-api-system = %version-%release
 Requires:       %name-backup = %version-%release
@@ -77,11 +81,12 @@ rm -rf %{_rpmdir}/%{_arch}/%{name}-* %{_builddir}/*
 tar -xf %{SOURCE1} --transform='s,^[^/]\+,buildtools,'       -C %{_builddir} &
 tar -xf %{SOURCE2} --transform='s,^[^/]\+,client,'           -C %{_builddir} &
 tar -xf %{SOURCE3} --transform='s,^[^/]\+,server,'           -C %{_builddir} &
+tar -xf %{SOURCE4} --transform='s,^[^/]\+,DocStore,'         -C %{_builddir} &
 tar -xf %{SOURCE5} --transform='s,^[^/]\+,campaigns,'        -C %{_builddir} &
 tar -xf %{SOURCE6} --transform='s,^[^/]\+,plugins,'          -C %{_builddir} &
 wait
-tar -xf %{SOURCE4} --transform='s,^[^/]\+,DocStore,'         -C %{_builddir}/server/products/ASC.Files/Server
 tar -xf %{SOURCE7} --transform='s,^[^/]\+,document-formats,' -C %{_builddir}/buildtools/config
+tar -xf %{SOURCE8} --transform='s,^[^/]\+,mcp,'              -C %{_builddir}
 cp -rf %{SOURCE0} .
 
 %include build.spec

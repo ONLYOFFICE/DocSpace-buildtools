@@ -1,7 +1,7 @@
 ARG SRC_PATH="/app/onlyoffice/src"
 ARG BUILD_PATH="/var/www"
-ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:9.0"
-ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:9.0-noble"
+ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:10.0"
+ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:10.0-noble"
 
 # Image resources
 FROM python:3.12-slim AS src
@@ -51,10 +51,11 @@ RUN <<EOF
     sed -i "s/\"number\".*,/\"number\": \"${PRODUCT_VERSION}.${BUILD_NUMBER}\",/g" /app/onlyoffice/config/appsettings.json
     sed -e 's/#//' -i /etc/nginx/conf.d/onlyoffice.conf
     if [ "$DEBUG_INFO" = true ]; then
-    echo "--- add customized debuginfo ---" && \
-        pip install -r ${SRC_PATH}/buildtools/requirements.txt --break-system-packages
-        python3 ${SRC_PATH}/buildtools/debuginfo.py
-    fi 
+        echo "--- add customized debuginfo ---" && \
+        pip install -r ${SRC_PATH}/buildtools/requirements.txt --break-system-packages && \
+        python3 ${SRC_PATH}/buildtools/debuginfo.py && \
+        pip cache purge
+    fi
 EOF
 
 # .net build
@@ -65,10 +66,11 @@ ARG SRC_PATH
 WORKDIR ${SRC_PATH}/server
 COPY --from=src ${SRC_PATH}/server/ .
 
-RUN echo "--- build/publishh docspace-server .net 9.0 ---" && \
+RUN echo "--- build/publish docspace-server .net 10.0 ---" && \
     dotnet build ASC.Web.slnf && \
     dotnet build ASC.Migrations.sln --property:OutputPath=${SRC_PATH}/publish/services/ASC.Migration.Runner/service/ && \
     dotnet publish ASC.Web.slnf -p PublishProfile=ReleaseProfile && \
+    dotnet nuget locals all --clear && \
     rm -rf ${SRC_PATH}/server/*
 
 # node build
@@ -82,12 +84,13 @@ WORKDIR ${SRC_PATH}/server
 COPY --from=src ${SRC_PATH}/server/common/ASC.Socket.IO ./common/ASC.Socket.IO
 COPY --from=src ${SRC_PATH}/server/common/ASC.SsoAuth ./common/ASC.SsoAuth
 
-RUN echo "--- build/publish ASC.Socket.IO ---" && \ 
-    cd ${SRC_PATH}/server/common/ASC.Socket.IO &&\
-    yarn install --immutable &&\
+RUN echo "--- build/publish ASC.Socket.IO ---" && \
+    cd ${SRC_PATH}/server/common/ASC.Socket.IO && \
+    yarn install --immutable && \
     echo "--- build/publish ASC.SsoAuth ---" && \ 
-    cd ${SRC_PATH}/server/common/ASC.SsoAuth &&\
-    yarn install --immutable
+    cd ${SRC_PATH}/server/common/ASC.SsoAuth && \
+    yarn install --immutable && \
+    yarn cache clean --all
 
 # build frondend from DocSpace-client
 WORKDIR ${SRC_PATH}
@@ -95,21 +98,27 @@ COPY --from=src ${SRC_PATH}/buildtools/config ./buildtools/config
 COPY --from=src ${SRC_PATH}/client/ ./client
 
 WORKDIR ${SRC_PATH}/client
+ENV PNPM_HOME=/tmp/pnpm
 RUN echo "--- installing pnpm ---" && \
     npm install -g pnpm && \
     echo "--- build/publish docspace-client node ---" && \
     pnpm install && \
     pnpm ${BUILD_ARGS} && \
     pnpm run ${DEPLOY_ARGS} && \
-    rm -rf ${SRC_PATH}/client/*
+    rm -rf ${SRC_PATH}/client ${SRC_PATH}/buildtools && \
+    rm -rf /tmp/pnpm
 
 # build plugins
+FROM node:22-slim AS build-plugins
+ARG SRC_PATH
 COPY --from=src ${SRC_PATH}/plugins ${SRC_PATH}/plugins
 WORKDIR ${SRC_PATH}/buildtools/install/common
 COPY --from=src ${SRC_PATH}/buildtools/install/common/plugins-build.sh ./plugins-build.sh
 RUN echo "--- build/publish plugins ---" && \
     apt-get update && apt-get install -y unzip && \
-    bash plugins-build.sh "${SRC_PATH}/plugins"
+    bash plugins-build.sh "${SRC_PATH}/plugins" && \
+    find "${SRC_PATH}/plugins" -mindepth 1 -maxdepth 1 ! -path "${SRC_PATH}/plugins/publish" -exec rm -rf {} + && \
+    rm -rf ${SRC_PATH}/buildtools
 
 # java build
 FROM maven:3.9-eclipse-temurin-21 AS java-build
@@ -119,9 +128,14 @@ WORKDIR ${SRC_PATH}/server/common/ASC.Identity/
 COPY --from=src ${SRC_PATH}/server/common/ASC.Identity/ .
 
 RUN echo "--- build/publish docspace-server java (ASC.Identity) ---" && \
-    mvn -B dependency:go-offline && \
-    mvn clean package -B -DskipTests -pl authorization/authorization-container -am && \
-    mvn clean package -B -DskipTests -pl registration/registration-container -am 
+    mkdir -p ${SRC_PATH}/publish/services/ASC.Identity.Registration && \
+    mkdir -p ${SRC_PATH}/publish/services/ASC.Identity.Authorization && \
+    mvn -Dmaven.repo.local=/tmp/m2/repository -B dependency:go-offline && \
+    mvn -Dmaven.repo.local=/tmp/m2/repository clean package -B -DskipTests -pl authorization/authorization-container -am && \
+    mvn -Dmaven.repo.local=/tmp/m2/repository clean package -B -DskipTests -pl registration/registration-container -am && \
+    mv -f ${SRC_PATH}/server/common/ASC.Identity/authorization/authorization-container/target/*.jar ${SRC_PATH}/publish/services/ASC.Identity.Authorization/app.jar && \
+    mv -f ${SRC_PATH}/server/common/ASC.Identity/registration/registration-container/target/*.jar ${SRC_PATH}/publish/services/ASC.Identity.Registration/app.jar && \
+    rm -rf ${SRC_PATH}/server /tmp/m2
 
 FROM $DOTNET_RUN AS dotnetrun
 ARG BUILD_PATH
@@ -279,6 +293,7 @@ RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.
     sed -i 's/127.0.0.1:5004/$service_people_server/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5000/$service_api/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5003/$service_studio/' /etc/nginx/conf.d/onlyoffice.conf && \
+    sed -i 's/127.0.0.1:5157/$service_ai/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:9899/$service_socket/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:9834/$service_sso/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5013/$service_doceditor/' /etc/nginx/conf.d/onlyoffice.conf && \
@@ -438,6 +453,24 @@ COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/servi
 
 CMD ["ASC.People.dll", "ASC.People"]
 
+## ASC.AI ##
+FROM dotnetrun AS ai
+WORKDIR ${BUILD_PATH}/products/ASC.AI/server/
+
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.AI/service/ .
+
+CMD ["ASC.AI.dll", "ASC.AI"]
+
+## ASC.AI.Service ##
+FROM dotnetrun AS ai_service
+WORKDIR ${BUILD_PATH}/products/ASC.AI/service/
+
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.AI.Service/service/ .
+
+CMD ["ASC.AI.Service.dll", "ASC.AI.Service", "core:eventBus:subscriptionClientName=asc_event_bus_ai_service_queue"] 
+
 ## ASC.Socket.IO ##
 FROM noderun AS socket
 WORKDIR ${BUILD_PATH}/services/ASC.Socket.IO/
@@ -479,7 +512,7 @@ FROM dotnetrun AS studio
 WORKDIR ${BUILD_PATH}/studio/ASC.Web.Studio/
 
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/plugins/publish/ ${BUILD_PATH}/studio/plugins
+COPY --from=build-plugins --chown=onlyoffice:onlyoffice ${SRC_PATH}/plugins/publish/ ${BUILD_PATH}/studio/plugins
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Web.Studio/service/ .
 
 CMD ["ASC.Web.Studio.dll", "ASC.Web.Studio", "core:eventBus:subscriptionClientName=asc_event_bus_webstudio_queue"]
@@ -515,13 +548,13 @@ ENTRYPOINT ["./docker-migration-entrypoint.sh"]
 ## ASC.Identity.Authorization ##
 FROM javarun AS identity-authorization
 WORKDIR ${BUILD_PATH}/services/ASC.Identity.Authorization/
-COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Identity/authorization/authorization-container/target/*.jar ./app.jar
+COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.Authorization/app.jar .
 CMD ["ASC.Identity.Authorization"]
 
 ## ASC.Identity.Registration ##
 FROM javarun AS identity-api
 WORKDIR ${BUILD_PATH}/services/ASC.Identity.Registration/
-COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Identity/registration/registration-container/target/*.jar ./app.jar
+COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.Registration/app.jar .
 CMD ["ASC.Identity.Registration"]
 
 ## image for k8s bin-share ##
@@ -529,12 +562,14 @@ FROM busybox:latest AS bin_share
 ARG SRC_PATH
 RUN mkdir -p /app/ASC.Files/server && \
     mkdir -p /app/ASC.People/server && \
+    mkdir -p /app/ASC.AI/server && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -u 104 onlyoffice --home /var/www/onlyoffice --system -G onlyoffice
 USER onlyoffice
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/bin-share-docker-entrypoint.sh /app/docker-entrypoint.sh
 COPY --from=files --chown=onlyoffice:onlyoffice /var/www/products/ASC.Files/server/ /app/ASC.Files/server/
 COPY --from=people_server --chown=onlyoffice:onlyoffice /var/www/products/ASC.People/server/ /app/ASC.People/server/
+COPY --from=ai --chown=onlyoffice:onlyoffice /var/www/products/ASC.AI/server/ /app/ASC.AI/server/
 ENTRYPOINT ["./app/docker-entrypoint.sh"]
 
 ## image for k8s wait-bin-share ##
@@ -558,6 +593,8 @@ WORKDIR /usr/bin/
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/dotnet_services.conf /etc/supervisor/conf.d/supervisord.conf
 
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.AI/service/ ${BUILD_PATH}/products/ASC.AI/server/
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.AI.Service/service/ ${BUILD_PATH}/products/ASC.AI/service/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.ApiSystem/service/  ${BUILD_PATH}/services/ASC.ApiSystem/service/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.ClearEvents/service/  ${BUILD_PATH}/services/ASC.ClearEvents/service/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Data.Backup/service/ ${BUILD_PATH}/services/ASC.Data.Backup/service/
@@ -585,7 +622,7 @@ COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/servi
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Web.Api/service/ ${BUILD_PATH}/services/ASC.Web.Api/service/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Web.HealthChecks.UI/service/ ${BUILD_PATH}/services/ASC.Web.HealthChecks.UI/service/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Web.Studio/service/ ${BUILD_PATH}/services/ASC.Web.Studio/service/
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/plugins/publish/ ${BUILD_PATH}/studio/plugins
+COPY --from=build-plugins --chown=onlyoffice:onlyoffice ${SRC_PATH}/plugins/publish/ ${BUILD_PATH}/studio/plugins
 
 CMD ["supervisord", "-n"]
 
@@ -616,7 +653,7 @@ ENV LOG_DIR=/var/log/onlyoffice
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-identity-entrypoint.sh /usr/bin/docker-identity-entrypoint.sh
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/java_services.conf /etc/supervisor/conf.d/supervisord.conf
 
-COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Identity/authorization/authorization-container/target/*.jar ${BUILD_PATH}/services/ASC.Identity.Authorization/app.jar
-COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Identity/registration/registration-container/target/*.jar ${BUILD_PATH}/services/ASC.Identity.Registration/app.jar
+COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.Authorization/app.jar ${BUILD_PATH}/services/ASC.Identity.Authorization/app.jar
+COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.Registration/app.jar ${BUILD_PATH}/services/ASC.Identity.Registration/app.jar
 
 ENTRYPOINT ["/usr/bin/supervisord", "-n"]

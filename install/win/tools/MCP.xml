@@ -1,0 +1,20 @@
+<service>
+	<id>DocSpace.MCP</id>
+	<name>ONLYOFFICE DocSpace MCP</name>
+	<description>ONLYOFFICE DocSpace MCP</description>
+	<priority>RealTime</priority>
+	<startmode>Automatic</startmode>
+	<autoRefresh>false</autoRefresh>
+	<onfailure action="restart" delay="10 sec"/>
+	<logpath>{APPDIR}Logs</logpath>
+	<env name="DOCSPACE_INTERNAL" value="true" />
+	<env name="DOCSPACE_TRANSPORT" value="http" />
+	<env name="DOCSPACE_HOST" value="0.0.0.0" />
+	<env name="DOCSPACE_PORT" value="5158" />
+	<executable>node</executable>
+	<arguments>&quot;{APPDIR}products\ASC.AI\mcp\onlyoffice-docspace-mcp.js&quot;</arguments>
+	<log mode="roll-by-size">
+  		<sizeThreshold>10240</sizeThreshold>
+  		<keepFiles>8</keepFiles>
+	</log>
+</service>

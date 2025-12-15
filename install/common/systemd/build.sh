@@ -76,6 +76,9 @@ SERVICE_NAME=(
 	sdk
 	management
 	telegram
+	ai
+	ai-service
+	mcp
 	)
 
 reassign_values (){
@@ -209,6 +212,22 @@ reassign_values (){
 		EXEC_FILE="ASC.TelegramService.dll"
 		CORE_EVENT_BUS=" --core:eventBus:subscriptionClientName=asc_event_bus_telegram_queue"
 	;;
+	ai )
+		SERVICE_PORT="5157"
+		WORK_DIR="${BASE_DIR}/products/ASC.AI/server/"
+		EXEC_FILE="ASC.AI.dll"
+	;;
+	ai-service )
+		SERVICE_PORT="5124"
+		WORK_DIR="${BASE_DIR}/products/ASC.AI/service/"
+		EXEC_FILE="ASC.AI.Service.dll"
+		CORE_EVENT_BUS=" --core:eventBus:subscriptionClientName=asc_event_bus_ai_service_queue"
+	;;
+	mcp )
+		SERVICE_PORT="5158"
+		WORK_DIR="${BASE_DIR}/products/ASC.AI/mcp/"
+		EXEC_FILE="bin/${PACKAGE_SYSNAME}-${PRODUCT}-mcp"
+	;;
   esac
   SERVICE_NAME="$1"
   RESTART="always"
@@ -224,6 +243,10 @@ reassign_values (){
 	SERVICE_TYPE="simple"
 	RESTART="on-failure"
 	EXEC_START="${DOTNET_RUN} ${WORK_DIR}${EXEC_FILE} standalone=true"
+  elif [[ "${SERVICE_NAME}" = "mcp" ]]; then
+	SERVICE_TYPE="simple"
+	RESTART="always"
+	EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE}"
   else
 	SERVICE_TYPE="notify"
 	EXEC_START="${DOTNET_RUN} ${WORK_DIR}${EXEC_FILE} --urls=${APP_URLS}:${SERVICE_PORT} --pathToConf=${PATH_TO_CONF} \

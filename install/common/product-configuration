@@ -310,7 +310,7 @@ setup_openresty(){
 		if command -v getenforce >/dev/null 2>&1; then
 			case "$(getenforce)" in
 				enforcing|permissive)
-					PORTS=(5000 5001 5003 5004 5005 5006 5007 5009 5010 5011 5012 5013 5015 5027 5032 5033 5075 5099 5100 8080 9090 9834 9899)
+					PORTS=(5000 5001 5003 5004 5005 5006 5007 5009 5010 5011 5012 5013 5014 5015 5027 5032 5033 5034 5075 5099 5100 5124 5157 5158 8080 9090 9834 9899)
 					setsebool -P httpd_can_network_connect on
 					EXISTING_PORTS="$(semanage port -l | awk '$1=="http_port_t" && $2=="tcp"{for(i=3;i<=NF;i++)print $i}' | tr ',' '\n' | tr -d ' ')"
 					for PORT in "${PORTS[@]}"; do
@@ -549,14 +549,14 @@ setup_redis() {
 setup_rabbitmq() {
 	echo -n "Configuring rabbitmq... "
 
-	: "${RABBITMQ_HOST:=$(json -f "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" RabbitMQ.Hostname 2>/dev/null)}
-	: "${RABBITMQ_PORT:=$(json -f "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" RabbitMQ.Port 2>/dev/null)}
-	: "${RABBITMQ_USER:=$(json -f "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" RabbitMQ.UserName 2>/dev/null)}
-	: "${RABBITMQ_PASSWORD:=$(json -f "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" RabbitMQ.Password 2>/dev/null)}
-	: "${RABBITMQ_URI:=$(json -f "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" RabbitMQ.Uri 2>/dev/null)}
-	: "${RABBITMQ_PROTOCOL:=${RABBITMQ_URI%%://*}}
+	: "${RABBITMQ_HOST:=$(json -f "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" RabbitMQ.Hostname 2>/dev/null)}"
+	: "${RABBITMQ_PORT:=$(json -f "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" RabbitMQ.Port 2>/dev/null)}"
+	: "${RABBITMQ_USER:=$(json -f "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" RabbitMQ.UserName 2>/dev/null)}"
+	: "${RABBITMQ_PASSWORD:=$(json -f "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" RabbitMQ.Password 2>/dev/null)}"
+	: "${RABBITMQ_URI:=$(json -f "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" RabbitMQ.Uri 2>/dev/null)}"
+	: "${RABBITMQ_PROTOCOL:=${RABBITMQ_URI%%://*}}"
 	: "${RABBITMQ_PROTOCOL:=amqp}" "${RABBITMQ_HOST:=localhost}" "${RABBITMQ_PORT:=5672}" "${RABBITMQ_USER:=guest}" "${RABBITMQ_PASSWORD:=guest}"
-	: "${RABBITMQ_URI:=${RABBITMQ_PROTOCOL}://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/}}"
+	: "${RABBITMQ_URI:=${RABBITMQ_PROTOCOL}://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/}"
 
 	json_configuration "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" "RabbitMQ.Hostname" "${RABBITMQ_HOST}"
 	json_configuration "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" "RabbitMQ.UserName" "${RABBITMQ_USER}"
@@ -606,6 +606,10 @@ product_configuration(){
 
 	env_configuration "$APP_DIR/systemd.env" ENVIRONMENT "${ENVIRONMENT}"
 	env_configuration "$APP_DIR/systemd.env" SPRING_PROFILES_ACTIVE "prod,server"
+	env_configuration "$APP_DIR/systemd.env" DOCSPACE_INTERNAL "true"
+	env_configuration "$APP_DIR/systemd.env" DOCSPACE_TRANSPORT "http"
+	env_configuration "$APP_DIR/systemd.env" DOCSPACE_HOST "0.0.0.0"
+	env_configuration "$APP_DIR/systemd.env" DOCSPACE_PORT "5158"
 
 	: "${CORE_MACHINEKEY:=$(generate_key "machinekey")}"
 	json_configuration "${USER_CONF}" "core.machinekey" "${CORE_MACHINEKEY}"
@@ -623,18 +627,18 @@ product_configuration(){
 # Function below checks if there is a connection to the external service. 0 - OK, connection established
 check_connection_external_services() {
 	exec {FD}<> /dev/tcp/$1/$2 && exec {FD}>&-
-	HOST_RESPONCE=$?
+	HOST_RESPONSE=$?
 
-	if [[ $HOST_RESPONCE -ne 0 ]]; then
+	if [[ $HOST_RESPONSE -ne 0 ]]; then
 		echo -e "$3 external server is not responding: $1:$2"
-		return $HOST_RESPONCE
+		return $HOST_RESPONSE
 	fi
 
-	return $HOST_RESPONCE
+	return $HOST_RESPONSE
 }
 
 stop_services() {
-	echo -n "Stoping services... "
+	echo -n "Stopping services... "
 	systemctl stop "${SERVICES_LIST[@]}" 'ds-*.service' 2>&1
 	echo "OK"
 }
@@ -642,7 +646,7 @@ stop_services() {
 SERVICES=(login api socket studio-notify notify \
 people-server files files-services studio backup api-system \
 clear-events backup-background ssoauth doceditor healthchecks \
-identity-authorization identity-api sdk management telegram)
+identity-authorization identity-api sdk management telegram ai ai-service mcp)
 SERVICES_LIST=("${SERVICES[@]/#/${PRODUCT}-}")
 
 if command -v yum >/dev/null 2>&1; then

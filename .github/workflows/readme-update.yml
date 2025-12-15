@@ -27,9 +27,9 @@ jobs:
       - name: Update OS list in README
         working-directory: ${{ github.event.repository.name }}
         run: |
-          OS_LIST=$(yq -r '.jobs.prepare.steps[] | select(.name == "Set matrix names") | .run' .github/workflows/ci-oci-install.yml \
-            | grep -oP '"name"\s*:\s*"\K[^"]+' \
-            | sed 's/^/- /')
+          OS_LIST=$(yq -r '.jobs.prepare.steps[] | select(.name == "Set matrix names") | .env.OS_MAP' .github/workflows/ci-oci-install.yml \
+            | jq -r 'to_entries | map(.value[0])[]' \
+            | awk 'NF{print "- "$0}')
           {
             echo '<!-- OS-SUPPORT-LIST-START -->'
             echo "$OS_LIST"
