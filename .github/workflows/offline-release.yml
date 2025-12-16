@@ -70,7 +70,7 @@ jobs:
           echo "CloudFront invalidation: $CF_STATUS"
 
           API_STATUS=$(aws apigateway test-invoke-method --rest-api-id ${{ secrets.AWS_REST_API_ID }} --resource-id "${{ secrets.AWS_RESOURCE_ID }}" \
-            --http-method PUT --path-with-query-string "/prod/cdn77" --body "$(jq -c -n '.paths = $ARGS.positional' --args "/docspace/${{ env.ARTIFACT_NAME }}" "/docspace/${{ env.ARTIFACT_VERSION_NAME }}")" \
+            --http-method PUT --path-with-query-string "/prod/static-site-oo-com" --body "$(jq -c -n '.paths = $ARGS.positional' --args "/docspace/${{ env.ARTIFACT_NAME }}" "/docspace/${{ env.ARTIFACT_VERSION_NAME }}")" \
             --region us-east-1 --query 'status' --output text || :)
 
           echo "API Gateway test-invoke status: ${API_STATUS:-<failed>}"
