@@ -54,18 +54,23 @@ jobs:
         run: |
           aws s3 cp ${{ secrets.AWS_BUCKET_URL_OCI }}/4testing-${{ env.ARTIFACT_NAME }} \
             ${{ secrets.AWS_BUCKET_URL_OCI }}/${{ env.ARTIFACT_NAME }} \
-            --acl public-read \
-            --metadata-directive REPLACE
+            --acl public-read --metadata-directive REPLACE
 
       - name: Upload offline self-extracting archive (versioned)
         run: |
           aws s3 cp ${{ secrets.AWS_BUCKET_URL_OCI }}/4testing-${{ env.ARTIFACT_NAME }} \
             ${{ secrets.AWS_BUCKET_URL_OCI }}/${{ env.ARTIFACT_VERSION_NAME }} \
-            --acl public-read \
-            --metadata-directive REPLACE
+            --acl public-read --metadata-directive REPLACE
 
       - name: Invalidate AWS CloudFront cache
         run: |
-          aws cloudfront create-invalidation \
+          CF_STATUS=$(aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.AWS_DISTRIBUTION_ID_OCI }} \
-            --paths "/docspace/${{ env.ARTIFACT_NAME }}" "/docspace/${{ env.ARTIFACT_VERSION_NAME }}"
+            --paths "/docspace/${{ env.ARTIFACT_NAME }}" "/docspace/${{ env.ARTIFACT_VERSION_NAME }}" --query 'Invalidation.Status' --output text)
+          echo "CloudFront invalidation: $CF_STATUS"
+
+          API_STATUS=$(aws apigateway test-invoke-method --rest-api-id ${{ secrets.AWS_REST_API_ID }} --resource-id "${{ secrets.AWS_RESOURCE_ID }}" \
+            --http-method PUT --path-with-query-string "/prod/cdn77" --body "$(jq -c -n '.paths = $ARGS.positional' --args "/docspace/${{ env.ARTIFACT_NAME }}" "/docspace/${{ env.ARTIFACT_VERSION_NAME }}")" \
+            --region us-east-1 --query 'status' --output text || :)
+
+          echo "API Gateway test-invoke status: ${API_STATUS:-<failed>}"
