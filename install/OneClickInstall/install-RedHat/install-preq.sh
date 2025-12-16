@@ -44,8 +44,8 @@ curl -fsSL https://rpm.nodesource.com/setup_${NODE_VERSION}.x | bash -
 dnf remove -y @mysql && dnf module -y reset mysql && dnf module -y disable mysql
 MYSQL_REPO_VERSION="$(curl https://repo.mysql.com | grep -oP "mysql84-community-release-${MYSQL_DISTR_NAME}${REV}-\K.*" | grep -o '^[^.]*' | sort | tail -n1)"
 yum install -y https://repo.mysql.com/mysql84-community-release-"${MYSQL_DISTR_NAME}""${REV}"-"${MYSQL_REPO_VERSION}".noarch.rpm || true
-# Disable weak deps to avoid mysql-server on Fedora
-[ "$DIST" = "fedora" ] && WEAK_OPT="--setopt=install_weak_deps=False"
+# Disable weak deps to avoid mysql-server on Fedora and CentOS 10
+[ "$DIST" = "fedora" ] || { [ "$DIST" = "centos" ] && [ "$REV" -ge 10 ]; } && WEAK_OPT="--setopt=install_weak_deps=False"
 
 if ! rpm -q mysql-community-server; then
 	MYSQL_FIRST_TIME_INSTALL="true"
