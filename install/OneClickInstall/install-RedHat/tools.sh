@@ -75,8 +75,6 @@ ERLANG_DIST_VER=$( [[ "$REV" == "10" ]] && echo "9" || echo "$REV" )
 if [ "$REV" = "10" ]; then
   OPENRESTY_REV="9"
   DNF_NOGPG="--nogpgcheck"
-  # Disable on CentOS 10 Cockpit to free 9090 needed by docspace-identity-api
-  systemctl list-sockets | grep -q '9090.*cockpit\.socket' && sudo systemctl stop cockpit.{service,socket} && sudo systemctl disable cockpit.socket || true
 fi
 
 if [ "$DIST" == "fedora" ]; then
