@@ -79,8 +79,6 @@ if [ "$REV" = "10" ]; then
   yum -y install  "$APPSTREAM_PKGS/$(curl -fsSL "$APPSTREAM_PKGS/" | grep -oE 'libXScrnSaver-[0-9][^"]+\.x86_64\.rpm' | sort -V | tail -1)" \
                   "$APPSTREAM_PKGS/$(curl -fsSL "$APPSTREAM_PKGS/" | grep -oE 'xorg-x11-server-common-[0-9][^"]+\.x86_64\.rpm' | sort -V | tail -1)" \
                   "$APPSTREAM_PKGS/$(curl -fsSL "$APPSTREAM_PKGS/" | grep -oE 'xorg-x11-server-Xvfb-[0-9][^"]+\.x86_64\.rpm' | sort -V | tail -1)"
-  # Disable on CentOS 10 Cockpit to free 9090 needed by docspace-identity-api
-  systemctl list-sockets | grep -q '9090.*cockpit\.socket' && sudo systemctl stop cockpit.{service,socket} && sudo systemctl disable cockpit.socket || true
 fi
 
 if [ "$DIST" == "fedora" ]; then
@@ -92,6 +90,9 @@ if [ "$DIST" == "fedora" ]; then
 	FEDORA_SUPP=$(curl https://docs.fedoraproject.org/en-US/releases/ | awk '/Supported Releases/,/EOL Releases/' | grep -oP 'F\d+' | tr -d 'F')
 	echo "$FEDORA_SUPP" | grep -q "$REV" || SUPPORTED_FEDORA_FLAG="false"
 fi
+
+# Disable Cockpit to free 9090 needed by docspace-identity-api
+systemctl list-sockets | awk '$1 ~ /:9090$/ && $2 ~ /cockpit/ {print $2; exit}' | xargs -r systemctl disable --now 2>/dev/null || true
 
 # Check if it's Centos less than 8 or Fedora release is out of service
 if { [[ "${DIST}" == "centos" && "${REV}" -lt 9 ]] || \
