@@ -17,7 +17,8 @@ on:
           rhel9,
           centos9s,
           centos10,
-          fedora42
+          fedora42,
+          fedora43
       deb_build:
         type: boolean
         description: "Run tests on DEB-based distros"
@@ -46,7 +47,8 @@ jobs:
               "debian13":   ["Debian 13",    "onlyoffice",   "base-debian13"],
               "ubuntu2204": ["Ubuntu 22.04", "onlyoffice",   "base-ubuntu2204"],
               "ubuntu2404": ["Ubuntu 24.04", "onlyoffice",   "base-ubuntu2404"],
-              "fedora42":   ["Fedora 42",    "onlyoffice",   "base-fedora42"]
+              "fedora42":   ["Fedora 42",    "onlyoffice",   "base-fedora42"],
+              "fedora43":   ["Fedora 43",    "brigada",      "fedora-43"]
             }
         run: |
           OS_INPUT="${{ github.event.inputs.os }}"
