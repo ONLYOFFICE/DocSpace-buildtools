@@ -76,13 +76,7 @@ jobs:
 
       - name: Invalidate AWS CloudFront cache
         run: |
-          CF_STATUS=$(aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.AWS_DISTRIBUTION_ID_OCI }} \
-            --paths "/${{ env.PRODUCT }}/*" --query 'Invalidation.Status' --output text)
-          echo "CloudFront invalidation: $CF_STATUS"
-
           API_STATUS=$(aws apigateway test-invoke-method --rest-api-id ${{ secrets.AWS_REST_API_ID }} --resource-id "${{ secrets.AWS_RESOURCE_ID }}" \
-            --http-method PUT --path-with-query-string "/prod/static-site-oo-com" --body "$(jq -c -n '.paths = $ARGS.positional' --args "/${{ env.PRODUCT }}/*")" \
+            --http-method PUT --path-with-query-string "/prod/download-oo-com" --body "$(jq -c -n '.paths = $ARGS.positional' --args "/${{ env.PRODUCT }}/*")" \
             --region us-east-1 --query 'status' --output text || :)
-
           echo "API Gateway test-invoke status: ${API_STATUS:-<failed>}"
