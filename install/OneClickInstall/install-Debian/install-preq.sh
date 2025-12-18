@@ -55,7 +55,7 @@ elif [ "$DIST" = "debian" ]; then
 	dpkg -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
 fi
 
-MYSQL_REPO_VERSION="$(curl -fsSL https://repo.mysql.com | grep -oP 'mysql-apt-config_\K.*' | grep -o '^[^_]*' | sort --version-sort --field-separator=. | tail -n1)"
+MYSQL_REPO_VERSION="$(curl -fsSL https://dev.mysql.com/downloads/repo/apt/ | grep -oP '(?<=mysql-apt-config_)[0-9.]+-[0-9]+(?=_all\.deb)' | head -n1)"
 MYSQL_PACKAGE_NAME="mysql-apt-config_${MYSQL_REPO_VERSION}_all.deb"
 if ! dpkg -l | grep -q "mysql-server"; then
 
@@ -83,11 +83,6 @@ elif dpkg -l | grep -q "mysql-apt-config" && [ "$(apt-cache policy mysql-apt-con
 	curl -fsSLO http://repo.mysql.com/${MYSQL_PACKAGE_NAME}
 	DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
 	rm -f "${MYSQL_PACKAGE_NAME}"
-fi
-
-# fix Bug 77825 - MySQL repo GPG key expired
-if [ -f "/etc/apt/sources.list.d/mysql.list" ]; then
-	sed -E -i 's/\[trusted=(no|yes) /\[trusted=yes /; /\[trusted=yes /! s/\[signed-by=(.*)\]/[trusted=yes signed-by=\1]/; s/^(deb-src)/#\1/' /etc/apt/sources.list.d/mysql.list
 fi
 
 if [ "$DIST" = "ubuntu" ]; then	
