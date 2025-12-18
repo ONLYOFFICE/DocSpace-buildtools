@@ -107,7 +107,19 @@ install_docspace() {
   echo "Exit code 0. Continue..."
 }
 
+ports_audit() {
+  echo -e "$LINE_SEPARATOR\n${COLOR_YELLOW}Listening ports (non-local = EXPOSED)${COLOR_RESET}\n$LINE_SEPARATOR"
+  ss -lntupH | awk -v red="${COLOR_RED}" -v green="${COLOR_GREEN}" -v reset="${COLOR_RESET}" '
+  function pname(s){ if (match(s,/"[^"]+"/)) return substr(s,RSTART+1,RLENGTH-2); else return s }
+  function pidv(s){ if (match(s,/pid=[0-9]+/)) return substr(s,RSTART+4,RLENGTH-4); else return "-" }
+  function is_local(addr){ return (addr ~ /(^127\.|\[::1\]:|\[::ffff:127\.)/) }
+  BEGIN { printf "%-4s %-22s %-7s %-22s %s\n","PROT","LOCAL","PID","PROC","SCOPE" }
+  { scope = is_local($5) ? green "LOCAL" reset : red "EXPOSED" reset;
+    printf "%-4s %-22s %-7s %-22s %s\n", $1, $5, pidv($7), pname($7), scope }'
+}
+
 healthcheck_systemd_services() {
+  echo -e "$LINE_SEPARATOR\n${COLOR_YELLOW}Systemd services health${COLOR_RESET}\n$LINE_SEPARATOR"
   for service in "${SERVICES_SYSTEMD[@]}"; do
     [[ "$service" == *migration* ]] && continue;
     if systemctl is-active --quiet "${service}"; then
@@ -152,6 +164,7 @@ main() {
   install_docspace
   sleep 180
   services_logs
+  ports_audit
   healthcheck_systemd_services
 }
 
