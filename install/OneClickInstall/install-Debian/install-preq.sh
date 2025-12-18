@@ -50,17 +50,13 @@ curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
 if [ "$DIST" = "ubuntu" ]; then
     add-apt-repository -y ppa:dotnet/backports
 elif [ "$DIST" = "debian" ]; then
-	# Temporary workaround Debian 13 (trixie) use Microsoft repo from Debian 12
-	MS_REV="$REV"
-	[ "${DISTRIB_CODENAME}" = "trixie" ] && MS_REV="12"
-	curl -fsSL https://packages.microsoft.com/config/"$DIST"/"$MS_REV"/packages-microsoft-prod.deb -O
+	curl -fsSL https://packages.microsoft.com/config/"$DIST"/"$REV"/packages-microsoft-prod.deb -O
 	echo -e "Package: *\nPin: origin \"packages.microsoft.com\"\nPin-Priority: 1002" | tee /etc/apt/preferences.d/99microsoft-prod.pref
 	dpkg -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
 fi
 
 MYSQL_REPO_VERSION="$(curl -fsSL https://repo.mysql.com | grep -oP 'mysql-apt-config_\K.*' | grep -o '^[^_]*' | sort --version-sort --field-separator=. | tail -n1)"
 MYSQL_PACKAGE_NAME="mysql-apt-config_${MYSQL_REPO_VERSION}_all.deb"
-MYSQL_CODENAME=$([ "${DISTRIB_CODENAME}" = "trixie" ] && echo "bookworm" || echo "${DISTRIB_CODENAME}")
 if ! dpkg -l | grep -q "mysql-server"; then
 
 	MYSQL_SERVER_HOST=${MYSQL_SERVER_HOST:-"localhost"}
@@ -71,7 +67,7 @@ if ! dpkg -l | grep -q "mysql-server"; then
 
 	# setup mysql 8.4 package
 	curl -fsSLO http://repo.mysql.com/"${MYSQL_PACKAGE_NAME}"
-	echo "mysql-apt-config mysql-apt-config/repo-codename  select  $MYSQL_CODENAME" | debconf-set-selections
+	echo "mysql-apt-config mysql-apt-config/repo-codename  select  $DISTRIB_CODENAME" | debconf-set-selections
 	echo "mysql-apt-config mysql-apt-config/repo-distro  select  $DIST" | debconf-set-selections
 	echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.4-lts" | debconf-set-selections
 	DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
@@ -82,12 +78,6 @@ if ! dpkg -l | grep -q "mysql-server"; then
 	echo mysql-community-server mysql-server/default-auth-override select "Use Strong Password Encryption (RECOMMENDED)" | debconf-set-selections
 	echo mysql-server mysql-server/root_password password "${MYSQL_SERVER_PASS}" | debconf-set-selections
 	echo mysql-server mysql-server/root_password_again password "${MYSQL_SERVER_PASS}" | debconf-set-selections
-
-    # Temporary workaround Debian 13 (trixie) MySQL requires libaio1
-    if [ "$DISTRIB_CODENAME" = "trixie" ] && ! dpkg -s libaio1 >/dev/null 2>&1; then
-      curl -fsSLo /tmp/libaio1.deb "https://deb.debian.org/debian/pool/main/liba/libaio/$(
-        curl -fsSL https://deb.debian.org/debian/pool/main/liba/libaio/ | grep -o 'libaio1_[0-9][^"]*_amd64\.deb' | sort -Vu | tail -n1)" && apt-get -y install /tmp/libaio1.deb && rm -f /tmp/libaio1.deb
-    fi
 
 elif dpkg -l | grep -q "mysql-apt-config" && [ "$(apt-cache policy mysql-apt-config | awk 'NR==2{print $2}')" != "${MYSQL_REPO_VERSION}" ]; then
 	curl -fsSLO http://repo.mysql.com/${MYSQL_PACKAGE_NAME}
@@ -166,9 +156,8 @@ JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*temurin-${JAVA_VERSION}*" | 
 update-alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && update-alternatives --set java "$JAVA_PATH"
 
 if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then
-	[[ "${DISTRIB_CODENAME}" == trixie ]] && FLUENTBIT_DIST_CODENAME="bookworm" || FLUENTBIT_DIST_CODENAME="${DISTRIB_CODENAME}"
 	curl -fsSL https://packages.fluentbit.io/fluentbit.key | gpg --dearmor > /usr/share/keyrings/fluentbit-keyring.gpg
-	echo "deb [signed-by=/usr/share/keyrings/fluentbit-keyring.gpg] https://packages.fluentbit.io/$DIST/$FLUENTBIT_DIST_CODENAME $FLUENTBIT_DIST_CODENAME main" | tee /etc/apt/sources.list.d/fluent-bit.list
+	echo "deb [signed-by=/usr/share/keyrings/fluentbit-keyring.gpg] https://packages.fluentbit.io/$DIST/$DISTRIB_CODENAME $DISTRIB_CODENAME main" | tee /etc/apt/sources.list.d/fluent-bit.list
 	apt-get -y update
 	apt-get install -o DPkg::options::="--force-confnew" -yq opensearch-dashboards="${DASHBOARDS_VERSION}" fluent-bit
 fi
