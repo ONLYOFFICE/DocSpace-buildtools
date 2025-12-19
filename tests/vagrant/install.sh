@@ -157,6 +157,86 @@ services_logs() {
   done
 }
 
+debug_exposed_ports() {
+  echo -e "$LINE_SEPARATOR\n${COLOR_YELLOW}Debug: why ports are EXPOSED${COLOR_RESET}\n$LINE_SEPARATOR"
+
+  local tmp="/tmp/exposed_ports.$$"
+  ss -lntupH | awk '
+    function is_local(addr){
+      return (addr ~ /(^127\.|^\[::1\]:|^\[::ffff:127\.)/)
+    }
+    function pidv(s){
+      if (match(s,/pid=[0-9]+/)) return substr(s,RSTART+4,RLENGTH-4);
+      return ""
+    }
+    function pname(s){
+      if (match(s,/"[^"]+"/)) return substr(s,RSTART+1,RLENGTH-2);
+      return s
+    }
+    {
+      # $5 = local addr:port, $7 = users:(("proc",pid=...))
+      if (!is_local($5)) {
+        p=pidv($7);
+        if (p != "") {
+          printf "%s\t%s\t%s\t%s\n", $1, $5, p, pname($7);
+        }
+      }
+    }' | sort -u > "$tmp"
+
+  if [[ ! -s "$tmp" ]]; then
+    echo "${COLOR_GREEN}[OK] No EXPOSED sockets with pid found${COLOR_RESET}"
+    rm -f "$tmp"
+    return 0
+  fi
+
+  echo -e "${COLOR_YELLOW}PROT\tLOCAL\tPID\tPROC${COLOR_RESET}"
+  cat "$tmp"
+
+  echo
+  while IFS=$'\t' read -r proto laddr pid proc; do
+    echo "$LINE_SEPARATOR"
+    echo "${COLOR_BLUE}PID ${pid} (${proc}) listens on ${laddr} (${proto})${COLOR_RESET}"
+
+    local unit=""
+    unit="$(systemctl status "${pid}" 2>/dev/null | awk -F': ' '/Loaded:/{next} /CGroup:/{next} /^●/{next} /Main PID:/{next} { } END{ }' >/dev/null; true)"
+    unit="$(systemctl status "${pid}" 2>/dev/null | awk 'NR==1{gsub(/^● /,""); split($0,a," "); print a[1]}' || true)"
+    if [[ -z "$unit" || "$unit" == "${pid}" ]]; then
+      unit="$(grep -aoE '[^/]+\.service' /proc/"$pid"/cgroup 2>/dev/null | head -n1 || true)"
+    fi
+
+    if [[ -n "$unit" ]]; then
+      echo "${COLOR_GREEN}Unit:${COLOR_RESET} $unit"
+    else
+      echo "${COLOR_RED}Unit:${COLOR_RESET} (not detected)"
+    fi
+
+    echo "${COLOR_GREEN}cmdline:${COLOR_RESET}"
+    tr '\0' ' ' < /proc/"$pid"/cmdline 2>/dev/null; echo
+
+    echo "${COLOR_GREEN}env (filtered):${COLOR_RESET}"
+    tr '\0' '\n' < /proc/"$pid"/environ 2>/dev/null | \
+      egrep -i '^(SERVER_|MANAGEMENT_|SPRING_|HOST(NAME)?=|PORT=|JAVA_TOOL_OPTIONS=|JDK_JAVA_OPTIONS=|_JAVA_OPTIONS=|JMX|RMI)' || true
+
+    if [[ "$proc" == "java" ]] && command -v jcmd >/dev/null 2>&1; then
+      echo "${COLOR_GREEN}jcmd VM.system_properties (filtered):${COLOR_RESET}"
+      sudo jcmd "$pid" VM.system_properties 2>/dev/null | \
+        egrep -i '(^| )(server\.address|server\.port|management\.server\.address|management\.server\.port|jmx|rmi|java\.rmi|com\.sun\.management\.jmxremote)' || true
+    fi
+
+    if [[ -n "$unit" ]]; then
+      echo "${COLOR_GREEN}systemd [Service] section:${COLOR_RESET}"
+      systemctl cat "$unit" 2>/dev/null | awk '
+        /^\[Service\]/{flag=1}
+        flag{print}
+        flag && /^\[/{ if($0!="[Service]") exit }
+      ' || true
+    fi
+
+  done < "$tmp"
+
+  rm -f "$tmp"
+}
+
 main() {
   get_colors
   prepare_vm
@@ -165,6 +245,7 @@ main() {
   sleep 180
   services_logs
   ports_audit
+  debug_exposed_ports
   healthcheck_systemd_services
 }
 
