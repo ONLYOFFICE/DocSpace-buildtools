@@ -48,7 +48,7 @@ STORAGE_ROOT="/var/www/${PACKAGE_SYSNAME}/Data"
 LOG_DIR="/var/log/${PACKAGE_SYSNAME}/${PRODUCT}"
 DOTNET_RUN="/usr/bin/dotnet"
 NODE_RUN="/usr/bin/node"
-JAVA_RUN="/usr/bin/java -jar"
+JAVA_RUN="/usr/bin/java"
 APP_URLS="http://127.0.0.1"
 SYSTEMD_ENVIRONMENT_FILE="${PATH_TO_CONF}/systemd.env"
 CORE=" --core:products:folder=${BASE_DIR}/products --core:products:subfolder=server"
@@ -239,7 +239,7 @@ reassign_values (){
   elif [[ "${EXEC_FILE}" == *".jar" ]]; then
 	SYSTEMD_ENVIRONMENT="SPRING_APPLICATION_NAME=${SPRING_APPLICATION_NAME} SERVER_PORT=${SERVICE_PORT} LOG_FILE_PATH=${LOG_DIR}/${SERVICE_NAME}.log"
 	SERVICE_TYPE="notify"
-	EXEC_START="${JAVA_RUN} ${WORK_DIR}${EXEC_FILE}"
+	EXEC_START="${JAVA_RUN} -Dserver.address=${APP_URLS#*://} -Dmanagement.server.address=${APP_URLS#*://} -jar ${WORK_DIR}${EXEC_FILE}"
   elif [[ "${SERVICE_NAME}" = "migration-runner" ]]; then
 	SERVICE_TYPE="simple"
 	RESTART="on-failure"
