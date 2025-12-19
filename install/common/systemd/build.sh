@@ -233,18 +233,9 @@ reassign_values (){
   RESTART="always"
   unset SYSTEMD_ENVIRONMENT
   if [[ "${EXEC_FILE}" == *".js" ]]; then
-	  SERVICE_TYPE="simple"
-	  SYSTEMD_ENVIRONMENT="HOSTNAME=${APP_URLS#*://}"
-	  case "${SERVICE_NAME}" in
-		  socket|ssoauth)
-			  (9899/9834) 
-			  EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE} --app.port=${SERVICE_PORT} --app.host=${APP_URLS#*://} --app.appsettings=${PATH_TO_CONF} --app.environment=\${ENVIRONMENT}"
-		  ;;
-		  *)
-			# (login/doceditor/sdk/management/sdk)
-			  EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE} --app.port=${SERVICE_PORT} --app.appsettings=${PATH_TO_CONF} --app.environment=\${ENVIRONMENT}"
-		  ;;
-	  esac
+	SERVICE_TYPE="simple"
+	SYSTEMD_ENVIRONMENT="HOSTNAME=${APP_URLS#*://}"
+	EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE} --app.port=${SERVICE_PORT} --app.appsettings=${PATH_TO_CONF} --app.environment=\${ENVIRONMENT}"
   elif [[ "${EXEC_FILE}" == *".jar" ]]; then
 	SYSTEMD_ENVIRONMENT="SPRING_APPLICATION_NAME=${SPRING_APPLICATION_NAME} SERVER_PORT=${SERVICE_PORT} SERVER_ADDRESS=${APP_URLS#*://} MANAGEMENT_SERVER_ADDRESS=${APP_URLS#*://} LOG_FILE_PATH=${LOG_DIR}/${SERVICE_NAME}.log"
 	SERVICE_TYPE="simple"
