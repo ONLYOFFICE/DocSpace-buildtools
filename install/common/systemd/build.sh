@@ -48,7 +48,7 @@ STORAGE_ROOT="/var/www/${PACKAGE_SYSNAME}/Data"
 LOG_DIR="/var/log/${PACKAGE_SYSNAME}/${PRODUCT}"
 DOTNET_RUN="/usr/bin/dotnet"
 NODE_RUN="/usr/bin/node"
-JAVA_RUN="/usr/bin/java -jar"
+JAVA_RUN="/usr/bin/java"
 APP_URLS="http://127.0.0.1"
 SYSTEMD_ENVIRONMENT_FILE="${PATH_TO_CONF}/systemd.env"
 CORE=" --core:products:folder=${BASE_DIR}/products --core:products:subfolder=server"
@@ -233,13 +233,22 @@ reassign_values (){
   RESTART="always"
   unset SYSTEMD_ENVIRONMENT
   if [[ "${EXEC_FILE}" == *".js" ]]; then
-	SERVICE_TYPE="simple"
-	SYSTEMD_ENVIRONMENT="HOSTNAME=${APP_URLS#*://}"
-	EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE} --app.port=${SERVICE_PORT} --app.appsettings=${PATH_TO_CONF} --app.environment=\${ENVIRONMENT}"
+	  SERVICE_TYPE="simple"
+	  SYSTEMD_ENVIRONMENT="HOSTNAME=${APP_URLS#*://}"
+	  case "${SERVICE_NAME}" in
+		  socket|ssoauth)
+			  (9899/9834) 
+			  EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE} --app.port=${SERVICE_PORT} --app.host=${APP_URLS#*://} --app.appsettings=${PATH_TO_CONF} --app.environment=\${ENVIRONMENT}"
+		  ;;
+		  *)
+			# (login/doceditor/sdk/management/sdk)
+			  EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE} --app.port=${SERVICE_PORT} --app.appsettings=${PATH_TO_CONF} --app.environment=\${ENVIRONMENT}"
+		  ;;
+	  esac
   elif [[ "${EXEC_FILE}" == *".jar" ]]; then
-	SYSTEMD_ENVIRONMENT="SPRING_APPLICATION_NAME=${SPRING_APPLICATION_NAME} SERVER_PORT=${SERVICE_PORT} LOG_FILE_PATH=${LOG_DIR}/${SERVICE_NAME}.log"
-	SERVICE_TYPE="notify"
-	EXEC_START="${JAVA_RUN} ${WORK_DIR}${EXEC_FILE}"
+	SYSTEMD_ENVIRONMENT="SPRING_APPLICATION_NAME=${SPRING_APPLICATION_NAME} SERVER_PORT=${SERVICE_PORT} SERVER_ADDRESS=${APP_URLS#*://} MANAGEMENT_SERVER_ADDRESS=${APP_URLS#*://} LOG_FILE_PATH=${LOG_DIR}/${SERVICE_NAME}.log"
+	SERVICE_TYPE="simple"
+	EXEC_START="${JAVA_RUN} -Dserver.port=${SERVICE_PORT} -Dserver.address=${APP_URLS#*://} -Dmanagement.server.address=${APP_URLS#*://} -jar ${WORK_DIR}${EXEC_FILE} --server.port=${SERVICE_PORT} --server.address=${APP_URLS#*://} --management.server.address=${APP_URLS#*://}"
   elif [[ "${SERVICE_NAME}" = "migration-runner" ]]; then
 	SERVICE_TYPE="simple"
 	RESTART="on-failure"
