@@ -235,7 +235,7 @@ reassign_values (){
   if [[ "${EXEC_FILE}" == *".js" ]]; then
 	SERVICE_TYPE="simple"
 	SYSTEMD_ENVIRONMENT="HOSTNAME=${APP_URLS#*://}"
-	EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE} --app.port=${SERVICE_PORT} --app.appsettings=${PATH_TO_CONF} --app.environment=\${ENVIRONMENT}"
+	EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE} --app.port=${SERVICE_PORT} --app.host=127.0.0.1 --app.appsettings=${PATH_TO_CONF} --app.environment=\${ENVIRONMENT}"
   elif [[ "${EXEC_FILE}" == *".jar" ]]; then
 	SYSTEMD_ENVIRONMENT="SPRING_APPLICATION_NAME=${SPRING_APPLICATION_NAME} SERVER_PORT=${SERVICE_PORT} LOG_FILE_PATH=${LOG_DIR}/${SERVICE_NAME}.log"
 	SERVICE_TYPE="notify"
@@ -247,7 +247,7 @@ reassign_values (){
   elif [[ "${SERVICE_NAME}" = "mcp" ]]; then
 	SERVICE_TYPE="simple"
 	RESTART="always"
-	EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE}"
+	EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE} --host=127.0.0.1"
   else
 	SERVICE_TYPE="notify"
 	EXEC_START="${DOTNET_RUN} ${WORK_DIR}${EXEC_FILE} --urls=${APP_URLS}:${SERVICE_PORT} --pathToConf=${PATH_TO_CONF} \
