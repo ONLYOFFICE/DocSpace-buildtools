@@ -34,6 +34,7 @@ SOCKET_HOST=${SOCKET_HOST:-"${CONTAINER_PREFIX}socket:${SERVICE_PORT}"}
 SSOAUTH_HOST=${SSOAUTH_HOST:-"${CONTAINER_PREFIX}ssoauth:${SERVICE_PORT}"}
 TELEGRAM_HOST=${TELEGRAM_HOST:-"${CONTAINER_PREFIX}telegram:${SERVICE_PORT}"}
 AI_HOST=${AI_HOST:-"${CONTAINER_PREFIX}ai:${SERVICE_PORT}"}
+AI_SERVICE_HOST=${AI_SERVICE_HOST:-"${CONTAINER_PREFIX}ai-service:${SERVICE_PORT}"}
 
 sed -i "s/\(\"Default\": \).*/\1\"${LOG_LEVEL:-"warning"}\"/" "${PATH_TO_CONF}/appsettings.json"
 sed -i "/\"Name\": \"ASC.ApiCache\"/,/{/d" ${PATH_TO_CONF}/appsettings.json

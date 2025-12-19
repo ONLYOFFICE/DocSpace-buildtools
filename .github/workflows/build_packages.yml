@@ -37,9 +37,6 @@ concurrency:
 
 env:
   PRODUCT: "DocSpace"
-  PRODUCT_LOW: "docspace"
-  BUILD_NUMBER: ${{ github.run_number }}
-  PACKAGE_DIRECTORY: "${{ github.workspace }}"
   BRANCH_BUILDTOOLS: ${{ github.event.inputs.branch-buildtools || github.ref_name || 'develop' }}
   BRANCH_CLIENT: ${{ github.event.inputs.branch-client || github.ref_name || 'develop' }}
   BRANCH_SERVER: ${{ github.event.inputs.branch-server || github.ref_name || 'develop' }}
@@ -51,10 +48,12 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       build_all: ${{ steps.set-matrix.outputs.build_all }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - name: Checkout repository 
+        run: |
+          git clone https://${{ secrets.GITEA_TOKEN }}@${{ secrets.GITEA_HOST }}/${{ github.repository }} -b ${{ github.ref_name }} --single-branch --depth=1
+          cd "${GITHUB_REPOSITORY#*/}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Set matrix
         id: set-matrix
@@ -69,6 +68,19 @@ jobs:
           [[ ${#package_types[@]} -eq 0 ]] && { echo "::error::No package types specified"; exit 1; }
           matrix=$(printf '%s\n' "${package_types[@]}" | jq -R . | jq -sc '{include: map({packageType: .})}')
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
+
+      - name: Changelog generation
+        run: |
+          cd ${GITHUB_REPOSITORY#*/}/install/common
+          bash changelog.sh deb; bash changelog.sh rpm
+          git add ../deb/debian/changelog ../rpm/SPECS/changelog.spec
+          if ! git diff --cached --quiet; then
+            git commit -m "Update packages changelogs"
+            git push origin HEAD:${{ github.ref_name }}
+          else
+            echo "No changes in changelog files" 
+          fi
+
   build:
     name: Build Packages
     needs: prepare
@@ -87,8 +99,7 @@ jobs:
 
       - name: Set product version
         run: |
-          PRODUCT_VERSION=$(grep -oP '\d+\.\d+\.\d+' <<< "${BRANCH_BUILDTOOLS//\//} ${BRANCH_CLIENT//\//} \
-          ${BRANCH_SERVER//\//}" | head -n1)
+          PRODUCT_VERSION=$(grep -oP '\d+\.\d+\.\d+' <<< "${BRANCH_BUILDTOOLS//\//} ${BRANCH_CLIENT//\//} ${BRANCH_SERVER//\//}" | head -n1)
           echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.6.0}" >> $GITHUB_ENV
 
       - name: Import GPG
@@ -124,8 +135,8 @@ jobs:
       - name: Download sources
         run: |
           case "${{ matrix.packageType }}" in
-            deb) SOURCE_DIR="${PACKAGE_DIRECTORY}/install/${{ matrix.packageType }}/debian/source" ;;
-            rpm) SOURCE_DIR="${PACKAGE_DIRECTORY}/install/${{ matrix.packageType }}/SPECS/SOURCES" ;;
+            deb) SOURCE_DIR="${GITHUB_WORKSPACE}/install/${{ matrix.packageType }}/debian/source" ;;
+            rpm) SOURCE_DIR="${GITHUB_WORKSPACE}/install/${{ matrix.packageType }}/SPECS/SOURCES" ;;
           esac
           download() { wget -q -O "${SOURCE_DIR}/$3.tar.gz" "https://codeload.github.com/ONLYOFFICE/$1/tar.gz/$2" && echo -e "\e[32m[OK] $3\e[0m" || echo -e "\e[31m[FAILED] $3\e[0m"; }
           download "$PRODUCT-buildtools"  "$BRANCH_BUILDTOOLS"      buildtools &
@@ -140,31 +151,50 @@ jobs:
 
       - name: Build DEB Packages
         if: matrix.packageType == 'deb'
+        working-directory: ${{ github.workspace }}/install/deb
         run: |
-          cd ${PACKAGE_DIRECTORY}/install/deb/
-          rename -f -v "s/product([^\/]*)$/${PRODUCT_LOW}\$1/g" debian/*
-          find debian/ -type f -exec sed -i -e "s/{{product}}/${PRODUCT_LOW}/g" -e "s/{{package_header_tag_version}}/${PRODUCT_VERSION}.${BUILD_NUMBER}/g" {} +
+          if ! grep -qF "${PRODUCT_VERSION}" debian/changelog; then
+            TMP=$(mktemp)
+            { printf '{{product}} ({{package_header_tag_version}}) unstable; urgency=medium\n\n'
+              printf '  * Upstream has been updated to version %s.\n\n' "${PRODUCT_VERSION}"
+              printf ' -- Ascensio System SIA <support@onlyoffice.com>  %s\n\n' "$(date -R)"
+              cat debian/changelog
+            } > "${TMP}" && mv "${TMP}" debian/changelog
+          fi
+          
+          rename -f -v "s/product([^\/]*)$/${PRODUCT,,}\$1/g" debian/*
+          find debian/ -type f -exec sed -i -e "s/{{product}}/${PRODUCT,,}/g" -e "s/{{package_header_tag_version}}/${PRODUCT_VERSION}.${GITHUB_RUN_NUMBER}/g" {} +
           yq -r '.files[] | .name as $n | "cat <<EOF > debian/\($n)\n" + .content + "\nEOF"' debian/files-bundle.yaml | bash
           export DEB_BUILD_OPTIONS="parallel=$(nproc)"
           dpkg-buildpackage -uc -us
 
       - name: Build RPM Packages
         if: matrix.packageType == 'rpm'
+        working-directory: ${{ github.workspace }}/install/rpm/SPECS
         run: |
-          cd ${PACKAGE_DIRECTORY}/install/rpm/SPECS
-          mv ./SOURCES/product.rpmlintrc ./SOURCES/${PRODUCT_LOW}.rpmlintrc
+          if ! grep -qF "${PRODUCT_VERSION}" /rpm/SPECS/changelog.spec; then
+            TMP=$(mktemp)
+            awk -v DATE="$(date '+%a %b %d %Y')" -v VERSION="${PRODUCT_VERSION}" ' /^%changelog$/ {
+                print
+                print "* " DATE " %{packager} - %{version}"
+                print "  - Upstream has been updated to version "VERSION".\n"
+                next
+              } { print } ' /rpm/SPECS/changelog.spec > ${TMP} && mv ${TMP} /rpm/SPECS/changelog.spec
+          fi
+          
+          mv ./SOURCES/product.rpmlintrc ./SOURCES/${PRODUCT,,}.rpmlintrc
           sed -i -e '/BuildRequires/d' product.spec
           rpmbuild -D "packager Ascensio System SIA <support@onlyoffice.com>" \
                    -D "_topdir $(pwd)" \
                    -D "version ${PRODUCT_VERSION}" \
-                   -D "release ${BUILD_NUMBER}" -ba product.spec
+                   -D "release ${GITHUB_RUN_NUMBER}" -ba product.spec
 
       - name: Sign DEB Packages
         if: matrix.packageType == 'deb'
         run: |
           dpkg-sig --sign origin \
             --gpg-options "--pinentry-mode loopback --passphrase ${{ secrets.GPG_PRIVATE_KEY_PASS }}" \
-            --batch ${PACKAGE_DIRECTORY}/install/*.deb
+            --batch ${GITHUB_WORKSPACE}/install/*.deb
 
       - name: Sign RPM Packages
         if: matrix.packageType == 'rpm'
@@ -174,12 +204,12 @@ jobs:
               -D "_gpg_path $HOME/.gnupg" \
               -D "_gpg_name ${{ secrets.GPG_KEY_NAME }}" \
               -D "_gpg_sign_cmd_extra_args --pinentry-mode loopback --passphrase ${{ secrets.GPG_PRIVATE_KEY_PASS }}" \
-              --addsign ${PACKAGE_DIRECTORY}/install/rpm/SPECS/RPMS/noarch/*.rpm
+              --addsign ${GITHUB_WORKSPACE}/install/rpm/SPECS/RPMS/noarch/*.rpm 
 
       - name: Upload DEB Packages
         if: matrix.packageType == 'deb'
         run: |
-          find "${PACKAGE_DIRECTORY}/install" -name "*.${{ matrix.packageType }}" | xargs -P4 -I{} bash -c '
+          find "${GITHUB_WORKSPACE}/install" -name "*.${{ matrix.packageType }}" | xargs -P4 -I{} bash -c '
             curl -sS --fail --retry 10 --retry-delay 10 --connect-timeout 60 --max-time 180 -H "Content-Type: multipart/form-data" \
               -u "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" --data-binary "@$1" "${{ secrets.REPO_URL_4TESTING_DEB }}" \
             && echo -e "\e[32m[Success] $(basename "$1")\e[0m" || echo "::warning:: [Uploading errors] $(basename "$1")"' _ {}
@@ -187,7 +217,7 @@ jobs:
       - name: Upload RPM Packages
         if: matrix.packageType == 'rpm'
         run: |
-          find "${PACKAGE_DIRECTORY}/install/rpm/SPECS/RPMS/noarch" -name "*.${{ matrix.packageType }}" | xargs -P4 -I{} bash -c '
+          find "${GITHUB_WORKSPACE}/install/rpm/SPECS/RPMS/noarch" -name "*.${{ matrix.packageType }}" | xargs -P4 -I{} bash -c '
             curl -sS --fail --retry 10 --retry-delay 10 --connect-timeout 60 --max-time 180 \
               -u "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" --upload-file "$1" "${{ secrets.REPO_URL_4TESTING_RPM}}/$(basename $1)" \
             && echo -e "\e[32m[Success] $(basename "$1")\e[0m" || echo "::warning:: [Uploading errors] $(basename "$1")"' _ {}
@@ -195,11 +225,11 @@ jobs:
       - name: Checking the DEB package for errors
         if: matrix.packageType == 'deb'
         run: |
-          for deb in ${PACKAGE_DIRECTORY}/install/*.deb; do
+          for deb in ${GITHUB_WORKSPACE}/install/*.deb; do
             lintian --profile debian "$deb" > "${deb}.lintian" 2>&1 &
           done
           wait
-          cat ${PACKAGE_DIRECTORY}/install/*.lintian | tee LINTIAN
+          cat ${GITHUB_WORKSPACE}/install/*.lintian | tee LINTIAN
           if grep -qE '^(W:|E:)' LINTIAN; then
             echo "::warning Noticedeb=lintian::$(cat LINTIAN | awk '/^W:/ { ws += 1 } /^E:/ { es += 1 } END { print "Warnings:", ws, "Errors:", es }')"
           fi
@@ -207,8 +237,8 @@ jobs:
       - name: Checking the RPM package for errors
         if: matrix.packageType == 'rpm'
         run: |
-          for rpm_package in ${PACKAGE_DIRECTORY}/install/rpm/SPECS/RPMS/noarch/*.rpm; do
-            rpmlint --ignore-unused-rpmlintrc --rpmlintrc ${PACKAGE_DIRECTORY}/install/rpm/SPECS/SOURCES/${PRODUCT_LOW}.rpmlintrc $rpm_package | tee -a RPM_LINT
+          for rpm_package in ${GITHUB_WORKSPACE}/install/rpm/SPECS/RPMS/noarch/*.rpm; do
+            rpmlint --ignore-unused-rpmlintrc --rpmlintrc ${GITHUB_WORKSPACE}/install/rpm/SPECS/SOURCES/${PRODUCT,,}.rpmlintrc $rpm_package | tee -a RPM_LINT
           done
           if grep -qE '(W:|E:)' RPM_LINT; then
             echo "::warning Noticerpm=rpmlint::$(cat RPM_LINT | awk '/W:/ { ws += 1 } /E:/ { es += 1 } END { print "Warnings:", ws, "Errors:", es }')"
