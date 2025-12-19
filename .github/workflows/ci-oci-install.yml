@@ -14,10 +14,7 @@ on:
           debian13,
           ubuntu2204,
           ubuntu2404,
-          rhel9,
-          centos9s,
           centos10,
-          fedora42,
           fedora43
       deb_build:
         type: boolean
@@ -39,15 +36,12 @@ jobs:
         env:
           OS_MAP: |
             {
-              "rhel9":      ["RHEL 9",       "generic",      "rhel9"],
-              "centos9s":   ["CentOS 9s",    "onlyoffice",   "base-centos9s"],
               "centos10":   ["CentOS 10",    "onlyoffice",   "base-centos10"],
               "debian11":   ["Debian 11",    "onlyoffice",   "base-debian11"],
               "debian12":   ["Debian 12",    "onlyoffice",   "base-debian12"],
               "debian13":   ["Debian 13",    "onlyoffice",   "base-debian13"],
               "ubuntu2204": ["Ubuntu 22.04", "onlyoffice",   "base-ubuntu2204"],
               "ubuntu2404": ["Ubuntu 24.04", "onlyoffice",   "base-ubuntu2404"],
-              "fedora42":   ["Fedora 42",    "onlyoffice",   "base-fedora42"],
               "fedora43":   ["Fedora 43",    "brigada",      "fedora-43"]
             }
         run: |
