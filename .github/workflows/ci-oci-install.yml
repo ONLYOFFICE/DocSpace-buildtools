@@ -14,8 +14,7 @@ on:
           debian13,
           ubuntu2204,
           ubuntu2404,
-          centos10,
-          fedora43
+          centos10
       deb_build:
         type: boolean
         description: "Run tests on DEB-based distros"
@@ -41,8 +40,7 @@ jobs:
               "debian12":   ["Debian 12",    "onlyoffice",   "base-debian12"],
               "debian13":   ["Debian 13",    "onlyoffice",   "base-debian13"],
               "ubuntu2204": ["Ubuntu 22.04", "onlyoffice",   "base-ubuntu2204"],
-              "ubuntu2404": ["Ubuntu 24.04", "onlyoffice",   "base-ubuntu2404"],
-              "fedora43":   ["Fedora 43",    "brigada",      "fedora-43"]
+              "ubuntu2404": ["Ubuntu 24.04", "onlyoffice",   "base-ubuntu2404"]
             }
         run: |
           OS_INPUT="${{ github.event.inputs.os }}"
