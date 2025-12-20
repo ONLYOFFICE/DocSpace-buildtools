@@ -237,9 +237,9 @@ reassign_values (){
 	SYSTEMD_ENVIRONMENT="HOSTNAME=${APP_URLS#*://}"
 	EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE} --app.port=${SERVICE_PORT} --app.appsettings=${PATH_TO_CONF} --app.environment=\${ENVIRONMENT}"
   elif [[ "${EXEC_FILE}" == *".jar" ]]; then
-	SYSTEMD_ENVIRONMENT="SPRING_APPLICATION_NAME=${SPRING_APPLICATION_NAME} SERVER_PORT=${SERVICE_PORT} SERVER_ADDRESS=${APP_URLS#*://} MANAGEMENT_SERVER_ADDRESS=${APP_URLS#*://} LOG_FILE_PATH=${LOG_DIR}/${SERVICE_NAME}.log"
-	SERVICE_TYPE="simple"
-	EXEC_START="${JAVA_RUN} -Dserver.port=${SERVICE_PORT} -Dserver.address=${APP_URLS#*://} -Dmanagement.server.address=${APP_URLS#*://} -jar ${WORK_DIR}${EXEC_FILE} --server.port=${SERVICE_PORT} --server.address=${APP_URLS#*://} --management.server.address=${APP_URLS#*://}"
+	SYSTEMD_ENVIRONMENT="SPRING_APPLICATION_NAME=${SPRING_APPLICATION_NAME} SERVER_PORT=${SERVICE_PORT} LOG_FILE_PATH=${LOG_DIR}/${SERVICE_NAME}.log"
+	SERVICE_TYPE="notify"
+	EXEC_START="${JAVA_RUN} ${WORK_DIR}${EXEC_FILE}"
   elif [[ "${SERVICE_NAME}" = "migration-runner" ]]; then
 	SERVICE_TYPE="simple"
 	RESTART="on-failure"
@@ -247,7 +247,8 @@ reassign_values (){
   elif [[ "${SERVICE_NAME}" = "mcp" ]]; then
 	SERVICE_TYPE="simple"
 	RESTART="always"
-	EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE}"
+	SYSTEMD_ENVIRONMENT="HOST=127.0.0.1 PORT=5158"
+	EXEC_START="/usr/bin/node /var/www/docspace/products/ASC.AI/mcp/bin/onlyoffice-docspace-mcp --host=127.0.0.1 --port=5158"
   else
 	SERVICE_TYPE="notify"
 	EXEC_START="${DOTNET_RUN} ${WORK_DIR}${EXEC_FILE} --urls=${APP_URLS}:${SERVICE_PORT} --pathToConf=${PATH_TO_CONF} \
