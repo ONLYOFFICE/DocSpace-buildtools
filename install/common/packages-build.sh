@@ -12,6 +12,25 @@ PUBLISH_DIR=${BUILD_PATH}/publish
 
 # Frontend build
 echo "== Frontend build =="; FRONTEND_START_TIMER=$(date +%s)
+
+# SDK
+json -I -f "${CLIENT_PATH}/packages/sdk/config/config.json" -e 'this.HOSTNAME="127.0.0.1"'
+
+# Login
+json -I -f "${CLIENT_PATH}/packages/login/config/config.json" -e 'this.HOSTNAME="127.0.0.1"'
+
+# DocEditor
+sed -i 's/\.listen(port, () => {/\.listen(port, hostname, () => {/' \
+  "${CLIENT_PATH}/packages/editor/server.js"
+json -I -f "${CLIENT_PATH}/packages/editor/config/config.json" \
+  -e 'this.HOSTNAME="127.0.0.1"'
+
+# Management
+sed -i 's/\.listen(port, () => {/\.listen(port, hostname, () => {/' \
+  "${CLIENT_PATH}/packages/management/server.js"
+json -I -f "${CLIENT_PATH}/packages/management/config/config.json" \
+  -e 'this.HOSTNAME="127.0.0.1"'
+
 cd ${CLIENT_PATH}; pnpm install; pnpm build; pnpm run deploy; FRONTEND_END_TIMER=$(date +%s)
 echo "::notice::Frontend build completed in $((FRONTEND_END_TIMER - FRONTEND_START_TIMER)) seconds"
 
