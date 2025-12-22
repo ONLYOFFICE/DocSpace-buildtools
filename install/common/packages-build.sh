@@ -21,8 +21,8 @@ json -I -f "${CLIENT_PATH}/packages/login/config/config.json" -e 'this.HOSTNAME=
 
 # DocEditor
 sed -i 's/\.listen(port, () => {/\.listen(port, hostname, () => {/' \
-  "${CLIENT_PATH}/packages/editor/server.js"
-json -I -f "${CLIENT_PATH}/packages/editor/config/config.json" \
+  "${CLIENT_PATH}/packages/doceditor/server.js"
+json -I -f "${CLIENT_PATH}/packages/doceditor/config/config.json" \
   -e 'this.HOSTNAME="127.0.0.1"'
 
 # Management
