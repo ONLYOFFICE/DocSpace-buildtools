@@ -63,6 +63,7 @@ REV=${REV:-"7"}
 REMI_DISTR_NAME="enterprise"
 RPMFUSION_DISTR_NAME="el"
 MYSQL_DISTR_NAME="el"
+MYSQL_REPO_REV="$REV"
 OPENRESTY_DISTR_NAME=${DIST/redhat/rhel}
 SUPPORTED_FEDORA_FLAG="true"
 REDIS_PACKAGE=$( [[ "$REV" == "10" ]] && echo "valkey" || echo "redis" )
@@ -74,24 +75,21 @@ ERLANG_DIST_VER=$( [[ "$REV" == "10" ]] && echo "9" || echo "$REV" )
 if [ "$REV" = "10" ]; then
   OPENRESTY_REV="9"
   DNF_NOGPG="--nogpgcheck"
-  # Temporary workaround for missing CentOS 10 repos
-  APPSTREAM_PKGS="https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/Packages"
-  yum -y install  "$APPSTREAM_PKGS/$(curl -fsSL "$APPSTREAM_PKGS/" | grep -oE 'libXScrnSaver-[0-9][^"]+\.x86_64\.rpm' | sort -V | tail -1)" \
-                  "$APPSTREAM_PKGS/$(curl -fsSL "$APPSTREAM_PKGS/" | grep -oE 'xorg-x11-server-common-[0-9][^"]+\.x86_64\.rpm' | sort -V | tail -1)" \
-                  "$APPSTREAM_PKGS/$(curl -fsSL "$APPSTREAM_PKGS/" | grep -oE 'xorg-x11-server-Xvfb-[0-9][^"]+\.x86_64\.rpm' | sort -V | tail -1)"
-  # Disable on CentOS 10 Cockpit to free 9090 needed by docspace-identity-api
-  systemctl list-sockets | grep -q '9090.*cockpit\.socket' && sudo systemctl stop cockpit.{service,socket} && sudo systemctl disable cockpit.socket || true
 fi
 
 if [ "$DIST" == "fedora" ]; then
 	REMI_DISTR_NAME="fedora"
 	RPMFUSION_DISTR_NAME="fedora"
 	MYSQL_DISTR_NAME="fc"
+	[ "$REV" = "43" ] && MYSQL_REPO_REV="42"
 	OPENRESTY_REV=$([ "$REV" -ge 37 ] && echo 36 || echo "$REV")
 
-	FEDORA_SUPP=$(curl https://docs.fedoraproject.org/en-US/releases/ | awk '/Supported Releases/,/EOL Releases/' | grep -oP 'F\d+' | tr -d 'F')
+	FEDORA_SUPP=$(curl -fsSL https://www.fedoraproject.org/releases.json | grep -oP '"version"\s*:\s*"\K[0-9]+' | sort -nr -u)
 	echo "$FEDORA_SUPP" | grep -q "$REV" || SUPPORTED_FEDORA_FLAG="false"
 fi
+
+# Disable Cockpit to free 9090 needed by docspace-identity-api
+systemctl list-sockets | awk '$1 ~ /:9090$/ && $2 ~ /cockpit/ {print $2; exit}' | xargs -r systemctl disable --now 2>/dev/null || true
 
 # Check if it's Centos less than 8 or Fedora release is out of service
 if { [[ "${DIST}" == "centos" && "${REV}" -lt 9 ]] || \

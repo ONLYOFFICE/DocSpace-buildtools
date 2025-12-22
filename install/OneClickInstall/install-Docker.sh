@@ -119,7 +119,7 @@ if [[ -n "${GIT_BRANCH:-}" ]]; then
   DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${PACKAGE_SYSNAME^^}/${PRODUCT}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
 fi
 
-[[ "$LOCAL_SCRIPTS" = "true" ]] && source "./${ARGS_SCRIPT}" || source <(curl "${DOWNLOAD_URL_PREFIX}/${ARGS_SCRIPT}")
+[[ "$LOCAL_SCRIPTS" = "true" ]] || [[ "$OFFLINE_INSTALLATION" = "true" ]] && source "./${ARGS_SCRIPT}" || source <(curl "${DOWNLOAD_URL_PREFIX}/${ARGS_SCRIPT}")
 
 uninstall() {
     read -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " REMOVE_DATA_SERVICES
@@ -625,7 +625,12 @@ set_docspace_params() {
 }
 
 set_installation_type_data () {
-	is_command_exists docker && UPDATE=${UPDATE:-$(test -n "$(docker ps -aqf name=${CONTAINER_NAME})" && echo true)}
+	if is_command_exists docker; then
+		if [ -n "$(docker ps -a -q -f "name=^${PACKAGE_SYSNAME}-dotnet-services$")" ]; then
+			STACK_MODE=true; CONTAINER_NAME="${PACKAGE_SYSNAME}-dotnet-services"
+		fi
+		UPDATE=${UPDATE:-$(test -n "$(docker ps -aqf name=${CONTAINER_NAME})" && echo true)}
+	fi
 	if [ -z "${DOCUMENT_SERVER_IMAGE_NAME}" ]; then
 		DOCUMENT_SERVER_IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}documentserver"
 		case "${INSTALLATION_TYPE}" in
@@ -760,8 +765,18 @@ install_fluent_bit () {
 
 install_product () {
 	if [ "$INSTALL_PRODUCT" == "true" ]; then
-		[ "${UPDATE}" = "true" ] && LOCAL_CONTAINER_TAG="$(docker inspect --format='{{index .Config.Image}}' ${CONTAINER_NAME} | awk -F':' '{print $2}')"
-		[ "${UPDATE}" = "true" ] && [ "${LOCAL_CONTAINER_TAG}" != "${DOCKER_TAG}" ] && docker-compose "${COMPOSE_FILES[@]}" down
+		if [ "${UPDATE}" = "true" ]; then
+			LOCAL_CONTAINER_TAG="$(docker inspect --format='{{index .Config.Image}}' "${CONTAINER_NAME}" 2>/dev/null | awk -F':' '{print $2}';)"
+			echo "Updating images from tag ${LOCAL_CONTAINER_TAG} to ${DOCKER_TAG}..."
+
+			if [ "$LOCAL_CONTAINER_TAG" != "$DOCKER_TAG" ]; then
+				if [ "$STACK_MODE" = "true" ]; then
+					docker-compose -f $BASE_DIR/docspace-stack.yml -f $BASE_DIR/proxy.yml down
+				else
+					docker-compose "${COMPOSE_FILES[@]}" down
+				fi
+			fi
+		fi
 
 		reconfigure ENV_EXTENSION ${ENV_EXTENSION}
 		reconfigure IDENTITY_PROFILE "${IDENTITY_PROFILE:-"prod,server"}"
@@ -775,14 +790,20 @@ install_product () {
 			echo -n "Waiting for MySQL container to become healthy..."
 			(timeout 30 bash -c "while ! docker inspect --format '{{json .State.Health.Status }}' ${PACKAGE_SYSNAME}-mysql-server | grep -q 'healthy'; do sleep 1; done") && echo "OK" || (echo "FAILED")
 		fi
-		
-		docker-compose -f $BASE_DIR/migration-runner.yml up -d
-		if [[ -n $(docker ps -q --filter "name=${PACKAGE_SYSNAME}-migration-runner") ]]; then
-			echo -n "Waiting for database migration to complete..."
-			timeout 30 bash -c "while [ $(docker wait ${PACKAGE_SYSNAME}-migration-runner) -ne 0 ]; do sleep 1; done;" && echo "OK" || echo "FAILED"
+
+		if [ "$STACK_MODE" = "true" ]; then
+			docker-compose -f "$BASE_DIR/docspace-stack.yml" up -d
+			docker-compose -f "$BASE_DIR/proxy.yml" up -d
+		else
+			docker-compose -f "$BASE_DIR/migration-runner.yml" up -d
+
+			if [[ -n $(docker ps -q --filter "name=${PACKAGE_SYSNAME}-migration-runner") ]]; then
+				echo -n "Waiting for database migration to complete..."
+				timeout 30 bash -c "while [ $(docker wait ${PACKAGE_SYSNAME}-migration-runner) -ne 0 ]; do sleep 1; done;" && echo "OK" || echo "FAILED"
+			fi
+
+			docker-compose "${COMPOSE_FILES[@]}" up -d
 		fi
-	
-		docker-compose "${COMPOSE_FILES[@]}" up -d
 
 		if [[ -n "${PREVIOUS_ELK_VERSION}" && "$(get_env_parameter "ELK_VERSION")" != "${PREVIOUS_ELK_VERSION}" ]]; then
 			docker ps -q -f name=${PACKAGE_SYSNAME}-elasticsearch | xargs -r docker stop
@@ -837,7 +858,7 @@ make_swap () {
 offline_check_docker_image() {
 	[ ! -f "$1" ] && { echo "Error: File '$1' does not exist."; exit 1; }
 	docker-compose -f "$1" config | grep -oP 'image:\s*\K\S+' | while IFS= read -r IMAGE_TAG; do
-		docker images "${IMAGE_TAG}" | grep -q "${IMAGE_TAG%%:*}" || { echo "Error: The image '${IMAGE_TAG}' is not found in the local Docker registry."; kill -s TERM $PID; }
+		docker images --format="{{.Repository}}:{{.Tag}}" "${IMAGE_TAG}"  | grep -q "${IMAGE_TAG%%:*}" || { echo "Error: The image '${IMAGE_TAG}' is not found in the local Docker registry."; kill -s TERM $PID; }
 	done
 }
 
@@ -904,7 +925,7 @@ check_docker_image () {
 		[ "$INSTALL_DOCUMENT_SERVER" == "true" ]    && offline_check_docker_image ${BASE_DIR}/ds.yml
 
 		if [ "$INSTALL_PRODUCT" == "true" ]; then
-			printf '%s\n' "${SERVICES[@]}" | xargs -I{} offline_check_docker_image "$BASE_DIR/{}.yml"
+			for SVC in "${SERVICES[@]}"; do offline_check_docker_image "${BASE_DIR}/${SVC}.yml"; done
 		fi
 	fi
 }

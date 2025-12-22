@@ -151,11 +151,70 @@ jobs:
       - name: Upload 4testing offline self-extracting archive
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
-          aws s3 cp ${{ github.workspace }}/install/${{ env.ARTIFACT_NAME }} \
-            ${{ secrets.AWS_BUCKET_URL_OCI }}/${{ env.ARTIFACT_NAME }} \
-            --acl public-read \
-            --content-type application/x-xz \
-            --metadata-directive REPLACE 
-          aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.AWS_DISTRIBUTION_ID_OCI }} \
-            --paths "/docspace/${{ env.ARTIFACT_NAME }}"
+          aws s3 cp "${{ github.workspace }}/install/${{ env.ARTIFACT_NAME }}" \
+            "${{ secrets.AWS_BUCKET_URL_OCI }}/${{ env.ARTIFACT_NAME }}" \
+            --acl public-read --content-type application/x-xz --metadata-directive REPLACE
+
+          API_STATUS=$(aws apigateway test-invoke-method --rest-api-id ${{ secrets.AWS_REST_API_ID }} --resource-id "${{ secrets.AWS_RESOURCE_ID }}" \
+            --http-method PUT --path-with-query-string "/prod/download-oo-com" --body "$(jq -c -n '.paths = $ARGS.positional' --args "/docspace/${{ env.ARTIFACT_NAME }}")" \
+            --region us-east-1 --query 'status' --output text || :)
+          echo "API Gateway test-invoke status: ${API_STATUS:-<failed>}"
+
+  Install-OCI-Docker-Stack-Mode:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Free Disk Space
+        run: |
+          sudo docker image prune --all --force
+          sudo rm -rf /usr/local/lib/android || true
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Test OCI docker scripts in stack mode
+        run: |
+          IS_4TESTING="${{ github.event.inputs.testing }}"
+          wget https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/install/OneClickInstall/install-Docker.sh
+          sed -i "1i set -x" install-Docker.sh && sed -i "/docker-compose.*up -d/ s/$/ --quiet-pull/" install-Docker.sh
+          sudo bash install-Docker.sh -skiphc true -noni true -sm true -gb ${{ github.ref_name }} $([ "${IS_4TESTING:-true}" != "false" ] && echo "-s 4testing-") || exit $?
+
+          echo -n "Waiting for all containers to start..."
+          timeout 300 bash -c 'while docker ps | grep -q "starting"; do sleep 5; done' && echo "OK" || echo "container_status=timeout" >> $GITHUB_ENV
+
+      - name: Check container status
+        run: |
+          SERVICES=(dashboards db ds fluent opensearch proxy rabbitmq redis docspace-stack)
+          for SERVICE in "${SERVICES[@]}"; do YML_ARGS+=( -f "/app/onlyoffice/${SERVICE}.yml" ); done
+          for SVC in $(docker compose "${YML_ARGS[@]}" config --services); do
+            docker compose "${YML_ARGS[@]}" ps "$SVC" | grep -q ${SVC} || { echo "::error::$SVC was not created"; MISSING_COUNT=$((MISSING_COUNT+1)); }
+          done; [ "${MISSING_COUNT:=0}" -gt 0 ] && { echo "::error::$MISSING_COUNT service(s) were not created."; exit 1; }
+
+          docker ps --all --format "{{.Names}}" | xargs -I {} sh -c '
+              status=$(docker inspect --format="{{if .State.Health}}{{.State.Health.Status}}{{else}}no healthcheck{{end}}" {});
+              case "$status" in
+                healthy) color="\033[0;32m" ;;                                        # green
+                "no healthcheck") color="\033[0;33m" ;;                               # yellow
+                *) color="\033[0;31m"; echo "container_status=red" >> $GITHUB_ENV ;;  # red
+              esac;
+              printf "%-50s ${color}%s\033[0m\n" "{}:" "$status";
+          '
+
+      - name: Print logs for crashed container
+        run: |
+          docker ps --all --format "{{.Names}}" | xargs -I {} sh -c '
+              status=$(docker inspect --format="{{if .State.Health}}{{.State.Health.Status}}{{else}}no healthcheck{{end}}" {});
+              case "$status" in
+                healthy | "no healthcheck") ;;
+                *)
+                  echo "Logs for container {}:";
+                  docker logs --tail 30 {} | sed "s/^/\t/g";
+                  ;;
+              esac;
+          '
+          case "${{ env.container_status }}" in
+              timeout) echo "::error:: Timeout reached. Not all containers are running."; exit 1 ;;
+              red) echo "::error:: One or more containers have status 'red'. Job will fail."; exit 1 ;;
+          esac

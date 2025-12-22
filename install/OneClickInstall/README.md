@@ -345,6 +345,7 @@ The installation scripts support the following operating systems, which are **re
 - Ubuntu 22.04
 - Ubuntu 24.04
 - Fedora 42
+- Fedora 43
 <!-- OS-SUPPORT-LIST-END -->
 
 ## 📚 Additional Resources

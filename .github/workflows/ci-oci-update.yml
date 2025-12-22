@@ -51,7 +51,7 @@ jobs:
           matrix=$(echo '{
             "include": [
               {"execute": '${{ github.event.inputs.centos9s || true }}', "name": "CentOS9S", "os": "centos9s", "distr": "onlyoffice"},
-              {"execute": '${{ github.event.inputs.centos9s || true }}', "name": "CentOS10", "os": "centos10", "distr": "onlyoffice"},
+              {"execute": '${{ github.event.inputs.centos10 || true }}', "name": "CentOS10", "os": "centos10", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.debian11 || true }}', "name": "Debian11", "os": "debian11", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.debian12 || true }}', "name": "Debian12", "os": "debian12", "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.debian13 || true }}', "name": "Debian13", "os": "debian13", "distr": "onlyoffice"},
