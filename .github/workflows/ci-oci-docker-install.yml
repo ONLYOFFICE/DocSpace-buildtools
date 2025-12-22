@@ -151,14 +151,14 @@ jobs:
       - name: Upload 4testing offline self-extracting archive
         if: ${{ success() && github.event.inputs.offline == 'true' }}
         run: |
-          aws s3 cp ${{ github.workspace }}/install/${{ env.ARTIFACT_NAME }} \
-            ${{ secrets.AWS_BUCKET_URL_OCI }}/${{ env.ARTIFACT_NAME }} \
-            --acl public-read \
-            --content-type application/x-xz \
-            --metadata-directive REPLACE 
-          aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.AWS_DISTRIBUTION_ID_OCI }} \
-            --paths "/docspace/${{ env.ARTIFACT_NAME }}"
+          aws s3 cp "${{ github.workspace }}/install/${{ env.ARTIFACT_NAME }}" \
+            "${{ secrets.AWS_BUCKET_URL_OCI }}/${{ env.ARTIFACT_NAME }}" \
+            --acl public-read --content-type application/x-xz --metadata-directive REPLACE
+
+          API_STATUS=$(aws apigateway test-invoke-method --rest-api-id ${{ secrets.AWS_REST_API_ID }} --resource-id "${{ secrets.AWS_RESOURCE_ID }}" \
+            --http-method PUT --path-with-query-string "/prod/download-oo-com" --body "$(jq -c -n '.paths = $ARGS.positional' --args "/docspace/${{ env.ARTIFACT_NAME }}")" \
+            --region us-east-1 --query 'status' --output text || :)
+          echo "API Gateway test-invoke status: ${API_STATUS:-<failed>}"
 
   Install-OCI-Docker-Stack-Mode:
     runs-on: ubuntu-22.04
