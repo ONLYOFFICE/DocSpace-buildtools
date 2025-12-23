@@ -12,27 +12,24 @@ PUBLISH_DIR=${BUILD_PATH}/publish
 
 # Frontend build
 echo "== Frontend build =="; FRONTEND_START_TIMER=$(date +%s)
+cd ${CLIENT_PATH}; pnpm install; pnpm build; pnpm run deploy; FRONTEND_END_TIMER=$(date +%s)
 
 # SDK
-json -I -f "${CLIENT_PATH}/packages/sdk/config/config.json" -e 'this.HOSTNAME="127.0.0.1"'
+json -I -f "${PUBLISH_DIR}/products/ASC.Sdk/sdk/config/config.json" -e 'this.HOSTNAME="127.0.0.1"'
 
 # Login
-json -I -f "${CLIENT_PATH}/packages/login/config/config.json" -e 'this.HOSTNAME="127.0.0.1"'
+json -I -f "${PUBLISH_DIR}/products/ASC.Login/login/config/config.json" -e 'this.HOSTNAME="127.0.0.1"'
 
 # DocEditor
-sed -i 's/\.listen(port, () => {/\.listen(port, hostname, () => {/' \
-  "${CLIENT_PATH}/packages/doceditor/server.js"
-json -I -f "${CLIENT_PATH}/packages/doceditor/config/config.json" \
-  -e 'this.HOSTNAME="127.0.0.1"'
+json -I -f "${PUBLISH_DIR}/products/ASC.Files/editor/config/config.json" -e 'this.HOSTNAME="127.0.0.1"'
+sed -i -E 's/\.listen\(\s*port\s*,\s*\(\)\s*=>\s*\{/.listen(port, hostname, () => {/' "${PUBLISH_DIR}/products/ASC.Files/editor/server.js"
 
 # Management
-sed -i 's/\.listen(port, () => {/\.listen(port, hostname, () => {/' \
-  "${CLIENT_PATH}/packages/management/server.js"
-json -I -f "${CLIENT_PATH}/packages/management/config/config.json" \
-  -e 'this.HOSTNAME="127.0.0.1"'
+json -I -f "${PUBLISH_DIR}/products/ASC.Management/management/config/config.json" -e 'this.HOSTNAME="127.0.0.1"'
+sed -i -E 's/\.listen\(\s*port\s*,\s*\(\)\s*=>\s*\{/.listen(port, hostname, () => {/' "${PUBLISH_DIR}/products/ASC.Management/management/server.js"
 
-cd ${CLIENT_PATH}; pnpm install; pnpm build; pnpm run deploy; FRONTEND_END_TIMER=$(date +%s)
-echo "::notice::Frontend build completed in $((FRONTEND_END_TIMER - FRONTEND_START_TIMER)) seconds"
+grep -R --line-number '\.listen(port, hostname' "${PUBLISH_DIR}/products/ASC."*/*/server.js
+grep -R --line-number '"HOSTNAME": "127.0.0.1"' "${PUBLISH_DIR}/products/ASC."*/*/config/config.json
 
 # Backend build
 echo "== Backend build =="; BACKEND_START_TIMER=$(date +%s)

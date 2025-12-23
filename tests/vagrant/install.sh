@@ -237,12 +237,41 @@ debug_exposed_ports() {
   rm -f "$tmp"
 }
 
+check_next_configs() {
+  echo -e "$LINE_SEPARATOR\n${COLOR_YELLOW}Check Next configs HOSTNAME (must be 127.0.0.1)${COLOR_RESET}\n$LINE_SEPARATOR"
+
+  for f in \
+    /var/www/docspace/products/ASC.Sdk/sdk/config/config.json \
+    /var/www/docspace/products/ASC.Login/login/config/config.json \
+    /var/www/docspace/products/ASC.Files/editor/config/config.json \
+    /var/www/docspace/products/ASC.Management/management/config/config.json
+  do
+    if [[ -f "$f" ]]; then
+      echo "${COLOR_GREEN}[FILE]${COLOR_RESET} $f"
+      cat "$f" | sed -n 's/.*"HOSTNAME"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/  HOSTNAME=\1/p'
+    else
+      echo "${COLOR_RED}[MISSING]${COLOR_RESET} $f"
+    fi
+  done
+}
+
+check_next_systemd_execstart() {
+  echo -e "$LINE_SEPARATOR\n${COLOR_YELLOW}Check systemd ExecStart for Next services${COLOR_RESET}\n$LINE_SEPARATOR"
+
+  for u in docspace-sdk docspace-login docspace-doceditor docspace-management; do
+    echo "${COLOR_GREEN}== $u ==${COLOR_RESET}"
+    systemctl cat "$u.service" 2>/dev/null | sed -n '/^\[Service\]/,/^\[/{/ExecStart=/p}'
+  done
+}
+
 main() {
   get_colors
   prepare_vm
   check_hw
   install_docspace
   sleep 180
+  check_next_configs
+  check_next_systemd_execstart
   services_logs
   ports_audit
   debug_exposed_ports
