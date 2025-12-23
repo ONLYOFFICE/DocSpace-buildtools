@@ -6,6 +6,7 @@ ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:10.0-noble"
 # Image resources
 FROM python:3.12-slim AS src
 ARG GIT_BRANCH="master"
+ARG FALLBACK_BRANCH="develop"
 ARG SRC_PATH
 ARG BUILD_PATH
 ARG PRODUCT_VERSION=0.0.0
@@ -28,13 +29,13 @@ RUN <<EOF
 echo "--- clone resources ---"
 
 git clone --recurse-submodules -b $(echo "$(git ls-remote --exit-code --heads "${BUILDTOOLS_REPO}" "${GIT_BRANCH}"\
- > /dev/null 2>&1 && echo "${GIT_BRANCH}" || echo "master")") --depth 30 ${BUILDTOOLS_REPO} ${SRC_PATH}/buildtools && \
+ > /dev/null 2>&1 && echo "${GIT_BRANCH}" || echo "${FALLBACK_BRANCH}")") --depth 30 ${BUILDTOOLS_REPO} ${SRC_PATH}/buildtools && \
 
 git clone --recurse-submodules -b $(echo "$(git ls-remote --exit-code --heads "${SERVER_REPO}" "${GIT_BRANCH}"\
- > /dev/null 2>&1 && echo "${GIT_BRANCH}" || echo "master")") --depth 30 ${SERVER_REPO} ${SRC_PATH}/server && \
+ > /dev/null 2>&1 && echo "${GIT_BRANCH}" || echo "${FALLBACK_BRANCH}")") --depth 30 ${SERVER_REPO} ${SRC_PATH}/server && \
 
 git clone -b $(echo "$(git ls-remote --exit-code --heads "${CLIENT_REPO}" "${GIT_BRANCH}"\
- > /dev/null 2>&1 && echo "${GIT_BRANCH}" || echo "master")") --depth 30 ${CLIENT_REPO} ${SRC_PATH}/client && \
+ > /dev/null 2>&1 && echo "${GIT_BRANCH}" || echo "${FALLBACK_BRANCH}")") --depth 30 ${CLIENT_REPO} ${SRC_PATH}/client && \
 
 git clone -b "$( [ "$GIT_BRANCH" = develop ] && echo develop || echo master )" --depth 1 https://github.com/ONLYOFFICE/docspace-plugins.git ${SRC_PATH}/plugins && \
 git clone -b "master" --depth 1 https://github.com/ONLYOFFICE/ASC.Web.Campaigns.git ${SRC_PATH}/campaigns
