@@ -54,9 +54,6 @@ grep -n '\.listen(port, hostname' \
 
 cd ${CLIENT_PATH}; pnpm install; pnpm build; pnpm run deploy; FRONTEND_END_TIMER=$(date +%s)
 
-grep -R --line-number '\.listen(port, hostname' "${PUBLISH_DIR}/products/ASC."*/*/server.js
-grep -R --line-number '"HOSTNAME": "127.0.0.1"' "${PUBLISH_DIR}/products/ASC."*/*/config/config.json
-
 # Backend build
 echo "== Backend build =="; BACKEND_START_TIMER=$(date +%s)
 cd ${SERVER_PATH}
