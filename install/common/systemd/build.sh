@@ -50,6 +50,7 @@ DOTNET_RUN="/usr/bin/dotnet"
 NODE_RUN="/usr/bin/node"
 JAVA_RUN="/usr/bin/java -jar"
 APP_URLS="http://127.0.0.1"
+LOCAL_BIND_HOST="127.0.0.1"
 SYSTEMD_ENVIRONMENT_FILE="${PATH_TO_CONF}/systemd.env"
 CORE=" --core:products:folder=${BASE_DIR}/products --core:products:subfolder=server"
 
@@ -234,6 +235,21 @@ reassign_values (){
   unset SYSTEMD_ENVIRONMENT
   if [[ "${EXEC_FILE}" == *".js" ]]; then
 	SERVICE_TYPE="simple"
+	SYSTEMD_ENVIRONMENT="\
+DOCSPACE_HOST=${LOCAL_BIND_HOST} \
+HOST=${LOCAL_BIND_HOST} \
+HOSTNAME=${LOCAL_BIND_HOST} \
+BIND=${LOCAL_BIND_HOST} \
+BIND_HOST=${LOCAL_BIND_HOST} \
+BIND_ADDRESS=${LOCAL_BIND_HOST} \
+LISTEN_HOST=${LOCAL_BIND_HOST} \
+LISTEN_ADDRESS=${LOCAL_BIND_HOST} \
+SERVER_HOST=${LOCAL_BIND_HOST} \
+SERVER_ADDRESS=${LOCAL_BIND_HOST} \
+NEXT_HOST=${LOCAL_BIND_HOST} \
+NEXT_HOSTNAME=${LOCAL_BIND_HOST} \
+NEXT_SERVER_HOST=${LOCAL_BIND_HOST} \
+"
 	EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE} --app.port=${SERVICE_PORT} --app.appsettings=${PATH_TO_CONF} --app.environment=\${ENVIRONMENT}"
   elif [[ "${EXEC_FILE}" == *".jar" ]]; then
 	SYSTEMD_ENVIRONMENT="SPRING_APPLICATION_NAME=${SPRING_APPLICATION_NAME} SERVER_PORT=${SERVICE_PORT} LOG_FILE_PATH=${LOG_DIR}/${SERVICE_NAME}.log"
@@ -256,11 +272,27 @@ reassign_values (){
 }
 
 write_to_file () {
-  [[ -n ${SYSTEMD_ENVIRONMENT} ]] && sed "/^ExecStart=/a Environment=${SYSTEMD_ENVIRONMENT}" -i $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
-  [[ -n ${DEPENDENCY_LIST} ]] && sed -e "s_\(After=.*\)_\1 ${DEPENDENCY_LIST}_" -e "/After=/a Wants=${DEPENDENCY_LIST}" -i $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
-  sed -i -e 's#${SERVICE_NAME}#'$SERVICE_NAME'#g' -e 's#${WORK_DIR}#'$WORK_DIR'#g' -e "s#\${RESTART}#$RESTART#g" -e "s#\${SYSTEMD_ENVIRONMENT_FILE}#$SYSTEMD_ENVIRONMENT_FILE#g" \
-  -e "s#\${EXEC_START}#$EXEC_START#g" -e "s#\${SERVICE_TYPE}#$SERVICE_TYPE#g"  $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
+  local unit="$BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service"
+
+  [[ -n ${DEPENDENCY_LIST} ]] && sed -e "s_\(After=.*\)_\1 ${DEPENDENCY_LIST}_" -e "/After=/a Wants=${DEPENDENCY_LIST}" -i "$unit"
+
+  sed -i \
+    -e 's#${SERVICE_NAME}#'"$SERVICE_NAME"'#g' \
+    -e 's#${WORK_DIR}#'"$WORK_DIR"'#g' \
+    -e "s#\${RESTART}#$RESTART#g" \
+    -e "s#\${SYSTEMD_ENVIRONMENT_FILE}#$SYSTEMD_ENVIRONMENT_FILE#g" \
+    -e "s#\${EXEC_START}#$EXEC_START#g" \
+    -e "s#\${SERVICE_TYPE}#$SERVICE_TYPE#g" \
+    "$unit"
+  if [[ -n ${SYSTEMD_ENVIRONMENT} ]]; then
+    if grep -q '^EnvironmentFile=' "$unit"; then
+      sed -i "/^EnvironmentFile=/a Environment=${SYSTEMD_ENVIRONMENT}" "$unit"
+    else
+      sed -i "/^\[Service\]/a Environment=${SYSTEMD_ENVIRONMENT}" "$unit"
+    fi
+  fi
 }
+
 
 mkdir -p $BUILD_PATH
 
