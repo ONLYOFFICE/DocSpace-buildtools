@@ -238,19 +238,36 @@ debug_exposed_ports() {
 }
 
 check_next_configs() {
-  echo -e "$LINE_SEPARATOR\n${COLOR_YELLOW}Check Next configs HOSTNAME (must be 127.0.0.1)${COLOR_RESET}\n$LINE_SEPARATOR"
-
-  for f in \
-    /var/www/docspace/products/ASC.Sdk/sdk/config/config.json \
-    /var/www/docspace/products/ASC.Login/login/config/config.json \
-    /var/www/docspace/products/ASC.Files/editor/config/config.json \
-    /var/www/docspace/products/ASC.Management/management/config/config.json
+  echo -e "$LINE_SEPARATOR\n${COLOR_YELLOW}Check Next configs HOSTNAME (real paths)${COLOR_RESET}\n$LINE_SEPARATOR"
+  for cfg in \
+    /var/www/docspace/products/ASC.Sdk/sdk/packages/sdk/config/config.json \
+    /var/www/docspace/products/ASC.Login/login/packages/login/config/config.json \
+    /var/www/docspace/products/ASC.Files/editor/packages/doceditor/config/config.json \
+    /var/www/docspace/products/ASC.Management/management/packages/management/config/config.json
   do
-    if [[ -f "$f" ]]; then
-      echo "${COLOR_GREEN}[FILE]${COLOR_RESET} $f"
-      cat "$f" | sed -n 's/.*"HOSTNAME"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/  HOSTNAME=\1/p'
+    if [ -f "$cfg" ]; then
+      echo "[OK] $cfg -> $(grep -oP '"HOSTNAME"\s*:\s*"\K[^"]+' "$cfg" | head -n1)"
     else
-      echo "${COLOR_RED}[MISSING]${COLOR_RESET} $f"
+      echo "[MISSING] $cfg"
+    fi
+  done
+
+  echo -e "$LINE_SEPARATOR\n${COLOR_YELLOW}Check packages/*/server.js listen(hostname)${COLOR_RESET}\n$LINE_SEPARATOR"
+  grep -R --line-number '\.listen(port, hostname' /var/www/docspace/products/ASC.*/*/packages/*/server.js 2>/dev/null | head -n 50 || true
+
+  echo -e "$LINE_SEPARATOR\n${COLOR_YELLOW}Check server.js patched listen(hostname)${COLOR_RESET}\n$LINE_SEPARATOR"
+  for js in \
+    /var/www/docspace/products/ASC.Sdk/sdk/server.js \
+    /var/www/docspace/products/ASC.Login/login/server.js \
+    /var/www/docspace/products/ASC.Files/editor/server.js \
+    /var/www/docspace/products/ASC.Management/management/server.js
+  do
+    echo "$LINE_SEPARATOR"
+    echo "== $js =="
+    if [ -f "$js" ]; then
+      grep -n '\.listen(port, hostname' "$js" || echo "[NO MATCH] .listen(port, hostname) not found"
+    else
+      echo "[MISSING]"
     fi
   done
 }

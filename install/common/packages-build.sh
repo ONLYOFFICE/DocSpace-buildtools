@@ -54,6 +54,47 @@ grep -n '\.listen(port, hostname' \
 
 cd ${CLIENT_PATH}; pnpm install; pnpm build; pnpm run deploy; FRONTEND_END_TIMER=$(date +%s)
 
+echo "== Patch Next services bind to 127.0.0.1 (AFTER deploy) =="
+
+for cfg in \
+  "${CLIENT_PATH}/packages/sdk/config/config.json" \
+  "${CLIENT_PATH}/packages/login/config/config.json" \
+  "${CLIENT_PATH}/packages/doceditor/config/config.json" \
+  "${CLIENT_PATH}/packages/management/config/config.json"
+do
+  if [ -f "$cfg" ]; then
+    json -I -f "$cfg" -e 'this.HOSTNAME="127.0.0.1"'
+  else
+    echo "::warning::Missing $cfg"
+  fi
+done
+
+for js in \
+  "${CLIENT_PATH}/packages/sdk/server.js" \
+  "${CLIENT_PATH}/packages/login/server.js" \
+  "${CLIENT_PATH}/packages/doceditor/server.js" \
+  "${CLIENT_PATH}/packages/management/server.js"
+do
+  if [ -f "$js" ]; then
+    sed -i -E 's/\.listen\(\s*port\s*,\s*\(\)\s*=>\s*\{/.listen(port, hostname, () => {/' "$js" || true
+  else
+    echo "::warning::Missing $js"
+  fi
+done
+
+echo "== Verify patches AFTER deploy =="
+grep -n '"HOSTNAME"' \
+  "${CLIENT_PATH}/packages/sdk/config/config.json" \
+  "${CLIENT_PATH}/packages/login/config/config.json" \
+  "${CLIENT_PATH}/packages/doceditor/config/config.json" \
+  "${CLIENT_PATH}/packages/management/config/config.json" || true
+
+grep -n '\.listen(port, hostname' \
+  "${CLIENT_PATH}/packages/sdk/server.js" \
+  "${CLIENT_PATH}/packages/login/server.js" \
+  "${CLIENT_PATH}/packages/doceditor/server.js" \
+  "${CLIENT_PATH}/packages/management/server.js" || true
+
 # Backend build
 echo "== Backend build =="; BACKEND_START_TIMER=$(date +%s)
 cd ${SERVER_PATH}
