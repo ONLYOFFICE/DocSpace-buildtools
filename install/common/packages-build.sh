@@ -12,88 +12,8 @@ PUBLISH_DIR=${BUILD_PATH}/publish
 
 # Frontend build
 echo "== Frontend build =="; FRONTEND_START_TIMER=$(date +%s)
-
-echo "== Patch Next services bind to 127.0.0.1 =="
-
-# SDK
-test -f "${CLIENT_PATH}/packages/sdk/config/config.json" && \
-  json -I -f "${CLIENT_PATH}/packages/sdk/config/config.json" -e 'this.HOSTNAME="127.0.0.1"'
-test -f "${CLIENT_PATH}/packages/sdk/server.js"
-
-# Login
-test -f "${CLIENT_PATH}/packages/login/config/config.json" && \
-  json -I -f "${CLIENT_PATH}/packages/login/config/config.json" -e 'this.HOSTNAME="127.0.0.1"'
-test -f "${CLIENT_PATH}/packages/login/server.js"
-
-# DocEditor
-test -f "${CLIENT_PATH}/packages/doceditor/config/config.json" && \
-  json -I -f "${CLIENT_PATH}/packages/doceditor/config/config.json" -e 'this.HOSTNAME="127.0.0.1"'
-test -f "${CLIENT_PATH}/packages/doceditor/server.js" && \
-  sed -i -E 's/\.listen\(\s*port\s*,\s*\(\)\s*=>\s*\{/.listen(port, hostname, () => {/' \
-    "${CLIENT_PATH}/packages/doceditor/server.js"
-
-# Management
-test -f "${CLIENT_PATH}/packages/management/config/config.json" && \
-  json -I -f "${CLIENT_PATH}/packages/management/config/config.json" -e 'this.HOSTNAME="127.0.0.1"'
-test -f "${CLIENT_PATH}/packages/management/server.js" && \
-  sed -i -E 's/\.listen\(\s*port\s*,\s*\(\)\s*=>\s*\{/.listen(port, hostname, () => {/' \
-    "${CLIENT_PATH}/packages/management/server.js"
-
-echo "== Verify patches in sources =="
-grep -n '"HOSTNAME"' \
-  "${CLIENT_PATH}/packages/sdk/config/config.json" \
-  "${CLIENT_PATH}/packages/login/config/config.json" \
-  "${CLIENT_PATH}/packages/doceditor/config/config.json" \
-  "${CLIENT_PATH}/packages/management/config/config.json" || true
-
-grep -n '\.listen(port, hostname' \
-  "${CLIENT_PATH}/packages/sdk/server.js" \
-  "${CLIENT_PATH}/packages/login/server.js" \
-  "${CLIENT_PATH}/packages/doceditor/server.js" \
-  "${CLIENT_PATH}/packages/management/server.js" || true
-
 cd ${CLIENT_PATH}; pnpm install; pnpm build; pnpm run deploy; FRONTEND_END_TIMER=$(date +%s)
-
-echo "== Patch Next services bind to 127.0.0.1 (AFTER deploy) =="
-
-for cfg in \
-  "${CLIENT_PATH}/packages/sdk/config/config.json" \
-  "${CLIENT_PATH}/packages/login/config/config.json" \
-  "${CLIENT_PATH}/packages/doceditor/config/config.json" \
-  "${CLIENT_PATH}/packages/management/config/config.json"
-do
-  if [ -f "$cfg" ]; then
-    json -I -f "$cfg" -e 'this.HOSTNAME="127.0.0.1"'
-  else
-    echo "::warning::Missing $cfg"
-  fi
-done
-
-for js in \
-  "${CLIENT_PATH}/packages/sdk/server.js" \
-  "${CLIENT_PATH}/packages/login/server.js" \
-  "${CLIENT_PATH}/packages/doceditor/server.js" \
-  "${CLIENT_PATH}/packages/management/server.js"
-do
-  if [ -f "$js" ]; then
-    sed -i -E 's/\.listen\(\s*port\s*,\s*\(\)\s*=>\s*\{/.listen(port, hostname, () => {/' "$js" || true
-  else
-    echo "::warning::Missing $js"
-  fi
-done
-
-echo "== Verify patches AFTER deploy =="
-grep -n '"HOSTNAME"' \
-  "${CLIENT_PATH}/packages/sdk/config/config.json" \
-  "${CLIENT_PATH}/packages/login/config/config.json" \
-  "${CLIENT_PATH}/packages/doceditor/config/config.json" \
-  "${CLIENT_PATH}/packages/management/config/config.json" || true
-
-grep -n '\.listen(port, hostname' \
-  "${CLIENT_PATH}/packages/sdk/server.js" \
-  "${CLIENT_PATH}/packages/login/server.js" \
-  "${CLIENT_PATH}/packages/doceditor/server.js" \
-  "${CLIENT_PATH}/packages/management/server.js" || true
+echo "::notice::Frontend build completed in $((FRONTEND_END_TIMER - FRONTEND_START_TIMER)) seconds"
 
 # Backend build
 echo "== Backend build =="; BACKEND_START_TIMER=$(date +%s)
