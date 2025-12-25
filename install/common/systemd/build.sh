@@ -242,12 +242,6 @@ HOSTNAME=${LOCAL_BIND_HOST} \
 BIND=${LOCAL_BIND_HOST} \
 BIND_HOST=${LOCAL_BIND_HOST} \
 BIND_ADDRESS=${LOCAL_BIND_HOST} \
-LISTEN_HOST=${LOCAL_BIND_HOST} \
-LISTEN_ADDRESS=${LOCAL_BIND_HOST} \
-SERVER_HOST=${LOCAL_BIND_HOST} \
-SERVER_ADDRESS=${LOCAL_BIND_HOST} \
-NEXT_HOST=${LOCAL_BIND_HOST} \
-NEXT_HOSTNAME=${LOCAL_BIND_HOST} \
 NEXT_SERVER_HOST=${LOCAL_BIND_HOST} \
 "
 	EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE} --app.port=${SERVICE_PORT} --app.appsettings=${PATH_TO_CONF} --app.environment=\${ENVIRONMENT}"
@@ -272,27 +266,11 @@ NEXT_SERVER_HOST=${LOCAL_BIND_HOST} \
 }
 
 write_to_file () {
-  local unit="$BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service"
-
-  [[ -n ${DEPENDENCY_LIST} ]] && sed -e "s_\(After=.*\)_\1 ${DEPENDENCY_LIST}_" -e "/After=/a Wants=${DEPENDENCY_LIST}" -i "$unit"
-
-  sed -i \
-    -e 's#${SERVICE_NAME}#'"$SERVICE_NAME"'#g' \
-    -e 's#${WORK_DIR}#'"$WORK_DIR"'#g' \
-    -e "s#\${RESTART}#$RESTART#g" \
-    -e "s#\${SYSTEMD_ENVIRONMENT_FILE}#$SYSTEMD_ENVIRONMENT_FILE#g" \
-    -e "s#\${EXEC_START}#$EXEC_START#g" \
-    -e "s#\${SERVICE_TYPE}#$SERVICE_TYPE#g" \
-    "$unit"
-  if [[ -n ${SYSTEMD_ENVIRONMENT} ]]; then
-    if grep -q '^EnvironmentFile=' "$unit"; then
-      sed -i "/^EnvironmentFile=/a Environment=${SYSTEMD_ENVIRONMENT}" "$unit"
-    else
-      sed -i "/^\[Service\]/a Environment=${SYSTEMD_ENVIRONMENT}" "$unit"
-    fi
-  fi
+  [[ -n ${SYSTEMD_ENVIRONMENT} ]] && sed "/^ExecStart=/a Environment=${SYSTEMD_ENVIRONMENT}" -i $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
+  [[ -n ${DEPENDENCY_LIST} ]] && sed -e "s_\(After=.*\)_\1 ${DEPENDENCY_LIST}_" -e "/After=/a Wants=${DEPENDENCY_LIST}" -i $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
+  sed -i -e 's#${SERVICE_NAME}#'$SERVICE_NAME'#g' -e 's#${WORK_DIR}#'$WORK_DIR'#g' -e "s#\${RESTART}#$RESTART#g" -e "s#\${SYSTEMD_ENVIRONMENT_FILE}#$SYSTEMD_ENVIRONMENT_FILE#g" \
+  -e "s#\${EXEC_START}#$EXEC_START#g" -e "s#\${SERVICE_TYPE}#$SERVICE_TYPE#g"  $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
 }
-
 
 mkdir -p $BUILD_PATH
 
