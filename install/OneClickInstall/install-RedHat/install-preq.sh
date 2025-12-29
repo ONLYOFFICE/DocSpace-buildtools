@@ -92,6 +92,22 @@ curl -fsSL -o /etc/yum.repos.d/openresty.repo "https://openresty.org/package/${O
 # Temporary disable GPG checks OpenResty key may fail CentOS 10
 [ "$DIST" = "centos" ] && [ "$REV" -ge 10 ] && sed -i 's/^gpgcheck=.*/gpgcheck=0/' /etc/yum.repos.d/openresty.repo
 
+
+echo "### DEBUG: enabled repos"
+${package_manager} repolist || true
+command -v subscription-manager >/dev/null 2>&1 && subscription-manager repos --list-enabled || true
+
+echo "### DEBUG: whatprovides (dotnet-sdk-10.0 / ffmpeg-free / ffmpeg)"
+for p in dotnet-sdk-10.0 ffmpeg-free ffmpeg; do
+  echo "--- $p"
+  repoquery --whatprovides "$p" --qf '%{repoid} -> %{name}-%{version}-%{release}.%{arch}' 2>/dev/null | head -n 30 || true
+done
+
+echo "### DEBUG: list available (fast)"
+${package_manager} -q list --available dotnet-sdk-10.0 ffmpeg-free ffmpeg 2>/dev/null || true
+
+
+
 JAVA_VERSION=21
 ${package_manager} ${WEAK_OPT} -y install $([ "$DIST" != "fedora" ] && echo "epel-release") \
 			python3 \
