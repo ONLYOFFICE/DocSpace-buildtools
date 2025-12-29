@@ -30,16 +30,30 @@ EPEL_URL="https://dl.fedoraproject.org/pub/epel/"
 if [ "$DIST" = "redhat" ]; then
     if [ "$REV" = "8" ]; then
         LADSPA_EL8_URL="https://download.rockylinux.org/pub/rocky/8/PowerTools/x86_64/kickstart/Packages/l"
-        LADSPA_PACKAGE_VERSION=$(curl -fsSL "${LADSPA_EL8_URL}/" \
-            | grep -oP 'ladspa-[0-9][^"]*\.rpm' \
-            | grep -v 'ladspa-devel' \
-            | sort -V | tail -n 1)
+        LADSPA_PACKAGE_VERSION=$(curl -fsSL "${LADSPA_EL8_URL}/" | grep -oP 'ladspa-[0-9][^"]*\.rpm' | grep -v 'ladspa-devel' | sort -V | tail -n 1)
         ${package_manager} install -y "${LADSPA_EL8_URL}/${LADSPA_PACKAGE_VERSION}"
     else
         LADSPA_PACKAGE_VERSION=$(curl -fsSL "${EPEL_URL}/10/Everything/x86_64/Packages/l/" | grep -oP 'ladspa-[0-9].*?\.rpm' | sort -V | tail -n 1)
         ${package_manager} install -y "${EPEL_URL}/10/Everything/x86_64/Packages/l/${LADSPA_PACKAGE_VERSION}"
     fi
 fi
+
+
+# --- DEBUG (CentOS 8) ---
+dnf -q repolist
+dnf -q repoquery --whatprovides 'ffmpeg-free' --qf '%{repoid} -> %{name}-%{version}-%{release}.%{arch}' | head
+dnf -q repoquery --whatprovides 'ffmpeg'      --qf '%{repoid} -> %{name}-%{version}-%{release}.%{arch}' | head
+dnf -q list --available 'ffmpeg*' | head -n 50
+echo "### DEBUG: repolist"
+dnf -q repolist || true
+echo "### DEBUG: whatprovides"
+for p in ffmpeg-free ffmpeg; do
+  echo "--- ${p}"
+  dnf -q repoquery --whatprovides "${p}" --qf '%{repoid} -> %{name}-%{version}-%{release}.%{arch}' | head -n 30 || true
+done
+echo "### DEBUG: available (top)"
+dnf -q list --available dotnet-sdk-10.0 ffmpeg-free ffmpeg 2>/dev/null || true
+# --- END DEBUG ---
 
 #add rabbitmq & erlang repo
 curl -fsSL https://packagecloud.io/install/repositories/rabbitmq/rabbitmq-server/script.rpm.sh | os=${RABBIT_DIST_NAME} dist="${RABBIT_DIST_VER}" bash
@@ -91,22 +105,6 @@ curl -fsSL -o /etc/yum.repos.d/openresty.repo "https://openresty.org/package/${O
 [ -n "${OPENRESTY_REV}" ] && sed -i "s/\$releasever/$OPENRESTY_REV/g" /etc/yum.repos.d/openresty.repo
 # Temporary disable GPG checks OpenResty key may fail CentOS 10
 [ "$DIST" = "centos" ] && [ "$REV" -ge 10 ] && sed -i 's/^gpgcheck=.*/gpgcheck=0/' /etc/yum.repos.d/openresty.repo
-
-
-echo "### DEBUG: enabled repos"
-${package_manager} repolist || true
-command -v subscription-manager >/dev/null 2>&1 && subscription-manager repos --list-enabled || true
-
-echo "### DEBUG: whatprovides (dotnet-sdk-10.0 / ffmpeg-free / ffmpeg)"
-for p in dotnet-sdk-10.0 ffmpeg-free ffmpeg; do
-  echo "--- $p"
-  repoquery --whatprovides "$p" --qf '%{repoid} -> %{name}-%{version}-%{release}.%{arch}' 2>/dev/null | head -n 30 || true
-done
-
-echo "### DEBUG: list available (fast)"
-${package_manager} -q list --available dotnet-sdk-10.0 ffmpeg-free ffmpeg 2>/dev/null || true
-
-
 
 JAVA_VERSION=21
 ${package_manager} ${WEAK_OPT} -y install $([ "$DIST" != "fedora" ] && echo "epel-release") \
