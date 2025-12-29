@@ -89,8 +89,17 @@ curl -fsSL -o /etc/yum.repos.d/openresty.repo "https://openresty.org/package/${O
 # Temporary disable GPG checks OpenResty key may fail CentOS 10
 [ "$DIST" = "centos" ] && [ "$REV" -ge 10 ] && sed -i 's/^gpgcheck=.*/gpgcheck=0/' /etc/yum.repos.d/openresty.repo
 
-curl -L -o /tmp/ffmpeg-free-el9.rpm "https://dl.fedoraproject.org/pub/epel/9/Everything/x86_64/Packages/f/ffmpeg-free-5.1.4-3.el9.x86_64.rpm"
-dnf install -y /tmp/ffmpeg-free-el9.rpm
+# --- ensure ffmpeg binary exists (EL8) ---
+if [ ! -x /usr/bin/ffmpeg ]; then
+  # RPM Fusion Free (EL8)
+  dnf -y install https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm || true
+
+  dnf -y install epel-release || true
+
+  dnf -y install ffmpeg
+
+  test -x /usr/bin/ffmpeg || { echo "ERROR: /usr/bin/ffmpeg not found"; exit 1; }
+fi
 
 JAVA_VERSION=21
 ${package_manager} ${WEAK_OPT} -y install $([ "$DIST" != "fedora" ] && echo "epel-release") \
