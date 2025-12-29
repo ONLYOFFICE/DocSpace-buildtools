@@ -39,6 +39,10 @@ if [ "$DIST" = "redhat" ]; then
 fi
 
 
+dnf -y install https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm || true
+dnf -y install ffmpeg
+
+
 # --- DEBUG (CentOS 8) ---
 dnf -q repolist
 dnf -q repoquery --whatprovides 'ffmpeg-free' --qf '%{repoid} -> %{name}-%{version}-%{release}.%{arch}' | head
@@ -54,6 +58,8 @@ done
 echo "### DEBUG: available (top)"
 dnf -q list --available dotnet-sdk-10.0 ffmpeg-free ffmpeg 2>/dev/null || true
 # --- END DEBUG ---
+
+
 
 #add rabbitmq & erlang repo
 curl -fsSL https://packagecloud.io/install/repositories/rabbitmq/rabbitmq-server/script.rpm.sh | os=${RABBIT_DIST_NAME} dist="${RABBIT_DIST_VER}" bash
