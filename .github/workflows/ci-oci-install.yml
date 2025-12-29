@@ -82,20 +82,20 @@ jobs:
       matrix: ${{fromJSON(needs.prepare.outputs.matrix)}}
 
     steps:
-      # - name: Free Disk Space
-      #   run: |
-      #     curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/free-disk-space-linux.sh | sudo VBOX_SAFE=1 bash
+      - name: Free Disk Space
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/free-disk-space-linux.sh | sudo VBOX_SAFE=1 bash
 
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # - name: "Checking scripts for errors"
-      #   run: |
-      #     set -eux
-      #     sudo apt-get install -y shellcheck
-      #     find install/OneClickInstall tests -type f -name "*.sh" ! -path "install/OneClickInstall/install-Docker.sh" \
-      #       | xargs shellcheck --exclude="$(awk '!/^#|^$/ {print $1}' tests/lint/sc_ignore | paste -sd ",")" --severity=warning | tee sc_output
-      #     awk '/\(warning\):/ {w++} /\(error\):/ {e++} END {if (w+e) printf "::warning ::ShellCheck detected %d warnings and %d errors\n", w+0, e+0}' sc_output
+      - name: "Checking scripts for errors"
+        run: |
+          set -eux
+          sudo apt-get install -y shellcheck
+          find install/OneClickInstall tests -type f -name "*.sh" ! -path "install/OneClickInstall/install-Docker.sh" \
+            | xargs shellcheck --exclude="$(awk '!/^#|^$/ {print $1}' tests/lint/sc_ignore | paste -sd ",")" --severity=warning | tee sc_output
+          awk '/\(warning\):/ {w++} /\(error\):/ {e++} END {if (w+e) printf "::warning ::ShellCheck detected %d warnings and %d errors\n", w+0, e+0}' sc_output
 
       - name: Get update and install vagrant
         run: |
