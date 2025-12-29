@@ -27,9 +27,18 @@ EPEL_URL="https://dl.fedoraproject.org/pub/epel/"
 [ "$DIST" != "fedora" ] && { rpm -ivh ${EPEL_URL}/epel-release-latest-$REV.noarch.rpm || true; }
 [ "$REV" = "9" ] && update-crypto-policies --set DEFAULT:SHA1
 [ "$DIST" = "centos" ] && TESTING_REPO="--enablerepo=$( [ "$REV" -ge "9" ] && echo "crb" || echo "powertools" )"
-if [ "$DIST" = "redhat" ]; then 
-	LADSPA_PACKAGE_VERSION=$(curl -fsSL "${EPEL_URL}/10/Everything/x86_64/Packages/l/" | grep -oP 'ladspa-[0-9].*?\.rpm' | sort -V | tail -n 1)
-	${package_manager} install -y "${EPEL_URL}/10/Everything/x86_64/Packages/l/${LADSPA_PACKAGE_VERSION}"
+if [ "$DIST" = "redhat" ]; then
+    if [ "$REV" = "8" ]; then
+        LADSPA_EL8_URL="https://download.rockylinux.org/pub/rocky/8/PowerTools/x86_64/kickstart/Packages/l"
+        LADSPA_PACKAGE_VERSION=$(curl -fsSL "${LADSPA_EL8_URL}/" \
+            | grep -oP 'ladspa-[0-9][^"]*\.rpm' \
+            | grep -v 'ladspa-devel' \
+            | sort -V | tail -n 1)
+        ${package_manager} install -y "${LADSPA_EL8_URL}/${LADSPA_PACKAGE_VERSION}"
+    else
+        LADSPA_PACKAGE_VERSION=$(curl -fsSL "${EPEL_URL}/10/Everything/x86_64/Packages/l/" | grep -oP 'ladspa-[0-9].*?\.rpm' | sort -V | tail -n 1)
+        ${package_manager} install -y "${EPEL_URL}/10/Everything/x86_64/Packages/l/${LADSPA_PACKAGE_VERSION}"
+    fi
 fi
 
 #add rabbitmq & erlang repo
