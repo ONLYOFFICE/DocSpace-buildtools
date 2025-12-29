@@ -38,29 +38,6 @@ if [ "$DIST" = "redhat" ]; then
     fi
 fi
 
-
-dnf -y install https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm || true
-dnf -y install ffmpeg
-
-
-# --- DEBUG (CentOS 8) ---
-dnf -q repolist
-dnf -q repoquery --whatprovides 'ffmpeg-free' --qf '%{repoid} -> %{name}-%{version}-%{release}.%{arch}' | head
-dnf -q repoquery --whatprovides 'ffmpeg'      --qf '%{repoid} -> %{name}-%{version}-%{release}.%{arch}' | head
-dnf -q list --available 'ffmpeg*' | head -n 50
-echo "### DEBUG: repolist"
-dnf -q repolist || true
-echo "### DEBUG: whatprovides"
-for p in ffmpeg-free ffmpeg; do
-  echo "--- ${p}"
-  dnf -q repoquery --whatprovides "${p}" --qf '%{repoid} -> %{name}-%{version}-%{release}.%{arch}' | head -n 30 || true
-done
-echo "### DEBUG: available (top)"
-dnf -q list --available dotnet-sdk-10.0 ffmpeg-free ffmpeg 2>/dev/null || true
-# --- END DEBUG ---
-
-
-
 #add rabbitmq & erlang repo
 curl -fsSL https://packagecloud.io/install/repositories/rabbitmq/rabbitmq-server/script.rpm.sh | os=${RABBIT_DIST_NAME} dist="${RABBIT_DIST_VER}" bash
 curl -fsSL https://packagecloud.io/install/repositories/rabbitmq/erlang/script.rpm.sh | os="${ERLANG_DIST_NAME}" dist="${ERLANG_DIST_VER}" bash
@@ -111,6 +88,9 @@ curl -fsSL -o /etc/yum.repos.d/openresty.repo "https://openresty.org/package/${O
 [ -n "${OPENRESTY_REV}" ] && sed -i "s/\$releasever/$OPENRESTY_REV/g" /etc/yum.repos.d/openresty.repo
 # Temporary disable GPG checks OpenResty key may fail CentOS 10
 [ "$DIST" = "centos" ] && [ "$REV" -ge 10 ] && sed -i 's/^gpgcheck=.*/gpgcheck=0/' /etc/yum.repos.d/openresty.repo
+
+curl -L -o /tmp/ffmpeg-free-el9.rpm "https://dl.fedoraproject.org/pub/epel/9/Everything/x86_64/Packages/f/ffmpeg-free-5.1.4-3.el9.x86_64.rpm"
+dnf install -y /tmp/ffmpeg-free-el9.rpm
 
 JAVA_VERSION=21
 ${package_manager} ${WEAK_OPT} -y install $([ "$DIST" != "fedora" ] && echo "epel-release") \
