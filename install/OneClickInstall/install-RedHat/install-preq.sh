@@ -96,6 +96,7 @@ JAVA_VERSION=21
 ${package_manager} ${WEAK_OPT} -y install $([ "$DIST" != "fedora" ] && echo "epel-release") \
 			python3 \
 			nodejs \
+			dotnet-sdk-10.0 \
 			opensearch-${ELASTIC_VERSION} \
 			mysql-community-server \
 			postgresql \
@@ -106,20 +107,6 @@ ${package_manager} ${WEAK_OPT} -y install $([ "$DIST" != "fedora" ] && echo "epe
 			expect \
 			java-${JAVA_VERSION}-openjdk-headless \
 			--enablerepo=opensearch-2.x ${DNF_NOGPG}
-
-DOTNET_SDK_PKG="dotnet-sdk-10.0"
-
-if [ "$DIST" = "redhat" ] && [ "$REV" = "8" ]; then
-  if ! ${package_manager} -q list --available "${DOTNET_SDK_PKG}" >/dev/null 2>&1; then
-    curl -fsSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh
-    bash /tmp/dotnet-install.sh --channel 10.0 --install-dir /usr/share/dotnet
-
-    ln -sf /usr/share/dotnet/dotnet /usr/bin/dotnet
-
-    DOTNET_SDK_PKG=""
-  fi
-fi
-
 
 # Set Java ${JAVA_VERSION} as the default version
 JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | head -1)

@@ -90,6 +90,19 @@ gpgcheck=0
 EOF
       fi
 
+      # --- ADD THIS BLOCK: RHEL 8 dotnet-sdk-10.0 provider repo (CI only) ---
+      if [ "$ID" = "rhel" ] && [ "${VERSION_ID%%.*}" = "8" ]; then
+          cat <<'EOF' | sudo tee /etc/yum.repos.d/ol8-appstream-dotnet.repo
+[ol8_appstream_dotnet]
+name=Oracle Linux 8 - AppStream (dotnet)
+baseurl=https://yum.oracle.com/repo/OracleLinux/OL8/appstream/x86_64/
+enabled=0
+gpgcheck=0
+EOF
+          sudo dnf -y install dotnet-sdk-10.0 --enablerepo=ol8_appstream_dotnet
+      fi
+      # --- END BLOCK ---
+
       if [ "$ID" = "rhel" ] && [ "${VERSION_ID%%.*}" = "9" ]; then
           cat <<'EOF' | sudo tee /etc/yum.repos.d/centos-stream-9.repo
 [centos9s-baseos]
