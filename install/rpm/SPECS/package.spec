@@ -17,7 +17,7 @@ A package containing configs and scripts.
 Summary:        Files-services
 Requires:       %name-common  = %version-%release
 Requires:       dotnet-sdk-10.0
-Requires:       ffmpeg-free
+Requires:       /usr/bin/ffmpeg
 AutoReqProv:    no
 BuildArch:      noarch
 %description    files-services
