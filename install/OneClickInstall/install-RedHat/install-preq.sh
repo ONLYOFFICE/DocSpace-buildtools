@@ -27,16 +27,16 @@ EPEL_URL="https://dl.fedoraproject.org/pub/epel/"
 [ "$DIST" != "fedora" ] && { rpm -ivh ${EPEL_URL}/epel-release-latest-$REV.noarch.rpm || true; }
 [ "$REV" = "9" ] && update-crypto-policies --set DEFAULT:SHA1
 [ "$DIST" = "centos" ] && TESTING_REPO="--enablerepo=$( [ "$REV" -ge "9" ] && echo "crb" || echo "powertools" )"
-if [ "$DIST" = "redhat" ]; then
-    if [ "$REV" = "8" ]; then
-        LADSPA_EL8_URL="https://download.rockylinux.org/pub/rocky/8/PowerTools/x86_64/kickstart/Packages/l"
-        LADSPA_PACKAGE_VERSION=$(curl -fsSL "${LADSPA_EL8_URL}/" | grep -oP 'ladspa-[0-9][^"]*\.rpm' | grep -v 'ladspa-devel' | sort -V | tail -n 1)
-        ${package_manager} install -y "${LADSPA_EL8_URL}/${LADSPA_PACKAGE_VERSION}"
-    else
-        LADSPA_PACKAGE_VERSION=$(curl -fsSL "${EPEL_URL}/10/Everything/x86_64/Packages/l/" | grep -oP 'ladspa-[0-9].*?\.rpm' | sort -V | tail -n 1)
-        ${package_manager} install -y "${EPEL_URL}/10/Everything/x86_64/Packages/l/${LADSPA_PACKAGE_VERSION}"
-    fi
-fi
+# if [ "$DIST" = "redhat" ]; then
+#     if [ "$REV" = "8" ]; then
+#         LADSPA_EL8_URL="https://download.rockylinux.org/pub/rocky/8/PowerTools/x86_64/kickstart/Packages/l"
+#         LADSPA_PACKAGE_VERSION=$(curl -fsSL "${LADSPA_EL8_URL}/" | grep -oP 'ladspa-[0-9][^"]*\.rpm' | grep -v 'ladspa-devel' | sort -V | tail -n 1)
+#         ${package_manager} install -y "${LADSPA_EL8_URL}/${LADSPA_PACKAGE_VERSION}"
+#     else
+#         LADSPA_PACKAGE_VERSION=$(curl -fsSL "${EPEL_URL}/10/Everything/x86_64/Packages/l/" | grep -oP 'ladspa-[0-9].*?\.rpm' | sort -V | tail -n 1)
+#         ${package_manager} install -y "${EPEL_URL}/10/Everything/x86_64/Packages/l/${LADSPA_PACKAGE_VERSION}"
+#     fi
+# fi
 
 #add rabbitmq & erlang repo
 curl -fsSL https://packagecloud.io/install/repositories/rabbitmq/rabbitmq-server/script.rpm.sh | os=${RABBIT_DIST_NAME} dist="${RABBIT_DIST_VER}" bash
@@ -89,16 +89,14 @@ curl -fsSL -o /etc/yum.repos.d/openresty.repo "https://openresty.org/package/${O
 # Temporary disable GPG checks OpenResty key may fail CentOS 10
 [ "$DIST" = "centos" ] && [ "$REV" -ge 10 ] && sed -i 's/^gpgcheck=.*/gpgcheck=0/' /etc/yum.repos.d/openresty.repo
 
-# --- ensure ffmpeg binary exists (EL8) ---
-if [ ! -x /usr/bin/ffmpeg ]; then
-  # RPM Fusion Free (EL8)
-  dnf -y install https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm || true
+if [ "$REV" = "8" ]; then
+  dnf -y install https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm
+  dnf -y install /usr/bin/ffmpeg
 
-  dnf -y install epel-release || true
-
-  dnf -y install ffmpeg
-
-  test -x /usr/bin/ffmpeg || { echo "ERROR: /usr/bin/ffmpeg not found"; exit 1; }
+  echo "### DEBUG: ffmpeg"
+  dnf -q repoquery --whatprovides /usr/bin/ffmpeg --qf '%{repoid} -> %{name}-%{version}-%{release}.%{arch}' | head -n 50 || true
+  command -v ffmpeg && ffmpeg -version | head || true
+  rpm -q --whatprovides /usr/bin/ffmpeg || true
 fi
 
 JAVA_VERSION=21
