@@ -79,3 +79,7 @@ map $scheme $api_cache_url {
 map $scheme $health_checks_url {
   default "$health_checks_env";
 }
+
+map $scheme $ai_service_url {
+  default "$ai_service_env";
+}
