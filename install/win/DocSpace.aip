@@ -529,12 +529,12 @@
     <ROW Action="AI_JsonRollback" Description="Rolling back JSON file configurations." DescriptionLocId="ActionText.Description.AI_JsonRollback" Template="Rolling back JSON file configurations." TemplateLocId="ActionText.Template.AI_JsonRollback"/>
     <ROW Action="AI_JsonUninstall" Description="Generating actions to configure JSON files" DescriptionLocId="ActionText.Description.AI_JsonUninstall"/>
     <ROW Action="AI_ProcessFailActions" Description="Generating actions to configure service failure actions" DescriptionLocId="ActionText.Description.AI_ProcessFailActions" Template="Service: [1]" TemplateLocId="ActionText.Template.AI_ProcessFailActions"/>
-    <ROW Action="AI_SqlConfig" Description="Executing install SQL scripts" DescriptionLocId="ActionText.Description.AI_SqlConfig" Template="Connection: [1]  Script: [2]" TemplateLocId="ActionText.Template.AI_SqlConfig"/>
-    <ROW Action="AI_SqlInstall" Description="Generating actions to configure databases for install SQL script execution" DescriptionLocId="ActionText.Description.AI_SqlInstall"/>
-    <ROW Action="AI_SqlMaint" Description="Executing maintenance SQL scripts" DescriptionLocId="ActionText.Description.AI_SqlMaint" Template="Connection: [1]  Script: [2]" TemplateLocId="ActionText.Template.AI_SqlMaint"/>
-    <ROW Action="AI_SqlRemove" Description="Executing uninstall SQL scripts" DescriptionLocId="ActionText.Description.AI_SqlRemove" Template="Connection: [1]  Script: [2]" TemplateLocId="ActionText.Template.AI_SqlRemove"/>
-    <ROW Action="AI_SqlRollback" Description="Executing rollback SQL scripts" DescriptionLocId="ActionText.Description.AI_SqlRollback" Template="Connection: [1]  Script: [2]" TemplateLocId="ActionText.Template.AI_SqlRollback"/>
-    <ROW Action="AI_SqlUninstall" Description="Generating actions to configure databases for uninstall SQL script execution" DescriptionLocId="ActionText.Description.AI_SqlUninstall"/>
+    <ROW Action="AI_SqlConfig64" Description="Executing install SQL scripts" DescriptionLocId="ActionText.Description.AI_SqlConfig" Template="Connection: [1]  Script: [2]" TemplateLocId="ActionText.Template.AI_SqlConfig"/>
+    <ROW Action="AI_SqlInstall64" Description="Generating actions to configure databases for install SQL script execution" DescriptionLocId="ActionText.Description.AI_SqlInstall"/>
+    <ROW Action="AI_SqlMaint64" Description="Executing maintenance SQL scripts" DescriptionLocId="ActionText.Description.AI_SqlMaint" Template="Connection: [1]  Script: [2]" TemplateLocId="ActionText.Template.AI_SqlMaint"/>
+    <ROW Action="AI_SqlRemove64" Description="Executing uninstall SQL scripts" DescriptionLocId="ActionText.Description.AI_SqlRemove" Template="Connection: [1]  Script: [2]" TemplateLocId="ActionText.Template.AI_SqlRemove"/>
+    <ROW Action="AI_SqlRollback64" Description="Executing rollback SQL scripts" DescriptionLocId="ActionText.Description.AI_SqlRollback" Template="Connection: [1]  Script: [2]" TemplateLocId="ActionText.Template.AI_SqlRollback"/>
+    <ROW Action="AI_SqlUninstall64" Description="Generating actions to configure databases for uninstall SQL script execution" DescriptionLocId="ActionText.Description.AI_SqlUninstall"/>
     <ROW Action="AI_TxtUpdaterCommit" Description="Commit text file changes." DescriptionLocId="ActionText.Description.AI_TxtUpdaterCommit" Template="Commit text file changes." TemplateLocId="ActionText.Template.AI_TxtUpdaterCommit"/>
     <ROW Action="AI_TxtUpdaterConfig" Description="Executing text file updates" DescriptionLocId="ActionText.Description.AI_TxtUpdaterConfig" Template="Updating text file: &quot;[1]&quot;" TemplateLocId="ActionText.Template.AI_TxtUpdaterConfig"/>
     <ROW Action="AI_TxtUpdaterInstall" Description="Generating actions to configure text files updates" DescriptionLocId="ActionText.Description.AI_TxtUpdaterInstall"/>
@@ -588,7 +588,7 @@
     <ROW Name="file_deleter.ps1" SourcePath="&lt;AI_SCRIPTS&gt;file_deleter.ps1"/>
     <ROW Name="jsonCfg.dll" SourcePath="&lt;AI_CUSTACTS&gt;jsonCfg.dll"/>
     <ROW Name="lzmaextractor.dll" SourcePath="&lt;AI_CUSTACTS&gt;lzmaextractor.dll"/>
-    <ROW Name="sql.dll" SourcePath="&lt;AI_CUSTACTS&gt;sql.dll"/>
+    <ROW Name="sql.dll" SourcePath="&lt;AI_CUSTACTS64&gt;sql.dll"/>
     <ROW Name="userAccounts.dll" SourcePath="&lt;AI_CUSTACTS&gt;userAccounts.dll"/>
     <ROW Name="utils.ps1_1" SourcePath="utils.ps1"/>
     <ROW Name="viewer.exe" SourcePath="&lt;AI_CUSTACTS&gt;viewer.exe" DigSign="true"/>
@@ -1009,6 +1009,8 @@
     <ROW Action="AI_DATA_SETTER_11" Type="51" Source="CustomActionData" Target="MySQL84"/>
     <ROW Action="AI_DATA_SETTER_12" Type="51" Source="CustomActionData" Target="OpenSearch"/>
     <ROW Action="AI_DATA_SETTER_13" Type="51" Source="StartOpenSearchService" Target="OpenSearch"/>
+    <ROW Action="AI_DATA_SETTER_14" Type="51" Source="CustomActionData" Target="[~]"/>
+    <ROW Action="AI_DATA_SETTER_15" Type="51" Source="CustomActionData" Target="[~]"/>
     <ROW Action="AI_DATA_SETTER_16" Type="51" Source="StopRedisService" Target="Redis"/>
     <ROW Action="AI_DATA_SETTER_17" Type="51" Source="CustomActionData" Target="[RedisServerConnectionError] |[ProductName] Setup |MB_OK,MB_ICONWARNING,MB_DEFBUTTON1||[CLIENTPROCESSID]"/>
     <ROW Action="AI_DATA_SETTER_18" Type="51" Source="CustomActionData" Target="[RabbitMQServerConnectionError] |[ProductName] Setup |MB_OK,MB_ICONWARNING,MB_DEFBUTTON1||[CLIENTPROCESSID]"/>
@@ -1086,12 +1088,12 @@
     <ROW Action="AI_SHOW_LOG" Type="65" Source="aicustact.dll" Target="LaunchLogFile" WithoutSeq="true"/>
     <ROW Action="AI_STORE_LOCATION" Type="51" Source="ARPINSTALLLOCATION" Target="[APPDIR]"/>
     <ROW Action="AI_SetPermissions" Type="11265" Source="userAccounts.dll" Target="OnSetPermissions" WithoutSeq="true"/>
-    <ROW Action="AI_SqlConfig" Type="9217" Source="sql.dll" Target="OnSqlConfig" WithoutSeq="true"/>
-    <ROW Action="AI_SqlInstall" Type="1" Source="sql.dll" Target="OnSqlInstall" AdditionalSeq="AI_DATA_SETTER_25"/>
-    <ROW Action="AI_SqlMaint" Type="9217" Source="sql.dll" Target="OnSqlMaint" WithoutSeq="true"/>
-    <ROW Action="AI_SqlRemove" Type="9217" Source="sql.dll" Target="OnSqlRemove" WithoutSeq="true"/>
-    <ROW Action="AI_SqlRollback" Type="9473" Source="sql.dll" Target="OnSqlRollback" WithoutSeq="true"/>
-    <ROW Action="AI_SqlUninstall" Type="1" Source="sql.dll" Target="OnSqlUninstall" AdditionalSeq="AI_DATA_SETTER_26"/>
+    <ROW Action="AI_SqlConfig64" Type="9217" Source="sql.dll" Target="OnSqlConfig" WithoutSeq="true"/>
+    <ROW Action="AI_SqlInstall64" Type="1" Source="sql.dll" Target="OnSqlInstall" AdditionalSeq="AI_DATA_SETTER_14"/>
+    <ROW Action="AI_SqlMaint64" Type="9217" Source="sql.dll" Target="OnSqlMaint" WithoutSeq="true"/>
+    <ROW Action="AI_SqlRemove64" Type="9217" Source="sql.dll" Target="OnSqlRemove" WithoutSeq="true"/>
+    <ROW Action="AI_SqlRollback64" Type="9473" Source="sql.dll" Target="OnSqlRollback" WithoutSeq="true"/>
+    <ROW Action="AI_SqlUninstall64" Type="1" Source="sql.dll" Target="OnSqlUninstall" AdditionalSeq="AI_DATA_SETTER_15"/>
     <ROW Action="AI_TxtUpdaterCommit" Type="11777" Source="TxtUpdater.dll" Target="OnTxtUpdaterCommit" WithoutSeq="true"/>
     <ROW Action="AI_TxtUpdaterConfig" Type="11265" Source="TxtUpdater.dll" Target="OnTxtUpdaterConfig" WithoutSeq="true"/>
     <ROW Action="AI_TxtUpdaterInstall" Type="1" Source="TxtUpdater.dll" Target="OnTxtUpdaterInstall"/>
@@ -1310,18 +1312,14 @@
     <ROW Action="AI_DATA_SETTER_19" Condition="( NOT Installed )" Sequence="1632"/>
     <ROW Action="AI_FwInstall" Condition="(VersionNT &gt;= 501) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5802"/>
     <ROW Action="AI_DATA_SETTER_21" Condition="(VersionNT &gt;= 501) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5801"/>
-    <ROW Action="AI_FwUninstall" Condition="(VersionNT &gt;= 501) AND (REMOVE=&quot;ALL&quot;)" Sequence="1702"/>
-    <ROW Action="AI_DATA_SETTER_22" Condition="(VersionNT &gt;= 501) AND (REMOVE=&quot;ALL&quot;)" Sequence="1701"/>
+    <ROW Action="AI_FwUninstall" Condition="(VersionNT &gt;= 501) AND (REMOVE=&quot;ALL&quot;)" Sequence="1704"/>
+    <ROW Action="AI_DATA_SETTER_22" Condition="(VersionNT &gt;= 501) AND (REMOVE=&quot;ALL&quot;)" Sequence="1703"/>
     <ROW Action="SetSERVERNAME" Condition="( NOT Installed )" Sequence="1604"/>
     <ROW Action="StopOpenResty" Condition="( NOT Installed )" Sequence="6606"/>
     <ROW Action="AI_DATA_SETTER_23" Condition="( NOT Installed )" Sequence="6605"/>
     <ROW Action="StartOpenResty" Condition="( NOT Installed )" Sequence="6608"/>
     <ROW Action="AI_DATA_SETTER_24" Condition="( NOT Installed )" Sequence="6607"/>
     <ROW Action="Set_LICENSE_PATH" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) OR ( Installed AND ( REMOVE = &quot;ALL&quot; OR AI_INSTALL_MODE = &quot;Remove&quot; ) AND UPGRADINGPRODUCTCODE ) )" Sequence="201"/>
-    <ROW Action="AI_SqlInstall" Condition="(VersionNT &gt;= 500) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5502"/>
-    <ROW Action="AI_DATA_SETTER_25" Condition="(VersionNT &gt;= 500) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5501"/>
-    <ROW Action="AI_SqlUninstall" Condition="(VersionNT &gt;= 500) AND (REMOVE=&quot;ALL&quot;)" Sequence="1704"/>
-    <ROW Action="AI_DATA_SETTER_26" Condition="(VersionNT &gt;= 500) AND (REMOVE=&quot;ALL&quot;)" Sequence="1703"/>
     <ROW Action="StopOpenSearchDashboardsService" Condition="( NOT Installed )" Sequence="1621"/>
     <ROW Action="AI_DATA_SETTER_28" Condition="( NOT Installed )" Sequence="1620"/>
     <ROW Action="StopFluentBitService" Condition="( NOT Installed )" Sequence="1617"/>
@@ -1342,6 +1340,10 @@
     <ROW Action="AI_DATA_SETTER_34" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1609"/>
     <ROW Action="Set_APPDIR_FORWARD_SLASH" Sequence="1635"/>
     <ROW Action="AI_DATA_SETTER_6" Sequence="1634"/>
+    <ROW Action="AI_SqlInstall64" Condition="(VersionNT64 &gt;= 500) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5502"/>
+    <ROW Action="AI_DATA_SETTER_14" Condition="(VersionNT64 &gt;= 500) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5501"/>
+    <ROW Action="AI_SqlUninstall64" Condition="(VersionNT64 &gt;= 500) AND (REMOVE=&quot;ALL&quot;)" Sequence="1702"/>
+    <ROW Action="AI_DATA_SETTER_15" Condition="(VersionNT64 &gt;= 500) AND (REMOVE=&quot;ALL&quot;)" Sequence="1701"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstallUISequenceComponent">
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>
@@ -1668,7 +1670,7 @@
     <ROW SearchKey="postgresqlx649.5" Prereq="PostgresSQL" SearchType="5" SearchString="HKLM\SOFTWARE\PostgreSQL\Installations\postgresql-x64-14" Order="1" Property="PreReqSearch_2_1"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.SqlConnectionComponent">
-    <ROW ConnectionName="MySql.Conection" Condition="1" Dbms="1" Flags="4" Order="0" LoginTimeout="60" ConnectionString="Driver={[MYSQLODBCDRIVER]};Server=[DB_HOST];Port=[DB_PORT];Database=[DB_NAME];User=[DB_USER];Password=[DB_PWD];charset=UTF8;GET_SERVER_PUBLIC_KEY=1;"/>
+    <ROW ConnectionName="MySql.Conection" Condition="1" Dbms="1" Flags="36" Order="0" LoginTimeout="60" ConnectionString="Driver={[MYSQLODBCDRIVER]};Server=[DB_HOST];Port=[DB_PORT];Database=[DB_NAME];User=[DB_USER];Password=[DB_PWD];charset=UTF8;GET_SERVER_PUBLIC_KEY=1;"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.SqlScriptComponent">
     <ROW ScriptName="SQL_SCRIPT_REINDEX_OPENSEARCH" ConnectionName="MySql.Conection" Condition="NEED_REINDEX_OPENSEARCH = &quot;TRUE&quot; AND OLDPRODUCTS &lt;&gt; &quot;&quot;" Separator=";" ScriptInline="TRUNCATE webstudio_index;&#13;&#10;" Flags="18" Order="0"/>
