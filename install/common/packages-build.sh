@@ -23,6 +23,15 @@ dotnet build ASC.Migrations.sln --property:OutputPath=${PUBLISH_DIR}/services/AS
 dotnet publish ASC.Web.slnf -p PublishProfile=ReleaseProfile
 cd "${SERVER_PATH}/common/ASC.Socket.IO" && yarn install --frozen-lockfile && mv -f ${SERVER_PATH}/common/ASC.Socket.IO ${PUBLISH_DIR}/services/
 cd "${SERVER_PATH}/common/ASC.SsoAuth" && yarn install --frozen-lockfile && mv -f ${SERVER_PATH}/common/ASC.SsoAuth ${PUBLISH_DIR}/services/
+
+# ASC.SsoAuth (9834)
+sed -i 's/httpServer\.listen(config\.app\.port, function/httpServer.listen(config.app.port, "127.0.0.1", function/' "${PUBLISH_DIR}/services/ASC.SsoAuth/app.js"
+# ASC.Socket.IO (9899)
+sed -i 's/httpServer\.listen(port,/httpServer.listen(port, "127.0.0.1",/' "${PUBLISH_DIR}/services/ASC.Socket.IO/server.js"
+# Sanity 
+grep -n 'httpServer.listen' "${PUBLISH_DIR}/services/ASC.SsoAuth/app.js" | head -n 1
+grep -n 'httpServer.listen' "${PUBLISH_DIR}/services/ASC.Socket.IO/server.js" | head -n 1
+
 cd "${SERVER_PATH}/common/ASC.Identity" && mkdir -p ${PUBLISH_DIR}/services/{ASC.Identity.Registration,ASC.Identity.Authorization}
 mvn -B dependency:go-offline -Dorg.slf4j.simpleLogger.defaultLogLevel=warn
 mvn clean package -B -DskipTests -pl authorization/authorization-container -am
