@@ -74,7 +74,7 @@ RUN echo "--- build/publish docspace-server .net 10.0 ---" && \
     rm -rf ${SRC_PATH}/server/*
 
 # node build
-FROM node:22-slim AS build-node
+FROM node:24-slim AS build-node
 ARG SRC_PATH
 ARG BUILD_ARGS="build"
 ARG DEPLOY_ARGS="deploy"
@@ -109,7 +109,7 @@ RUN echo "--- installing pnpm ---" && \
     rm -rf /tmp/pnpm
 
 # build plugins
-FROM node:22-slim AS build-plugins
+FROM node:24-slim AS build-plugins
 ARG SRC_PATH
 COPY --from=src ${SRC_PATH}/plugins ${SRC_PATH}/plugins
 WORKDIR ${SRC_PATH}/buildtools/install/common
@@ -174,7 +174,7 @@ USER onlyoffice
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
 
-FROM node:22-slim AS noderun
+FROM node:24-slim AS noderun
 ARG BUILD_PATH
 ARG SRC_PATH 
 ENV BUILD_PATH=${BUILD_PATH}
