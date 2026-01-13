@@ -639,6 +639,7 @@ check_connection_external_services() {
 
 stop_services() {
 	echo -n "Stopping services... "
+	systemctl daemon-reload
 	systemctl stop "${SERVICES_LIST[@]}" 'ds-*.service' 2>&1
 	echo "OK"
 }
