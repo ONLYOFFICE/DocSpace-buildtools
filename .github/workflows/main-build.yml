@@ -107,6 +107,7 @@ jobs:
       - name: Trigger ci-oci-docker-install Workflow
         env:
           GH_TOKEN: ${{ secrets.TOKEN }}
+          DOCKER_TAG: ${{ needs.build.outputs.DOCKER_TAG }}
         run: |
           echo "OCI docker test on branch ${{ matrix.branch }}"
-          gh workflow run "ci-oci-docker-install.yml" --repo "${{ github.repository }}" --ref "${{ matrix.branch }}" --field offline=false --field testing=true
+          gh workflow run "ci-oci-docker-install.yml" --repo "${{ github.repository }}" --ref "${{ matrix.branch }}" --field offline=false --field testing=true --field tag=${{ env.DOCKER_TAG }}
