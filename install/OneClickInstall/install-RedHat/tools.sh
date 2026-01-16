@@ -66,7 +66,7 @@ MYSQL_DISTR_NAME="el"
 MYSQL_REPO_REV="$REV"
 OPENRESTY_DISTR_NAME=${DIST/redhat/rhel}
 SUPPORTED_FEDORA_FLAG="true"
-REDIS_PACKAGE=$( [[ "$REV" == "10" ]] && echo "valkey" || echo "redis" )
+REDIS_PACKAGE=$( [[ "$REV" == "8" || "$REV" == "10" ]] && echo "valkey" || echo "redis" )
 RABBIT_DIST_NAME=$( [[ "$REV" == "10" ]] && echo "el" || echo "$DIST" )
 RABBIT_DIST_VER=$( [[ "$REV" == "10" ]] && echo "9" || echo "$REV" )
 ERLANG_DIST_NAME=$( [[ "$REV" == "10" ]] && echo "el" || echo "$DIST" )
