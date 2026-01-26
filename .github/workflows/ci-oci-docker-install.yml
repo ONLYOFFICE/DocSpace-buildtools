@@ -24,9 +24,14 @@ on:
         required: true
         default: false
         type: boolean
+      tag:
+        description: "Docker tag (optional)"
+        required: false
+        default: ''
+        type: string
 
 jobs:
-  Install-OneClickInstall-Docker:
+  Install-OCI-Docker:
     runs-on: ubuntu-22.04
     steps:
       - name: Free Disk Space
@@ -45,7 +50,7 @@ jobs:
           IS_4TESTING="${{ github.event.inputs.testing }}"
           wget https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/install/OneClickInstall/install-Docker.sh
           sed -i "1i set -x" install-Docker.sh && sed -i "/docker-compose.*up -d/ s/$/ --quiet-pull/" install-Docker.sh
-          sudo bash install-Docker.sh -skiphc true -noni true -gb ${{ github.ref_name }} $([ "${IS_4TESTING:-true}" != "false" ] && echo "-s 4testing-") || exit $?
+          sudo bash install-Docker.sh -skiphc true -noni true -gb ${{ github.ref_name }} $([ "${IS_4TESTING:-true}" != "false" ] && echo "-s 4testing-") $([ -n "${{ github.event.inputs.tag }}" ] && echo "-dsv ${{ github.event.inputs.tag }}") || exit $?
 
           echo -n "Waiting for all containers to start..."
           timeout 300 bash -c 'while docker ps | grep -q "starting"; do sleep 5; done' && echo "OK" || echo "container_status=timeout" >> $GITHUB_ENV
@@ -160,7 +165,7 @@ jobs:
             --region us-east-1 --query 'status' --output text || :)
           echo "API Gateway test-invoke status: ${API_STATUS:-<failed>}"
 
-  Install-OCI-Docker-Stack-Mode:
+  Install-OCI-Docker-Stack:
     runs-on: ubuntu-22.04
     steps:
       - name: Free Disk Space
@@ -179,7 +184,7 @@ jobs:
           IS_4TESTING="${{ github.event.inputs.testing }}"
           wget https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/install/OneClickInstall/install-Docker.sh
           sed -i "1i set -x" install-Docker.sh && sed -i "/docker-compose.*up -d/ s/$/ --quiet-pull/" install-Docker.sh
-          sudo bash install-Docker.sh -skiphc true -noni true -sm true -gb ${{ github.ref_name }} $([ "${IS_4TESTING:-true}" != "false" ] && echo "-s 4testing-") || exit $?
+          sudo bash install-Docker.sh -skiphc true -noni true -sm true -gb ${{ github.ref_name }} $([ "${IS_4TESTING:-true}" != "false" ] && echo "-s 4testing-") $([ -n "${{ github.event.inputs.tag }}" ] && echo "-dsv ${{ github.event.inputs.tag }}") || exit $?
 
           echo -n "Waiting for all containers to start..."
           timeout 300 bash -c 'while docker ps | grep -q "starting"; do sleep 5; done' && echo "OK" || echo "container_status=timeout" >> $GITHUB_ENV

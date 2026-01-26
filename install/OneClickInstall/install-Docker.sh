@@ -1,7 +1,7 @@
 #!/bin/bash
 
  #
- # (c) Copyright Ascensio System SIA 2025
+ # (c) Copyright Ascensio System SIA 2026
  #
  # This program is a free software product. You can redistribute it and/or
  # modify it under the terms of the GNU Affero General Public License (AGPL)
@@ -131,7 +131,7 @@ uninstall() {
     for SERVICE in "${SERVICES[@]}" "ds"; do
         if [[ -f "$BASE_DIR/$SERVICE.yml" ]]; then
             echo "Uninstallation of  $SERVICE and its volumes..."
-            docker-compose -f "$BASE_DIR/$SERVICE.yml" down -v || echo "Failed to remove $SERVICE."
+            ${DOCKER_COMPOSE} -f "$BASE_DIR/$SERVICE.yml" down -v || echo "Failed to remove $SERVICE."
         fi
     done
 
@@ -294,7 +294,7 @@ install_package () {
 
 install_docker_compose () {
 	curl -sL "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/bin/docker-compose
-	chmod +x /usr/bin/docker-compose
+	chmod +x /usr/bin/docker-compose && DOCKER_COMPOSE="docker-compose"
 }
 
 check_ports () {
@@ -688,12 +688,12 @@ install_mysql_server () {
 	if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ]; then
 		if [ -n "${VOLUMES_DIR}" ]; then
 			mkdir -p "${VOLUMES_DIR}/mysql_data"
-			chown $(docker run --rm "$(docker-compose -f ${BASE_DIR}/db.yml config | awk '/image:/ {print $2; exit}')" stat -c '%u:%g' /var/lib/mysql) "${VOLUMES_DIR}/mysql_data"
-			chmod $(docker run --rm "$(docker-compose -f ${BASE_DIR}/db.yml config | awk '/image:/ {print $2; exit}')" stat -c '%a' /var/lib/mysql) "${VOLUMES_DIR}/mysql_data"
+			chown $(docker run --rm "$(${DOCKER_COMPOSE} -f ${BASE_DIR}/db.yml config | awk '/image:/ {print $2; exit}')" stat -c '%u:%g' /var/lib/mysql) "${VOLUMES_DIR}/mysql_data"
+			chmod $(docker run --rm "$(${DOCKER_COMPOSE} -f ${BASE_DIR}/db.yml config | awk '/image:/ {print $2; exit}')" stat -c '%a' /var/lib/mysql) "${VOLUMES_DIR}/mysql_data"
 		fi
-		docker-compose -f $BASE_DIR/db.yml up -d --force-recreate
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/db.yml up -d --force-recreate
 	elif [ "$INSTALL_MYSQL_SERVER" == "pull" ]; then
-		docker-compose -f $BASE_DIR/db.yml pull
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/db.yml pull
 	fi
 }
 
@@ -701,25 +701,25 @@ install_document_server () {
 	reconfigure DOCUMENT_SERVER_JWT_HEADER ${DOCUMENT_SERVER_JWT_HEADER}
 	reconfigure DOCUMENT_SERVER_JWT_SECRET ${DOCUMENT_SERVER_JWT_SECRET}
 	if [[ -z ${DOCUMENT_SERVER_HOST} ]] && [ "$INSTALL_DOCUMENT_SERVER" == "true" ]; then
-		docker-compose -f $BASE_DIR/ds.yml up -d
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/ds.yml up -d
 	elif [ "$INSTALL_DOCUMENT_SERVER" == "pull" ]; then
-		docker-compose -f $BASE_DIR/ds.yml pull
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/ds.yml pull
 	fi
 }
 
 install_rabbitmq () {
 	if [[ -z ${RABBIT_HOST} ]] && [ "$INSTALL_RABBITMQ" == "true" ]; then
-		docker-compose -f $BASE_DIR/rabbitmq.yml up -d
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/rabbitmq.yml up -d
 	elif [ "$INSTALL_RABBITMQ" == "pull" ]; then
-		docker-compose -f $BASE_DIR/rabbitmq.yml pull
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/rabbitmq.yml pull
 	fi
 }
 
 install_redis () {
 	if [[ -z ${REDIS_HOST} ]] && [ "$INSTALL_REDIS" == "true" ]; then
-		docker-compose -f $BASE_DIR/redis.yml up -d
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/redis.yml up -d
 	elif [ "$INSTALL_REDIS" == "pull" ]; then
-		docker-compose -f $BASE_DIR/redis.yml pull
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/redis.yml pull
 	fi
 }
 
@@ -727,16 +727,16 @@ install_elasticsearch () {
 	if [[ -z ${ELK_HOST} ]] && [ "$INSTALL_ELASTICSEARCH" == "true" ]; then
 		if [ -n "${VOLUMES_DIR}" ]; then
 			mkdir -p "${VOLUMES_DIR}/os_data"
-			chown $(docker run --rm "$(docker-compose -f ${BASE_DIR}/opensearch.yml config | awk '/image:/ {print $2; exit}')" stat -c '%u:%g' /usr/share/opensearch/data) "${VOLUMES_DIR}/os_data"
+			chown $(docker run --rm "$(${DOCKER_COMPOSE} -f ${BASE_DIR}/opensearch.yml config | awk '/image:/ {print $2; exit}')" stat -c '%u:%g' /usr/share/opensearch/data) "${VOLUMES_DIR}/os_data"
 		fi
 
 		SAFE_MEMORY=$(( ( $(free --mega | grep -oP '\d+' | head -n 1) - 1024 ) / 2 )) # half of the remaining memory after the 1 GB reserve for the OS
 		HEAP=$(( SAFE_MEMORY < 2048 ? 1 : SAFE_MEMORY < 4096 ? 2 : 4 ))  #if <2GB → 1GB; <4GB → 2GB; otherwise → 4GB
 		sed -i "s/Xms[0-9]g/Xms${HEAP}g/g; s/Xmx[0-9]g/Xmx${HEAP}g/g" $BASE_DIR/opensearch.yml
 
-		docker-compose -f $BASE_DIR/opensearch.yml up -d
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/opensearch.yml up -d
 	elif [ "$INSTALL_ELASTICSEARCH" == "pull" ]; then
-		docker-compose -f $BASE_DIR/opensearch.yml pull
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/opensearch.yml pull
 	fi
 }
 
@@ -757,9 +757,9 @@ install_fluent_bit () {
 		reconfigure DASHBOARDS_USERNAME "${DASHBOARDS_USERNAME:-"${PACKAGE_SYSNAME}"}"
 		reconfigure DASHBOARDS_PASSWORD "${DASHBOARDS_PASSWORD:-$(get_random_str 20)}"
 		
-		docker-compose -f ${BASE_DIR}/fluent.yml -f ${BASE_DIR}/dashboards.yml up -d
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/fluent.yml -f ${BASE_DIR}/dashboards.yml up -d
 	elif [ "$INSTALL_FLUENT_BIT" == "pull" ]; then
-		docker-compose -f ${BASE_DIR}/fluent.yml -f ${BASE_DIR}/dashboards.yml pull
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/fluent.yml -f ${BASE_DIR}/dashboards.yml pull
 	fi
 }
 
@@ -771,9 +771,9 @@ install_product () {
 
 			if [ "$LOCAL_CONTAINER_TAG" != "$DOCKER_TAG" ]; then
 				if [ "$STACK_MODE" = "true" ]; then
-					docker-compose -f $BASE_DIR/docspace-stack.yml -f $BASE_DIR/proxy.yml down
+					${DOCKER_COMPOSE} -f ${BASE_DIR}/docspace-stack.yml -f ${BASE_DIR}/proxy.yml down
 				else
-					docker-compose "${COMPOSE_FILES[@]}" down
+					${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" down
 				fi
 			fi
 		fi
@@ -792,17 +792,17 @@ install_product () {
 		fi
 
 		if [ "$STACK_MODE" = "true" ]; then
-			docker-compose -f "$BASE_DIR/docspace-stack.yml" up -d
-			docker-compose -f "$BASE_DIR/proxy.yml" up -d
+			${DOCKER_COMPOSE} -f "${BASE_DIR}/docspace-stack.yml" up -d
+			${DOCKER_COMPOSE} -f "${BASE_DIR}/proxy.yml" up -d
 		else
-			docker-compose -f "$BASE_DIR/migration-runner.yml" up -d
+			${DOCKER_COMPOSE} -f "${BASE_DIR}/migration-runner.yml" up -d
 
 			if [[ -n $(docker ps -q --filter "name=${PACKAGE_SYSNAME}-migration-runner") ]]; then
 				echo -n "Waiting for database migration to complete..."
 				timeout 30 bash -c "while [ $(docker wait ${PACKAGE_SYSNAME}-migration-runner) -ne 0 ]; do sleep 1; done;" && echo "OK" || echo "FAILED"
 			fi
 
-			docker-compose "${COMPOSE_FILES[@]}" up -d
+			${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" up -d
 		fi
 
 		if [[ -n "${PREVIOUS_ELK_VERSION}" && "$(get_env_parameter "ELK_VERSION")" != "${PREVIOUS_ELK_VERSION}" ]]; then
@@ -828,7 +828,7 @@ install_product () {
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -r
 		fi
 	elif [ "$INSTALL_PRODUCT" == "pull" ]; then
-		docker-compose "${COMPOSE_FILES[@]}" pull
+		${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" pull
 	fi
 }
 
@@ -857,7 +857,7 @@ make_swap () {
 
 offline_check_docker_image() {
 	[ ! -f "$1" ] && { echo "Error: File '$1' does not exist."; exit 1; }
-	docker-compose -f "$1" config | grep -oP 'image:\s*\K\S+' | while IFS= read -r IMAGE_TAG; do
+	${DOCKER_COMPOSE} -f "$1" config | grep -oP 'image:\s*\K\S+' | while IFS= read -r IMAGE_TAG; do
 		docker images --format="{{.Repository}}:{{.Tag}}" "${IMAGE_TAG}"  | grep -q "${IMAGE_TAG%%:*}" || { echo "Error: The image '${IMAGE_TAG}' is not found in the local Docker registry."; kill -s TERM $PID; }
 	done
 }
@@ -867,8 +867,14 @@ check_registry_connection() {
 	[ -z "${TAGS_RESP[*]}" ] && { echo -e "Unable to download tags from ${REGISTRY_URL:-https://hub.docker.com}.\nTry specifying another docker registry URL using -reg"; exit 1; }
 }
 
+check_docker_compose() {
+	COMPOSE_REQ=2018000 # >= 2.18.0 
+	for DOCKER_COMPOSE in "docker compose" docker-compose; do $DOCKER_COMPOSE version --short 2>/dev/null | awk -F. 'NF==3{exit !($1*1000000+$2*1000+$3>=REQ)}' REQ="$COMPOSE_REQ" && return 0; done
+	return 1
+}
+
 dependency_installation() {
-	is_command_exists apt-get && apt-get -y update -qq
+	[ "${OFFLINE_INSTALLATION}" = "false" ] && is_command_exists apt-get && apt-get -y update -qq
 
 	install_package tar
 	install_package curl
@@ -895,9 +901,7 @@ dependency_installation() {
 		systemctl start docker
 	fi
 
-	if ! is_command_exists docker-compose || [ $(docker-compose -v | awk '{sub(/^v/,"",$NF);split($NF,a,".");printf "%d%03d%03d",a[1],a[2],a[3]}') -lt 2018000 ]; then
-		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker_compose || { echo "docker-compose not installed or outdated version"; exit 1; }
-	fi
+	check_docker_compose || { [ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker_compose || { echo "docker compose not installed or outdated version"; exit 1; }; }
 }
 
 check_docker_image () {

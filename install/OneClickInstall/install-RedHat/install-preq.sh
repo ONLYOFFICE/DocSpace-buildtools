@@ -27,7 +27,7 @@ EPEL_URL="https://dl.fedoraproject.org/pub/epel/"
 [ "$DIST" != "fedora" ] && { rpm -ivh ${EPEL_URL}/epel-release-latest-$REV.noarch.rpm || true; }
 [ "$REV" = "9" ] && update-crypto-policies --set DEFAULT:SHA1
 [ "$DIST" = "centos" ] && TESTING_REPO="--enablerepo=$( [ "$REV" -ge "9" ] && echo "crb" || echo "powertools" )"
-if [ "$DIST" = "redhat" ]; then 
+if [ "$DIST" = "redhat" ] && [ "$REV" -ge 9 ]; then 
 	LADSPA_PACKAGE_VERSION=$(curl -fsSL "${EPEL_URL}/10/Everything/x86_64/Packages/l/" | grep -oP 'ladspa-[0-9].*?\.rpm' | sort -V | tail -n 1)
 	${package_manager} install -y "${EPEL_URL}/10/Everything/x86_64/Packages/l/${LADSPA_PACKAGE_VERSION}"
 fi
@@ -44,8 +44,7 @@ curl -fsSL https://rpm.nodesource.com/setup_${NODE_VERSION}.x | bash -
 dnf remove -y @mysql && dnf module -y reset mysql && dnf module -y disable mysql
 MYSQL_REPO_VERSION="$(curl https://repo.mysql.com | grep -oP "mysql84-community-release-${MYSQL_DISTR_NAME}${MYSQL_REPO_REV}-\K.*" | grep -o '^[^.]*' | sort | tail -n1)"
 yum install -y https://repo.mysql.com/mysql84-community-release-"${MYSQL_DISTR_NAME}""${MYSQL_REPO_REV}"-"${MYSQL_REPO_VERSION}".noarch.rpm || true
-# Temporary workaround for Fedora 43 MySQL repo
-[ "$DIST" = "fedora" ] && [ "$REV" = "43" ] && sed -i 's|/fc/\$releasever/|/fc/42/|g' /etc/yum.repos.d/mysql*.repo 2>/dev/null || true
+[ "$DIST" = "fedora" ] && sed -i 's/gpgcheck=1/gpgcheck=0/' /etc/yum.repos.d/mysql-community*.repo
 # Disable weak deps to avoid mysql-server on Fedora and CentOS 10
 [ "$DIST" = "fedora" ] || { [ "$DIST" = "centos" ] && [ "$REV" -ge 10 ]; } && WEAK_OPT="--setopt=install_weak_deps=False"
 
@@ -83,6 +82,13 @@ curl -fsSL -o /etc/yum.repos.d/openresty.repo "https://openresty.org/package/${O
 # Temporary disable GPG checks OpenResty key may fail CentOS 10
 [ "$DIST" = "centos" ] && [ "$REV" -ge 10 ] && sed -i 's/^gpgcheck=.*/gpgcheck=0/' /etc/yum.repos.d/openresty.repo
 
+if [ "${DIST}" = "redhat" ] && [ "${REV}" = "8" ]; then
+  CRB_REPO=$(dnf -q repolist all | awk '/^codeready-builder-for-rhel-8-x86_64-rpms/ {print $1; exit} /^codeready-builder-for-rhel-8-rhui-rpms/ {print $1; exit}')
+  [ -n "${CRB_REPO}" ] && subscription-manager repos --enable="${CRB_REPO}" || true
+  CRB_REPO=${CRB_REPO:+--enablerepo=${CRB_REPO}}
+  ${package_manager} -y install https://download1.rpmfusion.org/free/el/rpmfusion-free-release-${REV}.noarch.rpm
+fi
+
 JAVA_VERSION=21
 ${package_manager} ${WEAK_OPT} -y install $([ "$DIST" != "fedora" ] && echo "epel-release") \
 			python3 \
@@ -97,7 +103,7 @@ ${package_manager} ${WEAK_OPT} -y install $([ "$DIST" != "fedora" ] && echo "epe
 			SDL2 \
 			expect \
 			java-${JAVA_VERSION}-openjdk-headless \
-			--enablerepo=opensearch-2.x ${DNF_NOGPG}
+			--enablerepo=opensearch-2.x ${DNF_NOGPG} ${CRB_REPO}
 
 # Set Java ${JAVA_VERSION} as the default version
 JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | head -1)
