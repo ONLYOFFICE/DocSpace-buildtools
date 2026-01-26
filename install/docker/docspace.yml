@@ -53,6 +53,7 @@ x-service: &x-service-base
     RABBIT_VIRTUAL_HOST: ${RABBIT_VIRTUAL_HOST}
     RABBIT_USER_NAME: ${RABBIT_USER_NAME}
     RABBIT_PASSWORD: ${RABBIT_PASSWORD}
+    API_HOST: ${API_HOST}
     ROUTER_HOST: ${ROUTER_HOST}
     LOG_LEVEL: ${LOG_LEVEL}
     DEBUG_INFO: ${DEBUG_INFO}
@@ -134,7 +135,7 @@ services:
   onlyoffice-api:
     <<: *x-service-base
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-api:${DOCKER_TAG}"
-    container_name: ${API_HOST}
+    container_name: ${API_SERVICE_HOST}
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_API}/health/ || exit 1

@@ -605,6 +605,7 @@ product_configuration(){
 
 	env_configuration "$APP_DIR/systemd.env" ENVIRONMENT "${ENVIRONMENT}"
 	env_configuration "$APP_DIR/systemd.env" SPRING_PROFILES_ACTIVE "prod,server"
+	env_configuration "$APP_DIR/systemd.env" API_HOST "http://127.0.0.1:8092"
 	env_configuration "$APP_DIR/systemd.env" DOCSPACE_INTERNAL "true"
 	env_configuration "$APP_DIR/systemd.env" DOCSPACE_TRANSPORT "http"
 	env_configuration "$APP_DIR/systemd.env" DOCSPACE_HOST "0.0.0.0"

@@ -57,6 +57,7 @@ x-service: &x-service-base
     RABBIT_USER_NAME: ${RABBIT_USER_NAME}
     RABBIT_PASSWORD: ${RABBIT_PASSWORD}
     ROUTER_HOST: ${ROUTER_HOST}
+    API_HOST: ${API_HOST}
   volumes:
     - ${ROOT_DIR}/data:/app/onlyoffice/data
     - ${ROOT_DIR}/logs:/var/log/onlyoffice
@@ -195,7 +196,7 @@ services:
   onlyoffice-api:
     <<: [*x-service-base, *x-profiles-backend]
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-api:${DOCKER_TAG}"
-    container_name: ${API_HOST}
+    container_name: ${API_SERVICE_HOST}
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_API}/health/ || exit 1
