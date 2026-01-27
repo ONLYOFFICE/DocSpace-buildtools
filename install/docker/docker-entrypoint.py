@@ -184,7 +184,7 @@ def deleteJsonPath(jsonData, jsonPath):
 
     return jsonData
 
-def waitForHostAvailable(HOST_URL, TIMEOUT=10, INTERVAL=3, MAX_RETRIES=5, RETRY_INTERVAL=15):
+def waitForHostAvailable(HOST_URL, TIMEOUT=10, INTERVAL=3, MAX_RETRIES=5, RETRY_INTERVAL=30):
     """
     Check if HOST_URL is reachable.
 
