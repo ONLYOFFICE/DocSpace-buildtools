@@ -139,7 +139,8 @@ fi
 
 { ${package_manager} check-update ${product}; PRODUCT_CHECK_UPDATE=$?; } || true
 if [ "$PRODUCT_INSTALLED" = "false" ]; then
-	${package_manager} install -y ${product} --best --allowerasing $TESTING_REPO
+	[[ ${PRODUCT_VERSION} =~ ^[0-9]+(\.[0-9]+){3}$ ]] && PRODUCT_VERSION="${PRODUCT_VERSION%.*}-${PRODUCT_VERSION##*.}"
+	${package_manager} install -y "${product}${PRODUCT_VERSION:+-${PRODUCT_VERSION}}" --best --allowerasing $TESTING_REPO
 	"${product}"-configuration \
 		-mysqlh "${MYSQL_SERVER_HOST}" \
 		-mysqlport "${MYSQL_SERVER_PORT}" \

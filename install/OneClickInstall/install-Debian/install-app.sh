@@ -68,7 +68,7 @@ if [ "$PRODUCT_INSTALLED" = "false" ]; then
 	echo "${product}" "${product}"/db-user select "$MYSQL_SERVER_USER" | debconf-set-selections
 	echo "${product}" "${product}"/db-pwd select "$MYSQL_SERVER_PASS" | debconf-set-selections
 
-	if apt-get install -y "${product}"; then
+	if apt-get install -y "${product}${PRODUCT_VERSION:+*=${PRODUCT_VERSION}}"; then
 		# Clear the password in debconf for a successful update when using external MySQL
 		if [ "$(echo "GET ${PRODUCT}/db-pwd" | debconf-communicate "$PRODUCT" | awk '{print $2}')" = "$MYSQL_SERVER_PASS" ]; then
 			printf "SET ${product}/db-host\nSET ${product}/db-name\nSET ${product}/db-user\nSET ${product}/db-pwd\nSET ${product}/db-port\n" | debconf-communicate ${product} >/dev/null

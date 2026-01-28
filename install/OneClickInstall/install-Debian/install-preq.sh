@@ -19,6 +19,10 @@ fi
 
 apt-get -y update
 
+if [ -n "$PRODUCT_VERSION" ] && ! apt-cache madison "$product" | awk '{print $3}' | grep -Eq "^${PRODUCT_VERSION}([.-]|$)"; then
+  echo "Requested ${product_name} version ${PRODUCT_VERSION} not found in repository."; exit 1
+fi
+
 if ! command -v locale-gen &> /dev/null; then
 	apt-get install -yq locales
 fi

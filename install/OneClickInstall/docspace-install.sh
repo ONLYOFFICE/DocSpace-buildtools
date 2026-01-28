@@ -44,7 +44,7 @@ while [ "$1" != "" ]; do
         -ls | --localscripts )     [[ "$2" == "true" || "$2" == "false" ]] && PARAMETERS="$PARAMETERS ${1}" && LOCAL_SCRIPTS=$2 && shift ;;
         -log | --logging )         [[ "$2" == "true" || "$2" == "false" ]] && ENABLE_LOGGING=$2 && shift 2 && continue ;;
         -gb | --gitbranch )        [ -n "$2" ] && PARAMETERS="$PARAMETERS ${1}" && GIT_BRANCH=$2 && shift ;;
-        -dsv | --docspaceversion ) [ -n "$2" ] && PARAMETERS="$PARAMETERS ${1}" && DOCKER_TAG=$2 && shift ;; # only for detect docker legacy installs
+        -dsv | --docspaceversion ) [ -n "$2" ] && PARAMETERS="$PARAMETERS ${1}" && DOCKER_TAG=$2 && PRODUCT_VERSION=$2 && shift ;;
         docker ) DOCKER="true"; shift ; continue ;;
         package ) DOCKER="false"; shift ; continue ;;
         -h | -? | --help )
