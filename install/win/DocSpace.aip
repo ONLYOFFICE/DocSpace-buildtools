@@ -22,6 +22,7 @@
     <ROW Property="APPDIR_FORWARD_SLASH" Value=" "/>
     <ROW Property="APP_PORT" Value="80"/>
     <ROW Property="APP_URLS" Value="http://0.0.0.0"/>
+    <ROW Property="API_HOST" Value="http://127.0.0.1:8092"/>
     <ROW Property="ARPCOMMENTS" Value="[|PRODUCT_NAME] is a platform based on .NET Core and React engines which comprises document management features and makes it possible to implement advanced folder management." ValueLocId="*"/>
     <ROW Property="ARPCONTACT" Value="20A-6, Ernesta Birznieka-Upisha str., Riga, LV-1050"/>
     <ROW Property="ARPHELPLINK" Value="https://forum.onlyoffice.com"/>
@@ -1699,6 +1700,7 @@
     <ROW Name="ReplaceAmqpPwd" TxtUpdateSet="xml" FindPattern="{AMQP_PWD}" ReplacePattern="[AMQP_PWD]" Options="2" Order="5" FileEncoding="-1"/>
     <ROW Name="ReplaceAmqpVhost" TxtUpdateSet="xml" FindPattern="{AMQP_VHOST}" ReplacePattern="[AMQP_VHOST]" Options="2" Order="6" FileEncoding="-1"/>
     <ROW Name="ReplaceAmqpPort" TxtUpdateSet="xml" FindPattern="{AMQP_PORT}" ReplacePattern="[AMQP_PORT]" Options="2" Order="7" FileEncoding="-1"/>
+    <ROW Name="ReplaceApiHost" TxtUpdateSet="xml" FindPattern="{API_HOST}" ReplacePattern="[API_HOST]" Options="2" Order="15" FileEncoding="-1"/>
     <ROW Name="ReplaceDbHost" TxtUpdateSet="xml" FindPattern="{DB_HOST}" ReplacePattern="[DB_HOST]" Options="2" Order="8" FileEncoding="-1"/>
     <ROW Name="ReplaceDbPwd" TxtUpdateSet="xml" FindPattern="{DB_PWD}" ReplacePattern="[DB_PWD]" Options="2" Order="9" FileEncoding="-1"/>
     <ROW Name="ReplaceDbUser" TxtUpdateSet="xml" FindPattern="{DB_USER}" ReplacePattern="[DB_USER]" Options="2" Order="10" FileEncoding="-1"/>
