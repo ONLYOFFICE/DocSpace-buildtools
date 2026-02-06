@@ -56,7 +56,7 @@ if [ "$DIST" = "ubuntu" ]; then
 elif [ "$DIST" = "debian" ]; then
 	curl -fsSL https://packages.microsoft.com/config/"$DIST"/"$REV"/packages-microsoft-prod.deb -O
 	echo -e "Package: *\nPin: origin \"packages.microsoft.com\"\nPin-Priority: 1002" | tee /etc/apt/preferences.d/99microsoft-prod.pref
-	dpkg -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
+	DEBIAN_FRONTEND=noninteractive dpkg --force-confnew -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
 fi
 
 MYSQL_REPO_VERSION="$(curl -fsSL https://dev.mysql.com/downloads/repo/apt/ | grep -oP '(?<=mysql-apt-config_)[0-9.]+-[0-9]+(?=_all\.deb)' | head -n1)"
