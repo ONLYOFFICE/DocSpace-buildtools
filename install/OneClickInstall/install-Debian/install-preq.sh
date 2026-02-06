@@ -17,6 +17,12 @@ if [ "$DIST" = "debian" ] && [ "$(apt-cache search ttf-mscorefonts-installer | w
 		echo "deb-src http://ftp.uk.debian.org/debian/ $DISTRIB_CODENAME main contrib" >> /etc/apt/sources.list
 fi
 
+# Temporary workaround extend apt-sequoia policy until 2027-02-01 (OpenResty/OpenSearch)
+if [ "$DISTRIB_CODENAME" = "trixie" ]; then
+    install -D /usr/share/apt/default-sequoia.config /etc/crypto-policies/back-ends/apt-sequoia.config
+    sed -i 's/2026-02-01/2027-02-01/' /etc/crypto-policies/back-ends/apt-sequoia.config
+fi
+
 apt-get -y update
 
 if [ -n "$PRODUCT_VERSION" ] && ! apt-cache madison "$product" | awk '{print $3}' | grep -Eq "^${PRODUCT_VERSION}([.-]|$)"; then
