@@ -128,7 +128,7 @@ reassign_values (){
 	files-services )
 		SERVICE_PORT="5009"
 		WORK_DIR="${BASE_DIR}/products/ASC.Files/service/"
-		EXEC_FILE="ASC.Files.Service.dll"
+		EXEC_FILE="ASC.Files.Worker.dll"
 		CORE_EVENT_BUS=" --core:eventBus:subscriptionClientName=asc_event_bus_files_service_queue"
 		DEPENDENCY_LIST="${DEPENDENCY_LIST} opensearch.service"
 	;;
@@ -168,8 +168,8 @@ reassign_values (){
 	;;
 	backup-background )
 		SERVICE_PORT="5032"
-		WORK_DIR="${BASE_DIR}/services/ASC.Data.Backup.BackgroundTasks/"
-		EXEC_FILE="ASC.Data.Backup.BackgroundTasks.dll"
+		WORK_DIR="${BASE_DIR}/services/ASC.Data.Backup.Worker/"
+		EXEC_FILE="ASC.Data.Backup.Worker.dll"
 		CORE_EVENT_BUS=" --core:eventBus:subscriptionClientName=asc_event_bus_backup_queue"
 	;;
 	doceditor )
@@ -220,7 +220,7 @@ reassign_values (){
 	ai-service )
 		SERVICE_PORT="5124"
 		WORK_DIR="${BASE_DIR}/products/ASC.AI/service/"
-		EXEC_FILE="ASC.AI.Service.dll"
+		EXEC_FILE="ASC.AI.Worker.dll"
 		CORE_EVENT_BUS=" --core:eventBus:subscriptionClientName=asc_event_bus_ai_service_queue"
 	;;
 	mcp )

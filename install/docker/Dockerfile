@@ -81,10 +81,10 @@ RUN mkdir -p /app/onlyoffice/ && \
     rm -rf ${SRC_PATH}/common/* && \
     rm -rf ${SRC_PATH}/web/ASC.Web.Core/* && \
     rm -rf ${SRC_PATH}/web/ASC.Web.Studio/* && \
-    rm -rf ${SRC_PATH}/products/ASC.Files/Service/* && \
+    rm -rf ${SRC_PATH}/products/ASC.Files/Worker/* && \
     rm -rf ${SRC_PATH}/products/ASC.Files/Server/* && \
     rm -rf ${SRC_PATH}/products/ASC.People/Server/* && \
-    rm -rf ${SRC_PATH}/products/ASC.AI/Service/* && \
+    rm -rf ${SRC_PATH}/products/ASC.AI/Worker/* && \
     rm -rf ${SRC_PATH}/products/ASC.AI/Server/*
 
 FROM $DOTNET_RUN as dotnetrun
@@ -221,14 +221,14 @@ COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/deploy/log
 
 CMD ["server.js", "ASC.Login"]
 
-## ASC.Data.Backup.BackgroundTasks ##
+## ASC.Data.Backup.Worker ##
 FROM dotnetrun AS backup_background
-WORKDIR ${BUILD_PATH}/services/ASC.Data.Backup.BackgroundTasks/service/
+WORKDIR ${BUILD_PATH}/services/ASC.Data.Backup.Worker/service/
 
 COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
-COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Data.Backup.BackgroundTasks/service/  .
+COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Data.Backup.Worker/service/  .
 
-CMD ["ASC.Data.Backup.BackgroundTasks.dll", "ASC.Data.Backup.BackgroundTasks", "core:eventBus:subscriptionClientName=asc_event_bus_backup_queue"]
+CMD ["ASC.Data.Backup.Worker.dll", "ASC.Data.Backup.Worker", "core:eventBus:subscriptionClientName=asc_event_bus_backup_queue"]
 
 # ASC.ApiSystem ##
 FROM dotnetrun AS api_system
@@ -267,16 +267,16 @@ COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/ASC.Files/Server/DocS
 
 CMD ["ASC.Files.dll", "ASC.Files"]
 
-## ASC.Files.Service ##
+## ASC.Files.Worker ##
 FROM dotnetrun AS files_services
 ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
 WORKDIR ${BUILD_PATH}/products/ASC.Files/service/
 
 COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
-COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Files.Service/service/ .
+COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Files.Worker/service/ .
 COPY --from=linuxserver/ffmpeg:latest --chown=onlyoffice:onlyoffice /usr/local/bin/ /usr/local/bin/
 
-CMD ["ASC.Files.Service.dll", "ASC.Files.Service", "core:eventBus:subscriptionClientName=asc_event_bus_files_service_queue"]
+CMD ["ASC.Files.Worker.dll", "ASC.Files.Worker", "core:eventBus:subscriptionClientName=asc_event_bus_files_service_queue"]
 
 ## ASC.Notify ##
 FROM dotnetrun AS notify
@@ -305,14 +305,14 @@ COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.AI/ser
 
 CMD ["ASC.AI.dll", "ASC.AI"]
 
-## ASC.AI.Service ##
+## ASC.AI.Worker ##
 FROM dotnetrun AS ai_service
 WORKDIR ${BUILD_PATH}/products/ASC.AI/service/
 
 COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
-COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.AI/service/ .
+COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.AI.Worker/service/ .
 
-CMD ["ASC.AI.Service.dll", "ASC.AI.Service", "core:eventBus:subscriptionClientName=asc_event_bus_ai_service_queue"]
+CMD ["ASC.AI.Worker.dll", "ASC.AI.Worker", "core:eventBus:subscriptionClientName=asc_event_bus_ai_service_queue"]
 
 ## ASC.Socket.IO ##
 FROM noderun AS socket

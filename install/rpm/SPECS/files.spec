@@ -115,7 +115,7 @@
 
 %files backup-background
 %defattr(-, onlyoffice, onlyoffice, -)
-%{buildpath}/services/ASC.Data.Backup.BackgroundTasks/
+%{buildpath}/services/ASC.Data.Backup.Worker/
 /usr/lib/systemd/system/%{product}-backup-background.service
 %dir %{buildpath}/services/
 

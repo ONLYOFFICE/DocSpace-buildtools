@@ -352,14 +352,14 @@ COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/log
 
 CMD ["server.js", "ASC.Login"]
 
-## ASC.Data.Backup.BackgroundTasks ##
+## ASC.Data.Backup.Worker ##
 FROM dotnetrun AS backup_background
-WORKDIR ${BUILD_PATH}/services/ASC.Data.Backup.BackgroundTasks/
+WORKDIR ${BUILD_PATH}/services/ASC.Data.Backup.Worker/
 
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Data.Backup.BackgroundTasks/service/  .
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Data.Backup.Worker/service/  .
 
-CMD ["ASC.Data.Backup.BackgroundTasks.dll", "ASC.Data.Backup.BackgroundTasks", "core:eventBus:subscriptionClientName=asc_event_bus_backup_queue"]
+CMD ["ASC.Data.Backup.Worker.dll", "ASC.Data.Backup.Worker", "core:eventBus:subscriptionClientName=asc_event_bus_backup_queue"]
 
 # ASC.ApiSystem ##
 FROM dotnetrun AS api_system
@@ -397,14 +397,14 @@ COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/servi
 
 CMD ["ASC.Files.dll", "ASC.Files"]
 
-## ASC.Files.Service ##
+## ASC.Files.Worker ##
 FROM dotnetrun AS files_services
 ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
 WORKDIR ${BUILD_PATH}/products/ASC.Files/service/
 USER root
 
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Files.Service/service/ .
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Files.Worker/service/ .
 COPY --from=onlyoffice/ffvideo:7.1 --chown=onlyoffice:onlyoffice /app/src/ /
 
 RUN <<EOF
@@ -434,7 +434,7 @@ EOF
 
 USER onlyoffice
 
-CMD ["ASC.Files.Service.dll", "ASC.Files.Service", "core:eventBus:subscriptionClientName=asc_event_bus_files_service_queue"]
+CMD ["ASC.Files.Worker.dll", "ASC.Files.Worker", "core:eventBus:subscriptionClientName=asc_event_bus_files_service_queue"]
 
 ## ASC.Notify ##
 FROM dotnetrun AS notify
@@ -463,14 +463,14 @@ COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/servi
 
 CMD ["ASC.AI.dll", "ASC.AI"]
 
-## ASC.AI.Service ##
+## ASC.AI.Worker ##
 FROM dotnetrun AS ai_service
 WORKDIR ${BUILD_PATH}/products/ASC.AI/service/
 
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.AI.Service/service/ .
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.AI.Worker/service/ .
 
-CMD ["ASC.AI.Service.dll", "ASC.AI.Service", "core:eventBus:subscriptionClientName=asc_event_bus_ai_service_queue"] 
+CMD ["ASC.AI.Worker.dll", "ASC.AI.Worker", "core:eventBus:subscriptionClientName=asc_event_bus_ai_service_queue"] 
 
 ## ASC.Socket.IO ##
 FROM noderun AS socket
@@ -595,16 +595,16 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/dotnet_services.conf /etc/supervisor/conf.d/supervisord.conf
 
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.AI/service/ ${BUILD_PATH}/products/ASC.AI/server/
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.AI.Service/service/ ${BUILD_PATH}/products/ASC.AI/service/
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.AI.Worker/service/ ${BUILD_PATH}/products/ASC.AI/service/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.ApiSystem/service/  ${BUILD_PATH}/services/ASC.ApiSystem/service/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.ClearEvents/service/  ${BUILD_PATH}/services/ASC.ClearEvents/service/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Data.Backup/service/ ${BUILD_PATH}/services/ASC.Data.Backup/service/
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Data.Backup.BackgroundTasks/service/  ${BUILD_PATH}/services/ASC.Data.Backup.BackgroundTasks/service
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Data.Backup.Worker/service/  ${BUILD_PATH}/services/ASC.Data.Backup.Worker/service
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Files/service/ ${BUILD_PATH}/products/ASC.Files/server/
 
 USER root
 ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Files.Service/service/ ${BUILD_PATH}/products/ASC.Files/service/
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Files.Worker/service/ ${BUILD_PATH}/products/ASC.Files/service/
 COPY --from=onlyoffice/ffvideo:7.1 --chown=onlyoffice:onlyoffice /app/src/ ${BUILD_PATH}/products/ASC.Files/service/
 
 RUN set -eux; \

@@ -130,9 +130,9 @@
     <ROW Directory="ASC.AI_Dir" Directory_Parent="products_Dir" DefaultDir="ASC.AI" DirectoryOptions="15"/>
     <ROW Directory="ASC.ApiSystem_Dir" Directory_Parent="services_Dir" DefaultDir="ASC~1.API|ASC.ApiSystem" DirectoryOptions="15"/>
     <ROW Directory="ASC.ClearEvents_Dir" Directory_Parent="services_Dir" DefaultDir="ASC~1.CLE|ASC.ClearEvents" DirectoryOptions="15"/>
-    <ROW Directory="ASC.Data.Backup.BackgroundTasks_Dir" Directory_Parent="services_Dir" DefaultDir="ASCDAT~2.BAC|ASC.Data.Backup.BackgroundTasks" DirectoryOptions="15"/>
+    <ROW Directory="ASC.Data.Backup.Worker_Dir" Directory_Parent="services_Dir" DefaultDir="ASCDAT~2.BAC|ASC.Data.Backup.Worker" DirectoryOptions="15"/>
     <ROW Directory="ASC.Data.Backup_Dir" Directory_Parent="services_Dir" DefaultDir="ASCDAT~1.BAC|ASC.Data.Backup" DirectoryOptions="15"/>
-    <ROW Directory="ASC.Files.Service_Dir" Directory_Parent="services_Dir" DefaultDir="ASCFIL~1.SER|ASC.Files.Service" DirectoryOptions="15"/>
+    <ROW Directory="ASC.Files.Worker_Dir" Directory_Parent="services_Dir" DefaultDir="ASCFIL~1.SER|ASC.Files.Worker" DirectoryOptions="15"/>
     <ROW Directory="ASC.Files_Dir" Directory_Parent="products_Dir" DefaultDir="ASC~1.FIL|ASC.Files" DirectoryOptions="15"/>
     <ROW Directory="ASC.Login_Dir" Directory_Parent="products_Dir" DefaultDir="ASC~1.LOG|ASC.Login" DirectoryOptions="15"/>
     <ROW Directory="ASC.Migration.Runner_Dir" Directory_Parent="services_Dir" DefaultDir="ASCMIG~1.RUN|ASC.Migration.Runner" DirectoryOptions="15"/>
@@ -174,11 +174,11 @@
     <ROW Directory="service_17_Dir" Directory_Parent="ASC.ApiSystem_Dir" DefaultDir="service" DirectoryOptions="15"/>
     <ROW Directory="service_1_Dir" Directory_Parent="ASC.Socket.IO_Dir" DefaultDir="service" DirectoryOptions="15"/>
     <ROW Directory="service_2_Dir" Directory_Parent="ASC.Data.Backup_Dir" DefaultDir="service" DirectoryOptions="15"/>
-    <ROW Directory="service_3_Dir" Directory_Parent="ASC.Data.Backup.BackgroundTasks_Dir" DefaultDir="service" DirectoryOptions="15"/>
+    <ROW Directory="service_3_Dir" Directory_Parent="ASC.Data.Backup.Worker_Dir" DefaultDir="service" DirectoryOptions="15"/>
     <ROW Directory="service_4_Dir" Directory_Parent="ASC.Web.HealthChecks.UI_Dir" DefaultDir="service" DirectoryOptions="15"/>
     <ROW Directory="service_5_Dir" Directory_Parent="ASC.SsoAuth_Dir" DefaultDir="service" DirectoryOptions="15"/>
     <ROW Directory="service_6_Dir" Directory_Parent="ASC.Migration.Runner_Dir" DefaultDir="service" DirectoryOptions="15"/>
-    <ROW Directory="service_7_Dir" Directory_Parent="ASC.Files.Service_Dir" DefaultDir="service" DirectoryOptions="15"/>
+    <ROW Directory="service_7_Dir" Directory_Parent="ASC.Files.Worker_Dir" DefaultDir="service" DirectoryOptions="15"/>
     <ROW Directory="service_8_Dir" Directory_Parent="ASC.TelegramService" DefaultDir="service" DirectoryOptions="15"/>
     <ROW Directory="service_9_Dir" Directory_Parent="ASC.Notify_Dir" DefaultDir="service" DirectoryOptions="15"/>
     <ROW Directory="service_Dir" Directory_Parent="ASC.ClearEvents_Dir" DefaultDir="service" DirectoryOptions="15"/>
@@ -204,18 +204,18 @@
     <ROW Component="AI_DisableModify" ComponentId="{E036B14F-E2E4-4247-B9AB-55C1F6142BF9}" Directory_="APPDIR" Attributes="4" KeyPath="NoModify" Options="1"/>
     <ROW Component="AI_ExePath" ComponentId="{EDF666FF-8C56-4EB7-8255-67DA879A090C}" Directory_="APPDIR" Attributes="4" KeyPath="AI_ExePath"/>
     <ROW Component="APPDIR" ComponentId="{E32A4F89-E985-4E8E-AB26-DFCD685A316B}" Directory_="APPDIR" Attributes="0"/>
-    <ROW Component="ASC.AI.Service.exe" ComponentId="{3E92D2E3-3280-4933-97DB-6F520D7DD4C2}" Directory_="service_10_Dir" Attributes="256" KeyPath="ASC.AI.Service.exe"/>
+    <ROW Component="ASC.AI.Worker.exe" ComponentId="{3E92D2E3-3280-4933-97DB-6F520D7DD4C2}" Directory_="service_10_Dir" Attributes="256" KeyPath="ASC.AI.Worker.exe"/>
     <ROW Component="ASC.AI.exe" ComponentId="{8AD5406A-527B-4EB3-BDF0-30B17705D901}" Directory_="server_Dir" Attributes="256" KeyPath="ASC.AI.exe"/>
     <ROW Component="ASC.ApiSystem.exe" ComponentId="{B781377D-457D-4304-B43D-A80B609B13E5}" Directory_="service_17_Dir" Attributes="0" KeyPath="ASC.ApiSystem.exe"/>
     <ROW Component="ASC.ClearEvents" ComponentId="{73FB7C9B-9AA8-4BB6-A2C3-E85F6B5BE1D5}" Directory_="ASC.ClearEvents_Dir" Attributes="0"/>
     <ROW Component="ASC.ClearEvents.exe" ComponentId="{208F2E9D-F72D-47D8-8B6E-0B85E3EAD12E}" Directory_="service_Dir" Attributes="0" KeyPath="ASC.ClearEvents.exe"/>
     <ROW Component="ASC.Data.Backup" ComponentId="{DDE1435C-947F-4507-B55B-B0594193F8E4}" Directory_="ASC.Data.Backup_Dir" Attributes="0"/>
-    <ROW Component="ASC.Data.Backup.BackgroundTasks" ComponentId="{E6D04525-2108-45E9-8DC2-AD692A66026A}" Directory_="ASC.Data.Backup.BackgroundTasks_Dir" Attributes="0"/>
-    <ROW Component="ASC.Data.Backup.BackgroundTasks.exe" ComponentId="{CB715B3B-BFC0-4A4D-8B47-B1DB7A99A49E}" Directory_="service_3_Dir" Attributes="0" KeyPath="ASC.Data.Backup.BackgroundTasks.exe"/>
+    <ROW Component="ASC.Data.Backup.Worker" ComponentId="{E6D04525-2108-45E9-8DC2-AD692A66026A}" Directory_="ASC.Data.Backup.Worker_Dir" Attributes="0"/>
+    <ROW Component="ASC.Data.Backup.Worker.exe" ComponentId="{CB715B3B-BFC0-4A4D-8B47-B1DB7A99A49E}" Directory_="service_3_Dir" Attributes="0" KeyPath="ASC.Data.Backup.Worker.exe"/>
     <ROW Component="ASC.Data.Backup.exe" ComponentId="{240665F1-DDCF-4FFB-ABEE-2F784ACD87E6}" Directory_="service_2_Dir" Attributes="0" KeyPath="ASC.Data.Backup.exe"/>
     <ROW Component="ASC.Files" ComponentId="{7D4356CB-8A55-4528-8CF6-E3C6181DC119}" Directory_="ASC.Files_Dir" Attributes="0"/>
-    <ROW Component="ASC.Files.Service" ComponentId="{10E5C648-6B24-40DB-926A-4E26E7ABBE7E}" Directory_="ASC.Files.Service_Dir" Attributes="0"/>
-    <ROW Component="ASC.Files.Service.exe" ComponentId="{14D153CC-E7A6-4818-A310-9CE1F332DCDA}" Directory_="service_7_Dir" Attributes="0" KeyPath="ASC.Files.Service.exe"/>
+    <ROW Component="ASC.Files.Worker" ComponentId="{10E5C648-6B24-40DB-926A-4E26E7ABBE7E}" Directory_="ASC.Files.Worker_Dir" Attributes="0"/>
+    <ROW Component="ASC.Files.Worker.exe" ComponentId="{14D153CC-E7A6-4818-A310-9CE1F332DCDA}" Directory_="service_7_Dir" Attributes="0" KeyPath="ASC.Files.Worker.exe"/>
     <ROW Component="ASC.Files.exe" ComponentId="{4D48DD81-BABF-4E1C-A216-C72C1EA8428B}" Directory_="server_2_Dir" Attributes="0" KeyPath="ASC.Files.exe"/>
     <ROW Component="ASC.Login" ComponentId="{323B1636-C7E9-4DA2-8575-92D939FA381F}" Directory_="ASC.Login_Dir" Attributes="0"/>
     <ROW Component="ASC.Migration.Runner" ComponentId="{C03F968B-6259-4CE7-89C7-3236EDD2170C}" Directory_="ASC.Migration.Runner_Dir" Attributes="0"/>
@@ -282,7 +282,7 @@
     <ROW Component="service_ASC.WebApi" ComponentId="{C9664C57-4333-4E95-B94E-E78C6CB28058}" Directory_="service_15_Dir" Attributes="0"/>
     <ROW Component="services" ComponentId="{8F9FE4E0-772E-487A-A61D-7019807D88D4}" Directory_="services_Dir" Attributes="0"/>
     <ROW Component="temp_ASC.ClearEvents" ComponentId="{0D0BC98A-425B-4217-B420-4DA6B25F23DD}" Directory_="temp_1_Dir" Attributes="0"/>
-    <ROW Component="temp_ASC.Data.Backup.BackgroundTasks" ComponentId="{29E2557D-6012-44B2-A9D4-D773157411E2}" Directory_="temp_2_Dir" Attributes="0"/>
+    <ROW Component="temp_ASC.Data.Backup.Worker" ComponentId="{29E2557D-6012-44B2-A9D4-D773157411E2}" Directory_="temp_2_Dir" Attributes="0"/>
     <ROW Component="temp_ASC.Data.Buckup" ComponentId="{53DD808E-59C8-471C-8F2B-05F7ED92D2A7}" Directory_="temp_4_Dir" Attributes="0"/>
     <ROW Component="temp_ASC.File.Service" ComponentId="{D36D733E-3659-46FB-9127-876F179702BD}" Directory_="temp_3_Dir" Attributes="0"/>
     <ROW Component="temp_ASC.Files" ComponentId="{B25665D3-EB6F-4010-A93A-2423983A426A}" Directory_="temp_13_Dir" Attributes="0"/>
@@ -333,7 +333,7 @@
     <ROW File="ASC.People.exe" Component_="ASC.People.exe" FileName="ASCPEO~1.EXE|ASC.People.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\products\ASC.People\server\ASC.People.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.ApiSystem.exe" Component_="ASC.ApiSystem.exe" FileName="ASCAPI~1.EXE|ASC.ApiSystem.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.ApiSystem\service\ASC.ApiSystem.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.Data.Backup.exe" Component_="ASC.Data.Backup.exe" FileName="ASCDAT~1.EXE|ASC.Data.Backup.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.Data.Backup\service\ASC.Data.Backup.exe" SelfReg="false" DigSign="true"/>
-    <ROW File="ASC.Files.Service.exe" Component_="ASC.Files.Service.exe" FileName="ASCFIL~1.EXE|ASC.Files.Service.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.Files.Service\service\ASC.Files.Service.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="ASC.Files.Worker.exe" Component_="ASC.Files.Worker.exe" FileName="ASCFIL~1.EXE|ASC.Files.Worker.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.Files.Worker\service\ASC.Files.Worker.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.Notify.exe" Component_="ASC.Notify.exe" FileName="ASCNOT~1.EXE|ASC.Notify.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.Notify\service\ASC.Notify.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.Studio.Notify.exe" Component_="ASC.Studio.Notify.exe" FileName="ASCSTU~1.EXE|ASC.Studio.Notify.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.Studio.Notify\service\ASC.Studio.Notify.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.Web.Studio.exe" Component_="ASC.Web.Studio.exe" FileName="ASCWEB~1.EXE|ASC.Web.Studio.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.Web.Studio\service\ASC.Web.Studio.exe" SelfReg="false" DigSign="true"/>
@@ -343,7 +343,7 @@
     <ROW File="Socket.IO.exe" Component_="Socket.IO.exe" FileName="SOCKET~1.EXE|Socket.IO.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\Socket.IO.exe" SelfReg="false" DigSign="true"/>
     <ROW File="SsoAuth.exe" Component_="SsoAuth.exe" FileName="SsoAuth.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\SsoAuth.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.ClearEvents.exe" Component_="ASC.ClearEvents.exe" FileName="ASCCLE~1.EXE|ASC.ClearEvents.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.ClearEvents\service\ASC.ClearEvents.exe" SelfReg="false" DigSign="true"/>
-    <ROW File="ASC.Data.Backup.BackgroundTasks.exe" Component_="ASC.Data.Backup.BackgroundTasks.exe" FileName="ASCDAT~1.EXE|ASC.Data.Backup.BackgroundTasks.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.Data.Backup.BackgroundTasks\service\ASC.Data.Backup.BackgroundTasks.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="ASC.Data.Backup.Worker.exe" Component_="ASC.Data.Backup.Worker.exe" FileName="ASCDAT~1.EXE|ASC.Data.Backup.Worker.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.Data.Backup.Worker\service\ASC.Data.Backup.Worker.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.Migration.Runner.exe" Component_="ASC.Migration.Runner.exe" FileName="ASCMIG~2.EXE|ASC.Migration.Runner.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.Migration.Runner\service\ASC.Migration.Runner.exe" SelfReg="false" DigSign="true"/>
     <ROW File="DocEditor.exe" Component_="DocEditor.exe" FileName="DOCEDI~1.EXE|DocEditor.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\DocEditor.exe" SelfReg="false" DigSign="true"/>
     <ROW File="Login.exe" Component_="Login.exe" FileName="LOGIN~1.EXE|Login.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\Login.exe" SelfReg="false" DigSign="true"/>
@@ -354,7 +354,7 @@
     <ROW File="Management.exe" Component_="Management.exe" FileName="MANAGE~1.EXE|Management.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\Tools\Management.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.TelegramService.exe" Component_="ASC.TelegramService.exe" FileName="ASCTEL~1.EXE|ASC.TelegramService.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.ASC.TelegramService\service\ASC.TelegramService.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.AI.exe" Component_="ASC.AI.exe" FileName="ASCAI~1.EXE|ASC.AI.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\products\ASC.AI\server\ASC.AI.exe" SelfReg="false" DigSign="true"/>
-    <ROW File="ASC.AI.Service.exe" Component_="ASC.AI.Service.exe" FileName="ASCAIS~1.EXE|ASC.AI.Service.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\products\ASC.AI\service\ASC.AI.Service.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="ASC.AI.Worker.exe" Component_="ASC.AI.Worker.exe" FileName="ASCAIS~1.EXE|ASC.AI.Worker.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\products\ASC.AI\service\ASC.AI.Worker.exe" SelfReg="false" DigSign="true"/>
     <ROW File="MCP.exe" Component_="MCP.exe" FileName="MCP.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\MCP.exe" SelfReg="false"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.BootstrOptComponent">
@@ -1173,16 +1173,16 @@
     <ROW Feature_="DataBackup" Component_="ASC.Data.Backup.exe"/>
     <ROW Feature_="DataBackup" Component_="service_ASC.Data.Backup"/>
     <ROW Feature_="DataBackup" Component_="temp_ASC.Data.Buckup"/>
-    <ROW Feature_="BackgroundTasks" Component_="ASC.Data.Backup.BackgroundTasks"/>
-    <ROW Feature_="BackgroundTasks" Component_="ASC.Data.Backup.BackgroundTasks.exe"/>
+    <ROW Feature_="BackgroundTasks" Component_="ASC.Data.Backup.Worker"/>
+    <ROW Feature_="BackgroundTasks" Component_="ASC.Data.Backup.Worker.exe"/>
     <ROW Feature_="BackgroundTasks" Component_="service_ASC.Data.Backup.BachgroundTasks"/>
-    <ROW Feature_="BackgroundTasks" Component_="temp_ASC.Data.Backup.BackgroundTasks"/>
+    <ROW Feature_="BackgroundTasks" Component_="temp_ASC.Data.Backup.Worker"/>
     <ROW Feature_="File" Component_="ASC.Files"/>
     <ROW Feature_="File" Component_="ASC.Files.exe"/>
     <ROW Feature_="File" Component_="server_ASC.Files"/>
     <ROW Feature_="File" Component_="temp_ASC.Files"/>
-    <ROW Feature_="Files" Component_="ASC.Files.Service"/>
-    <ROW Feature_="Files" Component_="ASC.Files.Service.exe"/>
+    <ROW Feature_="Files" Component_="ASC.Files.Worker"/>
+    <ROW Feature_="Files" Component_="ASC.Files.Worker.exe"/>
     <ROW Feature_="Files" Component_="service_ASC.File.Service"/>
     <ROW Feature_="Files" Component_="temp_ASC.File.Service"/>
     <ROW Feature_="WebHealthChecksUI" Component_="ASC.Web.HealthChecks.UI"/>
@@ -1246,7 +1246,7 @@
     <ROW Feature_="Management" Component_="Management.exe"/>
     <ROW Feature_="Telegram" Component_="ASC.TelegramService.exe"/>
     <ROW Feature_="AI" Component_="ASC.AI.exe"/>
-    <ROW Feature_="AI" Component_="ASC.AI.Service.exe"/>
+    <ROW Feature_="AI" Component_="ASC.AI.Worker.exe"/>
     <ROW Feature_="MCP" Component_="MCP.exe"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
@@ -1499,14 +1499,14 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiServConfigComponent">
     <ROW MsiServiceConfig="ServiceName_AI" Name="[ServiceName_AI]" Event="1" ConfigType="3" Argument="1" Component_="ASC.AI.exe"/>
-    <ROW MsiServiceConfig="ServiceName_AI_Service" Name="[ServiceName_AI_Service]" Event="1" ConfigType="3" Argument="1" Component_="ASC.AI.Service.exe"/>
+    <ROW MsiServiceConfig="ServiceName_AI_Service" Name="[ServiceName_AI_Service]" Event="1" ConfigType="3" Argument="1" Component_="ASC.AI.Worker.exe"/>
     <ROW MsiServiceConfig="ServiceName_ApiSystemService" Name="[ServiceName_ApiSystemService]" Event="1" ConfigType="3" Argument="1" Component_="ASC.ApiSystem.exe"/>
-    <ROW MsiServiceConfig="ServiceName_BackgroundTasks" Name="[ServiceName_BackgroundTasks]" Event="1" ConfigType="3" Argument="1" Component_="ASC.Data.Backup.BackgroundTasks.exe"/>
+    <ROW MsiServiceConfig="ServiceName_BackgroundTasks" Name="[ServiceName_BackgroundTasks]" Event="1" ConfigType="3" Argument="1" Component_="ASC.Data.Backup.Worker.exe"/>
     <ROW MsiServiceConfig="ServiceName_BackupService" Name="[ServiceName_BackupService]" Event="1" ConfigType="3" Argument="1" Component_="ASC.Data.Backup.exe"/>
     <ROW MsiServiceConfig="ServiceName_ClearEvents" Name="[ServiceName_ClearEvents]" Event="1" ConfigType="3" Argument="1" Component_="ASC.ClearEvents.exe"/>
     <ROW MsiServiceConfig="ServiceName_DocEditor" Name="[ServiceName_DocEditor]" Event="1" ConfigType="3" Argument="1" Component_="DocEditor.exe"/>
     <ROW MsiServiceConfig="ServiceName_FileServer" Name="[ServiceName_FileServer]" Event="1" ConfigType="3" Argument="1" Component_="ASC.Files.exe"/>
-    <ROW MsiServiceConfig="ServiceName_FileService" Name="[ServiceName_FileService]" Event="1" ConfigType="3" Argument="1" Component_="ASC.Files.Service.exe"/>
+    <ROW MsiServiceConfig="ServiceName_FileService" Name="[ServiceName_FileService]" Event="1" ConfigType="3" Argument="1" Component_="ASC.Files.Worker.exe"/>
     <ROW MsiServiceConfig="ServiceName_Identity.Authorization" Name="[ServiceName_Identity.Authorization]" Event="1" ConfigType="3" Argument="1" Component_="Identity.Authorization.exe"/>
     <ROW MsiServiceConfig="ServiceName_Identity.Registration" Name="[ServiceName_Identity.Registration]" Event="1" ConfigType="3" Argument="1" Component_="Identity.Registration.exe"/>
     <ROW MsiServiceConfig="ServiceName_Login" Name="[ServiceName_Login]" Event="1" ConfigType="3" Argument="1" Component_="Login.exe"/>
@@ -1525,14 +1525,14 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiServConfigFailureActionsComponent">
     <ROW MsiServiceConfigFailureActions="ServiceName_AI" Name="[ServiceName_AI]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.AI.exe"/>
-    <ROW MsiServiceConfigFailureActions="ServiceName_AI_Service" Name="[ServiceName_AI_Service]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.AI.Service.exe"/>
+    <ROW MsiServiceConfigFailureActions="ServiceName_AI_Service" Name="[ServiceName_AI_Service]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.AI.Worker.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_ApiSystemService" Name="[ServiceName_ApiSystemService]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.ApiSystem.exe"/>
-    <ROW MsiServiceConfigFailureActions="ServiceName_BackgroundTasks" Name="[ServiceName_BackgroundTasks]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.Data.Backup.BackgroundTasks.exe"/>
+    <ROW MsiServiceConfigFailureActions="ServiceName_BackgroundTasks" Name="[ServiceName_BackgroundTasks]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.Data.Backup.Worker.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_BackupService" Name="[ServiceName_BackupService]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.Data.Backup.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_ClearEvents" Name="[ServiceName_ClearEvents]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.ClearEvents.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_DocEditor" Name="[ServiceName_DocEditor]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="DocEditor.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_FileServer" Name="[ServiceName_FileServer]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.Files.exe"/>
-    <ROW MsiServiceConfigFailureActions="ServiceName_FileService" Name="[ServiceName_FileService]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.Files.Service.exe"/>
+    <ROW MsiServiceConfigFailureActions="ServiceName_FileService" Name="[ServiceName_FileService]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.Files.Worker.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_Identity.Authorization" Name="[ServiceName_Identity.Authorization]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="Identity.Authorization.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_Identity.Registration" Name="[ServiceName_Identity.Registration]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="Identity.Registration.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_Login" Name="[ServiceName_Login]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="Login.exe"/>
@@ -1551,14 +1551,14 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiServCtrlComponent">
     <ROW ServiceControl="ServiceName_AI" Name="[ServiceName_AI]" Event="161" Wait="0" Component_="ASC.AI.exe"/>
-    <ROW ServiceControl="ServiceName_AI_Service" Name="[ServiceName_AI_Service]" Event="161" Wait="0" Component_="ASC.AI.Service.exe"/>
+    <ROW ServiceControl="ServiceName_AI_Service" Name="[ServiceName_AI_Service]" Event="161" Wait="0" Component_="ASC.AI.Worker.exe"/>
     <ROW ServiceControl="ServiceName_ApiSystemService" Name="[ServiceName_ApiSystemService]" Event="161" Wait="0" Component_="ASC.ApiSystem.exe"/>
-    <ROW ServiceControl="ServiceName_BackgroundTasks" Name="[ServiceName_BackgroundTasks]" Event="161" Wait="0" Component_="ASC.Data.Backup.BackgroundTasks.exe"/>
+    <ROW ServiceControl="ServiceName_BackgroundTasks" Name="[ServiceName_BackgroundTasks]" Event="161" Wait="0" Component_="ASC.Data.Backup.Worker.exe"/>
     <ROW ServiceControl="ServiceName_BackupService" Name="[ServiceName_BackupService]" Event="161" Wait="0" Component_="ASC.Data.Backup.exe"/>
     <ROW ServiceControl="ServiceName_ClearEvents" Name="[ServiceName_ClearEvents]" Event="161" Wait="0" Component_="ASC.ClearEvents.exe"/>
     <ROW ServiceControl="ServiceName_DocEditor" Name="[ServiceName_DocEditor]" Event="161" Wait="0" Component_="DocEditor.exe"/>
     <ROW ServiceControl="ServiceName_FileServer" Name="[ServiceName_FileServer]" Event="161" Wait="0" Component_="ASC.Files.exe"/>
-    <ROW ServiceControl="ServiceName_FileService" Name="[ServiceName_FileService]" Event="161" Wait="0" Component_="ASC.Files.Service.exe"/>
+    <ROW ServiceControl="ServiceName_FileService" Name="[ServiceName_FileService]" Event="161" Wait="0" Component_="ASC.Files.Worker.exe"/>
     <ROW ServiceControl="ServiceName_Identity.Authorization" Name="[ServiceName_Identity.Authorization]" Event="161" Wait="0" Component_="Identity.Authorization.exe"/>
     <ROW ServiceControl="ServiceName_Identity.Registration" Name="[ServiceName_Identity.Registration]" Event="161" Wait="0" Component_="Identity.Registration.exe"/>
     <ROW ServiceControl="ServiceName_Login" Name="[ServiceName_Login]" Event="161" Wait="0" Component_="Login.exe"/>
@@ -1577,14 +1577,14 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiServInstComponent">
     <ROW ServiceInstall="ServiceName_AI" Name="[ServiceName_AI]" DisplayName="[ShortProductName] AI" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5157 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_AI] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER]" Component_="ASC.AI.exe" Description="[ShortProductName] AI"/>
-    <ROW ServiceInstall="ServiceName_AI_Service" Name="[ServiceName_AI_Service]" DisplayName="[ShortProductName] AI.Service" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5124 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_AI_Service] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER] --core:eventBus:subscriptionClientName=asc_event_bus_ai_service_queue" Component_="ASC.AI.Service.exe" Description="[ShortProductName] AI.Service"/>
+    <ROW ServiceInstall="ServiceName_AI_Service" Name="[ServiceName_AI_Service]" DisplayName="[ShortProductName] AI.Service" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5124 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_AI_Service] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER] --core:eventBus:subscriptionClientName=asc_event_bus_ai_service_queue" Component_="ASC.AI.Worker.exe" Description="[ShortProductName] AI.Service"/>
     <ROW ServiceInstall="ServiceName_ApiSystemService" Name="[ServiceName_ApiSystemService]" DisplayName="[ShortProductName] ApiSystem" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5010 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_ApiSystemService] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER]" Component_="ASC.ApiSystem.exe" Description="[ShortProductName] ApiSystem"/>
-    <ROW ServiceInstall="ServiceName_BackgroundTasks" Name="[ServiceName_BackgroundTasks]" DisplayName="[ShortProductName] Data.Backup.BackgroundTasks" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5032 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_BackgroundTasks] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER] --core:eventBus:subscriptionClientName=asc_event_bus_backup_queue" Component_="ASC.Data.Backup.BackgroundTasks.exe" Description="[ShortProductName] Data.Backup.BackgroundTasks"/>
+    <ROW ServiceInstall="ServiceName_BackgroundTasks" Name="[ServiceName_BackgroundTasks]" DisplayName="[ShortProductName] Data.Backup.BackgroundTasks" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5032 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_BackgroundTasks] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER] --core:eventBus:subscriptionClientName=asc_event_bus_backup_queue" Component_="ASC.Data.Backup.Worker.exe" Description="[ShortProductName] Data.Backup.BackgroundTasks"/>
     <ROW ServiceInstall="ServiceName_BackupService" Name="[ServiceName_BackupService]" DisplayName="[ShortProductName] BackupService" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5012 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_BackupService] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER]" Component_="ASC.Data.Backup.exe" Description="[ShortProductName] BackupService"/>
     <ROW ServiceInstall="ServiceName_ClearEvents" Name="[ServiceName_ClearEvents]" DisplayName="[ShortProductName] ClearEvents" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5027 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_ClearEvents] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER]" Component_="ASC.ClearEvents.exe" Description="[ShortProductName] ClearEvents"/>
     <ROW ServiceInstall="ServiceName_DocEditor" Name="[ServiceName_DocEditor]" DisplayName="[ShortProductName] DocEditor" ServiceType="16" StartType="2" ErrorControl="1" Component_="DocEditor.exe" Description="[ShortProductName] DocEditor"/>
     <ROW ServiceInstall="ServiceName_FileServer" Name="[ServiceName_FileServer]" DisplayName="[ShortProductName] FileServer" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5007 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_FileServer] [SUBFOLDER_SERVER]" Component_="ASC.Files.exe" Description="[ShortProductName] FileServer"/>
-    <ROW ServiceInstall="ServiceName_FileService" Name="[ServiceName_FileService]" DisplayName="[ShortProductName] FileService" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5009 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_FileService] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER] --core:eventBus:subscriptionClientName=asc_event_bus_files_service_queue" Component_="ASC.Files.Service.exe" Description="[ShortProductName] FileService"/>
+    <ROW ServiceInstall="ServiceName_FileService" Name="[ServiceName_FileService]" DisplayName="[ShortProductName] FileService" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5009 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_FileService] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER] --core:eventBus:subscriptionClientName=asc_event_bus_files_service_queue" Component_="ASC.Files.Worker.exe" Description="[ShortProductName] FileService"/>
     <ROW ServiceInstall="ServiceName_Identity.Authorization" Name="[ServiceName_Identity.Authorization]" DisplayName="[ShortProductName] Identity.Authorization" ServiceType="16" StartType="2" ErrorControl="1" Component_="Identity.Authorization.exe" Description="[ShortProductName] Identity.Authorization"/>
     <ROW ServiceInstall="ServiceName_Identity.Registration" Name="[ServiceName_Identity.Registration]" DisplayName="[ShortProductName] Identity.Registration" ServiceType="16" StartType="2" ErrorControl="1" Component_="Identity.Registration.exe" Description="[ShortProductName] Identity.Registration"/>
     <ROW ServiceInstall="ServiceName_Login" Name="[ServiceName_Login]" DisplayName="[ShortProductName] Login" ServiceType="16" StartType="2" ErrorControl="1" Component_="Login.exe" Description="[ShortProductName] Login"/>
