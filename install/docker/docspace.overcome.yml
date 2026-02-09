@@ -8,7 +8,7 @@ x-profiles-local: &x-profiles-local
     ENV_EXTENSION: ${ENV_EXTENSION}
 
 services:
-  onlyoffice-backup-background-tasks:
+  onlyoffice-backup-worker:
     <<: *x-profiles-local
     image: ${Baseimage_Dotnet_Run}
     working_dir: ${BUILD_PATH}/services/ASC.Data.Backup.Worker/
@@ -54,7 +54,7 @@ services:
       onlyoffice-migration-runner:
         condition: service_completed_successfully
 
-  onlyoffice-files-services:
+  onlyoffice-files-worker:
     <<: *x-profiles-local
     image: ${Baseimage_Dotnet_Run}
     working_dir: ${BUILD_PATH}/products/ASC.Files/service/
@@ -172,7 +172,7 @@ services:
       onlyoffice-migration-runner:
         condition: service_completed_successfully
 
-  onlyoffice-ai-service:
+  onlyoffice-ai-worker:
     <<: *x-profiles-local
     image: ${Baseimage_Dotnet_Run}
     working_dir: ${BUILD_PATH}/products/ASC.AI/service/
