@@ -1,5 +1,5 @@
 files:
-  - name: "{{product}}-ai-service.install"
+  - name: "{{product}}-ai-worker.install"
     content: |
       debian/build/publish/services/ASC.AI.Worker/service var/www/{{product}}/products/ASC.AI
 
@@ -19,7 +19,7 @@ files:
     content: |
       debian/build/publish/services/ASC.Web.Api/service/* var/www/{{product}}/studio/ASC.Web.Api
 
-  - name: "{{product}}-backup-background.install"
+  - name: "{{product}}-backup-worker.install"
     content: |
       debian/build/publish/services/ASC.Data.Backup.Worker/service/* var/www/{{product}}/services/ASC.Data.Backup.Worker
 
@@ -46,7 +46,7 @@ files:
     content: |
       debian/build/publish/web/editor var/www/{{product}}/products/ASC.Files
 
-  - name: "{{product}}-files-services.install"
+  - name: "{{product}}-files-worker.install"
     content: |
       debian/build/publish/services/ASC.Files.Worker/service var/www/{{product}}/products/ASC.Files
 

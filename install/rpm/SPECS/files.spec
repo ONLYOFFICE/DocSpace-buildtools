@@ -31,10 +31,10 @@
 %dir %{_sysconfdir}/onlyoffice/%{product}/.private/
 %dir %{_var}/log/onlyoffice/
 
-%files files-services
+%files files-worker
 %defattr(-, onlyoffice, onlyoffice, -)
 %{buildpath}/products/ASC.Files/service/
-/usr/lib/systemd/system/%{product}-files-services.service
+/usr/lib/systemd/system/%{product}-files-worker.service
 %dir %{buildpath}/products/
 %dir %{buildpath}/products/ASC.Files/
 
@@ -113,10 +113,10 @@
 /usr/lib/systemd/system/%{product}-clear-events.service
 %dir %{buildpath}/services/
 
-%files backup-background
+%files backup-worker
 %defattr(-, onlyoffice, onlyoffice, -)
 %{buildpath}/services/ASC.Data.Backup.Worker/
-/usr/lib/systemd/system/%{product}-backup-background.service
+/usr/lib/systemd/system/%{product}-backup-worker.service
 %dir %{buildpath}/services/
 
 %files doceditor
@@ -178,10 +178,10 @@
 %dir %{buildpath}/products/
 %dir %{buildpath}/products/ASC.AI/
 
-%files ai-service
+%files ai-worker
 %defattr(-, onlyoffice, onlyoffice, -)
 %{buildpath}/products/ASC.AI/service/
-/usr/lib/systemd/system/%{product}-ai-service.service
+/usr/lib/systemd/system/%{product}-ai-worker.service
 %dir %{buildpath}/products/
 %dir %{buildpath}/products/ASC.AI/
 

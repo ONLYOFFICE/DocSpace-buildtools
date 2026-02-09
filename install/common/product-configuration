@@ -645,9 +645,9 @@ stop_services() {
 }
 
 SERVICES=(login api socket studio-notify notify \
-people-server files files-services studio backup api-system \
-clear-events backup-background ssoauth doceditor healthchecks \
-identity-authorization identity-api sdk management telegram ai ai-service mcp)
+people-server files files-worker studio backup api-system \
+clear-events backup-worker ssoauth doceditor healthchecks \
+identity-authorization identity-api sdk management telegram ai ai-worker mcp)
 SERVICES_LIST=("${SERVICES[@]/#/${PRODUCT}-}")
 
 if command -v yum >/dev/null 2>&1; then

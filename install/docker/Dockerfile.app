@@ -353,7 +353,7 @@ COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/log
 CMD ["server.js", "ASC.Login"]
 
 ## ASC.Data.Backup.Worker ##
-FROM dotnetrun AS backup_background
+FROM dotnetrun AS backup_worker
 WORKDIR ${BUILD_PATH}/services/ASC.Data.Backup.Worker/
 
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
@@ -398,7 +398,7 @@ COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/servi
 CMD ["ASC.Files.dll", "ASC.Files"]
 
 ## ASC.Files.Worker ##
-FROM dotnetrun AS files_services
+FROM dotnetrun AS files_worker
 ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
 WORKDIR ${BUILD_PATH}/products/ASC.Files/service/
 USER root
@@ -464,7 +464,7 @@ COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/servi
 CMD ["ASC.AI.dll", "ASC.AI"]
 
 ## ASC.AI.Worker ##
-FROM dotnetrun AS ai_service
+FROM dotnetrun AS ai_worker
 WORKDIR ${BUILD_PATH}/products/ASC.AI/service/
 
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py

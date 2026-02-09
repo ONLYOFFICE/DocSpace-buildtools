@@ -61,14 +61,14 @@ SERVICE_NAME=(
 	notify 
 	people-server
 	files
-	files-services
+	files-worker
 	studio
 	backup
 	ssoauth
 	identity-authorization
 	identity-api
 	clear-events
-	backup-background
+	backup-worker
 	doceditor
 	migration-runner
 	login
@@ -77,7 +77,7 @@ SERVICE_NAME=(
 	management
 	telegram
 	ai
-	ai-service
+	ai-worker
 	mcp
 	)
 
@@ -125,7 +125,7 @@ reassign_values (){
 		WORK_DIR="${BASE_DIR}/products/ASC.Files/server/"
 		EXEC_FILE="ASC.Files.dll"
 	;;
-	files-services )
+	files-worker )
 		SERVICE_PORT="5009"
 		WORK_DIR="${BASE_DIR}/products/ASC.Files/service/"
 		EXEC_FILE="ASC.Files.Worker.dll"
@@ -166,7 +166,7 @@ reassign_values (){
 		WORK_DIR="${BASE_DIR}/services/ASC.ClearEvents/"
 		EXEC_FILE="ASC.ClearEvents.dll"
 	;;
-	backup-background )
+	backup-worker )
 		SERVICE_PORT="5032"
 		WORK_DIR="${BASE_DIR}/services/ASC.Data.Backup.Worker/"
 		EXEC_FILE="ASC.Data.Backup.Worker.dll"
@@ -217,7 +217,7 @@ reassign_values (){
 		WORK_DIR="${BASE_DIR}/products/ASC.AI/server/"
 		EXEC_FILE="ASC.AI.dll"
 	;;
-	ai-service )
+	ai-worker )
 		SERVICE_PORT="5124"
 		WORK_DIR="${BASE_DIR}/products/ASC.AI/service/"
 		EXEC_FILE="ASC.AI.Worker.dll"
