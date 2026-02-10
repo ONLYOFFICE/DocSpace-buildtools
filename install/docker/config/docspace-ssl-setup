@@ -67,7 +67,7 @@ create_renew_script() {
         echo "    -v /var/lib/letsencrypt:/var/lib/letsencrypt \\" >> ${CRON_FILE}
         echo "    -v onlyoffice_webroot_path:$WEBROOT_PATH \\" >> ${CRON_FILE}
         echo "    certbot/certbot renew -v --force-renewal 2>&1 | tee -a /var/log/${PRODUCT}-renew-letsencrypt.log" >> ${CRON_FILE}
-        echo "$(command -v docker-compose) -f ${DOCKERCOMPOSE}/proxy-ssl.yml up -d --force-recreate" >> ${CRON_FILE}
+        echo "$(echo "$(command -v ${DOCKER_COMPOSE%% *})${DOCKER_COMPOSE#${DOCKER_COMPOSE%% *}}") -f ${DOCKERCOMPOSE}/proxy-ssl.yml up -d --force-recreate" >> ${CRON_FILE}
         chmod a+x "${CRON_FILE}"
     else
       echo "Error: directory /etc/cron.weekly does not exist." >&2
@@ -112,6 +112,17 @@ db() {
       mysql -h"${MYSQL_HOST:-$MYSQL_CONTAINER_NAME}" -P"${MYSQL_PORT:-3306}" -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DATABASE}" "$@"
 }
 
+check_docker_compose() {
+  local COMPOSE_REQ=2018000 v
+  for DOCKER_COMPOSE in "docker compose" docker-compose; do
+    VERSION=$(${DOCKER_COMPOSE} version --short 2>/dev/null) || continue
+    awk -F. -v R="$COMPOSE_REQ" 'NF>=3{exit !($1*1e6+$2*1e3+$3>=R)}' <<<"${VERSION%%[^0-9.]*}" && return 0
+  done
+  return 1
+}
+
+check_docker_compose || { echo "docker compose not installed or outdated version"; exit 1; }
+
 case $1 in 
   -f | --file )
     if [ -n "$2" ] && [ -n "$3" ]; then
@@ -146,7 +157,7 @@ case $1 in
 
     if docker ps -f "name=onlyoffice-proxy" --format '{{.Names}}' | grep -q "onlyoffice-proxy"; then
       if docker ps -f "name=onlyoffice-proxy" --format "{{.Ports}}" | grep -q "443"; then
-        docker-compose -f ${DOCKERCOMPOSE}/proxy-ssl.yml down
+        ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/proxy-ssl.yml down
       fi
     fi
 
@@ -157,12 +168,12 @@ case $1 in
     if grep -q '^[[:space:]]*-[[:space:]]*.*${CERTIFICATE_PATH}' ${DOCKERCOMPOSE}/docspace.yml; then
       sed -i '/USE_UNAUTHORIZED_STORAGE/d' ${DOCKERCOMPOSE}/ds.yml
       sed -i 's/^\([[:space:]]*\)-\(.*${CERTIFICATE_PATH}.*\)/\1#-\2/' ${DOCKERCOMPOSE}/docspace.yml ${DOCKERCOMPOSE}/ds.yml
-      docker-compose -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-doceditor onlyoffice-sdk onlyoffice-login onlyoffice-socket onlyoffice-ssoauth
-      docker-compose -f ${DOCKERCOMPOSE}/ds.yml up --force-recreate -d
+      ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-doceditor onlyoffice-sdk onlyoffice-login onlyoffice-socket onlyoffice-ssoauth
+      ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/ds.yml up --force-recreate -d
     fi
 
-    docker-compose -f ${DOCKERCOMPOSE}/proxy.yml up --force-recreate -d
-    docker-compose -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-files
+    ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/proxy.yml up --force-recreate -d
+    ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-files
     
     echo "OK"
     exit 0
@@ -252,7 +263,7 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
 
       if [ "$CERT_TRUST_REQUIRED" = true ]; then
         sed -i 's/^\([[:space:]]*\)#-\(.*${CERTIFICATE_PATH}.*\)/\1-\2/' ${DOCKERCOMPOSE}/docspace.yml ${DOCKERCOMPOSE}/ds.yml
-        docker-compose -f "${DOCKERCOMPOSE}/ds.yml" up --force-recreate -d
+        ${DOCKER_COMPOSE} -f "${DOCKERCOMPOSE}/ds.yml" up --force-recreate -d
       fi
     fi
     
@@ -261,8 +272,8 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
       db -e "UPDATE tenants_tenants SET mappeddomain='${DOMAIN}' WHERE alias='localhost';"
     fi
     
-    docker-compose -f ${DOCKERCOMPOSE}/proxy-ssl.yml up --force-recreate -d
-    docker-compose -f ${DOCKERCOMPOSE}/docspace.yml -f ${DOCKERCOMPOSE}/notify.yml up --force-recreate -d
+    ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/proxy-ssl.yml up --force-recreate -d
+    ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/docspace.yml -f ${DOCKERCOMPOSE}/notify.yml up --force-recreate -d
 
     echo "OK"
   else
