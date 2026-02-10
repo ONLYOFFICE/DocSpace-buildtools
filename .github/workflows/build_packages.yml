@@ -147,7 +147,7 @@ jobs:
           download "$PRODUCT-plugins"     "master"                  plugins &
           download "document-formats"     "master"                  document-formats &
           download "$PRODUCT-mcp"         "main"                    mcp &
-          download "docspace-ui-kit-react" "develop"                 ui-kit &
+          download "$PRODUCT-ui-kit-react" "develop"                 ui-kit &
           wait
 
       - name: Build DEB Packages

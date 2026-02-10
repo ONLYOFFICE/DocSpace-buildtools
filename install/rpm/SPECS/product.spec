@@ -29,7 +29,7 @@ Source5:        https://codeload.github.com/ONLYOFFICE/ASC.Web.Campaigns/tar.gz/
 Source6:        https://codeload.github.com/ONLYOFFICE/%{product}-plugins/tar.gz/master#/plugins.tar.gz
 Source7:        https://codeload.github.com/ONLYOFFICE/document-formats/tar.gz/master#/document-formats.tar.gz
 Source8:        https://codeload.github.com/ONLYOFFICE/%{product}-mcp/tar.gz/main#/mcp.tar.gz
-Source9:        https://codeload.github.com/ONLYOFFICE/docspace-ui-kit-react/tar.gz/develop#/ui-kit.tar.gz
+Source9:        https://codeload.github.com/ONLYOFFICE/%{product}-ui-kit-react/tar.gz/develop#/ui-kit.tar.gz
 
 BuildRequires:  nodejs >= 22.0
 BuildRequires:  yarn
