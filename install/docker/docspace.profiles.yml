@@ -130,13 +130,13 @@ services:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_NOTIFY}/health/ || exit 1
 
-  onlyoffice-backup-background-tasks:
+  onlyoffice-backup-worker:
     <<: [*x-service-base, *x-profiles-backend]
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-backup-background:${DOCKER_TAG}"
-    container_name: ${BACKUP_BACKGRUOND_TASKS_HOST}
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-backup-worker:${DOCKER_TAG}"
+    container_name: ${BACKUP_WORKER_HOST}
     healthcheck:
       <<: *x-healthcheck
-      test: curl --fail http://${SERVICE_BACKUP_BACKGRUOND_TASKS}/health/ || exit 1
+      test: curl --fail http://${SERVICE_BACKUP_WORKER}/health/ || exit 1
 
   onlyoffice-backup:
     <<: [*x-service-base, *x-profiles-backend]
@@ -162,13 +162,13 @@ services:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_FILES}/health/ || exit 1
 
-  onlyoffice-files-services:
+  onlyoffice-files-worker:
     <<: [*x-service-base, *x-profiles-backend]
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-files-services:${DOCKER_TAG}"
-    container_name: ${FILES_SERVICES_HOST}
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-files-worker:${DOCKER_TAG}"
+    container_name: ${FILES_WORKER_HOST}
     healthcheck:
       <<: *x-healthcheck
-      test: curl --fail http://${SERVICE_FILES_SERVICES}/health/ || exit 1
+      test: curl --fail http://${SERVICE_FILES_WORKER}/health/ || exit 1
 
   onlyoffice-people-server:
     <<: [*x-service-base, *x-profiles-backend]
@@ -225,13 +225,13 @@ services:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_AI}/health/ || exit 1
 
-  onlyoffice-ai-service:
+  onlyoffice-ai-worker:
     <<: [*x-service-base, *x-profiles-backend]
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-ai-service:${DOCKER_TAG}"
-    container_name: ${AI_SERVICE_HOST}
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-ai-worker:${DOCKER_TAG}"
+    container_name: ${AI_WORKER_HOST}
     healthcheck:
       <<: *x-healthcheck
-      test: curl --fail http://${SERVICE_AI_SERVICE}/health/ || exit 1
+      test: curl --fail http://${SERVICE_AI_WORKER}/health/ || exit 1
 
   onlyoffice-ssoauth:
     <<: [*x-service-base, *x-profiles-backend]
@@ -289,7 +289,7 @@ services:
     environment:
       - SERVICE_BACKUP=${SERVICE_BACKUP}
       - SERVICE_FILES=${SERVICE_FILES}
-      - SERVICE_FILES_SERVICES=${SERVICE_FILES_SERVICES}
+      - SERVICE_FILES_WORKER=${SERVICE_FILES_WORKER}
       - SERVICE_CLEAR_EVENTS=${SERVICE_CLEAR_EVENTS}
       - SERVICE_NOTIFY=${SERVICE_NOTIFY}
       - SERVICE_PEOPLE_SERVER=${SERVICE_PEOPLE_SERVER}
@@ -301,7 +301,7 @@ services:
       - SERVICE_API_SYSTEM=${SERVICE_API_SYSTEM}
       - SERVICE_STUDIO=${SERVICE_STUDIO}
       - SERVICE_AI=${SERVICE_AI}
-      - SERVICE_AI_SERVICE=${SERVICE_AI_SERVICE}
+      - SERVICE_AI_WORKER=${SERVICE_AI_WORKER}
       - SERVICE_SSOAUTH=${SERVICE_SSOAUTH}
       - SERVICE_TELEGRAMREPORTS=${SERVICE_TELEGRAMREPORTS}
       - SERVICE_TELEGRAM=${SERVICE_TELEGRAM}

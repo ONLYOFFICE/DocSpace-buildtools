@@ -13,14 +13,14 @@ BuildArch:      noarch
 %description    common
 A package containing configs and scripts.
 
-%package        files-services
-Summary:        Files-services
+%package        files-worker
+Summary:        Files-worker
 Requires:       %name-common  = %version-%release
 Requires:       dotnet-sdk-10.0
 Requires:       /usr/bin/ffmpeg
 AutoReqProv:    no
 BuildArch:      noarch
-%description    files-services
+%description    files-worker
 The service which launches additional services related to file management:
  - ElasticSearchIndexService - indexes documents using Elasticsearch;
  - FeedAggregatorService - aggregates notifications;
@@ -161,13 +161,13 @@ The service responsible for clearing the login_events and audit_events
 tables by LoginHistoryLifeTime and AuditTrailLifeTime to log out users
 after a timeout.
 
-%package        backup-background
-Summary:        Backup-background
+%package        backup-worker
+Summary:        Backup-worker
 Requires:       %name-common  = %version-%release
 Requires:       dotnet-sdk-10.0
 AutoReqProv:    no
 BuildArch:      noarch
-%description    backup-background
+%description    backup-worker
 The service which launches additional services related to backup creation:
  - BackupWorkerService - launches WorkerService which runs backup/restore, etc;
  - BackupListenerService - waits for a signal to delete backups;
@@ -259,13 +259,13 @@ BuildArch:      noarch
 The REST API server for working with AI features. The service which
 handles API requests related to AI.
 
-%package        ai-service
-Summary:        AI Service
+%package        ai-worker
+Summary:        AI-Worker
 Requires:       %name-common  = %version-%release
 Requires:       dotnet-sdk-10.0
 AutoReqProv:    no
 BuildArch:      noarch
-%description    ai-service
+%description    ai-worker
 The service for background tasks related with AI. It vectorizes documents
 from the knowledge base for subsequent semantic search and performs
 chat/message export.

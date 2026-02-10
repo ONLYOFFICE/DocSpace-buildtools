@@ -13,7 +13,7 @@ print(f"SRC_PATH = {SRC_PATH}")
 print(f"BUILD_PATH = {BUILD_PATH}")
 
 BACKEND_NODEJS_SERVICES = ["ASC.Socket.IO", "ASC.SsoAuth"]
-BACKEND_DOTNETCORE_SERVICES = ["ASC.Files", "ASC.People", "ASC.Data.Backup", "ASC.Files.Service", "ASC.Notify", "ASC.Studio.Notify", "ASC.Web.Api", "ASC.Web.Studio", "ASC.Data.Backup.BackgroundTasks", "ASC.ClearEvents", "ASC.ApiSystem", "ASC.Web.HealthChecks.UI"]
+BACKEND_DOTNETCORE_SERVICES = ["ASC.Files", "ASC.People", "ASC.Data.Backup", "ASC.Files.Worker", "ASC.Notify", "ASC.Studio.Notify", "ASC.Web.Api", "ASC.Web.Studio", "ASC.Data.Backup.Worker", "ASC.ClearEvents", "ASC.ApiSystem", "ASC.Web.HealthChecks.UI"]
 
 DOCKER_ENTRYPOINT="docker-entrypoint.py"
 DOCKER_ENTRYPOINT_PATH = os.path.join(SRC_PATH, "buildtools", "install", "docker", DOCKER_ENTRYPOINT)

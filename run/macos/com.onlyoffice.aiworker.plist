@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.onlyoffice.backupbackgroundtasks</string>
+    <string>com.onlyoffice.aiworker</string>
 
     <key>WorkingDirectory</key>
     <string>${DOCSPACE_ROOT}</string>
@@ -11,24 +11,24 @@
     <key>ProgramArguments</key>
     <array>
         <string>/usr/local/share/dotnet/dotnet</string>
-        <string>server/common/services/ASC.Data.Backup.BackgroundTasks/bin/Debug/ASC.Data.Backup.BackgroundTasks.dll</string>
-        <string>urls=http://0.0.0.0:5032</string>
+        <string>/Users/dev/projects/onlyoffice/server/products/ASC.AI/Worker/bin/Debug/ASC.AI.Worker.dll</string>
+        <string>urls=http://0.0.0.0:5154</string>
         <string>$STORAGE_ROOT=${DOCSPACE_ROOT}/Data</string>
         <string>log:dir=${DOCSPACE_ROOT}/Logs</string>
-        <string>log:name=backup.backgroundtasks</string>
+        <string>log:name=ai.worker</string>
         <string>pathToConf=${DOCSPACE_ROOT}/buildtools/config</string>
         <string>core:products:folder=${DOCSPACE_ROOT}/server/products</string>
-        <string>core:eventBus:subscriptionClientName=asc_event_bus_backup_queue</string>
+        <string>core:eventBus:subscriptionClientName=asc_event_bus_ai_service_queue</string>
     </array>
 
     <key>RunAtLoad</key>
     <false/>
 
     <!--<key>StandardErrorPath</key>
-    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.backupbackgroundtasks.err</string>-->
+    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.aiworker.err</string>-->
 
     <!--<key>StandardOutPath</key>
-    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.backupbackgroundtasks.log</string>-->
+    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.aiworker.log</string>-->
 
     <key>KeepAlive</key>
     <true/>

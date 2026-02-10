@@ -39,16 +39,16 @@ BuildRequires:  java-21-openjdk-headless
 BuildRequires:  maven
 
 Requires:       %name-ai = %version-%release
-Requires:       %name-ai-service = %version-%release
+Requires:       %name-ai-worker = %version-%release
 Requires:       %name-mcp = %version-%release
 Requires:       %name-api = %version-%release
 Requires:       %name-api-system = %version-%release
 Requires:       %name-backup = %version-%release
-Requires:       %name-backup-background = %version-%release
+Requires:       %name-backup-worker = %version-%release
 Requires:       %name-clear-events = %version-%release
 Requires:       %name-doceditor = %version-%release
 Requires:       %name-files = %version-%release
-Requires:       %name-files-services = %version-%release
+Requires:       %name-files-worker = %version-%release
 Requires:       %name-healthchecks = %version-%release
 Requires:       %name-login = %version-%release
 Requires:       %name-management = %version-%release
