@@ -1,10 +1,10 @@
 services: 
-  onlyoffice-backup-background-tasks:
+  onlyoffice-backup-worker:
     build:
       context: ./
       dockerfile: "${DOCKERFILE}"
-      target: backup_background
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-backup-background:${DOCKER_TAG}"
+      target: backup_worker
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-backup-worker:${DOCKER_TAG}"
 
   onlyoffice-clear-events:
     build:
@@ -27,12 +27,12 @@ services:
       target: files
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-files:${DOCKER_TAG}"
 
-  onlyoffice-files-services:
+  onlyoffice-files-worker:
     build:
       context: ./
       dockerfile: "${DOCKERFILE}"
-      target: files_services
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-files-services:${DOCKER_TAG}"
+      target: files_worker
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-files-worker:${DOCKER_TAG}"
 
   onlyoffice-notify:
     build:
@@ -97,12 +97,12 @@ services:
       target: ai
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-ai:${DOCKER_TAG}"
 
-  onlyoffice-ai-service:
+  onlyoffice-ai-worker:
     build:
       context: ./
       dockerfile: "${DOCKERFILE}"
-      target: ai_service
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-ai-service:${DOCKER_TAG}"
+      target: ai_worker
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-ai-worker:${DOCKER_TAG}"
 
   onlyoffice-bin-share:
     build:

@@ -28,11 +28,12 @@ md buildtools\install\win\Files\sbin
 md buildtools\install\win\Files\products\ASC.Files\server\temp
 md buildtools\install\win\Files\products\ASC.People\server\temp
 md buildtools\install\win\Files\services\ASC.Data.Backup\service\temp
-md buildtools\install\win\Files\services\ASC.Files.Service\service\temp
 md buildtools\install\win\Files\services\ASC.Notify\service\temp
+md buildtools\install\win\Files\services\ASC.Files.Worker\service\temp
 md buildtools\install\win\Files\services\ASC.Studio.Notify\service\temp
-md buildtools\install\win\Files\services\ASC.Data.Backup.BackgroundTasks\service\temp
+md buildtools\install\win\Files\services\ASC.Data.Backup.Worker\service\temp
 md buildtools\install\win\Files\services\ASC.ClearEvents\service\temp
+md buildtools\install\win\Files\services\ASC.ApiSystem\service\temp
 md buildtools\install\win\Files\services\ASC.Web.Api\service\temp
 md buildtools\install\win\Files\services\ASC.Web.Studio\service\temp
 md buildtools\install\win\Files\services\ASC.Web.HealthChecks.UI\service\temp
