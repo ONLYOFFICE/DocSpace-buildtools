@@ -11,7 +11,8 @@ tail -n +$(awk '/^__END_OF_SHELL_SCRIPT__$/ {print NR+1; exit}' "$0") "$0" | tar
 source "$TEMP_DIR/install-Docker-args.sh" "$@"
 
 ! type docker &> /dev/null && { echo "docker not installed"; exit 1; }
-! type docker-compose &> /dev/null && { echo "docker-compose not installed"; exit 1; }
+docker compose version &>/dev/null || docker-compose version &>/dev/null || { echo "Docker Compose not installed"; exit 1; }
+
 
 echo "Extracting docker images to ${TEMP_DIR}..."
 tail -n +$(awk '/^__END_OF_SHELL_SCRIPT__$/{print NR + 1; exit 0;}' "$0") "$0" | tar x -C "${TEMP_DIR}"

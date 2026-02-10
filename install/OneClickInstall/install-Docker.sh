@@ -868,8 +868,11 @@ check_registry_connection() {
 }
 
 check_docker_compose() {
-	COMPOSE_REQ=2018000 # >= 2.18.0 
-	for DOCKER_COMPOSE in "docker compose" docker-compose; do $DOCKER_COMPOSE version --short 2>/dev/null | awk -F. 'NF==3{exit !($1*1000000+$2*1000+$3>=REQ)}' REQ="$COMPOSE_REQ" && return 0; done
+	local COMPOSE_REQ=2018000 v
+	for DOCKER_COMPOSE in "docker compose" docker-compose; do
+		VERSION=$(${DOCKER_COMPOSE} version --short 2>/dev/null) || continue
+		awk -F. -v R="$COMPOSE_REQ" 'NF>=3{exit !($1*1e6+$2*1e3+$3>=R)}' <<<"${VERSION%%[^0-9.]*}" && return 0
+	done
 	return 1
 }
 
