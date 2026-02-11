@@ -43,9 +43,43 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
 
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Prepare BuildKit storage
+        run: |
+          if mountpoint -q /mnt; then
+            echo "Using /mnt for BuildKit storage"
+            sudo mkdir -p /mnt/buildkit
+            sudo chmod 777 /mnt/buildkit
+            echo "BK_USE_MNT=1" >> $GITHUB_ENV
+          else
+            echo "No /mnt detected, using root disk"
+            echo "BK_USE_MNT=0" >> $GITHUB_ENV
+          fi
+
+      - name: Start BuildKit daemon
+        run: |
+          set -e
+          docker rm -f buildkitd || true
+          if [ "$BK_USE_MNT" = "1" ]; then
+            echo "Mounting /mnt/buildkit into buildkitd"
+            docker run -d --name buildkitd --privileged \
+              --network host -v /mnt/buildkit:/var/lib/buildkit \
+              moby/buildkit:buildx-stable-1 \
+              --addr tcp://0.0.0.0:1234 \
+              --allow-insecure-entitlement security.insecure \
+              --allow-insecure-entitlement network.host
+          else
+            echo "Starting buildkitd on root filesystem"
+            docker run -d --name buildkitd --privileged \
+              --network host --addr tcp://0.0.0.0:1234 \
+              moby/buildkit:buildx-stable-1 \
+              --allow-insecure-entitlement security.insecure \
+              --allow-insecure-entitlement network.host
+          fi
+
+      - name: Create buildx builder (remote)
+        run: |
+          docker buildx create --name builder --driver remote tcp://127.0.0.1:1234 --use
+          docker buildx inspect --bootstrap
 
       - name: Login to DockerHub
         uses: docker/login-action@v2
@@ -62,7 +96,6 @@ jobs:
           echo "BAKE_ARGS=--sbom=true --provenance=mode=max --set *.args.GIT_BRANCH=${{ matrix.branch }} \
             --set *.args.PRODUCT_VERSION=${PRODUCT_VERSION} --set *.args.BUILD_NUMBER=${{ github.run_number }} \
             --set *.platform=linux/amd64 --push" >> $GITHUB_ENV
-
         shell: bash
 
       - name: Build dotnet-services
