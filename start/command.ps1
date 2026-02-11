@@ -29,7 +29,7 @@ if ( $CommandName -eq "increase-service-timeout" ) {
 #Write-Output  ""
 
 Get-ChildItem -Path $WorkDir -File | ForEach-Object -ThrottleLimit 20 -Parallel  {
-    $ServiceName = "Onlyoffice$([System.IO.Path]::GetFileNameWithoutExtension($_))";
+    $ServiceName = "Onlyoffice.$([System.IO.Path]::GetFileNameWithoutExtension($_))";
 
     switch ( $Using:CommandName )
     {

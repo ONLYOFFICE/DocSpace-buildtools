@@ -1,5 +1,5 @@
 <service>
-  <id>OnlyofficeSsoAuth</id>
+  <id>Onlyoffice.SsoAuth</id>
   <name>ONLYOFFICE SsoAuth</name>
   <startmode>manual</startmode>
   <executable>node</executable>

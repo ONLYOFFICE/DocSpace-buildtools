@@ -1,6 +1,6 @@
 <service>
-  <id>OnlyofficeIdentityApi</id>
-  <name>ONLYOFFICE IdentityApi</name>
+  <id>Onlyoffice.Identity.Api</id>
+  <name>ONLYOFFICE Identity.Api</name>
   <startmode>manual</startmode>
   <executable>java</executable>
   <env name="LOG_FILE_PATH" value="../../Logs/identity-api.log"/>
@@ -10,4 +10,4 @@
   <log mode="none"/>
   <delayedAutoStart>true</delayedAutoStart>
   <onfailure action="restart" delay="5 sec" />
-</service>  
+</service>

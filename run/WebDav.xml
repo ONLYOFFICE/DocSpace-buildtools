@@ -1,6 +1,6 @@
 <service>
-  <id>OnlyofficeWebDav</id>
-  <name>ONLYOFFICE WebDav Server</name>
+  <id>Onlyoffice.WebDav</id>
+  <name>ONLYOFFICE WebDav</name>
   <startmode>manual</startmode>
   <executable>node</executable>
   <arguments>../../server/common/ASC.WebDav/server/webDavServer.js</arguments>

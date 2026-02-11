@@ -1,6 +1,6 @@
 <service>
-  <id>OnlyofficeIdentityService</id>
-  <name>ONLYOFFICE IdentityService</name>
+  <id>Onlyoffice.Identity.Authorization</id>
+  <name>ONLYOFFICE Identity.Authorization</name>
   <startmode>manual</startmode>
   <executable>java</executable>
   <env name="LOG_FILE_PATH" value="../../Logs/identity-authorization.log"/>

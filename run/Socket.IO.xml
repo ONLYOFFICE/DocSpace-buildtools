@@ -1,6 +1,6 @@
 <service>
-  <id>OnlyofficeSocketIO</id>
-  <name>ONLYOFFICE SocketIO</name>
+  <id>Onlyoffice.Socket.IO</id>
+  <name>ONLYOFFICE Socket.IO</name>
   <startmode>manual</startmode>
   <executable>node</executable>
   <arguments>../../server/common/ASC.Socket.IO/server.js</arguments>

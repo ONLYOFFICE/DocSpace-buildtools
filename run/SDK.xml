@@ -1,10 +1,10 @@
 <service>
-  <id>OnlyofficeSDK</id>
-  <name>ONLYOFFICE SDK SSR</name>
+  <id>Onlyoffice.SDK</id>
+  <name>ONLYOFFICE SDK</name>
   <startmode>manual</startmode>
   <executable>node</executable>
   <arguments>server.js</arguments>
-   <workingdirectory>%BASE%\..\..\client\packages\sdk</workingdirectory>
+  <workingdirectory>%BASE%\..\..\client\packages\sdk</workingdirectory>
   <log mode="none"/>
   <delayedAutoStart>true</delayedAutoStart>
   <onfailure action="none" />

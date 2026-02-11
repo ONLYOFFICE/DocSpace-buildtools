@@ -1,6 +1,6 @@
 <service>
-  <id>OnlyofficeEditors</id>
-  <name>ONLYOFFICE Editors SSR</name>
+  <id>Onlyoffice.DocEditor</id>
+  <name>ONLYOFFICE DocEditor</name>
   <startmode>manual</startmode>
   <executable>node</executable>
   <arguments>server.js</arguments>
