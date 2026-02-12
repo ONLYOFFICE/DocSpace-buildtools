@@ -43,9 +43,13 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
 
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Setup BuildKit
+        run: |
+          docker rm -f buildkitd || true
+          mountpoint -q /mnt && { sudo mkdir -p /mnt/buildkit; sudo chmod 777 /mnt/buildkit; STORAGE_ARGS="-v /mnt/buildkit:/var/lib/buildkit"; } || STORAGE_ARGS=""
+          docker run -d --name buildkitd --privileged --network host ${STORAGE_ARGS} moby/buildkit:buildx-stable-1 --addr tcp://0.0.0.0:1234 --allow-insecure-entitlement security.insecure --allow-insecure-entitlement network.host
+          docker buildx create --name builder --driver remote tcp://127.0.0.1:1234 --use
+          docker buildx inspect --bootstrap
 
       - name: Login to DockerHub
         uses: docker/login-action@v2
@@ -62,7 +66,6 @@ jobs:
           echo "BAKE_ARGS=--sbom=true --provenance=mode=max --set *.args.GIT_BRANCH=${{ matrix.branch }} \
             --set *.args.PRODUCT_VERSION=${PRODUCT_VERSION} --set *.args.BUILD_NUMBER=${{ github.run_number }} \
             --set *.platform=linux/amd64 --push" >> $GITHUB_ENV
-
         shell: bash
 
       - name: Build dotnet-services
