@@ -43,41 +43,11 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
 
-      - name: Prepare BuildKit storage
+      - name: Setup BuildKit
         run: |
-          if mountpoint -q /mnt; then
-            echo "Using /mnt for BuildKit storage"
-            sudo mkdir -p /mnt/buildkit
-            sudo chmod 777 /mnt/buildkit
-            echo "BK_USE_MNT=1" >> $GITHUB_ENV
-          else
-            echo "No /mnt detected, using root disk"
-            echo "BK_USE_MNT=0" >> $GITHUB_ENV
-          fi
-
-      - name: Start BuildKit daemon
-        run: |
-          set -e
           docker rm -f buildkitd || true
-          if [ "$BK_USE_MNT" = "1" ]; then
-            echo "Mounting /mnt/buildkit into buildkitd"
-            docker run -d --name buildkitd --privileged \
-              --network host -v /mnt/buildkit:/var/lib/buildkit \
-              moby/buildkit:buildx-stable-1 \
-              --addr tcp://0.0.0.0:1234 \
-              --allow-insecure-entitlement security.insecure \
-              --allow-insecure-entitlement network.host
-          else
-            echo "Starting buildkitd on root filesystem"
-            docker run -d --name buildkitd --privileged \
-              --network host --addr tcp://0.0.0.0:1234 \
-              moby/buildkit:buildx-stable-1 \
-              --allow-insecure-entitlement security.insecure \
-              --allow-insecure-entitlement network.host
-          fi
-
-      - name: Create buildx builder (remote)
-        run: |
+          mountpoint -q /mnt && { sudo mkdir -p /mnt/buildkit; sudo chmod 777 /mnt/buildkit; STORAGE_ARGS="-v /mnt/buildkit:/var/lib/buildkit"; } || STORAGE_ARGS=""
+          docker run -d --name buildkitd --privileged --network host ${STORAGE_ARGS} moby/buildkit:buildx-stable-1 --addr tcp://0.0.0.0:1234 --allow-insecure-entitlement security.insecure --allow-insecure-entitlement network.host
           docker buildx create --name builder --driver remote tcp://127.0.0.1:1234 --use
           docker buildx inspect --bootstrap
 
