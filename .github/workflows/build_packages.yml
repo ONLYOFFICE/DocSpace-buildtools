@@ -107,6 +107,11 @@ jobs:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PRIVATE_KEY_PASS }}
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+
       - name: Prepare build
         run: |
           wget -O - https://dl.yarnpkg.com/debian/pubkey.gpg | \
@@ -114,7 +119,7 @@ jobs:
           sudo chmod 644 /usr/share/keyrings/yarnkey.gpg
           echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian/ stable main" | \
           sudo tee /etc/apt/sources.list.d/yarn.list
-          curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash -
+          curl -fsSL https://deb.nodesource.com/setup_24.x | sudo bash -
           sudo add-apt-repository -y ppa:dotnet/backports
           sudo apt install -y dotnet-sdk-10.0 yarn nodejs rename unzip maven openjdk-21-jdk-headless
           JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | head -1)
