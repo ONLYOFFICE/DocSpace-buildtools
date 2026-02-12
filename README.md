@@ -73,30 +73,31 @@ buildtools/
 
 ## Installation
 
-### OneClick Docker Install
+### OneClickInstall
 
 The primary deployment method. Located in `install/OneClickInstall/`.
 
+**Universal installer:**
 ```bash
 # Quick install
-bash install-Docker.sh
+bash install/OneClickInstall/docspace-install.sh
 ```
 
-Supports extensive flags for customization (see [OneClickInstall README](install/OneClickInstall/README.md)).
-
-### Linux Packages
-
-**Debian/Ubuntu:**
+**Specialized installers:**
 ```bash
+# Docker
+bash install/OneClickInstall/install-Docker.sh
+
+# Debian/Ubuntu packages  
 bash install/OneClickInstall/install-Debian.sh
-```
 
-**RHEL/CentOS/Fedora:**
-```bash
+# RHEL/CentOS/Fedora packages
 bash install/OneClickInstall/install-RedHat.sh
 ```
 
 Package metadata is maintained in `install/deb/` and `install/rpm/`.
+
+All installers support extensive flags for customization (see [OneClickInstall README](install/OneClickInstall/README.md)).
 
 ### Windows Installer
 
