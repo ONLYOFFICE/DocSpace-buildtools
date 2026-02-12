@@ -113,7 +113,7 @@ Located in `install/docker/`:
 
 | Dockerfile | Purpose |
 |-----------|---------|
-| `Dockerfile` | Main multi-stage build for DocSpace |
+| `Dockerfile.app` | Main multi-stage build for DocSpace |
 | `Dockerfile.runtime` | Runtime dependencies image |
 
 Multi-platform builds are supported via `build.hcl` (Docker Buildx).
@@ -192,7 +192,6 @@ Located in `config/nginx/`:
 ### Database
 
 - `config/mysql/conf.d/mysql.cnf` — MySQL server tuning
-- `config/mysql/dotnet_dump.sql` — Database schema dump
 
 ### Process Management
 
