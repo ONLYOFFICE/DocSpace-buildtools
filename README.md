@@ -263,3 +263,7 @@ Docker-based migrations are handled by `migration-runner.yml` Compose service.
 ## Licensing
 
 ONLYOFFICE DocSpace is released under AGPLv3 license. See the LICENSE file for more information.
+
+## Need help for developers? 
+
+Check our [official API documentation](https://api.onlyoffice.com/docspace/).
