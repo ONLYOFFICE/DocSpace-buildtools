@@ -15,8 +15,8 @@ This repository contains the **build, deployment, and infrastructure** tooling f
 
 - [Project Structure](#project-structure)
 - [Installation](#installation)
-  - [OneClick Docker Install](#oneclick-docker-install)
-  - [Linux Packages](#linux-packages)
+  - [Docker](#OneClickInstall)
+  - [Linux Packages](#OneClickInstall)
   - [Windows Installer](#windows-installer)
 - [Docker](#docker)
   - [Dockerfiles](#dockerfiles)
