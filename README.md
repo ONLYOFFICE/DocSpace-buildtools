@@ -103,6 +103,8 @@ All installers support extensive flags for customization (see [OneClickInstall R
 
 Windows installation uses Advanced Installer projects (`.aip` files) located in `install/win/`, with WinSW for service management.
 
+See the [Windows installation guide](https://guides.onlyoffice.com/installation/docspace-community-install-windows.aspx) for detailed instructions.
+
 ## Docker
 
 ### Dockerfiles
