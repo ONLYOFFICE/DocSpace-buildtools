@@ -15,8 +15,9 @@ This repository contains the **build, deployment, and infrastructure** tooling f
 
 - [Project Structure](#project-structure)
 - [Installation](#installation)
-  - [Docker](#OneClickInstall)
-  - [Linux Packages](#OneClickInstall)
+  - [Universal Installer](#universal-installer)
+  - [Docker](#docker-install)
+  - [Linux Packages](#linux-packages)
   - [Windows Installer](#windows-installer)
 - [Docker](#docker)
   - [Dockerfiles](#dockerfiles)
@@ -77,21 +78,26 @@ buildtools/
 
 The primary deployment method. Located in `install/OneClickInstall/`.
 
+<a id="universal-installer"></a>
 **Universal installer:**
 ```bash
 # Quick install
 bash install/OneClickInstall/docspace-install.sh
 ```
 
-**Specialized installers:**
+<a id="docker-install"></a>
+**Docker:**
 ```bash
-# Docker
 bash install/OneClickInstall/install-Docker.sh
+```
 
-# Debian/Ubuntu packages  
+<a id="linux-packages"></a>
+**Linux Packages:**
+```bash
+# Debian/Ubuntu
 bash install/OneClickInstall/install-Debian.sh
 
-# RHEL/CentOS/Fedora packages
+# RHEL/CentOS/Fedora
 bash install/OneClickInstall/install-RedHat.sh
 ```
 
