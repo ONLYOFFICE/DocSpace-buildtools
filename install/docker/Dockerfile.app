@@ -34,7 +34,7 @@ git clone --recurse-submodules -b $(echo "$(git ls-remote --exit-code --heads "$
 git clone --recurse-submodules -b $(echo "$(git ls-remote --exit-code --heads "${SERVER_REPO}" "${GIT_BRANCH}"\
  > /dev/null 2>&1 && echo "${GIT_BRANCH}" || echo "${FALLBACK_BRANCH}")") --depth 30 ${SERVER_REPO} ${SRC_PATH}/server && \
 
-git clone -b $(echo "$(git ls-remote --exit-code --heads "${CLIENT_REPO}" "${GIT_BRANCH}"\
+git clone --recurse-submodules -b $(echo "$(git ls-remote --exit-code --heads "${CLIENT_REPO}" "${GIT_BRANCH}"\
  > /dev/null 2>&1 && echo "${GIT_BRANCH}" || echo "${FALLBACK_BRANCH}")") --depth 30 ${CLIENT_REPO} ${SRC_PATH}/client && \
 
 git clone -b "$( [ "$GIT_BRANCH" = develop ] && echo develop || echo master )" --depth 1 https://github.com/ONLYOFFICE/docspace-plugins.git ${SRC_PATH}/plugins && \

@@ -29,6 +29,7 @@ Source5:        https://codeload.github.com/ONLYOFFICE/ASC.Web.Campaigns/tar.gz/
 Source6:        https://codeload.github.com/ONLYOFFICE/%{product}-plugins/tar.gz/master#/plugins.tar.gz
 Source7:        https://codeload.github.com/ONLYOFFICE/document-formats/tar.gz/master#/document-formats.tar.gz
 Source8:        https://codeload.github.com/ONLYOFFICE/%{product}-mcp/tar.gz/main#/mcp.tar.gz
+Source9:        https://codeload.github.com/ONLYOFFICE/%{product}-ui-kit-react/tar.gz/master#/ui-kit.tar.gz
 
 BuildRequires:  nodejs >= 22.0
 BuildRequires:  yarn
@@ -87,6 +88,7 @@ tar -xf %{SOURCE6} --transform='s,^[^/]\+,plugins,'          -C %{_builddir} &
 wait
 tar -xf %{SOURCE7} --transform='s,^[^/]\+,document-formats,' -C %{_builddir}/buildtools/config
 tar -xf %{SOURCE8} --transform='s,^[^/]\+,mcp,'              -C %{_builddir}
+tar -xf %{SOURCE9} --transform='s,^[^/]\+,ui-kit,'          -C %{_builddir}/client/libs
 cp -rf %{SOURCE0} .
 
 %include build.spec
