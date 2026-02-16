@@ -15,6 +15,10 @@ ${package_manager} clean all
 
 ${package_manager} -y install yum-utils
 
+if [ -n "$PRODUCT_VERSION" ] && ! ${package_manager} --showduplicates list "$product" | awk '{print $2}' | grep -Eq "^${PRODUCT_VERSION}([.-]|$)"; then
+  echo "Requested ${product_name} version ${PRODUCT_VERSION} not found in repository."; exit 1
+fi
+
 { yum check-update postgresql; PSQLExitCode=$?; } || true #Checking for postgresql update
 { yum check-update "$DIST"*-release; exitCode=$?; } || true #Checking for distribution update
 

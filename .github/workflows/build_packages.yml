@@ -88,19 +88,17 @@ jobs:
     strategy:
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     steps:
-      - name: Free Disk Space
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${BRANCH_BUILDTOOLS}/.github/scripts/free-disk-space-linux.sh | sudo bash
-
       - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        run: |
+          WORKSPACE_DIR=$(mountpoint -q /mnt && echo "/mnt" || echo "${GITHUB_WORKSPACE}")
+          [ "$WORKSPACE_DIR" = "/mnt" ] && sudo chown $(whoami):$(whoami) /mnt 2>/dev/null || true
+          cd "${WORKSPACE_DIR}" && git clone https://${{ secrets.GITEA_TOKEN }}@${{ secrets.GITEA_HOST }}/${{ github.repository }} -b ${{ github.ref_name }} --single-branch --depth=1
+          echo "BUILD_WORKSPACE=${WORKSPACE_DIR}/${GITHUB_REPOSITORY#*/}" >> $GITHUB_ENV
 
       - name: Set product version
         run: |
           PRODUCT_VERSION=$(grep -oP '\d+\.\d+\.\d+' <<< "${BRANCH_BUILDTOOLS//\//} ${BRANCH_CLIENT//\//} ${BRANCH_SERVER//\//}" | head -n1)
-          echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.6.0}" >> $GITHUB_ENV
+          echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.6.1}" >> $GITHUB_ENV
 
       - name: Import GPG
         uses: crazy-max/ghaction-import-gpg@v6
@@ -109,6 +107,11 @@ jobs:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PRIVATE_KEY_PASS }}
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+
       - name: Prepare build
         run: |
           wget -O - https://dl.yarnpkg.com/debian/pubkey.gpg | \
@@ -116,7 +119,7 @@ jobs:
           sudo chmod 644 /usr/share/keyrings/yarnkey.gpg
           echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian/ stable main" | \
           sudo tee /etc/apt/sources.list.d/yarn.list
-          curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash -
+          curl -fsSL https://deb.nodesource.com/setup_24.x | sudo bash -
           sudo add-apt-repository -y ppa:dotnet/backports
           sudo apt install -y dotnet-sdk-10.0 yarn nodejs rename unzip maven openjdk-21-jdk-headless
           JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | head -1)
@@ -135,8 +138,8 @@ jobs:
       - name: Download sources
         run: |
           case "${{ matrix.packageType }}" in
-            deb) SOURCE_DIR="${GITHUB_WORKSPACE}/install/${{ matrix.packageType }}/debian/source" ;;
-            rpm) SOURCE_DIR="${GITHUB_WORKSPACE}/install/${{ matrix.packageType }}/SPECS/SOURCES" ;;
+            deb) SOURCE_DIR="${BUILD_WORKSPACE}/install/${{ matrix.packageType }}/debian/source" ;;
+            rpm) SOURCE_DIR="${BUILD_WORKSPACE}/install/${{ matrix.packageType }}/SPECS/SOURCES" ;;
           esac
           download() { wget -q -O "${SOURCE_DIR}/$3.tar.gz" "https://codeload.github.com/ONLYOFFICE/$1/tar.gz/$2" && echo -e "\e[32m[OK] $3\e[0m" || echo -e "\e[31m[FAILED] $3\e[0m"; }
           download "$PRODUCT-buildtools"  "$BRANCH_BUILDTOOLS"      buildtools &
@@ -147,11 +150,12 @@ jobs:
           download "$PRODUCT-plugins"     "master"                  plugins &
           download "document-formats"     "master"                  document-formats &
           download "$PRODUCT-mcp"         "main"                    mcp &
+          download "$PRODUCT-ui-kit-react" "master"                 ui-kit &
           wait
 
       - name: Build DEB Packages
         if: matrix.packageType == 'deb'
-        working-directory: ${{ github.workspace }}/install/deb
+        working-directory: ${{ env.BUILD_WORKSPACE }}/install/deb
         run: |
           if ! grep -qF "${PRODUCT_VERSION}" debian/changelog; then
             TMP=$(mktemp)
@@ -170,7 +174,7 @@ jobs:
 
       - name: Build RPM Packages
         if: matrix.packageType == 'rpm'
-        working-directory: ${{ github.workspace }}/install/rpm/SPECS
+        working-directory: ${{ env.BUILD_WORKSPACE }}/install/rpm/SPECS
         run: |
           if ! grep -qF "${PRODUCT_VERSION}" /rpm/SPECS/changelog.spec; then
             TMP=$(mktemp)
@@ -194,7 +198,7 @@ jobs:
         run: |
           dpkg-sig --sign origin \
             --gpg-options "--pinentry-mode loopback --passphrase ${{ secrets.GPG_PRIVATE_KEY_PASS }}" \
-            --batch ${GITHUB_WORKSPACE}/install/*.deb
+            --batch ${BUILD_WORKSPACE}/install/*.deb
 
       - name: Sign RPM Packages
         if: matrix.packageType == 'rpm'
@@ -204,12 +208,12 @@ jobs:
               -D "_gpg_path $HOME/.gnupg" \
               -D "_gpg_name ${{ secrets.GPG_KEY_NAME }}" \
               -D "_gpg_sign_cmd_extra_args --pinentry-mode loopback --passphrase ${{ secrets.GPG_PRIVATE_KEY_PASS }}" \
-              --addsign ${GITHUB_WORKSPACE}/install/rpm/SPECS/RPMS/noarch/*.rpm 
+              --addsign ${BUILD_WORKSPACE}/install/rpm/SPECS/RPMS/noarch/*.rpm 
 
       - name: Upload DEB Packages
         if: matrix.packageType == 'deb'
         run: |
-          find "${GITHUB_WORKSPACE}/install" -name "*.${{ matrix.packageType }}" | xargs -P4 -I{} bash -c '
+          find "${BUILD_WORKSPACE}/install" -name "*.${{ matrix.packageType }}" | xargs -P4 -I{} bash -c '
             curl -sS --fail --retry 10 --retry-delay 10 --connect-timeout 60 --max-time 180 -H "Content-Type: multipart/form-data" \
               -u "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" --data-binary "@$1" "${{ secrets.REPO_URL_4TESTING_DEB }}" \
             && echo -e "\e[32m[Success] $(basename "$1")\e[0m" || echo "::warning:: [Uploading errors] $(basename "$1")"' _ {}
@@ -217,7 +221,7 @@ jobs:
       - name: Upload RPM Packages
         if: matrix.packageType == 'rpm'
         run: |
-          find "${GITHUB_WORKSPACE}/install/rpm/SPECS/RPMS/noarch" -name "*.${{ matrix.packageType }}" | xargs -P4 -I{} bash -c '
+          find "${BUILD_WORKSPACE}/install/rpm/SPECS/RPMS/noarch" -name "*.${{ matrix.packageType }}" | xargs -P4 -I{} bash -c '
             curl -sS --fail --retry 10 --retry-delay 10 --connect-timeout 60 --max-time 180 \
               -u "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" --upload-file "$1" "${{ secrets.REPO_URL_4TESTING_RPM}}/$(basename $1)" \
             && echo -e "\e[32m[Success] $(basename "$1")\e[0m" || echo "::warning:: [Uploading errors] $(basename "$1")"' _ {}
@@ -225,11 +229,11 @@ jobs:
       - name: Checking the DEB package for errors
         if: matrix.packageType == 'deb'
         run: |
-          for deb in ${GITHUB_WORKSPACE}/install/*.deb; do
+          for deb in ${BUILD_WORKSPACE}/install/*.deb; do
             lintian --profile debian "$deb" > "${deb}.lintian" 2>&1 &
           done
           wait
-          cat ${GITHUB_WORKSPACE}/install/*.lintian | tee LINTIAN
+          cat ${BUILD_WORKSPACE}/install/*.lintian | tee LINTIAN
           if grep -qE '^(W:|E:)' LINTIAN; then
             echo "::warning Noticedeb=lintian::$(cat LINTIAN | awk '/^W:/ { ws += 1 } /^E:/ { es += 1 } END { print "Warnings:", ws, "Errors:", es }')"
           fi
@@ -237,8 +241,8 @@ jobs:
       - name: Checking the RPM package for errors
         if: matrix.packageType == 'rpm'
         run: |
-          for rpm_package in ${GITHUB_WORKSPACE}/install/rpm/SPECS/RPMS/noarch/*.rpm; do
-            rpmlint --ignore-unused-rpmlintrc --rpmlintrc ${GITHUB_WORKSPACE}/install/rpm/SPECS/SOURCES/${PRODUCT,,}.rpmlintrc $rpm_package | tee -a RPM_LINT
+          for rpm_package in ${BUILD_WORKSPACE}/install/rpm/SPECS/RPMS/noarch/*.rpm; do
+            rpmlint --ignore-unused-rpmlintrc --rpmlintrc ${BUILD_WORKSPACE}/install/rpm/SPECS/SOURCES/${PRODUCT,,}.rpmlintrc $rpm_package | tee -a RPM_LINT
           done
           if grep -qE '(W:|E:)' RPM_LINT; then
             echo "::warning Noticerpm=rpmlint::$(cat RPM_LINT | awk '/W:/ { ws += 1 } /E:/ { es += 1 } END { print "Warnings:", ws, "Errors:", es }')"

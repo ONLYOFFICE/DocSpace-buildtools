@@ -53,6 +53,7 @@ x-service: &x-service-base
     RABBIT_VIRTUAL_HOST: ${RABBIT_VIRTUAL_HOST}
     RABBIT_USER_NAME: ${RABBIT_USER_NAME}
     RABBIT_PASSWORD: ${RABBIT_PASSWORD}
+    API_HOST: ${API_HOST}
     ROUTER_HOST: ${ROUTER_HOST}
     LOG_LEVEL: ${LOG_LEVEL}
     DEBUG_INFO: ${DEBUG_INFO}
@@ -65,13 +66,13 @@ x-service: &x-service-base
     - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
 
 services:
-  onlyoffice-backup-background-tasks:
+  onlyoffice-backup-worker:
     <<: *x-service-base
-    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-backup-background:${DOCKER_TAG}"
-    container_name: ${BACKUP_BACKGRUOND_TASKS_HOST}
+    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-backup-worker:${DOCKER_TAG}"
+    container_name: ${BACKUP_WORKER_HOST}
     healthcheck:
       <<: *x-healthcheck
-      test: curl --fail http://${SERVICE_BACKUP_BACKGRUOND_TASKS}/health/ || exit 1
+      test: curl --fail http://${SERVICE_BACKUP_WORKER}/health/ || exit 1
 
   onlyoffice-backup:
     <<: *x-service-base
@@ -97,13 +98,13 @@ services:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_FILES}/health/ || exit 1
 
-  onlyoffice-files-services:
+  onlyoffice-files-worker:
     <<: *x-service-base
-    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-files-services:${DOCKER_TAG}"
-    container_name: ${FILES_SERVICES_HOST}
+    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-files-worker:${DOCKER_TAG}"
+    container_name: ${FILES_WORKER_HOST}
     healthcheck:
       <<: *x-healthcheck
-      test: curl --fail http://${SERVICE_FILES_SERVICES}/health/ || exit 1
+      test: curl --fail http://${SERVICE_FILES_WORKER}/health/ || exit 1
 
   onlyoffice-people-server:
     <<: *x-service-base
@@ -134,7 +135,7 @@ services:
   onlyoffice-api:
     <<: *x-service-base
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-api:${DOCKER_TAG}"
-    container_name: ${API_HOST}
+    container_name: ${API_SERVICE_HOST}
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_API}/health/ || exit 1
@@ -163,13 +164,13 @@ services:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_AI}/health/ || exit 1
 
-  onlyoffice-ai-service:
+  onlyoffice-ai-worker:
     <<: *x-service-base
-    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-ai-service:${DOCKER_TAG}"
-    container_name: ${AI_SERVICE_HOST}
+    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-ai-worker:${DOCKER_TAG}"
+    container_name: ${AI_WORKER_HOST}
     healthcheck:
       <<: *x-healthcheck
-      test: curl --fail http://${SERVICE_AI_SERVICE}/health/ || exit 1  
+      test: curl --fail http://${SERVICE_AI_WORKER}/health/ || exit 1  
 
   onlyoffice-mcp:
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-mcp:latest"
@@ -252,14 +253,14 @@ services:
       - "8099"
       - "8092"
     depends_on:
-      - onlyoffice-backup-background-tasks
+      - onlyoffice-backup-worker
       - onlyoffice-backup
       - onlyoffice-clear-events
       - onlyoffice-files
-      - onlyoffice-files-services
+      - onlyoffice-files-worker
       - onlyoffice-people-server
       - onlyoffice-ai
-      - onlyoffice-ai-service
+      - onlyoffice-ai-worker
       - onlyoffice-socket
       - onlyoffice-studio-notify
       - onlyoffice-api
@@ -274,7 +275,7 @@ services:
     environment:
       - SERVICE_BACKUP=${SERVICE_BACKUP}
       - SERVICE_FILES=${SERVICE_FILES}
-      - SERVICE_FILES_SERVICES=${SERVICE_FILES_SERVICES}
+      - SERVICE_FILES_WORKER=${SERVICE_FILES_WORKER}
       - SERVICE_CLEAR_EVENTS=${SERVICE_CLEAR_EVENTS}
       - SERVICE_NOTIFY=${SERVICE_NOTIFY}
       - SERVICE_PEOPLE_SERVER=${SERVICE_PEOPLE_SERVER}
@@ -286,7 +287,7 @@ services:
       - SERVICE_API_SYSTEM=${SERVICE_API_SYSTEM}
       - SERVICE_STUDIO=${SERVICE_STUDIO}
       - SERVICE_AI=${SERVICE_AI}
-      - SERVICE_AI_SERVICE=${SERVICE_AI_SERVICE}
+      - SERVICE_AI_WORKER=${SERVICE_AI_WORKER}
       - SERVICE_SSOAUTH=${SERVICE_SSOAUTH}
       - SERVICE_DOCEDITOR=${SERVICE_DOCEDITOR}
       - SERVICE_MANAGEMENT=${SERVICE_MANAGEMENT}

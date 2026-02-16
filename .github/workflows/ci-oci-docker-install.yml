@@ -49,7 +49,7 @@ jobs:
         run: |
           IS_4TESTING="${{ github.event.inputs.testing }}"
           wget https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/install/OneClickInstall/install-Docker.sh
-          sed -i "1i set -x" install-Docker.sh && sed -i "/docker-compose.*up -d/ s/$/ --quiet-pull/" install-Docker.sh
+          sed -i "1i set -x" install-Docker.sh && sed -i "/DOCKER_COMPOSE.*up -d/ s/$/ --quiet-pull/" install-Docker.sh
           sudo bash install-Docker.sh -skiphc true -noni true -gb ${{ github.ref_name }} $([ "${IS_4TESTING:-true}" != "false" ] && echo "-s 4testing-") $([ -n "${{ github.event.inputs.tag }}" ] && echo "-dsv ${{ github.event.inputs.tag }}") || exit $?
 
           echo -n "Waiting for all containers to start..."
@@ -183,7 +183,7 @@ jobs:
         run: |
           IS_4TESTING="${{ github.event.inputs.testing }}"
           wget https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/install/OneClickInstall/install-Docker.sh
-          sed -i "1i set -x" install-Docker.sh && sed -i "/docker-compose.*up -d/ s/$/ --quiet-pull/" install-Docker.sh
+          sed -i "1i set -x" install-Docker.sh && sed -i "/DOCKER_COMPOSE.*up -d/ s/$/ --quiet-pull/" install-Docker.sh
           sudo bash install-Docker.sh -skiphc true -noni true -sm true -gb ${{ github.ref_name }} $([ "${IS_4TESTING:-true}" != "false" ] && echo "-s 4testing-") $([ -n "${{ github.event.inputs.tag }}" ] && echo "-dsv ${{ github.event.inputs.tag }}") || exit $?
 
           echo -n "Waiting for all containers to start..."

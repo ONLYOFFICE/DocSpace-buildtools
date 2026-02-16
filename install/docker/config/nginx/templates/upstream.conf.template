@@ -90,7 +90,7 @@ map $SERVICE_HEALTHCHECKS $service_healthchecks {
     default $SERVICE_HEALTHCHECKS;
 }
 
-map "$DOCUMENT_SERVER_URL_EXTERNAL" "$document_server" {
+map "$DOCUMENT_SERVER_URL_EXTERNAL" "$doceditor_url" {
     volatile;
     default "$DOCUMENT_SERVER_URL_EXTERNAL";
     "" "http://$DOCUMENT_CONTAINER_NAME";

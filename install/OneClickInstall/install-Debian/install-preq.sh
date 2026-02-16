@@ -17,7 +17,17 @@ if [ "$DIST" = "debian" ] && [ "$(apt-cache search ttf-mscorefonts-installer | w
 		echo "deb-src http://ftp.uk.debian.org/debian/ $DISTRIB_CODENAME main contrib" >> /etc/apt/sources.list
 fi
 
+# Temporary workaround extend apt-sequoia policy until 2027-02-01 (OpenResty/OpenSearch)
+if [ "$DISTRIB_CODENAME" = "trixie" ]; then
+    install -D /usr/share/apt/default-sequoia.config /etc/crypto-policies/back-ends/apt-sequoia.config
+    sed -i 's/2026-02-01/2027-02-01/' /etc/crypto-policies/back-ends/apt-sequoia.config
+fi
+
 apt-get -y update
+
+if [ -n "$PRODUCT_VERSION" ] && ! apt-cache madison "$product" | awk '{print $3}' | grep -Eq "^${PRODUCT_VERSION}([.-]|$)"; then
+  echo "Requested ${product_name} version ${PRODUCT_VERSION} not found in repository."; exit 1
+fi
 
 if ! command -v locale-gen &> /dev/null; then
 	apt-get install -yq locales
@@ -52,7 +62,7 @@ if [ "$DIST" = "ubuntu" ]; then
 elif [ "$DIST" = "debian" ]; then
 	curl -fsSL https://packages.microsoft.com/config/"$DIST"/"$REV"/packages-microsoft-prod.deb -O
 	echo -e "Package: *\nPin: origin \"packages.microsoft.com\"\nPin-Priority: 1002" | tee /etc/apt/preferences.d/99microsoft-prod.pref
-	dpkg -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
+	DEBIAN_FRONTEND=noninteractive dpkg --force-confnew -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
 fi
 
 MYSQL_REPO_VERSION="$(curl -fsSL https://dev.mysql.com/downloads/repo/apt/ | grep -oP '(?<=mysql-apt-config_)[0-9.]+-[0-9]+(?=_all\.deb)' | head -n1)"

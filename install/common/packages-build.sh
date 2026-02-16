@@ -35,7 +35,7 @@ echo "::notice::Backend build completed in $((BACKEND_END_TIMER - BACKEND_START_
 
 # MCP build
 cd "${BUILD_PATH}/mcp"
-pnpm install && pnpm run build-app
+pnpm install --frozen-lockfile && pnpm build-app
 mkdir -p "${PUBLISH_DIR}/services/ASC.AI.MCP/service"
 cp -a bin "${PUBLISH_DIR}/services/ASC.AI.MCP/service/"
 

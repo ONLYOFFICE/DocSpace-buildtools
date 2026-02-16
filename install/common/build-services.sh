@@ -8,8 +8,8 @@ BUILD_DOTNET_CORE_ARGS=${BUILD_DOTNET_CORE_ARGS:-"false"}
 PROPERTY_BUILD=${PROPERTY_BUILD:-"all"}
 
 BACKEND_NODEJS_SERVICES=${BACKEND_NODEJS_SERVICES:-"ASC.Socket.IO, ASC.SsoAuth"}
-BACKEND_DOTNETCORE_SERVICES=${BACKEND_DOTNETCORE_SERVICES:-"ASC.Files, ASC.People, ASC.Data.Backup, ASC.Files.Service, ASC.Notify, \
-ASC.Studio.Notify, ASC.Web.Api, ASC.Web.Studio, ASC.Data.Backup.BackgroundTasks, ASC.ClearEvents, ASC.ApiSystem, ASC.Web.HealthChecks.UI"}
+BACKEND_DOTNETCORE_SERVICES=${BACKEND_DOTNETCORE_SERVICES:-"ASC.Files, ASC.People, ASC.Data.Backup, ASC.Files.Worker, ASC.Notify, \
+ASC.Studio.Notify, ASC.Web.Api, ASC.Web.Studio, ASC.Data.Backup.Worker, ASC.ClearEvents, ASC.ApiSystem, ASC.Web.HealthChecks.UI"}
 SELF_CONTAINED=${SELF_CONTAINED:-"false"}
 PUBLISH_BACKEND_ARGS=${PUBLISH_BACKEND_ARGS:-"false"}
 PUBLISH_CNF=${PUBLISH_CNF:-"Release"}
