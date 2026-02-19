@@ -122,6 +122,7 @@ fi
 [[ "$LOCAL_SCRIPTS" = "true" ]] || [[ "$OFFLINE_INSTALLATION" = "true" ]] && source "./${ARGS_SCRIPT}" || source <(curl "${DOWNLOAD_URL_PREFIX}/${ARGS_SCRIPT}")
 
 uninstall() {
+    DOCKER_COMPOSE="$(docker compose version >/dev/null 2>&1 && echo 'docker compose' || echo 'docker-compose')"
     read -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " REMOVE_DATA_SERVICES
 
 	if [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]]; then
