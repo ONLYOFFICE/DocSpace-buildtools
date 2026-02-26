@@ -20,6 +20,9 @@ else
   echo "Error: configuration files not found." && exit 1
 fi
 
+PROXY_SSL_CONF="${DOCKERCOMPOSE}/config/nginx/onlyoffice-proxy-ssl.conf"
+EXTERNAL_PORT=$(awk -F= '/^[[:space:]]*EXTERNAL_PORT=/{gsub(/^[[:space:]]*/,"",$2); gsub(/"/,"",$2); print $2; exit}' "${DOCKERCOMPOSE}/.env")
+
 help(){
   echo 
   echo "This script provided to automatically setup SSL Certificates for DocSpace"
@@ -215,11 +218,20 @@ case $1 in
           --cert-name "$PRODUCT" --agree-tos --email "$MAIL" \
           -d "${DOMAINS[@]}"
       else
-        ${DOCKER_CMD} -v onlyoffice_webroot_path:$WEBROOT_PATH \
-          certbot/certbot certonly \
-          --expand --webroot -w "$WEBROOT_PATH" --key-type rsa \
-          --cert-name "$PRODUCT" --non-interactive --agree-tos --email "$MAIL" \
-          -d "${DOMAINS[@]}"
+        if docker port onlyoffice-proxy 80/tcp 2>/dev/null | grep -q ':80$'; then
+          ${DOCKER_CMD} -v onlyoffice_webroot_path:$WEBROOT_PATH \
+            certbot/certbot certonly \
+            --expand --webroot -w "$WEBROOT_PATH" --key-type rsa \
+            --cert-name "$PRODUCT" --non-interactive --agree-tos --email "$MAIL" \
+            -d "${DOMAINS[@]}"
+        else
+          ss -lnt sport = :80 | grep -q LISTEN && { echo "Error: port 80 is in use. Let's Encrypt requires it for verification, so free it and retry." >&2; exit 1; }
+          ${DOCKER_CMD} --network host \
+            certbot/certbot certonly \
+            --expand --standalone --http-01-port 80 --key-type rsa \
+            --cert-name "$PRODUCT" --non-interactive --agree-tos --email "$MAIL" \
+            -d "${DOMAINS[@]}"
+        fi
       fi
     else
       help
@@ -235,8 +247,9 @@ PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${PRODUCT}/privkey.pem"}"
 
 if [ -f "${CERTIFICATE_FILE}" ]; then 
   if [ -f "${PRIVATEKEY_FILE}" ]; then
-    sed -i "s~\(APP_CORE_SERVER_ROOT=\).*~\1\"https://*/\"~g" ${DOCKERCOMPOSE}/.env
-    sed -i "s~\(APP_URL_PORTAL=\).*~\1\"https://${DOMAIN}\"~g" ${DOCKERCOMPOSE}/.env
+    sed -i "s~\(APP_CORE_SERVER_ROOT=\).*~\1\"https://*$( [ "$EXTERNAL_PORT" = "443" ] || echo ":$EXTERNAL_PORT" )/\"~g" ${DOCKERCOMPOSE}/.env
+    sed -i "s~\(APP_URL_PORTAL=\).*~\1\"https://${DOMAIN}$( [ "$EXTERNAL_PORT" = "443" ] || echo ":$EXTERNAL_PORT" )\"~g" ${DOCKERCOMPOSE}/.env
+    sed -i -E "s#https://\\\$host(:[0-9]+)?#https://\\\$host$( [ "$EXTERNAL_PORT" = "443" ] || echo ":$EXTERNAL_PORT" )#g" "$PROXY_SSL_CONF"
     sed -i "s~\(CERTIFICATE_PATH=\).*~\1\"${CERTIFICATE_FILE}\"~g" ${DOCKERCOMPOSE}/.env
     sed -i "s~\(CERTIFICATE_KEY_PATH=\).*~\1\"${PRIVATEKEY_FILE}\"~g" ${DOCKERCOMPOSE}/.env
     sed -i "s~\(DHPARAM_PATH=\).*~\1\"${DHPARAM_PATH}\"~g" ${DOCKERCOMPOSE}/.env
