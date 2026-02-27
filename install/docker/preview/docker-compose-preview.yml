@@ -63,7 +63,7 @@ services:
       - "host.docker.internal:host-gateway"
     user: root
     build:
-      context: ..
+      context: ../../../..
       dockerfile: ./buildtools/install/docker/preview/Dockerfile.preview
       target: final_preview
     container_name: ${DOCSPACE_PREVIEW_NAME}

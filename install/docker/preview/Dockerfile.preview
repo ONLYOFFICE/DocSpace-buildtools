@@ -172,7 +172,7 @@ RUN set -eux; \
 # Copy config + entrypoint + supervisor config 
 # ------------------------------------------------------------
 COPY --chown=${COMPANY}:${COMPANY} ./buildtools/config/ ${SRC_PATH}/buildtools/config/
-COPY --chown=${COMPANY}:${COMPANY} ./buildtools/install/docker/preview/docker-entrypoint-preview.sh /docker-entrypoint.sh
+COPY --chown=${COMPANY}:${COMPANY} ./buildtools/install/docker/preview/docker-entrypoint.sh /docker-entrypoint.sh
 COPY --chown=${COMPANY}:${COMPANY} ./buildtools/install/docker/preview/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 WORKDIR ${SRC_PATH}/buildtools/config
