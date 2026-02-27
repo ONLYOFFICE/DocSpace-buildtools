@@ -73,6 +73,7 @@ run/             — Service launch scripts
 ⚪️ **Fixed**: [title] - brief note
 [🔴/🟡/🔵] **Still Open**: [title] (original severity: [emoji]) - why still relevant
 
+- If no previous review issues are found, do NOT output the section "🔄 Previous Review Follow-up" at all.
 ---
 
 ### 🔒 Security Issues
@@ -98,7 +99,7 @@ run/             — Service launch scripts
 
 ### 📝 Documentation Updates Required
 - **README.md**: [what and why]
-- **CLOUDE.md**: [what and why]
+- **CLAUDE.md**: [what and why]
 
 </details>
 ```
