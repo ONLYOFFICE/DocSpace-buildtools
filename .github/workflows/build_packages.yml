@@ -141,16 +141,17 @@ jobs:
             deb) SOURCE_DIR="${BUILD_WORKSPACE}/install/${{ matrix.packageType }}/debian/source" ;;
             rpm) SOURCE_DIR="${BUILD_WORKSPACE}/install/${{ matrix.packageType }}/SPECS/SOURCES" ;;
           esac
+          [[ "${BRANCH_SERVER}" != "master" ]] && { PLUGINS_BRANCH="develop"; MCP_BRANCH="develop"; UI_KIT_BRANCH="develop"; } || { PLUGINS_BRANCH="master"; MCP_BRANCH="main"; UI_KIT_BRANCH="master"; }
           download() { wget -q -O "${SOURCE_DIR}/$3.tar.gz" "https://codeload.github.com/ONLYOFFICE/$1/tar.gz/$2" && echo -e "\e[32m[OK] $3\e[0m" || echo -e "\e[31m[FAILED] $3\e[0m"; }
-          download "$PRODUCT-buildtools"  "$BRANCH_BUILDTOOLS"      buildtools &
-          download "$PRODUCT-client"      "$BRANCH_CLIENT"          client &
-          download "$PRODUCT-server"      "$BRANCH_SERVER"          server &
-          download "document-templates"   "main/community-server"   DocStore &
-          download "ASC.Web.Campaigns"    "master"                  campaigns &
-          download "$PRODUCT-plugins"     "master"                  plugins &
-          download "document-formats"     "master"                  document-formats &
-          download "$PRODUCT-mcp"         "main"                    mcp &
-          download "$PRODUCT-ui-kit-react" "master"                 ui-kit &
+          download "$PRODUCT-buildtools"   "$BRANCH_BUILDTOOLS"      buildtools &
+          download "$PRODUCT-client"       "$BRANCH_CLIENT"          client &
+          download "$PRODUCT-server"       "$BRANCH_SERVER"          server &
+          download "document-templates"    "main/community-server"   DocStore &
+          download "ASC.Web.Campaigns"     "master"                  campaigns &
+          download "document-formats"      "master"                  document-formats &
+          download "$PRODUCT-plugins"      "$PLUGINS_BRANCH"         plugins &
+          download "$PRODUCT-mcp"          "$MCP_BRANCH"             mcp &
+          download "$PRODUCT-ui-kit-react" "$UI_KIT_BRANCH"          ui-kit &
           wait
 
       - name: Build DEB Packages

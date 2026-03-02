@@ -415,8 +415,8 @@
     <ROW JsonFile="redis.env.json" FileName="REDIST~1.JSO|redis.[|ENVIRONMENT].json" DirProperty="config_Dir" Component="config" RootProperty="Root_3" Flags="6" IndentUnits="2"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.JsonPropertyComponent">
-    <ROW JsonProperty="ConnectionString" Parent="__1" Name="ConnectionString" Condition="1" Order="0" Flags="57" Value="Server=[DB_HOST];Database=[DB_NAME];User ID=[DB_USER];Password=[DB_PWD]"/>
-    <ROW JsonProperty="ConnectionString_1" Parent="__2" Name="ConnectionString" Condition="1" Order="0" Flags="57" Value="Server=[DB_HOST];Database=[DB_NAME];User ID=[DB_USER];Password=[DB_PWD]"/>
+    <ROW JsonProperty="ConnectionString" Parent="__1" Name="ConnectionString" Condition="1" Order="0" Flags="57" Value="Server=[DB_HOST];Database=[DB_NAME];User ID=[DB_USER];Password=[DB_PWD];AllowPublicKeyRetrieval=True;SslMode=None;"/>
+    <ROW JsonProperty="ConnectionString_1" Parent="__2" Name="ConnectionString" Condition="1" Order="0" Flags="57" Value="Server=[DB_HOST];Database=[DB_NAME];User ID=[DB_USER];Password=[DB_PWD];AllowPublicKeyRetrieval=True;SslMode=None;"/>
     <ROW JsonProperty="ConnectionStrings" Parent="Root_12" Name="ConnectionStrings" Condition="1" Order="1" Flags="60"/>
     <ROW JsonProperty="ConnectionStrings_1" Parent="Root_1" Name="ConnectionStrings" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="Host" Parent="elastic" Name="Host" Condition="1" Order="0" Flags="57" Value="[OPENSEARCH_HOST]"/>

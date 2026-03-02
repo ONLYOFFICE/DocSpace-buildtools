@@ -1,7 +1,7 @@
 resolver $DNS_NAMESERVER valid=30s;
 
 # Mapping document service
-map "$DOCUMENT_SERVER_URL_EXTERNAL" "$doceditor_url" {
+map "$DOCUMENT_SERVER_URL_EXTERNAL" "$document_server" {
     volatile;
     
     # If external URL provided, use it directly

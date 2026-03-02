@@ -11,13 +11,13 @@ Vagrant.configure("2") do |config|
 
     config.vm.hostname = "host4test"
 
-    if ENV['TEST_CASE'] != '--production-install'
+    if ENV['DOWNLOAD_SCRIPT'] == '-ds false'
        config.vm.provision "file", source: "../../../DocSpace-buildtools/install/OneClickInstall/.", destination: "/tmp/docspace/"
     end
 
     config.vm.provision "file", source: "../../../DocSpace-buildtools/install/common/systemd/build.sh", destination: "/tmp/docspace/build.sh"
     config.vm.provision "shell", path: './install.sh', :args => "#{ENV['DOWNLOAD_SCRIPT']} #{ENV['TEST_REPO']} #{ENV['ARGUMENTS']}"
 
-    # Prevent SharedFoldersEnableSymlinksCreate errors
-    config.vm.synced_folder ".", "/vagrant", disabled: true
+    # Enable synced folder for log collection
+    config.vm.synced_folder ".", "/vagrant", type: "virtualbox"
 end

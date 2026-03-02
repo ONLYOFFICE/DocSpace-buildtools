@@ -539,6 +539,6 @@
     <ROW SearchKey="Version_7" Prereq="MySQLInstallerRunn" SearchType="2" SearchString="HKLM\SOFTWARE\MySQL AB\MySQL Server 8.4\Version" Order="5" Property="PreReqSearch_26"/>
     <ROW SearchKey="_" Prereq="ErlangOTP" SearchType="5" SearchString="HKLM\SOFTWARE\Wow6432Node\Ericsson\Erlang\14.0.2" Order="2" Property="PreReqSearch_17"/>
     <ROW SearchKey="postgresqlx6414" Prereq="PostgreSQL" SearchType="5" SearchString="HKLM\SOFTWARE\PostgreSQL\Installations\postgresql-x64-14" Order="2" Property="PreReqSearch_23"/>
-    <ROW SearchKey="v8.0" Prereq="MicrosoftASP.NETCo" SearchType="1" SearchString="HKLM\SOFTWARE\Microsoft\ASP.NET Core\Shared Framework\v10.0" VerMin="10.0.0" Order="2" Property="PreReqSearch_3"/>
+    <ROW SearchKey="v8.0" Prereq="MicrosoftASP.NETCo" SearchType="12" SearchString="HKLM\SOFTWARE\Wow6432Node\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.AspNetCore.App" VerMin="10.0.0" Order="2" Property="PreReqSearch_3"/>
   </COMPONENT>
 </DOCUMENT>

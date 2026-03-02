@@ -24,7 +24,7 @@ map $SERVICE_DOCEDITOR $doceditor_service_url {
     default $SERVICE_DOCEDITOR;
 }
 
-map "$DOCUMENT_SERVER_URL_EXTERNAL" "$doceditor_url" {
+map "$DOCUMENT_SERVER_URL_EXTERNAL" "$document_server" {
     volatile;
     default "$DOCUMENT_SERVER_URL_EXTERNAL";
     "" "http://$DOCUMENT_CONTAINER_NAME";

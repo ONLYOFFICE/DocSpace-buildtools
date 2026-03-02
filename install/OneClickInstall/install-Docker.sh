@@ -122,6 +122,7 @@ fi
 [[ "$LOCAL_SCRIPTS" = "true" ]] || [[ "$OFFLINE_INSTALLATION" = "true" ]] && source "./${ARGS_SCRIPT}" || source <(curl "${DOWNLOAD_URL_PREFIX}/${ARGS_SCRIPT}")
 
 uninstall() {
+    DOCKER_COMPOSE="$(docker compose version >/dev/null 2>&1 && echo 'docker compose' || echo 'docker-compose')"
     read -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " REMOVE_DATA_SERVICES
 
 	if [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]]; then
@@ -135,11 +136,11 @@ uninstall() {
         fi
     done
 
-	docker network rm "${NETWORK_NAME}" 2>/dev/null && NETWORK_REMOVED=true || echo "Failed to remove network ${NETWORK_NAME}."
+	docker network rm "${NETWORK_NAME}" 2>/dev/null || echo "Failed to remove network ${NETWORK_NAME}."
 
 	read -p "Do you want to retain data (keep .env file)? (Y/n): " KEEP_DATA
 
-	if [[ "$NETWORK_REMOVED" == "true" && -d "$BASE_DIR" ]]; then
+	if ! docker network inspect "${NETWORK_NAME}" >/dev/null 2>&1 && [[ -d "$BASE_DIR" ]]; then
 		if [[ "${KEEP_DATA,,}" =~ ^(y|yes)?$ ]]; then
 			find "$BASE_DIR" -mindepth 1 ! -name ".env" -exec rm -rf {} +
 		else
