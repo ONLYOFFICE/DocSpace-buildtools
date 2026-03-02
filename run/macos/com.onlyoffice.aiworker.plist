@@ -11,7 +11,7 @@
     <key>ProgramArguments</key>
     <array>
         <string>/usr/local/share/dotnet/dotnet</string>
-        <string>/Users/dev/projects/onlyoffice/server/products/ASC.AI/Worker/bin/Debug/ASC.AI.Worker.dll</string>
+        <string>server/products/ASC.AI/Worker/bin/Debug/ASC.AI.Worker.dll</string>
         <string>urls=http://0.0.0.0:5154</string>
         <string>$STORAGE_ROOT=${DOCSPACE_ROOT}/Data</string>
         <string>log:dir=${DOCSPACE_ROOT}/Logs</string>
