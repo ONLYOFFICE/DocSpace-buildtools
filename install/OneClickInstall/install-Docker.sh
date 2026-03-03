@@ -416,17 +416,10 @@ create_network () {
 }
 
 read_continue_installation () {
-	[ "$NON_INTERACTIVE" = "true" ] && INSTALLATION_CHOICE="Y" && return 0
-
-	while true; do
-        read -p "Continue installation [Y/C/N]? " CHOICE
-        case "$CHOICE" in
-            [yY]) INSTALLATION_CHOICE="Y"; return 0 ;;
-            [cC]) INSTALLATION_CHOICE="C"; return 0 ;;
-            [nN]) exit 0 ;;
-            *) echo "Please, enter Y, C or N" ;;
-        esac
-    done
+	[ "$NON_INTERACTIVE" = "true" ] && INSTALLATION_CHOICE="N" && return 0
+	while read -p "Continue installation [Y/C/N]? " CHOICE; do
+		[[ "$CHOICE" =~ ^[yYcCnN]$ ]] && { INSTALLATION_CHOICE="${CHOICE^^}"; return 0; } || echo "Please, enter Y, C or N"
+	done
 }
 
 domain_check () {
@@ -445,7 +438,7 @@ domain_check () {
 		DOCKER_DAEMON_FILE="/etc/docker/daemon.json"
 		if ! grep -q '"dns"' "$DOCKER_DAEMON_FILE" 2>/dev/null; then
 			echo "DNS issue detected for ${APP_DOMAIN_PORTAL:-$LOCAL_RESOLVED_DOMAINS} (loopback IP or NAT)."
-			echo "[Y] Use Google DNS | [C] Use custom DNS | [N] Cancel installation"
+			echo "[Y] Use Google DNS | [C] Use custom DNS | [N] Don't use DNS"
 			if read_continue_installation; then
 				case "$INSTALLATION_CHOICE" in
 					Y)  DNS=("8.8.8.8" "8.8.4.4") ;;
@@ -455,6 +448,7 @@ domain_check () {
 								[[ $IP =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || { echo "Invalid DNS: $IP"; continue 2; }
 							done && break
 						done ;;
+					N)  DNS=() ;;
 				esac
 				if ((${#DNS[@]})); then
 					echo "Updating Docker DNS config with: ${DNS[*]}"
