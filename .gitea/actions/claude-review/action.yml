@@ -6,6 +6,9 @@ inputs:
     required: true
   gitea_token:
     required: true
+  model:
+    required: false
+    default: claude-sonnet-4-6
 
 runs:
   using: composite
@@ -15,7 +18,7 @@ runs:
       with:
         anthropic_api_key: ${{ inputs.anthropic_api_key }}
         gitea_token: ${{ inputs.gitea_token }}
-        model: claude-sonnet-4-6
+        model: ${{ inputs.model }}
         direct_prompt: |
           Read CLAUDE.md from the repository root to understand the repository context (tech stack, project structure, review focus, coding standards).
           Then review this pull request following ALL instructions below precisely.
@@ -35,10 +38,14 @@ runs:
 
           ### 2. Output Format
 
-          Respond with exactly this HTML structure:
+          Respond with exactly this structure:
+
+          ---
 
           <details>
           <summary>[VERDICT] - Claude Code Review</summary>
+
+            > 🔴 **X** Critical · 🟡 **X** Medium · 🔵 **X** Low · ✅ **X** Positive
 
           ---
 
@@ -53,45 +60,47 @@ runs:
 
           ---
 
-          ### 🔄 Previous Review Follow-up (omit entire section if no previous review comments found)
-          ⚪️ **Fixed**: [title] - brief note
-          [🔴/🟡/🔵] **Still Open**: [title] (original severity: [emoji]) - why still relevant
+          ### 🔄 Previous Review Follow-up *(omit block if no previous review comments found)*
+            ⚪️ **Fixed**: [title] - brief note
+            [🔴/🟡/🔵] **Still Open**: [title] (original severity: [emoji]) - why still relevant
 
           ---
 
-          ### 🔒 Security Issues (omit entire section if no issues found)
-          <details><summary>🔴 Critical: Issue Title</summary>
+          ### 🔒 Security Issues *(omit block if no issues found)*
+            <details><summary>🔴 Critical: Issue Title</summary>
 
-          - **File**: `path/file.ext:42`
-          - **Why**: Problem explanation
-          - **Fix**: Solution with code example
+            - **File**: `path/file.ext:42`
+            - **Why**: Problem explanation
+            - **Fix**: Solution with code example
 
-          </details>
-
-          ---
-
-          ### 🐛 Code Quality (omit entire section if no issues found)
-          <details><summary>🟡 Medium: Issue Title</summary>...</details>
+            </details>
 
           ---
 
-          ### 🎨 Style (omit entire section if no issues found)
-          <details><summary>🔵 Low: Issue Title</summary>...</details>
+          ### 🐛 Code Quality *(omit block if no issues found)*
+            <details><summary>🟡 Medium: Issue Title</summary>...</details>
 
           ---
 
-          ### ✅ Positive Observations (omit entire section if none)
+          ### 🎨 Style *(omit block if no issues found)*
+            <details><summary>🔵 Low: Issue Title</summary>...</details>
+
+          ---
+
+          ### ✅ Positive Observations *(omit block if none)*
           - **Feature**: Description
 
           ---
 
-          ### 📝 Documentation Updates Required (omit entire section if nothing to update)
+          ### 📝 Documentation Updates Required *(omit block if nothing to update)*
           - **README.md**: [what and why]
           - **CLAUDE.md**: [what and why]
 
           ---
 
           </details>
+
+          ---
 
           ### 3. Verdict Logic
 
@@ -102,8 +111,9 @@ runs:
           ### 4. Formatting Rules
 
           - Severity: 🔴 Critical | 🟡 Medium | 🔵 Low | ✅ Positive | 💡 Recommendation
-          - Each section marked `(omit if ...)` must be omitted **together with its preceding `---`** when the condition applies
+          - **Omit rule**: each optional block header carries its condition in `*(omit block if ...)*`; omit the whole block (header + content + its trailing `---`) when the condition applies — this guarantees `---` always appears between any two present sections
           - Wrap each issue in `<details><summary>`
           - Group by category (🔒 Security, 🐛 Quality, 🎨 Style)
           - Always include file:line reference, impact description, and actionable fix
           - Add before/after code examples where helpful
+          - **Issue counter**: in the `> 🔴 **X** Critical · ...` line replace each `X` with the actual count of issues found in that category (use `0` if none)
