@@ -13,17 +13,11 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
-      - name: Claude Code Review
-        id: claude-review
-        uses: markwylde/claude-code-gitea-action@92631f4d12a7f117d0318802d6350f24c7b24c27
+
+      - uses: ONLYOFFICE/DocSpace-buildtools/.gitea/actions/claude-review@develop
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           gitea_token: ${{ secrets.GITEA_TOKEN }}
-          model: claude-sonnet-4-6
-          direct_prompt: |
-            Read CLAUDE.md from the repository root and follow ALL instructions precisely to review this pull request.

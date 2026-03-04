@@ -1,0 +1,109 @@
+name: Claude Code Review
+description: Runs Claude AI code review on a pull request
+
+inputs:
+  anthropic_api_key:
+    required: true
+  gitea_token:
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Claude Code Review
+      uses: markwylde/claude-code-gitea-action@92631f4d12a7f117d0318802d6350f24c7b24c27
+      with:
+        anthropic_api_key: ${{ inputs.anthropic_api_key }}
+        gitea_token: ${{ inputs.gitea_token }}
+        model: claude-sonnet-4-6
+        direct_prompt: |
+          Read CLAUDE.md from the repository root to understand the repository context (tech stack, project structure, review focus, coding standards).
+          Then review this pull request following ALL instructions below precisely.
+
+          **Environment**: Gitea Actions (not GitHub), standard git operations, some GitHub Actions features may differ
+
+          ## Review Workflow
+
+          **Context**: Also read README.md to understand project architecture before reviewing.
+
+          ### 1. Check Previous Reviews
+
+          - Find comments from `gitea-actions` or `claude` on this PR
+          - If fixed → acknowledge: `☑️ Fixed: [title]`
+          - If NOT fixed → re-raise with **original severity** (do NOT escalate based on repetition count)
+          - Focus on new changes only
+
+          ### 2. Output Format
+
+          Respond with exactly this HTML structure:
+
+          <details>
+          <summary>[VERDICT] - Claude Code Review</summary>
+
+          ---
+
+          ### 📋 PR Summary
+          - **What**: Brief description of the main changes.
+          - **Why**: Reason or motivation for the changes.
+          - **Scope**: Which files, components, directories are affected.
+          - **Details** (optional):
+            - If the changes affect project structure, list new, deleted, or moved files/directories.
+            - If there are important technical decisions, briefly describe them.
+            - If there are breaking changes, state them explicitly.
+
+          ---
+
+          ### 🔄 Previous Review Follow-up (omit entire section if no previous review comments found)
+          ⚪️ **Fixed**: [title] - brief note
+          [🔴/🟡/🔵] **Still Open**: [title] (original severity: [emoji]) - why still relevant
+
+          ---
+
+          ### 🔒 Security Issues (omit entire section if no issues found)
+          <details><summary>🔴 Critical: Issue Title</summary>
+
+          - **File**: `path/file.ext:42`
+          - **Why**: Problem explanation
+          - **Fix**: Solution with code example
+
+          </details>
+
+          ---
+
+          ### 🐛 Code Quality (omit entire section if no issues found)
+          <details><summary>🟡 Medium: Issue Title</summary>...</details>
+
+          ---
+
+          ### 🎨 Style (omit entire section if no issues found)
+          <details><summary>🔵 Low: Issue Title</summary>...</details>
+
+          ---
+
+          ### ✅ Positive Observations (omit entire section if none)
+          - **Feature**: Description
+
+          ---
+
+          ### 📝 Documentation Updates Required (omit entire section if nothing to update)
+          - **README.md**: [what and why]
+          - **CLAUDE.md**: [what and why]
+
+          ---
+
+          </details>
+
+          ### 3. Verdict Logic
+
+          Set [VERDICT] in the summary tag:
+          - `✅ APPROVE` — only 🔵 Low or ✅ Positive issues found
+          - `❌ BLOCKED` — at least one 🔴 Critical or 🟡 Medium issue found
+
+          ### 4. Formatting Rules
+
+          - Severity: 🔴 Critical | 🟡 Medium | 🔵 Low | ✅ Positive | 💡 Recommendation
+          - Each section marked `(omit if ...)` must be omitted **together with its preceding `---`** when the condition applies
+          - Wrap each issue in `<details><summary>`
+          - Group by category (🔒 Security, 🐛 Quality, 🎨 Style)
+          - Always include file:line reference, impact description, and actionable fix
+          - Add before/after code examples where helpful

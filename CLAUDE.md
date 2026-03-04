@@ -1,10 +1,6 @@
-# Claude Code Review Context
-
-## Repository
+## Project Overview
 
 ONLYOFFICE DocSpace Build Tools — build scripts, Docker configurations, installation packages, CI/CD pipelines, and application configuration.
-
-**Environment**: Gitea Actions (not GitHub), standard git operations, some GitHub Actions features may differ
 
 ## Tech Stack
 
@@ -38,84 +34,6 @@ run/             — Service launch scripts
 - Supervisor manages .NET/Node.js/Java processes
 - Three editions: Community, Enterprise, Developer
 - All config via environment variables in `.env`
-
-## Review Workflow
-
-**Context**: Read [README.md](README.md) to understand project architecture, setup instructions, and deployment practices before reviewing code.
-
-### 1. Check Previous Reviews
-
-- Find comments from `gitea-actions` or `claude`
-- If fixed → acknowledge: `☑️ Fixed: [title]`
-- If NOT fixed → re-raise with **original severity** (do NOT escalate based on repetition count)
-- Focus on new changes only
-
-### 2. Output Format
-
-```html
-<details>
-<summary>[VERDICT(✅ APPROVE (only Low/Positive) or ❌ REQUEST_CHANGES (has Critical/Medium))] - Claude Code Review</summary>
-
----
-
-###📋 PR Summary
-- **What**: Brief description of the main changes.
-- **Why**: Reason or motivation for the changes.
-- **Scope**: Which files, components, directories are affected.
-- **Details** (optional):
-	- If the changes affect project structure, list new, deleted, or moved files/directories.
-	- If there are important technical decisions, briefly describe them.
-	- If there are breaking changes, state them explicitly.
-
----
-
-### �🔄 Previous Review Follow-up
-⚪️ **Fixed**: [title] - brief note
-[🔴/🟡/🔵] **Still Open**: [title] (original severity: [emoji]) - why still relevant
-
-- If no previous review issues are found, do NOT output the section "🔄 Previous Review Follow-up" at all.
----
-
-### 🔒 Security Issues
-<details><summary>🔴 Critical: Issue Title</summary>
-
-- **File**: `path/file.ext:42`
-- **Why**: Problem explanation
-- **Fix**: Solution with code example
-
-</details>
-
----
-
-### 🐛 Code Quality
-<details><summary>🟡 Medium: Issue Title</summary>...</details>
-
----
-
-### ✅ Positive Observations
-- **Feature**: Description
-
----
-
-### 📝 Documentation Updates Required
-- **README.md**: [what and why]
-- **CLAUDE.md**: [what and why]
-
-</details>
-```
-
-**Verdict logic:**
-- `✅ APPROVE` — only 🔵 Low or ✅ Positive issues
-- `❌ REQUEST_CHANGES` — at least one 🔴 Critical or 🟡 Medium issue found
-
-**Formatting:** 🔴 Critical | 🟡 Medium | 🔵 Low | ✅ Positive | 💡 Recommendation
-
-**Requirements:**
-- Separate sections with `---`
-- Wrap issues in `<details><summary>`
-- Group by category (🔒 Security, 🐛 Quality, 💅 Style)
-- Include file:line, impact, actionable fix
-- Add before/after code examples
 
 ## Coding Standards
 
