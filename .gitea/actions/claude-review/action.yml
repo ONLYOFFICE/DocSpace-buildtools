@@ -29,23 +29,30 @@ runs:
 
           **Context**: Also read README.md to understand project architecture before reviewing.
 
-          ### 1. Check Previous Reviews
+          ### 1. Get the full PR diff
 
-          - Find comments from `gitea-actions` or `claude` on this PR
-          - If fixed → acknowledge: `☑️ Fixed: [title]`
-          - If NOT fixed → re-raise with **original severity** (do NOT escalate based on repetition count)
-          - Focus on new changes only
+          Run `git diff origin/<base_branch>...HEAD` to get the complete diff for the entire PR (all commits).
+          Use this diff as the source of truth for all output sections (PR Summary, Issues, Positive Observations, Documentation) — except Fixed entries, which are derived by comparing previous review issues against this diff.
 
-          ### 2. Output Format
+          ### 2. Check Previous Reviews
+
+          - Search PR comments for one containing `<!-- claude-review-bot -->`
+          - If found: for each issue check if it is **still present in the full PR diff**
+            - Fixed → replace its `<details>` block with a ⚪️ Fixed entry (preserving original severity)
+            - Not fixed → keep it as-is
+          - Find new issues in the full PR diff that are not already in the previous review
+          - **PR Summary and Positive Observations** must also reflect the full PR diff, not just the latest commit
+
+          ### 3. Output Format
 
           Respond with exactly this structure:
 
-          ---
+          <!-- claude-review-bot -->
 
           <details>
           <summary>[VERDICT] - Claude Code Review</summary>
 
-            > 🔴 **X** Critical · 🟡 **X** Medium · 🔵 **X** Low · ✅ **X** Positive
+            > 🔴 **X** Critical · 🟡 **X** Medium · 🔵 **X** Low · ✅ **X** Positive · ⚪️ **X** Fixed
 
           ---
 
@@ -60,14 +67,14 @@ runs:
 
           ---
 
-          ### 🔄 Previous Review Follow-up *(omit block if no previous review comments found)*
-            ⚪️ **Fixed**: [title] - brief note
-            [🔴/🟡/🔵] **Still Open**: [title] (original severity: [emoji]) - why still relevant
+          ### 🔒 Security Issues *(omit if no open issues and no fixed items)*
+            <details><summary>⚪️ Fixed [🔴/🟡/🔵]: [title]</summary>
 
-          ---
+            - **Was**: original severity description
+            - **Fix applied**: what exactly was changed and where (`path/file.ext:line`)
 
-          ### 🔒 Security Issues *(omit block if no issues found)*
-            <details><summary>🔴 Critical: Issue Title</summary>
+            </details> *(only if a previous Security issue was fixed)*
+            <details><summary>[🔴 Critical/🟡 Medium/🔵 Low]: Issue Title</summary>
 
             - **File**: `path/file.ext:42`
             - **Why**: Problem explanation
@@ -77,13 +84,13 @@ runs:
 
           ---
 
-          ### 🐛 Code Quality *(omit block if no issues found)*
-            <details><summary>🟡 Medium: Issue Title</summary>...</details>
+          ### 🐛 Code Quality *(omit if no open issues and no fixed items)*
+            *(same structure as Security)*
 
           ---
 
-          ### 🎨 Style *(omit block if no issues found)*
-            <details><summary>🔵 Low: Issue Title</summary>...</details>
+          ### 🎨 Style *(omit if no open issues and no fixed items)*
+            *(same structure as Security)*
 
           ---
 
@@ -100,20 +107,64 @@ runs:
 
           </details>
 
-          ---
+          ### 4. Verdict Logic
 
-          ### 3. Verdict Logic
+          Set [VERDICT] based only on **currently open** issues (⚪️ Fixed entries do NOT count):
+          - `✅ APPROVE` — no open 🔴 Critical or 🟡 Medium issues (only 🔵 Low / ✅ Positive / ⚪️ Fixed)
+          - `❌ BLOCKED` — at least one open 🔴 Critical or 🟡 Medium issue
 
-          Set [VERDICT] in the summary tag:
-          - `✅ APPROVE` — only 🔵 Low or ✅ Positive issues found
-          - `❌ BLOCKED` — at least one 🔴 Critical or 🟡 Medium issue found
+          ### 5. Formatting Rules
 
-          ### 4. Formatting Rules
+          - Severity in `<summary>`: exactly one of `🔴 Critical` · `🟡 Medium` · `🔵 Low`
+          - **Omit rule**: omit entire block (header + content + trailing `---`) when the block condition is met; repeat issue/fixed entries as needed within a block
+          - Always include file:line, impact, actionable fix; add before/after code examples where helpful
+          - **Issue counter**: replace each `X` with actual count (`0` if none); Fixed = total ⚪️ Fixed across all categories
+          - **Strict format**: output ONLY the structure above — do not add any extra lines, summaries, or sections outside the template
 
-          - Severity: 🔴 Critical | 🟡 Medium | 🔵 Low | ✅ Positive | 💡 Recommendation
-          - **Omit rule**: each optional block header carries its condition in `*(omit block if ...)*`; omit the whole block (header + content + its trailing `---`) when the condition applies — this guarantees `---` always appears between any two present sections
-          - Wrap each issue in `<details><summary>`
-          - Group by category (🔒 Security, 🐛 Quality, 🎨 Style)
-          - Always include file:line reference, impact description, and actionable fix
-          - Add before/after code examples where helpful
-          - **Issue counter**: in the `> 🔴 **X** Critical · ...` line replace each `X` with the actual count of issues found in that category (use `0` if none)
+    - name: Replace previous review with new one
+      shell: bash
+      env:
+        GITEA_TOKEN: ${{ inputs.gitea_token }}
+        GITEA_URL: ${{ github.server_url }}
+        REPO: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+      run: |
+        # Fetch all comments with pagination
+        ALL_COMMENTS="[]"
+        PAGE=1
+        while true; do
+          BATCH=$(curl -sf \
+            -H "Authorization: token $GITEA_TOKEN" \
+            "$GITEA_URL/api/v1/repos/$REPO/issues/$PR_NUMBER/comments?limit=50&page=$PAGE") || break
+          BATCH_COUNT=$(echo "$BATCH" | jq 'length')
+          [ "$BATCH_COUNT" -eq 0 ] && break
+          ALL_COMMENTS=$(jq -n --argjson a "$ALL_COMMENTS" --argjson b "$BATCH" '$a + $b')
+          [ "$BATCH_COUNT" -lt 50 ] && break
+          PAGE=$((PAGE + 1))
+        done
+
+        MARKED=$(echo "$ALL_COMMENTS" | jq '[.[] | select(.body | contains("<!-- claude-review-bot -->"))] | sort_by(.id)')
+        COUNT=$(echo "$MARKED" | jq 'length')
+
+        # Need at least 2: one old + one new just created by Claude
+        if [ "$COUNT" -lt 2 ]; then
+          echo "Only $COUNT review comment(s) found, nothing to merge"
+          exit 0
+        fi
+
+        OLD_ID=$(echo "$MARKED" | jq -r 'first | .id')
+        NEW_BODY=$(echo "$MARKED" | jq -r 'last | .body')
+
+        # Patch the oldest comment with the new content
+        curl -sf -X PATCH \
+          -H "Authorization: token $GITEA_TOKEN" \
+          -H "Content-Type: application/json" \
+          -d "{\"body\": $(echo "$NEW_BODY" | jq -Rs .)}" \
+          "$GITEA_URL/api/v1/repos/$REPO/issues/comments/$OLD_ID"
+
+        # Delete all other review comments (all except the oldest)
+        echo "$MARKED" | jq -r '.[1:] | .[].id' | while read -r DEL_ID; do
+          curl -sf -X DELETE \
+            -H "Authorization: token $GITEA_TOKEN" \
+            "$GITEA_URL/api/v1/repos/$REPO/issues/comments/$DEL_ID" || true
+        done
