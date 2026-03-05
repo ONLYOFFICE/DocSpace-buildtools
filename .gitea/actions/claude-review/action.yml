@@ -47,6 +47,8 @@ runs:
 
           Respond with exactly this structure (no extra lines outside it):
 
+          **IMPORTANT**: The very first line of your response MUST be exactly `<!-- claude-review-bot -->` — no text, no blank line before it.
+
           <!-- claude-review-bot -->
 
           <details>
