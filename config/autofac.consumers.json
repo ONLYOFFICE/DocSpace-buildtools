@@ -583,7 +583,8 @@
 			  "dbName": "",
 			  "dbUser": "",
 			  "dbPassword": "",
-			  "dbSsl": ""
+			  "dbSsl": "",
+			  "sqliteFilePath": ""
 			},
 			"additional": {}
 		}
