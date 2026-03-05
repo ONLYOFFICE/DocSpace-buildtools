@@ -31,8 +31,8 @@ runs:
 
           ### 1. Get the full PR diff
 
-          Run `git diff origin/<base_branch>...HEAD` to get the complete diff for the entire PR (all commits).
-          Use this diff as the source of truth for all output sections (PR Summary, Issues, Positive Observations, Documentation) — except Fixed entries, which are derived by comparing previous review issues against this diff.
+          Use the PR diff already available in context.
+          Only if it appears to cover just the latest commit (e.g., previous review exists with issues not present in current diff), run `git diff origin/<base_branch>...HEAD` to get the full diff across all commits.
 
           ### 2. Check Previous Reviews
 
