@@ -14,7 +14,44 @@ function get_colors() {
     export COLOR_RESET
     export COLOR_YELLOW
 }
+function get_hub_jwt() {
+  : "${DOCKER_USERNAME:?Should be set}"
+  : "${DOCKER_TOKEN:?Should be set}"
 
+  local response
+  response=$(curl -sSL \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"username\":\"${DOCKER_USERNAME}\",\"password\":\"${DOCKER_TOKEN}\"}" \
+    "https://hub.docker.com/v2/users/login/" 2>/dev/null)
+
+  HUB_JWT=$(echo "${response}" | jq -r '.token // empty' 2>/dev/null) || true
+
+  if [[ -z "${HUB_JWT}" ]]; then
+    error_msg=$(echo "${response}" | jq -r '.detail // .message // "unknown error"' 2>/dev/null) || error_msg="unknown error"
+    gha_warning "Docker Hub login failed: ${error_msg} — repository visibility will not be changed automatically"
+  fi
+}
+
+function make_repo_public() {
+  local full_repo="${1%:*}"   # strip tag, e.g. onlyoffice/docspace-api
+  local namespace="${full_repo%%/*}"
+  local repository="${full_repo#*/}"
+
+  local http_status
+  http_status=$(curl -s -o /dev/null -w "%{http_code}" \
+    -X POST \
+    -H "Authorization: JWT ${HUB_JWT}" \
+    -H "Content-Type: application/json" \
+    -d '{"is_private": false}' \
+    "https://hub.docker.com/v2/repositories/${namespace}/${repository}/privacy")
+
+  if [[ "${http_status}" == "200" ]]; then
+    echo "${COLOR_BLUE}Repository ${namespace}/${repository} is now public${COLOR_RESET}"
+  else
+    echo "${COLOR_YELLOW}Warning: could not set ${namespace}/${repository} to public (HTTP ${http_status})${COLOR_RESET}" >&2
+  fi
+}
 function release_service() {
    
    # ex. service_source_tag=onlyoffice/4testing-docspace-service-name:2.5.1.1473
@@ -38,6 +75,7 @@ function release_service() {
    # Make alert
    if [[ ! ${STATUS} ]]; then
      RELEASED_SERVICES+=("${service_release_tag}")
+     make_repo_public "${service_release_tag}"
    else
      UNRELEASED_SERVICES+=("${service_release_tag}")
    fi
@@ -62,6 +100,9 @@ function main() {
 
   # DOCKER_IMAGE_PREFIX mean tag prefix ex. 4testing-docspace
   : "${DOCKER_IMAGE_PREFIX:?Should be set}"
+
+  # Authenticate with Docker Hub API for repository visibility management
+  get_hub_jwt
 
   cd ${GITHUB_WORKSPACE}/install/docker
   
