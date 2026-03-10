@@ -101,6 +101,11 @@ cp -rf %{SOURCE0} .
 
 %pre common
 
+if [ "$1" -eq 2 ]; then
+    systemctl stop '%{product}-*.service' >/dev/null 2>&1 || true
+    systemctl daemon-reload >/dev/null 2>&1 || true
+fi
+
 getent group onlyoffice >/dev/null || groupadd -r onlyoffice
 getent passwd onlyoffice >/dev/null || useradd -r -g onlyoffice -s /usr/sbin/nologin -d %{_sysconfdir}/onlyoffice/%{product} onlyoffice
 

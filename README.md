@@ -253,6 +253,7 @@ Docker-based migrations are handled by `migration-runner.yml` Compose service.
 | `ci-oci-update.yml` | Update mechanism testing |
 | `zap-scanner.yaml` | OWASP ZAP security scanning |
 | `check-comments.yml` | Code review automation |
+| `claude-auto-review.yml` | Automated PR code review with Claude |
 
 **Infrastructure:**
 
