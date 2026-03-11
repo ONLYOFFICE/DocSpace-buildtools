@@ -93,6 +93,14 @@ runs:
 
           ---
 
+          ### ⚡ Performance
+
+          ---
+
+          ### 📦 Dependencies
+
+          ---
+
           ### 🎨 Style
 
           ---
@@ -114,7 +122,7 @@ runs:
 
           - Severity in `<summary>`: assigned based on actual impact, **not** tied to category — 🔴 **Critical**: must fix before merge (data loss, security breach, broken functionality) · 🟡 **Medium**: should fix (incorrect behaviour, bad practice, meaningful technical debt) · 🔵 **Low**: nice to fix (style, naming, minor inconsistency)
           - **Omit rule**: omit entire block (header + all entries + trailing `---`) if the block has no open issues AND no fixed items; omit `📝 Documentation` block if nothing to update; omit `✅ Positive Observations` block if none
-          - Issue and Fixed `<details>` entries may repeat as needed within a block; use same structure as Security for Code Quality and Style blocks
+          - Issue and Fixed `<details>` entries may repeat as needed within a block; all issue blocks follow the same `<details>` structure as 🔒 Security Issues
           - Always include file:line, impact, actionable fix; add before/after code examples where helpful
           - **Issue counter**: replace each `X` with actual count (`0` if none); Fixed = total ⚪️ Fixed across all categories
           - **Strict format**: output ONLY the structure from section 4 — do not add any extra lines, summaries, or sections outside it
