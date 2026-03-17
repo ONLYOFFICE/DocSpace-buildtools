@@ -25,13 +25,13 @@ jobs:
 
     steps:
       - name: Checkout Main Repository (DocSpace-buildtools)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: 'true'
           path: buildtools
 
       - name: Checkout DocSpace Server Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: ONLYOFFICE/DocSpace-server
           submodules: 'true'
@@ -39,7 +39,7 @@ jobs:
           ref: ${{ github.event.inputs.server_repo_branch }}
 
       - name: Checkout DocSpace Client Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: ONLYOFFICE/DocSpace-client
           submodules: 'true'
@@ -47,14 +47,14 @@ jobs:
           ref: ${{ github.event.inputs.client_repo_branch }}
 
       - name: Checkout ASC.Web.Campaigns Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: ONLYOFFICE/ASC.Web.Campaigns
           path: campaigns
           ref: master
 
       - name: Checkout DocSpace Plugins Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: ONLYOFFICE/docspace-plugins
           path: plugins

@@ -554,6 +554,40 @@
 			  "weixinRedirectUrl": "https://service.teamlab.info/oauth2.aspx"
 			}
 		}
+	},
+	{
+		"type": "ASC.FederatedLogin.DatabaseProviders.ExternalDatabaseProvider, ASC.FederatedLogin",
+		"services": [
+		  {
+			"type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common" 
+		  },
+		  { 
+			"type": "ASC.FederatedLogin.DatabaseProviders.ExternalDatabaseProvider, ASC.FederatedLogin"
+		  },
+		  { 
+			"key": "externaldb", "type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
+		  },
+		  { 
+			"key": "externaldb", "type": "ASC.FederatedLogin.DatabaseProviders.ExternalDatabaseProvider, ASC.FederatedLogin"
+		  }
+		],
+		"instanceScope": "perlifetimescope",
+		"parameters": {
+			"name": "externaldb",
+			"order": "27",
+			"paid": false,
+			"props": {
+			  "databaseType": "",
+			  "dbHost": "",
+			  "dbPort": "",
+			  "dbName": "",
+			  "dbUser": "",
+			  "dbPassword": "",
+			  "dbSsl": "",
+			  "sqliteFilePath": ""
+			},
+			"additional": {}
+		}
 	}
   ]
 }

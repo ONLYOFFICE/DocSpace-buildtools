@@ -23,7 +23,7 @@ jobs:
       SCRIPT_DIR: "${{ github.workspace }}/install/OneClickInstall"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Creating additional scripts
         run: |
