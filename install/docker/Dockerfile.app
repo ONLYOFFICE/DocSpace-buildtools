@@ -70,7 +70,7 @@ COPY --from=src ${SRC_PATH}/server/ .
 RUN echo "--- build/publish docspace-server .net 10.0 ---" && \
     dotnet build ASC.Web.slnf && \
     dotnet build ASC.Migrations.sln --property:OutputPath=${SRC_PATH}/publish/services/ASC.Migration.Runner/service/ && \
-    dotnet publish ASC.Web.slnf -p PublishProfile=ReleaseProfile -p ErrorOnDuplicatePublishOutputFiles=false && \
+    dotnet publish ASC.Web.slnf -p PublishProfile=ReleaseProfile && \
     dotnet nuget locals all --clear && \
     rm -rf ${SRC_PATH}/server/*
 
