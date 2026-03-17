@@ -49,14 +49,16 @@ function check_source_image_exists() {
 }
 
 function get_hub_jwt() {
-  : "${DOCKER_USERNAME:?Should be set}"
-  : "${DOCKER_TOKEN:?Should be set}"
+  if [[ -z "${DOCKER_USERNAME_PAT}" || -z "${DOCKER_TOKEN_PAT}" ]]; then
+    gha_warning "DOCKER_USERNAME_PAT / DOCKER_TOKEN_PAT are not set - repository visibility will not be changed automatically"
+    return 0
+  fi
 
   local response
   response=$(curl -sSL \
     -X POST \
     -H "Content-Type: application/json" \
-    -d "{\"username\":\"${DOCKER_USERNAME}\",\"password\":\"${DOCKER_TOKEN}\"}" \
+    -d "{\"username\":\"${DOCKER_USERNAME_PAT}\",\"password\":\"${DOCKER_TOKEN_PAT}\"}" \
     "https://hub.docker.com/v2/users/login/" 2>/dev/null)
 
   HUB_JWT=$(echo "${response}" | jq -r '.token // empty' 2>/dev/null) || true
@@ -68,6 +70,7 @@ function get_hub_jwt() {
 }
 
 function make_repo_public() {
+  [[ -z "${HUB_JWT}" ]] && return 0
   local full_repo="${1%:*}"
   local namespace="${full_repo%%/*}"
   local repository="${full_repo#*/}"
@@ -114,6 +117,7 @@ function release_service() {
    # Make alert
    if [[ ${STATUS} -eq 0 ]]; then
      RELEASED_SERVICES+=("${service_release_tag}")
+     get_hub_jwt
      make_repo_public "${service_release_tag}"
    else
      gha_error "docker buildx imagetools create failed for ${service_release_tag} (exit code ${STATUS})"
@@ -144,9 +148,6 @@ function main() {
   # Validate version formats early to fail fast
   validate_version_format "${DOCKER_TAG}"      "source_version (DOCKER_TAG)"
   validate_version_format "${RELEASE_VERSION}" "release_version (RELEASE_VERSION)"
-
-  # Authenticate with Docker Hub API for repository visibility management
-  get_hub_jwt
 
   cd "${GITHUB_WORKSPACE}/install/docker"
   
