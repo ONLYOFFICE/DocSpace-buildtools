@@ -92,7 +92,8 @@
           "smtp": "/docspace/configuration/docspace-integration-settings.aspx#smtpsettings_block",
           "apikeys": "/docspace/configuration/docspace-developer-tools-settings.aspx#apikeys_block",
           "dataImport": "/docspace/configuration/docspace-data-import-settings.aspx",
-          "documentService": "/docspace/configuration/docspace-integration-settings.aspx#documentservicesettings_block"
+          "documentService": "/docspace/configuration/docspace-integration-settings.aspx#documentservicesettings_block",
+          "aiservicesmanagement": "/ai/configuration.aspx"
         }
       }
     },
