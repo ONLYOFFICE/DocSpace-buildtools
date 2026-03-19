@@ -183,6 +183,14 @@
         "contentAsAttachment": true,
         "appendTenantId": false,
         "disableMigrate": true
+      },
+      {
+        "name": "externaldb",
+        "visible": false,
+        "type": "disc",
+        "path": "$STORAGE_ROOT\\ExtDb",
+        "appendTenantId": false,
+        "disableEncryption": true
       }
     ]
   }
