@@ -96,6 +96,7 @@ jobs:
           DOCKER_TAG="${PRODUCT_VERSION}.${{ github.run_number }}"
           
           curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ matrix.branch }}/.github/scripts/docker-images-availability.sh \
-            | sudo GITHUB_REPOSITORY=${{ github.repository }} BRANCH=${{ matrix.branch }} DOCKER_REPOSITORY=${{ env.REPO }} DOCKER_PREFIX=${{ env.DOCKER_IMAGE_PREFIX }} DOCKER_TAG=$DOCKER_TAG bash
+            | sudo GITHUB_REPOSITORY=${{ github.repository }} BRANCH=${{ matrix.branch }} DOCKER_REPOSITORY=${{ env.REPO }} DOCKER_PREFIX=${{ env.DOCKER_IMAGE_PREFIX }} DOCKER_TAG=$DOCKER_TAG \
+                   DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME_PAT }} DOCKERHUB_TOKEN=${{ secrets.DOCKERHUB_TOKEN_PAT }} bash
 
           gh workflow run "ci-oci-docker-install.yml" --repo "${{ github.repository }}" --ref "${{ matrix.branch }}" --field offline=false --field testing=true --field tag=$DOCKER_TAG
