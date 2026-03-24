@@ -177,12 +177,6 @@ get_os_info () {
     esac
 
 	if [ "$OS" == "linux" ]; then
-        MACH=$(uname -m)
-		if [ "${MACH}" != "x86_64" ]; then
-			echo "Currently only supports 64bit OS's"
-			exit 1
-		fi
-
 		KERNEL=$(uname -r)
 
 		if [ -f /etc/redhat-release ]; then
