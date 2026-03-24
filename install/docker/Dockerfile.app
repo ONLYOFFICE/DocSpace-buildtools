@@ -2,9 +2,13 @@ ARG SRC_PATH="/app/onlyoffice/src"
 ARG BUILD_PATH="/var/www"
 ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:10.0"
 ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:10.0-noble"
+ARG PYTHON_VERSION="3.12"
+ARG NODE_VERSION="24"
+ARG JAVA_VERSION="21"
+ARG MAVEN_VERSION="3.9"
 
 # Image resources
-FROM python:3.12-slim AS src
+FROM --platform=$BUILDPLATFORM python:${PYTHON_VERSION}-slim AS src
 ARG GIT_BRANCH="master"
 ARG FALLBACK_BRANCH="develop"
 ARG SRC_PATH
@@ -60,22 +64,23 @@ RUN <<EOF
 EOF
 
 # .net build
-FROM $DOTNET_SDK AS build-dotnet
+FROM --platform=$BUILDPLATFORM $DOTNET_SDK AS build-dotnet
 ARG DEBIAN_FRONTEND=noninteractive
 ARG SRC_PATH
+ARG TARGETARCH
 
 WORKDIR ${SRC_PATH}/server
 COPY --from=src ${SRC_PATH}/server/ .
 
-RUN echo "--- build/publish docspace-server .net 10.0 ---" && \
-    dotnet build ASC.Web.slnf && \
-    dotnet build ASC.Migrations.sln --property:OutputPath=${SRC_PATH}/publish/services/ASC.Migration.Runner/service/ && \
-    dotnet publish ASC.Web.slnf -p PublishProfile=ReleaseProfile && \
+RUN RID=linux-${TARGETARCH/amd64/x64} && \
+    PUBLISH_ARGS='-c Release --self-contained false -p:DebugType=None -p:DebugSymbols=false -p:UseAppHost=false --no-restore' && \
+    dotnet publish common/Tools/ASC.Migration.Runner/ASC.Migration.Runner.csproj $PUBLISH_ARGS -r "$RID" -o "${SRC_PATH}/publish/services/ASC.Migration.Runner/service/" && \
+    dotnet publish ASC.Web.slnf $PUBLISH_ARGS -r "$RID" -p:PublishProfile=ReleaseProfile && \
     dotnet nuget locals all --clear && \
     rm -rf ${SRC_PATH}/server/*
 
 # node build
-FROM node:24-slim AS build-node
+FROM --platform=$BUILDPLATFORM node:${NODE_VERSION}-slim AS build-node
 ARG SRC_PATH
 ARG BUILD_ARGS="build"
 ARG DEPLOY_ARGS="deploy"
@@ -110,7 +115,7 @@ RUN echo "--- installing pnpm ---" && \
     rm -rf /tmp/pnpm
 
 # build plugins
-FROM node:24-slim AS build-plugins
+FROM --platform=$BUILDPLATFORM node:${NODE_VERSION}-slim AS build-plugins
 ARG SRC_PATH
 COPY --from=src ${SRC_PATH}/plugins ${SRC_PATH}/plugins
 WORKDIR ${SRC_PATH}/buildtools/install/common
@@ -122,7 +127,7 @@ RUN echo "--- build/publish plugins ---" && \
     rm -rf ${SRC_PATH}/buildtools
 
 # java build
-FROM maven:3.9-eclipse-temurin-21 AS java-build
+FROM --platform=$BUILDPLATFORM maven:${MAVEN_VERSION}-eclipse-temurin-${JAVA_VERSION} AS build-java
 ARG SRC_PATH
 
 WORKDIR ${SRC_PATH}/server/common/ASC.Identity/
@@ -175,7 +180,7 @@ USER onlyoffice
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
 
-FROM node:24-slim AS noderun
+FROM node:${NODE_VERSION}-slim AS noderun
 ARG BUILD_PATH
 ARG SRC_PATH 
 ENV BUILD_PATH=${BUILD_PATH}
@@ -209,7 +214,7 @@ USER onlyoffice
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
 
-FROM eclipse-temurin:21-jre AS javarun
+FROM eclipse-temurin:${JAVA_VERSION}-jre AS javarun
 ARG BUILD_PATH
 ARG SRC_PATH
 ENV BUILD_PATH=${BUILD_PATH}
@@ -399,38 +404,20 @@ CMD ["ASC.Files.dll", "ASC.Files"]
 
 ## ASC.Files.Worker ##
 FROM dotnetrun AS files_worker
+ARG TARGETARCH
 ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
 WORKDIR ${BUILD_PATH}/products/ASC.Files/service/
 USER root
 
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Files.Worker/service/ .
-COPY --from=onlyoffice/ffvideo:7.1 --chown=onlyoffice:onlyoffice /app/src/ /
 
-RUN <<EOF
-    #!/bin/bash
-    set -xe
-    ARCH_LINUX=$(lscpu | grep Architecture | awk '{print $2}')
-    echo "--- ADD necessary lib for arh: ${ARCH_LINUX} ---"
-    if [ "$ARCH_LINUX" = "x86_64" ] ; then
-        apt update && \
-        apt install -y \
-            libasound2t64 \
-            libdrm2 \
-            libv4l-0t64 \
-            libplacebo-dev \
-            libxcb-shape0 \
-            ocl-icd-opencl-dev 
-    fi
-    if [ "$ARCH_LINUX" = "aarch64" ] ; then
-        apt update && \
-        apt install -y \
-            libasound2t64 \
-            libv4l-0t64
-    fi 
-    rm -rf /var/lib/apt/lists/* \
-    /tmp/*
-EOF
+# Copy ffmpeg binary and essential libraries
+COPY --from=onlyoffice/ffvideo:7.1 --chown=onlyoffice:onlyoffice /app/src/ /
+RUN set -eux; \
+  PKGS="libasound2t64 libv4l-0t64 libxml2 libgomp1"; \
+  [ "$TARGETARCH" = "amd64" ] && PKGS="$PKGS libx11-xcb1 libxcb-dri3-0 libxcb-shape0 libxcb-xfixes0 libxfixes3 ocl-icd-libopencl1"; \
+  apt-get update && apt-get install -y --no-install-recommends $PKGS && rm -rf /var/lib/apt/lists/* /tmp/*
 
 USER onlyoffice
 
@@ -602,15 +589,15 @@ COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/servi
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Data.Backup.Worker/service/  ${BUILD_PATH}/services/ASC.Data.Backup.Worker/service
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Files/service/ ${BUILD_PATH}/products/ASC.Files/server/
 
+ARG TARGETARCH
 USER root
 ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Files.Worker/service/ ${BUILD_PATH}/products/ASC.Files/service/
-COPY --from=onlyoffice/ffvideo:7.1 --chown=onlyoffice:onlyoffice /app/src/ ${BUILD_PATH}/products/ASC.Files/service/
 
+COPY --from=onlyoffice/ffvideo:7.1 --chown=onlyoffice:onlyoffice /app/src/ /
 RUN set -eux; \
-  ARCH=$(uname -m); \
-  PKGS="libasound2t64 libv4l-0t64"; \
-  [ "$ARCH" = "x86_64" ] && PKGS="$PKGS libdrm2 libplacebo-dev libxcb-shape0 ocl-icd-opencl-dev"; \
+  PKGS="libasound2t64 libv4l-0t64 libxml2 libgomp1"; \
+  [ "$TARGETARCH" = "amd64" ] && PKGS="$PKGS libx11-xcb1 libxcb-dri3-0 libxcb-shape0 libxcb-xfixes0 libxfixes3 ocl-icd-libopencl1"; \
   apt-get update && apt-get install -y --no-install-recommends $PKGS && rm -rf /var/lib/apt/lists/* /tmp/*
 
 USER onlyoffice
