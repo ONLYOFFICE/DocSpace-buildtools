@@ -35,8 +35,6 @@ RUN --mount=type=secret,id=github_token,env=GITHUB_TOKEN sh -ec '\
 
 RUN <<EOF
 #!/bin/bash
-echo "--- clone resources ---"
-
 git clone --recurse-submodules -b $(echo "$(git ls-remote --exit-code --heads "${BUILDTOOLS_REPO}" "${GIT_BRANCH}"\
  > /dev/null 2>&1 && echo "${GIT_BRANCH}" || echo "${FALLBACK_BRANCH}")") --depth 30 ${BUILDTOOLS_REPO} ${SRC_PATH}/buildtools && \
 
@@ -52,7 +50,6 @@ EOF
 
 WORKDIR ${SRC_PATH}/buildtools/config
 RUN <<EOF
-    echo "--- customize config base files ---" && \
     mkdir -p /app/onlyoffice/config/ && \
     ls | grep -Ev 'test|\.dev\.|nginx' | xargs cp -r -t /app/onlyoffice/config/
     cd ${SRC_PATH}
@@ -61,7 +58,6 @@ RUN <<EOF
     sed -i "s/\"number\".*,/\"number\": \"${PRODUCT_VERSION}.${BUILD_NUMBER}\",/g" /app/onlyoffice/config/appsettings.json
     sed -e 's/#//' -i /etc/nginx/conf.d/onlyoffice.conf
     if [ "$DEBUG_INFO" = true ]; then
-        echo "--- add customized debuginfo ---" && \
         pip install -r ${SRC_PATH}/buildtools/requirements.txt --break-system-packages && \
         python3 ${SRC_PATH}/buildtools/debuginfo.py && \
         pip cache purge
@@ -100,9 +96,8 @@ WORKDIR ${SRC_PATH}/server
 COPY --from=src ${SRC_PATH}/server/common/ASC.Socket.IO ./common/ASC.Socket.IO
 COPY --from=src ${SRC_PATH}/server/common/ASC.SsoAuth ./common/ASC.SsoAuth
 
-    cd ${SRC_PATH}/server/common/ASC.Socket.IO && \
+RUN cd ${SRC_PATH}/server/common/ASC.Socket.IO && \
     yarn install --immutable && \
-    echo "--- build/publish ASC.SsoAuth ---" && \ 
     cd ${SRC_PATH}/server/common/ASC.SsoAuth && \
     yarn install --immutable && \
     yarn cache clean --all
@@ -143,8 +138,7 @@ ARG SRC_PATH
 WORKDIR ${SRC_PATH}/server/common/ASC.Identity/
 COPY --from=src ${SRC_PATH}/server/common/ASC.Identity/ .
 
-RUN echo "--- build/publish docspace-server java (ASC.Identity) ---" && \
-    mkdir -p ${SRC_PATH}/publish/services/ASC.Identity.Registration && \
+RUN mkdir -p ${SRC_PATH}/publish/services/ASC.Identity.Registration && \
     mkdir -p ${SRC_PATH}/publish/services/ASC.Identity.Authorization && \
     mvn -Dmaven.repo.local=/tmp/m2/repository -B dependency:go-offline && \
     mvn -Dmaven.repo.local=/tmp/m2/repository clean package -B -DskipTests -pl authorization/authorization-container,registration/registration-container -am && \
@@ -464,13 +458,13 @@ ENTRYPOINT ["/bin/bash", "/usr/bin/docker-migration-entrypoint.sh"]
 ## ASC.Identity.Authorization ##
 FROM javarun AS identity-authorization
 WORKDIR ${BUILD_PATH}/services/ASC.Identity.Authorization/
-COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.Authorization/app.jar .
+COPY --from=build-java --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.Authorization/app.jar .
 CMD ["ASC.Identity.Authorization"]
 
 ## ASC.Identity.Registration ##
 FROM javarun AS identity-api
 WORKDIR ${BUILD_PATH}/services/ASC.Identity.Registration/
-COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.Registration/app.jar .
+COPY --from=build-java --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.Registration/app.jar .
 CMD ["ASC.Identity.Registration"]
 
 ## image for k8s bin-share ##
@@ -499,18 +493,8 @@ USER onlyoffice
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/wait-bin-share-docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
 ENTRYPOINT ["/bin/sh", "/usr/bin/docker-entrypoint.sh"]
 
-# Dotnet Services ##
+## Dotnet Services ##
 FROM dotnetrun AS dotnet-services
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/dotnet_services.conf /etc/supervisor/conf.d/supervisord.conf
-
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.AI/service/ ${BUILD_PATH}/products/ASC.AI/server/
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.AI.Worker/service/ ${BUILD_PATH}/products/ASC.AI/service/
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.ApiSystem/service/  ${BUILD_PATH}/services/ASC.ApiSystem/service/
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.ClearEvents/service/  ${BUILD_PATH}/services/ASC.ClearEvents/service/
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Data.Backup/service/ ${BUILD_PATH}/services/ASC.Data.Backup/service/
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Data.Backup.Worker/service/  ${BUILD_PATH}/services/ASC.Data.Backup.Worker/service
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Files/service/ ${BUILD_PATH}/products/ASC.Files/server/
-
 ARG TARGETARCH
 USER root
 RUN apt-get update && \
@@ -528,6 +512,14 @@ RUN set -eux; \
 
 USER onlyoffice
 
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/dotnet_services.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.AI/service/ ${BUILD_PATH}/products/ASC.AI/server/
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.AI.Worker/service/ ${BUILD_PATH}/products/ASC.AI/service/
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.ApiSystem/service/  ${BUILD_PATH}/services/ASC.ApiSystem/service/
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.ClearEvents/service/  ${BUILD_PATH}/services/ASC.ClearEvents/service/
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Data.Backup/service/ ${BUILD_PATH}/services/ASC.Data.Backup/service/
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Data.Backup.Worker/service/  ${BUILD_PATH}/services/ASC.Data.Backup.Worker/service
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Files/service/ ${BUILD_PATH}/products/ASC.Files/server/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Migration.Runner/service/ ${BUILD_PATH}/services/ASC.Migration.Runner/service/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Notify/service/ ${BUILD_PATH}/services/ASC.Notify/service/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.People/service/ ${BUILD_PATH}/products/ASC.People/server/
