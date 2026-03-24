@@ -123,12 +123,13 @@ RUN echo "--- installing pnpm ---" && \
 FROM --platform=$BUILDPLATFORM node:${NODE_VERSION}-slim AS build-plugins
 ARG SRC_PATH
 COPY --from=src ${SRC_PATH}/plugins ${SRC_PATH}/plugins
+COPY --from=src ${SRC_PATH}/buildtools/install/common/plugins-build.sh ${SRC_PATH}/buildtools/install/common/plugins-build.sh
 WORKDIR ${SRC_PATH}/buildtools/install/common
-COPY --from=src ${SRC_PATH}/buildtools/install/common/plugins-build.sh ./plugins-build.sh
-RUN echo "--- build/publish plugins ---" && \
-    apt-get update && apt-get install -y unzip && \
+RUN apt-get -y update && \
+    apt-get install -yq unzip jq && \
+    mkdir -p "${SRC_PATH}/plugins/publish" && \
     bash plugins-build.sh "${SRC_PATH}/plugins" && \
-    find "${SRC_PATH}/plugins" -mindepth 1 -maxdepth 1 ! -path "${SRC_PATH}/plugins/publish" -exec rm -rf {} + && \
+    find "${SRC_PATH}/plugins" -mindepth 1 -maxdepth 1 ! -name "publish" -exec rm -rf {} + && \
     rm -rf ${SRC_PATH}/buildtools
 
 # java build
