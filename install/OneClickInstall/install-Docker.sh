@@ -770,6 +770,7 @@ install_product () {
 				else
 					${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" down
 				fi
+				docker images --format "{{.Repository}}:{{.Tag}}" | grep ":${LOCAL_CONTAINER_TAG}$" | xargs -r docker rmi
 			fi
 		fi
 
