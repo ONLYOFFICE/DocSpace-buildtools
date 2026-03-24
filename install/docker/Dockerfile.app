@@ -24,10 +24,15 @@ ARG CLIENT_REPO="https://github.com/ONLYOFFICE/DocSpace-Client.git"
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
-    git ; \
+    git curl; \
     rm -rf /var/lib/apt/lists/*
 
-ADD https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/git/refs/heads/${GIT_BRANCH} version.json
+RUN --mount=type=secret,id=github_token,env=GITHUB_TOKEN sh -ec '\
+    curl --retry 3 --retry-delay 2 --retry-connrefused -fsSL \
+      -H "Accept: application/vnd.github+json" \
+      ${GITHUB_TOKEN:+-H "Authorization: Bearer ${GITHUB_TOKEN}"} \
+      "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/git/refs/heads/${GIT_BRANCH}" -o version.json'
+
 RUN <<EOF
 #!/bin/bash
 echo "--- clone resources ---"

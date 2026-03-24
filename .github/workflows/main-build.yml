@@ -62,6 +62,8 @@ jobs:
 
       - name: Build ${{ matrix.service }}
         timeout-minutes: 90
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           cd .${DOCKER_PATH}
           docker buildx bake -f build.hcl ${{ matrix.service }}-services \
@@ -69,6 +71,7 @@ jobs:
             --set "*.args.PRODUCT_VERSION=${{ env.PRODUCT_VERSION }}" \
             --set "*.args.BUILD_NUMBER=${{ github.run_number }}" \
             --set "*.platform=linux/amd64,linux/arm64" \
+            --set "*.secrets=id=github_token,env=GITHUB_TOKEN" \
             --sbom=true --provenance=mode=max --push
           
           # Clean up disk space after build
