@@ -1,3 +1,4 @@
 .DS_Store
 /*.log
+.claude/
 #/config/nginx/includes/onlyoffice-upstream-map.conf
