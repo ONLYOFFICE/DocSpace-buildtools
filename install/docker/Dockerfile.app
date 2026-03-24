@@ -95,7 +95,6 @@ WORKDIR ${SRC_PATH}/server
 COPY --from=src ${SRC_PATH}/server/common/ASC.Socket.IO ./common/ASC.Socket.IO
 COPY --from=src ${SRC_PATH}/server/common/ASC.SsoAuth ./common/ASC.SsoAuth
 
-RUN echo "--- build/publish ASC.Socket.IO ---" && \
     cd ${SRC_PATH}/server/common/ASC.Socket.IO && \
     yarn install --immutable && \
     echo "--- build/publish ASC.SsoAuth ---" && \ 
@@ -143,8 +142,7 @@ RUN echo "--- build/publish docspace-server java (ASC.Identity) ---" && \
     mkdir -p ${SRC_PATH}/publish/services/ASC.Identity.Registration && \
     mkdir -p ${SRC_PATH}/publish/services/ASC.Identity.Authorization && \
     mvn -Dmaven.repo.local=/tmp/m2/repository -B dependency:go-offline && \
-    mvn -Dmaven.repo.local=/tmp/m2/repository clean package -B -DskipTests -pl authorization/authorization-container -am && \
-    mvn -Dmaven.repo.local=/tmp/m2/repository clean package -B -DskipTests -pl registration/registration-container -am && \
+    mvn -Dmaven.repo.local=/tmp/m2/repository clean package -B -DskipTests -pl authorization/authorization-container,registration/registration-container -am && \
     mv -f ${SRC_PATH}/server/common/ASC.Identity/authorization/authorization-container/target/*.jar ${SRC_PATH}/publish/services/ASC.Identity.Authorization/app.jar && \
     mv -f ${SRC_PATH}/server/common/ASC.Identity/registration/registration-container/target/*.jar ${SRC_PATH}/publish/services/ASC.Identity.Registration/app.jar && \
     rm -rf ${SRC_PATH}/server /tmp/m2
@@ -155,30 +153,14 @@ ARG SRC_PATH
 ENV BUILD_PATH=${BUILD_PATH}
 ENV SRC_PATH=${SRC_PATH}
 
-# add defualt user and group for no-root run
-RUN echo "--- install runtime aspnet.9 ---" && \
-    mkdir -p /var/log/onlyoffice && \
-    mkdir -p /app/onlyoffice/data && \
-    apt-get -y update && \
-    apt-get install -yq \
-    sudo \
-    adduser \
-    nano \
-    curl \
-    supervisor \
-    vim \
-    python3-pip \
-    libgdiplus && \
+RUN apt-get -y update && \
+    apt-get install -yq sudo adduser nano curl python3-pip libgdiplus && \
     pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces requests && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
-    chown onlyoffice:onlyoffice /app/onlyoffice -R && \
-    chown onlyoffice:onlyoffice /var/log -R && \
-    chown onlyoffice:onlyoffice /var/www -R && \
-    chown onlyoffice:onlyoffice /run -R && \
-    echo "--- clean up ---" && \
-    rm -rf /var/lib/apt/lists/* \
-    /tmp/*
+    mkdir -p /var/log/onlyoffice /app/onlyoffice/data && \
+    chown -R onlyoffice:onlyoffice /app/onlyoffice /var/log /var/www /run && \
+    rm -rf /var/lib/apt/lists/* /tmp/*
 
 COPY --from=src --chown=onlyoffice:onlyoffice /app/onlyoffice/config /app/onlyoffice/config/
 
@@ -188,32 +170,18 @@ ENTRYPOINT ["python3", "docker-entrypoint.py"]
 
 FROM node:${NODE_VERSION}-slim AS noderun
 ARG BUILD_PATH
-ARG SRC_PATH 
+ARG SRC_PATH
 ENV BUILD_PATH=${BUILD_PATH}
 ENV SRC_PATH=${SRC_PATH}
 
-RUN echo "--- install runtime node.22 ---" && \
-    mkdir -p /var/log/onlyoffice && \
-    mkdir -p /app/onlyoffice/data && \
+RUN apt-get -y update && \
+    apt-get install -yq sudo adduser nano curl python3-pip && \
+    pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces requests && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
-    chown onlyoffice:onlyoffice /app/onlyoffice -R && \
-    chown onlyoffice:onlyoffice /var/log -R  && \
-    chown onlyoffice:onlyoffice /var/www -R && \
-    chown onlyoffice:onlyoffice /run -R && \
-    apt-get -y update && \
-    apt-get install -yq \ 
-    sudo \
-    nano \
-    curl \
-    vim \
-    supervisor \
-    python3-pip && \
-    pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces requests && \
-    echo "--- clean up ---" && \
-    rm -rf \
-    /var/lib/apt/lists/* \
-    /tmp/*
+    mkdir -p /var/log/onlyoffice /app/onlyoffice/data /var/www /run && \
+    chown -R onlyoffice:onlyoffice /app/onlyoffice /var/log /var/www /run && \
+    rm -rf /var/lib/apt/lists/* /tmp/*
 
 COPY --from=src --chown=onlyoffice:onlyoffice /app/onlyoffice/config /app/onlyoffice/config/
 USER onlyoffice
@@ -225,23 +193,12 @@ ARG BUILD_PATH
 ARG SRC_PATH
 ENV BUILD_PATH=${BUILD_PATH}
 
-RUN echo "--- install runtime eclipse-temurin:21 ---" && \
-    mkdir -p /var/log/onlyoffice && \
-    mkdir -p /var/www/onlyoffice && \
-    groupadd -g 107 onlyoffice && \
-    useradd -u 104 -g onlyoffice -d /var/www/onlyoffice -s /bin/bash onlyoffice && \
-    chown onlyoffice:onlyoffice /var/log -R && \
-    chown onlyoffice:onlyoffice /var/www -R && \
-    chown onlyoffice:onlyoffice /run -R && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
-    sudo \
-    bash \
-    nano \
-    curl \
-    supervisor && \
-    echo "--- clean up ---" && \
-    apt-get clean && \
+RUN apt-get -y update && \
+    apt-get install -yq sudo adduser nano curl && \
+    addgroup --system --gid 107 onlyoffice && \
+    adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
+    mkdir -p /var/log/onlyoffice /var/www/onlyoffice && \
+    chown -R onlyoffice:onlyoffice /var/log /var/www /run && \
     rm -rf /var/lib/apt/lists/* /tmp/*
 
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-identity-entrypoint.sh /usr/bin/docker-identity-entrypoint.sh
@@ -257,19 +214,9 @@ ENV DNS_NAMESERVER=127.0.0.11 \
     COUNT_WORKER_CONNECTIONS=$COUNT_WORKER_CONNECTIONS \
     MAP_HASH_BUCKET_SIZE=""
 
-RUN echo "--- customize router openresty service ---" && \
-    apt-get -y update && \
-    apt-get install -yq vim && \
-    mkdir -p /var/log/nginx/ && \
-    addgroup --system --gid 107 onlyoffice && \
+RUN addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
-    rm -rf /var/lib/apt/lists/* && \
-    rm -rf /usr/share/nginx/html/* && \
-    chown -R onlyoffice:onlyoffice /etc/nginx/ && \
-    chown -R onlyoffice:onlyoffice /var/ && \
-    chown -R onlyoffice:onlyoffice /usr/ && \
-    chown -R onlyoffice:onlyoffice /run/ && \
-    chown -R onlyoffice:onlyoffice /var/log/nginx/
+    mkdir -p /var/log/nginx/
 
 # copy static services files and config values 
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/client ${BUILD_PATH}/client
@@ -597,6 +544,10 @@ COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/servi
 
 ARG TARGETARCH
 USER root
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends supervisor && \
+    rm -rf /var/lib/apt/lists/*
+
 ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Files.Worker/service/ ${BUILD_PATH}/products/ASC.Files/service/
 
@@ -625,8 +576,11 @@ FROM noderun AS node-services
 ENV APP_STORAGE_ROOT=/app/onlyoffice/data/
 ENV LOG_DIR=/var/log/onlyoffice
 ENV PATH_TO_CONF=/app/onlyoffice/config
-
-WORKDIR /usr/bin/
+USER root
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends supervisor && \
+    rm -rf /var/lib/apt/lists/*
+USER onlyoffice
 
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py ./docker-entrypoint.py
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/node_services.conf /etc/supervisor/conf.d/supervisord.conf
@@ -643,6 +597,11 @@ CMD ["supervisord", "-n"]
 ## Java Services ##
 FROM javarun AS java-services
 ENV LOG_DIR=/var/log/onlyoffice
+USER root
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends supervisor && \
+    rm -rf /var/lib/apt/lists/*
+USER onlyoffice
 
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-identity-entrypoint.sh /usr/bin/docker-identity-entrypoint.sh
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/java_services.conf /etc/supervisor/conf.d/supervisord.conf
