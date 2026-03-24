@@ -11,8 +11,8 @@ ARG MAVEN_VERSION="3.9"
 FROM --platform=$BUILDPLATFORM python:${PYTHON_VERSION}-slim AS src
 ARG GIT_BRANCH="master"
 ARG FALLBACK_BRANCH="develop"
-ARG SRC_PATH
-ARG BUILD_PATH
+ARG SRC_PATH="/app/onlyoffice/src"
+ARG BUILD_PATH="/var/www"
 ARG PRODUCT_VERSION=0.0.0
 ARG BUILD_NUMBER=0
 ARG DEBUG_INFO="true"
@@ -153,6 +153,9 @@ ARG BUILD_PATH
 ARG SRC_PATH
 ENV BUILD_PATH=${BUILD_PATH}
 ENV SRC_PATH=${SRC_PATH}
+ENV APP_STORAGE_ROOT=/app/onlyoffice/data/ \
+    LOG_DIR=/var/log/onlyoffice \
+    PATH_TO_CONF=/app/onlyoffice/config
 
 RUN apt-get -y update && \
     apt-get install -yq sudo adduser nano curl python3-pip libgdiplus && \
@@ -175,6 +178,9 @@ ARG BUILD_PATH
 ARG SRC_PATH
 ENV BUILD_PATH=${BUILD_PATH}
 ENV SRC_PATH=${SRC_PATH}
+ENV APP_STORAGE_ROOT=/app/onlyoffice/data/ \
+    LOG_DIR=/var/log/onlyoffice \
+    PATH_TO_CONF=/app/onlyoffice/config
 
 RUN apt-get -y update && \
     apt-get install -yq sudo adduser nano curl python3-pip && \
@@ -195,6 +201,7 @@ FROM eclipse-temurin:${JAVA_VERSION}-jre AS javarun
 ARG BUILD_PATH
 ARG SRC_PATH
 ENV BUILD_PATH=${BUILD_PATH}
+ENV LOG_DIR=/var/log/onlyoffice
 
 RUN apt-get -y update && \
     apt-get install -yq sudo adduser nano curl && \
@@ -465,16 +472,17 @@ CMD ["ASC.Identity.Registration"]
 ## image for k8s bin-share ##
 FROM busybox:latest AS bin_share
 ARG SRC_PATH
+ARG BUILD_PATH
 RUN mkdir -p /app/ASC.Files/server && \
     mkdir -p /app/ASC.People/server && \
     mkdir -p /app/ASC.AI/server && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -u 104 onlyoffice --home /var/www/onlyoffice --system -G onlyoffice
 USER onlyoffice
-COPY --from=files --chown=onlyoffice:onlyoffice /var/www/products/ASC.Files/server/ /app/ASC.Files/server/
-COPY --from=people_server --chown=onlyoffice:onlyoffice /var/www/products/ASC.People/server/ /app/ASC.People/server/
-COPY --from=ai --chown=onlyoffice:onlyoffice /var/www/products/ASC.AI/server/ /app/ASC.AI/server/
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/bin-share-docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
+COPY --from=files --chown=onlyoffice:onlyoffice ${BUILD_PATH}/products/ASC.Files/server/ /app/ASC.Files/server/
+COPY --from=people_server --chown=onlyoffice:onlyoffice ${BUILD_PATH}/products/ASC.People/server/ /app/ASC.People/server/
+COPY --from=ai --chown=onlyoffice:onlyoffice ${BUILD_PATH}/products/ASC.AI/server/ /app/ASC.AI/server/
 ENTRYPOINT ["/bin/sh", "/usr/bin/docker-entrypoint.sh"]
 
 ## image for k8s wait-bin-share ##
@@ -489,9 +497,6 @@ ENTRYPOINT ["/bin/sh", "/usr/bin/docker-entrypoint.sh"]
 
 # Dotnet Services ##
 FROM dotnetrun AS dotnet-services
-ENV APP_STORAGE_ROOT=/app/onlyoffice/data/
-ENV LOG_DIR=/var/log/onlyoffice
-ENV PATH_TO_CONF=/app/onlyoffice/config
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/dotnet_services.conf /etc/supervisor/conf.d/supervisord.conf
 
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.AI/service/ ${BUILD_PATH}/products/ASC.AI/server/
@@ -533,9 +538,6 @@ CMD ["supervisord", "-n"]
 
 ## Node Services ##
 FROM noderun AS node-services
-ENV APP_STORAGE_ROOT=/app/onlyoffice/data/
-ENV LOG_DIR=/var/log/onlyoffice
-ENV PATH_TO_CONF=/app/onlyoffice/config
 USER root
 RUN apt-get update && \
     apt-get install -y --no-install-recommends supervisor && \
@@ -554,7 +556,6 @@ CMD ["supervisord", "-n"]
 
 ## Java Services ##
 FROM javarun AS java-services
-ENV LOG_DIR=/var/log/onlyoffice
 USER root
 RUN apt-get update && \
     apt-get install -y --no-install-recommends supervisor && \
@@ -562,8 +563,7 @@ RUN apt-get update && \
 USER onlyoffice
 
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/java_services.conf /etc/supervisor/conf.d/supervisord.conf
-
-COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.Authorization/app.jar ${BUILD_PATH}/services/ASC.Identity.Authorization/app.jar
-COPY --from=java-build --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.Registration/app.jar ${BUILD_PATH}/services/ASC.Identity.Registration/app.jar
+COPY --from=build-java --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.Authorization/app.jar ${BUILD_PATH}/services/ASC.Identity.Authorization/app.jar
+COPY --from=build-java --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.Registration/app.jar ${BUILD_PATH}/services/ASC.Identity.Registration/app.jar
 
 ENTRYPOINT ["/usr/bin/supervisord", "-n"]
