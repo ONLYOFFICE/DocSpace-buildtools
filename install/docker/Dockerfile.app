@@ -66,6 +66,7 @@ RUN <<EOF
         python3 ${SRC_PATH}/buildtools/debuginfo.py && \
         pip cache purge
     fi
+    find ${SRC_PATH} -name '.git' -type d -prune -exec rm -rf {} +
 EOF
 
 # .net build
