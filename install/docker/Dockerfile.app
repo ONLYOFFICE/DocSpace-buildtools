@@ -114,14 +114,14 @@ COPY --from=src ${SRC_PATH}/client/ ./client
 
 WORKDIR ${SRC_PATH}/client
 ENV PNPM_HOME=/tmp/pnpm
-RUN echo "--- installing pnpm ---" && \
-    npm install -g pnpm && \
-    echo "--- build/publish docspace-client node ---" && \
+RUN corepack enable && corepack prepare pnpm@latest --activate && \
     pnpm install && \
     pnpm ${BUILD_ARGS} && \
     pnpm run ${DEPLOY_ARGS} && \
-    rm -rf ${SRC_PATH}/client ${SRC_PATH}/buildtools && \
-    rm -rf /tmp/pnpm
+    rm -rf node_modules && \
+    pnpm install --prod && \
+    find ${SRC_PATH}/publish/web -type f \( -name "*.js.map" -o -name "*.css.map" \) -delete && \
+    rm -rf "$(pnpm store path)" /root/.cache ${SRC_PATH}/client ${SRC_PATH}/buildtools
 
 # build plugins
 FROM --platform=$BUILDPLATFORM node:${NODE_VERSION}-slim AS build-plugins
