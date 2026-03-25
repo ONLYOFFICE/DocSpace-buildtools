@@ -166,8 +166,7 @@ ENV APP_STORAGE_ROOT=/app/onlyoffice/data/ \
     PATH_TO_CONF=/app/onlyoffice/config
 
 RUN apt-get -y update && \
-    apt-get install --no-install-recommends -yq sudo adduser nano curl python3-pip libgdiplus iproute2 && \
-    pip3 install --no-cache-dir --upgrade --break-system-packages jsonpath-ng netaddr requests && \
+    apt-get install --no-install-recommends -yq sudo adduser nano curl libgdiplus iproute2 python3-requests python3-netaddr python3-jsonpath-ng && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     mkdir -p /var/log/onlyoffice /app/onlyoffice/data && \
@@ -181,7 +180,7 @@ USER onlyoffice
 EXPOSE 5050
 ENTRYPOINT ["python3", "/usr/bin/docker-entrypoint.py"]
 
-FROM node:${NODE_VERSION}-slim AS noderun
+FROM node:${NODE_VERSION}-trixie-slim AS noderun
 ARG BUILD_PATH
 ARG SRC_PATH
 ENV BUILD_PATH=${BUILD_PATH}
@@ -191,8 +190,7 @@ ENV APP_STORAGE_ROOT=/app/onlyoffice/data/ \
     PATH_TO_CONF=/app/onlyoffice/config
 
 RUN apt-get -y update && \
-    apt-get install --no-install-recommends -yq sudo adduser nano curl python3-pip iproute2 && \
-    pip3 install --no-cache-dir --upgrade --break-system-packages jsonpath-ng netaddr requests && \
+    apt-get install --no-install-recommends -yq sudo adduser nano curl iproute2 python3-requests python3-netaddr python3-jsonpath-ng && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     mkdir -p /var/log/onlyoffice /app/onlyoffice/data /var/www /run && \
