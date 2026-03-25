@@ -2,6 +2,9 @@ import json, sys, os, re, time, requests, threading, shutil, fileinput, subproce
 from jsonpath_ng.ext import parse
 from netaddr import IPNetwork
 
+def require_env(name):
+    return os.environ.get(name) or (_ for _ in ()).throw(RuntimeError(f"{name} must be set"))
+
 PRODUCT = os.environ.get("PRODUCT") or "onlyoffice"
 BASE_DIR =  os.environ.get("BASE_DIR") or  "/app/" + PRODUCT
 ENV_EXTENSION = (os.environ.get("ENV_EXTENSION") or os.environ.get("INSTALLATION_TYPE")).lower() or "none"
@@ -23,12 +26,12 @@ MYSQL_HOST = os.environ.get("MYSQL_HOST") or None
 MYSQL_PORT = os.environ.get("MYSQL_PORT") or "3306"
 MYSQL_DATABASE = os.environ.get("MYSQL_DATABASE") or "onlyoffice"
 MYSQL_USER = os.environ.get("MYSQL_USER") or "onlyoffice_user"
-MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD") or "onlyoffice_pass"
+MYSQL_PASSWORD = require_env("MYSQL_PASSWORD")
 MYSQL_CONNECTION_HOST = MYSQL_HOST if MYSQL_HOST else MYSQL_CONTAINER_NAME
 
 APP_CORE_SERVER_ROOT = os.environ.get("APP_CORE_SERVER_ROOT") or None
 APP_CORE_BASE_DOMAIN = os.environ.get("APP_CORE_BASE_DOMAIN", "localhost")
-APP_CORE_MACHINEKEY = os.environ.get("APP_CORE_MACHINEKEY") or "your_core_machinekey"
+APP_CORE_MACHINEKEY = require_env("APP_CORE_MACHINEKEY")
 APP_URL_PORTAL = os.environ.get("APP_URL_PORTAL") or "http://" + ROUTER_HOST + ":8092"
 OAUTH_REDIRECT_URL = os.environ.get("OAUTH_REDIRECT_URL") or None
 APP_STORAGE_ROOT = os.environ.get("APP_STORAGE_ROOT") or BASE_DIR + "/data/"
@@ -44,7 +47,7 @@ CERTIFICATE_PARAM = "NODE_EXTRA_CA_CERTS=" + CERTIFICATE_PATH + " " if CERTIFICA
 TLS_REJECT_UNAUTHORIZED = "NODE_TLS_REJECT_UNAUTHORIZED=1" if os.getenv("NODE_TLS_REJECT_UNAUTHORIZED", "").lower() in ("1","true","enable") else "";
 
 DOCUMENT_CONTAINER_NAME = os.environ.get("DOCUMENT_CONTAINER_NAME") or "onlyoffice-document-server"
-DOCUMENT_SERVER_JWT_SECRET = os.environ.get("DOCUMENT_SERVER_JWT_SECRET") or "your_jwt_secret"
+DOCUMENT_SERVER_JWT_SECRET = require_env("DOCUMENT_SERVER_JWT_SECRET")
 DOCUMENT_SERVER_JWT_HEADER = os.environ.get("DOCUMENT_SERVER_JWT_HEADER") or "AuthorizationJwt"
 DOCUMENT_SERVER_URL_INTERNAL = os.environ.get("DOCUMENT_SERVER_URL_INTERNAL") or "http://" + DOCUMENT_CONTAINER_NAME + "/"
 DOCUMENT_SERVER_URL_EXTERNAL = os.environ.get("DOCUMENT_SERVER_URL_EXTERNAL") or None
@@ -74,7 +77,7 @@ RABBIT_CONTAINER_NAME = os.environ.get("RABBIT_CONTAINER_NAME") or "onlyoffice-r
 RABBIT_PROTOCOL = os.environ.get("RABBIT_PROTOCOL") or "amqp"
 RABBIT_HOST = os.environ.get("RABBIT_HOST") or None
 RABBIT_USER_NAME = os.environ.get("RABBIT_USER_NAME") or "guest"
-RABBIT_PASSWORD = os.environ.get("RABBIT_PASSWORD") or "guest"
+RABBIT_PASSWORD = require_env("RABBIT_PASSWORD")
 RABBIT_PORT =  os.environ.get("RABBIT_PORT") or "5672"
 RABBIT_VIRTUAL_HOST = os.environ.get("RABBIT_VIRTUAL_HOST") or "/"
 RABBIT_CONNECTION_HOST = RABBIT_HOST if RABBIT_HOST else RABBIT_CONTAINER_NAME
