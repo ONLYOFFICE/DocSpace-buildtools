@@ -127,7 +127,7 @@ COPY --from=src ${SRC_PATH}/plugins ${SRC_PATH}/plugins
 COPY --from=src ${SRC_PATH}/buildtools/install/common/plugins-build.sh ${SRC_PATH}/buildtools/install/common/plugins-build.sh
 WORKDIR ${SRC_PATH}/buildtools/install/common
 RUN apt-get -y update && \
-    apt-get install -yq unzip jq && \
+    apt-get install --no-install-recommends -yq unzip jq && \
     mkdir -p "${SRC_PATH}/plugins/publish" && \
     bash plugins-build.sh "${SRC_PATH}/plugins" && \
     find "${SRC_PATH}/plugins" -mindepth 1 -maxdepth 1 ! -name "publish" -exec rm -rf {} + && \
@@ -160,8 +160,8 @@ ENV APP_STORAGE_ROOT=/app/onlyoffice/data/ \
     PATH_TO_CONF=/app/onlyoffice/config
 
 RUN apt-get -y update && \
-    apt-get install -yq sudo adduser nano curl python3-pip libgdiplus && \
-    pip3 install --no-cache-dir --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces requests && \
+    apt-get install --no-install-recommends -yq sudo adduser nano curl python3-pip libgdiplus && \
+    pip3 install --no-cache-dir --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces2 requests && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     mkdir -p /var/log/onlyoffice /app/onlyoffice/data && \
@@ -185,8 +185,8 @@ ENV APP_STORAGE_ROOT=/app/onlyoffice/data/ \
     PATH_TO_CONF=/app/onlyoffice/config
 
 RUN apt-get -y update && \
-    apt-get install -yq sudo adduser nano curl python3-pip && \
-    pip3 install --no-cache-dir --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces requests && \
+    apt-get install --no-install-recommends -yq sudo adduser nano curl python3-pip && \
+    pip3 install --no-cache-dir --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces2 requests && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     mkdir -p /var/log/onlyoffice /app/onlyoffice/data /var/www /run && \
@@ -206,7 +206,7 @@ ENV BUILD_PATH=${BUILD_PATH}
 ENV LOG_DIR=/var/log/onlyoffice
 
 RUN apt-get -y update && \
-    apt-get install -yq sudo adduser nano curl && \
+    apt-get install --no-install-recommends -yq sudo adduser nano curl && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     mkdir -p /var/log/onlyoffice /var/www/onlyoffice && \
