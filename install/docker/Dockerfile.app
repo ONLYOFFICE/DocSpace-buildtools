@@ -2,13 +2,14 @@ ARG SRC_PATH="/app/onlyoffice/src"
 ARG BUILD_PATH="/var/www"
 ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:10.0"
 ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:10.0-noble"
-ARG PYTHON_VERSION="3.12"
-ARG NODE_VERSION="24"
+ARG PYTHON_VERSION="3.12-slim"
+ARG NODE_VERSION="24-trixie-slim"
 ARG JAVA_VERSION="21"
-ARG MAVEN_VERSION="3.9"
+ARG JAVA_RUN_VERSION="${JAVA_VERSION}-jre"
+ARG MAVEN_VERSION="3.9-eclipse-temurin-${JAVA_VERSION}"
 
 # Image resources
-FROM --platform=$BUILDPLATFORM python:${PYTHON_VERSION}-slim AS src
+FROM --platform=$BUILDPLATFORM python:${PYTHON_VERSION} AS src
 ARG GIT_BRANCH="master"
 ARG FALLBACK_BRANCH="develop"
 ARG SRC_PATH="/app/onlyoffice/src"
@@ -94,7 +95,7 @@ RUN PUBLISH_ARGS='-c Release --self-contained false -p:DebugType=None -p:DebugSy
     rm -rf ${SRC_PATH}/server
 
 # node build
-FROM --platform=$BUILDPLATFORM node:${NODE_VERSION}-slim AS build-node
+FROM --platform=$BUILDPLATFORM node:${NODE_VERSION} AS build-node
 ARG SRC_PATH
 ARG BUILD_ARGS="build"
 ARG DEPLOY_ARGS="deploy"
@@ -127,7 +128,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate && \
     rm -rf "$(pnpm store path)" /root/.cache ${SRC_PATH}/client ${SRC_PATH}/buildtools
 
 # build plugins
-FROM --platform=$BUILDPLATFORM node:${NODE_VERSION}-slim AS build-plugins
+FROM --platform=$BUILDPLATFORM node:${NODE_VERSION} AS build-plugins
 ARG SRC_PATH
 COPY --from=src ${SRC_PATH}/plugins ${SRC_PATH}/plugins
 COPY --from=src ${SRC_PATH}/buildtools/install/common/plugins-build.sh ${SRC_PATH}/buildtools/install/common/plugins-build.sh
@@ -140,7 +141,7 @@ RUN apt-get -y update && \
     rm -rf ${SRC_PATH}/buildtools
 
 # java build
-FROM --platform=$BUILDPLATFORM maven:${MAVEN_VERSION}-eclipse-temurin-${JAVA_VERSION} AS build-java
+FROM --platform=$BUILDPLATFORM maven:${MAVEN_VERSION} AS build-java
 ARG SRC_PATH
 
 WORKDIR ${SRC_PATH}/server/common/ASC.Identity/
@@ -180,7 +181,7 @@ USER onlyoffice
 EXPOSE 5050
 ENTRYPOINT ["python3", "/usr/bin/docker-entrypoint.py"]
 
-FROM node:${NODE_VERSION}-trixie-slim AS noderun
+FROM node:${NODE_VERSION} AS noderun
 ARG BUILD_PATH
 ARG SRC_PATH
 ENV BUILD_PATH=${BUILD_PATH}
@@ -203,7 +204,7 @@ USER onlyoffice
 EXPOSE 5050
 ENTRYPOINT ["python3", "/usr/bin/docker-entrypoint.py"]
 
-FROM eclipse-temurin:${JAVA_VERSION}-jre AS javarun
+FROM eclipse-temurin:${JAVA_RUN_VERSION} AS javarun
 ARG BUILD_PATH
 ARG SRC_PATH
 ENV BUILD_PATH=${BUILD_PATH}
