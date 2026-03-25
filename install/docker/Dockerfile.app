@@ -2,6 +2,7 @@ ARG SRC_PATH="/app/onlyoffice/src"
 ARG BUILD_PATH="/var/www"
 ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:10.0"
 ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:10.0-noble"
+ARG BUSYBOX_VERSION="1.37"
 ARG PYTHON_VERSION="3.12-slim"
 ARG NODE_VERSION="24-trixie-slim"
 ARG JAVA_VERSION="21"
@@ -476,7 +477,7 @@ COPY --from=build-java --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/service
 CMD ["ASC.Identity.Registration"]
 
 ## image for k8s bin-share ##
-FROM busybox:latest AS bin_share
+FROM busybox:${BUSYBOX_VERSION} AS bin_share
 ARG SRC_PATH
 ARG BUILD_PATH
 RUN mkdir -p /app/ASC.Files/server && \
@@ -492,7 +493,7 @@ COPY --from=ai --chown=onlyoffice:onlyoffice ${BUILD_PATH}/products/ASC.AI/serve
 ENTRYPOINT ["/bin/sh", "/usr/bin/docker-entrypoint.sh"]
 
 ## image for k8s wait-bin-share ##
-FROM busybox:latest AS wait_bin_share
+FROM busybox:${BUSYBOX_VERSION} AS wait_bin_share
 ARG SRC_PATH
 RUN addgroup --system --gid 107 onlyoffice && \
     adduser -u 104 onlyoffice --home /var/www/onlyoffice --system -G onlyoffice && \
