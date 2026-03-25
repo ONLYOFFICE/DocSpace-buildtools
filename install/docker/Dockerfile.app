@@ -37,27 +37,28 @@ RUN --mount=type=secret,id=github_token,env=GITHUB_TOKEN sh -ec '\
 
 RUN <<'EOF'
 #!/bin/bash
-set -e
+    set -e
 
-git_clone() {
-    local REPO=$1 DEST=$2 EXTRA_OPTS=$3 FALLBACK=${4:-$FALLBACK_BRANCH}
-    local BRANCH=$(git ls-remote --exit-code --heads "${REPO}" "${GIT_BRANCH}" > /dev/null 2>&1 && echo "${GIT_BRANCH}" || echo "${FALLBACK}")
-    git clone ${EXTRA_OPTS} -b "${BRANCH}" "${REPO}" "${DEST}"
-}
+    git_clone() {
+        local REPO=$1 DEST=$2 EXTRA_OPTS=$3 FALLBACK=${4:-$FALLBACK_BRANCH}
+        local BRANCH=$(git ls-remote --exit-code --heads "${REPO}" "${GIT_BRANCH}" > /dev/null 2>&1 && echo "${GIT_BRANCH}" || echo "${FALLBACK}")
+        git clone ${EXTRA_OPTS} -b "${BRANCH}" "${REPO}" "${DEST}"
+    }
 
-PIDS=()
-DEPTH=$([[ "${DEBUG_INFO,,}" =~ ^(true|1|yes)$ ]] && echo 30 || echo 1)
-git_clone "${BUILDTOOLS_REPO}" "${SRC_PATH}/buildtools" "--recurse-submodules --depth ${DEPTH}" & PIDS+=($!)
-git_clone "${SERVER_REPO}"     "${SRC_PATH}/server"     "--recurse-submodules --depth ${DEPTH}" & PIDS+=($!)
-git_clone "${CLIENT_REPO}"     "${SRC_PATH}/client"     "--recurse-submodules --depth ${DEPTH}" & PIDS+=($!)
-git_clone https://github.com/ONLYOFFICE/docspace-plugins.git "${SRC_PATH}/plugins" "--depth 1" master & PIDS+=($!)
-git_clone https://github.com/ONLYOFFICE/ASC.Web.Campaigns.git "${SRC_PATH}/campaigns" "--depth 1" master & PIDS+=($!)
+    PIDS=()
+    DEPTH=$([[ "${DEBUG_INFO,,}" =~ ^(true|1|yes)$ ]] && echo 30 || echo 1)
+    git_clone "${BUILDTOOLS_REPO}" "${SRC_PATH}/buildtools" "--recurse-submodules --depth ${DEPTH}" & PIDS+=($!)
+    git_clone "${SERVER_REPO}"     "${SRC_PATH}/server"     "--recurse-submodules --depth ${DEPTH}" & PIDS+=($!)
+    git_clone "${CLIENT_REPO}"     "${SRC_PATH}/client"     "--recurse-submodules --depth ${DEPTH}" & PIDS+=($!)
+    git_clone https://github.com/ONLYOFFICE/docspace-plugins.git "${SRC_PATH}/plugins" "--depth 1" master & PIDS+=($!)
+    git_clone https://github.com/ONLYOFFICE/ASC.Web.Campaigns.git "${SRC_PATH}/campaigns" "--depth 1" master & PIDS+=($!)
 
-for PID in "${PIDS[@]}"; do wait "${PID}" || exit 1; done
+    for PID in "${PIDS[@]}"; do wait "${PID}" || exit 1; done
 EOF
 
 WORKDIR ${SRC_PATH}/buildtools/config
 RUN <<EOF
+#!/bin/bash
     mkdir -p /app/onlyoffice/config/ && \
     ls | grep -Ev 'test|\.dev\.|nginx' | xargs cp -r -t /app/onlyoffice/config/
     cd ${SRC_PATH}
