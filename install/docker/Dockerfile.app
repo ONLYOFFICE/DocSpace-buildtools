@@ -58,7 +58,7 @@ RUN <<EOF
     sed -i "s/\"number\".*,/\"number\": \"${PRODUCT_VERSION}.${BUILD_NUMBER}\",/g" /app/onlyoffice/config/appsettings.json
     sed -e 's/#//' -i /etc/nginx/conf.d/onlyoffice.conf
     if [ "$DEBUG_INFO" = true ]; then
-        pip install -r ${SRC_PATH}/buildtools/requirements.txt --break-system-packages && \
+        pip install --no-cache-dir -r ${SRC_PATH}/buildtools/requirements.txt --break-system-packages && \
         python3 ${SRC_PATH}/buildtools/debuginfo.py && \
         pip cache purge
     fi
@@ -85,7 +85,7 @@ RUN PUBLISH_ARGS='-c Release --self-contained false -p:DebugType=None -p:DebugSy
         mv ${SRC_PATH}/publish ${SRC_PATH}/publish-${ARCH} || exit 1; \
     done && \
     dotnet nuget locals all --clear && \
-    rm -rf ${SRC_PATH}/server/*
+    rm -rf ${SRC_PATH}/server
 
 # node build
 FROM --platform=$BUILDPLATFORM node:${NODE_VERSION}-slim AS build-node
@@ -161,7 +161,7 @@ ENV APP_STORAGE_ROOT=/app/onlyoffice/data/ \
 
 RUN apt-get -y update && \
     apt-get install -yq sudo adduser nano curl python3-pip libgdiplus && \
-    pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces requests && \
+    pip3 install --no-cache-dir --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces requests && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     mkdir -p /var/log/onlyoffice /app/onlyoffice/data && \
@@ -186,7 +186,7 @@ ENV APP_STORAGE_ROOT=/app/onlyoffice/data/ \
 
 RUN apt-get -y update && \
     apt-get install -yq sudo adduser nano curl python3-pip && \
-    pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces requests && \
+    pip3 install --no-cache-dir --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces requests && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     mkdir -p /var/log/onlyoffice /app/onlyoffice/data /var/www /run && \
