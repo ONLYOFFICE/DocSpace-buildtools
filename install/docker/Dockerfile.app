@@ -2,6 +2,7 @@ ARG SRC_PATH="/app/onlyoffice/src"
 ARG BUILD_PATH="/var/www"
 ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:10.0"
 ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:10.0-noble"
+ARG DEBUG_MODE=1
 
 # Image resources
 FROM python:3.12-slim AS src
@@ -60,19 +61,74 @@ RUN <<EOF
 EOF
 
 # .net build
-FROM $DOTNET_SDK AS build-dotnet
+FROM --platform=$BUILDPLATFORM $DOTNET_SDK AS build-dotnet
 ARG DEBIAN_FRONTEND=noninteractive
 ARG SRC_PATH
+ARG TARGETARCH
+ARG BUILDPLATFORM
+ARG TARGETPLATFORM
 
 WORKDIR ${SRC_PATH}/server
 COPY --from=src ${SRC_PATH}/server/ .
 
-RUN echo "--- build/publish docspace-server .net 10.0 ---" && \
-    dotnet build ASC.Web.slnf && \
-    dotnet build ASC.Migrations.sln --property:OutputPath=${SRC_PATH}/publish/services/ASC.Migration.Runner/service/ && \
-    dotnet publish ASC.Web.slnf -p PublishProfile=ReleaseProfile && \
-    dotnet nuget locals all --clear && \
-    rm -rf ${SRC_PATH}/server/*
+ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    DOTNET_NOLOGO=1 \
+    MSBUILDDISABLENODEREUSE=1
+
+RUN set -eux; \
+    echo "--- build/publish (.NET 10) ---"; \
+    echo "BUILDPLATFORM=$BUILDPLATFORM TARGETPLATFORM=$TARGETPLATFORM TARGETARCH=$TARGETARCH"; \
+    if [ "$BUILDPLATFORM" != "$TARGETPLATFORM" ]; then \
+        echo "Cross-platform build: $BUILDPLATFORM -> $TARGETPLATFORM"; \
+    fi; \
+    \
+    # Map TARGETARCH to RID
+    if [ "$TARGETARCH" = "amd64" ]; then \
+        RID="linux-x64"; \
+    elif [ "$TARGETARCH" = "arm64" ]; then \
+        RID="linux-arm64"; \
+    else \
+        echo "Unsupported architecture: $TARGETARCH"; \
+        exit 1; \
+    fi; \
+    echo "Using RID: $RID for TARGETARCH: $TARGETARCH"; \
+    \
+    # restore/build solutions (no RID)
+    dotnet restore ASC.Web.slnf; \
+    dotnet restore ASC.Migrations.sln; \
+    \
+    # publish with RID
+    dotnet publish ASC.Web.slnf -c Release \
+      -r "$RID" \
+      --self-contained false \
+      -p PublishProfile=ReleaseProfile \
+      -p:DebugType=None \
+      -p:DebugSymbols=false \
+      -p:UseAppHost=false; \
+    \
+    dotnet publish ASC.Migrations.sln -c Release \
+      -r "$RID" \
+      --self-contained false \
+      -p:DebugType=None \
+      -p:DebugSymbols=false \
+      -p:UseAppHost=false \
+      -p:PublishDir=${SRC_PATH}/publish/services/ASC.Migration.Runner/service/
+
+WORKDIR ${SRC_PATH}
+
+    # cleanup
+RUN set -eux; \
+    rm -rf ${SRC_PATH}/server; \
+    find ${SRC_PATH} -type d \( -name bin -o -name obj \) -prune -exec rm -rf {} + || true; \
+    rm -rf /root/.nuget/packages \
+           /root/.local/share/NuGet \
+           /tmp/* \
+           /var/tmp/*; \
+           \
+    dotnet nuget locals all --clear; \
+    \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # node build
 FROM node:24-slim AS build-node
@@ -141,33 +197,39 @@ RUN echo "--- build/publish docspace-server java (ASC.Identity) ---" && \
 FROM $DOTNET_RUN AS dotnetrun
 ARG BUILD_PATH
 ARG SRC_PATH
-ENV BUILD_PATH=${BUILD_PATH}
-ENV SRC_PATH=${SRC_PATH}
+ARG DEBUG_MODE
+ENV BUILD_PATH=${BUILD_PATH} \
+    SRC_PATH=${SRC_PATH} \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1
 
-# add defualt user and group for no-root run
-RUN echo "--- install runtime aspnet.9 ---" && \
-    mkdir -p /var/log/onlyoffice && \
-    mkdir -p /app/onlyoffice/data && \
-    apt-get -y update && \
-    apt-get install -yq \
-    sudo \
-    adduser \
-    nano \
-    curl \
-    supervisor \
-    vim \
-    python3-pip \
-    libgdiplus && \
-    pip3 install --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces requests && \
-    addgroup --system --gid 107 onlyoffice && \
-    adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
-    chown onlyoffice:onlyoffice /app/onlyoffice -R && \
-    chown onlyoffice:onlyoffice /var/log -R && \
-    chown onlyoffice:onlyoffice /var/www -R && \
-    chown onlyoffice:onlyoffice /run -R && \
-    echo "--- clean up ---" && \
-    rm -rf /var/lib/apt/lists/* \
-    /tmp/*
+RUN set -eux; \
+    mkdir -p /var/log/onlyoffice /app/onlyoffice/data; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+        adduser \
+        python3-pip \
+        python3-dev \
+        build-essential \
+        libgdiplus; \
+    if [ "$DEBUG_MODE" = "1" ]; then \
+        echo "Image build for debugging"; \
+        apt-get install -y --no-install-recommends \
+            nano \
+            vim \
+            curl; \
+    fi; \
+    pip3 install --upgrade --break-system-packages --no-cache-dir \
+        jsonpath-ng==1.6.1 \
+        multipledispatch==1.0.0 \
+        netaddr==1.3.0 \
+        netifaces==0.11.0 \
+        requests==2.32.3; \
+    addgroup --system --gid 107 onlyoffice; \
+    adduser --system --uid 104 --home /var/www/onlyoffice --ingroup onlyoffice onlyoffice; \
+    mkdir -p /var/www/onlyoffice; \
+    chown onlyoffice:onlyoffice /var/log/onlyoffice /app/onlyoffice/data /var/www/onlyoffice; \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /root/.cache
 
 COPY --from=src --chown=onlyoffice:onlyoffice /app/onlyoffice/config /app/onlyoffice/config/
 
@@ -191,7 +253,7 @@ RUN echo "--- install runtime node.22 ---" && \
     chown onlyoffice:onlyoffice /var/www -R && \
     chown onlyoffice:onlyoffice /run -R && \
     apt-get -y update && \
-    apt-get install -yq \ 
+    apt-get install -yq \
     sudo \
     nano \
     curl \
@@ -609,7 +671,7 @@ COPY --from=onlyoffice/ffvideo:7.1 --chown=onlyoffice:onlyoffice /app/src/ ${BUI
 
 RUN set -eux; \
   ARCH=$(uname -m); \
-  PKGS="libasound2t64 libv4l-0t64"; \
+  PKGS="supervisor libasound2t64 libv4l-0t64"; \
   [ "$ARCH" = "x86_64" ] && PKGS="$PKGS libdrm2 libplacebo-dev libxcb-shape0 ocl-icd-opencl-dev"; \
   apt-get update && apt-get install -y --no-install-recommends $PKGS && rm -rf /var/lib/apt/lists/* /tmp/*
 
