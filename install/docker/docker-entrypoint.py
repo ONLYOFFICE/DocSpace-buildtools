@@ -337,7 +337,8 @@ updateJsonData(jsonData,"$.web.samesite", SAMESITE)
 if MCP_ENDPOINT:
     updateJsonData(jsonData, "$.ai.mcp.[0].endpoint", MCP_ENDPOINT)
 
-iface_cidr = re.search(r'inet (\S+)', subprocess.check_output(['ip', '-4', '-o', 'addr', 'show', 'scope', 'global'], text=True)).group(1)
+_ip_match = re.search(r'inet (\S+)', subprocess.check_output(['ip', '-4', '-o', 'addr', 'show', 'scope', 'global'], text=True))
+iface_cidr = _ip_match.group(1) if _ip_match else "127.0.0.1/8"
 knownNetwork = [str(IPNetwork(iface_cidr).cidr)]
 knownProxies = ["127.0.0.1"]
 
