@@ -45,7 +45,7 @@ git_clone() {
 }
 
 PIDS=()
-DEPTH=$([ "${DEBUG_INFO}" = true ] && echo 30 || echo 1)
+DEPTH=$([[ "${DEBUG_INFO,,}" =~ ^(true|1|yes)$ ]] && echo 30 || echo 1)
 git_clone "${BUILDTOOLS_REPO}" "${SRC_PATH}/buildtools" "--recurse-submodules --depth ${DEPTH}" & PIDS+=($!)
 git_clone "${SERVER_REPO}"     "${SRC_PATH}/server"     "--recurse-submodules --depth ${DEPTH}" & PIDS+=($!)
 git_clone "${CLIENT_REPO}"     "${SRC_PATH}/client"     "--recurse-submodules --depth ${DEPTH}" & PIDS+=($!)
@@ -64,7 +64,7 @@ RUN <<EOF
     mkdir -p /etc/nginx/includes/ && cp -f buildtools/config/nginx/includes/onlyoffice*.conf /etc/nginx/includes/ && cp -f buildtools/config/nginx/includes/server-*.conf /etc/nginx/includes/
     sed -i "s/\"number\".*,/\"number\": \"${PRODUCT_VERSION}.${BUILD_NUMBER}\",/g" /app/onlyoffice/config/appsettings.json
     sed -e 's/#//' -i /etc/nginx/conf.d/onlyoffice.conf
-    if [ "$DEBUG_INFO" = true ]; then
+    if [[ "${DEBUG_INFO,,}" =~ ^(true|1|yes)$ ]]; then
         pip install --no-cache-dir -r ${SRC_PATH}/buildtools/requirements.txt --break-system-packages && \
         python3 ${SRC_PATH}/buildtools/debuginfo.py && \
         pip cache purge
