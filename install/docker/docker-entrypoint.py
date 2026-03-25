@@ -1,11 +1,6 @@
 import json, sys, os, re, time, requests, threading, shutil, fileinput, subprocess
 from jsonpath_ng.ext import parse
-from multipledispatch import dispatch
 from netaddr import IPNetwork
-
-filePath = None
-saveFilePath = None
-jsonValue = None
 
 PRODUCT = os.environ.get("PRODUCT") or "onlyoffice"
 BASE_DIR =  os.environ.get("BASE_DIR") or  "/app/" + PRODUCT
@@ -93,49 +88,20 @@ class RunServices:
     def __init__(self, SERVICE_PORT, PATH_TO_CONF):
         self.SERVICE_PORT = SERVICE_PORT
         self.PATH_TO_CONF = PATH_TO_CONF
-    @dispatch(str)    
-    def RunService(self, RUN_FILE):
-        os.system(TLS_REJECT_UNAUTHORIZED + CERTIFICATE_PARAM + "node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
-             " --app.appsettings=" + self.PATH_TO_CONF)
-        return 1
-        
-    @dispatch(str, str)
-    def RunService(self, RUN_FILE, ENV_EXTENSION):
-        if sys.argv[1] == "supervisord":
-            os.execvp(sys.argv[1], sys.argv[1:])
-            return 1
 
-        if ENV_EXTENSION == "none":
-            self.RunService(RUN_FILE)
-        os.system(TLS_REJECT_UNAUTHORIZED + CERTIFICATE_PARAM + "node " + RUN_FILE + " --app.port=" + self.SERVICE_PORT +\
-             " --app.appsettings=" + self.PATH_TO_CONF +\
-                " --app.environment=" + ENV_EXTENSION)
-        return 1
-
-    @dispatch(str, str, str)
-    def RunService(self, RUN_FILE, ENV_EXTENSION, LOG_FILE):
-        data = RUN_FILE.split(".")
-        if data[-1] != "dll":
-            self.RunService(RUN_FILE, ENV_EXTENSION)
-        elif  ENV_EXTENSION == "none":
-            os.system("dotnet " + RUN_FILE + " --urls=" + URLS + self.SERVICE_PORT +\
-                " --\'$STORAGE_ROOT\'=" + APP_STORAGE_ROOT +\
-                    " --pathToConf=" + self.PATH_TO_CONF +\
-                        " --log:dir=" + LOG_DIR +\
-                            " --log:name=" + LOG_FILE +\
-                                " core:products:folder=/var/www/products/" +\
-                                    " core:products:subfolder=server" + " " +\
-                                        CORE_EVENT_BUS)
+    def RunService(self, RUN_FILE, ENV_EXTENSION="none", LOG_FILE=None):
+        if LOG_FILE and RUN_FILE.endswith(".dll"):
+            cmd = (f"dotnet {RUN_FILE} --urls={URLS}{self.SERVICE_PORT} --'$STORAGE_ROOT'={APP_STORAGE_ROOT}"
+                   f" --pathToConf={self.PATH_TO_CONF} --log:dir={LOG_DIR} --log:name={LOG_FILE}"
+                   f" core:products:folder=/var/www/products/ core:products:subfolder=server {CORE_EVENT_BUS}")
+            if ENV_EXTENSION != "none":
+                cmd += f" --ENVIRONMENT={ENV_EXTENSION}"
         else:
-            os.system("dotnet " + RUN_FILE + " --urls=" + URLS + self.SERVICE_PORT +\
-                 " --\'$STORAGE_ROOT\'=" + APP_STORAGE_ROOT +\
-                    " --pathToConf=" + self.PATH_TO_CONF +\
-                        " --log:dir=" + LOG_DIR +\
-                            " --log:name=" + LOG_FILE +\
-                                " --ENVIRONMENT=" + ENV_EXTENSION +\
-                                    " core:products:folder=/var/www/products/" +\
-                                        " core:products:subfolder=server" + " " +\
-                                            CORE_EVENT_BUS)
+            cmd = f"{TLS_REJECT_UNAUTHORIZED}{CERTIFICATE_PARAM}node {RUN_FILE} --app.port={self.SERVICE_PORT} --app.appsettings={self.PATH_TO_CONF}"
+            if ENV_EXTENSION != "none":
+                cmd += f" --app.environment={ENV_EXTENSION}"
+        subprocess.call(cmd, shell=True)
+
 
 def openJsonFile(filePath):
     try:
@@ -353,13 +319,9 @@ def check_docs_connection():
 
     writeJsonFile(filePath, jsonData)
 
-#filePath = sys.argv[1]
-saveFilePath = filePath
-#jsonValue = sys.argv[2]
 
 filePath = "/app/onlyoffice/config/appsettings.json"
 jsonData = openJsonFile(filePath)
-#jsonUpdateValue = parseJsonValue(jsonValue)
 updateJsonData(jsonData,"$.ConnectionStrings.default.connectionString", "Server="+ MYSQL_CONNECTION_HOST +";Port="+ MYSQL_PORT +";Database="+ MYSQL_DATABASE +";User ID="+ MYSQL_USER +";Password="+ MYSQL_PASSWORD +";Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;ConnectionReset=false;AllowPublicKeyRetrieval=true",)
 updateJsonData(jsonData,"$.core.server-root", APP_CORE_SERVER_ROOT)
 updateJsonData(jsonData,"$.core.base-domain", APP_CORE_BASE_DOMAIN)
@@ -483,6 +445,9 @@ if os.path.isdir(RELEASE_PLUGINS_DIR):
     maintain_plugins()
 
 threading.Thread(target=check_docs_connection, daemon=True).start()
+
+if sys.argv[1] == "supervisord":
+    os.execvp(sys.argv[1], sys.argv[1:])
 
 run = RunServices(SERVICE_PORT, PATH_TO_CONF)
 run.RunService(RUN_FILE, ENV_EXTENSION, LOG_FILE)
