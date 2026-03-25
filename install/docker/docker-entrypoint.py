@@ -1,4 +1,4 @@
-import json, sys, os, netifaces, re, time, requests, threading, shutil, fileinput
+import json, sys, os, re, time, requests, threading, shutil, fileinput, subprocess
 from jsonpath_ng.ext import parse
 from multipledispatch import dispatch
 from netaddr import IPNetwork
@@ -375,11 +375,8 @@ updateJsonData(jsonData,"$.web.samesite", SAMESITE)
 if MCP_ENDPOINT:
     updateJsonData(jsonData, "$.ai.mcp.[0].endpoint", MCP_ENDPOINT)
 
-ip_address = netifaces.ifaddresses('eth0').get(netifaces.AF_INET)[0].get('addr')
-netmask = netifaces.ifaddresses('eth0').get(netifaces.AF_INET)[0].get('netmask')
-ip_address_netmask = '%s/%s' % (ip_address, netmask)
-interface_cidr = IPNetwork(ip_address_netmask)
-knownNetwork = [str(interface_cidr)]
+iface_cidr = re.search(r'inet (\S+)', subprocess.check_output(['ip', '-4', '-o', 'addr', 'show', 'scope', 'global'], text=True)).group(1)
+knownNetwork = [str(IPNetwork(iface_cidr).cidr)]
 knownProxies = ["127.0.0.1"]
 
 if APP_KNOWN_NETWORKS:

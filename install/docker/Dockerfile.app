@@ -166,8 +166,8 @@ ENV APP_STORAGE_ROOT=/app/onlyoffice/data/ \
     PATH_TO_CONF=/app/onlyoffice/config
 
 RUN apt-get -y update && \
-    apt-get install --no-install-recommends -yq sudo adduser nano curl python3-pip libgdiplus && \
-    pip3 install --no-cache-dir --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces2 requests && \
+    apt-get install --no-install-recommends -yq sudo adduser nano curl python3-pip libgdiplus iproute2 && \
+    pip3 install --no-cache-dir --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr requests && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     mkdir -p /var/log/onlyoffice /app/onlyoffice/data && \
@@ -191,8 +191,8 @@ ENV APP_STORAGE_ROOT=/app/onlyoffice/data/ \
     PATH_TO_CONF=/app/onlyoffice/config
 
 RUN apt-get -y update && \
-    apt-get install --no-install-recommends -yq sudo adduser nano curl python3-pip && \
-    pip3 install --no-cache-dir --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr netifaces2 requests && \
+    apt-get install --no-install-recommends -yq sudo adduser nano curl python3-pip iproute2 && \
+    pip3 install --no-cache-dir --upgrade --break-system-packages jsonpath-ng multipledispatch netaddr requests && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     mkdir -p /var/log/onlyoffice /app/onlyoffice/data /var/www /run && \
