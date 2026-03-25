@@ -33,19 +33,25 @@ RUN --mount=type=secret,id=github_token,env=GITHUB_TOKEN sh -ec '\
       ${GITHUB_TOKEN:+-H "Authorization: Bearer ${GITHUB_TOKEN}"} \
       "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/git/refs/heads/${GIT_BRANCH}" -o version.json'
 
-RUN <<EOF
+RUN <<'EOF'
 #!/bin/bash
-git clone --recurse-submodules -b $(echo "$(git ls-remote --exit-code --heads "${BUILDTOOLS_REPO}" "${GIT_BRANCH}"\
- > /dev/null 2>&1 && echo "${GIT_BRANCH}" || echo "${FALLBACK_BRANCH}")") --depth 30 ${BUILDTOOLS_REPO} ${SRC_PATH}/buildtools && \
+set -e
 
-git clone --recurse-submodules -b $(echo "$(git ls-remote --exit-code --heads "${SERVER_REPO}" "${GIT_BRANCH}"\
- > /dev/null 2>&1 && echo "${GIT_BRANCH}" || echo "${FALLBACK_BRANCH}")") --depth 30 ${SERVER_REPO} ${SRC_PATH}/server && \
+git_clone() {
+    local REPO=$1 DEST=$2 EXTRA_OPTS=$3 FALLBACK=${4:-$FALLBACK_BRANCH}
+    local BRANCH=$(git ls-remote --exit-code --heads "${REPO}" "${GIT_BRANCH}" > /dev/null 2>&1 && echo "${GIT_BRANCH}" || echo "${FALLBACK}")
+    git clone ${EXTRA_OPTS} -b "${BRANCH}" "${REPO}" "${DEST}"
+}
 
-git clone --recurse-submodules -b $(echo "$(git ls-remote --exit-code --heads "${CLIENT_REPO}" "${GIT_BRANCH}"\
- > /dev/null 2>&1 && echo "${GIT_BRANCH}" || echo "${FALLBACK_BRANCH}")") --depth 30 ${CLIENT_REPO} ${SRC_PATH}/client && \
+PIDS=()
+DEPTH=$([ "${DEBUG_INFO}" = true ] && echo 30 || echo 1)
+git_clone "${BUILDTOOLS_REPO}" "${SRC_PATH}/buildtools" "--recurse-submodules --depth ${DEPTH}" & PIDS+=($!)
+git_clone "${SERVER_REPO}"     "${SRC_PATH}/server"     "--recurse-submodules --depth ${DEPTH}" & PIDS+=($!)
+git_clone "${CLIENT_REPO}"     "${SRC_PATH}/client"     "--recurse-submodules --depth ${DEPTH}" & PIDS+=($!)
+git_clone https://github.com/ONLYOFFICE/docspace-plugins.git "${SRC_PATH}/plugins" "--depth 1" master & PIDS+=($!)
+git_clone https://github.com/ONLYOFFICE/ASC.Web.Campaigns.git "${SRC_PATH}/campaigns" "--depth 1" master & PIDS+=($!)
 
-git clone -b "$( [ "$GIT_BRANCH" = develop ] && echo develop || echo master )" --depth 1 https://github.com/ONLYOFFICE/docspace-plugins.git ${SRC_PATH}/plugins && \
-git clone -b "master" --depth 1 https://github.com/ONLYOFFICE/ASC.Web.Campaigns.git ${SRC_PATH}/campaigns
+for PID in "${PIDS[@]}"; do wait "${PID}" || exit 1; done
 EOF
 
 WORKDIR ${SRC_PATH}/buildtools/config
