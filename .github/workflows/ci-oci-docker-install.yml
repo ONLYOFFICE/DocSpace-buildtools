@@ -62,7 +62,7 @@ jobs:
       - name: Test OCI docker scripts
         run: |
           INSTALL_CMD="sudo bash install-Docker.sh -skiphc true -noni true -gb ${{ github.ref_name }} ${{ matrix.mode.args }}"
-          [ "${IS_4TESTING:-true}" != "false" ] && INSTALL_CMD="$INSTALL_CMD -s 4testing-"
+          [ "${IS_4TESTING:-true}" != "false" ] && INSTALL_CMD="$INSTALL_CMD -s 4testing- -un ${{ secrets.DOCKERHUB_USERNAME_PAT }} -p ${{ secrets.DOCKERHUB_TOKEN_PAT }}"
           [ -n "$DOCKER_TAG" ] && INSTALL_CMD="$INSTALL_CMD -dsv $DOCKER_TAG"
           
           wget -q https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/install/OneClickInstall/install-Docker.sh
