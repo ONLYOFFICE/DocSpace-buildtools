@@ -346,7 +346,7 @@ if APP_KNOWN_NETWORKS:
     knownNetwork= knownNetwork + [x.strip() for x in APP_KNOWN_NETWORKS.split(',')]
 
 if APP_KNOWN_PROXIES:
-    knownNetwork= knownNetwork + [x.strip() for x in APP_KNOWN_PROXIES.split(',')]
+    knownProxies = knownProxies + [x.strip() for x in APP_KNOWN_PROXIES.split(',')]
 
 updateJsonData(jsonData,"$.core.hosting.forwardedHeadersOptions.knownNetworks", knownNetwork)
 updateJsonData(jsonData,"$.core.hosting.forwardedHeadersOptions.knownProxies", knownProxies)
