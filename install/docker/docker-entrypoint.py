@@ -1,89 +1,87 @@
-import json, sys, os, netifaces, re, time, requests, threading, shutil
+import json, sys, os, netifaces, re, time, requests, threading, shutil, fileinput
 from jsonpath_ng.ext import parse
-from os import environ
 from multipledispatch import dispatch
-from netaddr import *
-import fileinput
+from netaddr import IPNetwork
 
 filePath = None
 saveFilePath = None
 jsonValue = None
 
-PRODUCT = os.environ["PRODUCT"] if environ.get("PRODUCT") else "onlyoffice"
-BASE_DIR =  os.environ["BASE_DIR"] if environ.get("BASE_DIR") else  "/app/" + PRODUCT
+PRODUCT = os.environ.get("PRODUCT") or "onlyoffice"
+BASE_DIR =  os.environ.get("BASE_DIR") or  "/app/" + PRODUCT
 ENV_EXTENSION = (os.environ.get("ENV_EXTENSION") or os.environ.get("INSTALLATION_TYPE")).lower() or "none"
-PROXY_HOST = os.environ["PROXY_HOST"] if environ.get("PROXY_HOST") else "onlyoffice-proxy"
-SERVICE_PORT = os.environ["SERVICE_PORT"] if environ.get("SERVICE_PORT") else "5050"
-URLS = os.environ["URLS"] if environ.get("URLS") else "http://0.0.0.0:"
-PATH_TO_CONF = os.environ["PATH_TO_CONF"] if environ.get("PATH_TO_CONF") else "/app/" + PRODUCT + "/config"
-LOG_DIR = os.environ["LOG_DIR"] if environ.get("LOG_DIR") else "/var/log/" + PRODUCT
-BUILD_PATH = os.environ["BUILD_PATH"] if environ.get("BUILD_PATH") else "/var/www"
-NODE_CONTAINER_NAME = os.environ["NODE_CONTAINER_NAME"] if os.environ.get("NODE_CONTAINER_NAME") else "onlyoffice-node-services"
-SERVICE_SOCKET_PORT = os.environ["SERVICE_SOCKET_PORT"] if os.environ.get("SERVICE_SOCKET_PORT") else SERVICE_PORT
-SERVICE_SSOAUTH_PORT = os.environ["SERVICE_SSOAUTH_PORT"] if os.environ.get("SERVICE_SSOAUTH_PORT") else SERVICE_PORT
-ROUTER_HOST = os.environ["ROUTER_HOST"] if environ.get("ROUTER_HOST") else "onlyoffice-router"
+PROXY_HOST = os.environ.get("PROXY_HOST") or "onlyoffice-proxy"
+SERVICE_PORT = os.environ.get("SERVICE_PORT") or "5050"
+URLS = os.environ.get("URLS") or "http://0.0.0.0:"
+PATH_TO_CONF = os.environ.get("PATH_TO_CONF") or "/app/" + PRODUCT + "/config"
+LOG_DIR = os.environ.get("LOG_DIR") or "/var/log/" + PRODUCT
+BUILD_PATH = os.environ.get("BUILD_PATH") or "/var/www"
+NODE_CONTAINER_NAME = os.environ.get("NODE_CONTAINER_NAME") or "onlyoffice-node-services"
+SERVICE_SOCKET_PORT = os.environ.get("SERVICE_SOCKET_PORT") or SERVICE_PORT
+SERVICE_SSOAUTH_PORT = os.environ.get("SERVICE_SSOAUTH_PORT") or SERVICE_PORT
+ROUTER_HOST = os.environ.get("ROUTER_HOST") or "onlyoffice-router"
 SOCKET_HOST = os.environ.get("NODE_CONTAINER_NAME") or os.environ.get("SOCKET_HOST") or "onlyoffice-socket"
-MCP_ENDPOINT = os.environ.get("MCP_ENDPOINT") or os.environ.get("MCP_ENDPOINT") or "http://onlyoffice-mcp:5158/mcp"
+MCP_ENDPOINT = os.environ.get("MCP_ENDPOINT") or "http://onlyoffice-mcp:5158/mcp"
 
-MYSQL_CONTAINER_NAME = os.environ["MYSQL_CONTAINER_NAME"] if environ.get("MYSQL_CONTAINER_NAME") else "onlyoffice-mysql-server"
-MYSQL_HOST = os.environ["MYSQL_HOST"] if environ.get("MYSQL_HOST") else None
-MYSQL_PORT = os.environ["MYSQL_PORT"] if environ.get("MYSQL_PORT") else "3306"
-MYSQL_DATABASE = os.environ["MYSQL_DATABASE"] if environ.get("MYSQL_DATABASE") else "onlyoffice"
-MYSQL_USER = os.environ["MYSQL_USER"] if environ.get("MYSQL_USER") else "onlyoffice_user"
-MYSQL_PASSWORD = os.environ["MYSQL_PASSWORD"] if environ.get("MYSQL_PASSWORD") else "onlyoffice_pass"
+MYSQL_CONTAINER_NAME = os.environ.get("MYSQL_CONTAINER_NAME") or "onlyoffice-mysql-server"
+MYSQL_HOST = os.environ.get("MYSQL_HOST") or None
+MYSQL_PORT = os.environ.get("MYSQL_PORT") or "3306"
+MYSQL_DATABASE = os.environ.get("MYSQL_DATABASE") or "onlyoffice"
+MYSQL_USER = os.environ.get("MYSQL_USER") or "onlyoffice_user"
+MYSQL_PASSWORD = os.environ.get("MYSQL_PASSWORD") or "onlyoffice_pass"
 MYSQL_CONNECTION_HOST = MYSQL_HOST if MYSQL_HOST else MYSQL_CONTAINER_NAME
 
-APP_CORE_SERVER_ROOT = os.environ["APP_CORE_SERVER_ROOT"] if environ.get("APP_CORE_SERVER_ROOT") else None
-APP_CORE_BASE_DOMAIN = os.environ["APP_CORE_BASE_DOMAIN"] if environ.get("APP_CORE_BASE_DOMAIN") is not None else "localhost"
-APP_CORE_MACHINEKEY = os.environ["APP_CORE_MACHINEKEY"] if environ.get("APP_CORE_MACHINEKEY") else "your_core_machinekey"
-APP_URL_PORTAL = os.environ["APP_URL_PORTAL"] if environ.get("APP_URL_PORTAL") else "http://" + ROUTER_HOST + ":8092"
-OAUTH_REDIRECT_URL = os.environ["OAUTH_REDIRECT_URL"] if environ.get("OAUTH_REDIRECT_URL") else None
-APP_STORAGE_ROOT = os.environ["APP_STORAGE_ROOT"] if environ.get("APP_STORAGE_ROOT") else BASE_DIR + "/data/"
-APP_KNOWN_PROXIES = os.environ["APP_KNOWN_PROXIES"]
-APP_KNOWN_NETWORKS = os.environ["APP_KNOWN_NETWORKS"]
-LOG_LEVEL = os.environ["LOG_LEVEL"].lower() if environ.get("LOG_LEVEL") else None
-DEBUG_INFO = os.environ["DEBUG_INFO"] if environ.get("DEBUG_INFO") else "false"
-SAMESITE = os.environ["SAMESITE"] if environ.get("SAMESITE") else "None"
-DISABLE_VALIDATE_TOKEN = os.environ["DISABLE_VALIDATE_TOKEN"] if environ.get("DISABLE_VALIDATE_TOKEN") else "false"
+APP_CORE_SERVER_ROOT = os.environ.get("APP_CORE_SERVER_ROOT") or None
+APP_CORE_BASE_DOMAIN = os.environ.get("APP_CORE_BASE_DOMAIN", "localhost")
+APP_CORE_MACHINEKEY = os.environ.get("APP_CORE_MACHINEKEY") or "your_core_machinekey"
+APP_URL_PORTAL = os.environ.get("APP_URL_PORTAL") or "http://" + ROUTER_HOST + ":8092"
+OAUTH_REDIRECT_URL = os.environ.get("OAUTH_REDIRECT_URL") or None
+APP_STORAGE_ROOT = os.environ.get("APP_STORAGE_ROOT") or BASE_DIR + "/data/"
+APP_KNOWN_PROXIES = os.environ.get("APP_KNOWN_PROXIES", "")
+APP_KNOWN_NETWORKS = os.environ.get("APP_KNOWN_NETWORKS", "")
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "").lower() or None
+DEBUG_INFO = os.environ.get("DEBUG_INFO") or "false"
+SAMESITE = os.environ.get("SAMESITE") or "None"
+DISABLE_VALIDATE_TOKEN = os.environ.get("DISABLE_VALIDATE_TOKEN") or "false"
 
 CERTIFICATE_PATH = os.environ.get("CERTIFICATE_PATH")
 CERTIFICATE_PARAM = "NODE_EXTRA_CA_CERTS=" + CERTIFICATE_PATH + " " if CERTIFICATE_PATH and os.path.exists(CERTIFICATE_PATH) else ""
 TLS_REJECT_UNAUTHORIZED = "NODE_TLS_REJECT_UNAUTHORIZED=1" if os.getenv("NODE_TLS_REJECT_UNAUTHORIZED", "").lower() in ("1","true","enable") else "";
 
-DOCUMENT_CONTAINER_NAME = os.environ["DOCUMENT_CONTAINER_NAME"] if environ.get("DOCUMENT_CONTAINER_NAME") else "onlyoffice-document-server"
-DOCUMENT_SERVER_JWT_SECRET = os.environ["DOCUMENT_SERVER_JWT_SECRET"] if environ.get("DOCUMENT_SERVER_JWT_SECRET") else "your_jwt_secret"
-DOCUMENT_SERVER_JWT_HEADER = os.environ["DOCUMENT_SERVER_JWT_HEADER"] if environ.get("DOCUMENT_SERVER_JWT_HEADER") else "AuthorizationJwt"
-DOCUMENT_SERVER_URL_INTERNAL = os.environ["DOCUMENT_SERVER_URL_INTERNAL"] if environ.get("DOCUMENT_SERVER_URL_INTERNAL") else "http://" + DOCUMENT_CONTAINER_NAME + "/"
-DOCUMENT_SERVER_URL_EXTERNAL = os.environ["DOCUMENT_SERVER_URL_EXTERNAL"] if environ.get("DOCUMENT_SERVER_URL_EXTERNAL") else None
-DOCUMENT_SERVER_URL_PUBLIC = DOCUMENT_SERVER_URL_EXTERNAL if DOCUMENT_SERVER_URL_EXTERNAL else os.environ["DOCUMENT_SERVER_URL_PUBLIC"] if environ.get("DOCUMENT_SERVER_URL_PUBLIC") else "/ds-vpath/"
+DOCUMENT_CONTAINER_NAME = os.environ.get("DOCUMENT_CONTAINER_NAME") or "onlyoffice-document-server"
+DOCUMENT_SERVER_JWT_SECRET = os.environ.get("DOCUMENT_SERVER_JWT_SECRET") or "your_jwt_secret"
+DOCUMENT_SERVER_JWT_HEADER = os.environ.get("DOCUMENT_SERVER_JWT_HEADER") or "AuthorizationJwt"
+DOCUMENT_SERVER_URL_INTERNAL = os.environ.get("DOCUMENT_SERVER_URL_INTERNAL") or "http://" + DOCUMENT_CONTAINER_NAME + "/"
+DOCUMENT_SERVER_URL_EXTERNAL = os.environ.get("DOCUMENT_SERVER_URL_EXTERNAL") or None
+DOCUMENT_SERVER_URL_PUBLIC = DOCUMENT_SERVER_URL_EXTERNAL if DOCUMENT_SERVER_URL_EXTERNAL else os.environ.get("DOCUMENT_SERVER_URL_PUBLIC") or "/ds-vpath/"
 DOCUMENT_SERVER_CONNECTION_HOST = DOCUMENT_SERVER_URL_EXTERNAL if DOCUMENT_SERVER_URL_EXTERNAL else DOCUMENT_SERVER_URL_INTERNAL
 
-ELK_CONTAINER_NAME = os.environ["ELK_CONTAINER_NAME"] if environ.get("ELK_CONTAINER_NAME") else "onlyoffice-opensearch"
-ELK_SCHEME = os.environ["ELK_SCHEME"] if environ.get("ELK_SCHEME") else "http"
-ELK_HOST = os.environ["ELK_HOST"] if environ.get("ELK_HOST") else None
-ELK_PORT = os.environ["ELK_PORT"] if environ.get("ELK_PORT") else "9200"
-ELK_THREADS = os.environ["ELK_THREADS"] if environ.get("ELK_THREADS") else "1"
+ELK_CONTAINER_NAME = os.environ.get("ELK_CONTAINER_NAME") or "onlyoffice-opensearch"
+ELK_SCHEME = os.environ.get("ELK_SCHEME") or "http"
+ELK_HOST = os.environ.get("ELK_HOST") or None
+ELK_PORT = os.environ.get("ELK_PORT") or "9200"
+ELK_THREADS = os.environ.get("ELK_THREADS") or "1"
 ELK_CONNECTION_HOST = ELK_HOST if ELK_HOST else ELK_CONTAINER_NAME
 
 RUN_FILE = sys.argv[1] if (len(sys.argv) > 1) else "none"
 LOG_FILE = sys.argv[2] if (len(sys.argv) > 2) else "none"
 CORE_EVENT_BUS = sys.argv[3] if (len(sys.argv) > 3) else ""
 
-REDIS_CONTAINER_NAME = os.environ["REDIS_CONTAINER_NAME"] if environ.get("REDIS_CONTAINER_NAME") else "onlyoffice-redis"
-REDIS_HOST = os.environ["REDIS_HOST"] if environ.get("REDIS_HOST") else None
-REDIS_PORT = os.environ["REDIS_PORT"] if environ.get("REDIS_PORT") else "6379"
-REDIS_USER_NAME = {"User": os.environ["REDIS_USER_NAME"]} if environ.get("REDIS_USER_NAME") else None
-REDIS_PASSWORD = {"Password": os.environ["REDIS_PASSWORD"]} if environ.get("REDIS_PASSWORD") else None
+REDIS_CONTAINER_NAME = os.environ.get("REDIS_CONTAINER_NAME") or "onlyoffice-redis"
+REDIS_HOST = os.environ.get("REDIS_HOST") or None
+REDIS_PORT = os.environ.get("REDIS_PORT") or "6379"
+REDIS_USER_NAME = {"User": os.environ["REDIS_USER_NAME"]} if os.environ.get("REDIS_USER_NAME") else None
+REDIS_PASSWORD = {"Password": os.environ["REDIS_PASSWORD"]} if os.environ.get("REDIS_PASSWORD") else None
 REDIS_CONNECTION_HOST = REDIS_HOST if REDIS_HOST else REDIS_CONTAINER_NAME
-REDIS_DB = os.environ["REDIS_DB"] if environ.get("REDIS_DB") else 0
+REDIS_DB = os.environ.get("REDIS_DB") or 0
 
-RABBIT_CONTAINER_NAME = os.environ["RABBIT_CONTAINER_NAME"] if environ.get("RABBIT_CONTAINER_NAME") else "onlyoffice-rabbitmq"
-RABBIT_PROTOCOL = os.environ["RABBIT_PROTOCOL"] if environ.get("RABBIT_PROTOCOL") else "amqp"
-RABBIT_HOST = os.environ["RABBIT_HOST"] if environ.get("RABBIT_HOST") else None
-RABBIT_USER_NAME = os.environ["RABBIT_USER_NAME"] if environ.get("RABBIT_USER_NAME") else "guest"
-RABBIT_PASSWORD = os.environ["RABBIT_PASSWORD"] if environ.get("RABBIT_PASSWORD") else "guest"
-RABBIT_PORT =  os.environ["RABBIT_PORT"] if environ.get("RABBIT_PORT") else "5672"
-RABBIT_VIRTUAL_HOST = os.environ["RABBIT_VIRTUAL_HOST"] if environ.get("RABBIT_VIRTUAL_HOST") else "/"
+RABBIT_CONTAINER_NAME = os.environ.get("RABBIT_CONTAINER_NAME") or "onlyoffice-rabbitmq"
+RABBIT_PROTOCOL = os.environ.get("RABBIT_PROTOCOL") or "amqp"
+RABBIT_HOST = os.environ.get("RABBIT_HOST") or None
+RABBIT_USER_NAME = os.environ.get("RABBIT_USER_NAME") or "guest"
+RABBIT_PASSWORD = os.environ.get("RABBIT_PASSWORD") or "guest"
+RABBIT_PORT =  os.environ.get("RABBIT_PORT") or "5672"
+RABBIT_VIRTUAL_HOST = os.environ.get("RABBIT_VIRTUAL_HOST") or "/"
 RABBIT_CONNECTION_HOST = RABBIT_HOST if RABBIT_HOST else RABBIT_CONTAINER_NAME
 RABBIT_URI = (
     {"Uri": os.environ["RABBIT_URI"]} if os.environ.get("RABBIT_URI")
@@ -265,12 +263,13 @@ def maintain_plugins():
 
     INSTALLED_PLUGINS = {}
     if os.path.exists(USER_STATE_FILE):
-        for LINE in open(USER_STATE_FILE):
-            PARTS = LINE.strip().split()
-            if len(PARTS) == 2:
-                INSTALLED_PLUGINS[PARTS[0]] = PARTS[1]
-            else:
-                LOG("error", f"Invalid line in {USER_STATE_FILE}: '{LINE.strip()}'")
+        with open(USER_STATE_FILE) as f:
+            for LINE in f:
+                PARTS = LINE.strip().split()
+                if len(PARTS) == 2:
+                    INSTALLED_PLUGINS[PARTS[0]] = PARTS[1]
+                else:
+                    LOG("error", f"Invalid line in {USER_STATE_FILE}: '{LINE.strip()}'")
 
     LOG("DEBUG", f"Loaded installed plugins: {INSTALLED_PLUGINS}")
 
@@ -279,7 +278,8 @@ def maintain_plugins():
         CONFIG_PATH = f"{RELEASE_PLUGINS_DIR}{PLUGIN}/config.json"
         if os.path.exists(CONFIG_PATH):
             try:
-                CONFIG = json.load(open(CONFIG_PATH))
+                with open(CONFIG_PATH) as f:
+                    CONFIG = json.load(f)
                 VERSION = CONFIG.get("version")
                 RELEASE_PLUGINS[PLUGIN] = VERSION
             except Exception as e:
@@ -475,7 +475,8 @@ if LOG_LEVEL:
     NLOG_PATH = "/app/onlyoffice/config/nlog.config"
     with open(NLOG_PATH) as f: NLOG = f.read()
     NLOG = re.sub(r'^(?!.*ZiggyCreatures)(.*minlevel=")\w+(")', rf'\1{LOG_LEVEL}\2', NLOG, flags=re.M)
-    open(NLOG_PATH, "w").write(NLOG)
+    with open(NLOG_PATH, "w") as f:
+        f.write(NLOG)
 
 RELEASE_PLUGINS_DIR = "/var/www/studio/plugins/"
 USER_PLUGINS_DIR = "/app/onlyoffice/data/Studio/webplugins/"
