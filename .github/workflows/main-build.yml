@@ -29,9 +29,29 @@ env:
   DOCKERFILE: "Dockerfile"
 
 jobs:
+  prepare:
+    name: Prepare
+    runs-on: ubuntu-latest
+    outputs:
+      tags: ${{ steps.compute.outputs.tags }}
+      versions: ${{ steps.compute.outputs.versions }}
+    steps:
+      - id: compute
+        run: |
+          VERSIONS=$(echo '${{ github.event.client_payload.branches || inputs.branches }}' | jq -c '
+            [.[] | {key: ., value: (gsub("^(release|hotfix|feature|bugfix).*/"; "") | gsub("-git-action$"; "") | ltrimstr("v"))}] | from_entries
+          ')
+          TAGS=$(echo "$VERSIONS" | jq -c 'with_entries(.value += ".${{ github.run_number }}")')
+          echo "versions=$VERSIONS" >> $GITHUB_OUTPUT
+          echo "tags=$TAGS" >> $GITHUB_OUTPUT
+
   build:
     name: ${{ matrix.service }} (${{ matrix.branch }})
+    needs: prepare
     runs-on: ubuntu-latest
+    env:
+      DOCKER_TAG: ${{ fromJson(needs.prepare.outputs.tags)[matrix.branch] }}
+      PRODUCT_VERSION: ${{ fromJson(needs.prepare.outputs.versions)[matrix.branch] }}
     strategy:
       matrix:
         branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches) }}
@@ -59,14 +79,6 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Prepare build variables
-        run: |
-          PRODUCT_VERSION=$(echo "${{ matrix.branch }}" | sed '/^release\b\|^hotfix\b\|^feature\b\|^bugfix\b/s/release.*\/\|hotfix.*\/\|feature.*\/\|bugfix.*\///; s/-git-action$//; s/^v//')
-          [ "${PRODUCT_VERSION}" = "develop" ] && PRODUCT_VERSION="develop"
-          echo "DOCKER_TAG=${PRODUCT_VERSION}.${{ github.run_number }}" >> $GITHUB_ENV
-          echo "PRODUCT_VERSION=${PRODUCT_VERSION}" >> $GITHUB_ENV
-        shell: bash
-
       - name: Build ${{ matrix.service }}
         timeout-minutes: 90
         env:
@@ -87,10 +99,12 @@ jobs:
 
   trigger-oci-docker:
     name: OCI (${{ matrix.branch }})
-    needs: build
+    needs: [build, prepare]
     if: ${{ !cancelled() && needs.build.result == 'success' }}
     continue-on-error: true
     runs-on: ubuntu-latest
+    env:
+      DOCKER_TAG: ${{ fromJson(needs.prepare.outputs.tags)[matrix.branch] }}
     strategy:
       matrix:
         branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches) }}
@@ -106,9 +120,6 @@ jobs:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME_PAT }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN_PAT }}
         run: |
-          PRODUCT_VERSION=$(echo "${{ matrix.branch }}" | sed '/^release\b\|^hotfix\b\|^feature\b\|^bugfix\b/s/release.*\/\|hotfix.*\/\|feature.*\/\|bugfix.*\///; s/-git-action$//; s/^v//')
-          DOCKER_TAG="${PRODUCT_VERSION}.${{ github.run_number }}"
-
           sudo GITHUB_REPOSITORY=${{ github.repository }} BRANCH=${{ matrix.branch }} \
             DOCKER_REPOSITORY=${{ env.REPO }} DOCKER_PREFIX=${{ env.DOCKER_IMAGE_PREFIX }} DOCKER_TAG=$DOCKER_TAG \
             DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME} DOCKERHUB_TOKEN=${DOCKERHUB_TOKEN} \
