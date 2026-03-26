@@ -111,7 +111,8 @@ RUN cd ${SRC_PATH}/server/common/ASC.Socket.IO && \
     yarn install --immutable && \
     cd ${SRC_PATH}/server/common/ASC.SsoAuth && \
     yarn install --immutable && \
-    yarn cache clean --all
+    yarn cache clean --all && \
+    find ${SRC_PATH}/server/common -type f \( -name "*.js.map" -o -name "*.css.map" \) -delete
 
 # build frondend from DocSpace-client
 WORKDIR ${SRC_PATH}
