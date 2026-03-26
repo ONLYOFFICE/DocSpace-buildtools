@@ -129,6 +129,14 @@ RUN corepack enable && corepack prepare pnpm@latest --activate && \
     find ${SRC_PATH}/publish/web -type f \( -name "*.js.map" -o -name "*.css.map" \) -delete && \
     rm -rf "$(pnpm store path)" /root/.cache ${SRC_PATH}/client ${SRC_PATH}/buildtools
 
+RUN find "${SRC_PATH}/publish/web" -mindepth 4 -maxdepth 4 -name ".next" -type d | \
+    while IFS= read -r NEXT_DIR; do \
+        APP_NAME=$(basename "$(dirname "$NEXT_DIR")") && \
+        mkdir -p "${SRC_PATH}/publish/static/${APP_NAME}/static" && \
+        cp -a "${NEXT_DIR}/static/chunks" "${NEXT_DIR}/static/css" "${NEXT_DIR}/static/media" \
+            "${SRC_PATH}/publish/static/${APP_NAME}/static/" ; \
+    done
+
 # build plugins
 FROM --platform=$BUILDPLATFORM node:${NODE_VERSION} AS build-plugins
 ARG SRC_PATH
@@ -239,29 +247,18 @@ RUN addgroup --system --gid 107 onlyoffice && \
     mkdir -p /var/log/nginx/
 
 # copy static services files and config values 
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/client ${BUILD_PATH}/client
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/public ${BUILD_PATH}/public
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/editor/packages/doceditor/.next/static/chunks ${BUILD_PATH}/build/doceditor/static/chunks
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/editor/packages/doceditor/.next/static/css ${BUILD_PATH}/build/doceditor/static/css
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/editor/packages/doceditor/.next/static/media ${BUILD_PATH}/build/doceditor/static/media
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/login/packages/login/.next/static/chunks ${BUILD_PATH}/build/login/static/chunks
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/login/packages/login/.next/static/css ${BUILD_PATH}/build/login/static/css
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/login/packages/login/.next/static/media ${BUILD_PATH}/build/login/static/media
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/packages/sdk/.next/static/chunks ${BUILD_PATH}/build/sdk/static/chunks
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/packages/sdk/.next/static/css ${BUILD_PATH}/build/sdk/static/css
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/packages/sdk/.next/static/media ${BUILD_PATH}/build/sdk/static/media
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management/packages/management/.next/static/chunks ${BUILD_PATH}/build/management/static/chunks
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management/packages/management/.next/static/css ${BUILD_PATH}/build/management/static/css
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management/packages/management/.next/static/media ${BUILD_PATH}/build/management/static/media
 COPY --from=src --chown=onlyoffice:onlyoffice /etc/nginx/conf.d /etc/nginx/conf.d
 COPY --from=src --chown=onlyoffice:onlyoffice /etc/nginx/includes /etc/nginx/includes
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/client ${BUILD_PATH}/client
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/public ${BUILD_PATH}/public
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/static ${BUILD_PATH}/build
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/config/nginx/html /etc/nginx/html
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/campaigns/src/campaigns ${BUILD_PATH}/public/campaigns
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/docker-entrypoint.d /docker-entrypoint.d
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/nginx.conf.template /etc/nginx/nginx.conf.template
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/config/nginx/html /etc/nginx/html
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/nginx.conf.template /etc/nginx/nginx.conf.template
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
 
 # changes for upstream configure
 RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.conf && \
