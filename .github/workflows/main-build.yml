@@ -118,3 +118,47 @@ jobs:
             bash .github/scripts/docker-images-availability.sh
 
           gh workflow run "ci-oci-docker-install.yml" --repo "${{ github.repository }}" --ref "${{ matrix.branch }}" --field offline=false --field testing=true --field tag=$DOCKER_TAG
+
+  grype-scan:
+    name: Grype (${{ matrix.branch }})
+    needs: [build, prepare]
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_TAG: ${{ fromJson(needs.prepare.outputs.tags)[matrix.branch] }}
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches) }}
+    steps:
+      - name: Login to DockerHub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Scan aggregate images
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL https://get.anchore.io/grype | sudo sh -s -- -b /usr/local/bin
+
+          SUMMARY=""; TOTAL=0
+          JQ_COUNTS='[.matches[]?.vulnerability.severity | select(.=="Critical" or .=="High")] | {critical: (map(select(.=="Critical")) | length), high: (map(select(.=="High")) | length)} | "\(.critical) \(.high)"'
+          JQ_TABLE='["PACKAGE","INSTALLED","FIXED-IN","TYPE","VULNERABILITY","SEVERITY"],
+            (.matches[]? | select(.vulnerability.severity | . == "High" or . == "Critical")
+            | [.artifact.name, .artifact.version, (.vulnerability.fix.versions[0] // "-"),
+               .artifact.type, .vulnerability.id, .vulnerability.severity]) | @tsv'
+
+          for SERVICE in dotnet node java; do
+            REPORT=$(grype "registry:${REPO}/${DOCKER_IMAGE_PREFIX}-${SERVICE}:${DOCKER_TAG}" --output json)
+            read -r CRITICAL HIGH <<< "$(jq -r "$JQ_COUNTS" <<< "$REPORT")"
+            COUNT=$((CRITICAL + HIGH)); TOTAL=$((TOTAL + COUNT))
+            SUMMARY+="${SUMMARY:+ | }${SERVICE}: $([ "$COUNT" -gt 0 ] && echo "${CRITICAL}C/${HIGH}H" || echo ok)"
+            ICON=$([ "$CRITICAL" -gt 0 ] && echo "🔴" || { [ "$HIGH" -gt 0 ] && echo "🟠" || echo "✅"; })
+            echo "::group::${ICON} ${SERVICE} — 🔴 critical: ${CRITICAL}, 🟠 high: ${HIGH}"
+            jq -r "$JQ_TABLE" <<< "$REPORT" | column -t -s $'\t'
+            echo "::endgroup::"
+          done
+
+          echo "$([ "$TOTAL" -gt 0 ] && echo "::warning" || echo "::notice") title=Grype [${{ matrix.branch }}]::${SUMMARY}"
