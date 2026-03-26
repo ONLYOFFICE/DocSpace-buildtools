@@ -1,0 +1,102 @@
+name: Trivy scan
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: 'DockerHub namespace'
+        required: false
+        default: onlyoffice
+        type: string
+      image_prefix:
+        description: 'Image name prefix'
+        required: false
+        default: 4testing-docspace
+        type: string
+      tag:
+        description: 'Docker image tag to scan'
+        required: true
+        type: string
+      trivy_version:
+        description: 'Pinned Trivy version'
+        required: false
+        default: v0.72.0
+        type: string
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  scan:
+    name: Scan
+    runs-on: ubuntu-latest
+    env:
+      REPO: ${{ inputs.repo }}
+      DOCKER_IMAGE_PREFIX: ${{ inputs.image_prefix }}
+      DOCKER_TAG: ${{ inputs.tag }}
+      TRIVY_VERSION: ${{ inputs.trivy_version }}
+    steps:
+      - name: Login to DockerHub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Scan aggregate images
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL "https://raw.githubusercontent.com/aquasecurity/trivy/${TRIVY_VERSION}/contrib/install.sh" | sudo sh -s -- -b /usr/local/bin "${TRIVY_VERSION}"
+
+          mkdir -p sarif
+          SUMMARY=""; TOTAL=0
+          JQ_FINDINGS='[.Results[]? | .Type as $type | (.Vulnerabilities // [])[]
+            | {package: .PkgName, installed: .InstalledVersion,
+               fixed: (if (.FixedVersion // "") == "" then "-" else .FixedVersion end),
+               type: $type, cve: .VulnerabilityID, severity: .Severity}]
+            | unique_by([.package, .installed, .cve])'
+          JQ_TABLE='["PACKAGE","INSTALLED","FIXED-IN","TYPE","VULNERABILITY","SEVERITY"],
+            (.[] | [.package, .installed, .fixed, .type, .cve, .severity]) | @tsv'
+
+          for SERVICE in dotnet node java community; do
+            # The community edition is published without the per-service suffix.
+            SUFFIX=$([ "$SERVICE" = community ] && echo "" || echo "-${SERVICE}")
+            IMAGE="${REPO}/${DOCKER_IMAGE_PREFIX}${SUFFIX}:${DOCKER_TAG}"
+            # A scan failure (missing image, registry/DB error) must not abort the other services.
+            if ! trivy image --quiet --format json --output "report-${SERVICE}.json" \
+                 --severity HIGH,CRITICAL --ignore-unfixed --scanners vuln,secret "$IMAGE"; then
+              SUMMARY+="${SUMMARY:+ | }${SERVICE}: err"
+              echo "::group::⚠️ ${SERVICE} — scan failed"
+              echo "Trivy failed to scan ${IMAGE}"
+              echo "::endgroup::"
+              continue
+            fi
+            # Reuse the JSON report for SARIF instead of scanning twice.
+            trivy convert --quiet --format sarif --output "sarif/${SERVICE}.sarif" "report-${SERVICE}.json"
+            # Tag each run with its own category so all services upload in one step
+            # (code scanning only rejects multiple runs sharing the same category).
+            jq --arg id "trivy-${SERVICE}" '.runs[].automationDetails.id = $id' \
+              "sarif/${SERVICE}.sarif" > "sarif/${SERVICE}.sarif.tmp"
+            mv "sarif/${SERVICE}.sarif.tmp" "sarif/${SERVICE}.sarif"
+
+            FINDINGS=$(jq -c "$JQ_FINDINGS" "report-${SERVICE}.json")
+            CRITICAL=$(jq '[.[] | select(.severity == "CRITICAL")] | length' <<< "$FINDINGS")
+            HIGH=$(jq '[.[] | select(.severity == "HIGH")] | length' <<< "$FINDINGS")
+            SECRETS=$(jq '[.Results[]? | (.Secrets // [])[]] | length' "report-${SERVICE}.json")
+            COUNT=$((CRITICAL + HIGH + SECRETS)); TOTAL=$((TOTAL + COUNT))
+            SUMMARY+="${SUMMARY:+ | }${SERVICE}: $([ "$COUNT" -gt 0 ] && echo "${CRITICAL}C/${HIGH}H$([ "$SECRETS" -gt 0 ] && echo "/${SECRETS}S")" || echo ok)"
+            ICON=$([ "$CRITICAL" -gt 0 ] && echo "🔴" || { [ "$((HIGH + SECRETS))" -gt 0 ] && echo "🟠" || echo "🟢"; })
+            echo "::group::${ICON} ${SERVICE} — 🔴 critical: ${CRITICAL}, 🟠 high: ${HIGH}, 🔑 secrets: ${SECRETS}"
+            jq -r "$JQ_TABLE" <<< "$FINDINGS" | column -t -s $'\t'
+            echo "::endgroup::"
+          done
+
+          # Informational gate — surface counts but never fail the job on findings.
+          echo "$([ "$TOTAL" -gt 0 ] && echo "::warning" || echo "::notice") title=Trivy [${DOCKER_TAG}]::${SUMMARY}"
+
+      - name: Upload SARIF to code scanning
+        if: ${{ !cancelled() && hashFiles('sarif/*.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: sarif

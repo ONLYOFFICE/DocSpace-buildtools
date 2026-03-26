@@ -14,6 +14,11 @@ on:
         description: 'Branches for multiarch build (JSON array)'
         required: false
         type: string
+      trivy:
+        description: 'Run Trivy vulnerability scan'
+        required: false
+        default: false
+        type: boolean
 
   repository_dispatch:
     types:
@@ -35,15 +40,22 @@ jobs:
     outputs:
       tags: ${{ steps.compute.outputs.tags }}
       versions: ${{ steps.compute.outputs.versions }}
+      trivy_branches: ${{ steps.compute.outputs.trivy_branches }}
     steps:
       - id: compute
+        env:
+          BRANCHES_JSON: ${{ github.event.client_payload.branches || inputs.branches }}
         run: |
-          VERSIONS=$(echo '${{ github.event.client_payload.branches || inputs.branches }}' | jq -c '
-            [.[] | {key: ., value: (gsub("^(release|hotfix|feature|bugfix).*/"; "") | gsub("-git-action$"; "") | ltrimstr("v"))}] | from_entries
+          BRANCHES="$BRANCHES_JSON"
+          VERSIONS=$(echo "$BRANCHES" | jq -c '
+            [.[] | {key: ., value: (gsub("^(release|hotfix|feature|bugfix)/"; "") | gsub("-git-action$"; "") | ltrimstr("v"))}] | from_entries
           ')
           TAGS=$(echo "$VERSIONS" | jq -c 'with_entries(.value += ".${{ github.run_number }}")')
+          # Trivy scans develop only; empty array leaves the trivy-scan matrix empty and the job is skipped.
+          TRIVY_BRANCHES=$(echo "$BRANCHES" | jq -c '[.[] | select(. == "develop")]')
           echo "versions=$VERSIONS" >> $GITHUB_OUTPUT
           echo "tags=$TAGS" >> $GITHUB_OUTPUT
+          echo "trivy_branches=$TRIVY_BRANCHES" >> $GITHUB_OUTPUT
 
   build:
     name: ${{ matrix.service }} (${{ matrix.branch }})
@@ -126,3 +138,22 @@ jobs:
             bash .github/scripts/docker-images-availability.sh
 
           gh workflow run "ci-oci-docker-install.yml" --repo "${{ github.repository }}" --ref "${{ matrix.branch }}" --field offline=false --field testing=true --field tag=$DOCKER_TAG
+
+  trivy-scan:
+    name: Trivy (${{ matrix.branch }})
+    needs: [build, prepare]
+    if: ${{ !cancelled() && needs.build.result == 'success' && (github.event.action == 'cron-trigger-action' || inputs.trivy) }}
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_TAG: ${{ fromJson(needs.prepare.outputs.tags)[matrix.branch] }}
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: ${{ fromJson(needs.prepare.outputs.trivy_branches) }}
+    steps:
+      - name: Trigger Trivy scan for ${{ matrix.branch }}
+        env:
+          GH_TOKEN: ${{ secrets.TOKEN }}
+        run: |
+          gh workflow run "trivy-scan.yml" --repo "${{ github.repository }}" --ref "${{ matrix.branch }}" \
+            --field tag="$DOCKER_TAG"
