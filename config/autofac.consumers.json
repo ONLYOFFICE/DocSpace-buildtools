@@ -611,7 +611,7 @@
 	  "parameters": {
 		  "name": "nextcloud",
 		  "paid": false,
-		  "order": "26",
+		  "order": "28",
 		  "props": {
 			"nextcloudBaseUrl": "",
 			"nextcloudClientId": "",
