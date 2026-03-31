@@ -111,6 +111,7 @@ SERVICES=(migration-runner identity notify "${PRODUCT}" healthchecks proxy)
 COMPOSE_FILES=($(printf '%s\n' "${SERVICES[@]}" | sed "s|^|-f ${BASE_DIR}/|; s|\$|.yml|"));
 
 EXTERNAL_PORT="80"
+EXTERNAL_PORT_HTTPS="443"
 ARGS_SCRIPT="install-Docker-args.sh"
 DOWNLOAD_URL_PREFIX="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}"
 GIT_BRANCH=$(echo "$@" | grep -oP '(?<=-gb )\S+' | tail -n 1)
@@ -316,8 +317,24 @@ check_ports () {
 		exit 1
 	fi
 
+	if [ "${EXTERNAL_PORT_HTTPS//[0-9]}" = "" ]; then
+		for RESERVED_PORT in "${RESERVED_PORTS[@]}"
+		do
+			if [ "$RESERVED_PORT" -eq "$EXTERNAL_PORT_HTTPS" ] ; then
+				echo "External HTTPS port $EXTERNAL_PORT_HTTPS is reserved. Select another port"
+				exit 1
+			fi
+		done
+	else
+		echo "Invalid external HTTPS port $EXTERNAL_PORT_HTTPS"
+		exit 1
+	fi
+
 	if [ "$INSTALL_PRODUCT" == "true" ]; then
 		ARRAY_PORTS+=("$EXTERNAL_PORT")
+		if [[ -n "$CERTIFICATE_PATH" ]] || [[ -n "$LETS_ENCRYPT_DOMAIN" ]]; then
+			ARRAY_PORTS+=("$EXTERNAL_PORT_HTTPS")
+		fi
 	fi
 
 	for PORT in "${ARRAY_PORTS[@]}"
@@ -591,6 +608,7 @@ set_docspace_params() {
 	VOLUMES_DIR=${VOLUMES_DIR:-$(get_env_parameter "VOLUMES_DIR")}
 	APP_CORE_BASE_DOMAIN=${APP_CORE_BASE_DOMAIN:-$(get_env_parameter "APP_CORE_BASE_DOMAIN" "${CONTAINER_NAME}")}
 	EXTERNAL_PORT=${EXTERNAL_PORT:-$(get_env_parameter "EXTERNAL_PORT" "${CONTAINER_NAME}")}
+	EXTERNAL_PORT_HTTPS=${EXTERNAL_PORT_HTTPS:-$(get_env_parameter "EXTERNAL_PORT_HTTPS" "${CONTAINER_NAME}")}
 
 	PREVIOUS_ELK_VERSION=$(get_env_parameter "ELK_VERSION")
 	ELK_SCHEME=${ELK_SCHEME:-$(get_env_parameter "ELK_SCHEME" "${CONTAINER_NAME}")}
@@ -780,6 +798,7 @@ install_product () {
 		reconfigure APP_CORE_BASE_DOMAIN ${APP_CORE_BASE_DOMAIN}
 		reconfigure APP_URL_PORTAL "${APP_URL_PORTAL:-"http://${PACKAGE_SYSNAME}-router:8092"}"
 		reconfigure EXTERNAL_PORT ${EXTERNAL_PORT}
+		reconfigure EXTERNAL_PORT_HTTPS ${EXTERNAL_PORT_HTTPS}
 
 		if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ] && [[ -n $(docker ps -q --filter "name=${PACKAGE_SYSNAME}-mysql-server") ]]; then
 			echo -n "Waiting for MySQL container to become healthy..."

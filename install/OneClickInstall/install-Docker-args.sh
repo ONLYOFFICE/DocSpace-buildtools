@@ -30,6 +30,7 @@ while [ "$1" != "" ]; do
         -skiphc  | --skiphardwarecheck   ) [ -n "$2" ] && SKIP_HARDWARE_CHECK=$2                                                  && shift ;;
         -sm      | --stack-mode          ) [ -n "$2" ] && STACK_MODE=$2                                                           && shift ;;
         -ep      | --externalport        ) [ -n "$2" ] && EXTERNAL_PORT=$2                                                        && shift ;;
+        -eph     | --externalporthttps   ) [ -n "$2" ] && EXTERNAL_PORT_HTTPS=$2                                                  && shift ;;
         -dsh     | --docspacehost        ) [ -n "$2" ] && APP_URL_PORTAL=$2                                                       && shift ;;
         -mk      | --machinekey          ) [ -n "$2" ] && APP_CORE_MACHINEKEY=$2                                                  && shift ;;
         -env     | --environment         ) [ -n "$2" ] && ENV_EXTENSION=$2                                                        && shift ;;
@@ -112,7 +113,8 @@ while [ "$1" != "" ]; do
             echo "  --stack-mode        <true|false>        Install services in containers with the appropriate runtime"
             echo "  --docspaceversion   <version>           ${PRODUCT_NAME} version tag (e.g., 3.2.0)"
             echo "  --docspacehost      <hostname>          Hostname or IP for ${PRODUCT_NAME} (default: localhost)"
-            echo "  --externalport      <port>              External port for ${PRODUCT_NAME} (default: 80)"
+            echo "  --externalport      <port>              External port for ${PRODUCT_NAME} HTTP (default: 80)"
+            echo "  --externalporthttps <port>              External port for ${PRODUCT_NAME} HTTPS (default: 443)"
             echo "  --machinekey        <key>               core.machinekey for encryption (default: random key)"
 
             echo 
