@@ -17,6 +17,10 @@ on:
          type: boolean
          description: 'CentOS 10 Stream'
          default: true
+      debian11:
+         type: boolean
+         description: 'Debian 11'
+         default: true
       debian13:
          type: boolean
          description: 'Debian 13'
@@ -24,10 +28,6 @@ on:
       debian12:
          type: boolean
          description: 'Debian 12'
-         default: true
-      debian11:
-         type: boolean
-         description: 'Debian 11'
          default: true
       ubuntu2204:
          type: boolean
@@ -77,41 +77,61 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Get update and install vagrant
+      - name: Install tools
         run: |
           set -eux
-          gpg --keyserver keyserver.ubuntu.com --recv-keys A2F683C52980AECF && gpg --export A2F683C52980AECF > /usr/share/keyrings/virtualbox.gpg
-          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/virtualbox.gpg] https://download.virtualbox.org/virtualbox/debian $(. /etc/os-release && echo $UBUNTU_CODENAME) contrib" | sudo tee /etc/apt/sources.list.d/virtualbox.list
-          sudo wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-          sudo echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-          sudo apt update -y
-          sudo apt install vagrant -y
-          # Temporary install VBox 7.1.12 via curl (.deb) to avoid SSH/NAT issues in 7.1.14
-          curl -fsSL "https://download.virtualbox.org/virtualbox/7.1.12/virtualbox-7.1_7.1.12-169651~Ubuntu~jammy_amd64.deb" -o /tmp/vbox.deb && sudo apt-get install -y /tmp/vbox.deb
+          # Setup VirtualBox repository
+          curl -fsSL https://www.virtualbox.org/download/oracle_vbox_2016.asc | sudo gpg --dearmor -o /usr/share/keyrings/virtualbox.gpg
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/virtualbox.gpg] https://download.virtualbox.org/virtualbox/debian $(lsb_release -cs) contrib" | sudo tee /etc/apt/sources.list.d/virtualbox.list
 
-      - name: Testing with update ${{matrix.name}}
-        if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
-        uses: nick-fields/retry@v3
-        with:
-          max_attempts: 1
-          timeout_minutes: 60
-          retry_on: error
-          command: |
-                set -eux
-                cd tests/vagrant
-                TEST_CASE='--local-install' \
-                DISTR='${{ matrix.distr }}' \
-                OS='docspace-${{ matrix.os }}' \
-                RAM='8192' \
-                CPU='3' \
-                DOWNLOAD_SCRIPT='-ds false' \
-                TEST_REPO='-tr true' \
-                ARGUMENTS="-arg '--skiphardwarecheck true --makeswap false --localscripts true --update true'" \
-                vagrant up --provider=virtualbox
-                sleep 10
-                vagrant destroy --force
-          on_retry_command: |
-              set -eux
-              echo "Clean-up and one more try"
-              cd ./tests/vagrant
-              vagrant destroy --force
+          # Setup Vagrant repository
+          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+
+          # Install tools
+          sudo apt-get update -y
+          sudo apt-get install -y vagrant shellcheck
+
+          # Install specific VirtualBox version
+          curl -fsSL "https://download.virtualbox.org/virtualbox/7.1.12/virtualbox-7.1_7.1.12-169651~Ubuntu~jammy_amd64.deb" -o /tmp/vbox.deb
+          sudo apt-get install -y /tmp/vbox.deb
+
+      - name: "Update on ${{matrix.name}}"
+        env:
+          TEST_CASE: --local-install
+          DISTR: ${{ matrix.distr }}
+          OS: docspace-${{ matrix.os }}
+          RAM: 8192
+          CPU: 3
+          DOWNLOAD_SCRIPT: '-ds false'
+          TEST_REPO: '-tr true'
+          ARGUMENTS: "-arg '--skiphardwarecheck true --makeswap false --localscripts true --update true'"
+        run: |
+          set -eux
+          cd tests/vagrant
+          vagrant up --provider=virtualbox
+
+      - name: "Health check for ${{matrix.name}}"
+        run: |
+          cd tests/vagrant
+          if vagrant status | grep -q "running"; then
+            vagrant ssh -c "sudo bash /vagrant/post-install.sh healthcheck" || true
+          else
+            echo "VM is not running, skipping health check"
+          fi
+
+      - name: "Collect logs for ${{matrix.name}}"
+        run: |
+          cd tests/vagrant
+          if vagrant status | grep -q "running"; then
+            vagrant ssh -c "sudo bash /vagrant/post-install.sh logs" || true
+          else
+            echo "VM is not running, skipping log collection"
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: |
+          cd tests/vagrant || exit 0
+          vagrant destroy --force || true
+          vagrant global-status --prune || true
