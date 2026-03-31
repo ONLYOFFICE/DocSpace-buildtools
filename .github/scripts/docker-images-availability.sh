@@ -5,6 +5,13 @@
 : "${DOCKER_REPOSITORY:?::error::[FAIL] DOCKER_REPOSITORY not set}"
 : "${DOCKER_PREFIX:?::error::[FAIL] DOCKER_PREFIX not set}"
 : "${DOCKER_TAG:?::error::[FAIL] DOCKER_TAG not set}"
+: "${DOCKERHUB_USERNAME:?::error::[FAIL] DOCKERHUB_USERNAME not set}"
+: "${DOCKERHUB_TOKEN:?::error::[FAIL] DOCKERHUB_TOKEN not set}"
+
+DOCKERHUB_JWT=$(curl -fsSL -X POST "https://hub.docker.com/v2/users/login" \
+  -H "Content-Type: application/json" \
+  -d "{\"username\":\"${DOCKERHUB_USERNAME}\",\"password\":\"${DOCKERHUB_TOKEN}\"}" \
+  | grep -oPm1 '(?<="token":")[^"]+') || { echo "::error::[FAIL] Docker Hub login failed"; exit 1; }
 
 check_image() {
   local REPO="$1"
@@ -13,12 +20,12 @@ check_image() {
   local TAG="$4"
   local IMAGE="${REPO}/${PREFIX}-${SVC}"
 
-  if ! curl -sf -o /dev/null "https://hub.docker.com/v2/repositories/${IMAGE}/"; then
+  if ! curl -sf -o /dev/null -H "Authorization: JWT ${DOCKERHUB_JWT}" "https://hub.docker.com/v2/repositories/${IMAGE}/"; then
     printf "::error::[FAIL]    %-22s repo not found\n" "${SVC}"; return 1
   fi
 
   local TOKEN
-  TOKEN=$(curl -fsSL "https://auth.docker.io/token?service=registry.docker.io&scope=repository:${IMAGE}:pull" \
+  TOKEN=$(curl -fsSL -u "${DOCKERHUB_USERNAME}:${DOCKERHUB_TOKEN}" "https://auth.docker.io/token?service=registry.docker.io&scope=repository:${IMAGE}:pull" \
     | grep -oPm1 '(?<="token":")[^"]+') || { printf "::error::[FAIL]    %-22s token fetch failed\n" "${SVC}"; return 1; }
   [[ -z "${TOKEN}" ]] && { printf "::error::[FAIL]    %-22s empty token\n" "${SVC}"; return 1; }
 

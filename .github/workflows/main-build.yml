@@ -27,12 +27,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        platform: [linux/amd64]
         branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches) }}
         service: [dotnet, node, java]
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ matrix.branch }}
 
@@ -63,13 +62,16 @@ jobs:
 
       - name: Build ${{ matrix.service }}
         timeout-minutes: 90
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           cd .${DOCKER_PATH}
           docker buildx bake -f build.hcl ${{ matrix.service }}-services \
             --set "*.args.GIT_BRANCH=${{ matrix.branch }}" \
             --set "*.args.PRODUCT_VERSION=${{ env.PRODUCT_VERSION }}" \
             --set "*.args.BUILD_NUMBER=${{ github.run_number }}" \
-            --set "*.platform=linux/amd64" \
+            --set "*.platform=linux/amd64,linux/arm64" \
+            --set "*.secrets=id=github_token,env=GITHUB_TOKEN" \
             --sbom=true --provenance=mode=max --push
           
           # Clean up disk space after build
@@ -85,15 +87,23 @@ jobs:
       matrix:
         branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches) }}
     steps:
+      - name: Checkout ${{ matrix.branch }}
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ matrix.branch }}
+
       - name: Process branch ${{ matrix.branch }}
         env:
           GH_TOKEN: ${{ secrets.TOKEN }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME_PAT }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN_PAT }}
         run: |
           PRODUCT_VERSION=$(echo "${{ matrix.branch }}" | sed '/^release\b\|^hotfix\b\|^feature\b\|^bugfix\b/s/release.*\/\|hotfix.*\/\|feature.*\/\|bugfix.*\///; s/-git-action$//; s/^v//')
-          [ "${PRODUCT_VERSION}" = "develop" ] && PRODUCT_VERSION="develop"
           DOCKER_TAG="${PRODUCT_VERSION}.${{ github.run_number }}"
-          
-          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ matrix.branch }}/.github/scripts/docker-images-availability.sh \
-            | sudo GITHUB_REPOSITORY=${{ github.repository }} BRANCH=${{ matrix.branch }} DOCKER_REPOSITORY=${{ env.REPO }} DOCKER_PREFIX=${{ env.DOCKER_IMAGE_PREFIX }} DOCKER_TAG=$DOCKER_TAG bash
+
+          sudo GITHUB_REPOSITORY=${{ github.repository }} BRANCH=${{ matrix.branch }} \
+            DOCKER_REPOSITORY=${{ env.REPO }} DOCKER_PREFIX=${{ env.DOCKER_IMAGE_PREFIX }} DOCKER_TAG=$DOCKER_TAG \
+            DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME} DOCKERHUB_TOKEN=${DOCKERHUB_TOKEN} \
+            bash .github/scripts/docker-images-availability.sh
 
           gh workflow run "ci-oci-docker-install.yml" --repo "${{ github.repository }}" --ref "${{ matrix.branch }}" --field offline=false --field testing=true --field tag=$DOCKER_TAG
