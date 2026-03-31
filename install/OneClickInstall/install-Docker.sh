@@ -220,10 +220,6 @@ check_os_info () {
 		echo "Not supported OS"
 		exit 1
 	fi
-
-	if [ -f /etc/needrestart/needrestart.conf ]; then
-		sed -e "s_#\$nrconf{restart}_\$nrconf{restart}_" -e "s_\(\$nrconf{restart} =\).*_\1 'a';_" -i /etc/needrestart/needrestart.conf
-	fi
 }
 
 check_kernel () {
@@ -886,6 +882,8 @@ check_docker_compose() {
 }
 
 dependency_installation() {
+	[ "$NON_INTERACTIVE" = "true" ] && export NEEDRESTART_MODE=a
+
 	[ "${OFFLINE_INSTALLATION}" = "false" ] && is_command_exists apt-get && apt-get -y update -qq
 
 	install_package tar
