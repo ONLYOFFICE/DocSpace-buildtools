@@ -82,6 +82,7 @@ jobs:
     name: OCI (${{ matrix.branch }})
     needs: build
     if: ${{ !cancelled() && needs.build.result == 'success' }}
+    continue-on-error: true
     runs-on: ubuntu-latest
     strategy:
       matrix:
