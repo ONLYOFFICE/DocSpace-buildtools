@@ -115,13 +115,13 @@ jobs:
           esac
 
       - name: Checkout repository
-        if: startsWith(matrix.mode.name, 'stack')
+        if: startsWith(matrix.mode.name, 'stack') && (matrix.runner == 'ubuntu-24.04' || github.event.inputs.offline == 'true')
         uses: actions/checkout@v5
         with:
           ref: ${{ github.ref_name }}
 
       - name: Check Docker scripts for errors
-        if: startsWith(matrix.mode.name, 'stack')
+        if: matrix.mode.name == 'stack' && matrix.runner == 'ubuntu-24.04'
         run: |
           set -eux
           sudo apt-get install -y shellcheck
@@ -198,7 +198,8 @@ jobs:
           rm -f "${INSTALL_PATH}"/{docker_images.tar.xz,docs_images.tar.xz,docker-stack.tar.gz}
 
           # Create final self-extracting archive
-          echo "ARTIFACT_NAME=${ARTIFACT_NAME:=4testing-offline-docspace-installation.sh}" >> $GITHUB_ENV
+          SUFFIX=$( [ "${{ matrix.arch }}" = "arm" ] && echo "-arm" || echo "" )
+          echo "ARTIFACT_NAME=${ARTIFACT_NAME:=4testing-offline-docspace-installation${SUFFIX}.sh}" >> $GITHUB_ENV
           cat ${INSTALL_PATH}/common/self-extracting.sh ${INSTALL_PATH}/offline-docspace.tar > ${INSTALL_PATH}/${ARTIFACT_NAME}
           chmod +x ${INSTALL_PATH}/${ARTIFACT_NAME}
 
