@@ -243,9 +243,10 @@ ENV DNS_NAMESERVER=127.0.0.11 \
     COUNT_WORKER_CONNECTIONS=$COUNT_WORKER_CONNECTIONS \
     MAP_HASH_BUCKET_SIZE=""
 
-RUN addgroup --system --gid 107 onlyoffice && \
+RUN mkdir -p /var/log/nginx/ && \
+    addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
-    mkdir -p /var/log/nginx/
+    chown -R onlyoffice:onlyoffice /etc/nginx/ /var/ /usr/ /run/ /var/log/nginx/
 
 # copy static services files and config values 
 COPY --from=src --chown=onlyoffice:onlyoffice /etc/nginx/conf.d /etc/nginx/conf.d
