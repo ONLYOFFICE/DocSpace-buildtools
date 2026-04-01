@@ -160,11 +160,30 @@ jobs:
           DOCSPACE_VERSION=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "docspace-" | sed -E "s/.*:([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+.*/\1/" | head -n1)
           sed -i "s~\(DOCSPACE_VERSION=\)\"[^\"]*\"~\1\"${DOCSPACE_VERSION}\"~g" "${INSTALL_PATH}/common/self-extracting.sh"
 
+          echo "Downloading Docker static binaries for offline installation..."
+          DOCKER_ARCH=$( [ "${{ matrix.arch }}" = "arm" ] && echo "aarch64" || echo "x86_64" )
+          CNI_ARCH=$( [ "${{ matrix.arch }}" = "arm" ] && echo "arm64" || echo "amd64" )
+          mkdir -p "${INSTALL_PATH}/docker-static"
+          cp -r "${INSTALL_PATH}/common/systemd/offline" "${INSTALL_PATH}/docker-static/systemd"
+
+          DOCKER_STATIC_VERSION=$(curl -fsSL "https://download.docker.com/linux/static/stable/${DOCKER_ARCH}/" \
+            | grep -oE 'docker-[0-9]+\.[0-9]+\.[0-9]+\.tgz' | sort -V | tail -n1 | sed 's/docker-\(.*\)\.tgz/\1/')
+          curl -fsSL "https://download.docker.com/linux/static/stable/${DOCKER_ARCH}/docker-${DOCKER_STATIC_VERSION}.tgz" \
+            -o "${INSTALL_PATH}/docker-static/docker.tgz"
+
+          COMPOSE_VERSION=$(curl -fsSL https://api.github.com/repos/docker/compose/releases/latest | jq -r .tag_name)
+          curl -fsSL "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-${DOCKER_ARCH}" \
+            -o "${INSTALL_PATH}/docker-static/docker-compose"
+
+          CNI_VERSION=$(curl -fsSL https://api.github.com/repos/containernetworking/plugins/releases/latest | jq -r .tag_name)
+          curl -fsSL "https://github.com/containernetworking/plugins/releases/download/${CNI_VERSION}/cni-plugins-linux-${CNI_ARCH}-${CNI_VERSION}.tgz" \
+            -o "${INSTALL_PATH}/docker-static/cni-plugins.tgz"
+
           echo "Creating Docs compressed archives..."
           docker save $(docker images --format "{{.Repository}}:{{.Tag}}" | grep -E 'onlyoffice/documentserver') | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docs_images.tar.xz
           docker rmi $(docker images --format "{{.Repository}}:{{.Tag}}" | grep -E 'onlyoffice/documentserver')
           docker save $(docker images --format "{{.Repository}}:{{.Tag}}") | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docker_images.tar.xz
-          
+
           echo "Creating docker configuration archive..."
           cd ${INSTALL_PATH}/docker
 
@@ -193,17 +212,19 @@ jobs:
           
           # Create combined offline archive
           tar -cf "${INSTALL_PATH}/offline-docspace.tar" \
-            -C "${INSTALL_PATH}/OneClickInstall" install-Docker.sh install-Docker-args.sh \
-            -C "${INSTALL_PATH}" docker_images.tar.xz docs_images.tar.xz docker-stack.tar.gz
+            -C "${INSTALL_PATH}/OneClickInstall" install-Docker-args.sh install-Docker.sh \
+            -C "${INSTALL_PATH}" docker-static docker-stack.tar.gz docker_images.tar.xz docs_images.tar.xz
 
           # Clean up temporary archives
-          rm -f "${INSTALL_PATH}"/{docker_images.tar.xz,docs_images.tar.xz,docker-stack.tar.gz}
+          rm -rf "${INSTALL_PATH}"/{docker_images.tar.xz,docs_images.tar.xz,docker-stack.tar.gz,docker-static}
 
           # Create final self-extracting archive
           SUFFIX=$( [ "${{ matrix.arch }}" = "arm" ] && echo "-arm" || echo "" )
           echo "ARTIFACT_NAME=${ARTIFACT_NAME:=4testing-offline-docspace-installation${SUFFIX}.sh}" >> $GITHUB_ENV
           cat ${INSTALL_PATH}/common/self-extracting.sh ${INSTALL_PATH}/offline-docspace.tar > ${INSTALL_PATH}/${ARTIFACT_NAME}
           chmod +x ${INSTALL_PATH}/${ARTIFACT_NAME}
+
+          echo "::notice::Archive sizes — $(cd "${INSTALL_PATH}" && du -sh "${ARTIFACT_NAME}" | awk '{printf "%s: %s", $2, $1}')"
 
       - name: Configure AWS Credentials
         if: success() && github.event.inputs.offline == 'true' && startsWith(matrix.mode.name, 'stack')
