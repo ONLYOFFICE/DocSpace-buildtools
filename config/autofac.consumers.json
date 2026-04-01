@@ -588,6 +588,39 @@
 			},
 			"additional": {}
 		}
-	}
+	},
+    {
+      "type": "ASC.FederatedLogin.LoginProviders.NextcloudLoginProvider, ASC.FederatedLogin",
+      "services": [
+        {
+          "type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
+        },
+		{
+		  "type": "ASC.FederatedLogin.LoginProviders.NextcloudLoginProvider, ASC.FederatedLogin"
+		},
+		{
+		  "key": "nextcloud",
+		  "type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
+		},
+		{
+		  "key": "nextcloud",
+		  "type": "ASC.FederatedLogin.LoginProviders.NextcloudLoginProvider, ASC.FederatedLogin"
+		}
+      ],
+	  "instanceScope": "perlifetimescope",
+	  "parameters": {
+		  "name": "nextcloud",
+		  "paid": false,
+		  "order": "28",
+		  "props": {
+			"nextcloudBaseUrl": "",
+			"nextcloudClientId": "",
+			"nextcloudClientSecret": ""
+		  },
+		  "additional": {
+			"nextcloudRedirectUrl" : "https://service.teamlab.info/oauth2.aspx"
+		  }
+	  }
+    }
   ]
 }
