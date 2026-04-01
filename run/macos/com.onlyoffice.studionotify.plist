@@ -18,6 +18,7 @@
         <string>log:name=studio.notify</string>
         <string>pathToConf=${DOCSPACE_ROOT}/buildtools/config</string>
         <string>core:products:folder=${DOCSPACE_ROOT}/server/products</string>
+        <string>core:eventBus:subscriptionClientName=asc_event_bus_studio_notify_queue</string>
     </array>
 
     <key>RunAtLoad</key>

@@ -420,7 +420,7 @@ FROM dotnetrun AS studio_notify
 WORKDIR ${BUILD_PATH}/services/ASC.Studio.Notify/service/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Studio.Notify/service/ .
 
-CMD ["ASC.Studio.Notify.dll", "ASC.Studio.Notify"]
+CMD ["ASC.Studio.Notify.dll", "ASC.Studio.Notify", "core:eventBus:subscriptionClientName=asc_event_bus_studio_notify_queue"]
 
 ## ASC.Web.Api ##
 FROM dotnetrun AS api
