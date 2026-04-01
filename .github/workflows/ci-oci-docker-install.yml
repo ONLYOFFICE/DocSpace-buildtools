@@ -157,6 +157,8 @@ jobs:
           
           # Prepare installation script for offline mode
           sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\|STACK_MODE="\).*"$~\1true"~g' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
+          DOCSPACE_VERSION=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "docspace-" | sed -E "s/.*:([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+.*/\1/" | head -n1)
+          sed -i "s~\(DOCSPACE_VERSION=\)\"[^\"]*\"~\1\"${DOCSPACE_VERSION}\"~g" "${INSTALL_PATH}/common/self-extracting.sh"
 
           echo "Creating Docs compressed archives..."
           docker save $(docker images --format "{{.Repository}}:{{.Tag}}" | grep -E 'onlyoffice/documentserver') | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docs_images.tar.xz
