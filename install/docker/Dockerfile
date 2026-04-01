@@ -339,7 +339,7 @@ WORKDIR ${BUILD_PATH}/services/ASC.Studio.Notify/service/
 COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Studio.Notify/service/ .
 
-CMD ["ASC.Studio.Notify.dll", "ASC.Studio.Notify"]
+CMD ["ASC.Studio.Notify.dll", "ASC.Studio.Notify", "core:eventBus:subscriptionClientName=asc_event_bus_studio_notify_queue"]
 
 ## ASC.Web.Api ##
 FROM dotnetrun AS api
