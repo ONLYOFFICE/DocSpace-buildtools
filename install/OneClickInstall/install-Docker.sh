@@ -104,6 +104,7 @@ LETS_ENCRYPT_DOMAIN=""
 LETS_ENCRYPT_MAIL=""
 IDENTITY_ENCRYPTION_SECRET=""
 
+STACK_MODE="false"
 OFFLINE_INSTALLATION="false"
 SKIP_HARDWARE_CHECK="false"
 
@@ -644,27 +645,27 @@ set_installation_type_data () {
 }
 
 download_files () {
-	[ "${OFFLINE_INSTALLATION}" = "false" ] && echo -n "Downloading configuration files to ${BASE_DIR}..." || echo "Unzip docker.tar.gz to ${BASE_DIR}..."
+	DOCKER_TARBALL="$( [ "${STACK_MODE}" = "true" ] && echo "docker-stack.tar.gz" || echo "docker.tar.gz" )"
+
+	[ "${OFFLINE_INSTALLATION}" = "false" ] && echo -n "Downloading configuration files to ${BASE_DIR}..." || echo "Unzip ${DOCKER_TARBALL} to ${BASE_DIR}..."
 
 	rm -rf "${BASE_DIR:?}"
 	mkdir -p ${BASE_DIR}
 
-	
 	if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
 		if [ -z "${GIT_BRANCH}" ]; then
-			DOWNLOAD_URL="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/docker.tar.gz"
+			DOWNLOAD_URL="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/${DOCKER_TARBALL}"
 		else
 			DOWNLOAD_URL="https://codeload.github.com/${PACKAGE_SYSNAME}/${PRODUCT}-buildtools/tar.gz/${GIT_BRANCH}"
 			STRIP_COMPONENTS="--strip-components=3 --wildcards */install/docker/*"
 		fi
-
 		curl -sL "${DOWNLOAD_URL}" | tar -xzf - -C "${BASE_DIR}" ${STRIP_COMPONENTS}
 	else
-		if [ -f "$(dirname "$0")/docker.tar.gz" ]; then
-			tar -xf "$(dirname "$0")/docker.tar.gz" -C "${BASE_DIR}"
+		if [ -f "$(dirname "$0")/${DOCKER_TARBALL}" ]; then
+			tar -xf "$(dirname "$0")/${DOCKER_TARBALL}" -C "${BASE_DIR}"
 		else
-			echo "Error: docker.tar.gz not found in the same directory as the script."
-			echo "You need to download the docker.tar.gz file from https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/docker.tar.gz"
+			echo "Error: ${DOCKER_TARBALL} not found in the same directory as the script."
+			echo "You need to download the ${DOCKER_TARBALL} file from https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/${DOCKER_TARBALL}"
 			exit 1
 		fi
 	fi

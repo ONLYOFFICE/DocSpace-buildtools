@@ -107,13 +107,13 @@ jobs:
           esac
 
       - name: Checkout repository
-        if: matrix.mode.name == 'standard'
+        if: matrix.mode.name == 'stack'
         uses: actions/checkout@v5
         with:
           ref: ${{ github.ref_name }}
 
       - name: Check Docker scripts for errors
-        if: matrix.mode.name == 'standard'
+        if: matrix.mode.name == 'stack'
         run: |
           set -eux
           sudo apt-get install -y shellcheck
@@ -122,7 +122,7 @@ jobs:
           awk '/\(warning\):/ {w++} /\(error\):/ {e++} END {if (w+e) printf "::warning ::ShellCheck detected %d warnings and %d errors\n", w+0, e+0}' sc_output
 
       - name: Prepare offline environment
-        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'standard'
+        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'stack'
         run: |
           # Clean up and free space
           docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q) && docker volume rm $(docker volume ls -q) 2>/dev/null || true
@@ -143,12 +143,12 @@ jobs:
           ' _ {}
 
       - name: Create compressed archives
-        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'standard'
+        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'stack'
         run: |
           INSTALL_PATH="${{ github.workspace }}/install"
           
           # Prepare installation script for offline mode
-          sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\).*"$~\1true"~g' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
+          sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\|STACK_MODE="\).*"$~\1true"~g' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
 
           echo "Creating Docs compressed archives..."
           docker save $(docker images --format "{{.Repository}}:{{.Tag}}" | grep -E 'onlyoffice/documentserver') | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docs_images.tar.xz
@@ -156,20 +156,38 @@ jobs:
           docker save $(docker images --format "{{.Repository}}:{{.Tag}}") | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docker_images.tar.xz
           
           echo "Creating docker configuration archive..."
-          cd ${INSTALL_PATH}/docker && tar -czvf ${INSTALL_PATH}/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
+          cd ${INSTALL_PATH}/docker
+
+          tar -czvf ${INSTALL_PATH}/docker-stack.tar.gz \
+            --exclude='build.yml' \
+            --exclude='db.dev.yml' \
+            --exclude='dnsmasq.yml' \
+            --exclude='docspace.overcome.yml' \
+            --exclude='docspace.profiles.yml' \
+            --exclude='config/supervisor*' \
+            --exclude='config/mysql*' \
+            --exclude='config/nginx/docker-entrypoint*' \
+            --exclude='config/createdb.sql' \
+            --exclude='build-*' \
+            --exclude='docspace.yml' \
+            --exclude='healthchecks.yml' \
+            --exclude='identity.yml' \
+            --exclude='migration-runner.yml' \
+            --exclude='notify.yml' \
+            *.yml .env config
 
       - name: Build self-extracting archive
-        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'standard'
+        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'stack'
         run: |
           INSTALL_PATH="${{ github.workspace }}/install"
           
           # Create combined offline archive
           tar -cf "${INSTALL_PATH}/offline-docspace.tar" \
             -C "${INSTALL_PATH}/OneClickInstall" install-Docker.sh install-Docker-args.sh \
-            -C "${INSTALL_PATH}" docker_images.tar.xz docs_images.tar.xz docker.tar.gz
-          
+            -C "${INSTALL_PATH}" docker_images.tar.xz docs_images.tar.xz docker-stack.tar.gz
+
           # Clean up temporary archives
-          rm -f "${INSTALL_PATH}"/{docker_images.tar.xz,docs_images.tar.xz,docker.tar.gz}
+          rm -f "${INSTALL_PATH}"/{docker_images.tar.xz,docs_images.tar.xz,docker-stack.tar.gz}
 
           # Create final self-extracting archive
           echo "ARTIFACT_NAME=${ARTIFACT_NAME:=4testing-offline-docspace-installation.sh}" >> $GITHUB_ENV
@@ -177,7 +195,7 @@ jobs:
           chmod +x ${INSTALL_PATH}/${ARTIFACT_NAME}
 
       - name: Configure AWS Credentials
-        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'standard'
+        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'stack'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_OCI }}
@@ -185,7 +203,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Upload 4testing offline self-extracting archive
-        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'standard'
+        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'stack'
         run: |
           aws s3 cp "${{ github.workspace }}/install/${{ env.ARTIFACT_NAME }}" \
             "${{ secrets.AWS_BUCKET_URL_OCI }}/${{ env.ARTIFACT_NAME }}" \

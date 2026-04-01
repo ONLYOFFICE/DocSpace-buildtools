@@ -20,7 +20,7 @@ tail -n +$(awk '/^__END_OF_SHELL_SCRIPT__$/{print NR + 1; exit 0;}' "$0") "$0" |
 [ "$OFFLINE_IMAGE_LOAD" != "true" ] && echo "Loading docker images..." && docker load -i "${TEMP_DIR}/docker_images.tar.xz" && docker load -i "${TEMP_DIR}/docs_images.tar.xz"
 
 echo "Extracting OneClickInstall files to the current directory..."
-mv -f ${TEMP_DIR}/{docker.tar.gz,install-Docker.sh,install-Docker-args.sh} $(dirname "$0")
+mv -f ${TEMP_DIR}/{docker-stack.tar.gz,install-Docker.sh,install-Docker-args.sh} $(dirname "$0")
 
 echo "Running the install-Docker.sh script..."
 chmod +x $(dirname "$0")/install-Docker.sh
