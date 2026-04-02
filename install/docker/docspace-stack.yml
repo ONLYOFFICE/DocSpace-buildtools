@@ -1,8 +1,7 @@
 x-healthcheck-stack: &x-healthcheck-stack
-  test: ["CMD-SHELL", "supervisorctl status | grep -v 'ASC.Migration.Runner' | grep -qv RUNNING && exit 1 || exit 0"]
   interval: 60s
   retries: 5
-  start_period: 30s
+  start_period: 60s
   timeout: 10s
 
 x-service: &x-service-base
@@ -91,24 +90,54 @@ x-service: &x-service-base
   volumes:
     - ${VOLUMES_DIR:+${VOLUMES_DIR}/}app_data:/app/onlyoffice/data
     - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
-  healthcheck:
-    <<: *x-healthcheck-stack
 
 services:
   onlyoffice-dotnet-services:
     <<: *x-service-base
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-dotnet:${DOCKER_TAG}"
     container_name: ${DOTNET_CONTAINER_NAME}
+    healthcheck:
+      <<: *x-healthcheck-stack
+      test: >-
+        curl -fs http://${DOTNET_CONTAINER_NAME}:${SERVICE_API_PORT}/health &&
+        curl -fs http://${DOTNET_CONTAINER_NAME}:${SERVICE_API_SYSTEM_PORT}/health &&
+        curl -fs http://${DOTNET_CONTAINER_NAME}:${SERVICE_STUDIO_PORT}/health &&
+        curl -fs http://${DOTNET_CONTAINER_NAME}:${SERVICE_FILES_PORT}/health &&
+        curl -fs http://${DOTNET_CONTAINER_NAME}:${SERVICE_FILES_WORKER_PORT}/health &&
+        curl -fs http://${DOTNET_CONTAINER_NAME}:${SERVICE_PEOPLE_SERVER_PORT}/health &&
+        curl -fs http://${DOTNET_CONTAINER_NAME}:${SERVICE_NOTIFY_PORT}/health &&
+        curl -fs http://${DOTNET_CONTAINER_NAME}:${SERVICE_STUDIO_NOTIFY_PORT}/health &&
+        curl -fs http://${DOTNET_CONTAINER_NAME}:${SERVICE_BACKUP_PORT}/health &&
+        curl -fs http://${DOTNET_CONTAINER_NAME}:${SERVICE_BACKUP_WORKER_PORT}/health &&
+        curl -fs http://${DOTNET_CONTAINER_NAME}:${SERVICE_CLEAR_EVENTS_PORT}/health &&
+        curl -fs http://${DOTNET_CONTAINER_NAME}:${SERVICE_AI_PORT}/health &&
+        curl -fs http://${DOTNET_CONTAINER_NAME}:${SERVICE_AI_WORKER_PORT}/health &&
+        curl -fs http://${DOTNET_CONTAINER_NAME}:${SERVICE_TELEGRAM_PORT}/health
 
   onlyoffice-java-services:
     <<: *x-service-base
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-java:${DOCKER_TAG}"
     container_name: ${JAVA_CONTAINER_NAME}
+    healthcheck:
+      <<: *x-healthcheck-stack
+      test: >-
+        curl -fs http://${JAVA_CONTAINER_NAME}:${IDENTITY_AUTHORIZATION_SERVER_PORT}/health/ &&
+        curl -fs http://${JAVA_CONTAINER_NAME}:${IDENTITY_API_SERVER_PORT}/health/
 
   onlyoffice-node-services:
     <<: *x-service-base
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-node:${DOCKER_TAG}"
     container_name: ${NODE_CONTAINER_NAME}
+    healthcheck:
+      <<: *x-healthcheck-stack
+      test: >-
+        curl -fs http://${NODE_CONTAINER_NAME}:${SERVICE_LOGIN_PORT}/login/health &&
+        curl -fs http://${NODE_CONTAINER_NAME}:${SERVICE_DOCEDITOR_PORT}/doceditor/health &&
+        curl -fs http://${NODE_CONTAINER_NAME}:${SERVICE_MANAGEMENT_PORT}/management/health &&
+        curl -fs http://${NODE_CONTAINER_NAME}:${SERVICE_SDK_PORT}/sdk/health &&
+        curl -fs http://${NODE_CONTAINER_NAME}:${SERVICE_SOCKET_PORT}/health &&
+        curl -fs http://${NODE_CONTAINER_NAME}:${SERVICE_SSOAUTH_PORT}/health
+
   onlyoffice-mcp:
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-mcp:latest"
     container_name: ${MCP_HOST}
