@@ -12,7 +12,7 @@ ARG MAVEN_VERSION="3.9-eclipse-temurin-${JAVA_VERSION}"
 # Image resources
 FROM --platform=$BUILDPLATFORM python:${PYTHON_VERSION} AS src
 ARG GIT_BRANCH="master"
-ARG FALLBACK_BRANCH="develop"
+ARG FALLBACK_BRANCH="release/v3.7.0"
 ARG SRC_PATH="/app/onlyoffice/src"
 ARG BUILD_PATH="/var/www"
 ARG PRODUCT_VERSION=0.0.0
