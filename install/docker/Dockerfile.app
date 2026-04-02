@@ -521,6 +521,7 @@ RUN set -eux; \
 USER onlyoffice
 
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/dotnet_services.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/start-after-migration.py /usr/local/bin/start-after-migration.py
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.AI/service/ ${BUILD_PATH}/products/ASC.AI/server/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.AI.Worker/service/ ${BUILD_PATH}/products/ASC.AI/service/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.ApiSystem/service/  ${BUILD_PATH}/services/ASC.ApiSystem/service/
