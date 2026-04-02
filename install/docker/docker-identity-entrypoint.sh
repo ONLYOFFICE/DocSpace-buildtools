@@ -21,4 +21,8 @@ export RABBIT_URI="${RABBIT_URI:-${RABBIT_PROTOCOL}://${RABBIT_USER_NAME}:${RABB
 
 export LOG_FILE_PATH="${LOG_DIR:-"/var/log/onlyoffice"}/${SPRING_APPLICATION_NAME}.log"
 
+if [ "$1" = "supervisord" ]; then
+    exec "$@"
+fi
+
 java -jar ${BUILD_PATH}/services/${SPRING_APPLICATION_NAME}/app.jar
