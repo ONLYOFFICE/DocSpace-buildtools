@@ -38,8 +38,6 @@ BASE_DIR="/app/$PACKAGE_SYSNAME"
 STATUS=""
 DOCKER_TAG=""
 INSTALLATION_TYPE="ENTERPRISE"
-IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-api"
-CONTAINER_NAME="${PACKAGE_SYSNAME}-api"
 IDENTITY_CONTAINER_NAME="${PACKAGE_SYSNAME}-identity-api"
 
 NETWORK_NAME=${PACKAGE_SYSNAME}
@@ -108,9 +106,6 @@ STACK_MODE="false"
 OFFLINE_INSTALLATION="false"
 SKIP_HARDWARE_CHECK="false"
 
-SERVICES=(migration-runner identity notify "${PRODUCT}" healthchecks proxy)
-COMPOSE_FILES=($(printf '%s\n' "${SERVICES[@]}" | sed "s|^|-f ${BASE_DIR}/|; s|\$|.yml|"));
-
 EXTERNAL_PORT="80"
 EXTERNAL_PORT_HTTPS="443"
 ARGS_SCRIPT="install-Docker-args.sh"
@@ -122,6 +117,18 @@ if [[ -n "${GIT_BRANCH:-}" ]]; then
 fi
 
 [[ "$LOCAL_SCRIPTS" = "true" ]] || [[ "$OFFLINE_INSTALLATION" = "true" ]] && source "./${ARGS_SCRIPT}" || source <(curl "${DOWNLOAD_URL_PREFIX}/${ARGS_SCRIPT}")
+
+if [ "${STACK_MODE}" = "true" ]; then
+  CONTAINER_NAME="${PACKAGE_SYSNAME}-dotnet-services"
+  IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-dotnet"
+  SERVICES=("${PRODUCT}-stack" proxy)
+  COMPOSE_FILES=($(printf '%s\n' "${SERVICES[@]}" | sed "s|^|-f ${BASE_DIR}/|; s|\$|.yml|"));
+else
+  CONTAINER_NAME="${PACKAGE_SYSNAME}-api"
+  IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-api"
+  SERVICES=(migration-runner identity notify "${PRODUCT}" healthchecks proxy)
+  COMPOSE_FILES=($(printf '%s\n' "${SERVICES[@]}" | sed "s|^|-f ${BASE_DIR}/|; s|\$|.yml|"));
+fi
 
 uninstall() {
     DOCKER_COMPOSE="$(docker compose version >/dev/null 2>&1 && echo 'docker compose' || echo 'docker-compose')"

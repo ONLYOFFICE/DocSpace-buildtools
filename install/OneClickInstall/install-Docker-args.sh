@@ -34,7 +34,7 @@ while [ "$1" != "" ]; do
         -dsh     | --docspacehost        ) [ -n "$2" ] && APP_URL_PORTAL=$2                                                       && shift ;;
         -mk      | --machinekey          ) [ -n "$2" ] && APP_CORE_MACHINEKEY=$2                                                  && shift ;;
         -env     | --environment         ) [ -n "$2" ] && ENV_EXTENSION=$2                                                        && shift ;;
-        -s       | --status              ) [ -n "$2" ] && STATUS=$2 && IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-api"    && shift ;;
+        -s       | --status              ) [ -n "$2" ] && STATUS=$2                                                               && shift ;;
         -dsv     | --docspaceversion     ) [ -n "$2" ] && DOCKER_TAG=$2                                                           && shift ;;
         -gb      | --gitbranch           ) [ -n "$2" ] && PARAMETERS="$PARAMETERS $1" && GIT_BRANCH=$2                            && shift ;;
         -docsi   | --docsimage           ) [ -n "$2" ] && DOCUMENT_SERVER_IMAGE_NAME=$2                                           && shift ;;
@@ -180,4 +180,3 @@ while [ "$1" != "" ]; do
     esac
     shift
 done
-
