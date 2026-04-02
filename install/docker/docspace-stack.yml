@@ -104,6 +104,20 @@ services:
     <<: *x-service-base
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-node:${DOCKER_TAG}"
     container_name: ${NODE_CONTAINER_NAME}
+  onlyoffice-mcp:
+    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-mcp:latest"
+    container_name: ${MCP_HOST}
+    restart: always
+    environment:
+      DOCSPACE_INTERNAL: "true"
+      DOCSPACE_TRANSPORT: "http"
+      DOCSPACE_HOST: "0.0.0.0"
+      DOCSPACE_PORT: "${SERVICE_MCP_PORT}"
+    healthcheck:
+      <<: *x-healthcheck-stack
+      test: wget -qO- http://${MCP_HOST}:${SERVICE_MCP_PORT}/health || exit 1
+    networks:
+      - default
 
   onlyoffice-router:
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-router:${DOCKER_TAG}"
