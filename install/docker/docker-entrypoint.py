@@ -307,7 +307,7 @@ def maintain_plugins():
     RESULT = (ANY_INSTALLED and "Plugins installed successfully." or ANY_UPDATED and "Plugins updated successfully." or "Plugins are up to date.")
     LOG("INFORMATION", RESULT)
 
-def check_docs_connection():
+def check_docs_connection(wait=True):
     filePath = "/app/onlyoffice/config/appsettings.json"
     jsonData = openJsonFile(filePath)
 
@@ -317,7 +317,7 @@ def check_docs_connection():
     updateJsonData(jsonData, "$.files.docservice.secret.value", DOCUMENT_SERVER_JWT_SECRET)
     updateJsonData(jsonData, "$.files.docservice.secret.header", DOCUMENT_SERVER_JWT_HEADER)
 
-    if not waitForHostAvailable(DOCUMENT_SERVER_CONNECTION_HOST, TIMEOUT=10, INTERVAL=3, MAX_RETRIES=5, RETRY_INTERVAL=15):
+    if wait and not waitForHostAvailable(DOCUMENT_SERVER_CONNECTION_HOST, TIMEOUT=10, INTERVAL=3, MAX_RETRIES=5, RETRY_INTERVAL=15):
         deleteJsonPath(jsonData, "$.files.docservice")
 
     writeJsonFile(filePath, jsonData)
@@ -448,10 +448,11 @@ USER_STATE_FILE = USER_PLUGINS_DIR + ".plugins.state"
 if os.path.isdir(RELEASE_PLUGINS_DIR):
     maintain_plugins()
 
-threading.Thread(target=check_docs_connection, daemon=True).start()
-
 if sys.argv[1] == "supervisord":
+    check_docs_connection(wait=False)
     os.execvp(sys.argv[1], sys.argv[1:])
+
+threading.Thread(target=check_docs_connection, daemon=True).start()
 
 run = RunServices(SERVICE_PORT, PATH_TO_CONF)
 run.RunService(RUN_FILE, ENV_EXTENSION, LOG_FILE)
