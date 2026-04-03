@@ -32,7 +32,17 @@ SCRIPT_DIR=$(dirname "$0")
 tail -n +"${PAYLOAD_LINE}" "$0" | tar -x -C "$TEMP_DIR" install-Docker-args.sh
 source "$TEMP_DIR/install-Docker-args.sh" "$@"
 
+_MISSING=0
+_error_missing() {
+  type "$1" &>/dev/null && return
+  local pkg; type apt-get &>/dev/null && pkg="$2" || pkg="$3"
+  echo "Error: '$1' not found. Install: ${pkg}"
+  _MISSING=1
+}
+
 if ! type docker &>/dev/null; then
+  _error_missing iptables iptables iptables; [ "$_MISSING" -eq 1 ] && exit 1
+
   echo "Installing Docker from bundled static binaries..."
   tail -n +"${PAYLOAD_LINE}" "$0" | tar -x -C "$TEMP_DIR" docker-static
 
@@ -58,18 +68,30 @@ if ! type docker &>/dev/null; then
   systemctl daemon-reload
   systemctl enable --now containerd docker 2>/dev/null || true
 
-  type docker &>/dev/null || { echo "Error: Docker is required. Please install Docker and Docker Compose, then re-run this script."; exit 1; }
-  systemctl is-active --quiet docker || { echo "Error: Docker daemon (installed from bundled static binaries) failed to start."; exit 1; }
+  if ! type docker &>/dev/null || ! systemctl is-active --quiet docker; then
+    echo ""
+    echo "ERROR: Failed to start Docker (installed from bundled static binaries)."
+    echo "       Check logs: journalctl -xeu docker.service"
+    echo ""
+    echo "Cleaning up bundled installation..."
+    systemctl disable --now containerd docker 2>/dev/null || true
+    rm -f /usr/local/bin/docker* /usr/local/bin/containerd* /usr/local/bin/ctr /usr/local/bin/runc
+    rm -f /usr/local/lib/docker/cli-plugins/docker-compose
+    rm -f "${SYSTEMD_DIR}/docker.service" "${SYSTEMD_DIR}/docker.socket" "${SYSTEMD_DIR}/containerd.service"
+    rm -f /etc/profile.d/docker-static.sh
+    systemctl daemon-reload
+    echo ""
+    echo "Please install Docker manually and re-run this script."
+    echo "  https://docs.docker.com/engine/install/"
+    exit 1
+  fi
 fi
 docker compose version &>/dev/null || docker-compose version &>/dev/null || { echo "Docker Compose not installed"; exit 1; }
 
-_warn_missing() {
-  type "$1" &>/dev/null && return
-  type apt-get &>/dev/null && echo "Warning: '$1' not found. Install: apt-get install $2" || echo "Warning: '$1' not found. Install: dnf install $3"
-}
 for pkg in tar iptables jq 'netstat:net-tools:net-tools' 'crontab:cron:cronie'; do
-  IFS=: read -r cmd apt dnf <<< "$pkg"; _warn_missing "$cmd" "${apt:-$cmd}" "${dnf:-$cmd}"
+  IFS=: read -r cmd apt dnf <<< "$pkg"; _error_missing "$cmd" "${apt:-$cmd}" "${dnf:-$cmd}"
 done
+[ "$_MISSING" -eq 1 ] && exit 1
 
 ARCHIVE_SIZE=$(( $(stat -c%s "$0") / 1024 / 1024 ))
 AVAIL_MB=$(df -m "${TEMP_DIR}" | awk 'NR==2 {print $4}')
@@ -103,7 +125,14 @@ mv -f "${TEMP_DIR}/docker-stack.tar.gz" "${TEMP_DIR}/install-Docker.sh" "${TEMP_
 
 echo "Running the install-Docker.sh script..."
 chmod +x "${SCRIPT_DIR}/install-Docker.sh"
-"${SCRIPT_DIR}/install-Docker.sh" "${UPDATE}" "$@"
+if ! "${SCRIPT_DIR}/install-Docker.sh" "${UPDATE}" "$@"; then
+  echo ""
+  echo "ERROR: Installation failed. Fix the issue and re-run this script."
+  echo "To clean up before retrying:"
+  echo "  docker stop \$(docker ps -a -q); docker container prune -f; rm -rf /app/"
+  echo "Then re-run: ${SCRIPT_DIR}/install-Docker.sh ${UPDATE} $@"
+  exit 1
+fi
 
 exit 0
 
