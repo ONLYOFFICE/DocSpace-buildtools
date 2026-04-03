@@ -182,7 +182,7 @@ jobs:
           echo "Creating Docs compressed archives..."
           docker save $(docker images --format "{{.Repository}}:{{.Tag}}" | grep -E 'onlyoffice/documentserver') | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docs_images.tar.xz
           docker rmi $(docker images --format "{{.Repository}}:{{.Tag}}" | grep -E 'onlyoffice/documentserver')
-          docker save $(docker images --format "{{.Repository}}:{{.Tag}}") | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docker_images.tar.xz
+          docker save $(docker images --format "{{.Repository}}:{{.Tag}}") | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docspace_images.tar.xz
 
           echo "Creating docker configuration archive..."
           cd ${INSTALL_PATH}/docker
@@ -213,10 +213,10 @@ jobs:
           # Create combined offline archive
           tar -cf "${INSTALL_PATH}/offline-docspace.tar" \
             -C "${INSTALL_PATH}/OneClickInstall" install-Docker-args.sh install-Docker.sh \
-            -C "${INSTALL_PATH}" docker-static docker-stack.tar.gz docker_images.tar.xz docs_images.tar.xz
+            -C "${INSTALL_PATH}" docker-static docker-stack.tar.gz docspace_images.tar.xz docs_images.tar.xz
 
           # Clean up temporary archives
-          rm -rf "${INSTALL_PATH}"/{docker_images.tar.xz,docs_images.tar.xz,docker-stack.tar.gz,docker-static}
+          rm -rf "${INSTALL_PATH}"/{docspace_images.tar.xz,docs_images.tar.xz,docker-stack.tar.gz,docker-static}
 
           # Create final self-extracting archive
           SUFFIX=$( [ "${{ matrix.arch }}" = "arm" ] && echo "-arm" || echo "" )

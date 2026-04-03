@@ -116,7 +116,7 @@ _load_image() {
 
 if [ "$OFFLINE_IMAGE_LOAD" != "true" ]; then
   echo "Loading docker images (this may take a few minutes)..."
-  _load_image "${TEMP_DIR}/docker_images.tar.xz"
+  _load_image "${TEMP_DIR}/docspace_images.tar.xz"
   _load_image "${TEMP_DIR}/docs_images.tar.xz"
 fi
 
