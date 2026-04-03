@@ -59,8 +59,17 @@ if ! type docker &>/dev/null; then
   systemctl enable --now containerd docker 2>/dev/null || true
 
   type docker &>/dev/null || { echo "Error: Docker is required. Please install Docker and Docker Compose, then re-run this script."; exit 1; }
+  systemctl is-active --quiet docker || { echo "Error: Docker daemon (installed from bundled static binaries) failed to start."; exit 1; }
 fi
 docker compose version &>/dev/null || docker-compose version &>/dev/null || { echo "Docker Compose not installed"; exit 1; }
+
+_warn_missing() {
+  type "$1" &>/dev/null && return
+  type apt-get &>/dev/null && echo "Warning: '$1' not found. Install: apt-get install $2" || echo "Warning: '$1' not found. Install: dnf install $3"
+}
+for pkg in tar iptables jq 'netstat:net-tools:net-tools' 'crontab:cron:cronie'; do
+  IFS=: read -r cmd apt dnf <<< "$pkg"; _warn_missing "$cmd" "${apt:-$cmd}" "${dnf:-$cmd}"
+done
 
 ARCHIVE_SIZE=$(( $(stat -c%s "$0") / 1024 / 1024 ))
 AVAIL_MB=$(df -m "${TEMP_DIR}" | awk 'NR==2 {print $4}')
