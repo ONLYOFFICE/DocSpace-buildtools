@@ -158,7 +158,7 @@ jobs:
           # Prepare installation script for offline mode
           sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\|STACK_MODE="\).*"$~\1true"~g' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
           DOCSPACE_VERSION=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "docspace-" | sed -E "s/.*:([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+.*/\1/" | head -n1)
-          sed -i "s~\(DOCSPACE_VERSION=\)\"[^\"]*\"~\1\"${DOCSPACE_VERSION}\"~g" "${INSTALL_PATH}/common/self-extracting.sh"
+          sed -i "s~\(DOCSPACE_VERSION=\)\"[^\"]*\"~\1\"${DOCSPACE_VERSION}\"~g" "${INSTALL_PATH}/common/offline-self-extracting.sh"
 
           echo "Downloading Docker static binaries for offline installation..."
           DOCKER_ARCH=$( [ "${{ matrix.arch }}" = "arm" ] && echo "aarch64" || echo "x86_64" )
@@ -221,7 +221,7 @@ jobs:
           # Create final self-extracting archive
           SUFFIX=$( [ "${{ matrix.arch }}" = "arm" ] && echo "-arm" || echo "" )
           echo "ARTIFACT_NAME=${ARTIFACT_NAME:=4testing-offline-docspace-installation${SUFFIX}.sh}" >> $GITHUB_ENV
-          cat ${INSTALL_PATH}/common/self-extracting.sh ${INSTALL_PATH}/offline-docspace.tar > ${INSTALL_PATH}/${ARTIFACT_NAME}
+          cat ${INSTALL_PATH}/common/offline-self-extracting.sh ${INSTALL_PATH}/offline-docspace.tar > ${INSTALL_PATH}/${ARTIFACT_NAME}
           chmod +x ${INSTALL_PATH}/${ARTIFACT_NAME}
 
           echo "::notice::Archive sizes — $(cd "${INSTALL_PATH}" && du -sh "${ARTIFACT_NAME}" | awk '{printf "%s: %s", $2, $1}')"

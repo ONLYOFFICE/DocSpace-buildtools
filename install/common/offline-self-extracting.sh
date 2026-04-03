@@ -71,10 +71,22 @@ fi
 echo "Extracting docker images to ${TEMP_DIR}..."
 tail -n +"${PAYLOAD_LINE}" "$0" | tar x -C "${TEMP_DIR}" --exclude='docker-static'
 
+_load_image() {
+  local file="$1" mb=$(( $(stat -c%s "$1") / 1024 / 1024 )) s='|/-\' i=0 t=0
+  docker load -i "$file" &
+  local pid=$!
+  while kill -0 "$pid" 2>/dev/null; do
+    printf "\r  Loading %s (~%dMB) %s %ds" "$(basename "$file")" "$mb" "${s:i++%4:1}" "$t"
+    sleep 1; (( t++ )) || true
+  done
+  wait "$pid"
+  printf "\r  Loaded  %s (~%dMB) in %ds\n" "$(basename "$file")" "$mb" "$t"
+}
+
 if [ "$OFFLINE_IMAGE_LOAD" != "true" ]; then
   echo "Loading docker images (this may take a few minutes)..."
-  dd if="${TEMP_DIR}/docker_images.tar.xz" bs=1M status=progress | docker load
-  dd if="${TEMP_DIR}/docs_images.tar.xz"   bs=1M status=progress | docker load
+  _load_image "${TEMP_DIR}/docker_images.tar.xz"
+  _load_image "${TEMP_DIR}/docs_images.tar.xz"
 fi
 
 echo "Extracting OneClickInstall files to the current directory..."
