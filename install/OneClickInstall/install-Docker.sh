@@ -782,6 +782,11 @@ install_product () {
 			echo "Updating images from tag ${LOCAL_CONTAINER_TAG} to ${DOCKER_TAG}..."
 
 			if [ "$LOCAL_CONTAINER_TAG" != "$DOCKER_TAG" ]; then
+				# (DS v3.7.0) Remove legacy service containers after renaming
+				for _svc in "files-services" "backup-background-tasks" "ai-service"; do
+					docker ps -q --filter "name=^${PACKAGE_SYSNAME}-${_svc}$" | xargs -r docker rm -f
+				done
+
 				if [ "$STACK_MODE" = "true" ]; then
 					${DOCKER_COMPOSE} -f ${BASE_DIR}/docspace-stack.yml -f ${BASE_DIR}/proxy.yml down
 				else
