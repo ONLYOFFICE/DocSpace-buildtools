@@ -122,11 +122,11 @@ function get_services_name {
 function build_dotnetcore_backend {
   if [[ ${BUILD_DOTNET_CORE_ARGS} == "false" ]]
   then
-    echo "== Build ASC.Web.slnf =="
-    dotnet build server/ASC.Web.slnf
+    echo "== Build ASC.Web.slnx =="
+    dotnet build server/ASC.Web.slnx
   else
-    echo "== Build ASC.Web.slnf ${BUILD_DOTNET_CORE_ARGS} =="
-    dotnet build server/ASC.Web.slnf ${BUILD_DOTNET_CORE_ARGS}
+    echo "== Build ASC.Web.slnx ${BUILD_DOTNET_CORE_ARGS} =="
+    dotnet build server/ASC.Web.slnx ${BUILD_DOTNET_CORE_ARGS}
   fi
   
   if [[ $# -gt 0 ]]
@@ -150,13 +150,13 @@ function backend-dotnet-publish {
   # List of names for nodejs backend projects
   get_services_name "${BACKEND_DOTNETCORE_SERVICES}"
   
-  echo "== Publish ASC.Web.slnf =="
+  echo "== Publish ASC.Web.slnx =="
 
   if [[ ${PUBLISH_BACKEND_ARGS} == "false" ]]
   then
-    dotnet publish $SRC_PATH/server/ASC.Web.slnf -p "PublishProfile=FolderProfile"
+    dotnet publish $SRC_PATH/server/ASC.Web.slnx -p "PublishProfile=FolderProfile"
   else
-    dotnet publish $SRC_PATH/server/ASC.Web.slnf ${PUBLISH_BACKEND_ARGS} -p "PublishProfile=FolderProfile"
+    dotnet publish $SRC_PATH/server/ASC.Web.slnx ${PUBLISH_BACKEND_ARGS} -p "PublishProfile=FolderProfile"
   fi
 
   if [[ ${DOCKER_ENTRYPOINT} != "false" ]]

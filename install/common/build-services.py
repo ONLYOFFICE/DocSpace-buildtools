@@ -22,8 +22,8 @@ if os.path.exists(os.path.join(BUILD_PATH, "services")):
     print("== Clean up services ==")
     shutil.rmtree(os.path.join(BUILD_PATH, "services"))
 
-print("== Build ASC.Web.slnf ==")
-subprocess.run(["dotnet", "build", os.path.join(SRC_PATH, "server", "ASC.Web.slnf")])
+print("== Build ASC.Web.slnx ==")
+subprocess.run(["dotnet", "build", os.path.join(SRC_PATH, "server", "ASC.Web.slnx")])
 
 print("== Build ASC.Migrations.sln ==")
 subprocess.run(["dotnet", "build", os.path.join(SRC_PATH, "server", "ASC.Migrations.sln"), "-o", os.path.join(BUILD_PATH, "services", "ASC.Migration.Runner", "service")])
@@ -78,8 +78,8 @@ for service in BACKEND_NODEJS_SERVICES:
     print(f"== Add docker-entrypoint.py to {service}")
     shutil.copyfile(DOCKER_ENTRYPOINT_PATH, os.path.join(dst, DOCKER_ENTRYPOINT))
 
-print("== Publish ASC.Web.slnf ==")
-subprocess.run(["dotnet", "publish", os.path.join(SRC_PATH, "server", "ASC.Web.slnf"), "-p", "PublishProfile=FolderProfile"])
+print("== Publish ASC.Web.slnx ==")
+subprocess.run(["dotnet", "publish", os.path.join(SRC_PATH, "server", "ASC.Web.slnx"), "-p", "PublishProfile=FolderProfile"])
 
 for service in BACKEND_DOTNETCORE_SERVICES:
     print(f"== Add {DOCKER_ENTRYPOINT} to {service}")

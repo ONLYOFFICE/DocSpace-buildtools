@@ -18,9 +18,9 @@ echo "::notice::Frontend build completed in $((FRONTEND_END_TIMER - FRONTEND_STA
 # Backend build
 echo "== Backend build =="; BACKEND_START_TIMER=$(date +%s)
 cd ${SERVER_PATH}
-dotnet build ASC.Web.slnf
+dotnet build ASC.Web.slnx
 dotnet build ASC.Migrations.sln --property:OutputPath=${PUBLISH_DIR}/services/ASC.Migration.Runner/service/
-dotnet publish ASC.Web.slnf -p PublishProfile=ReleaseProfile
+dotnet publish ASC.Web.slnx -p PublishProfile=ReleaseProfile
 cd "${SERVER_PATH}/common/ASC.Socket.IO" && yarn install --frozen-lockfile && mv -f ${SERVER_PATH}/common/ASC.Socket.IO ${PUBLISH_DIR}/services/
 cd "${SERVER_PATH}/common/ASC.SsoAuth" && yarn install --frozen-lockfile && mv -f ${SERVER_PATH}/common/ASC.SsoAuth ${PUBLISH_DIR}/services/
 cd "${SERVER_PATH}/common/ASC.Identity" && mkdir -p ${PUBLISH_DIR}/services/{ASC.Identity.Registration,ASC.Identity.Authorization}
