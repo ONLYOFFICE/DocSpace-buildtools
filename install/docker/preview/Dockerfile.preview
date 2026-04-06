@@ -337,7 +337,7 @@ RUN set -eux; \
     \
     # restore/build solutions (no RID)
     dotnet restore ASC.Web.slnx; \
-    dotnet restore ASC.Migrations.sln; \
+    dotnet restore ASC.Migrations.slnx; \
     \
     # publish with RID
     dotnet publish ASC.Web.slnx -c Release \
@@ -348,7 +348,7 @@ RUN set -eux; \
       -p:DebugSymbols=false \
       -p:UseAppHost=false; \
     \
-    dotnet publish ASC.Migrations.sln -c Release \
+    dotnet publish ASC.Migrations.slnx -c Release \
       -r "$RID" \
       --self-contained false \
       -p:DebugType=None \

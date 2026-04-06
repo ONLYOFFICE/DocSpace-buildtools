@@ -25,8 +25,8 @@ if os.path.exists(os.path.join(BUILD_PATH, "services")):
 print("== Build ASC.Web.slnx ==")
 subprocess.run(["dotnet", "build", os.path.join(SRC_PATH, "server", "ASC.Web.slnx")])
 
-print("== Build ASC.Migrations.sln ==")
-subprocess.run(["dotnet", "build", os.path.join(SRC_PATH, "server", "ASC.Migrations.sln"), "-o", os.path.join(BUILD_PATH, "services", "ASC.Migration.Runner", "service")])
+print("== Build ASC.Migrations.slnx ==")
+subprocess.run(["dotnet", "build", os.path.join(SRC_PATH, "server", "ASC.Migrations.slnx"), "-o", os.path.join(BUILD_PATH, "services", "ASC.Migration.Runner", "service")])
 
 print("== Add docker-migration-entrypoint.sh to ASC.Migration.Runner ==")
 file_path = os.path.join(BUILD_PATH, "services", "ASC.Migration.Runner", "service", "docker-migration-entrypoint.sh")

@@ -225,9 +225,9 @@ if skip_build == False:
     subprocess.run(["dotnet", "build", os.path.join(
         dir, "server", "ASC.Web.slnx")])
 
-    print("== Build ASC.Migrations.sln ==")
+    print("== Build ASC.Migrations.slnx ==")
     subprocess.run(["dotnet", "build", os.path.join(
-        dir, "server", "ASC.Migrations.sln")])
+        dir, "server", "ASC.Migrations.slnx")])
 
     DOCKER_ENTRYPOINT = "docker-entrypoint.py"
     DOCKER_ENTRYPOINT_PATH = os.path.join(

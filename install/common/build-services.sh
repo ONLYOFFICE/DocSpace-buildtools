@@ -134,8 +134,8 @@ function build_dotnetcore_backend {
     local migration_check=$(echo $1 | tr '[:upper:]' '[:lower:]' | tr -d ' ')
     if [[ ${migration_check} == "true" ]]
     then
-      echo "== Build ASC.Migrations.sln =="
-      dotnet build server/ASC.Migrations.sln -o ${BUILD_PATH}/services/ASC.Migration.Runner/service/
+      echo "== Build ASC.Migrations.slnx =="
+      dotnet build server/ASC.Migrations.slnx -o ${BUILD_PATH}/services/ASC.Migration.Runner/service/
     fi
     if [[ ${DOCKER_ENTRYPOINT} != "false" ]]
     then
