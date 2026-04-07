@@ -336,11 +336,11 @@ RUN set -eux; \
     echo "Using RID: $RID for TARGETARCH: $TARGETARCH"; \ 
     \
     # restore/build solutions (no RID)
-    dotnet restore ASC.Web.slnf; \
-    dotnet restore ASC.Migrations.sln; \
+    dotnet restore ASC.Web.slnx; \
+    dotnet restore ASC.Migrations.slnx; \
     \
     # publish with RID
-    dotnet publish ASC.Web.slnf -c Release \
+    dotnet publish ASC.Web.slnx -c Release \
       -r "$RID" \
       --self-contained false \
       -p PublishProfile=ReleaseProfile \
@@ -348,7 +348,7 @@ RUN set -eux; \
       -p:DebugSymbols=false \
       -p:UseAppHost=false; \
     \
-    dotnet publish ASC.Migrations.sln -c Release \
+    dotnet publish ASC.Migrations.slnx -c Release \
       -r "$RID" \
       --self-contained false \
       -p:DebugType=None \

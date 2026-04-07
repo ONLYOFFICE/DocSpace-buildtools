@@ -90,7 +90,7 @@ RUN PUBLISH_ARGS='-c Release --self-contained false -p:DebugType=None -p:DebugSy
     for PAIR in "linux-x64:amd64" "linux-arm64:arm64"; do \
         RID="${PAIR%%:*}"; ARCH="${PAIR##*:}"; \
         dotnet publish common/Tools/ASC.Migration.Runner/ASC.Migration.Runner.csproj $PUBLISH_ARGS -r "$RID" -o "${SRC_PATH}/publish/services/ASC.Migration.Runner/service/" && \
-        dotnet publish ASC.Web.slnf $PUBLISH_ARGS -r "$RID" -p:PublishProfile=ReleaseProfile && \
+        dotnet publish ASC.Web.slnx $PUBLISH_ARGS -r "$RID" -p:PublishProfile=ReleaseProfile && \
         mv ${SRC_PATH}/publish ${SRC_PATH}/publish-${ARCH} || exit 1; \
     done && \
     dotnet nuget locals all --clear && \
