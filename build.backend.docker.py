@@ -221,13 +221,13 @@ if skip_build == False:
 
     # print("Build backend services (to 'publish/' folder)")
     # subprocess.run(["python", os.path.join(dir, "buildtools", "install", "common", "build-services.py")])
-    print("== Build ASC.Web.slnf ==")
+    print("== Build ASC.Web.slnx ==")
     subprocess.run(["dotnet", "build", os.path.join(
-        dir, "server", "ASC.Web.slnf")])
+        dir, "server", "ASC.Web.slnx")])
 
-    print("== Build ASC.Migrations.sln ==")
+    print("== Build ASC.Migrations.slnx ==")
     subprocess.run(["dotnet", "build", os.path.join(
-        dir, "server", "ASC.Migrations.sln")])
+        dir, "server", "ASC.Migrations.slnx")])
 
     DOCKER_ENTRYPOINT = "docker-entrypoint.py"
     DOCKER_ENTRYPOINT_PATH = os.path.join(
