@@ -64,9 +64,9 @@ if ! type docker &>/dev/null; then
   getent group docker &>/dev/null || groupadd docker
   SYSTEMD_DIR=$([ -d /usr/lib/systemd/system ] && echo /usr/lib/systemd/system || echo /lib/systemd/system)
   mkdir -p "${SYSTEMD_DIR}"
-  cp ${TEMP_DIR}/docker-static/systemd/* "${SYSTEMD_DIR}/"
+  find "${TEMP_DIR}/docker-static/systemd/" -maxdepth 1 -type f -exec cp {} "${SYSTEMD_DIR}/" \;
   systemctl daemon-reload
-  systemctl enable --now containerd docker 2>/dev/null || true
+  systemctl enable --now containerd docker docker.socket 2>/dev/null || true
 
   if ! type docker &>/dev/null || ! systemctl is-active --quiet docker; then
     echo ""
@@ -75,10 +75,11 @@ if ! type docker &>/dev/null; then
     echo ""
     echo "Cleaning up bundled installation..."
     systemctl disable --now containerd docker 2>/dev/null || true
-    rm -f /usr/local/bin/docker* /usr/local/bin/containerd* /usr/local/bin/ctr /usr/local/bin/runc
-    rm -f /usr/local/lib/docker/cli-plugins/docker-compose
-    rm -f "${SYSTEMD_DIR}/docker.service" "${SYSTEMD_DIR}/docker.socket" "${SYSTEMD_DIR}/containerd.service"
-    rm -f /etc/profile.d/docker-static.sh
+    rm -f /usr/local/bin/{docker*,containerd*,ctr,runc} \
+          /usr/local/lib/docker/cli-plugins/docker-compose \
+          "${SYSTEMD_DIR}"/{docker.service,docker.socket,containerd.service} \
+          /etc/profile.d/docker-static.sh && \
+    rm -rf /opt/cni/bin
     systemctl daemon-reload
     echo ""
     echo "Please install Docker manually and re-run this script."
