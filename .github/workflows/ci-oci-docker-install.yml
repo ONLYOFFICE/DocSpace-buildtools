@@ -170,10 +170,16 @@ jobs:
             | grep -oE 'docker-[0-9]+\.[0-9]+\.[0-9]+\.tgz' | sort -V | tail -n1 | sed 's/docker-\(.*\)\.tgz/\1/')
           curl -fsSL "https://download.docker.com/linux/static/stable/${DOCKER_ARCH}/docker-${DOCKER_STATIC_VERSION}.tgz" \
             -o "${INSTALL_PATH}/docker-static/docker.tgz"
+          curl -fsSL "https://download.docker.com/linux/static/stable/${DOCKER_ARCH}/docker-${DOCKER_STATIC_VERSION}.tgz.sha256" \
+            -o docker.sha256
+          echo "$(cat docker.sha256)  ${INSTALL_PATH}/docker-static/docker.tgz" | sha256sum -c
 
           COMPOSE_VERSION=$(curl -fsSL https://api.github.com/repos/docker/compose/releases/latest | jq -r .tag_name)
           curl -fsSL "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-${DOCKER_ARCH}" \
             -o "${INSTALL_PATH}/docker-static/docker-compose"
+          curl -fsSL "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-${DOCKER_ARCH}.sha256" \
+            -o compose.sha256
+          echo "$(cat compose.sha256)  ${INSTALL_PATH}/docker-static/docker-compose" | sha256sum -c
 
           CNI_VERSION=$(curl -fsSL https://api.github.com/repos/containernetworking/plugins/releases/latest | jq -r .tag_name)
           curl -fsSL "https://github.com/containernetworking/plugins/releases/download/${CNI_VERSION}/cni-plugins-linux-${CNI_ARCH}-${CNI_VERSION}.tgz" \
