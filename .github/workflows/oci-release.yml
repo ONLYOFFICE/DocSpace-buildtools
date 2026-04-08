@@ -1,4 +1,4 @@
-name: Upload OneClickInstall scripts on S3
+name: Release OCI Scripts
 
 on:
   push:

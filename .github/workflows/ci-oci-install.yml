@@ -1,4 +1,4 @@
-name: Install OneClickInstall DocSpace
+name: OCI Packages
 
 on:
   schedule:
@@ -86,7 +86,7 @@ jobs:
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
 
   vagrant-up:
-    name: "Test OCI with ${{ matrix.name}}"
+    name: "${{ matrix.name }}"
     runs-on: ubuntu-22.04
     needs: prepare
     strategy:

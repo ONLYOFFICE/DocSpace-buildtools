@@ -1,4 +1,4 @@
-name: Upload offline self-extracting archive
+name: Release Offline Archive
 
 on:
   workflow_dispatch:

@@ -1,4 +1,11 @@
-name: 4testing multiarch-build
+name: Build Docker
+
+run-name: >-
+  Build Docker
+  ${{ github.event.action == 'cron-trigger-action'   && '[Cron]'   ||
+      github.event.action == 'config-trigger-action' && '[Config]' ||
+      github.event.action == 'client-trigger-action' && '[Client]' ||
+      github.event.action == 'server-trigger-action' && '[Server]' || '' }}
 
 on:
   workflow_dispatch:

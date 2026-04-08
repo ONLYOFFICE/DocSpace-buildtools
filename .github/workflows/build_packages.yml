@@ -1,4 +1,4 @@
-name: Build packages
+name: Build Linux Packages
 
 on:
   push:

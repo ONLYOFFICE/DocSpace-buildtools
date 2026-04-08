@@ -1,4 +1,4 @@
-name: Install OneClickInstall Docker
+name: OCI Docker
 
 on:
   schedule:

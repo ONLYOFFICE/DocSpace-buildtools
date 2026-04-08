@@ -1,7 +1,4 @@
-name: Update OneClickInstall DocSpace
-
-run-name: >
-  Update DocSpace from older versions
+name: OCI Packages Update
 
 on:
   schedule:
@@ -62,7 +59,7 @@ jobs:
           echo "matrix=${matrix}" >> $GITHUB_OUTPUT
 
   update-boxes:
-    name: "Update DocSpace on ${{ matrix.name}}"
+    name: "${{ matrix.name }}"
     runs-on: ubuntu-22.04
     needs: prepare
     strategy:
