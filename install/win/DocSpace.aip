@@ -373,7 +373,7 @@
     <ROW Path="&lt;AI_DICTS&gt;ui_en.ail"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.DigCertStoreComponent">
-    <ROW DigitalCertificate="asc_2016.pfx" TimeStampUrl="http://timestamp.comodoca.com" SignerDescription="[|ProductName]" SignOptions="0" SignTool="0" UseSha256="1" Password="7A9D9DA09C93B1035480FE53"/>
+    <ROW TimeStampUrl="http://timestamp.digicert.com" SignerDescription="[|ProductName]" SignOptions="0" SignTool="0" UseSha256="1" Store="User\MY" CustomToolPath="C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" CustomToolCmdLine="-ExecutionPolicy Bypass -File &quot;[|AI_AIP_FOLDER]signing-tool.ps1&quot; -File"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.FirewallExceptionComponent">
     <ROW FirewallException="ProductNameHTTP" Direction="1" Action="1" DisplayName="[ProductName] HTTP" Enabled="1" Scope="*" Condition="1" Profiles="0" Port="80" Protocol="TCP"/>
