@@ -19,9 +19,9 @@ echo "::notice::Frontend build completed in $((FRONTEND_END_TIMER - FRONTEND_STA
 echo "== Backend build =="; BACKEND_START_TIMER=$(date +%s)
 export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 MSBUILDDISABLENODEREUSE=1
 cd ${SERVER_PATH}
-dotnet build ASC.Web.slnx
-dotnet build ASC.Migrations.slnx --property:OutputPath=${PUBLISH_DIR}/services/ASC.Migration.Runner/service/
-dotnet publish ASC.Web.slnx -p PublishProfile=ReleaseProfile
+PUBLISH_ARGS='-c Release --self-contained false -p:DebugType=None -p:DebugSymbols=false -p:UseAppHost=false'
+dotnet publish common/Tools/ASC.Migration.Runner/ASC.Migration.Runner.csproj $PUBLISH_ARGS -o ${PUBLISH_DIR}/services/ASC.Migration.Runner/service/ && \
+dotnet publish ASC.Web.slnx $PUBLISH_ARGS -p:PublishProfile=ReleaseProfile && \
 cd "${SERVER_PATH}/common/ASC.Socket.IO" && yarn install --immutable && mv -f ${SERVER_PATH}/common/ASC.Socket.IO ${PUBLISH_DIR}/services/
 cd "${SERVER_PATH}/common/ASC.SsoAuth" && yarn install --immutable && mv -f ${SERVER_PATH}/common/ASC.SsoAuth ${PUBLISH_DIR}/services/
 cd "${SERVER_PATH}/common/ASC.Identity" && mkdir -p ${PUBLISH_DIR}/services/{ASC.Identity.Registration,ASC.Identity.Authorization}
