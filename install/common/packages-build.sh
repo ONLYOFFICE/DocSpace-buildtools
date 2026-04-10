@@ -48,6 +48,7 @@ done
 find ${PUBLISH_DIR} -depth -type f -regex '.*\(eslintrc.*\|npmignore\|gitignore\|gitattributes\|gitmodules\|un~\|DS_Store\)' -exec rm -f {} \;
 find ${BUILDTOOLS_PATH}/config -type f -regex '.*\.\(test\|dev\)\..*' -delete
 rm -f ${BUILDTOOLS_PATH}/config/nginx/onlyoffice-{login,management}.conf
+find ${PUBLISH_DIR}/web ${PUBLISH_DIR}/services/{ASC.SsoAuth,ASC.Socket.IO} -type f \( -name "*.js.map" -o -name "*.css.map" \) -delete
 
 # Renaming files
 find ${BUILDTOOLS_PATH}/install/common -type f -exec rename -f -v "s/product([^\/]*)$/${PRODUCT}\$1/g" {} ';'
