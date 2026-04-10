@@ -17,6 +17,7 @@ echo "::notice::Frontend build completed in $((FRONTEND_END_TIMER - FRONTEND_STA
 
 # Backend build
 echo "== Backend build =="; BACKEND_START_TIMER=$(date +%s)
+export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 MSBUILDDISABLENODEREUSE=1
 cd ${SERVER_PATH}
 dotnet build ASC.Web.slnx
 dotnet build ASC.Migrations.slnx --property:OutputPath=${PUBLISH_DIR}/services/ASC.Migration.Runner/service/
