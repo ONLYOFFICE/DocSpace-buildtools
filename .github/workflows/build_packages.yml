@@ -141,7 +141,7 @@ jobs:
             deb) SOURCE_DIR="${BUILD_WORKSPACE}/install/${{ matrix.packageType }}/debian/source" ;;
             rpm) SOURCE_DIR="${BUILD_WORKSPACE}/install/${{ matrix.packageType }}/SPECS/SOURCES" ;;
           esac
-          [[ "${BRANCH_SERVER}" != "master" ]] && { PLUGINS_BRANCH="develop"; MCP_BRANCH="develop"; UI_KIT_BRANCH="develop"; } || { PLUGINS_BRANCH="master"; MCP_BRANCH="main"; UI_KIT_BRANCH="master"; }
+          [[ "${BRANCH_SERVER}" != "master" ]] && { PLUGINS_BRANCH="develop"; MCP_BRANCH="develop"; } || { PLUGINS_BRANCH="master"; MCP_BRANCH="main"; }
           download() { wget -q -O "${SOURCE_DIR}/$3.tar.gz" "https://codeload.github.com/ONLYOFFICE/$1/tar.gz/$2" && echo -e "\e[32m[OK] $3\e[0m" || echo -e "\e[31m[FAILED] $3\e[0m"; }
           download "$PRODUCT-buildtools"   "$BRANCH_BUILDTOOLS"      buildtools &
           download "$PRODUCT-client"       "$BRANCH_CLIENT"          client &
@@ -151,7 +151,7 @@ jobs:
           download "document-formats"      "master"                  document-formats &
           download "$PRODUCT-plugins"      "$PLUGINS_BRANCH"         plugins &
           download "$PRODUCT-mcp"          "$MCP_BRANCH"             mcp &
-          download "$PRODUCT-ui-kit-react" "$UI_KIT_BRANCH"          ui-kit &
+          download "$PRODUCT-ui-kit-react" "$BRANCH_CLIENT"          ui-kit &
           wait
 
       - name: Build DEB Packages
