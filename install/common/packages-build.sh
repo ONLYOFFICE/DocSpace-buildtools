@@ -26,8 +26,7 @@ cd "${SERVER_PATH}/common/ASC.Socket.IO" && yarn install --frozen-lockfile && mv
 cd "${SERVER_PATH}/common/ASC.SsoAuth" && yarn install --frozen-lockfile && mv -f ${SERVER_PATH}/common/ASC.SsoAuth ${PUBLISH_DIR}/services/
 cd "${SERVER_PATH}/common/ASC.Identity" && mkdir -p ${PUBLISH_DIR}/services/{ASC.Identity.Registration,ASC.Identity.Authorization}
 mvn -B dependency:go-offline -Dorg.slf4j.simpleLogger.defaultLogLevel=warn
-mvn clean package -B -DskipTests -pl authorization/authorization-container -am
-mvn clean package -B -DskipTests -pl registration/registration-container -am
+mvn clean package -B -DskipTests -pl authorization/authorization-container,registration/registration-container -am
 mv -f ${SERVER_PATH}/common/ASC.Identity/authorization/authorization-container/target/*.jar ${PUBLISH_DIR}/services/ASC.Identity.Authorization/app.jar
 mv -f ${SERVER_PATH}/common/ASC.Identity/registration/registration-container/target/*.jar ${PUBLISH_DIR}/services/ASC.Identity.Registration/app.jar
 mv -f ${SERVER_PATH}/LICENSE ${BUILD_PATH}/LICENSE
