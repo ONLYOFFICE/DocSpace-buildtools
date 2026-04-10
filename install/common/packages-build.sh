@@ -22,8 +22,8 @@ cd ${SERVER_PATH}
 dotnet build ASC.Web.slnx
 dotnet build ASC.Migrations.slnx --property:OutputPath=${PUBLISH_DIR}/services/ASC.Migration.Runner/service/
 dotnet publish ASC.Web.slnx -p PublishProfile=ReleaseProfile
-cd "${SERVER_PATH}/common/ASC.Socket.IO" && yarn install --frozen-lockfile && mv -f ${SERVER_PATH}/common/ASC.Socket.IO ${PUBLISH_DIR}/services/
-cd "${SERVER_PATH}/common/ASC.SsoAuth" && yarn install --frozen-lockfile && mv -f ${SERVER_PATH}/common/ASC.SsoAuth ${PUBLISH_DIR}/services/
+cd "${SERVER_PATH}/common/ASC.Socket.IO" && yarn install --immutable && mv -f ${SERVER_PATH}/common/ASC.Socket.IO ${PUBLISH_DIR}/services/
+cd "${SERVER_PATH}/common/ASC.SsoAuth" && yarn install --immutable && mv -f ${SERVER_PATH}/common/ASC.SsoAuth ${PUBLISH_DIR}/services/
 cd "${SERVER_PATH}/common/ASC.Identity" && mkdir -p ${PUBLISH_DIR}/services/{ASC.Identity.Registration,ASC.Identity.Authorization}
 mvn -B dependency:go-offline -Dorg.slf4j.simpleLogger.defaultLogLevel=warn
 mvn clean package -B -DskipTests -pl authorization/authorization-container,registration/registration-container -am
