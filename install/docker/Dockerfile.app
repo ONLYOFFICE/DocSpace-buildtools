@@ -121,6 +121,7 @@ COPY --from=src ${SRC_PATH}/client/ ./client
 
 WORKDIR ${SRC_PATH}/client
 ENV PNPM_HOME=/tmp/pnpm
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN corepack enable && corepack prepare pnpm@latest --activate && \
     pnpm install && \
     pnpm ${BUILD_ARGS} && \
