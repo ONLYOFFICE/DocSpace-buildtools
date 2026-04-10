@@ -266,4 +266,5 @@ jobs:
           gh api --method POST /repos/${{ github.repository }}/actions/workflows/85067971/dispatches \
             -f ref='${{ github.ref_name }}' \
             -f inputs[deb_build]="${deb_build}" \
-            -f inputs[rpm_build]="${rpm_build}"
+            -f inputs[rpm_build]="${rpm_build}" \
+            -f inputs[testing]="true"
