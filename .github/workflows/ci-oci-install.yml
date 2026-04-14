@@ -16,8 +16,8 @@ on:
           ubuntu2204,
           ubuntu2404,
           rhel9,
-          centos9s,
-          centos10,
+          centos9S,
+          centos10S,
           fedora42,
           fedora43
       deb_build:
@@ -42,22 +42,23 @@ jobs:
       - name: Set matrix names
         id: set-matrix
         env:
+          OS_ORDER: rhel9 centos9S centos10S fedora42 fedora43 debian11 debian12 debian13 ubuntu2204 ubuntu2404
           OS_MAP: |
             {
-              "rhel9":      ["RHEL 9",       "generic",      "rhel9"],
-              "centos9s":   ["CentOS 9s",    "onlyoffice",   "base-centos9s"],
-              "centos10":   ["CentOS 10",    "onlyoffice",   "base-centos10"],
-              "debian11":   ["Debian 11",    "onlyoffice",   "base-debian11"],
-              "debian12":   ["Debian 12",    "onlyoffice",   "base-debian12"],
-              "debian13":   ["Debian 13",    "onlyoffice",   "base-debian13"],
-              "ubuntu2204": ["Ubuntu 22.04", "onlyoffice",   "base-ubuntu2204"],
-              "ubuntu2404": ["Ubuntu 24.04", "onlyoffice",   "base-ubuntu2404"],
-              "fedora42":   ["Fedora 42",    "onlyoffice",   "base-fedora42"],
-              "fedora43":   ["Fedora 43",    "brigada",      "fedora-43"]
+              "rhel9":      ["RHEL 9",       "generic",    "rhel9"],
+              "centos9S":   ["CentOS 9S",    "onlyoffice", "base-centos9s"],
+              "centos10S":  ["CentOS 10S",   "onlyoffice", "base-centos10"],
+              "fedora42":   ["Fedora 42",    "onlyoffice", "base-fedora42"],
+              "fedora43":   ["Fedora 43",    "brigada",    "fedora-43"],
+              "debian11":   ["Debian 11",    "onlyoffice", "base-debian11"],
+              "debian12":   ["Debian 12",    "onlyoffice", "base-debian12"],
+              "debian13":   ["Debian 13",    "onlyoffice", "base-debian13"],
+              "ubuntu2204": ["Ubuntu 22.04", "onlyoffice", "base-ubuntu2204"],
+              "ubuntu2404": ["Ubuntu 24.04", "onlyoffice", "base-ubuntu2404"]
             }
         run: |
           declare -A os_set
-          
+
           # Handle individual distro selection
           if [[ "${{ github.event.inputs.deb_build }}" != "true" && "${{ github.event.inputs.rpm_build }}" != "true" ]]; then
             DISTROS_INPUT="${{ github.event.inputs.distros }}"
@@ -66,22 +67,23 @@ jobs:
               [[ -n "$os_trimmed" ]] && os_set["$os_trimmed"]=1
             done
           fi
-          
+
           # Override: All DEB-based distros (Debian/Ubuntu)
           [[ "${{ github.event.inputs.deb_build }}" == "true" ]] && \
             for os in $(jq -r 'to_entries[] | select(.value[0] | test("Debian|Ubuntu")) | .key' <<< "$OS_MAP"); do os_set["$os"]=1; done
-          
+
           # Override: All RPM-based distros (CentOS/Fedora/RHEL)
           [[ "${{ github.event.inputs.rpm_build }}" == "true" ]] && \
             for os in $(jq -r 'to_entries[] | select(.value[0] | test("CentOS|Fedora|RHEL")) | .key' <<< "$OS_MAP"); do os_set["$os"]=1; done
-          
+
           # For scheduled runs, use all distros
           [[ "${{ github.event_name }}" == "schedule" ]] && \
             for os in $(jq -r 'keys[]' <<< "$OS_MAP"); do os_set["$os"]=1; done
 
-          # Build matrix from selected OS list
-          matrix=$(jq -c -n --argjson map "$OS_MAP" --argjson list "$(printf '%s\n' "${!os_set[@]}" | sort -u | jq -R . | jq -s .)" \
-            '{include: $list | map({name:  $map[.][0],os:    ($map[.][2] // .),distr: $map[.][1]})}')
+          # Build matrix in defined order
+          matrix=$(jq -c -n --argjson map "$OS_MAP" --arg order "$OS_ORDER" \
+            --argjson list "$(printf '%s\n' "${!os_set[@]}" | jq -R . | jq -s .)" \
+            '{include: [($order | split(" "))[] | select(. as $k | $list[] == $k) | {name: $map[.][0], os: ($map[.][2] // .), distr: $map[.][1]}]}')
 
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
 

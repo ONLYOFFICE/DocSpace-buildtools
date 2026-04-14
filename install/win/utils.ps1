@@ -102,7 +102,29 @@ function TestSqlConnection {
     $Uid      = AI_GetMsiProperty DB_USER
     $Pwd      = AI_GetMsiProperty DB_PWD
 
-    $ConnectionString = "DRIVER={MySQL ODBC 8.4 Unicode Driver};SERVER=$Server;PORT=$Port;USER=$Uid;PASSWORD=$Pwd;"
+    $MySqlDriver = ""
+    $Paths = @(
+        "HKLM:\SOFTWARE\ODBC\ODBCINST.INI",
+        "HKLM:\SOFTWARE\WOW6432Node\ODBC\ODBCINST.INI"
+    )
+
+    foreach ($path in $Paths) {
+        if (Test-Path $path) {
+            $keys = Get-ChildItem -Path $path -ErrorAction SilentlyContinue
+            foreach ($k in $keys) {
+                $name = $k.PSChildName
+                if ($name -like "*MySQL ODBC*" -and $name -notlike "*ANSI*") {
+                    $MySqlDriver = $name
+                    break
+                }
+            }
+        }
+        if ($MySqlDriver) { break }
+    }
+
+    AI_SetMsiProperty MYSQLODBCDRIVER $MySqlDriver
+
+    $ConnectionString = "DRIVER={$MySqlDriver};SERVER=$Server;PORT=$Port;USER=$Uid;PASSWORD=$Pwd;"
     $Connection = New-Object System.Data.Odbc.OdbcConnection($ConnectionString)
 
     try {
