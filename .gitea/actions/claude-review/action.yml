@@ -42,6 +42,24 @@ runs:
             - Not fixed → keep it as-is
           - Add any new issues found in the diff not already in the previous review
           - PR Summary and Positive Observations reflect the full PR, not just the latest commit
+          
+          ### 2.1 Validate PR Title and Commit Messages
+
+          Evaluate PR title and commit messages using these rules:
+
+          1. Separate subject from body with a blank line (for commit messages)
+          2. Limit the subject line to 50 characters
+          3. Capitalize the subject line
+          4. Do not end the subject line with a period
+          5. Use the imperative mood in the subject line
+          6. Wrap the body at 72 characters (for commit messages with body)
+          7. Use the body to explain what and why vs. how
+          8. Allow bracketed platform tags like [iOS], [Android], [Web]
+
+          - Report violations in **🎨 Style** section
+          - Treat violations as:
+            - 🟡 Medium → if it affects readability/standards consistency
+            - 🔵 Low → minor formatting issues
 
           ### 3. Verdict Logic
 
