@@ -431,51 +431,9 @@ create_network () {
 	fi
 }
 
-read_continue_installation () {
-	[ "$NON_INTERACTIVE" = "true" ] && INSTALLATION_CHOICE="N" && return 0
-	while read -p "Continue installation [Y/C/N]? " CHOICE; do
-		[[ "$CHOICE" =~ ^[yYcCnN]$ ]] && { INSTALLATION_CHOICE="${CHOICE^^}"; return 0; } || echo "Please, enter Y, C or N"
-	done
-}
-
 domain_check () {
 	APP_DOMAIN_PORTAL=$(cut -d ',' -f 1 <<< "$LETS_ENCRYPT_DOMAIN")
 	APP_DOMAIN_PORTAL=${APP_DOMAIN_PORTAL:-${APP_URL_PORTAL:-$(get_env_parameter "APP_URL_PORTAL" "${PACKAGE_SYSNAME}-files" | awk -F[/:] '{if ($1 == "https") print $4; else print ""}')}}
-
-	while IFS= read -r DOMAIN; do
-		IP_ADDRESS=$( [ -n "${DOMAIN}" ] && ping -c 1 -W 1 ${DOMAIN} | grep -oP '(\d+\.\d+\.\d+\.\d+)' | head -n 1 )
-		if [[ -n "$IP_ADDRESS" && "$IP_ADDRESS" =~ ^(10\.|127\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.) ]]; then
-			LOCAL_RESOLVED_DOMAINS+="$DOMAIN"
-		fi
-	done <<< "${APP_DOMAIN_PORTAL:-$(dig +short -x "$(curl -s -4 ifconfig.me)" | sed 's/\.$//')}"
-	
-	# check if the domain is a loopback IP or NAT
-	if [[ -n "${LOCAL_RESOLVED_DOMAINS}" ]] || [[ $(ip route get 8.8.8.8 | awk '{print $7}') != $(curl -s -4 ifconfig.me) ]]; then 
-		DOCKER_DAEMON_FILE="/etc/docker/daemon.json"
-		if ! grep -q '"dns"' "$DOCKER_DAEMON_FILE" 2>/dev/null; then
-			echo "DNS issue detected for ${APP_DOMAIN_PORTAL:-$LOCAL_RESOLVED_DOMAINS} (loopback IP or NAT)."
-			echo "[Y] Use Google DNS | [C] Use custom DNS | [N] Don't use DNS"
-			if read_continue_installation; then
-				case "$INSTALLATION_CHOICE" in
-					Y)  DNS=("8.8.8.8" "8.8.4.4") ;;
-					C)  while true; do
-							read -p "Enter custom DNS (e.g. 8.8.8.8 8.8.4.4): " INPUT; IFS=' ' read -ra DNS <<< "$INPUT"
-							for IP in "${DNS[@]}"; do 
-								[[ $IP =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || { echo "Invalid DNS: $IP"; continue 2; }
-							done && break
-						done ;;
-					N)  DNS=() ;;
-				esac
-				if ((${#DNS[@]})); then
-					echo "Updating Docker DNS config with: ${DNS[*]}"
-					jq -e . "${DOCKER_DAEMON_FILE}" > /dev/null 2>&1 || echo '{}' > "${DOCKER_DAEMON_FILE}"
-					echo "$(jq --argjson dns "$(printf '%s\n' "${DNS[@]}" | jq -R . | jq -s .)" '.dns = $dns' "${DOCKER_DAEMON_FILE}")" > "${DOCKER_DAEMON_FILE}"
-					systemctl restart docker || { echo "Failed to restart Docker service"; exit 1; }
-				fi
-			fi
-		fi
-	fi
-
 	APP_URL_PORTAL=${APP_DOMAIN_PORTAL:+http://${APP_DOMAIN_PORTAL}:${EXTERNAL_PORT}}
 }
 
@@ -904,12 +862,6 @@ dependency_installation() {
 	install_package curl
 	install_package netstat net-tools
 
-	if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
-		install_package dig  "dnsutils|bind-utils"
-		install_package ping "iputils-ping|iputils"
-		install_package ip   "iproute2|iproute"
-	fi
-
 	[ "$INSTALL_FLUENT_BIT" = "true" ] && install_package crontab "cron|cronie"
 
 	if ! is_command_exists jq ; then
@@ -1028,7 +980,7 @@ start_installation () {
 
 	create_network
 
-	[ "${OFFLINE_INSTALLATION}" = "false" ] && domain_check
+	domain_check
 
 	if [ "$UPDATE" = "true" ]; then
 		set_docspace_params
