@@ -18,7 +18,7 @@ BuildArch:      noarch
 URL:            http://onlyoffice.com
 Vendor:         Ascensio System SIA
 Packager:       %{packager}
-License:        AGPLv3
+License:        AGPL-3.0-only AND CC-BY-SA-4.0
 
 Source0:        %{product}.rpmlintrc
 Source1:        https://codeload.github.com/ONLYOFFICE/%{product}-buildtools/tar.gz/master#/buildtools.tar.gz
