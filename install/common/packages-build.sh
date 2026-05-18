@@ -11,22 +11,23 @@ BUILDTOOLS_PATH=${BUILD_PATH}/buildtools
 PUBLISH_DIR=${BUILD_PATH}/publish
 
 # Frontend build
+export NODE_OPTIONS="--max-old-space-size=4096"
 echo "== Frontend build =="; FRONTEND_START_TIMER=$(date +%s)
 cd ${CLIENT_PATH}; pnpm install; pnpm build; pnpm run deploy; FRONTEND_END_TIMER=$(date +%s)
 echo "::notice::Frontend build completed in $((FRONTEND_END_TIMER - FRONTEND_START_TIMER)) seconds"
 
 # Backend build
 echo "== Backend build =="; BACKEND_START_TIMER=$(date +%s)
+export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 MSBUILDDISABLENODEREUSE=1
 cd ${SERVER_PATH}
-dotnet build ASC.Web.slnf
-dotnet build ASC.Migrations.sln --property:OutputPath=${PUBLISH_DIR}/services/ASC.Migration.Runner/service/
-dotnet publish ASC.Web.slnf -p PublishProfile=ReleaseProfile
-cd "${SERVER_PATH}/common/ASC.Socket.IO" && yarn install --frozen-lockfile && mv -f ${SERVER_PATH}/common/ASC.Socket.IO ${PUBLISH_DIR}/services/
-cd "${SERVER_PATH}/common/ASC.SsoAuth" && yarn install --frozen-lockfile && mv -f ${SERVER_PATH}/common/ASC.SsoAuth ${PUBLISH_DIR}/services/
+PUBLISH_ARGS='-c Release --self-contained false -p:DebugType=None -p:DebugSymbols=false -p:UseAppHost=false'
+dotnet publish common/Tools/ASC.Migration.Runner/ASC.Migration.Runner.csproj $PUBLISH_ARGS -o ${PUBLISH_DIR}/services/ASC.Migration.Runner/service/ && \
+dotnet publish ASC.Web.slnx $PUBLISH_ARGS -p:PublishProfile=ReleaseProfile && \
+cd "${SERVER_PATH}/common/ASC.Socket.IO" && yarn install --immutable && mv -f ${SERVER_PATH}/common/ASC.Socket.IO ${PUBLISH_DIR}/services/
+cd "${SERVER_PATH}/common/ASC.SsoAuth" && yarn install --immutable && mv -f ${SERVER_PATH}/common/ASC.SsoAuth ${PUBLISH_DIR}/services/
 cd "${SERVER_PATH}/common/ASC.Identity" && mkdir -p ${PUBLISH_DIR}/services/{ASC.Identity.Registration,ASC.Identity.Authorization}
 mvn -B dependency:go-offline -Dorg.slf4j.simpleLogger.defaultLogLevel=warn
-mvn clean package -B -DskipTests -pl authorization/authorization-container -am
-mvn clean package -B -DskipTests -pl registration/registration-container -am
+mvn clean package -B -DskipTests -pl authorization/authorization-container,registration/registration-container -am
 mv -f ${SERVER_PATH}/common/ASC.Identity/authorization/authorization-container/target/*.jar ${PUBLISH_DIR}/services/ASC.Identity.Authorization/app.jar
 mv -f ${SERVER_PATH}/common/ASC.Identity/registration/registration-container/target/*.jar ${PUBLISH_DIR}/services/ASC.Identity.Registration/app.jar
 mv -f ${SERVER_PATH}/LICENSE ${BUILD_PATH}/LICENSE
@@ -47,6 +48,7 @@ done
 find ${PUBLISH_DIR} -depth -type f -regex '.*\(eslintrc.*\|npmignore\|gitignore\|gitattributes\|gitmodules\|un~\|DS_Store\)' -exec rm -f {} \;
 find ${BUILDTOOLS_PATH}/config -type f -regex '.*\.\(test\|dev\)\..*' -delete
 rm -f ${BUILDTOOLS_PATH}/config/nginx/onlyoffice-{login,management}.conf
+find ${PUBLISH_DIR}/web ${PUBLISH_DIR}/services/{ASC.SsoAuth,ASC.Socket.IO} -type f \( -name "*.js.map" -o -name "*.css.map" \) -delete
 
 # Renaming files
 find ${BUILDTOOLS_PATH}/install/common -type f -exec rename -f -v "s/product([^\/]*)$/${PRODUCT}\$1/g" {} ';'
@@ -88,7 +90,6 @@ sed -e 's_etc/nginx_etc/openresty_g' \
 sed -E 's_(http://)[^:]+(:5601)_\1localhost\2_g' -i ${BUILDTOOLS_PATH}/config/nginx/onlyoffice.conf
 sed -e 's/\$router_host/127.0.0.1/g' \
     -e 's/this_host\|proxy_x_forwarded_host/host/g' \
-    -e 's/proxy_x_forwarded_proto/scheme/g' \
     -e 's_includes_/etc/openresty/includes_g' \
     -e '/quic\|alt-svc/Id' \
     -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy*.conf

@@ -11,7 +11,7 @@ cd "$SCRIPT_DIR"
 
 if [ $? -eq 0 ]; then
     bash start/stop.sh
-    dotnet build ../server/asc.web.slnf /fl1 "/flp1:logfile=asc.web.log;verbosity=normal"
+    dotnet build ../server/ASC.Web.slnx /fl1 "/flp1:logfile=asc.web.log;verbosity=normal"
 fi
 
 echo "install nodejs projects dependencies..."

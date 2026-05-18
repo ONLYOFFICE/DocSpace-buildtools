@@ -21,7 +21,8 @@ else
 fi
 
 PROXY_SSL_CONF="${DOCKERCOMPOSE}/config/nginx/onlyoffice-proxy-ssl.conf"
-EXTERNAL_PORT=$(awk -F= '/^[[:space:]]*EXTERNAL_PORT=/{gsub(/^[[:space:]]*/,"",$2); gsub(/"/,"",$2); print $2; exit}' "${DOCKERCOMPOSE}/.env")
+EXTERNAL_PORT_HTTPS=$(awk -F= '/^[[:space:]]*EXTERNAL_PORT_HTTPS=/{gsub(/^[[:space:]]*/,"",$2); gsub(/"/,"",$2); print $2; exit}' "${DOCKERCOMPOSE}/.env")
+EXTERNAL_PORT_HTTPS="${EXTERNAL_PORT_HTTPS:-443}"
 
 help(){
   echo 
@@ -247,9 +248,9 @@ PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${PRODUCT}/privkey.pem"}"
 
 if [ -f "${CERTIFICATE_FILE}" ]; then 
   if [ -f "${PRIVATEKEY_FILE}" ]; then
-    sed -i "s~\(APP_CORE_SERVER_ROOT=\).*~\1\"https://*$( [ "$EXTERNAL_PORT" = "443" ] || echo ":$EXTERNAL_PORT" )/\"~g" ${DOCKERCOMPOSE}/.env
-    sed -i "s~\(APP_URL_PORTAL=\).*~\1\"https://${DOMAIN}$( [ "$EXTERNAL_PORT" = "443" ] || echo ":$EXTERNAL_PORT" )\"~g" ${DOCKERCOMPOSE}/.env
-    sed -i -E "s#https://\\\$host(:[0-9]+)?#https://\\\$host$( [ "$EXTERNAL_PORT" = "443" ] || echo ":$EXTERNAL_PORT" )#g" "$PROXY_SSL_CONF"
+    sed -i "s~\(APP_CORE_SERVER_ROOT=\).*~\1\"https://*$( [ "$EXTERNAL_PORT_HTTPS" = "443" ] || echo ":$EXTERNAL_PORT_HTTPS" )/\"~g" ${DOCKERCOMPOSE}/.env
+    sed -i "s~\(APP_URL_PORTAL=\).*~\1\"https://${DOMAIN}$( [ "$EXTERNAL_PORT_HTTPS" = "443" ] || echo ":$EXTERNAL_PORT_HTTPS" )\"~g" ${DOCKERCOMPOSE}/.env
+    sed -i -E "s#https://\\\$host(:[0-9]+)?#https://\\\$host$( [ "$EXTERNAL_PORT_HTTPS" = "443" ] || echo ":$EXTERNAL_PORT_HTTPS" )#g" "$PROXY_SSL_CONF"
     sed -i "s~\(CERTIFICATE_PATH=\).*~\1\"${CERTIFICATE_FILE}\"~g" ${DOCKERCOMPOSE}/.env
     sed -i "s~\(CERTIFICATE_KEY_PATH=\).*~\1\"${PRIVATEKEY_FILE}\"~g" ${DOCKERCOMPOSE}/.env
     sed -i "s~\(DHPARAM_PATH=\).*~\1\"${DHPARAM_PATH}\"~g" ${DOCKERCOMPOSE}/.env

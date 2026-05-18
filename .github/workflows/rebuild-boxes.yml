@@ -1,6 +1,6 @@
-name: Rebuild DocSpace vagrant boxes
+name: Rebuild Vagrant Boxes
 
-run-name: "Rebuild DocSpace vagrant boxes version: ${{ github.event.inputs.box-version }} (OS: ${{ github.event.inputs.os-name }})"
+run-name: "Rebuild Vagrant Boxes [${{ github.event.inputs.os-name }}] v${{ github.event.inputs.box-version }}"
 
 on:
   workflow_dispatch:

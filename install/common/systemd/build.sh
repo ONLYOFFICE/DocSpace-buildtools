@@ -108,6 +108,7 @@ reassign_values (){
 		SERVICE_PORT="5006"
 		WORK_DIR="${BASE_DIR}/services/ASC.Studio.Notify/"
 		EXEC_FILE="ASC.Studio.Notify.dll"
+		CORE_EVENT_BUS=" --core:eventBus:subscriptionClientName=asc_event_bus_studio_notify_queue"
 	;;
 	notify )
 		SERVICE_PORT="5005"

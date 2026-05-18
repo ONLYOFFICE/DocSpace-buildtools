@@ -39,6 +39,7 @@ md buildtools\install\win\Files\services\ASC.Web.Studio\service\temp
 md buildtools\install\win\Files\services\ASC.Web.HealthChecks.UI\service\temp
 xcopy "plugins\publish\*" "buildtools\install\win\Files\Data\Studio\webplugins" /s /e /y /i
 xcopy "mcp\bin\*" "buildtools\install\win\Files\products\ASC.AI\mcp" /s /e /y /i
+copy cloudhsm\signing-tool.ps1 "buildtools\install\win\signing-tool.ps1" /y
 copy buildtools\install\win\WinSW.NET4.exe "buildtools\install\win\OpenResty\tools\OpenResty.exe" /y
 copy buildtools\install\win\tools\OpenResty.xml "buildtools\install\win\OpenResty\tools\OpenResty.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\Socket.IO.exe" /y
@@ -149,21 +150,18 @@ REM echo ######## Build OpenResty ########
 %AdvancedInstaller% /edit buildtools\install\win\OpenResty.aip /SetVersion %openresty_version%
 IF "%SignBuild%"=="true" (
 %AdvancedInstaller% /edit buildtools\install\win\OpenResty.aip /SetSig
-%AdvancedInstaller% /edit buildtools\install\win\OpenResty.aip /SetDigitalCertificateFile -file %onlyoffice_codesign_path% -password "%onlyoffice_codesign_password%"
 )
 %AdvancedInstaller% /rebuild buildtools\install\win\OpenResty.aip
 
 REM echo ######## Build OpenSearch ########
 IF "%SignBuild%"=="true" (
 %AdvancedInstaller% /edit buildtools\install\win\OpenSearch.aip /SetSig
-%AdvancedInstaller% /edit buildtools\install\win\OpenSearch.aip /SetDigitalCertificateFile -file %onlyoffice_codesign_path% -password "%onlyoffice_codesign_password%"
 )
 %AdvancedInstaller% /rebuild buildtools\install\win\OpenSearch.aip
 
 REM echo ######## Build OpenSearchStack ########
 IF "%SignBuild%"=="true" (
 %AdvancedInstaller% /edit buildtools\install\win\OpenSearchStack.aip /SetSig
-%AdvancedInstaller% /edit buildtools\install\win\OpenSearchStack.aip /SetDigitalCertificateFile -file %onlyoffice_codesign_path% -password "%onlyoffice_codesign_password%"
 )
 %AdvancedInstaller% /rebuild buildtools\install\win\OpenSearchStack.aip
 
@@ -173,9 +171,7 @@ REM echo ######## Build DocSpace package ########
 
 IF "%SignBuild%"=="true" (
 %AdvancedInstaller% /edit buildtools\install\win\DocSpace.aip /SetSig
-%AdvancedInstaller% /edit buildtools\install\win\DocSpace.aip /SetDigitalCertificateFile -file %onlyoffice_codesign_path% -password "%onlyoffice_codesign_password%"
 %AdvancedInstaller% /edit buildtools\install\win\DocSpace.Prerequisites.aip /SetSig
-%AdvancedInstaller% /edit buildtools\install\win\DocSpace.Prerequisites.aip /SetDigitalCertificateFile -file %onlyoffice_codesign_path% -password "%onlyoffice_codesign_password%"
 )
 
 :: Build DocSpace Community

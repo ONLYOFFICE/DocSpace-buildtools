@@ -1,4 +1,4 @@
-name: 4testing multiarch-cron-build
+name: Trigger Build [Cron]
 
 on:
   schedule:

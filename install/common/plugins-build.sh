@@ -3,8 +3,8 @@ set -xe
 
 SRC_PATH=${1:-"/plugins"}
 
-find "$SRC_PATH" -mindepth 2 -maxdepth 2 -type f -name "package.json" -printf '%h\n' | while read -r PLUGIN_DIR; do
-  PLUGIN_NAME=$(grep -oP '"name"\s*:\s*"\K([^"\\]|\\.)+(?="\s*[},])' "$PLUGIN_DIR/package.json")
+find "$SRC_PATH" -mindepth 2 -maxdepth 2 -type f -name "package.json" -exec dirname {} \; | while read -r PLUGIN_DIR; do
+  PLUGIN_NAME=$(jq -r '.name' "$PLUGIN_DIR/package.json")
   echo "=== Building plugin: $PLUGIN_NAME ==="
   cd "$PLUGIN_DIR" || { echo "::error:: Cannot cd to $PLUGIN_DIR"; exit 1; }
 

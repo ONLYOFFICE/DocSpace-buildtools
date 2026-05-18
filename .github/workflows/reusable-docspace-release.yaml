@@ -1,4 +1,4 @@
-name: "<reusable> release Docker-DocSpace"
+name: "<reusable> Release Docker images"
 
 on:
   workflow_call:

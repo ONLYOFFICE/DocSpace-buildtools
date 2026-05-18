@@ -18,8 +18,8 @@ if ! dpkg -l | grep -q "sudo"; then
 	apt-get install -yq sudo
 fi
 
-if ! dpkg -l | grep -q "net-tools"; then
-	apt-get install -yq net-tools
+if ! command -v ss >/dev/null 2>&1; then
+	apt-get install -yq iproute2
 fi
 
 if ! dpkg -l | grep -q "dirmngr"; then
