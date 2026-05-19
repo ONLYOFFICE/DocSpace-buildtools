@@ -13,7 +13,14 @@ PUBLISH_DIR=${BUILD_PATH}/publish
 # Frontend build
 export NODE_OPTIONS="--max-old-space-size=4096"
 echo "== Frontend build =="; FRONTEND_START_TIMER=$(date +%s)
-cd ${CLIENT_PATH}; pnpm install; pnpm build; pnpm run deploy; FRONTEND_END_TIMER=$(date +%s)
+cd ${CLIENT_PATH}; pnpm install
+if [ -z "${NX_PARALLEL}" ]; then
+  pnpm build
+else
+  NX_PACKAGES=$(node -p "require('./package.json').scripts.build.match(/-p ([^-]+)/)[1].trim()")
+  pnpm nx run-many -t build -p ${NX_PACKAGES} --parallel=${NX_PARALLEL}
+fi
+pnpm run deploy; FRONTEND_END_TIMER=$(date +%s)
 echo "::notice::Frontend build completed in $((FRONTEND_END_TIMER - FRONTEND_START_TIMER)) seconds"
 
 # Backend build
