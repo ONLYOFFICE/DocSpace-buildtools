@@ -11,7 +11,7 @@ BUILDTOOLS_PATH=${BUILD_PATH}/buildtools
 PUBLISH_DIR=${BUILD_PATH}/publish
 
 # Frontend build
-export NODE_OPTIONS="--max-old-space-size=4096"
+export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=4096}"
 echo "== Frontend build =="; FRONTEND_START_TIMER=$(date +%s)
 cd ${CLIENT_PATH}; pnpm install
 if [ -z "${NX_PARALLEL}" ]; then
