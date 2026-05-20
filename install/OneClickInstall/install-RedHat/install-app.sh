@@ -66,71 +66,41 @@ if [ "${MYSQL_FIRST_TIME_INSTALL}" = "true" ]; then
 fi
 
 if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
-	declare -x DS_PORT=8083
+    declare -x DS_PORT=${DS_PORT:-8083}
 
-	DS_RABBITMQ_HOST=localhost
-	DS_RABBITMQ_USER=guest
-	DS_RABBITMQ_PWD=guest
-	
-	DS_REDIS_HOST=localhost
-	
-	DS_COMMON_NAME=${DS_COMMON_NAME:-"ds"}
+    if [ "$INSTALLATION_TYPE" != "COMMUNITY" ]; then
+    	DS_COMMON_NAME=${DS_COMMON_NAME:-ds}
+        DS_DB_NAME=${DS_DB_NAME:-$DS_COMMON_NAME}
+        DS_DB_USER=${DS_DB_USER:-$DS_COMMON_NAME}
+        DS_DB_PWD=${DS_DB_PWD:-$DS_COMMON_NAME}
 
-	DS_DB_HOST=localhost
-	DS_DB_NAME=$DS_COMMON_NAME
-	DS_DB_USER=$DS_COMMON_NAME
-	DS_DB_PWD=$DS_COMMON_NAME
-	
-	declare -x JWT_ENABLED=${JWT_ENABLED:-true}
-	declare -x JWT_SECRET=${JWT_SECRET:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)}
-	declare -x JWT_HEADER=${JWT_HEADER:-AuthorizationJwt}
-		
-	if ! su - postgres -s /bin/bash -c "psql -lqt" | cut -d \| -f 1 | grep -q "${DS_DB_NAME}"; then
-		su - postgres -s /bin/bash -c "psql -c \"CREATE USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';\""
-		su - postgres -s /bin/bash -c "psql -c \"CREATE DATABASE ${DS_DB_NAME} OWNER ${DS_DB_USER};\""
+        if ! su - postgres -s /bin/bash -c "psql -lqt" | cut -d \| -f 1 | grep -q ${DS_DB_NAME}; then
+            su - postgres -s /bin/bash -c "psql -c \"CREATE USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';\""
+            su - postgres -s /bin/bash -c "psql -c \"CREATE DATABASE ${DS_DB_NAME} OWNER ${DS_DB_USER};\""
+        fi
+    fi
+
+    declare -x JWT_ENABLED=${JWT_ENABLED:-true}
+    declare -x JWT_SECRET=${JWT_SECRET:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)}
+    declare -x JWT_HEADER=${JWT_HEADER:-AuthorizationJwt}
+    [ -n "${WOPI_ENABLED}" ] && declare -x WOPI_ENABLED
+
+    ${package_manager} -y install ${ds_pkg_name} --nobest # --nobest for rhel 8 compatibility
+
+	ds_configure_args=()
+	if [ "$INSTALLATION_TYPE" != "COMMUNITY" ]; then
+		ds_configure_args=(
+			--redishost "${DS_REDIS_HOST:-localhost}"
+			--amqphost "${DS_RABBITMQ_HOST:-localhost}"
+			--amqpuser "${DS_RABBITMQ_USER:-guest}"
+			--amqppassword "${DS_RABBITMQ_PWD:-guest}"
+			--databasehost "${DS_DB_HOST:-localhost}"
+			--databasename "$DS_DB_NAME"
+			--databaseuser "$DS_DB_USER"
+			--databasepassword "$DS_DB_PWD"
+		)
 	fi
-	
-	${package_manager} -y install ${ds_pkg_name}
-	
-expect << EOF
-	
-	set timeout -1
-	log_user 1
-	
-	spawn documentserver-configure.sh
-	
-	expect "Configuring database access..."
-	
-	expect -re "Host"
-	send "$DS_DB_HOST\r"
-	
-	expect -re "Database name"
-	send "$DS_DB_NAME\r"
-	
-	expect -re "User"
-	send "$DS_DB_USER\r"
-	
-	expect -re "Password"
-	send "$DS_DB_PWD\r"
-	
-	if { "${INSTALLATION_TYPE}" == "ENTERPRISE" || "${INSTALLATION_TYPE}" == "DEVELOPER" } {
-		expect "Configuring redis access..."
-		send "$DS_REDIS_HOST\r"
-	}
-	
-	expect "Configuring AMQP access... "
-	expect -re "Host"
-	send "$DS_RABBITMQ_HOST\r"
-	
-	expect -re "User"
-	send "$DS_RABBITMQ_USER\r"
-	
-	expect -re "Password"
-	send "$DS_RABBITMQ_PWD\r"
-	
-	expect eof
-	
-EOF
+	documentserver-configure.sh "${ds_configure_args[@]}"
 fi
 
 if [ "$MAKESWAP" == "true" ]; then
