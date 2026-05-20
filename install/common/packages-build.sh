@@ -64,7 +64,7 @@ rename -f -v 's/(.*\.(community|enterprise|developer))\.json$/$1.json.template/'
 # Change directories
 if ! grep -q 'var/www/${PRODUCT}' ${BUILDTOOLS_PATH}/config/nginx/*.conf; then find ${BUILDTOOLS_PATH}/config/nginx/ -name "*.conf" -exec sed -i "s@\(var/www/\)@\1${PRODUCT}/@" {} +; fi
 sed -i "s#\$public_root#/var/www/${PRODUCT}/public/#g" ${BUILDTOOLS_PATH}/config/nginx/onlyoffice.conf
-sed "s_\(.*root\).*;_\1 \"/var/www/${PRODUCT}\";_g" -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/letsencrypt.conf
+sed "s_\(.*root\).*;_\1 \"/var/www/${PRODUCT}\";_g" -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/proxy/letsencrypt.conf
 sed -i 's_app/onlyoffice/data_var/www/onlyoffice/Data_g' ${BUILDTOOLS_PATH}/config/*.json.template
 
 # Configuring ${PRODUCT} services  
@@ -99,13 +99,13 @@ sed -e 's/\$router_host/127.0.0.1/g' \
     -e 's/this_host\|proxy_x_forwarded_host/host/g' \
     -e 's_includes_/etc/openresty/includes_g' \
     -e '/quic\|alt-svc/Id' \
-    -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy*.conf
+    -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/proxy/onlyoffice-proxy*.conf
 sed -e '/.pid/d' \
     -e '/temp_path/d' \
     -e 's_etc/nginx_etc/openresty_g' \
     -e 's/\.log/-openresty.log/g' \
-    -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/templates/nginx.conf.template
-rename -f -v 's/\.conf$/.conf.template/' ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy*.conf
+    -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/nginx.conf.template
+rename -f -v 's/\.conf$/.conf.template/' ${BUILDTOOLS_PATH}/install/docker/config/nginx/proxy/onlyoffice-proxy*.conf
 
 # Configuring fluent-bit
 sed -i "s#\(/var/log/onlyoffice/\)#\1${PRODUCT}/#" ${BUILDTOOLS_PATH}/install/docker/config/fluent-bit.conf 
