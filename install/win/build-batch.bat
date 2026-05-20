@@ -65,10 +65,10 @@ copy buildtools\install\win\tools\Identity.Authorization.xml "buildtools\install
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\Identity.Registration.exe" /y
 copy buildtools\install\win\tools\Identity.Registration.xml "buildtools\install\win\Files\tools\Identity.Registration.xml" /y
 copy "buildtools\install\win\nginx.conf" "buildtools\install\win\Files\nginx\conf\nginx.conf" /y
-copy "buildtools\install\docker\config\nginx\onlyoffice-proxy.conf" "buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf" /y
-copy "buildtools\install\docker\config\nginx\onlyoffice-proxy.conf" "buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf.tmpl" /y
-copy "buildtools\install\docker\config\nginx\onlyoffice-proxy-ssl.conf" "buildtools\install\win\Files\nginx\conf\onlyoffice-proxy-ssl.conf.tmpl" /y
-copy "buildtools\install\docker\config\nginx\letsencrypt.conf" "buildtools\install\win\Files\nginx\conf\includes\letsencrypt.conf" /y
+copy "buildtools\install\docker\config\nginx\proxy\onlyoffice-proxy.conf" "buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf" /y
+copy "buildtools\install\docker\config\nginx\proxy\onlyoffice-proxy.conf" "buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf.tmpl" /y
+copy "buildtools\install\docker\config\nginx\proxy\onlyoffice-proxy-ssl.conf" "buildtools\install\win\Files\nginx\conf\onlyoffice-proxy-ssl.conf.tmpl" /y
+copy "buildtools\install\docker\config\nginx\proxy\letsencrypt.conf" "buildtools\install\win\Files\nginx\conf\includes\letsencrypt.conf" /y
 copy "buildtools\install\win\sbin\docspace-ssl-setup.ps1" "buildtools\install\win\Files\sbin\docspace-ssl-setup.ps1" /y
 copy "buildtools\install\docker\config\fluent-bit.conf" "buildtools\install\win\Files\config\fluent-bit.conf" /y
 rmdir buildtools\install\win\publish /s /q
