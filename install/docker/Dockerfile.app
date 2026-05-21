@@ -5,7 +5,7 @@ ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:10.0-noble"
 ARG BUSYBOX_VERSION="1.37"
 ARG PYTHON_VERSION="3.12-slim"
 ARG NODE_VERSION="24-trixie-slim"
-ARG JAVA_VERSION="21"
+ARG JAVA_VERSION="25"
 ARG JAVA_RUN_VERSION="${JAVA_VERSION}-jre"
 ARG MAVEN_VERSION="3.9-eclipse-temurin-${JAVA_VERSION}"
 
@@ -71,6 +71,11 @@ RUN <<EOF
         python3 ${SRC_PATH}/buildtools/debuginfo.py && \
         pip cache purge
     fi
+    # Set execute permissions on entrypoint scripts
+    chmod +x ${SRC_PATH}/buildtools/install/docker/config/nginx/router/docker-entrypoint.sh
+    chmod +x ${SRC_PATH}/buildtools/install/docker/prepare-nginx-router.sh
+    # Make all .sh scripts in docker-entrypoint.d executable
+    find ${SRC_PATH}/buildtools/install/docker/config/nginx/router/docker-entrypoint.d -name '*.sh' -exec chmod +x {} \;
     find ${SRC_PATH} -name '.git' -type d -prune -exec rm -rf {} +
 EOF
 
