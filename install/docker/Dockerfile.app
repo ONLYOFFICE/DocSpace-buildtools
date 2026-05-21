@@ -71,6 +71,11 @@ RUN <<EOF
         python3 ${SRC_PATH}/buildtools/debuginfo.py && \
         pip cache purge
     fi
+    # Set execute permissions on entrypoint scripts
+    chmod +x ${SRC_PATH}/buildtools/install/docker/config/nginx/router/docker-entrypoint.sh
+    chmod +x ${SRC_PATH}/buildtools/install/docker/prepare-nginx-router.sh
+    # Make all .sh scripts in docker-entrypoint.d executable
+    find ${SRC_PATH}/buildtools/install/docker/config/nginx/router/docker-entrypoint.d -name '*.sh' -exec chmod +x {} \;
     find ${SRC_PATH} -name '.git' -type d -prune -exec rm -rf {} +
 EOF
 
