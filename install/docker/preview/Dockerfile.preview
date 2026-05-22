@@ -262,6 +262,7 @@ COPY ./buildtools/install/common/plugins-build.sh ./plugins-build.sh
 RUN echo "--- build/publish plugins ---" && \
     apt-get update && apt-get install -y dos2unix unzip &&\
     dos2unix *.sh && \
+    chmod +x plugins-build.sh && \
     bash plugins-build.sh "${SRC_PATH}/plugins"
 
 #-------------------------------------
