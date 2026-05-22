@@ -19,9 +19,6 @@ if [ -n "$PRODUCT_VERSION" ] && ! ${package_manager} --showduplicates list "$pro
   echo "Requested ${product_name} version ${PRODUCT_VERSION} not found in repository."; exit 1
 fi
 
-{ yum check-update postgresql; PSQLExitCode=$?; } || true #Checking for postgresql update
-{ yum check-update "$DIST"*-release; exitCode=$?; } || true #Checking for distribution update
-
 if rpm -qa | grep 'mariadb.*config' | grep -v 'connector' >/dev/null 2>&1; then
    echo "$RES_MARIADB" && exit 0
 fi
@@ -100,8 +97,6 @@ ${package_manager} ${WEAK_OPT} -y install $([ "$DIST" != "fedora" ] && echo "epe
 			dotnet-sdk-10.0 \
 			opensearch-${ELASTIC_VERSION} \
 			mysql-community-server \
-			postgresql \
-			postgresql-server \
 			rabbitmq-server \
 			${REDIS_PACKAGE} \
 			SDL2 \
@@ -119,20 +114,25 @@ if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then
 	${package_manager} -y install opensearch-dashboards-"${DASHBOARDS_VERSION}" --enablerepo=opensearch-dashboards-2.x ${DNF_NOGPG}
 fi
 
-if [[ $PSQLExitCode -eq $UPDATE_AVAILABLE_CODE ]]; then
-	yum -y install postgresql-upgrade
-	postgresql-setup --upgrade || true
-fi
-postgresql-setup --initdb || true
-
-sed -E -i "s/(host\s+(all|replication)\s+all\s+(127\.0\.0\.1\/32|\:\:1\/128)\s+)(ident|trust|md5)/\1scram-sha-256/" /var/lib/pgsql/data/pg_hba.conf
-sed -i "s/^#\?password_encryption = .*/password_encryption = 'scram-sha-256'/" /var/lib/pgsql/data/postgresql.conf
-
 if ! command -v semanage &> /dev/null; then
 	yum install -y policycoreutils-python || yum install -y policycoreutils-python-utils
 fi 
 
 semanage permissive -a httpd_t
 
-package_services="rabbitmq-server postgresql ${REDIS_PACKAGE} mysqld"
-rpm -q valkey &>/dev/null && package_services="${package_services//redis/valkey}" || true # https://fedoraproject.org/wiki/Changes/Replace_Redis_With_Valkey 
+package_services="rabbitmq-server ${REDIS_PACKAGE} mysqld"
+
+if [ "$INSTALLATION_TYPE" != "COMMUNITY" ]; then
+	{ yum check-update postgresql; PSQLExitCode=$?; } || true
+	${package_manager} -y install postgresql postgresql-server
+	if [[ $PSQLExitCode -eq $UPDATE_AVAILABLE_CODE ]]; then
+		yum -y install postgresql-upgrade
+		postgresql-setup --upgrade || true
+	fi
+	postgresql-setup --initdb || true
+
+	sed -E -i "s/(host\s+(all|replication)\s+all\s+(127\.0\.0\.1\/32|\:\:1\/128)\s+)(ident|trust|md5)/\1scram-sha-256/" /var/lib/pgsql/data/pg_hba.conf
+	sed -i "s/^#\?password_encryption = .*/password_encryption = 'scram-sha-256'/" /var/lib/pgsql/data/postgresql.conf
+
+	package_services+=" postgresql"
+fi

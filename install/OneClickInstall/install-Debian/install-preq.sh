@@ -126,11 +126,14 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 				make \
 				mysql-server \
 				mysql-client \
-				postgresql \
 				redis-server \
 				rabbitmq-server \
 				temurin-${JAVA_VERSION}-jre \
 				ffmpeg 
+
+if [ "$INSTALLATION_TYPE" != "COMMUNITY" ]; then
+	apt-get install -yq postgresql
+fi
 
 # Temporary fallback dotnet-sdk-10.0 on Debian 11 and Ubuntu 24.04
 DOTNET_VERSION="10.0.100"; DOTNET_PKG="dotnet-sdk-${DOTNET_VERSION%.*}"

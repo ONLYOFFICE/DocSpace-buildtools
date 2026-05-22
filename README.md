@@ -45,9 +45,8 @@ buildtools/
 │   ├── externalresources.json # CDN and external URLs
 │   ├── nginx/                 # Web server configuration
 │   │   ├── onlyoffice.conf
-│   │   ├── proxy configs
-│   │   ├── templates/
-│   │   └── docker-entrypoint.d/
+│   │   ├── includes/
+│   │   └── templates/
 │   ├── mysql/                 # Database configuration
 │   ├── supervisor/            # Process management
 │   ├── document-formats/      # Document format definitions (submodule)
@@ -186,14 +185,34 @@ The `.env` file in `install/docker/` contains ~200 configuration variables cover
 
 ### Nginx
 
-Located in `config/nginx/`:
+Two separate nginx roles, each with its own config directory.
 
-- `onlyoffice.conf` — Main Nginx configuration with routing rules for all services
-- `onlyoffice-proxy.conf` / `onlyoffice-proxy-ssl.conf` — Reverse proxy settings
-- `proxy-frontend.conf` — Frontend proxying rules
-- `letsencrypt.conf` — Let's Encrypt SSL configuration
-- `templates/` — Nginx configs with environment variable substitution
-- `docker-entrypoint.d/` — Modular initialization scripts (IPv6, tuning, envsubst)
+**Application router** (`config/nginx/`) — OpenResty-based, baked into the router Docker image:
+- `onlyoffice.conf` — Main routing config: location blocks for all services (API, login, doceditor, management, sdk, socket.io, ds-vpath, etc.)
+- `onlyoffice-client.conf` / `onlyoffice-login.conf` / `onlyoffice-management.conf` — Per-service nginx configs
+- `proxy-frontend.conf` / `proxy-frontend-virt.conf` — Frontend proxying rules
+- `includes/onlyoffice-upstream-map.conf.template` — Service URL maps (processed by envsubst at container start)
+- `includes/onlyoffice-public.conf` — Public-facing location rules
+- `includes/server-dashboards.conf` / `server-static-headers.conf` — Reusable include fragments
+- `html/custom_4xx.html` / `custom_50x.html` — Custom error pages
+
+**Router Docker image init** (`install/docker/config/nginx/router/`) — copied into the router image at build time:
+- `docker-entrypoint.sh` — Entrypoint that runs `docker-entrypoint.d/` scripts then starts nginx
+- `docker-entrypoint.d/10-listen-on-ipv6-by-default.sh` — Enables IPv6 listening
+- `docker-entrypoint.d/15-local-resolvers.envsh` — Sets `$NGINX_LOCAL_RESOLVERS` from `/etc/resolv.conf`
+- `docker-entrypoint.d/20-envsubst-on-templates.sh` — Processes `*.template` files with `envsubst`
+- `docker-entrypoint.d/30-tune-worker-processes.sh` — Auto-tunes worker processes
+- `templates/upstream.conf.template` — Static upstream definitions
+- `templates/onlyoffice-upstream-map.conf.template` — Dynamic service URL maps (reads `SERVICE_*` env vars)
+
+**Proxy** (`install/docker/config/nginx/proxy/`) — mounted into the proxy container at runtime via `proxy.yml`:
+- `onlyoffice-proxy.conf` — HTTP reverse proxy: forwards all traffic to the router on port 8092
+- `onlyoffice-proxy-ssl.conf` — HTTPS variant with TLS termination, QUIC/HTTP3, HSTS
+- `letsencrypt.conf` — ACME challenge location for Let's Encrypt certificate renewal
+- `templates/proxy.upstream.conf.template` — upstream server address template
+
+**Shared** (`install/docker/config/nginx/`):
+- `nginx.conf.template` — base nginx.conf used by both the proxy and router containers
 
 ### Database
 
