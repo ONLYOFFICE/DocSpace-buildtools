@@ -1,4 +1,4 @@
-name: Upload offline self-extracting archive
+name: Release Offline Archive
 
 on:
   workflow_dispatch:
@@ -41,10 +41,12 @@ jobs:
         run: |
           DOCKER_VERSION=$(curl -s https://hub.docker.com/v2/repositories/onlyoffice/docspace-api/tags/ | jq -r '.results[].name' | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' | sort -V | tail -n 1)
           echo "ARTIFACT_NAME=offline-docspace-installation.sh" >> $GITHUB_ENV
+          echo "ARTIFACT_ARM_NAME=offline-docspace-installation-arm.sh" >> $GITHUB_ENV
           echo "ARTIFACT_VERSION_NAME=offline-docspace-${DOCKER_VERSION}-installation.sh" >> $GITHUB_ENV
+          echo "ARTIFACT_ARM_VERSION_NAME=offline-docspace-${DOCKER_VERSION}-installation-arm.sh" >> $GITHUB_ENV
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6.0.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_OCI }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_OCI }}
@@ -55,16 +57,22 @@ jobs:
           aws s3 cp ${{ secrets.AWS_BUCKET_URL_OCI }}/4testing-${{ env.ARTIFACT_NAME }} \
             ${{ secrets.AWS_BUCKET_URL_OCI }}/${{ env.ARTIFACT_NAME }} \
             --acl public-read --metadata-directive REPLACE
+          aws s3 cp ${{ secrets.AWS_BUCKET_URL_OCI }}/4testing-${{ env.ARTIFACT_ARM_NAME }} \
+            ${{ secrets.AWS_BUCKET_URL_OCI }}/${{ env.ARTIFACT_ARM_NAME }} \
+            --acl public-read --metadata-directive REPLACE
 
       - name: Upload offline self-extracting archive (versioned)
         run: |
           aws s3 cp ${{ secrets.AWS_BUCKET_URL_OCI }}/4testing-${{ env.ARTIFACT_NAME }} \
             ${{ secrets.AWS_BUCKET_URL_OCI }}/${{ env.ARTIFACT_VERSION_NAME }} \
             --acl public-read --metadata-directive REPLACE
+          aws s3 cp ${{ secrets.AWS_BUCKET_URL_OCI }}/4testing-${{ env.ARTIFACT_ARM_NAME }} \
+            ${{ secrets.AWS_BUCKET_URL_OCI }}/${{ env.ARTIFACT_ARM_VERSION_NAME }} \
+            --acl public-read --metadata-directive REPLACE
 
       - name: Invalidate AWS CloudFront cache
         run: |
           API_STATUS=$(aws apigateway test-invoke-method --rest-api-id ${{ secrets.AWS_REST_API_ID }} --resource-id "${{ secrets.AWS_RESOURCE_ID }}" \
-            --http-method PUT --path-with-query-string "/prod/download-oo-com" --body "$(jq -c -n '.paths = $ARGS.positional' --args "/docspace/${{ env.ARTIFACT_NAME }}" "/docspace/${{ env.ARTIFACT_VERSION_NAME }}")" \
+            --http-method PUT --path-with-query-string "/prod/download-oo-com" --body "$(jq -c -n '.paths = $ARGS.positional' --args "/docspace/${{ env.ARTIFACT_NAME }}" "/docspace/${{ env.ARTIFACT_VERSION_NAME }}" "/docspace/${{ env.ARTIFACT_ARM_NAME }}" "/docspace/${{ env.ARTIFACT_ARM_VERSION_NAME }}")" \
             --region us-east-1 --query 'status' --output text || :)
           echo "API Gateway test-invoke status: ${API_STATUS:-<failed>}"

@@ -1,4 +1,4 @@
-name: Build and Package DocSpace for Windows
+name: Build Windows Packages
 
 on:
   workflow_dispatch:

@@ -101,7 +101,7 @@ services:
     <<: *x-profiles-local
     image: ${Baseimage_Dotnet_Run}
     working_dir: ${BUILD_PATH}/services/ASC.Studio.Notify/service/
-    command: ["ASC.Studio.Notify.dll", "ASC.Studio.Notify"]
+    command: ["ASC.Studio.Notify.dll", "ASC.Studio.Notify", "core:eventBus:subscriptionClientName=asc_event_bus_studio_notify_queue"]
     volumes:
       - ${ROOT_DIR}/server/common/services/ASC.Studio.Notify/${BIN_DIR}:${BUILD_PATH}/services/ASC.Studio.Notify/service/
       - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/

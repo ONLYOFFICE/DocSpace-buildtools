@@ -111,6 +111,9 @@
     <ROW Path="&lt;AI_DICTS&gt;ui.ail"/>
     <ROW Path="&lt;AI_DICTS&gt;ui_en.ail"/>
   </COMPONENT>
+  <COMPONENT cid="caphyon.advinst.msicomp.DigCertStoreComponent">
+    <ROW SignOptions="0" SignTool="0" UseSha256="1" Store="User\MY" CustomToolPath="C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" CustomToolCmdLine="-ExecutionPolicy Bypass -File &quot;[|AI_AIP_FOLDER]signing-tool.ps1&quot; -File"/>
+  </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.FragmentComponent">
     <ROW Fragment="CommonUI.aip" Path="&lt;AI_FRAGS&gt;CommonUI.aip"/>
     <ROW Fragment="LicenseAgreementDlg.aip" Path="&lt;AI_THEMES&gt;classic\fragments\LicenseAgreementDlg.aip"/>

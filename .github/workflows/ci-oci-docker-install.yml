@@ -1,4 +1,4 @@
-name: Install OneClickInstall Docker
+name: OCI Docker
 
 on:
   schedule:
@@ -36,7 +36,7 @@ env:
 
 jobs:
   Install-OCI-Docker:
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
@@ -47,8 +47,16 @@ jobs:
           - name: "stack"
             services: "docspace-stack dashboards db ds fluent opensearch proxy rabbitmq redis "
             args: "-sm true"
-    name: OCI (${{ matrix.mode.name }})
-    
+        include:
+          - runner: ubuntu-24.04
+            arch: amd
+          - runner: ubuntu-24.04-arm
+            arch: arm
+        runner:
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+    name: OCI (${{ matrix.mode.name }}) [${{ matrix.arch }}]
+
     steps:
       - name: Free Disk Space
         run: curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/free-disk-space-linux.sh | sudo bash
@@ -62,7 +70,7 @@ jobs:
       - name: Test OCI docker scripts
         run: |
           INSTALL_CMD="sudo bash install-Docker.sh -skiphc true -noni true -gb ${{ github.ref_name }} ${{ matrix.mode.args }}"
-          [ "${IS_4TESTING:-true}" != "false" ] && INSTALL_CMD="$INSTALL_CMD -s 4testing-"
+          [ "${IS_4TESTING:-true}" != "false" ] && INSTALL_CMD="$INSTALL_CMD -s 4testing- -un ${{ secrets.DOCKERHUB_USERNAME_PAT }} -p ${{ secrets.DOCKERHUB_TOKEN_PAT }}"
           [ -n "$DOCKER_TAG" ] && INSTALL_CMD="$INSTALL_CMD -dsv $DOCKER_TAG"
           
           wget -q https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/install/OneClickInstall/install-Docker.sh
@@ -107,13 +115,13 @@ jobs:
           esac
 
       - name: Checkout repository
-        if: matrix.mode.name == 'standard'
+        if: startsWith(matrix.mode.name, 'stack') && (matrix.runner == 'ubuntu-24.04' || github.event.inputs.offline == 'true')
         uses: actions/checkout@v5
         with:
           ref: ${{ github.ref_name }}
 
       - name: Check Docker scripts for errors
-        if: matrix.mode.name == 'standard'
+        if: matrix.mode.name == 'stack' && matrix.runner == 'ubuntu-24.04'
         run: |
           set -eux
           sudo apt-get install -y shellcheck
@@ -122,7 +130,7 @@ jobs:
           awk '/\(warning\):/ {w++} /\(error\):/ {e++} END {if (w+e) printf "::warning ::ShellCheck detected %d warnings and %d errors\n", w+0, e+0}' sc_output
 
       - name: Prepare offline environment
-        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'standard'
+        if: success() && github.event.inputs.offline == 'true' && startsWith(matrix.mode.name, 'stack')
         run: |
           # Clean up and free space
           docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q) && docker volume rm $(docker volume ls -q) 2>/dev/null || true
@@ -143,49 +151,86 @@ jobs:
           ' _ {}
 
       - name: Create compressed archives
-        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'standard'
+        if: success() && github.event.inputs.offline == 'true' && startsWith(matrix.mode.name, 'stack')
         run: |
           INSTALL_PATH="${{ github.workspace }}/install"
           
           # Prepare installation script for offline mode
-          sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\).*"$~\1true"~g' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
+          sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\|STACK_MODE="\|NON_INTERACTIVE="\).*"$~\1true"~g' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
+          DOCSPACE_VERSION=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "docspace-" | sed -E "s/.*:([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+.*/\1/" | head -n1)
+          sed -i "s~\(DOCSPACE_VERSION=\)\"[^\"]*\"~\1\"${DOCSPACE_VERSION}\"~g" "${INSTALL_PATH}/common/offline-self-extracting.sh"
+
+          echo "Downloading Docker static binaries for offline installation..."
+          DOCKER_ARCH=$( [ "${{ matrix.arch }}" = "arm" ] && echo "aarch64" || echo "x86_64" )
+          CNI_ARCH=$( [ "${{ matrix.arch }}" = "arm" ] && echo "arm64" || echo "amd64" )
+          mkdir -p "${INSTALL_PATH}/docker-static"
+          cp -r "${INSTALL_PATH}/common/systemd/offline" "${INSTALL_PATH}/docker-static/systemd"
+
+          download_verify() { curl -fsSL "$1" -o "$2" && echo "$(curl -fsSL "$1.sha256")  $2" | sha256sum -c; }
+          DOCKER_STATIC_VERSION=$(curl -fsSL "https://download.docker.com/linux/static/stable/${DOCKER_ARCH}/" | grep -oE 'docker-[0-9]+\.[0-9]+\.[0-9]+\.tgz' | sort -V | tail -n1 | sed 's/docker-\(.*\)\.tgz/\1/')
+          COMPOSE_VERSION=$(curl -fsSL https://api.github.com/repos/docker/compose/releases/latest | jq -r .tag_name)
+          CNI_VERSION=$(curl -fsSL https://api.github.com/repos/containernetworking/plugins/releases/latest | jq -r .tag_name)
+          download_verify "https://download.docker.com/linux/static/stable/${DOCKER_ARCH}/docker-${DOCKER_STATIC_VERSION}.tgz" "${INSTALL_PATH}/docker-static/docker.tgz"
+          download_verify "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-${DOCKER_ARCH}" "${INSTALL_PATH}/docker-static/docker-compose"
+          download_verify "https://github.com/containernetworking/plugins/releases/download/${CNI_VERSION}/cni-plugins-linux-${CNI_ARCH}-${CNI_VERSION}.tgz" "${INSTALL_PATH}/docker-static/cni-plugins.tgz"
 
           echo "Creating Docs compressed archives..."
           docker save $(docker images --format "{{.Repository}}:{{.Tag}}" | grep -E 'onlyoffice/documentserver') | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docs_images.tar.xz
           docker rmi $(docker images --format "{{.Repository}}:{{.Tag}}" | grep -E 'onlyoffice/documentserver')
-          docker save $(docker images --format "{{.Repository}}:{{.Tag}}") | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docker_images.tar.xz
-          
+          docker save $(docker images --format "{{.Repository}}:{{.Tag}}") | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docspace_images.tar.xz
+
           echo "Creating docker configuration archive..."
-          cd ${INSTALL_PATH}/docker && tar -czvf ${INSTALL_PATH}/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
+          cd ${INSTALL_PATH}/docker
+
+          tar -czvf ${INSTALL_PATH}/docker-stack.tar.gz \
+            --exclude='build.yml' \
+            --exclude='db.dev.yml' \
+            --exclude='dnsmasq.yml' \
+            --exclude='docspace.overcome.yml' \
+            --exclude='docspace.profiles.yml' \
+            --exclude='config/supervisor*' \
+            --exclude='config/mysql*' \
+            --exclude='config/nginx/router/' \
+            --exclude='config/createdb.sql' \
+            --exclude='build-*' \
+            --exclude='docspace.yml' \
+            --exclude='healthchecks.yml' \
+            --exclude='identity.yml' \
+            --exclude='migration-runner.yml' \
+            --exclude='notify.yml' \
+            *.yml .env config
 
       - name: Build self-extracting archive
-        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'standard'
+        if: success() && github.event.inputs.offline == 'true' && startsWith(matrix.mode.name, 'stack')
         run: |
           INSTALL_PATH="${{ github.workspace }}/install"
           
           # Create combined offline archive
           tar -cf "${INSTALL_PATH}/offline-docspace.tar" \
-            -C "${INSTALL_PATH}/OneClickInstall" install-Docker.sh install-Docker-args.sh \
-            -C "${INSTALL_PATH}" docker_images.tar.xz docs_images.tar.xz docker.tar.gz
-          
+            -C "${INSTALL_PATH}/OneClickInstall" install-Docker-args.sh install-Docker.sh \
+            -C "${INSTALL_PATH}" docker-static docker-stack.tar.gz docspace_images.tar.xz docs_images.tar.xz
+
           # Clean up temporary archives
-          rm -f "${INSTALL_PATH}"/{docker_images.tar.xz,docs_images.tar.xz,docker.tar.gz}
+          rm -rf "${INSTALL_PATH}"/{docspace_images.tar.xz,docs_images.tar.xz,docker-stack.tar.gz,docker-static}
 
           # Create final self-extracting archive
-          echo "ARTIFACT_NAME=${ARTIFACT_NAME:=4testing-offline-docspace-installation.sh}" >> $GITHUB_ENV
-          cat ${INSTALL_PATH}/common/self-extracting.sh ${INSTALL_PATH}/offline-docspace.tar > ${INSTALL_PATH}/${ARTIFACT_NAME}
+          SUFFIX=$( [ "${{ matrix.arch }}" = "arm" ] && echo "-arm" || echo "" )
+          echo "ARTIFACT_NAME=${ARTIFACT_NAME:=4testing-offline-docspace-installation${SUFFIX}.sh}" >> $GITHUB_ENV
+          cat ${INSTALL_PATH}/common/offline-self-extracting.sh ${INSTALL_PATH}/offline-docspace.tar > ${INSTALL_PATH}/${ARTIFACT_NAME}
           chmod +x ${INSTALL_PATH}/${ARTIFACT_NAME}
 
+          echo "::notice::Archive sizes — $(cd "${INSTALL_PATH}" && du -sh "${ARTIFACT_NAME}" | awk '{printf "%s: %s", $2, $1}')"
+
       - name: Configure AWS Credentials
-        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'standard'
-        uses: aws-actions/configure-aws-credentials@v4
+        if: success() && github.event.inputs.offline == 'true' && startsWith(matrix.mode.name, 'stack')
+        uses: aws-actions/configure-aws-credentials@v6.0.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_OCI }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_OCI }}
           aws-region: us-east-1
 
       - name: Upload 4testing offline self-extracting archive
-        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'standard'
+        if: success() && github.event.inputs.offline == 'true' && startsWith(matrix.mode.name, 'stack')
         run: |
           aws s3 cp "${{ github.workspace }}/install/${{ env.ARTIFACT_NAME }}" \
             "${{ secrets.AWS_BUCKET_URL_OCI }}/${{ env.ARTIFACT_NAME }}" \

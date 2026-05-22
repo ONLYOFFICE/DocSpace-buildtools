@@ -336,11 +336,11 @@ RUN set -eux; \
     echo "Using RID: $RID for TARGETARCH: $TARGETARCH"; \ 
     \
     # restore/build solutions (no RID)
-    dotnet restore ASC.Web.slnf; \
-    dotnet restore ASC.Migrations.sln; \
+    dotnet restore ASC.Web.slnx; \
+    dotnet restore ASC.Migrations.slnx; \
     \
     # publish with RID
-    dotnet publish ASC.Web.slnf -c Release \
+    dotnet publish ASC.Web.slnx -c Release \
       -r "$RID" \
       --self-contained false \
       -p PublishProfile=ReleaseProfile \
@@ -348,7 +348,7 @@ RUN set -eux; \
       -p:DebugSymbols=false \
       -p:UseAppHost=false; \
     \
-    dotnet publish ASC.Migrations.sln -c Release \
+    dotnet publish ASC.Migrations.slnx -c Release \
       -r "$RID" \
       --self-contained false \
       -p:DebugType=None \
@@ -397,13 +397,13 @@ RUN set -eux; \
     
 FROM base AS final_preview
 
-COPY --chown=${COMPANY}:${COMPANY} ./buildtools/install/docker/config/nginx/docker-entrypoint.d /docker-entrypoint.d
+COPY --chown=${COMPANY}:${COMPANY} ./buildtools/install/docker/config/nginx/router/docker-entrypoint.d /docker-entrypoint.d
 COPY --chown=${COMPANY}:${COMPANY} ./buildtools/config/elastic.test.json /app/${COMPANY}/config/elastic.json
 COPY --chown=${COMPANY}:${COMPANY} ./buildtools/install/docker/preview/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
-COPY --chown=${COMPANY}:${COMPANY} ./buildtools/install/docker/config/nginx/templates/nginx.conf.template /etc/nginx/nginx.conf.template
+COPY --chown=${COMPANY}:${COMPANY} ./buildtools/install/docker/config/nginx/nginx.conf.template /etc/nginx/nginx.conf.template
 COPY --chown=${COMPANY}:${COMPANY} ./buildtools/config/nginx/html /etc/nginx/html
 COPY --chown=${COMPANY}:${COMPANY} ./buildtools/install/docker/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
-COPY --chown=${COMPANY}:${COMPANY} ./buildtools/install/docker/config/nginx/docker-entrypoint.sh /nginx/docker-entrypoint.sh
+COPY --chown=${COMPANY}:${COMPANY} ./buildtools/install/docker/config/nginx/router/docker-entrypoint.sh /nginx/docker-entrypoint.sh
 
 COPY --from=build-nodejs-client --chown=${COMPANY}:${COMPANY} ${SRC_PATH}/publish/web/ ${BUILD_PATH}/
 COPY --from=build-nodejs-client --chown=${COMPANY}:${COMPANY} ${BUILD_PATH}/build ${BUILD_PATH}/build

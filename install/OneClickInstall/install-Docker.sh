@@ -38,8 +38,6 @@ BASE_DIR="/app/$PACKAGE_SYSNAME"
 STATUS=""
 DOCKER_TAG=""
 INSTALLATION_TYPE="ENTERPRISE"
-IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-api"
-CONTAINER_NAME="${PACKAGE_SYSNAME}-api"
 IDENTITY_CONTAINER_NAME="${PACKAGE_SYSNAME}-identity-api"
 
 NETWORK_NAME=${PACKAGE_SYSNAME}
@@ -104,13 +102,13 @@ LETS_ENCRYPT_DOMAIN=""
 LETS_ENCRYPT_MAIL=""
 IDENTITY_ENCRYPTION_SECRET=""
 
+STACK_MODE="false"
 OFFLINE_INSTALLATION="false"
+NON_INTERACTIVE="false"
 SKIP_HARDWARE_CHECK="false"
 
-SERVICES=(migration-runner identity notify "${PRODUCT}" healthchecks proxy)
-COMPOSE_FILES=($(printf '%s\n' "${SERVICES[@]}" | sed "s|^|-f ${BASE_DIR}/|; s|\$|.yml|"));
-
 EXTERNAL_PORT="80"
+EXTERNAL_PORT_HTTPS="443"
 ARGS_SCRIPT="install-Docker-args.sh"
 DOWNLOAD_URL_PREFIX="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}"
 GIT_BRANCH=$(echo "$@" | grep -oP '(?<=-gb )\S+' | tail -n 1)
@@ -120,6 +118,18 @@ if [[ -n "${GIT_BRANCH:-}" ]]; then
 fi
 
 [[ "$LOCAL_SCRIPTS" = "true" ]] || [[ "$OFFLINE_INSTALLATION" = "true" ]] && source "./${ARGS_SCRIPT}" || source <(curl "${DOWNLOAD_URL_PREFIX}/${ARGS_SCRIPT}")
+
+if [ "${STACK_MODE}" = "true" ]; then
+  CONTAINER_NAME="${PACKAGE_SYSNAME}-dotnet-services"
+  IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-dotnet"
+  SERVICES=("${PRODUCT}-stack" proxy)
+  COMPOSE_FILES=($(printf '%s\n' "${SERVICES[@]}" | sed "s|^|-f ${BASE_DIR}/|; s|\$|.yml|"));
+else
+  CONTAINER_NAME="${PACKAGE_SYSNAME}-api"
+  IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-api"
+  SERVICES=(migration-runner identity notify "${PRODUCT}" healthchecks proxy)
+  COMPOSE_FILES=($(printf '%s\n' "${SERVICES[@]}" | sed "s|^|-f ${BASE_DIR}/|; s|\$|.yml|"));
+fi
 
 uninstall() {
     DOCKER_COMPOSE="$(docker compose version >/dev/null 2>&1 && echo 'docker compose' || echo 'docker-compose')"
@@ -177,12 +187,6 @@ get_os_info () {
     esac
 
 	if [ "$OS" == "linux" ]; then
-        MACH=$(uname -m)
-		if [ "${MACH}" != "x86_64" ]; then
-			echo "Currently only supports 64bit OS's"
-			exit 1
-		fi
-
 		KERNEL=$(uname -r)
 
 		if [ -f /etc/redhat-release ]; then
@@ -224,10 +228,6 @@ check_os_info () {
 		echo "$KERNEL, $DIST, $REV"
 		echo "Not supported OS"
 		exit 1
-	fi
-
-	if [ -f /etc/needrestart/needrestart.conf ]; then
-		sed -e "s_#\$nrconf{restart}_\$nrconf{restart}_" -e "s_\(\$nrconf{restart} =\).*_\1 'a';_" -i /etc/needrestart/needrestart.conf
 	fi
 }
 
@@ -316,8 +316,24 @@ check_ports () {
 		exit 1
 	fi
 
+	if [ "${EXTERNAL_PORT_HTTPS//[0-9]}" = "" ]; then
+		for RESERVED_PORT in "${RESERVED_PORTS[@]}"
+		do
+			if [ "$RESERVED_PORT" -eq "$EXTERNAL_PORT_HTTPS" ] ; then
+				echo "External HTTPS port $EXTERNAL_PORT_HTTPS is reserved. Select another port"
+				exit 1
+			fi
+		done
+	else
+		echo "Invalid external HTTPS port $EXTERNAL_PORT_HTTPS"
+		exit 1
+	fi
+
 	if [ "$INSTALL_PRODUCT" == "true" ]; then
 		ARRAY_PORTS+=("$EXTERNAL_PORT")
+		if [[ -n "$CERTIFICATE_PATH" ]] || [[ -n "$LETS_ENCRYPT_DOMAIN" ]]; then
+			ARRAY_PORTS+=("$EXTERNAL_PORT_HTTPS")
+		fi
 	fi
 
 	for PORT in "${ARRAY_PORTS[@]}"
@@ -415,51 +431,9 @@ create_network () {
 	fi
 }
 
-read_continue_installation () {
-	[ "$NON_INTERACTIVE" = "true" ] && INSTALLATION_CHOICE="N" && return 0
-	while read -p "Continue installation [Y/C/N]? " CHOICE; do
-		[[ "$CHOICE" =~ ^[yYcCnN]$ ]] && { INSTALLATION_CHOICE="${CHOICE^^}"; return 0; } || echo "Please, enter Y, C or N"
-	done
-}
-
 domain_check () {
 	APP_DOMAIN_PORTAL=$(cut -d ',' -f 1 <<< "$LETS_ENCRYPT_DOMAIN")
 	APP_DOMAIN_PORTAL=${APP_DOMAIN_PORTAL:-${APP_URL_PORTAL:-$(get_env_parameter "APP_URL_PORTAL" "${PACKAGE_SYSNAME}-files" | awk -F[/:] '{if ($1 == "https") print $4; else print ""}')}}
-
-	while IFS= read -r DOMAIN; do
-		IP_ADDRESS=$( [ -n "${DOMAIN}" ] && ping -c 1 -W 1 ${DOMAIN} | grep -oP '(\d+\.\d+\.\d+\.\d+)' | head -n 1 )
-		if [[ -n "$IP_ADDRESS" && "$IP_ADDRESS" =~ ^(10\.|127\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.) ]]; then
-			LOCAL_RESOLVED_DOMAINS+="$DOMAIN"
-		fi
-	done <<< "${APP_DOMAIN_PORTAL:-$(dig +short -x "$(curl -s -4 ifconfig.me)" | sed 's/\.$//')}"
-	
-	# check if the domain is a loopback IP or NAT
-	if [[ -n "${LOCAL_RESOLVED_DOMAINS}" ]] || [[ $(ip route get 8.8.8.8 | awk '{print $7}') != $(curl -s -4 ifconfig.me) ]]; then 
-		DOCKER_DAEMON_FILE="/etc/docker/daemon.json"
-		if ! grep -q '"dns"' "$DOCKER_DAEMON_FILE" 2>/dev/null; then
-			echo "DNS issue detected for ${APP_DOMAIN_PORTAL:-$LOCAL_RESOLVED_DOMAINS} (loopback IP or NAT)."
-			echo "[Y] Use Google DNS | [C] Use custom DNS | [N] Don't use DNS"
-			if read_continue_installation; then
-				case "$INSTALLATION_CHOICE" in
-					Y)  DNS=("8.8.8.8" "8.8.4.4") ;;
-					C)  while true; do
-							read -p "Enter custom DNS (e.g. 8.8.8.8 8.8.4.4): " INPUT; IFS=' ' read -ra DNS <<< "$INPUT"
-							for IP in "${DNS[@]}"; do 
-								[[ $IP =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || { echo "Invalid DNS: $IP"; continue 2; }
-							done && break
-						done ;;
-					N)  DNS=() ;;
-				esac
-				if ((${#DNS[@]})); then
-					echo "Updating Docker DNS config with: ${DNS[*]}"
-					jq -e . "${DOCKER_DAEMON_FILE}" > /dev/null 2>&1 || echo '{}' > "${DOCKER_DAEMON_FILE}"
-					echo "$(jq --argjson dns "$(printf '%s\n' "${DNS[@]}" | jq -R . | jq -s .)" '.dns = $dns' "${DOCKER_DAEMON_FILE}")" > "${DOCKER_DAEMON_FILE}"
-					systemctl restart docker || { echo "Failed to restart Docker service"; exit 1; }
-				fi
-			fi
-		fi
-	fi
-
 	APP_URL_PORTAL=${APP_DOMAIN_PORTAL:+http://${APP_DOMAIN_PORTAL}:${EXTERNAL_PORT}}
 }
 
@@ -591,6 +565,7 @@ set_docspace_params() {
 	VOLUMES_DIR=${VOLUMES_DIR:-$(get_env_parameter "VOLUMES_DIR")}
 	APP_CORE_BASE_DOMAIN=${APP_CORE_BASE_DOMAIN:-$(get_env_parameter "APP_CORE_BASE_DOMAIN" "${CONTAINER_NAME}")}
 	EXTERNAL_PORT=${EXTERNAL_PORT:-$(get_env_parameter "EXTERNAL_PORT" "${CONTAINER_NAME}")}
+	EXTERNAL_PORT_HTTPS=${EXTERNAL_PORT_HTTPS:-$(get_env_parameter "EXTERNAL_PORT_HTTPS" "${CONTAINER_NAME}")}
 
 	PREVIOUS_ELK_VERSION=$(get_env_parameter "ELK_VERSION")
 	ELK_SCHEME=${ELK_SCHEME:-$(get_env_parameter "ELK_SCHEME" "${CONTAINER_NAME}")}
@@ -636,27 +611,27 @@ set_installation_type_data () {
 }
 
 download_files () {
-	[ "${OFFLINE_INSTALLATION}" = "false" ] && echo -n "Downloading configuration files to ${BASE_DIR}..." || echo "Unzip docker.tar.gz to ${BASE_DIR}..."
+	DOCKER_TARBALL="$( [ "${STACK_MODE}" = "true" ] && echo "docker-stack.tar.gz" || echo "docker.tar.gz" )"
+
+	[ "${OFFLINE_INSTALLATION}" = "false" ] && echo -n "Downloading configuration files to ${BASE_DIR}..." || echo "Unzip ${DOCKER_TARBALL} to ${BASE_DIR}..."
 
 	rm -rf "${BASE_DIR:?}"
 	mkdir -p ${BASE_DIR}
 
-	
 	if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
 		if [ -z "${GIT_BRANCH}" ]; then
-			DOWNLOAD_URL="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/docker.tar.gz"
+			DOWNLOAD_URL="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/${DOCKER_TARBALL}"
 		else
 			DOWNLOAD_URL="https://codeload.github.com/${PACKAGE_SYSNAME}/${PRODUCT}-buildtools/tar.gz/${GIT_BRANCH}"
 			STRIP_COMPONENTS="--strip-components=3 --wildcards */install/docker/*"
 		fi
-
 		curl -sL "${DOWNLOAD_URL}" | tar -xzf - -C "${BASE_DIR}" ${STRIP_COMPONENTS}
 	else
-		if [ -f "$(dirname "$0")/docker.tar.gz" ]; then
-			tar -xf "$(dirname "$0")/docker.tar.gz" -C "${BASE_DIR}"
+		if [ -f "$(dirname "$0")/${DOCKER_TARBALL}" ]; then
+			tar -xf "$(dirname "$0")/${DOCKER_TARBALL}" -C "${BASE_DIR}"
 		else
-			echo "Error: docker.tar.gz not found in the same directory as the script."
-			echo "You need to download the docker.tar.gz file from https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/docker.tar.gz"
+			echo "Error: ${DOCKER_TARBALL} not found in the same directory as the script."
+			echo "You need to download the ${DOCKER_TARBALL} file from https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/${DOCKER_TARBALL}"
 			exit 1
 		fi
 	fi
@@ -765,11 +740,17 @@ install_product () {
 			echo "Updating images from tag ${LOCAL_CONTAINER_TAG} to ${DOCKER_TAG}..."
 
 			if [ "$LOCAL_CONTAINER_TAG" != "$DOCKER_TAG" ]; then
+				# (DS v3.7.0) Remove legacy service containers after renaming
+				for _svc in "files-services" "backup-background-tasks" "ai-service"; do
+					docker ps -q --filter "name=^${PACKAGE_SYSNAME}-${_svc}$" | xargs -r docker rm -f
+				done
+
 				if [ "$STACK_MODE" = "true" ]; then
 					${DOCKER_COMPOSE} -f ${BASE_DIR}/docspace-stack.yml -f ${BASE_DIR}/proxy.yml down
 				else
 					${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" down
 				fi
+				docker images --format "{{.Repository}}:{{.Tag}}" | grep ":${LOCAL_CONTAINER_TAG}$" | xargs -r docker rmi
 			fi
 		fi
 
@@ -780,6 +761,7 @@ install_product () {
 		reconfigure APP_CORE_BASE_DOMAIN ${APP_CORE_BASE_DOMAIN}
 		reconfigure APP_URL_PORTAL "${APP_URL_PORTAL:-"http://${PACKAGE_SYSNAME}-router:8092"}"
 		reconfigure EXTERNAL_PORT ${EXTERNAL_PORT}
+		reconfigure EXTERNAL_PORT_HTTPS ${EXTERNAL_PORT_HTTPS}
 
 		if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ] && [[ -n $(docker ps -q --filter "name=${PACKAGE_SYSNAME}-mysql-server") ]]; then
 			echo -n "Waiting for MySQL container to become healthy..."
@@ -872,17 +854,13 @@ check_docker_compose() {
 }
 
 dependency_installation() {
+	[ "$NON_INTERACTIVE" = "true" ] && export NEEDRESTART_MODE=a
+
 	[ "${OFFLINE_INSTALLATION}" = "false" ] && is_command_exists apt-get && apt-get -y update -qq
 
 	install_package tar
 	install_package curl
 	install_package netstat net-tools
-
-	if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
-		install_package dig  "dnsutils|bind-utils"
-		install_package ping "iputils-ping|iputils"
-		install_package ip   "iproute2|iproute"
-	fi
 
 	[ "$INSTALL_FLUENT_BIT" = "true" ] && install_package crontab "cron|cronie"
 
@@ -1002,7 +980,7 @@ start_installation () {
 
 	create_network
 
-	[ "${OFFLINE_INSTALLATION}" = "false" ] && domain_check
+	domain_check
 
 	if [ "$UPDATE" = "true" ]; then
 		set_docspace_params

@@ -84,7 +84,7 @@ if [ "$DIST" == "fedora" ]; then
 	[ "$REV" = "43" ] && MYSQL_REPO_REV="42"
 	OPENRESTY_REV=$([ "$REV" -ge 37 ] && echo 36 || echo "$REV")
 
-	FEDORA_SUPP=$(curl -fsSL https://www.fedoraproject.org/releases.json | grep -oP '"version"\s*:\s*"\K[0-9]+' | sort -nr -u)
+	FEDORA_SUPP=$(curl -fsSL https://fedoraproject.org/releases.json | grep -oP '"version"\s*:\s*"\K[0-9]+' | sort -nr -u)
 	echo "$FEDORA_SUPP" | grep -q "$REV" || SUPPORTED_FEDORA_FLAG="false"
 fi
 
