@@ -33,9 +33,9 @@ on:
         default: ""
         type: string
       rpm_image:
-        description: "EL9 systemd container image"
+        description: "CentOS Stream 9 systemd container image"
         required: true
-        default: "registry.access.redhat.com/ubi9-init:latest"
+        default: "quay.io/centos/centos:stream9"
         type: string
 
 permissions:
@@ -48,7 +48,7 @@ jobs:
     timeout-minutes: 120
     env:
       CONTAINER_NAME: docspace-arm-el9
-      RPM_IMAGE: ${{ github.event.inputs.rpm_image || 'registry.access.redhat.com/ubi9-init:latest' }}
+      RPM_IMAGE: ${{ github.event.inputs.rpm_image || 'quay.io/centos/centos:stream9' }}
       PRODUCT_VERSION: ${{ github.event.inputs.product_version }}
       USE_4TESTING: ${{ github.event.inputs.testing }}
 
@@ -72,7 +72,8 @@ jobs:
             --tmpfs /run/lock \
             -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
             -v "${GITHUB_WORKSPACE}:/workspace:ro" \
-            "${RPM_IMAGE}"
+            "${RPM_IMAGE}" \
+            /usr/sbin/init
 
           for _ in {1..60}; do
             if docker exec "${CONTAINER_NAME}" test -S /run/systemd/private; then
