@@ -130,7 +130,13 @@ if ! command -v semanage &> /dev/null; then
 	yum install -y policycoreutils-python || yum install -y policycoreutils-python-utils
 fi 
 
-semanage permissive -a httpd_t
+if command -v getenforce >/dev/null 2>&1; then
+	case "$(getenforce)" in
+		Enforcing|Permissive|enforcing|permissive)
+			semanage permissive -a httpd_t || true
+			;;
+	esac
+fi
 
 package_services="rabbitmq-server ${REDIS_PACKAGE} mysqld"
 
