@@ -33,7 +33,7 @@ on:
         default: ""
         type: string
       rpm_image:
-        description: "CentOS Stream 9 systemd container image"
+        description: "CentOS Stream 9 base container image"
         required: true
         default: "quay.io/centos/centos:stream9"
         type: string
@@ -49,6 +49,7 @@ jobs:
     env:
       CONTAINER_NAME: docspace-arm-el9
       RPM_IMAGE: ${{ github.event.inputs.rpm_image || 'quay.io/centos/centos:stream9' }}
+      SYSTEMD_IMAGE: docspace-arm-el9-systemd
       PRODUCT_VERSION: ${{ github.event.inputs.product_version }}
       USE_4TESTING: ${{ github.event.inputs.testing }}
 
@@ -58,6 +59,23 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Build EL9 ARM systemd image
+        run: |
+          set -eux
+          docker build \
+            --platform linux/arm64 \
+            --build-arg BASE_IMAGE="${RPM_IMAGE}" \
+            -t "${SYSTEMD_IMAGE}" \
+            - <<'DOCKERFILE'
+          ARG BASE_IMAGE
+          FROM ${BASE_IMAGE}
+          RUN dnf -y install systemd dbus dbus-broker findutils gawk gnupg2 grep hostname iproute procps-ng sed tar util-linux && \
+              dnf clean all && \
+              rm -rf /var/cache/dnf
+          STOPSIGNAL SIGRTMIN+3
+          CMD ["/usr/sbin/init"]
+          DOCKERFILE
 
       - name: Start EL9 ARM systemd container
         run: |
@@ -72,8 +90,7 @@ jobs:
             --tmpfs /run/lock \
             -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
             -v "${GITHUB_WORKSPACE}:/workspace:ro" \
-            "${RPM_IMAGE}" \
-            /usr/sbin/init
+            "${SYSTEMD_IMAGE}"
 
           for _ in {1..60}; do
             if docker exec "${CONTAINER_NAME}" test -S /run/systemd/private; then
