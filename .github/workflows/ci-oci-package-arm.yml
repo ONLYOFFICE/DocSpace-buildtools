@@ -94,7 +94,7 @@ jobs:
             bash -lc '
               set -euxo pipefail
 
-              dnf -y install curl findutils gawk gnupg2 grep hostname iproute procps-ng sed tar util-linux
+              dnf -y install findutils gawk gnupg2 grep hostname iproute procps-ng sed tar util-linux
 
               if [ "${USE_4TESTING}" = "true" ]; then
                 printf "%s\n" \
