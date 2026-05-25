@@ -36,20 +36,31 @@ MYSQL_SERVER_DB_NAME=${MYSQL_SERVER_DB_NAME:-"${package_sysname}"}
 MYSQL_SERVER_USER=${MYSQL_SERVER_USER:-"root"}
 MYSQL_SERVER_PORT=${MYSQL_SERVER_PORT:-3306}
 
+get_mysql_temporary_root_password() {
+	{
+		[ -f "/var/log/mysqld.log" ] && cat /var/log/mysqld.log
+		if command -v journalctl >/dev/null 2>&1; then
+			journalctl -u mysqld -o cat --no-pager 2>/dev/null || true
+		fi
+	} | grep "temporary password" | awk '{print $NF}' | tail -1
+}
+
 if [ "${MYSQL_FIRST_TIME_INSTALL}" = "true" ]; then
 	MYSQL_TEMPORARY_ROOT_PASS=""
 
-	if [ -f "/var/log/mysqld.log" ]; then
-		MYSQL_TEMPORARY_ROOT_PASS=$(cat /var/log/mysqld.log | grep "temporary password" | rev | cut -d " " -f 1 | rev | tail -1)
-	fi
-
-	while ! mysqladmin ping -u root --silent; do
+	while ! mysqladmin ping -u root --silent >/dev/null 2>&1; do
 		sleep 1
 	done
 
-	if ! mysql "-u$MYSQL_SERVER_USER" "-p$MYSQL_TEMPORARY_ROOT_PASS" -e ";" >/dev/null 2>&1; then
+	MYSQL_TEMPORARY_ROOT_PASS="$(get_mysql_temporary_root_password)"
+
+	mysql_check_args=("-u$MYSQL_SERVER_USER")
+	[ -n "$MYSQL_TEMPORARY_ROOT_PASS" ] && mysql_check_args+=("-p$MYSQL_TEMPORARY_ROOT_PASS")
+
+	if ! mysql "${mysql_check_args[@]}" -e ";" >/dev/null 2>&1; then
 		if [ -z "$MYSQL_TEMPORARY_ROOT_PASS" ]; then
-		   MYSQL="mysql --connect-expired-password -u$MYSQL_SERVER_USER -D mysql"
+			echo "Unable to find MySQL temporary root password in /var/log/mysqld.log or systemd journal."
+			exit 1
 		else
 		   MYSQL="mysql --connect-expired-password -u$MYSQL_SERVER_USER -p${MYSQL_TEMPORARY_ROOT_PASS} -D mysql"
 		   MYSQL_ROOT_PASS=$(echo "$MYSQL_TEMPORARY_ROOT_PASS" | sed -e 's/;/%/g' -e 's/=/%/g')
