@@ -23,14 +23,18 @@ if rpm -qa | grep 'mariadb.*config' | grep -v 'connector' >/dev/null 2>&1; then
    echo "$RES_MARIADB" && exit 0
 fi
 
+[ -z "${RPM_ARCH:-}" ] && RPM_ARCH="$(uname -m)"
+
 #Add repository EPEL
 EPEL_URL="https://dl.fedoraproject.org/pub/epel/"
 [ "$DIST" != "fedora" ] && { rpm -ivh ${EPEL_URL}/epel-release-latest-$REV.noarch.rpm || true; }
 [ "$REV" = "9" ] && update-crypto-policies --set DEFAULT:SHA1
 [ "$DIST" = "centos" ] && TESTING_REPO="--enablerepo=$( [ "$REV" -ge "9" ] && echo "crb" || echo "powertools" )"
 if [ "$DIST" = "redhat" ] && [ "$REV" -ge 9 ]; then 
-	LADSPA_PACKAGE_VERSION=$(curl -fsSL "${EPEL_URL}/10/Everything/x86_64/Packages/l/" | grep -oP 'ladspa-[0-9].*?\.rpm' | sort -V | tail -n 1)
-	${package_manager} install -y "${EPEL_URL}/10/Everything/x86_64/Packages/l/${LADSPA_PACKAGE_VERSION}"
+	LADSPA_REPO_URL="${EPEL_URL}/10/Everything/${RPM_ARCH}/Packages/l/"
+	LADSPA_PACKAGE_VERSION=$(curl -fsSL "${LADSPA_REPO_URL}" | grep -oP 'ladspa-[0-9].*?\.rpm' | sort -V | tail -n 1)
+	[ -n "${LADSPA_PACKAGE_VERSION}" ] || { echo "Unable to find ladspa package for ${RPM_ARCH}"; exit 1; }
+	${package_manager} install -y "${LADSPA_REPO_URL}${LADSPA_PACKAGE_VERSION}"
 fi
 
 #add rabbitmq & erlang repo
@@ -40,6 +44,14 @@ curl -fsSL https://packagecloud.io/install/repositories/rabbitmq/erlang/script.r
 #add nodejs repo
 NODE_VERSION="22"
 curl -fsSL https://rpm.nodesource.com/setup_${NODE_VERSION}.x | bash -
+
+if [ "${RPM_ARCH}" = "aarch64" ]; then
+	ERLANG_VERSION="26.2.5.14"
+	ERLANG_RPM_DIST="el${RABBIT_DIST_VER}"
+	if ! rpm -q erlang >/dev/null 2>&1 || ! rpm -q --qf '%{VERSION}\n' erlang | grep -q '^26\.'; then
+		${package_manager} install -y "https://github.com/rabbitmq/erlang-rpm/releases/download/v${ERLANG_VERSION}/erlang-${ERLANG_VERSION}-1.${ERLANG_RPM_DIST}.${RPM_ARCH}.rpm"
+	fi
+fi
 
 #add mysql repo
 dnf remove -y @mysql && dnf module -y reset mysql && dnf module -y disable mysql
@@ -84,7 +96,7 @@ curl -fsSL -o /etc/yum.repos.d/openresty.repo "https://openresty.org/package/${O
 [ "$DIST" = "centos" ] && [ "$REV" -ge 10 ] && sed -i 's/^gpgcheck=.*/gpgcheck=0/' /etc/yum.repos.d/openresty.repo
 
 if [ "${DIST}" = "redhat" ] && [ "${REV}" = "8" ]; then
-  CRB_REPO=$(dnf -q repolist all | awk '/^codeready-builder-for-rhel-8-x86_64-rpms/ {print $1; exit} /^codeready-builder-for-rhel-8-rhui-rpms/ {print $1; exit}')
+  CRB_REPO=$(dnf -q repolist all | awk '/^codeready-builder-for-rhel-8-(x86_64|aarch64)-rpms/ {print $1; exit} /^codeready-builder-for-rhel-8-rhui-rpms/ {print $1; exit}')
   [ -n "${CRB_REPO}" ] && subscription-manager repos --enable="${CRB_REPO}" || true
   CRB_REPO=${CRB_REPO:+--enablerepo=${CRB_REPO}}
   ${package_manager} -y install https://download1.rpmfusion.org/free/el/rpmfusion-free-release-${REV}.noarch.rpm

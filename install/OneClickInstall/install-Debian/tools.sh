@@ -79,9 +79,18 @@ if [ "$SKIP_HARDWARE_CHECK" != "true" ]; then
 fi
 
 ARCH="$(dpkg --print-architecture)"
-if [ "$ARCH" != "amd64" ]; then
-    echo "ONLYOFFICE ${product^^} doesn't support architecture '$ARCH'"
-    exit
+case "$ARCH" in
+	amd64|arm64) ;;
+	*)
+		echo "ONLYOFFICE ${product^^} doesn't support architecture '$ARCH'"
+		exit 1
+		;;
+esac
+
+if [ "$ARCH" = "arm64" ]; then
+	echo "ONLYOFFICE ${product^^} package installation on Debian/Ubuntu arm64 requires arm64 OpenResty and MySQL packages."
+	echo "Please use Docker installation until all required ARM packages are available."
+	exit 1
 fi
 
 REV=$(< /etc/debian_version)

@@ -1,0 +1,181 @@
+name: OCI ARM Packages
+
+on:
+  schedule:
+    - cron: "30 21 * * 0"
+  push:
+    branches:
+      - "hotfix/**"
+      - "release/**"
+      - "develop"
+    paths:
+      - ".github/workflows/ci-oci-package-arm.yml"
+      - "install/OneClickInstall/**"
+  workflow_dispatch:
+    inputs:
+      testing:
+        description: "Use 4testing packages"
+        required: true
+        default: false
+        type: boolean
+      product_version:
+        description: "DocSpace package version (optional)"
+        required: false
+        default: ""
+        type: string
+      rpm_image:
+        description: "EL9 systemd container image"
+        required: true
+        default: "registry.access.redhat.com/ubi9-init:latest"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  rpm-el9-aarch64:
+    name: RPM EL9 aarch64 package install
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 120
+    env:
+      CONTAINER_NAME: docspace-arm-el9
+      RPM_IMAGE: ${{ github.event.inputs.rpm_image || 'registry.access.redhat.com/ubi9-init:latest' }}
+      PRODUCT_VERSION: ${{ github.event.inputs.product_version }}
+      USE_4TESTING: ${{ github.event.inputs.testing }}
+
+    steps:
+      - name: Free Disk Space
+        run: curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/free-disk-space-linux.sh | sudo bash
+
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Start EL9 ARM systemd container
+        run: |
+          set -eux
+          docker run -d \
+            --name "${CONTAINER_NAME}" \
+            --platform linux/arm64 \
+            --privileged \
+            --cgroupns=host \
+            --tmpfs /tmp \
+            --tmpfs /run \
+            --tmpfs /run/lock \
+            -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+            -v "${GITHUB_WORKSPACE}:/workspace:ro" \
+            "${RPM_IMAGE}"
+
+          for _ in {1..60}; do
+            if docker exec "${CONTAINER_NAME}" test -S /run/systemd/private; then
+              exit 0
+            fi
+            sleep 2
+          done
+
+          docker logs "${CONTAINER_NAME}" || true
+          exit 1
+
+      - name: Install DocSpace RPM package on ARM
+        run: |
+          set -eux
+          docker exec \
+            -e PRODUCT_VERSION="${PRODUCT_VERSION}" \
+            -e USE_4TESTING="${USE_4TESTING:-false}" \
+            "${CONTAINER_NAME}" \
+            bash -lc '
+              set -euxo pipefail
+
+              dnf -y install curl findutils gawk gnupg2 grep hostname iproute procps-ng sed tar util-linux
+
+              if [ "${USE_4TESTING}" = "true" ]; then
+                printf "%s\n" \
+                  "[onlyoffice4testing]" \
+                  "name=onlyoffice4testing repo" \
+                  "baseurl=https://nexus.onlyoffice.com/repository/centos-testing/4testing/main/noarch" \
+                  "gpgcheck=1" \
+                  "enabled=1" \
+                  "gpgkey=https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE" \
+                  > /etc/yum.repos.d/onlyoffice4testing.repo
+              fi
+
+              cd /workspace/install/OneClickInstall
+              args=(
+                package
+                --localscripts true
+                --skiphardwarecheck true
+                --makeswap false
+                --installfluentbit false
+                --installationtype community
+                --logging false
+              )
+              [ -n "${PRODUCT_VERSION}" ] && args+=(--docspaceversion "${PRODUCT_VERSION}")
+
+              bash docspace-install.sh "${args[@]}"
+            '
+
+      - name: Verify RPM installation
+        run: |
+          set -eux
+          docker exec "${CONTAINER_NAME}" bash -lc '
+            set -euxo pipefail
+            rpm -q docspace docspace-proxy onlyoffice-documentserver
+            systemctl --no-pager --failed || true
+            for service in mysqld rabbitmq-server redis opensearch openresty; do
+              systemctl is-active "$service"
+            done
+          '
+
+      - name: Collect ARM package logs
+        if: failure()
+        run: |
+          docker exec "${CONTAINER_NAME}" bash -lc '
+            systemctl --no-pager --failed || true
+            systemctl --no-pager status mysqld rabbitmq-server redis opensearch openresty "docspace*" || true
+            journalctl --no-pager -n 500 || true
+            rpm -qa | sort | grep -E "docspace|onlyoffice|documentserver|rabbitmq|erlang|mysql|openresty|opensearch|redis" || true
+          ' || true
+          docker logs "${CONTAINER_NAME}" || true
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f "${CONTAINER_NAME}" || true
+
+  deb-ubuntu2404-arm64-preflight:
+    name: DEB Ubuntu 24.04 arm64 upstream preflight
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Check DEB ARM blockers
+        run: |
+          set -euo pipefail
+          missing=0
+
+          check_architecture() {
+            local name="$1"
+            local url="$2"
+            local arch="$3"
+            local release
+
+            release="$(curl -fsSL "$url")"
+            echo "$release" | grep -E '^Architectures:' || true
+            if echo "$release" | awk -v arch="$arch" '/^Architectures:/ {for (i=2; i<=NF; i++) if ($i == arch) found=1} END {exit !found}'; then
+              echo "::notice::${name} publishes ${arch} packages."
+            else
+              echo "::notice::${name} does not publish ${arch} packages yet."
+              missing=1
+            fi
+          }
+
+          check_architecture "OpenResty Ubuntu noble" "https://openresty.org/package/ubuntu/dists/noble/Release" "arm64"
+          check_architecture "Oracle MySQL Ubuntu noble" "https://repo.mysql.com/apt/ubuntu/dists/noble/Release" "arm64"
+
+          if [ "$missing" -eq 0 ]; then
+            echo "::error::Ubuntu 24.04 arm64 prerequisites are now available. Remove the DEB arm64 guard and add a real package install job."
+            exit 1
+          fi
+
+          grep -q "Debian/Ubuntu arm64 requires arm64 OpenResty and MySQL packages" install/OneClickInstall/install-Debian/tools.sh

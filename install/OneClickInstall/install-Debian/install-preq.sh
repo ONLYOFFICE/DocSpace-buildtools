@@ -141,9 +141,10 @@ if ! apt-get install -yq "${DOTNET_PKG}"; then
   curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --version "${DOTNET_VERSION}" --install-dir /usr/share/dotnet
   ln -sf /usr/share/dotnet/dotnet /usr/bin/dotnet
 
+  DOTNET_DEB_ARCH="${ARCH:-$(dpkg --print-architecture)}"
   DOTNET_PKGDIR="/tmp/${DOTNET_PKG}"; mkdir -p "${DOTNET_PKGDIR}/DEBIAN"
-  printf "Package: %s\nVersion: %s\nArchitecture: amd64\nMaintainer: local\nDescription: Provides .NET %s SDK\n" \
-	"${DOTNET_PKG}" "${DOTNET_VERSION}" "${DOTNET_VERSION%%.*}" > "${DOTNET_PKGDIR}/DEBIAN/control"
+  printf "Package: %s\nVersion: %s\nArchitecture: %s\nMaintainer: local\nDescription: Provides .NET %s SDK\n" \
+	"${DOTNET_PKG}" "${DOTNET_VERSION}" "${DOTNET_DEB_ARCH}" "${DOTNET_VERSION%%.*}" > "${DOTNET_PKGDIR}/DEBIAN/control"
 
   dpkg-deb --build "${DOTNET_PKGDIR}" "/tmp/${DOTNET_PKG}.deb" && dpkg -i "/tmp/${DOTNET_PKG}.deb"
   rm -rf "${DOTNET_PKGDIR}" "/tmp/${DOTNET_PKG}.deb"

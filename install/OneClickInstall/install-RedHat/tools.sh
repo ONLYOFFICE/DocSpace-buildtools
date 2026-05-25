@@ -53,6 +53,15 @@ if [ "$SKIP_HARDWARE_CHECK" != "true" ]; then
 	check_hardware
 fi
 
+RPM_ARCH="$(uname -m)"
+case "$RPM_ARCH" in
+	x86_64|aarch64) ;;
+	*)
+		echo "ONLYOFFICE ${product^^} doesn't support architecture '$RPM_ARCH'"
+		exit 1
+		;;
+esac
+
 UPDATE_AVAILABLE_CODE=100
 DIST=$(rpm -qa --queryformat '%{NAME}\n' | grep -E 'centos-release|redhat-release|fedora-release' | awk -F '-' '{print $1}' | head -n 1)
 DIST=${DIST:-$(awk -F= '/^ID=/ {gsub(/"/, "", $2); print tolower($2)}' /etc/os-release)}
@@ -86,6 +95,12 @@ if [ "$DIST" == "fedora" ]; then
 
 	FEDORA_SUPP=$(curl -fsSL https://fedoraproject.org/releases.json | grep -oP '"version"\s*:\s*"\K[0-9]+' | sort -nr -u)
 	echo "$FEDORA_SUPP" | grep -q "$REV" || SUPPORTED_FEDORA_FLAG="false"
+fi
+
+if [ "$RPM_ARCH" = "aarch64" ] && [ "$DIST" = "fedora" ]; then
+	echo "ONLYOFFICE ${product^^} package installation on Fedora aarch64 requires RabbitMQ ARM packages that are not available."
+	echo "Please use Docker installation until all required ARM packages are available."
+	exit 1
 fi
 
 # Disable Cockpit to free 9090 needed by docspace-identity-api
