@@ -5,9 +5,18 @@ on:
     - cron: "30 21 * * 0"
   push:
     branches:
+      - "feature/**"
       - "hotfix/**"
       - "release/**"
       - "develop"
+    paths:
+      - ".github/workflows/ci-oci-package-arm.yml"
+      - "install/OneClickInstall/**"
+  pull_request:
+    branches:
+      - "develop"
+      - "release/**"
+      - "hotfix/**"
     paths:
       - ".github/workflows/ci-oci-package-arm.yml"
       - "install/OneClickInstall/**"
