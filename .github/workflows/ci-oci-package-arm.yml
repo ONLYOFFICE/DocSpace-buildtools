@@ -100,5 +100,6 @@ jobs:
         run: |
           systemctl --no-pager --failed || true
           systemctl --no-pager status mysql rabbitmq-server redis-server opensearch openresty "docspace*" || true
+          [ -f /var/log/opensearch/install_demo_configuration.log ] && cat /var/log/opensearch/install_demo_configuration.log || true
           journalctl --no-pager -n 500 || true
           dpkg -l | grep -E "docspace|onlyoffice|documentserver|rabbitmq|erlang|mysql|openresty|opensearch|redis" || true

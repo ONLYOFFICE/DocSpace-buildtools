@@ -153,7 +153,10 @@ if ! apt-get install -yq "${DOTNET_PKG}"; then
 fi
 
 if ! dpkg -l | grep -q "opensearch"; then
-	apt-get install -yq opensearch=${ELASTIC_VERSION}
+	OPENSEARCH_INITIAL_ADMIN_PASSWORD="${OPENSEARCH_INITIAL_ADMIN_PASSWORD}" apt-get install -yq opensearch=${ELASTIC_VERSION} || {
+		[ -f /var/log/opensearch/install_demo_configuration.log ] && cat /var/log/opensearch/install_demo_configuration.log
+		exit 1
+	}
 else
 	ELASTIC_PLUGIN="/usr/share/opensearch/bin/opensearch-plugin"
 	if dpkg --compare-versions "$(dpkg-query -W -f='${Version}\n' opensearch 2>/dev/null || true)" ne "$ELASTIC_VERSION"; then
