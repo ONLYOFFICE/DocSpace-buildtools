@@ -47,7 +47,7 @@ jobs:
 
     steps:
       - name: Free Disk Space
-        run: curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/free-disk-space-linux.sh | sudo bash
+        run: curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/free-disk-space-linux.sh | sudo env KEEP_MYSQL=1 bash
 
       - name: Checkout repository
         uses: actions/checkout@v5

@@ -17,6 +17,7 @@ export DEBIAN_FRONTEND=noninteractive
 : "${CLEAN_DIRS:=1}"       # remove large unused dirs/binaries
 : "${CLEAN_LOGS:=1}"       # truncate logs, clean /tmp
 : "${CLEAN_DEV_CACHES:=1}" # also remove dev caches (~/.cache, npm, pip, cargo, ...)
+: "${KEEP_MYSQL:=0}"       # 1 = keep MySQL package files and data dir
 
 # ======= Utils =======
 rm_rf(){ echo "[DEL] $*"; sudo rm -rf "$@" & }
@@ -29,7 +30,9 @@ printSavedSpace(){ local b=${1:-0}; local t=${2:-}; local a=$(getAvailableSpace)
 
 # ======= Cleanup functions =======
 cleanPackages(){ 
-  local patterns='^(temurin-|llvm-|libllvm|libclang-cpp|gcc-|postgresql-|mysql-|kubectl|python3-botocore|linux-azure-.*-headers).*|(google-chrome-stable|microsoft-edge-stable|firefox|azure-cli|google-cloud-cli|google-cloud-cli-anthoscli|powershell|snapd)$'
+  local mysql_package_pattern="mysql-|"
+  [[ "${KEEP_MYSQL}" == "1" ]] && mysql_package_pattern=""
+  local patterns="^(temurin-|llvm-|libllvm|libclang-cpp|gcc-|postgresql-|${mysql_package_pattern}kubectl|python3-botocore|linux-azure-.*-headers).*|(google-chrome-stable|microsoft-edge-stable|firefox|azure-cli|google-cloud-cli|google-cloud-cli-anthoscli|powershell|snapd)$"
   local pkgs=$(dpkg-query -W -f='${Package}\n' | grep -E "$patterns" || true)
   [[ -n "$pkgs" ]] && sudo dpkg --purge --force-all $pkgs || true
   sudo rm -rf /var/lib/apt/lists/* /var/cache/apt/* || true
@@ -54,11 +57,16 @@ cleanSwap() {
 }
 
 removeDirs() {
+  local database_dirs=(/usr/lib/postgresql /var/lib/postgresql)
+  if [[ "${KEEP_MYSQL}" != "1" ]]; then
+    database_dirs+=(/usr/lib/mysql /var/lib/mysql)
+  fi
+
   if [[ "${VBOX_SAFE}" == "1" ]]; then
     rm_rf \
       /opt/google/chrome /opt/microsoft/msedge /usr/lib/firefox* \
       /usr/lib/google-cloud-sdk /opt/az /opt/microsoft/powershell \
-      /var/lib/snapd /snap /usr/lib/{postgresql,mysql} /var/lib/{postgresql,mysql} \
+      /var/lib/snapd /snap "${database_dirs[@]}" \
       /usr/local/{aws-sam-cli,julia*,lib/android,.ghcup} \
       /usr/local/share/{chromedriver-*,chromium,edge_driver,emacs,gecko_driver,icons,vcpkg,vim} \
       /usr/share/{apache-maven-*,gradle-*,kotlinc,miniconda,php,ri,swift,az_*} \
@@ -70,7 +78,7 @@ removeDirs() {
       /usr/lib/gcc /usr/include/c++ \
       /opt/google/chrome /opt/microsoft/msedge /usr/lib/firefox* \
       /usr/lib/google-cloud-sdk /opt/az /opt/microsoft/powershell \
-      /var/lib/snapd /snap /usr/lib/{postgresql,mysql} /var/lib/{postgresql,mysql} \
+      /var/lib/snapd /snap "${database_dirs[@]}" \
       /usr/local/{aws-sam-cli,julia*,lib/android,.ghcup} \
       /usr/local/share/{chromedriver-*,chromium,cmake-*,edge_driver,emacs,gecko_driver,icons,vcpkg,vim} \
       /usr/share/{apache-maven-*,gradle-*,kotlinc,miniconda,php,ri,swift,az_*} \
