@@ -89,6 +89,9 @@ fi
 # add onlyoffice repo
 mkdir -p "$HOME/.gnupg" && chmod 700 "$HOME/.gnupg"
 echo "deb [signed-by=/usr/share/keyrings/onlyoffice.gpg] http://download.onlyoffice.com/repo/debian squeeze main" | tee /etc/apt/sources.list.d/onlyoffice.list
+if [ "${USE_4TESTING:-false}" = "true" ]; then
+	echo "deb [signed-by=/usr/share/keyrings/onlyoffice.gpg] http://nexus.onlyoffice.com/repository/4testing-debian stable main" | tee /etc/apt/sources.list.d/onlyoffice-4testing.list
+fi
 curl -fsSL https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/onlyoffice.gpg --import
 chmod 644 /usr/share/keyrings/onlyoffice.gpg
 

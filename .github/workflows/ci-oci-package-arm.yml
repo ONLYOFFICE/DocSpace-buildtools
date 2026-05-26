@@ -1,0 +1,88 @@
+name: OCI ARM Packages
+
+on:
+  push:
+    branches:
+      - "feature/arm-deb"
+
+jobs:
+  deb-ubuntu2404-arm64:
+    name: DEB Ubuntu 24.04 arm64 package install
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 120
+    env:
+      PRODUCT_VERSION: ${{ github.event.inputs.product_version }}
+      USE_4TESTING: ${{ github.event.inputs.testing != 'false' }}
+
+    steps:
+      - name: Free Disk Space
+        run: curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/free-disk-space-linux.sh | sudo bash
+
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Reset preinstalled MySQL
+        run: |
+          set -eux
+          sudo systemctl stop mysql || true
+          sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y \
+            mysql-server \
+            mysql-server-8.0 \
+            mysql-server-core-8.0 \
+            mysql-client \
+            mysql-client-8.0 \
+            mysql-client-core-8.0 || true
+          sudo rm -rf /var/lib/mysql /var/log/mysql
+          sudo DEBIAN_FRONTEND=noninteractive apt-get autoremove -y || true
+
+      - name: Install DocSpace DEB package on ARM
+        run: |
+          set -eux
+          cd install/OneClickInstall
+
+          args=(
+            package
+            --localscripts true
+            --skiphardwarecheck true
+            --makeswap false
+            --installfluentbit false
+            --installationtype community
+            --logging false
+          )
+          [ -n "${PRODUCT_VERSION}" ] && args+=(--docspaceversion "${PRODUCT_VERSION}")
+
+          sudo USE_4TESTING="${USE_4TESTING}" bash docspace-install.sh "${args[@]}"
+
+      - name: Verify DEB installation
+        run: |
+          set -eux
+          dpkg -s docspace docspace-proxy onlyoffice-documentserver
+          systemctl --no-pager --failed || true
+          for service in mysql rabbitmq-server redis-server opensearch openresty; do
+            systemctl is-active "$service"
+          done
+
+      - name: Collect ARM package logs
+        if: always()
+        run: |
+          systemctl --no-pager --failed || true
+          systemctl --no-pager list-units "docspace*" || true
+          systemctl --no-pager status mysql rabbitmq-server redis-server opensearch openresty "docspace*" || true
+          dotnet --info || true
+          systemctl show-environment | grep -E "DOTNET|COMPlus" || true
+          grep -HIn "connectionString" /etc/onlyoffice/docspace/appsettings.*.json /etc/onlyoffice/docspace/apisystem.*.json 2>/dev/null | sed -E 's/(Password=)[^;"]+/\1***/g' || true
+          [ -f /var/log/opensearch/install_demo_configuration.log ] && cat /var/log/opensearch/install_demo_configuration.log || true
+          for service in \
+            docspace-api \
+            docspace-ai-worker \
+            docspace-backup-worker \
+            docspace-files-worker \
+            docspace-identity-authorization \
+            docspace-studio \
+            docspace-telegram; do
+            journalctl --no-pager -u "$service" -n 200 || true
+          done
+          coredumpctl --no-pager list || true
+          coredumpctl --no-pager info || true
+          journalctl --no-pager -n 500 || true
+          dpkg -l | grep -E "docspace|onlyoffice|documentserver|rabbitmq|erlang|mysql|openresty|opensearch|redis" || true
