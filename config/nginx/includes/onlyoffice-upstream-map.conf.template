@@ -273,3 +273,14 @@ map $DASHBOARDS_CONTAINER_NAME $dashboards_service_url {
 
     default $DASHBOARDS_CONTAINER_NAME;
 }
+
+map $STORYBOOK_CONTAINER_NAME $storybook_service_url {
+    volatile;
+
+    ""          "http://127.0.0.1:6006";
+    "null"      "http://127.0.0.1:6006";
+    "~^\\s*$"   "http://127.0.0.1:6006";
+    "undefined" "http://127.0.0.1:6006";
+
+    default $STORYBOOK_CONTAINER_NAME;
+}
