@@ -137,6 +137,20 @@ if [ "$INSTALLATION_TYPE" != "COMMUNITY" ]; then
 	apt-get install -yq postgresql
 fi
 
+if dpkg -l | grep -q "mysql-server"; then
+	systemctl enable mysql >/dev/null 2>&1 || true
+	if ! systemctl start mysql; then
+		systemctl --no-pager status mysql || true
+		journalctl --no-pager -xeu mysql.service || true
+		exit 1
+	fi
+
+	if [ "${MYSQL_SERVER_USER:-root}" = "root" ] && [ -n "${MYSQL_SERVER_PASS:-}" ]; then
+		mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY '${MYSQL_SERVER_PASS}'; FLUSH PRIVILEGES;" || \
+		mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_SERVER_PASS}'; FLUSH PRIVILEGES;"
+	fi
+fi
+
 # Set Java ${JAVA_VERSION} before installing OpenSearch. Some runners export a
 # stale JAVA_HOME that points to a preinstalled JDK removed during disk cleanup.
 JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*temurin-${JAVA_VERSION}*" | head -1)

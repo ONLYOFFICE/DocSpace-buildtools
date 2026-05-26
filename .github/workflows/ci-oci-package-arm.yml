@@ -4,11 +4,11 @@ on:
   schedule:
     - cron: "30 21 * * 0"
   push:
-    branches:
-      - "feature/**"
-      - "hotfix/**"
-      - "release/**"
-      - "develop"
+    # branches:
+    #   - "feature/**"
+    #   - "hotfix/**"
+    #   - "release/**"
+    #   - "develop"
     paths:
       - ".github/workflows/ci-oci-package-arm.yml"
       - "install/OneClickInstall/**"
@@ -22,6 +22,11 @@ on:
       - "install/OneClickInstall/**"
   workflow_dispatch:
     inputs:
+      testing:
+        description: "Use 4testing packages"
+        required: true
+        default: true
+        type: boolean
       product_version:
         description: "DocSpace package version (optional)"
         required: false
@@ -38,6 +43,7 @@ jobs:
     timeout-minutes: 120
     env:
       PRODUCT_VERSION: ${{ github.event.inputs.product_version }}
+      USE_4TESTING: ${{ github.event.inputs.testing != 'false' }}
 
     steps:
       - name: Free Disk Space
@@ -84,7 +90,7 @@ jobs:
           )
           [ -n "${PRODUCT_VERSION}" ] && args+=(--docspaceversion "${PRODUCT_VERSION}")
 
-          sudo bash docspace-install.sh "${args[@]}"
+          sudo USE_4TESTING="${USE_4TESTING}" bash docspace-install.sh "${args[@]}"
 
       - name: Verify DEB installation
         run: |
