@@ -65,31 +65,46 @@ elif [ "$DIST" = "debian" ]; then
 	DEBIAN_FRONTEND=noninteractive dpkg --force-confnew -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
 fi
 
-MYSQL_REPO_VERSION="$(curl -fsSL https://dev.mysql.com/downloads/repo/apt/ | grep -oP '(?<=mysql-apt-config_)[0-9.]+-[0-9]+(?=_all\.deb)' | head -n1)"
-MYSQL_PACKAGE_NAME="mysql-apt-config_${MYSQL_REPO_VERSION}_all.deb"
-if ! dpkg -l | grep -q "mysql-server"; then
-
-	MYSQL_SERVER_HOST=${MYSQL_SERVER_HOST:-"localhost"}
-	MYSQL_SERVER_PORT=${MYSQL_SERVER_PORT:-"3306"}
-	MYSQL_SERVER_DB_NAME=${MYSQL_SERVER_DB_NAME:-"${package_sysname}"}
+USE_DISTRO_MYSQL=false
+[ "$DIST" = "ubuntu" ] && [ "${ARCH:-$(dpkg --print-architecture)}" = "arm64" ] && USE_DISTRO_MYSQL=true
+MYSQL_SERVER_HOST=${MYSQL_SERVER_HOST:-"localhost"}
+MYSQL_SERVER_PORT=${MYSQL_SERVER_PORT:-"3306"}
+MYSQL_SERVER_DB_NAME=${MYSQL_SERVER_DB_NAME:-"${package_sysname}"}
+if [ "$USE_DISTRO_MYSQL" = "true" ]; then
+	MYSQL_SERVER_USER=${MYSQL_SERVER_USER:-"${package_sysname}"}
+else
 	MYSQL_SERVER_USER=${MYSQL_SERVER_USER:-"root"}
-	MYSQL_SERVER_PASS=${MYSQL_SERVER_PASS:-"$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)"}
+fi
+MYSQL_SERVER_PASS=${MYSQL_SERVER_PASS:-"$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)"}
+MYSQL_SERVER_PACKAGE="mysql-server"
+MYSQL_CLIENT_PACKAGE="mysql-client"
+if [ "$USE_DISTRO_MYSQL" = "true" ]; then
+	MYSQL_SERVER_PACKAGE="mysql-server-8.0"
+	MYSQL_CLIENT_PACKAGE="mysql-client-8.0"
+fi
+if [ "$USE_DISTRO_MYSQL" != "true" ]; then
+	MYSQL_REPO_VERSION="$(curl -fsSL https://dev.mysql.com/downloads/repo/apt/ | grep -oP '(?<=mysql-apt-config_)[0-9.]+-[0-9]+(?=_all\.deb)' | head -n1)"
+	MYSQL_PACKAGE_NAME="mysql-apt-config_${MYSQL_REPO_VERSION}_all.deb"
+fi
 
-	# setup mysql 8.4 package
-	curl -fsSLO http://repo.mysql.com/"${MYSQL_PACKAGE_NAME}"
-	echo "mysql-apt-config mysql-apt-config/repo-codename  select  $DISTRIB_CODENAME" | debconf-set-selections
-	echo "mysql-apt-config mysql-apt-config/repo-distro  select  $DIST" | debconf-set-selections
-	echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.4-lts" | debconf-set-selections
-	DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
-	rm -f "${MYSQL_PACKAGE_NAME}"
+if ! dpkg -l | grep -q "mysql-server"; then
+	if [ "$USE_DISTRO_MYSQL" != "true" ]; then
+		# setup mysql 8.4 package
+		curl -fsSLO http://repo.mysql.com/"${MYSQL_PACKAGE_NAME}"
+		echo "mysql-apt-config mysql-apt-config/repo-codename  select  $DISTRIB_CODENAME" | debconf-set-selections
+		echo "mysql-apt-config mysql-apt-config/repo-distro  select  $DIST" | debconf-set-selections
+		echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.4-lts" | debconf-set-selections
+		DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
+		rm -f "${MYSQL_PACKAGE_NAME}"
 
-	echo mysql-community-server mysql-community-server/root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
-	echo mysql-community-server mysql-community-server/re-root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
-	echo mysql-community-server mysql-server/default-auth-override select "Use Strong Password Encryption (RECOMMENDED)" | debconf-set-selections
-	echo mysql-server mysql-server/root_password password "${MYSQL_SERVER_PASS}" | debconf-set-selections
-	echo mysql-server mysql-server/root_password_again password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+		echo mysql-community-server mysql-community-server/root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+		echo mysql-community-server mysql-community-server/re-root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+		echo mysql-community-server mysql-server/default-auth-override select "Use Strong Password Encryption (RECOMMENDED)" | debconf-set-selections
+		echo mysql-server mysql-server/root_password password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+		echo mysql-server mysql-server/root_password_again password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+	fi
 
-elif dpkg -l | grep -q "mysql-apt-config" && [ "$(apt-cache policy mysql-apt-config | awk 'NR==2{print $2}')" != "${MYSQL_REPO_VERSION}" ]; then
+elif [ "$USE_DISTRO_MYSQL" != "true" ] && dpkg -l | grep -q "mysql-apt-config" && [ "$(apt-cache policy mysql-apt-config | awk 'NR==2{print $2}')" != "${MYSQL_REPO_VERSION}" ]; then
 	curl -fsSLO http://repo.mysql.com/${MYSQL_PACKAGE_NAME}
 	DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
 	rm -f "${MYSQL_PACKAGE_NAME}"
@@ -126,8 +141,8 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 				nodejs \
 				gcc \
 				make \
-				mysql-server \
-				mysql-client \
+				"${MYSQL_SERVER_PACKAGE}" \
+				"${MYSQL_CLIENT_PACKAGE}" \
 				redis-server \
 				rabbitmq-server \
 				temurin-${JAVA_VERSION}-jre \
@@ -148,7 +163,24 @@ if dpkg -l | grep -q "mysql-server"; then
 	if [ "${MYSQL_SERVER_USER:-root}" = "root" ] && [ -n "${MYSQL_SERVER_PASS:-}" ]; then
 		mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY '${MYSQL_SERVER_PASS}'; FLUSH PRIVILEGES;" || \
 		mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_SERVER_PASS}'; FLUSH PRIVILEGES;"
+	elif [ -n "${MYSQL_SERVER_USER:-}" ] && [ -n "${MYSQL_SERVER_PASS:-}" ]; then
+		mysql -u root <<MYSQL_SCRIPT
+CREATE DATABASE IF NOT EXISTS \`${MYSQL_SERVER_DB_NAME}\` CHARACTER SET utf8 COLLATE utf8_general_ci;
+CREATE USER IF NOT EXISTS '${MYSQL_SERVER_USER}'@'localhost' IDENTIFIED BY '${MYSQL_SERVER_PASS}';
+ALTER USER '${MYSQL_SERVER_USER}'@'localhost' IDENTIFIED BY '${MYSQL_SERVER_PASS}';
+GRANT ALL PRIVILEGES ON \`${MYSQL_SERVER_DB_NAME}\`.* TO '${MYSQL_SERVER_USER}'@'localhost';
+CREATE USER IF NOT EXISTS '${MYSQL_SERVER_USER}'@'127.0.0.1' IDENTIFIED BY '${MYSQL_SERVER_PASS}';
+ALTER USER '${MYSQL_SERVER_USER}'@'127.0.0.1' IDENTIFIED BY '${MYSQL_SERVER_PASS}';
+GRANT ALL PRIVILEGES ON \`${MYSQL_SERVER_DB_NAME}\`.* TO '${MYSQL_SERVER_USER}'@'127.0.0.1';
+FLUSH PRIVILEGES;
+MYSQL_SCRIPT
 	fi
+
+	mysql -u "${MYSQL_SERVER_USER}" -p"${MYSQL_SERVER_PASS}" -h "${MYSQL_SERVER_HOST}" -P "${MYSQL_SERVER_PORT}" -e ";" || {
+		systemctl --no-pager status mysql || true
+		journalctl --no-pager -xeu mysql.service || true
+		exit 1
+	}
 fi
 
 # Set Java ${JAVA_VERSION} before installing OpenSearch. Some runners export a
