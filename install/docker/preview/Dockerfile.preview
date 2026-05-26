@@ -260,8 +260,9 @@ RUN git clone -b "master" --depth 1 https://github.com/ONLYOFFICE/docspace-plugi
 WORKDIR ${SRC_PATH}/buildtools/install/common
 COPY ./buildtools/install/common/plugins-build.sh ./plugins-build.sh
 RUN echo "--- build/publish plugins ---" && \
-    apt-get update && apt-get install -y dos2unix unzip &&\
+    apt-get update && apt-get install -y dos2unix unzip jq &&\
     dos2unix *.sh && \
+    chmod +x plugins-build.sh && \
     bash plugins-build.sh "${SRC_PATH}/plugins"
 
 #-------------------------------------
