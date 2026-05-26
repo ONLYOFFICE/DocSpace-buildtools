@@ -84,7 +84,7 @@ jobs:
           )
           [ -n "${PRODUCT_VERSION}" ] && args+=(--docspaceversion "${PRODUCT_VERSION}")
 
-          sudo -E bash docspace-install.sh "${args[@]}"
+          sudo bash docspace-install.sh "${args[@]}"
 
       - name: Verify DEB installation
         run: |

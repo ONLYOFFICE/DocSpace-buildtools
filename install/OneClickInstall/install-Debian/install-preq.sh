@@ -137,6 +137,13 @@ if [ "$INSTALLATION_TYPE" != "COMMUNITY" ]; then
 	apt-get install -yq postgresql
 fi
 
+# Set Java ${JAVA_VERSION} before installing OpenSearch. Some runners export a
+# stale JAVA_HOME that points to a preinstalled JDK removed during disk cleanup.
+JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*temurin-${JAVA_VERSION}*" | head -1)
+JAVA_HOME=$(dirname "$(dirname "$JAVA_PATH")")
+export JAVA_HOME
+update-alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && update-alternatives --set java "$JAVA_PATH"
+
 # Temporary fallback dotnet-sdk-10.0 on Debian 11 and Ubuntu 24.04
 DOTNET_VERSION="10.0.100"; DOTNET_PKG="dotnet-sdk-${DOTNET_VERSION%.*}"
 if ! apt-get install -yq "${DOTNET_PKG}"; then
@@ -164,10 +171,6 @@ else
 		systemctl restart opensearch || true
 	fi
 fi
-
-# Set Java ${JAVA_VERSION} as the default version
-JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*temurin-${JAVA_VERSION}*" | head -1)
-update-alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && update-alternatives --set java "$JAVA_PATH"
 
 if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then
 	curl -fsSL https://packages.fluentbit.io/fluentbit.key | gpg --dearmor > /usr/share/keyrings/fluentbit-keyring.gpg
