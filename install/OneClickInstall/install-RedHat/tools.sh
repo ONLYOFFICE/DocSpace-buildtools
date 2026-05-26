@@ -81,7 +81,6 @@ if [ "$DIST" == "fedora" ]; then
 	REMI_DISTR_NAME="fedora"
 	RPMFUSION_DISTR_NAME="fedora"
 	MYSQL_DISTR_NAME="fc"
-	[ "$REV" = "43" ] && MYSQL_REPO_REV="42"
 	OPENRESTY_REV=$([ "$REV" -ge 37 ] && echo 36 || echo "$REV")
 
 	FEDORA_SUPP=$(curl -fsSL https://fedoraproject.org/releases.json | grep -oP '"version"\s*:\s*"\K[0-9]+' | sort -nr -u)
