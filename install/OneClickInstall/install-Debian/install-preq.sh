@@ -65,34 +65,35 @@ elif [ "$DIST" = "debian" ]; then
 	DEBIAN_FRONTEND=noninteractive dpkg --force-confnew -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
 fi
 
-MYSQL_REPO_VERSION="$(curl -fsSL https://dev.mysql.com/downloads/repo/apt/ | grep -oP '(?<=mysql-apt-config_)[0-9.]+-[0-9]+(?=_all\.deb)' | head -n1)"
-MYSQL_PACKAGE_NAME="mysql-apt-config_${MYSQL_REPO_VERSION}_all.deb"
-if ! dpkg -l | grep -q "mysql-server"; then
+MYSQL_SERVER_HOST=${MYSQL_SERVER_HOST:-"localhost"}
+MYSQL_SERVER_PORT=${MYSQL_SERVER_PORT:-"3306"}
+MYSQL_SERVER_DB_NAME=${MYSQL_SERVER_DB_NAME:-"${package_sysname}"}
+MYSQL_SERVER_USER=${MYSQL_SERVER_USER:-"root"}
+MYSQL_SERVER_PASS=${MYSQL_SERVER_PASS:-"$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)"}
 
-	MYSQL_SERVER_HOST=${MYSQL_SERVER_HOST:-"localhost"}
-	MYSQL_SERVER_PORT=${MYSQL_SERVER_PORT:-"3306"}
-	MYSQL_SERVER_DB_NAME=${MYSQL_SERVER_DB_NAME:-"${package_sysname}"}
-	MYSQL_SERVER_USER=${MYSQL_SERVER_USER:-"root"}
-	MYSQL_SERVER_PASS=${MYSQL_SERVER_PASS:-"$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)"}
+if [ "$ARCH" != "arm64" ]; then
+	MYSQL_REPO_VERSION="$(curl -fsSL https://dev.mysql.com/downloads/repo/apt/ | grep -oP '(?<=mysql-apt-config_)[0-9.]+-[0-9]+(?=_all\.deb)' | head -n1)"
+	MYSQL_PACKAGE_NAME="mysql-apt-config_${MYSQL_REPO_VERSION}_all.deb"
+	if ! dpkg -l | grep -q "mysql-server"; then
+		# setup mysql 8.4 package
+		curl -fsSLO http://repo.mysql.com/"${MYSQL_PACKAGE_NAME}"
+		echo "mysql-apt-config mysql-apt-config/repo-codename  select  $DISTRIB_CODENAME" | debconf-set-selections
+		echo "mysql-apt-config mysql-apt-config/repo-distro  select  $DIST" | debconf-set-selections
+		echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.4-lts" | debconf-set-selections
+		DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
+		rm -f "${MYSQL_PACKAGE_NAME}"
 
-	# setup mysql 8.4 package
-	curl -fsSLO http://repo.mysql.com/"${MYSQL_PACKAGE_NAME}"
-	echo "mysql-apt-config mysql-apt-config/repo-codename  select  $DISTRIB_CODENAME" | debconf-set-selections
-	echo "mysql-apt-config mysql-apt-config/repo-distro  select  $DIST" | debconf-set-selections
-	echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.4-lts" | debconf-set-selections
-	DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
-	rm -f "${MYSQL_PACKAGE_NAME}"
+		echo mysql-community-server mysql-community-server/root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+		echo mysql-community-server mysql-community-server/re-root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+		echo mysql-community-server mysql-server/default-auth-override select "Use Strong Password Encryption (RECOMMENDED)" | debconf-set-selections
+		echo mysql-server mysql-server/root_password password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+		echo mysql-server mysql-server/root_password_again password "${MYSQL_SERVER_PASS}" | debconf-set-selections
 
-	echo mysql-community-server mysql-community-server/root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
-	echo mysql-community-server mysql-community-server/re-root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
-	echo mysql-community-server mysql-server/default-auth-override select "Use Strong Password Encryption (RECOMMENDED)" | debconf-set-selections
-	echo mysql-server mysql-server/root_password password "${MYSQL_SERVER_PASS}" | debconf-set-selections
-	echo mysql-server mysql-server/root_password_again password "${MYSQL_SERVER_PASS}" | debconf-set-selections
-
-elif dpkg -l | grep -q "mysql-apt-config" && [ "$(apt-cache policy mysql-apt-config | awk 'NR==2{print $2}')" != "${MYSQL_REPO_VERSION}" ]; then
-	curl -fsSLO http://repo.mysql.com/${MYSQL_PACKAGE_NAME}
-	DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
-	rm -f "${MYSQL_PACKAGE_NAME}"
+	elif dpkg -l | grep -q "mysql-apt-config" && [ "$(apt-cache policy mysql-apt-config | awk 'NR==2{print $2}')" != "${MYSQL_REPO_VERSION}" ]; then
+		curl -fsSLO http://repo.mysql.com/${MYSQL_PACKAGE_NAME}
+		DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
+		rm -f "${MYSQL_PACKAGE_NAME}"
+	fi
 fi
 
 if [ "$DIST" = "ubuntu" ]; then	
@@ -104,7 +105,7 @@ fi
 curl -fsSL https://openresty.org/package/pubkey.gpg | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/openresty.gpg --import
 # Temporary workaround Debian 13 (trixie) use bookworm codename for OpenResty
 OPENRESTY_CODENAME=$([ "${DISTRIB_CODENAME}" = "trixie" ] && echo "bookworm" || echo "${DISTRIB_CODENAME}")
-echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/$DIST ${OPENRESTY_CODENAME} $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
+echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/$([ "$ARCH" = "arm64" ] && echo "arm64/")$DIST ${OPENRESTY_CODENAME} $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
 chmod 644 /usr/share/keyrings/openresty.gpg
 
 #add java repo
@@ -135,6 +136,10 @@ if [ "$INSTALLATION_TYPE" != "COMMUNITY" ]; then
 	apt-get install -yq postgresql
 fi
 
+if [ "$ARCH" = "arm64" ]; then
+	mysql -u root -e "ALTER USER '${MYSQL_SERVER_USER}'@'localhost' IDENTIFIED WITH caching_sha2_password BY '${MYSQL_SERVER_PASS}';"
+fi
+
 # Temporary fallback dotnet-sdk-10.0 on Debian 11 and Ubuntu 24.04
 DOTNET_VERSION="10.0.100"; DOTNET_PKG="dotnet-sdk-${DOTNET_VERSION%.*}"
 if ! apt-get install -yq "${DOTNET_PKG}"; then
@@ -142,12 +147,18 @@ if ! apt-get install -yq "${DOTNET_PKG}"; then
   ln -sf /usr/share/dotnet/dotnet /usr/bin/dotnet
 
   DOTNET_PKGDIR="/tmp/${DOTNET_PKG}"; mkdir -p "${DOTNET_PKGDIR}/DEBIAN"
-  printf "Package: %s\nVersion: %s\nArchitecture: amd64\nMaintainer: local\nDescription: Provides .NET %s SDK\n" \
-	"${DOTNET_PKG}" "${DOTNET_VERSION}" "${DOTNET_VERSION%%.*}" > "${DOTNET_PKGDIR}/DEBIAN/control"
+  printf "Package: %s\nVersion: %s\nArchitecture: %s\nMaintainer: local\nDescription: Provides .NET %s SDK\n" \
+	"${DOTNET_PKG}" "${DOTNET_VERSION}" "${ARCH}" "${DOTNET_VERSION%%.*}" > "${DOTNET_PKGDIR}/DEBIAN/control"
 
   dpkg-deb --build "${DOTNET_PKGDIR}" "/tmp/${DOTNET_PKG}.deb" && dpkg -i "/tmp/${DOTNET_PKG}.deb"
   rm -rf "${DOTNET_PKGDIR}" "/tmp/${DOTNET_PKG}.deb"
 fi
+
+# Set Java ${JAVA_VERSION} as the default version
+JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*temurin-${JAVA_VERSION}*" | head -1)
+JAVA_HOME=$(dirname "$(dirname "$JAVA_PATH")")
+export JAVA_HOME
+update-alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && update-alternatives --set java "$JAVA_PATH"
 
 if ! dpkg -l | grep -q "opensearch"; then
 	apt-get install -yq opensearch=${ELASTIC_VERSION}
@@ -158,10 +169,6 @@ else
 		systemctl restart opensearch || true
 	fi
 fi
-
-# Set Java ${JAVA_VERSION} as the default version
-JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*temurin-${JAVA_VERSION}*" | head -1)
-update-alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && update-alternatives --set java "$JAVA_PATH"
 
 if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then
 	curl -fsSL https://packages.fluentbit.io/fluentbit.key | gpg --dearmor > /usr/share/keyrings/fluentbit-keyring.gpg

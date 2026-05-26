@@ -79,10 +79,10 @@ if [ "$SKIP_HARDWARE_CHECK" != "true" ]; then
 fi
 
 ARCH="$(dpkg --print-architecture)"
-if [ "$ARCH" != "amd64" ]; then
+[[ "$ARCH" =~ ^(amd64|arm64)$ ]] || {
     echo "ONLYOFFICE ${product^^} doesn't support architecture '$ARCH'"
     exit
-fi
+}
 
 REV=$(< /etc/debian_version)
 DIST='Debian'
