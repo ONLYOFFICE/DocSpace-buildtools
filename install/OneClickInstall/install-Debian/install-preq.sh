@@ -104,7 +104,9 @@ fi
 curl -fsSL https://openresty.org/package/pubkey.gpg | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/openresty.gpg --import
 # Temporary workaround Debian 13 (trixie) use bookworm codename for OpenResty
 OPENRESTY_CODENAME=$([ "${DISTRIB_CODENAME}" = "trixie" ] && echo "bookworm" || echo "${DISTRIB_CODENAME}")
-echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/$DIST ${OPENRESTY_CODENAME} $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
+OPENRESTY_REPO_PATH="package"
+[ "${ARCH:-$(dpkg --print-architecture)}" = "arm64" ] && OPENRESTY_REPO_PATH="package/arm64"
+echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/${OPENRESTY_REPO_PATH}/$DIST ${OPENRESTY_CODENAME} $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
 chmod 644 /usr/share/keyrings/openresty.gpg
 
 #add java repo

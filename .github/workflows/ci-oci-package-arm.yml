@@ -22,36 +22,22 @@ on:
       - "install/OneClickInstall/**"
   workflow_dispatch:
     inputs:
-      testing:
-        description: "Use 4testing packages"
-        required: true
-        default: false
-        type: boolean
       product_version:
         description: "DocSpace package version (optional)"
         required: false
         default: ""
-        type: string
-      rpm_image:
-        description: "CentOS Stream 9 base container image"
-        required: true
-        default: "quay.io/centos/centos:stream9"
         type: string
 
 permissions:
   contents: read
 
 jobs:
-  rpm-el9-aarch64:
-    name: RPM EL9 aarch64 package install
+  deb-ubuntu2404-arm64:
+    name: DEB Ubuntu 24.04 arm64 package install
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 120
     env:
-      CONTAINER_NAME: docspace-arm-el9
-      RPM_IMAGE: ${{ github.event.inputs.rpm_image || 'quay.io/centos/centos:stream9' }}
-      SYSTEMD_IMAGE: docspace-arm-el9-systemd
       PRODUCT_VERSION: ${{ github.event.inputs.product_version }}
-      USE_4TESTING: ${{ github.event.inputs.testing }}
 
     steps:
       - name: Free Disk Space
@@ -60,149 +46,59 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Build EL9 ARM systemd image
+      - name: Show upstream ARM package metadata
+        run: |
+          set -euo pipefail
+
+          show_architectures() {
+            local name="$1"
+            local url="$2"
+
+            echo "::group::${name}"
+            echo "Source: ${url}"
+            curl -fsSL "${url}" | grep -E '^(Architectures|Components|Codename|Suite):' || true
+            echo "::endgroup::"
+          }
+
+          show_architectures "OpenResty Ubuntu noble arm64" "https://openresty.org/package/arm64/ubuntu/dists/noble/Release"
+          show_architectures "Oracle MySQL Ubuntu noble" "https://repo.mysql.com/apt/ubuntu/dists/noble/Release"
+
+          echo "::group::Oracle MySQL 8.4 LTS Ubuntu noble indexes"
+          echo "Source: https://repo.mysql.com/apt/ubuntu/dists/noble/mysql-8.4-lts/"
+          curl -fsSL "https://repo.mysql.com/apt/ubuntu/dists/noble/mysql-8.4-lts/" | grep -E 'binary-' || true
+          echo "::endgroup::"
+
+      - name: Install DocSpace DEB package on ARM
         run: |
           set -eux
-          docker build \
-            --platform linux/arm64 \
-            --build-arg BASE_IMAGE="${RPM_IMAGE}" \
-            -t "${SYSTEMD_IMAGE}" \
-            - <<'DOCKERFILE'
-          ARG BASE_IMAGE
-          FROM ${BASE_IMAGE}
-          RUN dnf -y install systemd dbus dbus-broker findutils gawk gnupg2 grep hostname iproute procps-ng sed tar util-linux && \
-              dnf clean all && \
-              rm -rf /var/cache/dnf
-          STOPSIGNAL SIGRTMIN+3
-          CMD ["/usr/sbin/init"]
-          DOCKERFILE
+          cd install/OneClickInstall
 
-      - name: Start EL9 ARM systemd container
+          args=(
+            package
+            --localscripts true
+            --skiphardwarecheck true
+            --makeswap false
+            --installfluentbit false
+            --installationtype community
+            --logging false
+          )
+          [ -n "${PRODUCT_VERSION}" ] && args+=(--docspaceversion "${PRODUCT_VERSION}")
+
+          sudo -E bash docspace-install.sh "${args[@]}"
+
+      - name: Verify DEB installation
         run: |
           set -eux
-          docker run -d \
-            --name "${CONTAINER_NAME}" \
-            --platform linux/arm64 \
-            --privileged \
-            --cgroupns=host \
-            --tmpfs /tmp \
-            --tmpfs /run \
-            --tmpfs /run/lock \
-            -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-            -v "${GITHUB_WORKSPACE}:/workspace:ro" \
-            "${SYSTEMD_IMAGE}"
-
-          for _ in {1..60}; do
-            if docker exec "${CONTAINER_NAME}" test -S /run/systemd/private; then
-              exit 0
-            fi
-            sleep 2
+          dpkg -s docspace docspace-proxy onlyoffice-documentserver
+          systemctl --no-pager --failed || true
+          for service in mysql rabbitmq-server redis-server opensearch openresty; do
+            systemctl is-active "$service"
           done
-
-          docker logs "${CONTAINER_NAME}" || true
-          exit 1
-
-      - name: Install DocSpace RPM package on ARM
-        run: |
-          set -eux
-          docker exec \
-            -e PRODUCT_VERSION="${PRODUCT_VERSION}" \
-            -e USE_4TESTING="${USE_4TESTING:-false}" \
-            "${CONTAINER_NAME}" \
-            bash -lc '
-              set -euxo pipefail
-
-              dnf -y install findutils gawk gnupg2 grep hostname iproute procps-ng sed tar util-linux
-
-              if [ "${USE_4TESTING}" = "true" ]; then
-                printf "%s\n" \
-                  "[onlyoffice4testing]" \
-                  "name=onlyoffice4testing repo" \
-                  "baseurl=https://nexus.onlyoffice.com/repository/centos-testing/4testing/main/noarch" \
-                  "gpgcheck=1" \
-                  "enabled=1" \
-                  "gpgkey=https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE" \
-                  > /etc/yum.repos.d/onlyoffice4testing.repo
-              fi
-
-              cd /workspace/install/OneClickInstall
-              args=(
-                package
-                --localscripts true
-                --skiphardwarecheck true
-                --makeswap false
-                --installfluentbit false
-                --installationtype community
-                --logging false
-              )
-              [ -n "${PRODUCT_VERSION}" ] && args+=(--docspaceversion "${PRODUCT_VERSION}")
-
-              bash docspace-install.sh "${args[@]}"
-            '
-
-      - name: Verify RPM installation
-        run: |
-          set -eux
-          docker exec "${CONTAINER_NAME}" bash -lc '
-            set -euxo pipefail
-            rpm -q docspace docspace-proxy onlyoffice-documentserver
-            systemctl --no-pager --failed || true
-            for service in mysqld rabbitmq-server redis opensearch openresty; do
-              systemctl is-active "$service"
-            done
-          '
 
       - name: Collect ARM package logs
         if: failure()
         run: |
-          docker exec "${CONTAINER_NAME}" bash -lc '
-            systemctl --no-pager --failed || true
-            systemctl --no-pager status mysqld rabbitmq-server redis opensearch openresty "docspace*" || true
-            journalctl --no-pager -n 500 || true
-            rpm -qa | sort | grep -E "docspace|onlyoffice|documentserver|rabbitmq|erlang|mysql|openresty|opensearch|redis" || true
-          ' || true
-          docker logs "${CONTAINER_NAME}" || true
-
-      - name: Cleanup
-        if: always()
-        run: docker rm -f "${CONTAINER_NAME}" || true
-
-  deb-ubuntu2404-arm64-preflight:
-    name: DEB Ubuntu 24.04 arm64 upstream preflight
-    runs-on: ubuntu-24.04-arm
-    timeout-minutes: 15
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Check DEB ARM blockers
-        run: |
-          set -euo pipefail
-          missing=0
-
-          check_architecture() {
-            local name="$1"
-            local url="$2"
-            local arch="$3"
-            local release
-
-            release="$(curl -fsSL "$url")"
-            echo "$release" | grep -E '^Architectures:' || true
-            if echo "$release" | awk -v arch="$arch" '/^Architectures:/ {for (i=2; i<=NF; i++) if ($i == arch) found=1} END {exit !found}'; then
-              echo "::notice::${name} publishes ${arch} packages."
-            else
-              echo "::notice::${name} does not publish ${arch} packages yet."
-              missing=1
-            fi
-          }
-
-          check_architecture "OpenResty Ubuntu noble" "https://openresty.org/package/ubuntu/dists/noble/Release" "arm64"
-          check_architecture "Oracle MySQL Ubuntu noble" "https://repo.mysql.com/apt/ubuntu/dists/noble/Release" "arm64"
-
-          if [ "$missing" -eq 0 ]; then
-            echo "::error::Ubuntu 24.04 arm64 prerequisites are now available. Remove the DEB arm64 guard and add a real package install job."
-            exit 1
-          fi
-
-          grep -q "Debian/Ubuntu arm64 requires arm64 OpenResty and MySQL packages" install/OneClickInstall/install-Debian/tools.sh
+          systemctl --no-pager --failed || true
+          systemctl --no-pager status mysql rabbitmq-server redis-server opensearch openresty "docspace*" || true
+          journalctl --no-pager -n 500 || true
+          dpkg -l | grep -E "docspace|onlyoffice|documentserver|rabbitmq|erlang|mysql|openresty|opensearch|redis" || true
