@@ -43,7 +43,8 @@ echo "::notice::Backend build completed in $((BACKEND_END_TIMER - BACKEND_START_
 
 # MCP build
 cd "${BUILD_PATH}/mcp"
-pnpm install --frozen-lockfile && pnpm build-app
+# Allow postinstall scripts for MCP deps: esbuild and unrs-resolver
+pnpm install --frozen-lockfile --dangerously-allow-all-builds && pnpm build-app
 mkdir -p "${PUBLISH_DIR}/services/ASC.AI.MCP/service"
 cp -a bin "${PUBLISH_DIR}/services/ASC.AI.MCP/service/"
 
