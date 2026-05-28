@@ -151,7 +151,7 @@ runs:
           PAGE=$((PAGE + 1))
         done
 
-        MARKED=$(echo "$ALL_COMMENTS" | jq '[.[] | select(.body | contains("Claude Code Review"))] | sort_by(.id)')
+        MARKED=$(echo "$ALL_COMMENTS" | jq '[.[] | select(.body | contains("Claude Code Review") and (.body | contains("<!-- Claude-Review -->") | not))] | sort_by(.id)')
         COUNT=$(echo "$MARKED" | jq 'length')
 
         # Need at least 2: one old + one new just created by Claude
