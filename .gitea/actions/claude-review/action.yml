@@ -33,7 +33,7 @@ runs:
 
           - Use the PR diff already available in context as the source of truth for all output sections
           - Only run `git diff origin/<base_branch>...HEAD` if the available diff appears to cover only the latest commit (e.g., previous review references issues absent from the current context diff)
-          - Search PR comments for one containing `Claude Code Review` — this is the previous review
+          - Search PR comments for one containing `Claude Code Review` but NOT containing `<!-- Claude-Review -->` — this is the previous review
 
           ### 2. Build the review
 
@@ -151,7 +151,7 @@ runs:
           PAGE=$((PAGE + 1))
         done
 
-        MARKED=$(echo "$ALL_COMMENTS" | jq '[.[] | select(.body | contains("Claude Code Review"))] | sort_by(.id)')
+        MARKED=$(echo "$ALL_COMMENTS" | jq '[.[] | select(.body | contains("Claude Code Review") and (.body | contains("<!-- Claude-Review -->") | not))] | sort_by(.id)')
         COUNT=$(echo "$MARKED" | jq 'length')
 
         # Need at least 2: one old + one new just created by Claude

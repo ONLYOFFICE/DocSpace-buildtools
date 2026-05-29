@@ -364,19 +364,22 @@ setup_docs() {
 
 	if [ $1 == "LOCAL_DOCS_SERVER" ]; then
 		DS_CONF_DIR="/etc/${PACKAGE_SYSNAME}/documentserver"
-		DOCUMENT_SERVER_PORT=$(grep -oP '(?<=:)\d+(?=\s)' ${DS_CONF_DIR}/nginx/ds.conf)
+		DOCUMENT_SERVER_PORT=$(grep -oP '(?<=:)\d+(?=[\s;])' ${DS_CONF_DIR}/nginx/ds.conf | head -1)
+		: "${DOCUMENT_SERVER_PORT:=8083}"
 		: "${DOCUMENT_SERVER_JWT_SECRET:=$(json -f ${DS_CONF_DIR}/local.json services.CoAuthoring.secret.inbox.string 2>/dev/null)}"
 		: "${DOCUMENT_SERVER_JWT_HEADER:=$(json -f ${DS_CONF_DIR}/local.json services.CoAuthoring.token.inbox.header 2>/dev/null)}"
 
-		json_configuration "${DS_CONF_DIR}/local.json" "rabbitmq" "{ url: '${RABBITMQ_URI}' }"
-		json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis" "{ host: '${REDIS_HOST}', port: '${REDIS_PORT}' }"
-		json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis.options" "{
-			${REDIS_USER:+username: '${REDIS_USER}',}
-			${REDIS_PASS:+password: '${REDIS_PASS}',}
-			${REDIS_DB:+database: '${REDIS_DB}',}
-		}"
+		if [ "${ENVIRONMENT}" != "community" ]; then
+			json_configuration "${DS_CONF_DIR}/local.json" "rabbitmq" "{ url: '${RABBITMQ_URI}' }"
+			json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis" "{ host: '${REDIS_HOST}', port: '${REDIS_PORT}' }"
+			json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis.options" "{
+				${REDIS_USER:+username: '${REDIS_USER}',}
+				${REDIS_PASS:+password: '${REDIS_PASS}',}
+				${REDIS_DB:+database: '${REDIS_DB}',}
+			}"
+			chown ds:ds ${DS_CONF_DIR}/local.json
+		fi
 		
-		chown ds:ds ${DS_CONF_DIR}/local.json
 		usermod -aG ${PACKAGE_SYSNAME} ds
 		chmod g+rwxs /var/www/${PACKAGE_SYSNAME}/Data
 		systemctl restart ds-converter ds-docservice ds-metrics
@@ -386,12 +389,13 @@ setup_docs() {
 		: "${DOCUMENT_SERVER_JWT_HEADER:=$(json -f "${USER_CONF}" services.CoAuthoring.token.inbox.header 2>/dev/null)}"
 	fi
 
-	sed "0,/proxy_pass .*;/{s#proxy_pass .*;#proxy_pass ${DOCUMENT_SERVER_URL_EXTERNAL:-http://$APP_HOST:$DOCUMENT_SERVER_PORT};#}" -i ${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}.conf
-	json_configuration "${USER_CONF}" "files.docservice.secret.value" "${DOCUMENT_SERVER_JWT_SECRET}" 
-	json_configuration "${USER_CONF}" "files.docservice.secret.header" "${DOCUMENT_SERVER_JWT_HEADER:-"AuthorizationJwt"}" 
-	json_configuration "${USER_CONF}" "files.docservice.url.public" "${DOCUMENT_SERVER_URL_EXTERNAL:-"/ds-vpath/"}"
-	json_configuration "${USER_CONF}" "files.docservice.url.internal" "${DOCUMENT_SERVER_URL_EXTERNAL:-"http://${APP_HOST}:${DOCUMENT_SERVER_PORT}"}"
-	json_configuration "${USER_CONF}" "files.docservice.url.portal" "http://${APP_HOST}:${APP_PORT}"
+	local _ds_url="${DOCUMENT_SERVER_URL_EXTERNAL:-http://$APP_HOST:$DOCUMENT_SERVER_PORT}"
+	sed "/map \$scheme \$document_server/,/^}/s|\(default \)\".*\";|\1\"${_ds_url}\";|" -i "${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}.conf"
+	json_configuration "${USER_CONF}" "files.docservice.url.internal"  "${_ds_url}"
+	json_configuration "${USER_CONF}" "files.docservice.secret.value"  "${DOCUMENT_SERVER_JWT_SECRET}"
+	json_configuration "${USER_CONF}" "files.docservice.secret.header" "${DOCUMENT_SERVER_JWT_HEADER:-"AuthorizationJwt"}"
+	json_configuration "${USER_CONF}" "files.docservice.url.public"    "${DOCUMENT_SERVER_URL_EXTERNAL:-"/ds-vpath/"}"
+	json_configuration "${USER_CONF}" "files.docservice.url.portal"    "http://${APP_HOST}:${APP_PORT}"
 	
 	echo "OK"
 }
