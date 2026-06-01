@@ -170,8 +170,3 @@ if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then
 	apt-get install -o DPkg::options::="--force-confnew" -yq opensearch-dashboards="${DASHBOARDS_VERSION}" fluent-bit
 fi
 
-# disable apparmor for mysql
-if which apparmor_parser && [ ! -f /etc/apparmor.d/disable/usr.sbin.mysqld ] && [ -f /etc/apparmor.d/disable/usr.sbin.mysqld ]; then
-	ln -sf /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/
-	apparmor_parser -R /etc/apparmor.d/usr.sbin.mysqld
-fi
