@@ -71,31 +71,6 @@ MYSQL_SERVER_DB_NAME=${MYSQL_SERVER_DB_NAME:-"${package_sysname}"}
 MYSQL_SERVER_USER=${MYSQL_SERVER_USER:-"root"}
 MYSQL_SERVER_PASS=${MYSQL_SERVER_PASS:-"$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)"}
 
-if [ "$ARCH" != "arm64" ]; then
-	MYSQL_REPO_VERSION="$(curl -fsSL https://dev.mysql.com/downloads/repo/apt/ | grep -oP '(?<=mysql-apt-config_)[0-9.]+-[0-9]+(?=_all\.deb)' | head -n1)"
-	MYSQL_PACKAGE_NAME="mysql-apt-config_${MYSQL_REPO_VERSION}_all.deb"
-	if ! dpkg -l | grep -q "mysql-server"; then
-		# setup mysql 8.4 package
-		curl -fsSLO http://repo.mysql.com/"${MYSQL_PACKAGE_NAME}"
-		echo "mysql-apt-config mysql-apt-config/repo-codename  select  $DISTRIB_CODENAME" | debconf-set-selections
-		echo "mysql-apt-config mysql-apt-config/repo-distro  select  $DIST" | debconf-set-selections
-		echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.4-lts" | debconf-set-selections
-		DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
-		rm -f "${MYSQL_PACKAGE_NAME}"
-
-		echo mysql-community-server mysql-community-server/root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
-		echo mysql-community-server mysql-community-server/re-root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
-		echo mysql-community-server mysql-server/default-auth-override select "Use Strong Password Encryption (RECOMMENDED)" | debconf-set-selections
-		echo mysql-server mysql-server/root_password password "${MYSQL_SERVER_PASS}" | debconf-set-selections
-		echo mysql-server mysql-server/root_password_again password "${MYSQL_SERVER_PASS}" | debconf-set-selections
-
-	elif dpkg -l | grep -q "mysql-apt-config" && [ "$(apt-cache policy mysql-apt-config | awk 'NR==2{print $2}')" != "${MYSQL_REPO_VERSION}" ]; then
-		curl -fsSLO http://repo.mysql.com/${MYSQL_PACKAGE_NAME}
-		DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
-		rm -f "${MYSQL_PACKAGE_NAME}"
-	fi
-fi
-
 if [ "$DIST" = "ubuntu" ]; then	
 	curl -fsSL https://packages.redis.io/gpg | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/redis.gpg --import
 	echo "deb [signed-by=/usr/share/keyrings/redis.gpg] https://packages.redis.io/deb ${DISTRIB_CODENAME} main" | tee /etc/apt/sources.list.d/redis.list
@@ -136,8 +111,8 @@ if [ "$INSTALLATION_TYPE" != "COMMUNITY" ]; then
 	apt-get install -yq postgresql
 fi
 
-if [ "$ARCH" = "arm64" ]; then
-	mysql -u root -e "ALTER USER '${MYSQL_SERVER_USER}'@'localhost' IDENTIFIED WITH caching_sha2_password BY '${MYSQL_SERVER_PASS}';"
+if ! mysql -u root -e "ALTER USER '${MYSQL_SERVER_USER}'@'localhost' IDENTIFIED WITH caching_sha2_password BY '${MYSQL_SERVER_PASS}';"; then
+	mysql -u root -e "ALTER USER '${MYSQL_SERVER_USER}'@'localhost' IDENTIFIED BY '${MYSQL_SERVER_PASS}';"
 fi
 
 # Temporary fallback dotnet-sdk-10.0 on Debian 11 and Ubuntu 24.04
