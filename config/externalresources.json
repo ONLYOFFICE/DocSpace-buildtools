@@ -137,7 +137,13 @@
           "registrationcanceled": "/registration-canceled.aspx",
           "seamlesscollaboration": "/seamless-collaboration.aspx",
           "subscribe": "/post.ashx",
-          "wrongportalname": "/wrongportalname.aspx"
+          "wrongportalname": "/wrongportalname.aspx",
+          "nextcloud": "/office-for-nextcloud",
+          "owncloud": "/office-for-owncloud",
+          "confluence": "/office-for-confluence",
+          "alfresco": "/office-for-alfresco",
+          "moodle": "/office-for-moodle",
+          "odoo": "/office-for-odoo"
         }
       },
       "zh-CN": {
