@@ -83,6 +83,12 @@
 /usr/lib/systemd/system/%{product}-socket.service
 %dir %{buildpath}/services/
 
+%files newai
+%defattr(-, onlyoffice, onlyoffice, -)
+%{buildpath}/services/ASC.NewAi/
+/usr/lib/systemd/system/%{product}-newai.service
+%dir %{buildpath}/services/
+
 %files studio
 %defattr(-, onlyoffice, onlyoffice, -)
 %{buildpath}/studio/ASC.Web.Studio/

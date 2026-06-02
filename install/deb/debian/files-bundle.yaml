@@ -112,6 +112,10 @@ files:
     content: |
       debian/build/publish/services/ASC.Socket.IO var/www/{{product}}/services
 
+  - name: "{{product}}-newai.install"
+    content: |
+      debian/build/publish/services/ASC.NewAi var/www/{{product}}/services
+
   - name: "{{product}}-ssoauth.install"
     content: |
       debian/build/publish/services/ASC.SsoAuth var/www/{{product}}/services

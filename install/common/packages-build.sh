@@ -31,6 +31,7 @@ PUBLISH_ARGS='-c Release --self-contained false -p:DebugType=None -p:DebugSymbol
 dotnet publish common/Tools/ASC.Migration.Runner/ASC.Migration.Runner.csproj $PUBLISH_ARGS -o ${PUBLISH_DIR}/services/ASC.Migration.Runner/service/ && \
 dotnet publish ASC.Web.slnx $PUBLISH_ARGS -p:PublishProfile=ReleaseProfile && \
 cd "${SERVER_PATH}/common/ASC.Socket.IO" && yarn install --immutable && mv -f ${SERVER_PATH}/common/ASC.Socket.IO ${PUBLISH_DIR}/services/
+cd "${SERVER_PATH}/common/ASC.NewAi" && yarn install --immutable && mv -f ${SERVER_PATH}/common/ASC.NewAi ${PUBLISH_DIR}/services/
 cd "${SERVER_PATH}/common/ASC.SsoAuth" && yarn install --immutable && mv -f ${SERVER_PATH}/common/ASC.SsoAuth ${PUBLISH_DIR}/services/
 cd "${SERVER_PATH}/common/ASC.Identity" && mkdir -p ${PUBLISH_DIR}/services/{ASC.Identity.Registration,ASC.Identity.Authorization}
 mvn -B dependency:go-offline -Dorg.slf4j.simpleLogger.defaultLogLevel=warn
@@ -56,7 +57,7 @@ done
 find ${PUBLISH_DIR} -depth -type f -regex '.*\(eslintrc.*\|npmignore\|gitignore\|gitattributes\|gitmodules\|un~\|DS_Store\)' -exec rm -f {} \;
 find ${BUILDTOOLS_PATH}/config -type f -regex '.*\.\(test\|dev\)\..*' -delete
 rm -f ${BUILDTOOLS_PATH}/config/nginx/onlyoffice-{login,management}.conf
-find ${PUBLISH_DIR}/web ${PUBLISH_DIR}/services/{ASC.SsoAuth,ASC.Socket.IO} -type f \( -name "*.js.map" -o -name "*.css.map" \) -delete
+find ${PUBLISH_DIR}/web ${PUBLISH_DIR}/services/{ASC.SsoAuth,ASC.Socket.IO,ASC.NewAi} -type f \( -name "*.js.map" -o -name "*.css.map" \) -delete
 
 # Renaming files
 find ${BUILDTOOLS_PATH}/install/common -type f -exec rename -f -v "s/product([^\/]*)$/${PRODUCT}\$1/g" {} ';'

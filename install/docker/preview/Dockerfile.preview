@@ -287,6 +287,21 @@ RUN echo "--- build/publish ASC.Socket.IO ---" && \
 
 COPY ./server/common/ASC.Socket.IO ./
 
+# build services NewAi
+WORKDIR ${SRC_PATH}/server/common/ASC.NewAi
+
+# Copy package.json and yarn.lock files
+COPY ./server/common/ASC.NewAi/package.json ./
+COPY ./server/common/ASC.NewAi/yarn.lock ./
+COPY ./server/common/ASC.NewAi/.yarnrc.yml ./
+COPY ./server/common/ASC.NewAi/.yarn ./.yarn
+
+# Install dependencies
+RUN echo "--- build/publish ASC.NewAi ---" && \
+    yarn install --immutable
+
+COPY ./server/common/ASC.NewAi ./
+
 # build services SsoAuth
 WORKDIR ${SRC_PATH}/server/common/ASC.SsoAuth
 
@@ -412,6 +427,7 @@ COPY --from=build-nodejs-client --chown=${COMPANY}:${COMPANY} ${SRC_PATH}/plugin
 
 COPY --from=build-dotnet --chown=${COMPANY}:${COMPANY} ${SRC_PATH}/publish/backend/ ${SRC_PATH}/publish/services/backend/
 COPY --from=build-nodejs-server --chown=${COMPANY}:${COMPANY} ${SRC_PATH}/server/common/ASC.Socket.IO ${SRC_PATH}/publish/services/ASC.Socket.IO
+COPY --from=build-nodejs-server --chown=${COMPANY}:${COMPANY} ${SRC_PATH}/server/common/ASC.NewAi ${SRC_PATH}/publish/services/ASC.NewAi
 COPY --from=build-nodejs-server --chown=${COMPANY}:${COMPANY} ${SRC_PATH}/server/common/ASC.SsoAuth ${SRC_PATH}/publish/services/ASC.SsoAuth
 
 # ---- nginx/openresty config + templates + campaigns (merged from your snippets) ----
@@ -461,6 +477,6 @@ RUN set -eux; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/* /tmp/*
 
-EXPOSE  5007 5009 5004 5000 5157 5003 5013 5011 9899 8092 8080 5032 5010 5027 5012 5005 5006 5124 5075 5015 5099 9834
+EXPOSE  5007 5009 5004 5000 5157 5003 5013 5011 9899 9837 8092 8080 5032 5010 5027 5012 5005 5006 5124 5075 5015 5099 9834
 
 ENTRYPOINT  [ "/docker-entrypoint.sh" ]

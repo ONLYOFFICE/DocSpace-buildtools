@@ -44,6 +44,8 @@ copy buildtools\install\win\WinSW.NET4.exe "buildtools\install\win\OpenResty\too
 copy buildtools\install\win\tools\OpenResty.xml "buildtools\install\win\OpenResty\tools\OpenResty.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\Socket.IO.exe" /y
 copy buildtools\install\win\tools\Socket.IO.xml "buildtools\install\win\Files\tools\Socket.IO.xml" /y
+copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\NewAi.exe" /y
+copy buildtools\install\win\tools\NewAi.xml "buildtools\install\win\Files\tools\NewAi.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\SsoAuth.exe" /y
 copy buildtools\install\win\tools\SsoAuth.xml "buildtools\install\win\Files\tools\SsoAuth.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\DocEditor.exe" /y

@@ -323,6 +323,15 @@ COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Socket
 
 CMD  ["server.js", "ASC.Socket.IO"]
 
+## ASC.NewAi ##
+FROM noderun AS newai
+WORKDIR ${BUILD_PATH}/services/ASC.NewAi/service/
+
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
+COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.NewAi/service/ .
+
+CMD  ["server.js", "ASC.NewAi"]
+
 ## ASC.SsoAuth ##
 FROM noderun AS ssoauth
 WORKDIR ${BUILD_PATH}/services/ASC.SsoAuth/service/

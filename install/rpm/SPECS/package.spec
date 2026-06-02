@@ -90,6 +90,15 @@ BuildArch:      noarch
 %description    socket
 The service which provides two-way communication between a web browser and the server.
 
+%package        newai
+Summary:        NewAi
+Requires:       %name-common  = %version-%release
+Requires:       nodejs >= 22.0
+AutoReqProv:    no
+BuildArch:      noarch
+%description    newai
+The service which provides AI chat features and MCP tool integrations.
+
 %package        studio
 Summary:        Studio
 Requires:       %name-common  = %version-%release

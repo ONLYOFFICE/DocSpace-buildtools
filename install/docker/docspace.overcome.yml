@@ -97,6 +97,17 @@ services:
       onlyoffice-migration-runner:
         condition: service_completed_successfully
 
+  onlyoffice-newai:
+    <<: *x-profiles-local
+    image: ${Baseimage_Nodejs_Run}
+    working_dir: ${BUILD_PATH}/services/ASC.NewAi/
+    command: ["server.js", "ASC.NewAi"]
+    volumes:
+      - ${ROOT_DIR}/server/common/ASC.NewAi/:${BUILD_PATH}/services/ASC.NewAi/
+    depends_on:
+      onlyoffice-migration-runner:
+        condition: service_completed_successfully
+
   onlyoffice-studio-notify:
     <<: *x-profiles-local
     image: ${Baseimage_Dotnet_Run}
