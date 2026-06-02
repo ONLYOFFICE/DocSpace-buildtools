@@ -110,12 +110,6 @@ map $SERVICE_SOCKET $socket_io_url {
     default $SERVICE_SOCKET;
 }
 
-map $SERVICE_NEW_AI $new_ai_service_url {
-    volatile;
-    "" 127.0.0.1:9837;
-    default $SERVICE_NEW_AI;
-}
-
 map $scheme $api_cache_url {
   default "http://127.0.0.1:5100";
 }
