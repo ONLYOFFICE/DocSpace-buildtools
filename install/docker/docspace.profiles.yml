@@ -58,6 +58,7 @@ x-service: &x-service-base
     RABBIT_PASSWORD: ${RABBIT_PASSWORD}
     ROUTER_HOST: ${ROUTER_HOST}
     API_HOST: ${API_HOST}
+    AI_SERVICE_URL: http://${SERVICE_AI}
   volumes:
     - ${ROOT_DIR}/data:/app/onlyoffice/data
     - ${ROOT_DIR}/logs:/var/log/onlyoffice
