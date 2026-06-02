@@ -1,6 +1,7 @@
 %install
 rm -rf %{buildroot}
 mkdir -p "%{buildroot}%{_bindir}/"
+mkdir -p "%{buildroot}%{_datadir}/licenses/%{name}"
 mkdir -p "%{buildroot}%{_docdir}/%{name}-%{version}-%{release}/"
 mkdir -p "%{buildroot}%{_sysconfdir}/fluent-bit/"
 mkdir -p "%{buildroot}%{_sysconfdir}/onlyoffice/%{product}/.private/"
@@ -83,5 +84,6 @@ rsync -a %{_builddir}/publish/services/ASC.Identity.Registration/app.jar "%{buil
 rsync -a %{_builddir}/publish/services/ASC.Socket.IO/ "%{buildroot}%{buildpath}/services/ASC.Socket.IO/"
 rsync -a %{_builddir}/publish/services/ASC.NewAi/ "%{buildroot}%{buildpath}/services/ASC.NewAi/"
 rsync -a %{_builddir}/publish/services/ASC.SsoAuth/ "%{buildroot}%{buildpath}/services/ASC.SsoAuth/"
-rsync -a %{_builddir}/LICENSE "%{buildroot}%{_docdir}/%{name}-%{version}-%{release}/"
+rsync -a %{_builddir}/LICENSE "%{buildroot}%{_datadir}/licenses/%{name}/"
+rsync -a %{_builddir}/buildtools/install/common/LICENSE-CC-BY-SA "%{buildroot}%{_datadir}/licenses/%{name}/"
 rsync -a %{_builddir}/DocStore/ "%{buildroot}%{buildpath}/products/ASC.Files/server/DocStore/"
