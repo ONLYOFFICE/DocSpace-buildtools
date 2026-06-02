@@ -192,6 +192,9 @@ services:
     container_name: ${NEW_AI_HOST}
     expose:
       - ${SERVICE_PORT}
+    healthcheck:
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_NEW_AI}/health/ || exit 1
 
   onlyoffice-studio-notify:
     <<: [*x-service-base, *x-profiles-backend]
