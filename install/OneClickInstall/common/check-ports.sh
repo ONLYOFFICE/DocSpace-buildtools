@@ -71,6 +71,14 @@ if [ "$PRODUCT_INSTALLED" = "true" ] && [ "$UPDATE" != "true" ]; then
 fi
 
 if [ "$UPDATE" != "true" ]; then
+	if ! command -v ss >/dev/null 2>&1; then
+		if command -v dpkg >/dev/null 2>&1; then
+			apt-get install -yq iproute2
+		elif command -v rpm >/dev/null 2>&1; then
+			${package_manager} -y install iproute
+		fi
+	fi
+
 	PRODUCT_PORTS=(
 		"${APP_PORT:-80}" 5000 5001 5003 5004 5005 5006 5007 5009 5010 5011 5012 5013 5014 5015
 		5027 5032 5033 5034 5075 5099 5100 5124 5157 5158
