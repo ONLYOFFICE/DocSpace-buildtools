@@ -58,7 +58,7 @@ while [ "$1" != "" ]; do
         -je | --jwtenabled )                [ -n "$2" ] && JWT_ENABLED=$2 && shift ;;
         -jh | --jwtheader )                 [ -n "$2" ] && JWT_HEADER=$2 && shift ;;
         -js | --jwtsecret )                 [ -n "$2" ] && JWT_SECRET=$2 && shift ;;
-        -gb | --gitbranch )                 [ -n "$2" ] && PARAMETERS="$PARAMETERS ${1}" && GIT_BRANCH=$2 && shift ;;
+        -gb | --gitbranch )                 [ -n "$2" ] && GIT_BRANCH=$2 && shift ;;
         -ifb | --installfluentbit )         [ -n "$2" ] && INSTALL_FLUENT_BIT=$2 && shift ;;
         -dsv | --docspaceversion )          [ -n "$2" ] && PRODUCT_VERSION=$2 && shift ;;
         -du | --dashboardsusername )        [ -n "$2" ] && DASHBOARDS_USERNAME=$2 && shift ;;
@@ -118,13 +118,11 @@ END
 
 if [ "$LOCAL_SCRIPTS" = "true" ]; then
 	source install-RedHat/tools.sh
-	source install-RedHat/bootstrap.sh
 	source common/check-ports.sh
 	source install-RedHat/install-preq.sh
 	source install-RedHat/install-app.sh
 else
 	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/install-RedHat/tools.sh)
-	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/install-RedHat/bootstrap.sh)
 	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/common/check-ports.sh)
 	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/install-RedHat/install-preq.sh)
 	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/install-RedHat/install-app.sh)

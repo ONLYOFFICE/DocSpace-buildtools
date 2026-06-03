@@ -49,8 +49,7 @@ EOF
 hold_package_version
 
 if [ "$DIST" = "debian" ] && [ "$(apt-cache search ttf-mscorefonts-installer | wc -l)" -eq 0 ]; then
-		echo "deb http://ftp.uk.debian.org/debian/ $DISTRIB_CODENAME main contrib" >> /etc/apt/sources.list
-		echo "deb-src http://ftp.uk.debian.org/debian/ $DISTRIB_CODENAME main contrib" >> /etc/apt/sources.list
+		echo "deb http://deb.debian.org/debian/ $DISTRIB_CODENAME main contrib" >> /etc/apt/sources.list
 fi
 
 # Temporary workaround extend apt-sequoia policy until 2027-02-01 (OpenResty/OpenSearch)
@@ -65,14 +64,8 @@ if [ -n "$PRODUCT_VERSION" ] && ! apt-cache madison "$product" | awk '{print $3}
   echo "Requested ${product_name} version ${PRODUCT_VERSION} not found in repository."; exit 1
 fi
 
-if ! command -v locale-gen &> /dev/null; then
-	apt-get install -yq locales
-fi
-
-if ! dpkg -l | grep -q "apt-transport-https"; then
-	apt-get install -yq apt-transport-https
-fi
-
+dpkg -l | grep -q "debconf-utils" || apt-get install -yq debconf-utils
+command -v locale-gen &>/dev/null || apt-get install -yq locales
 locale-gen en_US.UTF-8
 
 # add opensearch repo
