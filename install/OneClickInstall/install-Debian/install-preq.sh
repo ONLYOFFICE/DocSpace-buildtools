@@ -106,7 +106,7 @@ if ! dpkg -l | grep -q "mysql-server"; then
 
 	# setup mysql 8.4 package
 	curl -fsSLO http://repo.mysql.com/"${MYSQL_PACKAGE_NAME}"
-	echo "mysql-apt-config mysql-apt-config/repo-codename  select  $DISTRIB_CODENAME" | debconf-set-selections
+	echo "mysql-apt-config mysql-apt-config/repo-codename  select  ${DISTRIB_CODENAME/resolute/noble}" | debconf-set-selections
 	echo "mysql-apt-config mysql-apt-config/repo-distro  select  $DIST" | debconf-set-selections
 	echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.4-lts" | debconf-set-selections
 	DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
@@ -131,8 +131,8 @@ if [ "$DIST" = "ubuntu" ]; then
 fi
 
 curl -fsSL https://openresty.org/package/pubkey.gpg | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/openresty.gpg --import
-# Temporary workaround Debian 13 (trixie) use bookworm codename for OpenResty
-OPENRESTY_CODENAME=$([ "${DISTRIB_CODENAME}" = "trixie" ] && echo "bookworm" || echo "${DISTRIB_CODENAME}")
+# Temporary workaround Debian 13 (trixie) and Ubuntu 26.04 (resolute) use previous LTS codename for OpenResty
+OPENRESTY_CODENAME=$([ "${DISTRIB_CODENAME}" = "trixie" ] && echo "bookworm" || echo "${DISTRIB_CODENAME/resolute/noble}")
 echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/$DIST ${OPENRESTY_CODENAME} $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
 chmod 644 /usr/share/keyrings/openresty.gpg
 

@@ -34,6 +34,10 @@ on:
          type: boolean
          description: 'Ubuntu 24.04'
          default: true
+      ubuntu2604:
+         type: boolean
+         description: 'Ubuntu 26.04'
+         default: true
 
 jobs:
   prepare:
@@ -53,7 +57,8 @@ jobs:
               {"execute": '${{ github.event.inputs.debian12   || true }}', "name": "Debian 12",    "os": "debian12",   "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.debian13   || true }}', "name": "Debian 13",    "os": "debian13",   "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu 22.04", "os": "ubuntu2204", "distr": "onlyoffice"},
-              {"execute": '${{ github.event.inputs.ubuntu2404 || true }}', "name": "Ubuntu 24.04", "os": "ubuntu2404", "distr": "onlyoffice"}
+              {"execute": '${{ github.event.inputs.ubuntu2404 || true }}', "name": "Ubuntu 24.04", "os": "ubuntu2404", "distr": "onlyoffice"},
+              {"execute": '${{ github.event.inputs.ubuntu2604 || true }}', "name": "Ubuntu 26.04", "os": "ubuntu2604", "distr": "onlyoffice"}
             ]
           }' | jq -c '{include: [.include[] | select(.execute == true)]}')
           echo "matrix=${matrix}" >> $GITHUB_OUTPUT
