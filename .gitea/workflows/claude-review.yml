@@ -5,6 +5,10 @@ on:
     types: [opened, synchronize]
     branches: [master, develop, 'hotfix/**', 'release/**']
 
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   claude-review:
     runs-on: ubuntu-latest
