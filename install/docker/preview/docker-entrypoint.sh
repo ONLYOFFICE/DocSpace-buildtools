@@ -7,6 +7,7 @@ echo "=================================="
 # Default values
 PATH_TO_CONF=${PATH_TO_CONF:-"/app/onlyoffice/config"}
 SRC_PATH=${SRC_PATH:-"/app/onlyoffice/src"}
+DEBUG_INFO=${DEBUG_INFO:-"false"}
 APP_CORE_BASE_DOMAIN=${APP_CORE_BASE_DOMAIN:-"localhost"}
 APP_URL_PORTAL=${APP_URL_PORTAL:-"http://127.0.0.1:8092"}
 APP_CORE_MACHINEKEY=${APP_CORE_MACHINEKEY:-"your_core_machinekey"}
@@ -52,6 +53,7 @@ update_configs() {
     sed -i "s!\"base-domain\".*,!\"base-domain\": \"${APP_CORE_BASE_DOMAIN}\",!g" ${PATH_TO_CONF}/appsettings.json
     sed -i "s!\"machinekey\".*,!\"machinekey\": \"${APP_CORE_MACHINEKEY}\",!g" ${PATH_TO_CONF}/appsettings.json
     sed -i "s!\"public\".*,!\"public\": \"${DOCUMENT_SERVER_URL_PUBLIC}\",!g" ${PATH_TO_CONF}/appsettings.json
+    sed -i "s!\"debug-info\": {[^}]*}!\"debug-info\": { \"enabled\": ${DEBUG_INFO} }!g" ${PATH_TO_CONF}/appsettings.json
     sed -i "s!\"internal\".*,!\"internal\": \"${DOCUMENT_SERVER_URL_EXTERNAL}/\\\",!g" ${PATH_TO_CONF}/appsettings.json
     sed -i "0,/\"value\"/s!\"value\".*,!\"value\": \"${DOCUMENT_SERVER_JWT_SECRET}\",!" ${PATH_TO_CONF}/appsettings.json
     sed -i "s!\"portal\".*!\"portal\": \"${APP_URL_PORTAL}\"!g" ${PATH_TO_CONF}/appsettings.json
