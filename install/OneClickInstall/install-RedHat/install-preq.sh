@@ -87,7 +87,9 @@ yum-config-manager --disable 'mysql*' >/dev/null 2>&1 || true
 yum-config-manager --enable "${MYSQL_LTS_REPO}" >/dev/null 2>&1 || { echo "ERROR: failed to enable ${MYSQL_LTS_REPO} repo" >&2; exit 1; }
 [ "$DIST" = "fedora" ] && sed -i 's/\(gpgcheck=\)1/\10/' /etc/yum.repos.d/mysql-community*.repo
 [ "$DIST" = "fedora" ] || { [ "$DIST" = "centos" ] && [ "$REV" -ge 10 ]; } && WEAK_OPT="--setopt=install_weak_deps=False"
-MYSQL_CANDIDATE="$(dnf -q --showduplicates list available mysql-community-server 2>/dev/null | awk '{print $2}' | grep -E '^[0-9]' | sort -V | tail -n1)"
+dnf -q makecache --repo="${MYSQL_LTS_REPO}" 2>/dev/null || true
+MYSQL_CANDIDATE="$(dnf -q --showduplicates list available --repo="${MYSQL_LTS_REPO}" mysql-community-server 2>/dev/null | awk '{print $2}' | grep -E '^[0-9]' | sort -V | tail -n1)"
+[[ -n "${MYSQL_CANDIDATE}" ]] || { echo "ERROR: mysql-community-server 8.x is not available for ${DIST}${REV}" >&2; exit 1; }
 [[ "${MYSQL_CANDIDATE}" == ${MYSQL_LTS_MAJOR}.* ]] || { echo "ERROR: mysql-community-server candidate is '${MYSQL_CANDIDATE}', expected ${MYSQL_LTS_MAJOR}.x" >&2; exit 1; }
 rpm -q mysql-community-server >/dev/null 2>&1 || MYSQL_FIRST_TIME_INSTALL="true"
 
