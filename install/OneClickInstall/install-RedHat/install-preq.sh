@@ -77,20 +77,21 @@ curl -fsSL https://packagecloud.io/install/repositories/rabbitmq/erlang/script.r
 NODE_VERSION="22"
 curl -fsSL https://rpm.nodesource.com/setup_${NODE_VERSION}.x | bash -
 
-#add mysql repo
-MYSQL_LTS_MAJOR="8.4"
-MYSQL_LTS_REPO="mysql-${MYSQL_LTS_MAJOR}-lts-community"
-MYSQL_REPO_VERSION="$(curl -fsSL https://repo.mysql.com | grep -oP "mysql84-community-release-${MYSQL_DISTR_NAME}${MYSQL_REPO_REV}-\K.*" | grep -o '^[^.]*' | sort -n | tail -n1)"
 # Distro modularity exists only on EL8/EL9; on EL10 and Fedora there are no modules.
 if [ "$DIST" != "fedora" ] && [ "$REV" -lt 10 ]; then
 	dnf remove -y @mysql; dnf module -y reset mysql; dnf module -y disable mysql
 fi
+
+#add mysql repo
+MYSQL_LTS_MAJOR="8.4"
+MYSQL_LTS_REPO="mysql-${MYSQL_LTS_MAJOR}-lts-community"
+MYSQL_REPO_VERSION="$(curl -fsSL https://repo.mysql.com | grep -oP "mysql84-community-release-${MYSQL_DISTR_NAME}${MYSQL_REPO_REV}-\K.*" | grep -o '^[^.]*' | sort -n | tail -n1)"
 yum install -y https://repo.mysql.com/mysql84-community-release-"${MYSQL_DISTR_NAME}""${MYSQL_REPO_REV}"-"${MYSQL_REPO_VERSION}".noarch.rpm || true
 yum-config-manager --disable 'mysql*' >/dev/null 2>&1 || true
 yum-config-manager --enable "${MYSQL_LTS_REPO}" >/dev/null 2>&1 || { echo "ERROR: failed to enable ${MYSQL_LTS_REPO} repo" >&2; exit 1; }
 [ "$DIST" = "fedora" ] && sed -i 's/\(gpgcheck=\)1/\10/' /etc/yum.repos.d/mysql-community*.repo
 [ "$DIST" = "fedora" ] || { [ "$DIST" = "centos" ] && [ "$REV" -ge 10 ]; } && WEAK_OPT="--setopt=install_weak_deps=False"
-MYSQL_CANDIDATE="$(dnf repoquery -q --available --repo="${MYSQL_LTS_REPO}" --queryformat='%{version}' mysql-community-server 2>/dev/null | grep -E '^[0-9]' | sort -V | tail -n1)"
+MYSQL_CANDIDATE="$(dnf repoquery -q --available --repo="${MYSQL_LTS_REPO}" --queryformat='%{version}\n' mysql-community-server 2>/dev/null | grep -E '^[0-9]' | sort -V | tail -n1)"
 [[ -n "${MYSQL_CANDIDATE}" && "${MYSQL_CANDIDATE}" == ${MYSQL_LTS_MAJOR}.* ]] || { echo "ERROR: mysql-community-server ${MYSQL_LTS_MAJOR}.x not available for ${DIST}${REV}, found: '${MYSQL_CANDIDATE}'" >&2; exit 1; }
 rpm -q mysql-community-server >/dev/null 2>&1 || MYSQL_FIRST_TIME_INSTALL="true"
 
