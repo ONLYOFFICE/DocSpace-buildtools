@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1-labs
+
 ARG PRODUCT=onlyoffice
 ARG SRC_PATH="/app/onlyoffice/src"
 ARG BUILD_PATH="/var/www"
@@ -72,11 +74,7 @@ RUN <<EOF
         python3 ${SRC_PATH}/buildtools/debuginfo.py && \
         pip cache purge
     fi
-    # Set execute permissions on entrypoint scripts
-    chmod +x ${SRC_PATH}/buildtools/install/docker/config/nginx/router/docker-entrypoint.sh
-    chmod +x ${SRC_PATH}/buildtools/install/docker/prepare-nginx-router.sh
-    # Make all .sh scripts in docker-entrypoint.d executable
-    find ${SRC_PATH}/buildtools/install/docker/config/nginx/router/docker-entrypoint.d -name '*.sh' -exec chmod +x {} \;
+    find ${SRC_PATH}/buildtools/install/docker -name "*.sh" -exec chmod +x {} +
     find ${SRC_PATH} -name '.git' -type d -prune -exec rm -rf {} +
 EOF
 
@@ -509,255 +507,6 @@ USER onlyoffice
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/wait-bin-share-docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
 ENTRYPOINT ["/bin/sh", "/usr/bin/docker-entrypoint.sh"]
 
-# -----------------------------------------------------------
-# Image Preview
-# -----------------------------------------------------------
-FROM ubuntu:24.04 AS preview
-
-ARG SRC_PATH
-ARG BUILD_PATH
-ARG APP_STORAGE_ROOT=/app/${PRODUCT}/data
-ARG TARGETARCH
-
-ARG PATH_TO_CONF
-ARG LOG_DIR
-ARG PRODUCT
-ARG DEBIAN_FRONTEND=noninteractive
-
-# --- Make company/user/group name configurable ---
-ARG COMPANY=${PRODUCT}
-ARG COMPANY_UID=1004
-ARG COMPANY_GID=107
-
-# Optional: set to 1 at build time if you want vim inside the image
-ARG INSTALL_TOOL=0
-
-ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
-    DOTNET_NOLOGO=1
-
-ARG OPENSEARCH_PATH="/opt/opensearch/config"
-ARG ENV_EXTENSION=""
-ARG BUILD_DATE=""
-
-ARG MYSQL_PORT=3306
-ARG MYSQL_DATABASE=docspace
-ARG MYSQL_USER=${PRODUCT}_user
-ARG MYSQL_PASSWORD=${PRODUCT}_pass
-ARG MYSQL_ROOT_PASSWORD=my-secret-pw
-
-ARG REDIS_PORT=6379
-ARG REDIS_USER_NAME=""
-ARG REDIS_PASSWORD=""
-ARG REDIS_DB="0"
-
-ARG RABBIT_PROTOCOL=""
-ARG RABBIT_PORT=5672
-ARG RABBIT_VIRTUAL_HOST=/
-ARG RABBIT_USER_NAME=guest
-ARG RABBIT_PASSWORD=guest
-
-ARG OPENSEARCH_VERSION=2.18.0
-ARG DASHBOARDS_VERSION=2.18.0
-
-ARG DOCUMENT_CONTAINER_NAME=${COMPANY}-document-server
-ARG DOCUMENT_SERVER_URL_EXTERNAL=""
-ARG COUNT_WORKER_CONNECTIONS=1024
-
-ARG JDBC_URL=${MYSQL_HOST}
-ARG JDBC_DATABASE=${MYSQL_DATABASE}
-ARG JDBC_USER_NAME=${MYSQL_USER}
-ARG JDBC_PASSWORD=${MYSQL_PASSWORD}
-
-ENV COMPANY=${COMPANY} \
-    DEBIAN_FRONTEND=${DEBIAN_FRONTEND} \
-    DNS_NAMESERVER=127.0.0.11 \
-    TARGETARCH=${TARGETARCH} \
-    COUNT_WORKER_CONNECTIONS=$COUNT_WORKER_CONNECTIONS \
-    MAP_HASH_BUCKET_SIZE="" \
-    SRC_PATH=${SRC_PATH} \
-    APP_STORAGE_ROOT=${APP_STORAGE_ROOT} \
-    PATH_TO_CONF=${PATH_TO_CONF} \
-    LOG_DIR=${LOG_DIR} \
-    BUILD_PATH=${BUILD_PATH} \
-    ENV_EXTENSION=${ENV_EXTENSION} \
-    BUILD_DATE=${BUILD_DATE} \
-    DOCUMENT_CONTAINER_NAME=${DOCUMENT_CONTAINER_NAME} \
-    DOCUMENT_SERVER_URL_EXTERNAL=${DOCUMENT_SERVER_URL_EXTERNAL} \
-    OPENSEARCH_VERSION=${OPENSEARCH_VERSION} \
-    DASHBOARDS_VERSION=${DASHBOARDS_VERSION} \
-    MIGRATION_TYPE="standalone=true" \
-    RABBIT_PROTOCOL=${RABBIT_PROTOCOL} \
-    RABBIT_PORT=${RABBIT_PORT} \
-    RABBIT_VIRTUAL_HOST=${RABBIT_VIRTUAL_HOST} \
-    RABBIT_USER_NAME=${RABBIT_USER_NAME} \
-    RABBIT_PASSWORD=${RABBIT_PASSWORD} \
-    REDIS_PORT=${REDIS_PORT} \
-    REDIS_USER_NAME=${REDIS_USER_NAME} \
-    REDIS_PASSWORD=${REDIS_PASSWORD} \
-    REDIS_DB=${REDIS_DB} \
-    MYSQL_PORT=${MYSQL_PORT} \
-    MYSQL_DATABASE=${MYSQL_DATABASE} \
-    MYSQL_USER=${MYSQL_USER} \
-    MYSQL_PASSWORD=${MYSQL_PASSWORD} \
-    MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD} \
-    JDBC_URL=${MYSQL_HOST} \
-    JDBC_DATABASE=${MYSQL_DATABASE} \
-    JDBC_USER_NAME=${MYSQL_USER} \
-    JDBC_PASSWORD=${MYSQL_PASSWORD}
-
-# ---- base dirs + minimal runtime packages ----
-# Notes:
-# - install repo helpers only temporarily, then purge them
-# - no git/sudo/apt-transport-https by default
-RUN set -eux; \
-    mkdir -p /var/log/${COMPANY} /app/${COMPANY}/data; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends \
-      mysql-client \
-      ca-certificates \
-      curl \
-      wget \
-      gnupg \
-      lsb-release \
-      gettext-base \
-      supervisor \
-      dos2unix \
-      adduser \
-      \
-      # repo helpers (temporary)
-      software-properties-common \
-      python3-launchpadlib \
-    ; \
-    \
-    # ---- ${COMPANY} user/group ----
-    addgroup --system --gid ${COMPANY_GID} ${COMPANY}; \
-    adduser --uid ${COMPANY_UID} --quiet --home /var/www/${COMPANY} --system --gid ${COMPANY_GID} ${COMPANY}; \
-    \
-    # ---- .NET runtime (jammy) ----
-    add-apt-repository -y ppa:dotnet/backports; \
-    apt-get update --fix-missing; \
-    apt-get install -y --no-install-recommends aspnetcore-runtime-10.0; \
-    \
-    # ---- OpenResty (Ubuntu repo; required for access_by_lua + resty.redis) ----
-    wget -O - https://openresty.org/package/pubkey.gpg | gpg --dearmor -o /usr/share/keyrings/openresty.gpg; \
-    \
-    arch="$(dpkg --print-architecture)"; \
-    if [ "$arch" = "arm64" ]; then \
-      repo="http://openresty.org/package/arm64/ubuntu"; \
-    else \
-      repo="http://openresty.org/package/ubuntu"; \
-    fi; \
-    echo "deb [arch=$arch signed-by=/usr/share/keyrings/openresty.gpg] $repo $(lsb_release -sc) main" \
-      > /etc/apt/sources.list.d/openresty.list; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends openresty; \
-    \
-    # ---- Optional ----
-    if [ "${INSTALL_TOOL}" = "1" ]; then \
-      apt-get install -y --no-install-recommends vim nano git; \
-    fi; \
-    \
-    # ---- purge repo helper packages to shrink ----
-    apt-get purge -y --auto-remove software-properties-common python3-launchpadlib lsb-release; \
-    \
-    rm -rf /usr/share/nginx/html/*; \
-    mkdir -p /var/log/nginx/ /etc/nginx/ /var/log/openresty /etc/openresty/conf.d /etc/nginx/includes/ /etc/nginx/conf.d; \
-    # ---- clean apt ----
-    rm -rf /var/lib/apt/lists/*
-
-# ---- Node runtime: copy node binary only (no npm/pnpm) ----
-COPY --from=node:24-bookworm-slim /usr/local/bin/node /usr/local/bin/node
-
-# ToDo need to be checked
-# ---- ASP.NET Core Runtime 10 ----
-#COPY --from=mcr.microsoft.com/dotnet/aspnet:10.0-noble \
-#    /usr/share/dotnet \
-#    /usr/share/dotnet
-
-#ENV DOTNET_ROOT=/usr/share/dotnet
-#ENV PATH="${PATH}:/usr/share/dotnet"
-
-# ------------------------------------------------------------
-# Copy services config + entrypoint + supervisor config 
-# ------------------------------------------------------------
-COPY --from=src --chown=${COMPANY}:${COMPANY} /app/onlyoffice/config/ /app/onlyoffice/config/
-COPY --from=src --chown=${COMPANY}:${COMPANY} ${SRC_PATH}/buildtools/install/docker/preview/docker-entrypoint.sh /docker-entrypoint.sh
-COPY --from=src --chown=${COMPANY}:${COMPANY} ${SRC_PATH}/buildtools/install/docker/preview/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-# ------------------------------------------------------------
-# Copy nginx config, static files, scripts for router 
-# ------------------------------------------------------------
-COPY --from=src --chown=${COMPANY}:${COMPANY} /etc/nginx/conf.d /etc/nginx/conf.d
-COPY --from=src --chown=${COMPANY}:${COMPANY} /etc/nginx/includes /etc/nginx/includes
-COPY --from=src --chown=${COMPANY}:${COMPANY} ${SRC_PATH}/buildtools/config/nginx/html /etc/nginx/html
-COPY --from=src --chown=${COMPANY}:${COMPANY} ${SRC_PATH}/campaigns/src/campaigns ${BUILD_PATH}/public/campaigns
-COPY --from=src --chown=${COMPANY}:${COMPANY} ${SRC_PATH}/buildtools/install/docker/config/nginx/router/docker-entrypoint.d /docker-entrypoint.d
-COPY --from=src --chown=${COMPANY}:${COMPANY} ${SRC_PATH}/buildtools/install/docker/config/nginx/router/docker-entrypoint.sh /nginx/docker-entrypoint.sh
-COPY --from=src --chown=${COMPANY}:${COMPANY} ${SRC_PATH}/buildtools/install/docker/config/nginx/nginx.conf.template /etc/nginx/nginx.conf.template
-COPY --from=src --chown=${COMPANY}:${COMPANY} ${SRC_PATH}/buildtools/install/docker/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
-COPY --from=src --chown=${COMPANY}:${COMPANY} ${SRC_PATH}/buildtools/install/docker/preview/config/nginx/conf.d/onlyoffice-proxy.conf /etc/nginx/conf.d/
-COPY --from=src --chown=${COMPANY}:${COMPANY} ${SRC_PATH}/buildtools/install/docker/preview/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
-
-# ------------------------------------------------------------
-# Copy nodejs static and dynamic files, plugins
-# ------------------------------------------------------------
-COPY --from=build-node --chown=${COMPANY}:${COMPANY} ${SRC_PATH}/publish/web/ ${BUILD_PATH}/
-COPY --from=build-node --chown=${COMPANY}:${COMPANY} ${SRC_PATH}/publish/static ${BUILD_PATH}/build
-COPY --from=build-node --chown=${COMPANY}:${COMPANY} ${SRC_PATH}/server/common/ASC.Socket.IO ${SRC_PATH}/publish/services/ASC.Socket.IO
-COPY --from=build-node --chown=${COMPANY}:${COMPANY} ${SRC_PATH}/server/common/ASC.SsoAuth ${SRC_PATH}/publish/services/ASC.SsoAuth
-COPY --from=build-plugins --chown=${COMPANY}:${COMPANY} ${SRC_PATH}/plugins/publish/ ${APP_STORAGE_ROOT}/Studio/webplugins
-
-# ------------------------------------------------------------
-# Copy .net Monolith and Migration Runner 
-# ------------------------------------------------------------
-COPY --from=build-dotnet --chown=${COMPANY}:${COMPANY} ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Monolith/service ${SRC_PATH}/publish/services/backend/
-COPY --from=build-dotnet --chown=${COMPANY}:${COMPANY} ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Migration.Runner/service ${SRC_PATH}/publish/services/backend/
-COPY --from=build-dotnet --chown=${COMPANY}:${COMPANY} ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Files/service/DocStore/ ${SRC_PATH}/publish/services/backend/DocStore/
-   
-# ---- nginx/openresty config + templates + campaigns (merged from your snippets) ----
-RUN set -eux; \
-    sed -i 's/$public_root/\/var\/www\/public\//' /etc/nginx/conf.d/${COMPANY}.conf; \
-    #sed -i "/map \$scheme \$document_server {/,/}/ s|default \"http://[^\"]*\";|default \"http://${COMPANY}-document-server\";|" \
-    sed -i "/map \$scheme \$document_server {/,/}/ s|default \"http://[^\"]*\";|default \$document_server_vs_path;|" \
-    /etc/nginx/conf.d/${COMPANY}.conf; \
-    sed -i '/client_body_temp_path/ i \ \ \ \ $MAP_HASH_BUCKET_SIZE' /etc/nginx/nginx.conf.template; \
-    sed -i 's/\(worker_connections\).*;/\1 $COUNT_WORKER_CONNECTIONS;/' /etc/nginx/nginx.conf.template; \
-    sed -i -e '/^user/s/^/#/' -e 's#/tmp/nginx.pid#nginx.pid#' -e 's#/etc/nginx/mime.types#mime.types#' /etc/nginx/nginx.conf.template; \
-    \
-    NGINX_CONF=/etc/nginx/conf.d/onlyoffice.conf; \
-    \
-    sed -i 's|default "http://127.0.0.1:5000";|default "http://127.0.0.1:5051";|g' "$NGINX_CONF"; \
-    sed -i 's|default "http://127.0.0.1:5003";|default "http://127.0.0.1:5051";|g' "$NGINX_CONF"; \
-    sed -i 's|default "http://127.0.0.1:5004";|default "http://127.0.0.1:5051";|g' "$NGINX_CONF"; \
-    sed -i 's|default "http://127.0.0.1:5007";|default "http://127.0.0.1:5051";|g' "$NGINX_CONF"; \
-    sed -i 's|default "http://127.0.0.1:5010";|default "http://127.0.0.1:5051";|g' "$NGINX_CONF"; \
-    sed -i 's|default "http://127.0.0.1:5012";|default "http://127.0.0.1:5051";|g' "$NGINX_CONF"; \
-    sed -i 's|default "http://127.0.0.1:5157";|default "http://127.0.0.1:5051";|g' "$NGINX_CONF"; \
-    \
-    chown -R ${COMPANY}:${COMPANY} /etc/nginx/ /var/log/${COMPANY} /var/log/nginx/ ${BUILD_PATH}/public/campaigns; \
-    echo '{ "Redis": {} }' > /app/onlyoffice/config/redis.json; \
-    echo '{ "RabbitMQ": {} }' > /app/onlyoffice/config/rabbitmq.json
-
-# ---- normalize scripts line-endings + permissions ----
-WORKDIR /
-RUN set -eux; \
-    if [ -d /docker-entrypoint.d ]; then dos2unix /docker-entrypoint.d/* || true; chmod +x /docker-entrypoint.d/* || true; fi; \
-    if [ -d /nginx ]; then dos2unix /nginx/*.sh || true; chmod +x /nginx/*.sh || true; fi; \
-    dos2unix /*.sh || true; \
-    chmod +x /*.sh || true
-
-# ---- cleanup runtime artifacts ----
-RUN set -eux; \
-    echo "--- delete temporary files ---"; \
-    apt-get clean; \
-    rm /etc/nginx/conf.d/onlyoffice-login.conf; \
-    rm /etc/nginx/conf.d/onlyoffice-management.conf; \
-    rm -rf /var/lib/apt/lists/* /tmp/*
-
-EXPOSE  5007 5009 5004 5000 5157 5003 5013 5011 9899 8092 8080 5032 5010 5027 5012 5005 5006 5124 5075 5015 5099 9834 5051
-
-ENTRYPOINT  [ "/docker-entrypoint.sh" ]
-
 ## Dotnet Services ##
 FROM dotnetrun AS dotnet-services
 USER root
@@ -828,3 +577,77 @@ COPY --from=build-java --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/service
 COPY --from=build-java --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.Registration/app.jar ${BUILD_PATH}/services/ASC.Identity.Registration/app.jar
 
 CMD ["supervisord", "-n"]
+
+## Image Preview ##
+FROM dotnetrun AS preview
+USER root
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+ENV DNS_NAMESERVER=127.0.0.11 \
+    COUNT_WORKER_CONNECTIONS=1024 \
+    MAP_HASH_BUCKET_SIZE= ENV_EXTENSION=
+
+RUN set -eux; \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        mysql-client ca-certificates wget gnupg \
+        gettext-base supervisor libcap2-bin; \
+    curl -fsSL https://github.com/trentm/json/raw/master/lib/json.js -o /usr/local/bin/json && chmod +x /usr/local/bin/json; \
+    wget -qO- https://openresty.org/package/pubkey.gpg | gpg --dearmor -o /usr/share/keyrings/openresty.gpg; \
+    echo "deb [arch=$TARGETARCH signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/$([ "$TARGETARCH" = arm64 ] && echo arm64/)ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") main" > /etc/apt/sources.list.d/openresty.list; \
+    apt-get update && apt-get install -y --no-install-recommends openresty; \
+    # let the unprivileged onlyoffice user bind :80, then prepare nginx dirs
+    setcap 'cap_net_bind_service=+ep' /usr/local/openresty/nginx/sbin/nginx; \
+    mkdir -p /var/log/nginx /var/log/openresty /var/log/supervisor /etc/nginx/conf.d /etc/nginx/includes /etc/nginx/templates; \
+    chown -R onlyoffice:onlyoffice /etc/nginx /var/log/nginx /var/log/openresty /var/log/supervisor /usr/local/openresty; \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb /tmp/*
+
+# Services config + entrypoint + supervisor config
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/preview/docker-entrypoint.sh /docker-entrypoint.sh
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/preview/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# nginx config, static files, router scripts
+COPY --from=src --exclude=onlyoffice-login.conf --exclude=onlyoffice-management.conf --chown=onlyoffice:onlyoffice /etc/nginx/conf.d /etc/nginx/conf.d
+COPY --from=src --chown=onlyoffice:onlyoffice /etc/nginx/includes /etc/nginx/includes
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/config/nginx/html /etc/nginx/html
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/campaigns/src/campaigns ${BUILD_PATH}/public/campaigns
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/docker-entrypoint.d /docker-entrypoint.d
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/docker-entrypoint.sh /nginx/docker-entrypoint.sh
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/nginx.conf.template /etc/nginx/nginx.conf.template
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/preview/config/nginx/conf.d/onlyoffice-proxy.conf /etc/nginx/conf.d/
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/preview/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
+
+# nodejs static and dynamic files
+COPY --from=node:24-bookworm-slim /usr/local/bin/node /usr/local/bin/node
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/ ${BUILD_PATH}/
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/static ${BUILD_PATH}/build
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Socket.IO ${SRC_PATH}/publish/services/ASC.Socket.IO
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.SsoAuth ${SRC_PATH}/publish/services/ASC.SsoAuth
+COPY --from=build-plugins --chown=onlyoffice:onlyoffice ${SRC_PATH}/plugins/publish/ ${APP_STORAGE_ROOT}/Studio/webplugins
+
+# .NET Monolith and Migration Runner, plugins
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Monolith/service ${SRC_PATH}/publish/services/backend/
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Migration.Runner/service ${SRC_PATH}/publish/services/backend/
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Files/service/DocStore/ ${SRC_PATH}/publish/services/backend/DocStore/
+
+RUN set -eux; \
+    sed -i -e 's#$public_root#/var/www/public/#' -e "/map \$scheme \$document_server {/,/}/ s|default \"http://[^\"]*\";|default \$document_server_vs_path;|" /etc/nginx/conf.d/onlyoffice.conf; \
+    # route every .NET backend upstream to the single monolith port
+    sed -i -E "s#default \"(http://127.0.0.1):(5000|5003|5004|5007|5010|5012|5157)\";#default \"\1:5051\";#g" "/etc/nginx/conf.d/onlyoffice.conf"; \
+    sed -i '/client_body_temp_path/ i \ \ \ \ $MAP_HASH_BUCKET_SIZE' /etc/nginx/nginx.conf.template && \
+    sed -i 's/\(worker_connections\).*;/\1 $COUNT_WORKER_CONNECTIONS;/' /etc/nginx/nginx.conf.template && \
+    sed -i -e '/^user/s/^/#/' -e 's#/tmp/nginx.pid#nginx.pid#' -e 's#/etc/nginx/mime.types#mime.types#' /etc/nginx/nginx.conf.template && \
+    echo '{ "Redis": {} }' > /app/onlyoffice/config/redis.json && \
+    echo '{ "RabbitMQ": {} }' > /app/onlyoffice/config/rabbitmq.json
+    # Note: redis.json / rabbitmq.json are baked as empty objects in the image
+    # (no Redis/RabbitMQ container in the preview stack), so they are left as-is.
+
+USER onlyoffice
+EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=300s --retries=5 \
+    CMD supervisorctl status >/dev/null 2>&1 || exit 1; supervisorctl status | grep -qE 'FATAL|BACKOFF' && exit 1 || exit 0
+
+ENTRYPOINT [ "/docker-entrypoint.sh" ]

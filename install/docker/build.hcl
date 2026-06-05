@@ -214,6 +214,16 @@ target "onlyoffice-node-services" {
   tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-node:${DOCKER_TAG}"]
 }
 
+target "onlyoffice-preview" {
+  context    = "."
+  dockerfile = "${DOCKERFILE}"
+  target     = "preview"
+  tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-preview:${DOCKER_TAG}"]
+  args = {
+    DEPLOY_ARGS = "deploy:preview"
+  }
+}
+
 group "default" {
   targets = [
     "onlyoffice-ai",
@@ -291,6 +301,12 @@ group "java-services" {
     "onlyoffice-identity-api",
     "onlyoffice-identity-authorization",
     "onlyoffice-java-services",
+  ]
+}
+
+group "preview-services" {
+  targets = [
+    "onlyoffice-preview",
   ]
 }
 
