@@ -15,6 +15,7 @@ on:
           debian13,
           ubuntu2204,
           ubuntu2404,
+          ubuntu2604,
           rhel9,
           centos9S,
           centos10S,
@@ -42,7 +43,7 @@ jobs:
       - name: Set matrix names
         id: set-matrix
         env:
-          OS_ORDER: rhel9 centos9S centos10S fedora42 fedora43 debian11 debian12 debian13 ubuntu2204 ubuntu2404
+          OS_ORDER: rhel9 centos9S centos10S fedora42 fedora43 debian11 debian12 debian13 ubuntu2204 ubuntu2404 ubuntu2604
           OS_MAP: |
             {
               "rhel9":      ["RHEL 9",       "generic",    "rhel9"],
@@ -54,7 +55,8 @@ jobs:
               "debian12":   ["Debian 12",    "onlyoffice", "base-debian12"],
               "debian13":   ["Debian 13",    "onlyoffice", "base-debian13"],
               "ubuntu2204": ["Ubuntu 22.04", "onlyoffice", "base-ubuntu2204"],
-              "ubuntu2404": ["Ubuntu 24.04", "onlyoffice", "base-ubuntu2404"]
+              "ubuntu2404": ["Ubuntu 24.04", "onlyoffice", "base-ubuntu2404"],
+              "ubuntu2604": ["Ubuntu 26.04", "onlyoffice", "base-ubuntu2604"]
             }
         run: |
           declare -A os_set

@@ -43,7 +43,6 @@ x-service: &x-service-base
     JDBC_URL: ${MYSQL_HOST}
     JDBC_PASSWORD: ${MYSQL_PASSWORD}
     JDBC_USER_NAME: ${MYSQL_USER}
-    API_HOST: "http://host.docker.internal"  
 
 services:
   onlyoffice-docspace-preview:
@@ -63,25 +62,12 @@ services:
       - "host.docker.internal:host-gateway"
     user: root
     build:
-      context: ../../../..
-      dockerfile: ./buildtools/install/docker/preview/Dockerfile.preview
-      target: final_preview
-    container_name: ${DOCSPACE_PREVIEW_NAME}
+      context: ..
+      dockerfile: Dockerfile.app
+      target: preview
+    container_name: onlyoffice-docspace-preview  
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-preview:${DOCKER_TAG}"
-
-  onlyoffice-redis:
-    image: ${REGISTRY}${REDIS_IMAGE_NAME}
-    container_name: ${REDIS_CONTAINER_NAME}
-    restart: always
-    expose:
-      - "6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      retries: 3
-      start_period: 10s
-      timeout: 10s
-
+  
   onlyoffice-mysql-server:
     image: ${REGISTRY}${MYSQL_IMAGE}
     cap_add:
