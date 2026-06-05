@@ -105,7 +105,7 @@ COPY /buildtools/install/docker/config/nginx/router/docker-entrypoint.d /docker-
 
 COPY /buildtools/install/docker/config/nginx/router/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
 COPY /buildtools/install/docker/config/nginx/nginx.conf.template /etc/nginx/nginx.conf.template
-COPY /buildtools/install/docker/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
+COPY /buildtools/install/docker/build/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
 
 RUN dos2unix /docker-entrypoint.d/* && \
     dos2unix /docker-entrypoint.sh && \

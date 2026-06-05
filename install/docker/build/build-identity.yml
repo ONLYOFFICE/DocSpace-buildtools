@@ -1,5 +1,5 @@
 x-build: &x-build
-  context: ../../../server/common/ASC.Identity
+  context: ../../../../server/common/ASC.Identity
   dockerfile: Dockerfile
 
 x-common-environment: &x-common-environment

@@ -50,7 +50,7 @@ services:
       - "localhost:host-gateway"
       - "host.docker.internal:host-gateway"
     build:
-      context: ..
+      context: ../build
       dockerfile: Dockerfile.app
       target: preview
     container_name: onlyoffice-docspace-preview  
