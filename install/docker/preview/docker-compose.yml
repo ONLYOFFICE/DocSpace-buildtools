@@ -51,7 +51,7 @@ services:
       - "host.docker.internal:host-gateway"
     build:
       context: ../build
-      dockerfile: Dockerfile.app
+      dockerfile: Dockerfile
       target: preview
     container_name: onlyoffice-docspace-preview  
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-preview:${DOCKER_TAG}"

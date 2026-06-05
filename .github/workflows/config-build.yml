@@ -8,7 +8,7 @@ on:
       - 'develop'
     paths:
       - 'config/**'
-      - 'install/docker/build/Dockerfile.app'
+      - 'install/docker/build/Dockerfile'
       - 'install/docker/build/*entrypoint*.*'
   workflow_dispatch:
 
