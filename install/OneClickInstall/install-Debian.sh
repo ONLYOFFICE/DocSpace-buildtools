@@ -57,7 +57,7 @@ while [ "$1" != "" ]; do
         -je | --jwtenabled )                [ -n "$2" ] && DS_JWT_ENABLED=$2 && shift ;;
         -jh | --jwtheader )                 [ -n "$2" ] && DS_JWT_HEADER=$2 && shift ;;
         -js | --jwtsecret )                 [ -n "$2" ] && DS_JWT_SECRET=$2 && shift ;;
-        -gb | --gitbranch )                 [ -n "$2" ] && PARAMETERS="$PARAMETERS ${1}" && GIT_BRANCH=$2 && shift ;;
+        -gb | --gitbranch )                 [ -n "$2" ] && GIT_BRANCH=$2 && shift ;;
         -ifb | --installfluentbit )         [ -n "$2" ] && INSTALL_FLUENT_BIT=$2 && shift ;;
         -dsv | --docspaceversion )          [ -n "$2" ] && PRODUCT_VERSION=$2 && shift ;;
         -du | --dashboardsusername )        [ -n "$2" ] && DASHBOARDS_USERNAME=$2 && shift ;;
@@ -93,15 +93,14 @@ UPDATE="${UPDATE:-false}"
 LOCAL_SCRIPTS="${LOCAL_SCRIPTS:-false}"
 SKIP_HARDWARE_CHECK="${SKIP_HARDWARE_CHECK:-false}"
 
-if fuser /var/lib/dpkg/lock-frontend1 &>/dev/null; then
-  echo "Waiting for /var/lib/dpkg/lock-frontend1 to be released (up to 60 seconds)..."
-   timeout 60 bash -c 'while fuser /var/lib/dpkg/lock-frontend1 &>/dev/null; do sleep 1; done'
+if fuser /var/lib/dpkg/lock-frontend &>/dev/null; then
+  echo "Waiting for /var/lib/dpkg/lock-frontend to be released (up to 60 seconds)..."
+   timeout 60 bash -c 'while fuser /var/lib/dpkg/lock-frontend &>/dev/null; do sleep 1; done'
 fi
 
-apt-get update -y --allow-releaseinfo-change;
-if [ "$(dpkg-query -W -f='${Status}' curl 2>/dev/null | grep -c "ok installed")" -eq 0 ]; then
-  apt-get install -yq curl
-fi
+export NEEDRESTART_MODE=a
+apt-get update -y --allow-releaseinfo-change
+apt-get install -yq sudo curl dirmngr debian-archive-keyring
 
 DOWNLOAD_URL_PREFIX="https://download.onlyoffice.com/${product}"
 [ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
@@ -114,12 +113,6 @@ if [ "${UNINSTALL}" == "true" ]; then
         source <(curl -fsSL "${DOWNLOAD_URL_PREFIX}"/install-Debian/uninstall.sh)
     fi
     exit 0
-fi
-
-if [ "${LOCAL_SCRIPTS}" == "true" ]; then
-	source install-Debian/bootstrap.sh
-else
-	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/install-Debian/bootstrap.sh)
 fi
 
 # add onlyoffice repo

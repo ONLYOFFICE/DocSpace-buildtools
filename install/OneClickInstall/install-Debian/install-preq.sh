@@ -49,8 +49,7 @@ EOF
 hold_package_version
 
 if [ "$DIST" = "debian" ] && [ "$(apt-cache search ttf-mscorefonts-installer | wc -l)" -eq 0 ]; then
-		echo "deb http://ftp.uk.debian.org/debian/ $DISTRIB_CODENAME main contrib" >> /etc/apt/sources.list
-		echo "deb-src http://ftp.uk.debian.org/debian/ $DISTRIB_CODENAME main contrib" >> /etc/apt/sources.list
+		echo "deb http://deb.debian.org/debian/ $DISTRIB_CODENAME main contrib" >> /etc/apt/sources.list
 fi
 
 # Temporary workaround extend apt-sequoia policy until 2027-02-01 (OpenResty/OpenSearch)
@@ -65,14 +64,8 @@ if [ -n "$PRODUCT_VERSION" ] && ! apt-cache madison "$product" | awk '{print $3}
   echo "Requested ${product_name} version ${PRODUCT_VERSION} not found in repository."; exit 1
 fi
 
-if ! command -v locale-gen &> /dev/null; then
-	apt-get install -yq locales
-fi
-
-if ! dpkg -l | grep -q "apt-transport-https"; then
-	apt-get install -yq apt-transport-https
-fi
-
+dpkg -l | grep -q "debconf-utils" || apt-get install -yq debconf-utils
+command -v locale-gen &>/dev/null || apt-get install -yq locales
 locale-gen en_US.UTF-8
 
 # add opensearch repo
@@ -113,7 +106,7 @@ if ! dpkg -l | grep -q "mysql-server"; then
 
 	# setup mysql 8.4 package
 	curl -fsSLO http://repo.mysql.com/"${MYSQL_PACKAGE_NAME}"
-	echo "mysql-apt-config mysql-apt-config/repo-codename  select  $DISTRIB_CODENAME" | debconf-set-selections
+	echo "mysql-apt-config mysql-apt-config/repo-codename  select  ${DISTRIB_CODENAME/resolute/noble}" | debconf-set-selections
 	echo "mysql-apt-config mysql-apt-config/repo-distro  select  $DIST" | debconf-set-selections
 	echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.4-lts" | debconf-set-selections
 	DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
@@ -138,8 +131,8 @@ if [ "$DIST" = "ubuntu" ]; then
 fi
 
 curl -fsSL https://openresty.org/package/pubkey.gpg | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/openresty.gpg --import
-# Temporary workaround Debian 13 (trixie) use bookworm codename for OpenResty
-OPENRESTY_CODENAME=$([ "${DISTRIB_CODENAME}" = "trixie" ] && echo "bookworm" || echo "${DISTRIB_CODENAME}")
+# Temporary workaround Debian 13 (trixie) and Ubuntu 26.04 (resolute) use previous LTS codename for OpenResty
+OPENRESTY_CODENAME=$([ "${DISTRIB_CODENAME}" = "trixie" ] && echo "bookworm" || echo "${DISTRIB_CODENAME/resolute/noble}")
 echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/$DIST ${OPENRESTY_CODENAME} $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
 chmod 644 /usr/share/keyrings/openresty.gpg
 
