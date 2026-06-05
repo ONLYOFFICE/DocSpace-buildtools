@@ -39,7 +39,7 @@ check_image() {
   " && printf "[OK]      %-22s\n" "${SVC}" || { printf "::error::[FAIL]    %-22s manifest not found\n" "${SVC}"; return 1; }
 }
 
-SERVICES=$(curl -sSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/refs/heads/${BRANCH}/install/docker/build.yml" | \
+SERVICES=$(curl -sSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/refs/heads/${BRANCH}/install/docker/build/build.yml" | \
   docker compose -f- config 2>/dev/null | grep -oP 'image: [^/]*/-?\K[^:]+' | grep -vE '^(dotnet|java|node)$')
 
 PIDS=()

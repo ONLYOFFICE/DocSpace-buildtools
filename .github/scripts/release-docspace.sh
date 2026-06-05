@@ -151,7 +151,7 @@ function main() {
 
   cd "${GITHUB_WORKSPACE}/install/docker"
   
-  SERVICES=($(docker buildx bake -f build.yml --print | jq -r '.target | .[] | .tags[]'))
+  SERVICES=($(docker buildx bake -f build/build.yml --print | jq -r '.target | .[] | .tags[]'))
 
   if [[ ${#SERVICES[@]} -eq 0 ]]; then
     gha_error "No services found in build.yml — bake returned an empty target list"
