@@ -54,25 +54,31 @@ config/                     — Application configuration (41 JSON + nginx)
   radicale.*                — CalDAV/CardDAV server configs
   nginx/                    — Nginx configs + templates + docker-entrypoint.d/
   document-formats/         — Document format definitions (git submodule)
-  supervisor/               — Supervisor configs (dotnet_services, node_services, java_services)
 
 install/
-  docker/                   — Dockerfiles, Compose files, entrypoints
-    Dockerfile.app          — Main multi-stage DocSpace image
-    Dockerfile.runtime      — Runtime dependencies
-    Dockerfile.ffvideo       — FFmpeg video processing
-    docker-entrypoint.py/sh — Main service entrypoints
-    docker-identity-entrypoint.sh
-    docker-migration-entrypoint.sh
-    docker-healthchecks-entrypoint.sh
-    bin-share-docker-entrypoint.sh / wait-bin-share-docker-entrypoint.sh
-    build.hcl               — BuildX multi-arch config
-    build.yml / build-identity.yml
+  docker/                   — Production Compose files (shipped in OCI tarballs)
+    build/                  — Build + local-dev assets (NOT shipped to end users):
+      Dockerfile            — Main multi-stage DocSpace image
+      Dockerfile.runtime    — Runtime dependencies
+      Dockerfile.ffvideo    — FFmpeg video processing
+      docker-entrypoint.py    — Main service entrypoint
+      docker-identity-entrypoint.sh
+      docker-migration-entrypoint.sh
+      docker-healthchecks-entrypoint.sh
+      bin-share-docker-entrypoint.sh / wait-bin-share-docker-entrypoint.sh
+      prepare-nginx-router.sh
+      build.hcl             — BuildX multi-arch config
+      build.yml / build-identity.yml
+      .dockerignore
+      stack/supervisor/     — Supervisor service configs baked into the image
+      db.dev.yml            — MySQL dev overrides (exposed ports)
+      docspace.profiles.yml — Profile-based configs (local dev)
+      docspace.overcome.yml — Local dev overrides
+      dnsmasq.yml           — DNS for local dev
+    preview/                — Local preview stack
     docspace.yml            — All DocSpace app services
     docspace-stack.yml      — Full stack (app + all dependencies)
-    docspace.profiles.yml   — Profile-based configs
-    docspace.overcome.yml   — Local dev overrides
-    db.yml / db.dev.yml     — MySQL
+    db.yml                  — MySQL
     redis.yml               — Redis
     rabbitmq.yml            — RabbitMQ
     opensearch.yml          — OpenSearch
@@ -83,7 +89,6 @@ install/
     fluent.yml              — Fluent Bit log collector
     healthchecks.yml        — Health check UI
     notify.yml              — Notification service
-    dnsmasq.yml             — DNS for local dev
   OneClickInstall/          — Installer scripts (Debian, RedHat, Docker, universal)
   common/                   — Shared packaging: build-services.py/sh, changelog.sh,
                               packages-build.sh, plugins-build.sh, systemd/, product-ssl-setup/
@@ -116,7 +121,7 @@ docker compose -f docspace.yml up -d
 docker compose -f docspace-stack.yml up -d
 
 # With local dev overrides
-docker compose -f docspace.yml -f docspace.overcome.yml up -d
+docker compose --env-file .env -f docspace.yml -f build/docspace.overcome.yml up -d
 ```
 
 ## CI/CD Workflows

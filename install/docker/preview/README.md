@@ -7,6 +7,8 @@
 
 ### Overview
 
+The preview is a lightweight DocSpace solution that you bring up with a single `docker compose` command — no extra infrastructure to wire up.
+
 This preview ships ONLYOFFICE DocSpace as a monolithic build: all ONLYOFFICE DocSpace services run in a single container rather than as separate per-service containers. The full stack consists of three containers:
 
 | Container | Role |
