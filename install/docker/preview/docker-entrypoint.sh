@@ -68,7 +68,7 @@ update_configs() {
     # OAuth redirect
     sed -i -E "s!\"https://service\.teamlab\.info/oauth2\.aspx\"!\"${OAUTH_REDIRECT_URL}\"!g" "${PATH_TO_CONF}/autofac.consumers.json"
     # Migration runner connection string
-    sed -i -E "s!(\"ConnectionString\").*!\1: \"${CONNECTION_STRING};Command Timeout=${COMMAND_TIMEOUT}\"!g" "${BACKEND_PATH}/appsettings.runner.json"
+    sed -i -E "s!(\"ConnectionString\").*!\1: \"${CONNECTION_STRING//!/\\!};Command Timeout=${COMMAND_TIMEOUT}\"!g" "${BACKEND_PATH}/appsettings.runner.json"
 
     log "✅ Configuration files updated"
 }
