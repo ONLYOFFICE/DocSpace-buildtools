@@ -57,6 +57,18 @@ case "${INSTALLATION_TYPE}" in
 	"ENTERPRISE") ds_pkg_name+="-ee" ;;
 esac
 
+DS_COMMON_NAME=${DS_COMMON_NAME:-ds}
+setup_postgres_db() {
+	DS_DB_NAME=${DS_DB_NAME:-$DS_COMMON_NAME}
+	DS_DB_USER=${DS_DB_USER:-$DS_COMMON_NAME}
+	DS_DB_PWD=${DS_DB_PWD:-$DS_COMMON_NAME}
+
+	if ! su - postgres -s /bin/bash -c "psql -lqt" | cut -d \| -f 1 | grep -q "${DS_DB_NAME}"; then
+		su - postgres -s /bin/bash -c "psql -c \"CREATE USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';\""
+		su - postgres -s /bin/bash -c "psql -c \"CREATE DATABASE ${DS_DB_NAME} OWNER ${DS_DB_USER};\""
+	fi
+}
+
 if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ]; then
 	ds_pkg_installed_name=$(rpm -qa --qf '%{NAME}\n' | grep "${package_sysname}"-documentserver)
 	if [ -n "${ds_pkg_installed_name}" ] && [ "${ds_pkg_installed_name}" != "${ds_pkg_name}" ]; then
@@ -104,17 +116,7 @@ fi
 if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
     declare -x DS_PORT=${DS_PORT:-8083}
 
-    if [ "$INSTALLATION_TYPE" != "COMMUNITY" ]; then
-    	DS_COMMON_NAME=${DS_COMMON_NAME:-ds}
-        DS_DB_NAME=${DS_DB_NAME:-$DS_COMMON_NAME}
-        DS_DB_USER=${DS_DB_USER:-$DS_COMMON_NAME}
-        DS_DB_PWD=${DS_DB_PWD:-$DS_COMMON_NAME}
-
-        if ! su - postgres -s /bin/bash -c "psql -lqt" | cut -d \| -f 1 | grep -q ${DS_DB_NAME}; then
-            su - postgres -s /bin/bash -c "psql -c \"CREATE USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';\""
-            su - postgres -s /bin/bash -c "psql -c \"CREATE DATABASE ${DS_DB_NAME} OWNER ${DS_DB_USER};\""
-        fi
-    fi
+    [ "$INSTALLATION_TYPE" != "COMMUNITY" ] && setup_postgres_db
 
     declare -x JWT_ENABLED=${JWT_ENABLED:-true}
     declare -x JWT_SECRET=${JWT_SECRET:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)}
