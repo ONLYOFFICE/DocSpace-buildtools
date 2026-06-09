@@ -1,4 +1,4 @@
-resolver $DNS_NAMESERVER valid=30s;
+resolver $DNS_NAMESERVER valid=30s ipv6=off;
 
 # Mapping document service
 map "$DOCUMENT_SERVER_URL_EXTERNAL" "$document_server" {
