@@ -58,6 +58,7 @@ Requires:       %name-people-server = %version-%release
 Requires:       %name-proxy = %version-%release
 Requires:       %name-plugins = %version-%release
 Requires:       %name-socket = %version-%release
+Requires:       %name-newai = %version-%release
 Requires:       %name-ssoauth = %version-%release
 Requires:       %name-telegram = %version-%release
 Requires:       %name-identity-authorization = %version-%release

@@ -31,6 +31,7 @@ Depends: debconf, openssl,
          {{product}}-proxy (= {{package_header_tag_version}}),
          {{product}}-plugins (= {{package_header_tag_version}}),
          {{product}}-socket (= {{package_header_tag_version}}),
+         {{product}}-newai (= {{package_header_tag_version}}),
          {{product}}-ssoauth (= {{package_header_tag_version}}),
          {{product}}-studio (= {{package_header_tag_version}}),
          {{product}}-studio-notify (= {{package_header_tag_version}}),
@@ -108,6 +109,13 @@ Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= 22~),
 Recommends: redis-server
 Description: {{product}}-socket
 	The service which provides two-way communication between a web browser and the server.
+
+Package: {{product}}-newai
+Architecture: all
+Multi-Arch: foreign
+Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= 22~), ${misc:Depends}, ${shlibs:Depends}
+Description: {{product}}-newai
+	The service which provides AI chat features and MCP tool integrations.
 
 Package: {{product}}-studio-notify
 Architecture: all

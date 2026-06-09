@@ -233,7 +233,7 @@ if skip_build == False:
     DOCKER_ENTRYPOINT_PATH = os.path.join(
         dir, "buildtools", "install", "docker", DOCKER_ENTRYPOINT)
 
-    BACKEND_NODEJS_SERVICES = ["ASC.Socket.IO", "ASC.SsoAuth"]
+    BACKEND_NODEJS_SERVICES = ["ASC.Socket.IO", "ASC.SsoAuth", "ASC.NewAi"]
     for service in BACKEND_NODEJS_SERVICES:
         # print(f"== Build {service} project ==")
         src = os.path.join(dir, "server", "common", service)

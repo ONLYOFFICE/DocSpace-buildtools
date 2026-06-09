@@ -59,6 +59,7 @@ x-service: &x-service-base
     RABBIT_PASSWORD: ${RABBIT_PASSWORD}
     ROUTER_HOST: ${ROUTER_HOST}
     API_HOST: ${API_HOST}
+    AI_SERVICE_URL: http://${SERVICE_AI}
   volumes:
     - ${ROOT_DIR}/data:/app/onlyoffice/data
     - ${ROOT_DIR}/logs:/var/log/onlyoffice
@@ -186,6 +187,16 @@ services:
     expose:
       - ${SERVICE_PORT}
 
+  onlyoffice-newai:
+    <<: [*x-service-base, *x-profiles-backend]
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-newai:${DOCKER_TAG}"
+    container_name: ${NEW_AI_HOST}
+    expose:
+      - ${SERVICE_PORT}
+    healthcheck:
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_NEW_AI}/health/ || exit 1
+
   onlyoffice-studio-notify:
     <<: [*x-service-base, *x-profiles-backend]
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-studio-notify:${DOCKER_TAG}"
@@ -295,6 +306,7 @@ services:
       - SERVICE_NOTIFY=${SERVICE_NOTIFY}
       - SERVICE_PEOPLE_SERVER=${SERVICE_PEOPLE_SERVER}
       - SERVICE_SOCKET=${SERVICE_SOCKET}
+      - SERVICE_NEW_AI=${SERVICE_NEW_AI}
       - SERVICE_IDENTITY_API=${SERVICE_IDENTITY_API}
       - SERVICE_IDENTITY=${SERVICE_IDENTITY}
       - SERVICE_STUDIO_NOTIFY=${SERVICE_STUDIO_NOTIFY}

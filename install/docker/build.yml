@@ -55,6 +55,13 @@ services:
       target: socket
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-socket:${DOCKER_TAG}"
 
+  onlyoffice-newai:
+    build:
+      context:  ./
+      dockerfile: "${DOCKERFILE}"
+      target: newai
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-newai:${DOCKER_TAG}"
+
   onlyoffice-studio-notify:
     build:
       context: ./

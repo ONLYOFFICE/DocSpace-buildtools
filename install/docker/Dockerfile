@@ -179,6 +179,7 @@ RUN chown nginx:nginx /etc/nginx/* -R && \
     sed -i 's/127.0.0.1:5003/$service_studio/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5157/$service_ai/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:9899/$service_socket/' /etc/nginx/conf.d/onlyoffice.conf && \
+    sed -i 's/127.0.0.1:9837/$service_new_ai/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:9834/$service_sso/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5013/$service_doceditor/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5099/$service_sdk/' /etc/nginx/conf.d/onlyoffice.conf && \
@@ -322,6 +323,15 @@ COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/do
 COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.Socket.IO/service/ .
 
 CMD  ["server.js", "ASC.Socket.IO"]
+
+## ASC.NewAi ##
+FROM noderun AS newai
+WORKDIR ${BUILD_PATH}/services/ASC.NewAi/service/
+
+COPY --from=base --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/docker-entrypoint.py .
+COPY --from=base --chown=onlyoffice:onlyoffice ${BUILD_PATH}/services/ASC.NewAi/service/ .
+
+CMD  ["server.js", "ASC.NewAi"]
 
 ## ASC.SsoAuth ##
 FROM noderun AS ssoauth

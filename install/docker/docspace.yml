@@ -55,6 +55,7 @@ x-service: &x-service-base
     RABBIT_USER_NAME: ${RABBIT_USER_NAME}
     RABBIT_PASSWORD: ${RABBIT_PASSWORD}
     API_HOST: ${API_HOST}
+    AI_SERVICE_URL: http://${SERVICE_AI}
     ROUTER_HOST: ${ROUTER_HOST}
     LOG_LEVEL: ${LOG_LEVEL}
     DEBUG_INFO: ${DEBUG_INFO}
@@ -122,6 +123,16 @@ services:
     healthcheck:
       <<: *x-healthcheck
       test: curl --fail http://${SERVICE_SOCKET}/health/ || exit 1
+    expose:
+      - ${SERVICE_PORT}
+
+  onlyoffice-newai:
+    <<: *x-service-base
+    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-newai:${DOCKER_TAG}"
+    container_name: ${NEW_AI_HOST}
+    healthcheck:
+      <<: *x-healthcheck
+      test: curl --fail http://${SERVICE_NEW_AI}/health/ || exit 1
     expose:
       - ${SERVICE_PORT}
 
@@ -263,6 +274,7 @@ services:
       - onlyoffice-ai
       - onlyoffice-ai-worker
       - onlyoffice-socket
+      - onlyoffice-newai
       - onlyoffice-studio-notify
       - onlyoffice-api
       - onlyoffice-api-system
@@ -289,6 +301,7 @@ services:
       - SERVICE_STUDIO=${SERVICE_STUDIO}
       - SERVICE_AI=${SERVICE_AI}
       - SERVICE_AI_WORKER=${SERVICE_AI_WORKER}
+      - SERVICE_NEW_AI=${SERVICE_NEW_AI}
       - SERVICE_SSOAUTH=${SERVICE_SSOAUTH}
       - SERVICE_DOCEDITOR=${SERVICE_DOCEDITOR}
       - SERVICE_MANAGEMENT=${SERVICE_MANAGEMENT}

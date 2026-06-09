@@ -110,10 +110,13 @@ ARG DEPLOY_ARGS="deploy"
 WORKDIR ${SRC_PATH}/server
 COPY --from=src ${SRC_PATH}/server/common/ASC.Socket.IO ./common/ASC.Socket.IO
 COPY --from=src ${SRC_PATH}/server/common/ASC.SsoAuth ./common/ASC.SsoAuth
+COPY --from=src ${SRC_PATH}/server/common/ASC.NewAi ./common/ASC.NewAi
 
 RUN cd ${SRC_PATH}/server/common/ASC.Socket.IO && \
     yarn install --immutable && \
     cd ${SRC_PATH}/server/common/ASC.SsoAuth && \
+    yarn install --immutable && \
+    cd ${SRC_PATH}/server/common/ASC.NewAi && \
     yarn install --immutable && \
     yarn cache clean --all && \
     find ${SRC_PATH}/server/common -type f \( -name "*.js.map" -o -name "*.css.map" \) -delete
@@ -276,6 +279,7 @@ RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.
     sed -i 's/127.0.0.1:5003/$service_studio/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5157/$service_ai/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:9899/$service_socket/' /etc/nginx/conf.d/onlyoffice.conf && \
+    sed -i 's/127.0.0.1:9837/$service_new_ai/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:9834/$service_sso/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5013/$service_doceditor/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5099/$service_sdk/' /etc/nginx/conf.d/onlyoffice.conf && \
@@ -413,6 +417,13 @@ WORKDIR ${BUILD_PATH}/services/ASC.Socket.IO/
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Socket.IO .
 
 CMD  ["server.js", "ASC.Socket.IO"]
+
+## ASC.NewAi ##
+FROM noderun AS newai
+WORKDIR ${BUILD_PATH}/services/ASC.NewAi/
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.NewAi .
+
+CMD  ["server.js", "ASC.NewAi"]
 
 ## ASC.SsoAuth ##
 FROM noderun AS ssoauth
@@ -560,6 +571,7 @@ COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/log
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management/ ${BUILD_PATH}/products/ASC.Management/management/
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/ ${BUILD_PATH}/products/ASC.Sdk/sdk/
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Socket.IO ${BUILD_PATH}/services/ASC.Socket.IO/
+COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.NewAi ${BUILD_PATH}/services/ASC.NewAi/
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.SsoAuth ${BUILD_PATH}/services/ASC.SsoAuth/
 
 CMD ["supervisord", "-n"]
