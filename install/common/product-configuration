@@ -301,7 +301,9 @@ setup_openresty(){
 		# Remove default nginx settings [error] port 80 is already in use
 		if [ -f /etc/nginx/nginx.conf ]; then
 			if grep -q "server {"  /etc/nginx/nginx.conf ; then
-				sed -e '$a}' -e '/server {/,$d' -i /etc/nginx/nginx.conf
+				# fix Bug 81918 - Remove default server block without dropping conf.d includes
+				awk '/^[[:space:]]*server[[:space:]]*\{/&&!done{done=1;d=1;next}d{d+=gsub(/\{/,"{")-gsub(/\}/,"}");if(d<=0)d=0;next}1' \
+					/etc/nginx/nginx.conf > /etc/nginx/nginx.conf.tmp && mv -f /etc/nginx/nginx.conf.tmp /etc/nginx/nginx.conf
 				systemctl reload nginx
 			fi
 		fi

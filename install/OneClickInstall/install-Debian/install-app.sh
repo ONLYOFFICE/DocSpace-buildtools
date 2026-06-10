@@ -53,9 +53,26 @@ case "${INSTALLATION_TYPE}" in
 	"ENTERPRISE") ds_pkg_name+="-ee" ;;
 esac
 
+DS_COMMON_NAME=${DS_COMMON_NAME:-ds}
+setup_postgres_db() {
+	DS_DB_NAME=${DS_DB_NAME:-$DS_COMMON_NAME}
+	DS_DB_USER=${DS_DB_USER:-$DS_COMMON_NAME}
+	DS_DB_PWD=${DS_DB_PWD:-$DS_COMMON_NAME}
+
+	if ! su - postgres -s /bin/bash -c "psql -lqt" | cut -d \| -f 1 | grep -q "${DS_DB_NAME}"; then
+		su - postgres -s /bin/bash -c "psql -c \"CREATE USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';\""
+		su - postgres -s /bin/bash -c "psql -c \"CREATE DATABASE ${DS_DB_NAME} OWNER ${DS_DB_USER};\""
+	fi
+
+	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/db-pwd select "$DS_DB_PWD" | debconf-set-selections
+	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/db-user select "$DS_DB_USER" | debconf-set-selections
+	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/db-name select "$DS_DB_NAME" | debconf-set-selections
+}
+
 if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ]; then
 	ds_pkg_installed_name=$(dpkg -l | grep "${package_sysname}"-documentserver | tail -n1 | awk '{print $2}')
 	if [ -n "${ds_pkg_installed_name}" ] && [ "${ds_pkg_installed_name}" != "${ds_pkg_name}" ]; then
+		[ "$INSTALLATION_TYPE" != "COMMUNITY" ] && [ "${ds_pkg_installed_name}" = "${package_sysname}-documentserver" ] && setup_postgres_db
 		debconf-get-selections | grep ^"${ds_pkg_installed_name}" | sed s/"${ds_pkg_installed_name}"/"${ds_pkg_name}"/g | debconf-set-selections
 		DEBIAN_FRONTEND=noninteractive apt-get purge -yq "${ds_pkg_installed_name}"
 		apt-get install -yq "${ds_pkg_name}"
@@ -67,22 +84,6 @@ fi
 
 if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
 	DS_PORT=${DS_PORT:-8083}
-	DS_COMMON_NAME=${DS_COMMON_NAME:-ds}
-
-	if [ "$INSTALLATION_TYPE" != "COMMUNITY" ]; then
-		DS_DB_NAME=${DS_DB_NAME:-$DS_COMMON_NAME}
-		DS_DB_USER=${DS_DB_USER:-$DS_COMMON_NAME}
-		DS_DB_PWD=${DS_DB_PWD:-$DS_COMMON_NAME}
-
-		if ! su - postgres -s /bin/bash -c "psql -lqt" | cut -d \| -f 1 | grep -q "${DS_DB_NAME}"; then
-			su - postgres -s /bin/bash -c "psql -c \"CREATE USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';\""
-			su - postgres -s /bin/bash -c "psql -c \"CREATE DATABASE ${DS_DB_NAME} OWNER ${DS_DB_USER};\""
-		fi
-
-		echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/db-pwd select "$DS_DB_PWD" | debconf-set-selections
-		echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/db-user select "$DS_DB_USER" | debconf-set-selections
-		echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/db-name select "$DS_DB_NAME" | debconf-set-selections
-	fi
 
 	DS_JWT_ENABLED=${DS_JWT_ENABLED:-true}
 	DS_JWT_SECRET=${DS_JWT_SECRET:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)}
@@ -92,6 +93,8 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
 	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/jwt-enabled select "${DS_JWT_ENABLED}" | debconf-set-selections
 	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/jwt-secret select "${DS_JWT_SECRET}" | debconf-set-selections
 	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/jwt-header select "${DS_JWT_HEADER}" | debconf-set-selections
+
+	[ "$INSTALLATION_TYPE" != "COMMUNITY" ] && setup_postgres_db
 
 	apt-get install -yq "${ds_pkg_name}"
 fi
