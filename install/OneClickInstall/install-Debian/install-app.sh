@@ -84,7 +84,6 @@ fi
 
 if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
 	DS_PORT=${DS_PORT:-8083}
-
 	DS_JWT_ENABLED=${DS_JWT_ENABLED:-true}
 	DS_JWT_SECRET=${DS_JWT_SECRET:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)}
 	DS_JWT_HEADER=${DS_JWT_HEADER:-AuthorizationJwt}
