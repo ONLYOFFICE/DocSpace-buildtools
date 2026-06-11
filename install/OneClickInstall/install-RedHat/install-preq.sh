@@ -70,8 +70,10 @@ if [ "$DIST" = "redhat" ] && [ "$REV" -ge 9 ]; then
 fi
 
 #add rabbitmq & erlang repo
-curl -fsSL https://packagecloud.io/install/repositories/rabbitmq/rabbitmq-server/script.rpm.sh | os=${RABBIT_DIST_NAME} dist="${RABBIT_DIST_VER}" bash
-curl -fsSL https://packagecloud.io/install/repositories/rabbitmq/erlang/script.rpm.sh | os="${ERLANG_DIST_NAME}" dist="${ERLANG_DIST_VER}" bash
+if [ "$DIST" != "fedora" ]; then
+	curl -fsSL https://packagecloud.io/install/repositories/rabbitmq/rabbitmq-server/script.rpm.sh | os=${RABBIT_DIST_NAME} dist="${RABBIT_DIST_VER}" bash
+	curl -fsSL https://packagecloud.io/install/repositories/rabbitmq/erlang/script.rpm.sh | os="${ERLANG_DIST_NAME}" dist="${ERLANG_DIST_VER}" bash
+fi
 
 #add nodejs repo
 NODE_VERSION="22"
@@ -89,7 +91,7 @@ MYSQL_REPO_VERSION="$(curl -fsSL https://repo.mysql.com | grep -oP "mysql84-comm
 yum install -y https://repo.mysql.com/mysql84-community-release-"${MYSQL_DISTR_NAME}""${MYSQL_REPO_REV}"-"${MYSQL_REPO_VERSION}".noarch.rpm || true
 yum-config-manager --disable 'mysql*' >/dev/null 2>&1 || true
 yum-config-manager --enable "${MYSQL_LTS_REPO}" >/dev/null 2>&1 || { echo "ERROR: failed to enable ${MYSQL_LTS_REPO} repo" >&2; exit 1; }
-[ "$DIST" = "fedora" ] && sed -i 's/\(gpgcheck=\)1/\10/' /etc/yum.repos.d/mysql-community*.repo
+[ "$DIST" = "fedora" ] && sed -i "s/\$releasever/${MYSQL_REPO_REV}/g" /etc/yum.repos.d/mysql-community*.repo
 [ "$DIST" = "fedora" ] || { [ "$DIST" = "centos" ] && [ "$REV" -ge 10 ]; } && WEAK_OPT="--setopt=install_weak_deps=False"
 MYSQL_CANDIDATE="$(dnf repoquery -q --available --repo="${MYSQL_LTS_REPO}" --queryformat='%{version}\n' mysql-community-server 2>/dev/null | grep -E '^[0-9]' | sort -V | tail -n1)"
 [[ -n "${MYSQL_CANDIDATE}" && "${MYSQL_CANDIDATE}" == ${MYSQL_LTS_MAJOR}.* ]] || { echo "ERROR: mysql-community-server ${MYSQL_LTS_MAJOR}.x not available for ${DIST}${REV}, found: '${MYSQL_CANDIDATE}'" >&2; exit 1; }
@@ -132,7 +134,19 @@ if [ "${DIST}" = "redhat" ] && [ "${REV}" = "8" ]; then
   ${package_manager} -y install https://download1.rpmfusion.org/free/el/rpmfusion-free-release-${REV}.noarch.rpm
 fi
 
+if [ "$DIST" = "fedora" ] && [ "$REV" -ge 44 ]; then
+cat > /etc/yum.repos.d/adoptium.repo <<END
+[Adoptium]
+name=Adoptium
+baseurl=https://packages.adoptium.net/artifactory/rpm/fedora/$REV/\$basearch
+enabled=1
+gpgcheck=1
+gpgkey=https://packages.adoptium.net/artifactory/api/gpg/key/public
+END
+fi
+
 JAVA_VERSION=21
+JAVA_PKG=$([ "$DIST" = "fedora" ] && [ "$REV" -ge 44 ] && echo "jre-${JAVA_VERSION}-headless" || echo "java-${JAVA_VERSION}-openjdk-headless")
 ${package_manager} ${WEAK_OPT} -y install $([ "$DIST" != "fedora" ] && echo "epel-release") \
 			python3 \
 			nodejs \
@@ -143,7 +157,7 @@ ${package_manager} ${WEAK_OPT} -y install $([ "$DIST" != "fedora" ] && echo "epe
 			${REDIS_PACKAGE} \
 			SDL2 \
 			expect \
-			java-${JAVA_VERSION}-openjdk-headless \
+			${JAVA_PKG} \
 			--enablerepo=opensearch-2.x ${DNF_NOGPG} ${CRB_REPO}
 
 # Set Java ${JAVA_VERSION} as the default version
