@@ -72,7 +72,6 @@ REDIS_USER_NAME = {"User": os.environ["REDIS_USER_NAME"]} if os.environ.get("RED
 REDIS_PASSWORD = {"Password": os.environ["REDIS_PASSWORD"]} if os.environ.get("REDIS_PASSWORD") else None
 REDIS_CONNECTION_HOST = REDIS_HOST if REDIS_HOST else REDIS_CONTAINER_NAME
 REDIS_DB = os.environ.get("REDIS_DB") or 0
-REDIS_TLS = {"true": True, "false": False}.get(os.environ.get("REDIS_TLS", "").lower())
 
 RABBIT_CONTAINER_NAME = os.environ.get("RABBIT_CONTAINER_NAME") or "onlyoffice-rabbitmq"
 RABBIT_PROTOCOL = os.environ.get("RABBIT_PROTOCOL") or "amqp"
@@ -418,7 +417,6 @@ updateJsonData(jsonData,"$.Redis.Hosts.[0].Port", REDIS_PORT)
 updateJsonData(jsonData,"$.Redis.Database", REDIS_DB)
 jsonData["Redis"].update(REDIS_USER_NAME) if REDIS_USER_NAME is not None else None
 jsonData["Redis"].update(REDIS_PASSWORD) if REDIS_PASSWORD is not None else None
-updateJsonData(jsonData, "$.Redis.Ssl", REDIS_TLS) if REDIS_TLS is not None else None
 writeJsonFile(filePath, jsonData)
 
 filePath = os.path.join(BUILD_PATH, "services", "ASC.Migration.Runner", "service", "appsettings.runner.json")
