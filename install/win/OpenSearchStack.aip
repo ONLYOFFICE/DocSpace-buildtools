@@ -57,7 +57,7 @@
     <ROW SignOptions="0" SignTool="0" UseSha256="1" Store="User\MY" CustomToolPath="C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" CustomToolCmdLine="-ExecutionPolicy Bypass -File &quot;[|AI_AIP_FOLDER]signing-tool.ps1&quot; -File"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.ExpandArchiveComponent">
-    <ROW ExpandArchive="ExpandArchive" DestFolder="APPDIR" SourcePath="[APPDIR]opensearch-dashboards-2.18.0-windows-x64.zip" Flags="57"/>
+    <ROW ExpandArchive="ExpandArchive" DestFolder="APPDIR" SourcePath="[APPDIR]opensearch-dashboards-3.5.0-windows-x64.zip" Flags="57"/>
     <ROW ExpandArchive="ExpandArchive_1" DestFolder="APPDIR" SourcePath="[APPDIR]fluent-bit-3.2.4-win64.zip" Flags="57"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.FragmentComponent">
