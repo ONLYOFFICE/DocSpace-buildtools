@@ -115,13 +115,12 @@ fi
 
 if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
     declare -x DS_PORT=${DS_PORT:-8083}
-
-    [ "$INSTALLATION_TYPE" != "COMMUNITY" ] && setup_postgres_db
-
     declare -x JWT_ENABLED=${JWT_ENABLED:-true}
     declare -x JWT_SECRET=${JWT_SECRET:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)}
     declare -x JWT_HEADER=${JWT_HEADER:-AuthorizationJwt}
     [ -n "${WOPI_ENABLED}" ] && declare -x WOPI_ENABLED
+
+    [ "$INSTALLATION_TYPE" != "COMMUNITY" ] && setup_postgres_db
 
     ${package_manager} -y install ${ds_pkg_name} --nobest # --nobest for rhel 8 compatibility
 

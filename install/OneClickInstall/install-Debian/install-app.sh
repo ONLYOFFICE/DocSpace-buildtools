@@ -75,6 +75,8 @@ if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ]; then
 		[ "$INSTALLATION_TYPE" != "COMMUNITY" ] && [ "${ds_pkg_installed_name}" = "${package_sysname}-documentserver" ] && setup_postgres_db
 		debconf-get-selections | grep ^"${ds_pkg_installed_name}" | sed s/"${ds_pkg_installed_name}"/"${ds_pkg_name}"/g | debconf-set-selections
 		DEBIAN_FRONTEND=noninteractive apt-get purge -yq "${ds_pkg_installed_name}"
+		# Temporary kill orphaned nginx workers blocking port after purge
+		nginx -s reload 2>/dev/null || pkill -x nginx 2>/dev/null || true
 		apt-get install -yq "${ds_pkg_name}"
 		RECONFIGURE_PRODUCT="true"
 	else
@@ -84,7 +86,6 @@ fi
 
 if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
 	DS_PORT=${DS_PORT:-8083}
-
 	DS_JWT_ENABLED=${DS_JWT_ENABLED:-true}
 	DS_JWT_SECRET=${DS_JWT_SECRET:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)}
 	DS_JWT_HEADER=${DS_JWT_HEADER:-AuthorizationJwt}
