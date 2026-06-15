@@ -45,7 +45,7 @@ cd DocSpace-buildtools/install/docker/preview
 docker compose up -d
 ```
 
-4.	Access ONLYOFFICE DocSpace at http://localhost.
+4.	Access ONLYOFFICE DocSpace at http://localhost or http://your-ip-address.
 
 ---
 
@@ -74,4 +74,4 @@ docker compose up -d --build
 > **Note:** By default, the images are built from the `master` branch.
 > To build from another branch, specify the build argument `GIT_BRANCH`: `GIT_BRANCH=your-branch docker compose up -d --build`
 
-4.	Access ONLYOFFICE DocSpace at http://localhost.
+4.	Access ONLYOFFICE DocSpace at http://localhost or http://your-ip-address.

@@ -166,6 +166,7 @@ jobs:
           fi
 
       - name: "Collect logs for ${{matrix.name}}"
+        if: always()
         run: |
           cd tests/vagrant
           if vagrant status | grep -q "running"; then

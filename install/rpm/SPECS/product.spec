@@ -127,6 +127,13 @@ fi
 
 %post 
 
+%posttrans
+
+if [ "$1" -ge 2 ]; then
+    find /etc/systemd/system -type l -name '%{product}-*.service' ! -exec test -e {} \; -delete
+    systemctl daemon-reload >/dev/null 2>&1 || true
+fi
+
 %preun
 
 if [ "$1" -eq 0 ]; then

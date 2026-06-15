@@ -51,6 +51,9 @@ services:
       - "host.docker.internal:host-gateway"
     build:
       context: ..
+      args:
+        - GIT_BRANCH=${GIT_BRANCH}
+        - DEPLOY_ARGS=deploy:preview
       dockerfile: Dockerfile.app
       target: preview
     container_name: onlyoffice-docspace-preview  
