@@ -100,11 +100,11 @@ COPY --from=base /etc/nginx/includes /etc/nginx/includes
 COPY --from=base /etc/nginx/conf.d /etc/nginx/conf.d
 COPY --from=base /etc/nginx/html /etc/nginx/html
 
-COPY /buildtools/install/docker/config/nginx/docker-entrypoint.sh /docker-entrypoint.sh
-COPY /buildtools/install/docker/config/nginx/docker-entrypoint.d /docker-entrypoint.d
+COPY /buildtools/install/docker/config/nginx/router/docker-entrypoint.sh /docker-entrypoint.sh
+COPY /buildtools/install/docker/config/nginx/router/docker-entrypoint.d /docker-entrypoint.d
 
-COPY /buildtools/install/docker/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
-COPY /buildtools/install/docker/config/nginx/templates/nginx.conf.template /etc/nginx/nginx.conf.template
+COPY /buildtools/install/docker/config/nginx/router/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
+COPY /buildtools/install/docker/config/nginx/nginx.conf.template /etc/nginx/nginx.conf.template
 COPY /buildtools/install/docker/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
 
 RUN dos2unix /docker-entrypoint.d/* && \
@@ -125,6 +125,7 @@ RUN chown onlyoffice:onlyoffice /etc/nginx/* -R && \
     sed -i 's/127.0.0.1:5003/$service_studio/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5157/$service_ai/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:9899/$service_socket/' /etc/nginx/conf.d/onlyoffice.conf && \
+    sed -i 's/127.0.0.1:9837/$service_new_ai/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:9834/$service_sso/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5013/$service_doceditor/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5099/$service_sdk/' /etc/nginx/conf.d/onlyoffice.conf && \

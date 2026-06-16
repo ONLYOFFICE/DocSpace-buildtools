@@ -1,5 +1,41 @@
 #!/bin/bash
 
+ #
+ # Copyright (C) Ascensio System SIA, 2009-2026
+ #
+ # This program is a free software product. You can redistribute it and/or
+ # modify it under the terms of the GNU Affero General Public License (AGPL)
+ # version 3 as published by the Free Software Foundation, together with the
+ # additional terms provided in the LICENSE file.
+ #
+ # This program is distributed WITHOUT ANY WARRANTY; without even the implied
+ # warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. For
+ # details, see the GNU AGPL at: https://www.gnu.org/licenses/agpl-3.0.html
+ #
+ # You can contact Ascensio System SIA by email at info@onlyoffice.com
+ # or by postal mail at 20A-6 Ernesta Birznieka-Upisha Street, Riga,
+ # LV-1050, Latvia, European Union.
+ #
+ # The interactive user interfaces in modified versions of the Program
+ # are required to display Appropriate Legal Notices in accordance with
+ # Section 5 of the GNU AGPL version 3.
+ #
+ # No trademark rights are granted under this License.
+ #
+ # All non-code elements of the Product, including illustrations,
+ # icon sets, and technical writing content, are licensed under the
+ # Creative Commons Attribution-ShareAlike 4.0 International License:
+ # https://creativecommons.org/licenses/by-sa/4.0/legalcode
+ #
+ # This license applies only to such non-code elements and does not
+ # modify or replace the licensing terms applicable to the Program's
+ # source code, which remains licensed under the GNU Affero General
+ # Public License v3.
+ #
+ # SPDX-License-Identifier: AGPL-3.0-only
+ #
+
+
 set -e
 
 function make_swap () {
@@ -65,7 +101,6 @@ RPMFUSION_DISTR_NAME="el"
 MYSQL_DISTR_NAME="el"
 MYSQL_REPO_REV="$REV"
 OPENRESTY_DISTR_NAME=${DIST/redhat/rhel}
-SUPPORTED_FEDORA_FLAG="true"
 REDIS_PACKAGE=$( [[ "$REV" == "8" || "$REV" == "10" ]] && echo "valkey" || echo "redis" )
 RABBIT_DIST_NAME=$( [[ "$REV" == "10" ]] && echo "el" || echo "$DIST" )
 RABBIT_DIST_VER=$( [[ "$REV" == "10" ]] && echo "9" || echo "$REV" )
@@ -81,11 +116,8 @@ if [ "$DIST" == "fedora" ]; then
 	REMI_DISTR_NAME="fedora"
 	RPMFUSION_DISTR_NAME="fedora"
 	MYSQL_DISTR_NAME="fc"
-	[ "$REV" = "43" ] && MYSQL_REPO_REV="42"
+	MYSQL_REPO_REV=$([ "$REV" = "44" ] && echo 43 || echo "$REV")
 	OPENRESTY_REV=$([ "$REV" -ge 37 ] && echo 36 || echo "$REV")
-
-	FEDORA_SUPP=$(curl -fsSL https://fedoraproject.org/releases.json | grep -oP '"version"\s*:\s*"\K[0-9]+' | sort -nr -u)
-	echo "$FEDORA_SUPP" | grep -q "$REV" || SUPPORTED_FEDORA_FLAG="false"
 fi
 
 # Disable Cockpit to free 9090 needed by docspace-identity-api
@@ -94,7 +126,7 @@ systemctl list-sockets | awk '$1 ~ /:9090$/ && $2 ~ /cockpit/ {print $2; exit}' 
 # Check if it's Centos less than 8 or Fedora release is out of service
 if { [[ "${DIST}" == "centos" && "${REV}" -lt 9 ]] || \
      [[ "${DIST}" == "redhat" && "${REV}" -lt 8 ]] || \
-     [[ "$SUPPORTED_FEDORA_FLAG" == "false" ]]; }; then
+     { [[ "${DIST}" == "fedora" ]] && ( . /etc/os-release; [ -n "${SUPPORT_END:-}" ] && [ "$(date -d "$SUPPORT_END" +%Y%m%d)" -lt "$(date +%Y%m%d)" ] ); }; }; then
     echo "Your ${DIST} ${REV} operating system has reached the end of its service life."
     echo "Please consider upgrading your operating system or using a Docker installation."
     exit 1

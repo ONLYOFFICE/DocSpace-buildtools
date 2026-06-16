@@ -12,6 +12,7 @@ on:
       - ".github/workflows/ci-oci-docker-install.yml"
       - "install/OneClickInstall/install-Docker.sh"
       - "install/docker/*.yml"
+      - "install/docker/preview/docker-compose.yml"
   workflow_dispatch:
     inputs:
       testing:
@@ -190,7 +191,7 @@ jobs:
             --exclude='docspace.profiles.yml' \
             --exclude='config/supervisor*' \
             --exclude='config/mysql*' \
-            --exclude='config/nginx/docker-entrypoint*' \
+            --exclude='config/nginx/router/' \
             --exclude='config/createdb.sql' \
             --exclude='build-*' \
             --exclude='docspace.yml' \
@@ -240,3 +241,75 @@ jobs:
             --http-method PUT --path-with-query-string "/prod/download-oo-com" --body "$(jq -c -n '.paths = $ARGS.positional' --args "/docspace/${{ env.ARTIFACT_NAME }}")" \
             --region us-east-1 --query 'status' --output text || :)
           echo "API Gateway test-invoke status: ${API_STATUS:-<failed>}"
+
+  Install-Preview:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd
+          - runner: ubuntu-24.04-arm
+            arch: arm
+    name: Preview [${{ matrix.arch }}]
+
+    steps:
+      - name: Free Disk Space
+        run: curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/free-disk-space-linux.sh | sudo bash
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Start preview
+        working-directory: install/docker/preview
+        run: |
+          set -eux
+          # Point the stack at the pushed 4testing images and the requested tag.
+          if [ "${IS_4TESTING:-true}" != "false" ]; then
+            sed -i 's~^\(\s*DOCKER_IMAGE_PREFIX=\).*~\14testing-docspace~' .env
+          fi
+          [ -n "$DOCKER_TAG" ] && sed -i "s~^\(\s*DOCKER_TAG=\).*~\1${DOCKER_TAG}~" .env
+
+          docker compose up -d --quiet-pull
+          echo "Waiting for containers to become ready..."
+          timeout 600 bash -c 'while docker ps --format "{{.Status}}" | grep -q "health: starting"; do sleep 5; done' \
+            || echo "container_status=timeout" >> "$GITHUB_ENV"
+
+      - name: Check container status
+        run: |
+          docker ps --all --format "{{.Names}}" | xargs -I {} sh -c '
+              status=$(docker inspect --format="{{if .State.Health}}{{.State.Health.Status}}{{else}}no healthcheck{{end}}" {});
+              case "$status" in
+                healthy) color="\033[0;32m" ;;                                        # green
+                "no healthcheck") color="\033[0;33m" ;;                               # yellow
+                *) color="\033[0;31m"; echo "container_status=red" >> $GITHUB_ENV ;;  # red
+              esac;
+              printf "%-50s ${color}%s\033[0m\n" "{}:" "$status";
+          '
+
+      - name: Print logs for crashed containers
+        if: always()
+        run: |
+          docker ps --all --format "{{.Names}}" | xargs -I {} sh -c '
+              status=$(docker inspect --format="{{if .State.Health}}{{.State.Health.Status}}{{else}}no healthcheck{{end}}" {});
+              case "$status" in
+                healthy | "no healthcheck") ;;
+                *)
+                  echo "Logs for container {}:";
+                  docker logs --tail 50 {} | sed "s/^/\t/g";
+                  ;;
+              esac;
+          '
+          case "${{ env.container_status }}" in
+              timeout) echo "::error:: Timeout reached. Not all preview containers are running."; exit 1 ;;
+              red) echo "::error:: One or more preview containers have status 'red'. Job will fail."; exit 1 ;;
+          esac

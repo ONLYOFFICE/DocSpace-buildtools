@@ -1,20 +1,19 @@
 #!/bin/bash
-set -e  # Exit on any error
-
-echo "🚀 Starting Docker entrypoint..."
-echo "=================================="
+set -euo pipefail
 
 # Default values
 PATH_TO_CONF=${PATH_TO_CONF:-"/app/onlyoffice/config"}
 SRC_PATH=${SRC_PATH:-"/app/onlyoffice/src"}
+BACKEND_PATH="${SRC_PATH}/publish/services/backend"
+DEBUG_INFO=${DEBUG_INFO:-"false"}
 APP_CORE_BASE_DOMAIN=${APP_CORE_BASE_DOMAIN:-"localhost"}
 APP_URL_PORTAL=${APP_URL_PORTAL:-"http://127.0.0.1:8092"}
-APP_CORE_MACHINEKEY=${APP_CORE_MACHINEKEY:-"your_core_machinekey"}
+: "${APP_CORE_MACHINEKEY:?APP_CORE_MACHINEKEY must be set}"
 
 DOCUMENT_CONTAINER_NAME=${DOCUMENT_CONTAINER_NAME:-"onlyoffice-document-server"}
 DOCUMENT_SERVER_URL_PUBLIC=${DOCUMENT_SERVER_URL_PUBLIC:-"/ds-vpath/"}
 DOCUMENT_SERVER_URL_EXTERNAL=${DOCUMENT_SERVER_URL_EXTERNAL:-"http://${DOCUMENT_CONTAINER_NAME}"}
-DOCUMENT_SERVER_JWT_SECRET=${DOCUMENT_SERVER_JWT_SECRET:-"your_jwt_secret"}
+: "${DOCUMENT_SERVER_JWT_SECRET:?DOCUMENT_SERVER_JWT_SECRET must be set}"
 DOCUMENT_SERVER_JWT_HEADER=${DOCUMENT_SERVER_JWT_HEADER:-"AuthorizationJwt"}
 OAUTH_REDIRECT_URL=${OAUTH_REDIRECT_URL:-"https://service.onlyoffice.com/oauth2.aspx"}
 
@@ -28,164 +27,96 @@ MYSQL_USER=${MYSQL_USER:-"onlyoffice_user"}
 MYSQL_PASSWORD=${MYSQL_PASSWORD:-"onlyoffice_pass"}
 COMMAND_TIMEOUT=${COMMAND_TIMEOUT:-"100"}
 
-RABBIT_CONTAINER_NAME=${RABBIT_CONTAINER_NAME:-"onlyoffice-rabbitmq"}
-REDIS_CONTAINER_NAME=${REDIS_CONTAINER_NAME:-"onlyoffice-redis"}
-
-ELK_SHEME=${ELK_SHEME:-"http"}
-ELK_HOST=${ELK_HOST:-"localhost"}
-ELK_PORT=${ELK_PORT:-"9200"}
-ELK_THREADS=${ELK_THREADS:-"1"}
-
 MIGRATION_TYPE=${MIGRATION_TYPE:-"STANDALONE"}  # STANDALONE or SAAS
 
-# Function to log with timestamp
-log() {
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
+export MYSQL_PWD="$MYSQL_PASSWORD"
+MYSQL_ARGS=(-h "$MYSQL_HOST" -P "$MYSQL_PORT" -u "$MYSQL_USER")
+export CONNECTION_STRING="Server=${MYSQL_HOST};Port=${MYSQL_PORT};Database=${MYSQL_DATABASE};User ID=${MYSQL_USER};Password=${MYSQL_PASSWORD}"
+
+log() { echo "[$(date +'%F %T')] $1"; }
+
+migration_count() {
+    mysql "${MYSQL_ARGS[@]}" -sN -e "SELECT COUNT(*) FROM __EFMigrationsHistory;" \
+        "$MYSQL_DATABASE" 2>/dev/null || echo "?"
 }
 
 # Function to update configuration files
 update_configs() {
     log "📝 Updating configuration files..."
-    
-    # Main appsettings
-    sed -i "s!\"connectionString\".*;Pooling=!\"connectionString\": \"Server=${MYSQL_HOST};Port=${MYSQL_PORT};Database=${MYSQL_DATABASE};User ID=${MYSQL_USER};Password=${MYSQL_PASSWORD};Pooling=!g" ${PATH_TO_CONF}/appsettings.json
-    sed -i "s!\"base-domain\".*,!\"base-domain\": \"${APP_CORE_BASE_DOMAIN}\",!g" ${PATH_TO_CONF}/appsettings.json
-    sed -i "s!\"machinekey\".*,!\"machinekey\": \"${APP_CORE_MACHINEKEY}\",!g" ${PATH_TO_CONF}/appsettings.json
-    sed -i "s!\"public\".*,!\"public\": \"${DOCUMENT_SERVER_URL_PUBLIC}\",!g" ${PATH_TO_CONF}/appsettings.json
-    sed -i "s!\"internal\".*,!\"internal\": \"${DOCUMENT_SERVER_URL_EXTERNAL}/\\\",!g" ${PATH_TO_CONF}/appsettings.json
-    sed -i "0,/\"value\"/s!\"value\".*,!\"value\": \"${DOCUMENT_SERVER_JWT_SECRET}\",!" ${PATH_TO_CONF}/appsettings.json
-    sed -i "s!\"portal\".*!\"portal\": \"${APP_URL_PORTAL}\"!g" ${PATH_TO_CONF}/appsettings.json
-    #sed -i "s!\"hide-settings\".*],!\"hide-settings\": ${HIDE_SETTINGS},!g" ${PATH_TO_CONF}/appsettings.json 
-    
-    # API System
-    sed -i "s!\"connectionString\".*;Pooling=!\"connectionString\": \"Server=${MYSQL_HOST};Port=${MYSQL_PORT};Database=${MYSQL_DATABASE};User ID=${MYSQL_USER};Password=${MYSQL_PASSWORD};Pooling=!g" ${PATH_TO_CONF}/apisystem.json
-    sed -i "s!\"base-domain\".*,!\"base-domain\": \"${APP_CORE_BASE_DOMAIN}\",!g" ${PATH_TO_CONF}/apisystem.json
-    sed -i "s!\"machinekey\".*,!\"machinekey\": \"${APP_CORE_MACHINEKEY}\",!g" ${PATH_TO_CONF}/apisystem.json
-    sed -i "s!\"postman\".*!\"postman\": \"services\"!g" ${PATH_TO_CONF}/appsettings.json
-    
-    # Migration Runner
-    MIGRATION_PARAMS=""
-    if [[ ${MIGRATION_TYPE} == "STANDALONE" ]]; then
-        MIGRATION_PARAMS="standalone=true"
-    fi
 
-    sed -i "s!\"ConnectionString\".*!\"ConnectionString\": \"Server=${MYSQL_HOST};Port=${MYSQL_PORT};Database=${MYSQL_DATABASE};User ID=${MYSQL_USER};Password=${MYSQL_PASSWORD};Command Timeout=${COMMAND_TIMEOUT}\"!g" ${SRC_PATH}/publish/services/backend/appsettings.runner.json
+    JSON="node /usr/local/bin/json -I -f"
 
-    # Autofac consumers
-    sed -i "s!\"https://service\.teamlab\.info/oauth2\.aspx\"!\"${OAUTH_REDIRECT_URL}\"!g" ${PATH_TO_CONF}/autofac.consumers.json
-    
-    # Message queue
-    sed -i "s!\"Hostname\".*!\"Hostname\": \"${RABBIT_CONTAINER_NAME}\",!g" ${PATH_TO_CONF}/rabbitmq.json
-    sed -i "s!\"Host\".*!\"Host\": \"${REDIS_CONTAINER_NAME}\",!g" ${PATH_TO_CONF}/redis.json
-    
-    # Elastic
-    sed -i "s!\"Scheme\".*!\"Scheme\": \"${ELK_SHEME}\",!g" ${PATH_TO_CONF}/elastic.json
-    sed -i "s!\"Host\".*!\"Host\": \"${ELK_HOST}\",!g" ${PATH_TO_CONF}/elastic.json
-    sed -i "s!\"Port\".*!\"Port\": \"${ELK_PORT}\",!g" ${PATH_TO_CONF}/elastic.json
-    sed -i "s!\"Threads\".*!\"Threads\": \"${ELK_THREADS}\"!g" ${PATH_TO_CONF}/elastic.json
-    
-    # RabbitMQ override
-    cat > "${PATH_TO_CONF}/rabbitmq.json" <<EOF
-{
-  "RabbitMQ": {}
-}
-EOF
-    
+    # Main appsettings (connection, core, document server, misc)
+    ${JSON} "${PATH_TO_CONF}/appsettings.json" \
+        -e "this.ConnectionStrings.default.connectionString=process.env.CONNECTION_STRING+';Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;ConnectionReset=false;AllowPublicKeyRetrieval=true'" \
+        -e "this.core['base-domain']=process.env.APP_CORE_BASE_DOMAIN" \
+        -e "this.core.machinekey=process.env.APP_CORE_MACHINEKEY" \
+        -e "this.files.docservice.url.public=process.env.DOCUMENT_SERVER_URL_PUBLIC" \
+        -e "this['debug-info'].enabled=(process.env.DEBUG_INFO==='true')" \
+        -e "this.files.docservice.url.internal=process.env.DOCUMENT_SERVER_URL_EXTERNAL+'/'" \
+        -e "this.files.docservice.secret.value=process.env.DOCUMENT_SERVER_JWT_SECRET" \
+        -e "this.files.docservice.secret.header=process.env.DOCUMENT_SERVER_JWT_HEADER" \
+        -e "this.files.docservice.url.portal=process.env.APP_URL_PORTAL" \
+        -e "this.core.notify.postman='services'"
+
+    # API system (connection + core)
+    ${JSON} "${PATH_TO_CONF}/apisystem.json" \
+        -e "this.ConnectionStrings.default.connectionString=process.env.CONNECTION_STRING+';Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;ConnectionReset=false;AllowPublicKeyRetrieval=true'" \
+        -e "this.core['base-domain']=process.env.APP_CORE_BASE_DOMAIN" \
+        -e "this.core.machinekey=process.env.APP_CORE_MACHINEKEY"
+
+    # OAuth redirect
+    sed -i -E "s!\"https://service\.teamlab\.info/oauth2\.aspx\"!\"${OAUTH_REDIRECT_URL}\"!g" "${PATH_TO_CONF}/autofac.consumers.json"
+    # Migration runner connection string
+    sed -i -E "s!(\"ConnectionString\").*!\1: \"${CONNECTION_STRING//!/\\!};Command Timeout=${COMMAND_TIMEOUT}\"!g" "${BACKEND_PATH}/appsettings.runner.json"
+
     log "✅ Configuration files updated"
 }
 
 # Function to wait for MySQL and run migrations
 run_migrations() {
+    migration_args=()
+    [[ ${MIGRATION_TYPE} == "STANDALONE" ]] && migration_args=(standalone=true)
     log "🔍 Starting migration process..."
-    
-    # Build migration parameters
-    MIGRATION_PARAMS=""
-    if [[ ${MIGRATION_TYPE} == "STANDALONE" ]]; then
-        MIGRATION_PARAMS="standalone=true"
-        log "   Mode: STANDALONE"
-    else
-        log "   Mode: SAAS"
-    fi
-    
-    # Wait for MySQL
+    log "   Mode: ${MIGRATION_TYPE}"
+
     log "⏳ Waiting for MySQL to be ready..."
-    counter=0
     MAX_RETRIES=30
-    until mysql -h "$MYSQL_HOST" -P "$MYSQL_PORT" \
-        -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" \
-        -e "SELECT 1" "$MYSQL_DATABASE" >/dev/null 2>&1; do
-        counter=$((counter + 1))
-        if [ $counter -ge $MAX_RETRIES ]; then
-            log "❌ MySQL not available after $MAX_RETRIES attempts"
-            return 1
-        fi
-        log "   Waiting... ($counter/$MAX_RETRIES)"
+    for ((counter = 1; counter <= MAX_RETRIES; counter++)); do
+        mysql "${MYSQL_ARGS[@]}" -e "SELECT 1" "$MYSQL_DATABASE" >/dev/null 2>&1 && break
+        [ "$counter" -eq "$MAX_RETRIES" ] && { log "❌ MySQL not available after ${MAX_RETRIES} attempts"; return 1; }
         sleep 2
     done
     log "✅ MySQL is ready!"
-    
-    # Check current migration state
-    log "📋 Current migration state:"
-    mysql -h "$MYSQL_HOST" -P "$MYSQL_PORT" \
-        -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" \
-        -e "SELECT COUNT(*) as 'Total Migrations' FROM __EFMigrationsHistory;" "$MYSQL_DATABASE" 2>/dev/null || log "   No migrations table yet"
-    
-    log ""
+    log "📋 Current migration state: $(migration_count)"
     log "📋 Last 5 migrations:"
-    mysql -h "$MYSQL_HOST" -P "$MYSQL_PORT" \
-        -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" \
-        -e "SELECT MigrationId, ProductVersion FROM __EFMigrationsHistory ORDER BY MigrationId DESC LIMIT 5;" "$MYSQL_DATABASE" 2>/dev/null || log "   No migrations applied yet"
-    
-    log ""
-    
-    # Run migration
+    mysql "${MYSQL_ARGS[@]}" -e "SELECT MigrationId, ProductVersion FROM __EFMigrationsHistory ORDER BY MigrationId DESC LIMIT 5;" \
+        "$MYSQL_DATABASE" 2>/dev/null || log "   No migrations applied yet"
+
     log "🚀 Running database migration..."
-    cd ${SRC_PATH}/publish/services/backend/
-    
-    if dotnet ASC.Migration.Runner.dll ${MIGRATION_PARAMS}; then
+    cd "${BACKEND_PATH}"
+    if dotnet ASC.Migration.Runner.dll "${migration_args[@]}"; then
         log "✅ Migration completed successfully"
-        
-        # Show updated state
-        log ""
-        log "📋 Updated migration state:"
-        mysql -h "$MYSQL_HOST" -P "$MYSQL_PORT" \
-            -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" \
-            -e "SELECT COUNT(*) as 'Total Migrations' FROM __EFMigrationsHistory;" "$MYSQL_DATABASE" 2>/dev/null
-        
-        log ""
+        log "📋 Updated migration state: $(migration_count)"
         log "📋 Most recent migrations:"
-        mysql -h "$MYSQL_HOST" -P "$MYSQL_PORT" \
-            -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" \
-            -e "SELECT MigrationId, ProductVersion FROM __EFMigrationsHistory ORDER BY MigrationId DESC LIMIT 5;" "$MYSQL_DATABASE" 2>/dev/null
-        
-        # Create success flag
-        touch /tmp/migration-completed
+        mysql "${MYSQL_ARGS[@]}" -e "SELECT MigrationId, ProductVersion FROM __EFMigrationsHistory ORDER BY MigrationId DESC LIMIT 5;" \
+            "$MYSQL_DATABASE" 2>/dev/null
         return 0
-    else
-        log "❌ Migration failed"
-        return 1
     fi
+    log "❌ Migration failed"
+    return 1
 }
 
-# Main execution
 main() {
+    echo "🚀 Starting Docker entrypoint..."
+    echo "=================================="
     log "=== Starting initialization ==="
-    
-    # Step 1: Update configuration files
     update_configs
-    
-    # Step 2: Run migrations
-    if ! run_migrations; then
-        log "❌ Migration failed - exiting"
-        exit 1
-    fi
-    
+    run_migrations || { log "❌ Migration failed - exiting"; exit 1; }
+    log "🌐 Initializing nginx..." && /nginx/docker-entrypoint.sh
     log "✅ Initialization complete - starting supervisord"
     log "=================================="
-    
-    # Step 3: Start supervisord (which will start all services)
     exec supervisord -n
 }
 
-# Run main function
 main

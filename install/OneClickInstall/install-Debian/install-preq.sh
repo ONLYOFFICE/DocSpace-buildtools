@@ -1,5 +1,41 @@
 #!/bin/bash
 
+ #
+ # Copyright (C) Ascensio System SIA, 2009-2026
+ #
+ # This program is a free software product. You can redistribute it and/or
+ # modify it under the terms of the GNU Affero General Public License (AGPL)
+ # version 3 as published by the Free Software Foundation, together with the
+ # additional terms provided in the LICENSE file.
+ #
+ # This program is distributed WITHOUT ANY WARRANTY; without even the implied
+ # warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. For
+ # details, see the GNU AGPL at: https://www.gnu.org/licenses/agpl-3.0.html
+ #
+ # You can contact Ascensio System SIA by email at info@onlyoffice.com
+ # or by postal mail at 20A-6 Ernesta Birznieka-Upisha Street, Riga,
+ # LV-1050, Latvia, European Union.
+ #
+ # The interactive user interfaces in modified versions of the Program
+ # are required to display Appropriate Legal Notices in accordance with
+ # Section 5 of the GNU AGPL version 3.
+ #
+ # No trademark rights are granted under this License.
+ #
+ # All non-code elements of the Product, including illustrations,
+ # icon sets, and technical writing content, are licensed under the
+ # Creative Commons Attribution-ShareAlike 4.0 International License:
+ # https://creativecommons.org/licenses/by-sa/4.0/legalcode
+ #
+ # This license applies only to such non-code elements and does not
+ # modify or replace the licensing terms applicable to the Program's
+ # source code, which remains licensed under the GNU Affero General
+ # Public License v3.
+ #
+ # SPDX-License-Identifier: AGPL-3.0-only
+ #
+
+
 set -e
 
 cat<<EOF
@@ -13,8 +49,7 @@ EOF
 hold_package_version
 
 if [ "$DIST" = "debian" ] && [ "$(apt-cache search ttf-mscorefonts-installer | wc -l)" -eq 0 ]; then
-		echo "deb http://ftp.uk.debian.org/debian/ $DISTRIB_CODENAME main contrib" >> /etc/apt/sources.list
-		echo "deb-src http://ftp.uk.debian.org/debian/ $DISTRIB_CODENAME main contrib" >> /etc/apt/sources.list
+		echo "deb http://deb.debian.org/debian/ $DISTRIB_CODENAME main contrib" >> /etc/apt/sources.list
 fi
 
 # Temporary workaround extend apt-sequoia policy until 2027-02-01 (OpenResty/OpenSearch)
@@ -29,14 +64,8 @@ if [ -n "$PRODUCT_VERSION" ] && ! apt-cache madison "$product" | awk '{print $3}
   echo "Requested ${product_name} version ${PRODUCT_VERSION} not found in repository."; exit 1
 fi
 
-if ! command -v locale-gen &> /dev/null; then
-	apt-get install -yq locales
-fi
-
-if ! dpkg -l | grep -q "apt-transport-https"; then
-	apt-get install -yq apt-transport-https
-fi
-
+dpkg -l | grep -q "debconf-utils" || apt-get install -yq debconf-utils
+command -v locale-gen &>/dev/null || apt-get install -yq locales
 locale-gen en_US.UTF-8
 
 # add opensearch repo
@@ -77,7 +106,7 @@ if ! dpkg -l | grep -q "mysql-server"; then
 
 	# setup mysql 8.4 package
 	curl -fsSLO http://repo.mysql.com/"${MYSQL_PACKAGE_NAME}"
-	echo "mysql-apt-config mysql-apt-config/repo-codename  select  $DISTRIB_CODENAME" | debconf-set-selections
+	echo "mysql-apt-config mysql-apt-config/repo-codename  select  ${DISTRIB_CODENAME/resolute/noble}" | debconf-set-selections
 	echo "mysql-apt-config mysql-apt-config/repo-distro  select  $DIST" | debconf-set-selections
 	echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.4-lts" | debconf-set-selections
 	DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
@@ -102,8 +131,8 @@ if [ "$DIST" = "ubuntu" ]; then
 fi
 
 curl -fsSL https://openresty.org/package/pubkey.gpg | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/openresty.gpg --import
-# Temporary workaround Debian 13 (trixie) use bookworm codename for OpenResty
-OPENRESTY_CODENAME=$([ "${DISTRIB_CODENAME}" = "trixie" ] && echo "bookworm" || echo "${DISTRIB_CODENAME}")
+# Temporary workaround Debian 13 (trixie) and Ubuntu 26.04 (resolute) use previous LTS codename for OpenResty
+OPENRESTY_CODENAME=$([ "${DISTRIB_CODENAME}" = "trixie" ] && echo "bookworm" || echo "${DISTRIB_CODENAME/resolute/noble}")
 echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/$DIST ${OPENRESTY_CODENAME} $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
 chmod 644 /usr/share/keyrings/openresty.gpg
 
@@ -126,11 +155,14 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 				make \
 				mysql-server \
 				mysql-client \
-				postgresql \
 				redis-server \
 				rabbitmq-server \
 				temurin-${JAVA_VERSION}-jre \
 				ffmpeg 
+
+if [ "$INSTALLATION_TYPE" != "COMMUNITY" ]; then
+	apt-get install -yq postgresql
+fi
 
 # Temporary fallback dotnet-sdk-10.0 on Debian 11 and Ubuntu 24.04
 DOTNET_VERSION="10.0.100"; DOTNET_PKG="dotnet-sdk-${DOTNET_VERSION%.*}"
@@ -167,8 +199,3 @@ if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then
 	apt-get install -o DPkg::options::="--force-confnew" -yq opensearch-dashboards="${DASHBOARDS_VERSION}" fluent-bit
 fi
 
-# disable apparmor for mysql
-if which apparmor_parser && [ ! -f /etc/apparmor.d/disable/usr.sbin.mysqld ] && [ -f /etc/apparmor.d/disable/usr.sbin.mysqld ]; then
-	ln -sf /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/
-	apparmor_parser -R /etc/apparmor.d/usr.sbin.mysqld
-fi

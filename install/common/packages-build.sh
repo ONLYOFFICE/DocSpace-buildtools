@@ -11,9 +11,16 @@ BUILDTOOLS_PATH=${BUILD_PATH}/buildtools
 PUBLISH_DIR=${BUILD_PATH}/publish
 
 # Frontend build
-export NODE_OPTIONS="--max-old-space-size=4096"
+export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=4096}"
 echo "== Frontend build =="; FRONTEND_START_TIMER=$(date +%s)
-cd ${CLIENT_PATH}; pnpm install; pnpm build; pnpm run deploy; FRONTEND_END_TIMER=$(date +%s)
+cd ${CLIENT_PATH}; pnpm install
+if [ -z "${NX_PARALLEL}" ]; then
+  pnpm build
+else
+  NX_PACKAGES=$(node -p "require('./package.json').scripts.build.match(/-p ([^-]+)/)[1].trim()")
+  pnpm nx run-many -t build -p ${NX_PACKAGES} --parallel=${NX_PARALLEL}
+fi
+pnpm run deploy; FRONTEND_END_TIMER=$(date +%s)
 echo "::notice::Frontend build completed in $((FRONTEND_END_TIMER - FRONTEND_START_TIMER)) seconds"
 
 # Backend build
@@ -24,6 +31,7 @@ PUBLISH_ARGS='-c Release --self-contained false -p:DebugType=None -p:DebugSymbol
 dotnet publish common/Tools/ASC.Migration.Runner/ASC.Migration.Runner.csproj $PUBLISH_ARGS -o ${PUBLISH_DIR}/services/ASC.Migration.Runner/service/ && \
 dotnet publish ASC.Web.slnx $PUBLISH_ARGS -p:PublishProfile=ReleaseProfile && \
 cd "${SERVER_PATH}/common/ASC.Socket.IO" && yarn install --immutable && mv -f ${SERVER_PATH}/common/ASC.Socket.IO ${PUBLISH_DIR}/services/
+cd "${SERVER_PATH}/common/ASC.NewAi" && yarn install --immutable && mv -f ${SERVER_PATH}/common/ASC.NewAi ${PUBLISH_DIR}/services/
 cd "${SERVER_PATH}/common/ASC.SsoAuth" && yarn install --immutable && mv -f ${SERVER_PATH}/common/ASC.SsoAuth ${PUBLISH_DIR}/services/
 cd "${SERVER_PATH}/common/ASC.Identity" && mkdir -p ${PUBLISH_DIR}/services/{ASC.Identity.Registration,ASC.Identity.Authorization}
 mvn -B dependency:go-offline -Dorg.slf4j.simpleLogger.defaultLogLevel=warn
@@ -36,7 +44,8 @@ echo "::notice::Backend build completed in $((BACKEND_END_TIMER - BACKEND_START_
 
 # MCP build
 cd "${BUILD_PATH}/mcp"
-pnpm install --frozen-lockfile && pnpm build-app
+# Allow postinstall scripts for MCP deps: esbuild and unrs-resolver
+pnpm install --frozen-lockfile --dangerously-allow-all-builds && pnpm build-app
 mkdir -p "${PUBLISH_DIR}/services/ASC.AI.MCP/service"
 cp -a bin "${PUBLISH_DIR}/services/ASC.AI.MCP/service/"
 
@@ -48,7 +57,7 @@ done
 find ${PUBLISH_DIR} -depth -type f -regex '.*\(eslintrc.*\|npmignore\|gitignore\|gitattributes\|gitmodules\|un~\|DS_Store\)' -exec rm -f {} \;
 find ${BUILDTOOLS_PATH}/config -type f -regex '.*\.\(test\|dev\)\..*' -delete
 rm -f ${BUILDTOOLS_PATH}/config/nginx/onlyoffice-{login,management}.conf
-find ${PUBLISH_DIR}/web ${PUBLISH_DIR}/services/{ASC.SsoAuth,ASC.Socket.IO} -type f \( -name "*.js.map" -o -name "*.css.map" \) -delete
+find ${PUBLISH_DIR}/web ${PUBLISH_DIR}/services/{ASC.SsoAuth,ASC.Socket.IO,ASC.NewAi} -type f \( -name "*.js.map" -o -name "*.css.map" \) -delete
 
 # Renaming files
 find ${BUILDTOOLS_PATH}/install/common -type f -exec rename -f -v "s/product([^\/]*)$/${PRODUCT}\$1/g" {} ';'
@@ -57,7 +66,7 @@ rename -f -v 's/(.*\.(community|enterprise|developer))\.json$/$1.json.template/'
 # Change directories
 if ! grep -q 'var/www/${PRODUCT}' ${BUILDTOOLS_PATH}/config/nginx/*.conf; then find ${BUILDTOOLS_PATH}/config/nginx/ -name "*.conf" -exec sed -i "s@\(var/www/\)@\1${PRODUCT}/@" {} +; fi
 sed -i "s#\$public_root#/var/www/${PRODUCT}/public/#g" ${BUILDTOOLS_PATH}/config/nginx/onlyoffice.conf
-sed "s_\(.*root\).*;_\1 \"/var/www/${PRODUCT}\";_g" -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/letsencrypt.conf
+sed "s_\(.*root\).*;_\1 \"/var/www/${PRODUCT}\";_g" -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/proxy/letsencrypt.conf
 sed -i 's_app/onlyoffice/data_var/www/onlyoffice/Data_g' ${BUILDTOOLS_PATH}/config/*.json.template
 
 # Configuring ${PRODUCT} services  
@@ -89,16 +98,16 @@ sed -e 's_etc/nginx_etc/openresty_g' \
     -i ${BUILDTOOLS_PATH}/config/nginx/*.conf ${BUILDTOOLS_PATH}/config/nginx/includes/*.conf
 sed -E 's_(http://)[^:]+(:5601)_\1localhost\2_g' -i ${BUILDTOOLS_PATH}/config/nginx/onlyoffice.conf
 sed -e 's/\$router_host/127.0.0.1/g' \
-    -e 's/this_host\|proxy_x_forwarded_host/host/g' \
+    -e 's/this_host/http_host/g' \
     -e 's_includes_/etc/openresty/includes_g' \
     -e '/quic\|alt-svc/Id' \
-    -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy*.conf
+    -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/proxy/onlyoffice-proxy*.conf
 sed -e '/.pid/d' \
     -e '/temp_path/d' \
     -e 's_etc/nginx_etc/openresty_g' \
     -e 's/\.log/-openresty.log/g' \
-    -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/templates/nginx.conf.template
-rename -f -v 's/\.conf$/.conf.template/' ${BUILDTOOLS_PATH}/install/docker/config/nginx/onlyoffice-proxy*.conf
+    -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/nginx.conf.template
+rename -f -v 's/\.conf$/.conf.template/' ${BUILDTOOLS_PATH}/install/docker/config/nginx/proxy/onlyoffice-proxy*.conf
 
 # Configuring fluent-bit
 sed -i "s#\(/var/log/onlyoffice/\)#\1${PRODUCT}/#" ${BUILDTOOLS_PATH}/install/docker/config/fluent-bit.conf 

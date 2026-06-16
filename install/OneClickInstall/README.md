@@ -346,6 +346,7 @@ The installation scripts support the following operating systems, which are **re
 - Debian 13
 - Ubuntu 22.04
 - Ubuntu 24.04
+- Ubuntu 26.04
 <!-- OS-SUPPORT-LIST-END -->
 
 ## 📚 Additional Resources

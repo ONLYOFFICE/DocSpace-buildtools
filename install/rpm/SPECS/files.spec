@@ -24,7 +24,8 @@
 %config %attr(640, onlyoffice, onlyoffice) %{_sysconfdir}/onlyoffice/%{product}/*
 %exclude %{_sysconfdir}/onlyoffice/%{product}/openresty
 %attr(740, onlyoffice, onlyoffice) %{_sysconfdir}/onlyoffice/%{product}/document-formats/
-%{_docdir}/%{name}-%{version}-%{release}/
+%license %{_datadir}/licenses/%{name}/LICENSE
+%license %{_datadir}/licenses/%{name}/LICENSE-CC-BY-SA
 %{_var}/log/onlyoffice/%{product}/
 %dir %{_sysconfdir}/onlyoffice/
 %dir %{_sysconfdir}/onlyoffice/%{product}/
@@ -81,6 +82,12 @@
 %defattr(-, onlyoffice, onlyoffice, -)
 %{buildpath}/services/ASC.Socket.IO/
 /usr/lib/systemd/system/%{product}-socket.service
+%dir %{buildpath}/services/
+
+%files newai
+%defattr(-, onlyoffice, onlyoffice, -)
+%{buildpath}/services/ASC.NewAi/
+/usr/lib/systemd/system/%{product}-newai.service
 %dir %{buildpath}/services/
 
 %files studio

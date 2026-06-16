@@ -301,7 +301,9 @@ setup_openresty(){
 		# Remove default nginx settings [error] port 80 is already in use
 		if [ -f /etc/nginx/nginx.conf ]; then
 			if grep -q "server {"  /etc/nginx/nginx.conf ; then
-				sed -e '$a}' -e '/server {/,$d' -i /etc/nginx/nginx.conf
+				# fix Bug 81918 - Remove default server block without dropping conf.d includes
+				awk '/^[[:space:]]*server[[:space:]]*\{/&&!done{done=1;d=1;next}d{d+=gsub(/\{/,"{")-gsub(/\}/,"}");if(d<=0)d=0;next}1' \
+					/etc/nginx/nginx.conf > /etc/nginx/nginx.conf.tmp && mv -f /etc/nginx/nginx.conf.tmp /etc/nginx/nginx.conf
 				systemctl reload nginx
 			fi
 		fi
@@ -310,7 +312,7 @@ setup_openresty(){
 		if command -v getenforce >/dev/null 2>&1; then
 			case "$(getenforce)" in
 				enforcing|permissive)
-					PORTS=(5000 5001 5003 5004 5005 5006 5007 5009 5010 5011 5012 5013 5014 5015 5027 5032 5033 5034 5075 5099 5100 5124 5157 5158 8080 9090 9834 9899)
+					PORTS=(5000 5001 5003 5004 5005 5006 5007 5009 5010 5011 5012 5013 5014 5015 5027 5032 5033 5034 5075 5099 5100 5124 5157 5158 8080 9090 9834 9837 9899)
 					setsebool -P httpd_can_network_connect on
 					EXISTING_PORTS="$(semanage port -l | awk '$1=="http_port_t" && $2=="tcp"{for(i=3;i<=NF;i++)print $i}' | tr ',' '\n' | tr -d ' ')"
 					for PORT in "${PORTS[@]}"; do
@@ -364,19 +366,22 @@ setup_docs() {
 
 	if [ $1 == "LOCAL_DOCS_SERVER" ]; then
 		DS_CONF_DIR="/etc/${PACKAGE_SYSNAME}/documentserver"
-		DOCUMENT_SERVER_PORT=$(grep -oP '(?<=:)\d+(?=\s)' ${DS_CONF_DIR}/nginx/ds.conf)
+		DOCUMENT_SERVER_PORT=$(grep -oP '(?<=:)\d+(?=[\s;])' ${DS_CONF_DIR}/nginx/ds.conf | head -1)
+		: "${DOCUMENT_SERVER_PORT:=8083}"
 		: "${DOCUMENT_SERVER_JWT_SECRET:=$(json -f ${DS_CONF_DIR}/local.json services.CoAuthoring.secret.inbox.string 2>/dev/null)}"
 		: "${DOCUMENT_SERVER_JWT_HEADER:=$(json -f ${DS_CONF_DIR}/local.json services.CoAuthoring.token.inbox.header 2>/dev/null)}"
 
-		json_configuration "${DS_CONF_DIR}/local.json" "rabbitmq" "{ url: '${RABBITMQ_URI}' }"
-		json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis" "{ host: '${REDIS_HOST}', port: '${REDIS_PORT}' }"
-		json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis.options" "{
-			${REDIS_USER:+username: '${REDIS_USER}',}
-			${REDIS_PASS:+password: '${REDIS_PASS}',}
-			${REDIS_DB:+database: '${REDIS_DB}',}
-		}"
+		if [ "${ENVIRONMENT}" != "community" ]; then
+			json_configuration "${DS_CONF_DIR}/local.json" "rabbitmq" "{ url: '${RABBITMQ_URI}' }"
+			json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis" "{ host: '${REDIS_HOST}', port: '${REDIS_PORT}' }"
+			json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis.options" "{
+				${REDIS_USER:+username: '${REDIS_USER}',}
+				${REDIS_PASS:+password: '${REDIS_PASS}',}
+				${REDIS_DB:+database: '${REDIS_DB}',}
+			}"
+			chown ds:ds ${DS_CONF_DIR}/local.json
+		fi
 		
-		chown ds:ds ${DS_CONF_DIR}/local.json
 		usermod -aG ${PACKAGE_SYSNAME} ds
 		chmod g+rwxs /var/www/${PACKAGE_SYSNAME}/Data
 		systemctl restart ds-converter ds-docservice ds-metrics
@@ -386,12 +391,13 @@ setup_docs() {
 		: "${DOCUMENT_SERVER_JWT_HEADER:=$(json -f "${USER_CONF}" services.CoAuthoring.token.inbox.header 2>/dev/null)}"
 	fi
 
-	sed "0,/proxy_pass .*;/{s#proxy_pass .*;#proxy_pass ${DOCUMENT_SERVER_URL_EXTERNAL:-http://$APP_HOST:$DOCUMENT_SERVER_PORT};#}" -i ${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}.conf
-	json_configuration "${USER_CONF}" "files.docservice.secret.value" "${DOCUMENT_SERVER_JWT_SECRET}" 
-	json_configuration "${USER_CONF}" "files.docservice.secret.header" "${DOCUMENT_SERVER_JWT_HEADER:-"AuthorizationJwt"}" 
-	json_configuration "${USER_CONF}" "files.docservice.url.public" "${DOCUMENT_SERVER_URL_EXTERNAL:-"/ds-vpath/"}"
-	json_configuration "${USER_CONF}" "files.docservice.url.internal" "${DOCUMENT_SERVER_URL_EXTERNAL:-"http://${APP_HOST}:${DOCUMENT_SERVER_PORT}"}"
-	json_configuration "${USER_CONF}" "files.docservice.url.portal" "http://${APP_HOST}:${APP_PORT}"
+	local _ds_url="${DOCUMENT_SERVER_URL_EXTERNAL:-http://$APP_HOST:$DOCUMENT_SERVER_PORT}"
+	sed "/~\* \^\/ds-vpath\/ {/,/}/s|\(proxy_pass \).*;|\1${_ds_url};|" -i "${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}.conf"
+	json_configuration "${USER_CONF}" "files.docservice.url.internal"  "${_ds_url}"
+	json_configuration "${USER_CONF}" "files.docservice.secret.value"  "${DOCUMENT_SERVER_JWT_SECRET}"
+	json_configuration "${USER_CONF}" "files.docservice.secret.header" "${DOCUMENT_SERVER_JWT_HEADER:-"AuthorizationJwt"}"
+	json_configuration "${USER_CONF}" "files.docservice.url.public"    "${DOCUMENT_SERVER_URL_EXTERNAL:-"/ds-vpath/"}"
+	json_configuration "${USER_CONF}" "files.docservice.url.portal"    "http://${APP_HOST}:${APP_PORT}"
 	
 	echo "OK"
 }
@@ -606,6 +612,7 @@ product_configuration(){
 	env_configuration "$APP_DIR/systemd.env" ENVIRONMENT "${ENVIRONMENT}"
 	env_configuration "$APP_DIR/systemd.env" SPRING_PROFILES_ACTIVE "prod,server"
 	env_configuration "$APP_DIR/systemd.env" API_HOST "http://127.0.0.1:8092"
+	env_configuration "$APP_DIR/systemd.env" AI_SERVICE_URL "http://127.0.0.1:5157"
 	env_configuration "$APP_DIR/systemd.env" DOCSPACE_INTERNAL "true"
 	env_configuration "$APP_DIR/systemd.env" DOCSPACE_TRANSPORT "http"
 	env_configuration "$APP_DIR/systemd.env" DOCSPACE_HOST "0.0.0.0"
@@ -644,7 +651,7 @@ stop_services() {
 	echo "OK"
 }
 
-SERVICES=(login api socket studio-notify notify \
+SERVICES=(login api socket newai studio-notify notify \
 people-server files files-worker studio backup api-system \
 clear-events backup-worker ssoauth doceditor healthchecks \
 identity-authorization identity-api sdk management telegram ai ai-worker mcp)

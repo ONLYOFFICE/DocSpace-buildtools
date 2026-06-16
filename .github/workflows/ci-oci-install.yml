@@ -15,11 +15,12 @@ on:
           debian13,
           ubuntu2204,
           ubuntu2404,
+          ubuntu2604,
           rhel9,
           centos9S,
           centos10S,
-          fedora42,
-          fedora43
+          fedora43,
+          fedora44
       deb_build:
         type: boolean
         description: "Override: All DEB-based distros"
@@ -42,19 +43,20 @@ jobs:
       - name: Set matrix names
         id: set-matrix
         env:
-          OS_ORDER: rhel9 centos9S centos10S fedora42 fedora43 debian11 debian12 debian13 ubuntu2204 ubuntu2404
+          OS_ORDER: rhel9 centos9S centos10S fedora43 fedora44 debian11 debian12 debian13 ubuntu2204 ubuntu2404 ubuntu2604
           OS_MAP: |
             {
               "rhel9":      ["RHEL 9",       "generic",    "rhel9"],
               "centos9S":   ["CentOS 9S",    "onlyoffice", "base-centos9s"],
               "centos10S":  ["CentOS 10S",   "onlyoffice", "base-centos10"],
-              "fedora42":   ["Fedora 42",    "onlyoffice", "base-fedora42"],
               "fedora43":   ["Fedora 43",    "brigada",    "fedora-43"],
+              "fedora44":   ["Fedora 44",    "onlyoffice", "base-fedora44"],
               "debian11":   ["Debian 11",    "onlyoffice", "base-debian11"],
               "debian12":   ["Debian 12",    "onlyoffice", "base-debian12"],
               "debian13":   ["Debian 13",    "onlyoffice", "base-debian13"],
               "ubuntu2204": ["Ubuntu 22.04", "onlyoffice", "base-ubuntu2204"],
-              "ubuntu2404": ["Ubuntu 24.04", "onlyoffice", "base-ubuntu2404"]
+              "ubuntu2404": ["Ubuntu 24.04", "onlyoffice", "base-ubuntu2404"],
+              "ubuntu2604": ["Ubuntu 26.04", "onlyoffice", "base-ubuntu2604"]
             }
         run: |
           declare -A os_set
@@ -164,6 +166,7 @@ jobs:
           fi
 
       - name: "Collect logs for ${{matrix.name}}"
+        if: always()
         run: |
           cd tests/vagrant
           if vagrant status | grep -q "running"; then

@@ -60,6 +60,13 @@ target "onlyoffice-socket" {
   tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-socket:${DOCKER_TAG}"]
 }
 
+target "onlyoffice-newai" {
+  context    = "."
+  dockerfile = "${DOCKERFILE}"
+  target     = "newai"
+  tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-newai:${DOCKER_TAG}"]
+}
+
 target "onlyoffice-studio-notify" {
   context    = "."
   dockerfile = "${DOCKERFILE}"
@@ -214,6 +221,16 @@ target "onlyoffice-node-services" {
   tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-node:${DOCKER_TAG}"]
 }
 
+target "onlyoffice-preview" {
+  context    = "."
+  dockerfile = "${DOCKERFILE}"
+  target     = "preview"
+  tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-preview:${DOCKER_TAG}"]
+  args = {
+    DEPLOY_ARGS = "deploy:preview"
+  }
+}
+
 group "default" {
   targets = [
     "onlyoffice-ai",
@@ -241,6 +258,7 @@ group "default" {
     "onlyoffice-router",
     "onlyoffice-sdk",
     "onlyoffice-socket",
+    "onlyoffice-newai",
     "onlyoffice-ssoauth",
     "onlyoffice-studio",
     "onlyoffice-studio-notify",
@@ -282,6 +300,7 @@ group "node-services" {
     "onlyoffice-login",
     "onlyoffice-router",
     "onlyoffice-socket",
+    "onlyoffice-newai",
     "onlyoffice-ssoauth",
   ]
 }
@@ -291,6 +310,12 @@ group "java-services" {
     "onlyoffice-identity-api",
     "onlyoffice-identity-authorization",
     "onlyoffice-java-services",
+  ]
+}
+
+group "preview-services" {
+  targets = [
+    "onlyoffice-preview",
   ]
 }
 

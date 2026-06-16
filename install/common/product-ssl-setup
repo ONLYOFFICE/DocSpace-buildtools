@@ -176,9 +176,14 @@ PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${PRODUCT}/privkey.pem"}"
 
 if [ -f "${CERTIFICATE_FILE}" ]; then 
   if [ -f "${PRIVATEKEY_FILE}" ]; then
+    APP_PORT=$(sed -nE '/listen .* (ssl|quic)/s/.*:([0-9]{2,5})([[:space:]].*)?;.*/\1/p' ${OPENRESTY}/onlyoffice-proxy.conf 2>/dev/null | head -1)
+    APP_PORT=${APP_PORT:-$(sed -nE 's/.*listen .+:([0-9]{2,5}).*/\1/p' ${OPENRESTY}/onlyoffice-proxy.conf 2>/dev/null | head -1)}
+    [[ "${APP_PORT}" = "80" || "${APP_PORT}" = "443" ]] && APP_PORT=""
     cp -f ${OPENRESTY}/onlyoffice-proxy-ssl.conf.template ${OPENRESTY}/onlyoffice-proxy.conf
-    json -I -f ${USER_CONF} -e "this.files.docservice.url.portal = \"https://${DOMAIN}\""
-    json -I -f ${USER_CONF} -e "this.core['server-root'] = 'https://*/'"
+    json -I -f ${USER_CONF} -e "this.files.docservice.url.portal = \"https://${DOMAIN}${APP_PORT:+:${APP_PORT}}\""
+    json -I -f ${USER_CONF} -e "this.core['server-root'] = 'https://*${APP_PORT:+:${APP_PORT}}/'"
+    sed -i "/\(ssl\|quic\)/s/\(listen .*:\)[0-9]\{2,5\}\( .*\)/\1${APP_PORT:-443}\2/" ${OPENRESTY}/onlyoffice-proxy.conf
+    sed -i -E "s#https://\\\$host(:[0-9]+)?#https://\\\$host${APP_PORT:+:${APP_PORT}}#g" ${OPENRESTY}/onlyoffice-proxy.conf
     sed -i "s~\(ssl_certificate \).*;~\1${CERTIFICATE_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
     sed -i "s~\(ssl_certificate_key \).*;~\1${PRIVATEKEY_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
     sed -i "s~\(ssl_dhparam \).*;~\1${DHPARAM_PATH};~g" ${OPENRESTY}/onlyoffice-proxy.conf

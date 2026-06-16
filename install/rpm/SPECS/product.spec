@@ -18,7 +18,7 @@ BuildArch:      noarch
 URL:            http://onlyoffice.com
 Vendor:         Ascensio System SIA
 Packager:       %{packager}
-License:        AGPLv3
+License:        AGPL-3.0-only AND CC-BY-SA-4.0
 
 Source0:        %{product}.rpmlintrc
 Source1:        https://codeload.github.com/ONLYOFFICE/%{product}-buildtools/tar.gz/master#/buildtools.tar.gz
@@ -58,6 +58,7 @@ Requires:       %name-people-server = %version-%release
 Requires:       %name-proxy = %version-%release
 Requires:       %name-plugins = %version-%release
 Requires:       %name-socket = %version-%release
+Requires:       %name-newai = %version-%release
 Requires:       %name-ssoauth = %version-%release
 Requires:       %name-telegram = %version-%release
 Requires:       %name-identity-authorization = %version-%release
@@ -126,6 +127,13 @@ if [ -f ${PROXY_CONF} ]; then
 fi
 
 %post 
+
+%posttrans
+
+if [ "$1" -ge 2 ]; then
+    find /etc/systemd/system -type l -name '%{product}-*.service' ! -exec test -e {} \; -delete
+    systemctl daemon-reload >/dev/null 2>&1 || true
+fi
 
 %preun
 

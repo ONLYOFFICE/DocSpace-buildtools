@@ -21,7 +21,8 @@ on:
           debian12,
           debian13,
           ubuntu2204,
-          ubuntu2404
+          ubuntu2404,
+          ubuntu2604
 
 jobs:
   prepare:
@@ -49,7 +50,8 @@ jobs:
             "debian12":  {"distr":"onlyoffice","os":"base-debian12"},
             "debian13":  {"distr":"onlyoffice","os":"base-debian13"},
             "ubuntu2204":{"distr":"onlyoffice","os":"base-ubuntu2204"},
-            "ubuntu2404":{"distr":"onlyoffice","os":"base-ubuntu2404"}
+            "ubuntu2404":{"distr":"onlyoffice","os":"base-ubuntu2404"},
+            "ubuntu2604":{"distr":"onlyoffice","os":"base-ubuntu2604"}
           }
           JSON
           )
