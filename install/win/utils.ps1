@@ -305,9 +305,9 @@ function SetIdentityEncryptionSecret {
 # Function to set up OpenSearch.
 function OpenSearchSetup {
     $AppDir = AI_GetMsiProperty APPDIR
-    $AppIndexDir = Join-Path $AppDir "Data\Index\v2.18.0\"
+    $AppIndexDir = Join-Path $AppDir "Data\Index\v3.5.0\"
     $LogsDir     = Join-Path $AppDir "Logs\"
-    $OpenSearchDashboardsYml = "C:\OpenSearchStack\opensearch-dashboards-2.18.0\config\opensearch_dashboards.yml"
+    $OpenSearchDashboardsYml = "C:\OpenSearchStack\opensearch-dashboards-3.5.0\config\opensearch_dashboards.yml"
 
     # Check if the index directory exists and set NEED_REINDEX_OPENSEARCH property if it doesn't.
     if (-not (Test-Path $AppIndexDir)) {
