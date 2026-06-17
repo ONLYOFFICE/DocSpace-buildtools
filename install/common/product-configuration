@@ -597,7 +597,7 @@ product_configuration(){
 	USER_CONF="$APP_DIR/appsettings.$ENVIRONMENT.json"
 
 	#Creating environment configuration files 
-	environmentFiles=("appsettings.$ENVIRONMENT.json" "apisystem.$ENVIRONMENT.json" "elastic.$ENVIRONMENT.json" "rabbitmq.$ENVIRONMENT.json" "redis.$ENVIRONMENT.json")
+	environmentFiles=("appsettings.$ENVIRONMENT.json" "apisystem.$ENVIRONMENT.json" "elastic.$ENVIRONMENT.json" "externalresources.$ENVIRONMENT.json" "rabbitmq.$ENVIRONMENT.json" "redis.$ENVIRONMENT.json")
 
 	for FILE in "${environmentFiles[@]}"; do
 		if [ ! -e "$APP_DIR/${FILE}" ]; then
