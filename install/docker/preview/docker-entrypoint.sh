@@ -33,6 +33,64 @@ export MYSQL_PWD="$MYSQL_PASSWORD"
 MYSQL_ARGS=(-h "$MYSQL_HOST" -P "$MYSQL_PORT" -u "$MYSQL_USER")
 export CONNECTION_STRING="Server=${MYSQL_HOST};Port=${MYSQL_PORT};Database=${MYSQL_DATABASE};User ID=${MYSQL_USER};Password=${MYSQL_PASSWORD}"
 
+SSL_MODE=${SSL_MODE:-"none"}
+SSL_DOMAIN=${SSL_DOMAIN:-""}
+SSL_CERT_PATH=${SSL_CERT_PATH:-""}
+SSL_KEY_PATH=${SSL_KEY_PATH:-""}
+
+setup_nginx_ssl() {
+    mkdir -p /var/www/certbot
+
+    if [[ "$SSL_MODE" == "custom" ]]; then
+        if [[ -z "$SSL_DOMAIN" || -z "$SSL_CERT_PATH" || -z "$SSL_KEY_PATH" ]]; then
+            log "SSL_MODE=custom requires SSL_DOMAIN, SSL_CERT_PATH, SSL_KEY_PATH"
+            exit 1
+        fi
+
+        if [[ ! -f "$SSL_CERT_PATH" || ! -f "$SSL_KEY_PATH" ]]; then
+            log "Custom SSL cert/key not found"
+            exit 1
+        fi
+
+        SERVER_NAME="$SSL_DOMAIN" \
+        SSL_CERTIFICATE="$SSL_CERT_PATH" \
+        SSL_CERTIFICATE_KEY="$SSL_KEY_PATH" \
+        envsubst '${SERVER_NAME} ${SSL_CERTIFICATE} ${SSL_CERTIFICATE_KEY}' \
+            < /app/onlyoffice/template/nginx/onlyoffice-proxy.ssl.conf.template \
+            > /etc/nginx/conf.d/onlyoffice-proxy.conf
+	log "Using self-signed certificate"  
+
+        return 0
+    fi
+
+    if [[ "$SSL_MODE" == "letsencrypt" ]]; then
+        if [[ -z "$SSL_DOMAIN" ]]; then
+            log "SSL_MODE=letsencrypt requires SSL_DOMAIN"
+            exit 1
+        fi
+
+        if [[ -f "/etc/letsencrypt/live/$SSL_DOMAIN/fullchain.pem" && -f "/etc/letsencrypt/live/$SSL_DOMAIN/privkey.pem" ]]; then
+            SERVER_NAME="$SSL_DOMAIN" \
+            SSL_CERTIFICATE="/etc/letsencrypt/live/$SSL_DOMAIN/fullchain.pem" \
+            SSL_CERTIFICATE_KEY="/etc/letsencrypt/live/$SSL_DOMAIN/privkey.pem" \
+            envsubst '${SERVER_NAME} ${SSL_CERTIFICATE} ${SSL_CERTIFICATE_KEY}' \
+                < /app/onlyoffice/template/nginx/onlyoffice-proxy.ssl.conf.template \
+                > /etc/nginx/conf.d/onlyoffice-proxy.conf
+	    log "Using Let's Encrypt certificate"
+        else
+            log "Let's Encrypt cert not found yet - HTTP only"
+            cp /app/onlyoffice/template/nginx/onlyoffice-proxy.http.conf \
+                /etc/nginx/conf.d/onlyoffice-proxy.conf
+        fi
+
+        return 0
+    fi
+
+    log "SSL disabled - HTTP only"
+    cp  /app/onlyoffice/template/nginx/onlyoffice-proxy.http.conf \
+        /etc/nginx/conf.d/onlyoffice-proxy.conf
+}
+
 log() { echo "[$(date +'%F %T')] $1"; }
 
 migration_count() {
@@ -116,6 +174,7 @@ main() {
     log "🌐 Initializing nginx..." && /nginx/docker-entrypoint.sh
     log "✅ Initialization complete - starting supervisord"
     log "=================================="
+    setup_nginx_ssl
     exec supervisord -n
 }
 

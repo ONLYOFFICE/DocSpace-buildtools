@@ -1,17 +1,26 @@
 services:
-  onlyoffice-proxy:
-    image: nginx:stable
+  onlyoffice-docspace-preview:
     ports:
       - "443:443"
+    environment:
+      SSL_MODE: ${SSL_MODE}
+      SSL_DOMAIN: ${SSL_DOMAIN}
+      SSL_CERT_PATH: ${SSL_CERT_PATH}
+      SSL_KEY_PATH: ${SSL_KEY_PATH}
     volumes:
-      - ./config/nginx/ssl/conf.d/onlyoffice-proxy.conf:/etc/nginx/conf.d/default.conf
-      - ./config/nginx/ssl/letsencrypt:/etc/letsencrypt      
+      - ./config/nginx/ssl/letsencrypt:/etc/letsencrypt:ro
+      - ./config/nginx/certs:/etc/nginx/certs:ro
+      - certbot:/var/www/certbot
 
   certbot:
     image: certbot/certbot
     container_name: certbot
+    environment:
+      SSL_DOMAIN: ${SSL_DOMAIN}
+      SSL_EMAIL: ${SSL_EMAIL}
     volumes:
       - ./config/nginx/ssl/letsencrypt:/etc/letsencrypt
-      -  certbot:/var/www/certbot
-        #networks:
-        #- onlyoffice    
+      - certbot:/var/www/certbot
+
+volumes:
+  certbot:
