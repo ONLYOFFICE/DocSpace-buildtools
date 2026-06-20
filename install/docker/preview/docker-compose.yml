@@ -40,7 +40,6 @@ services:
     volumes:
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}app_data:/app/onlyoffice/data
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
-      -  certbot:/var/www/certbot
     ports:
       - "${EXTERNAL_PORT:-80}:80"
     user: root
