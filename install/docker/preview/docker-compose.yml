@@ -32,6 +32,7 @@ x-service: &x-service-base
     ELK_SHEME: ${ELK_SHEME}
     ELK_HOST: ${ELK_HOST}
     ELK_PORT: ${ELK_PORT}
+    SPRING_PROFILES_ACTIVE: minified,stage
 
 services:
   onlyoffice-docspace-preview:
@@ -53,7 +54,7 @@ services:
       args:
         - GIT_BRANCH=${GIT_BRANCH}
         - DEPLOY_ARGS=deploy:preview
-      dockerfile: Dockerfile.app
+      dockerfile: Dockerfile.app 
       target: preview
     container_name: onlyoffice-docspace-preview  
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-preview:${DOCKER_TAG}"
