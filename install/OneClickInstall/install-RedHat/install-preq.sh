@@ -65,14 +65,22 @@ EPEL_URL="https://dl.fedoraproject.org/pub/epel/"
 [ "$REV" = "9" ] && update-crypto-policies --set DEFAULT:SHA1
 [ "$DIST" = "centos" ] && TESTING_REPO="--enablerepo=$( [ "$REV" -ge "9" ] && echo "crb" || echo "powertools" )"
 if [ "$DIST" = "redhat" ] && [ "$REV" -ge 9 ]; then 
-	LADSPA_PACKAGE_VERSION=$(curl -fsSL "${EPEL_URL}/10/Everything/x86_64/Packages/l/" | grep -oP 'ladspa-[0-9].*?\.rpm' | sort -V | tail -n 1)
-	${package_manager} install -y "${EPEL_URL}/10/Everything/x86_64/Packages/l/${LADSPA_PACKAGE_VERSION}"
+	LADSPA_PACKAGE_VERSION=$(curl -fsSL "${EPEL_URL}/10/Everything/${ARCH}/Packages/l/" | grep -oP 'ladspa-[0-9].*?\.rpm' | sort -V | tail -n 1)
+	[ -n "${LADSPA_PACKAGE_VERSION}" ] || { echo "ERROR: ladspa package not found for ${ARCH}" >&2; exit 1; }
+	${package_manager} install -y "${EPEL_URL}/10/Everything/${ARCH}/Packages/l/${LADSPA_PACKAGE_VERSION}"
 fi
 
 #add rabbitmq & erlang repo
 if [ "$DIST" != "fedora" ]; then
 	curl -fsSL https://packagecloud.io/install/repositories/rabbitmq/rabbitmq-server/script.rpm.sh | os=${RABBIT_DIST_NAME} dist="${RABBIT_DIST_VER}" bash
-	curl -fsSL https://packagecloud.io/install/repositories/rabbitmq/erlang/script.rpm.sh | os="${ERLANG_DIST_NAME}" dist="${ERLANG_DIST_VER}" bash
+	if [ "$ARCH" = "aarch64" ]; then
+		ERLANG_MAJOR=$(dnf repoquery -q --requires --latest-limit=1 rabbitmq-server | awk '/^erlang >= / {split($3,v,"."); print v[1]; exit}')
+		ERLANG_RPM_URL=$(curl -fsSL "https://api.github.com/repos/rabbitmq/erlang-rpm/releases?per_page=100" | grep -oP "https://github.com/rabbitmq/erlang-rpm/releases/download/v${ERLANG_MAJOR}[^\"]*/erlang-[0-9][^\"]*-1.el${REV}.${ARCH}.rpm" | head -n 1)
+		[ -n "${ERLANG_RPM_URL}" ] || { echo "ERROR: erlang package not found for ${ARCH}" >&2; exit 1; }
+		${package_manager} -y install "${ERLANG_RPM_URL}"
+	else
+		curl -fsSL https://packagecloud.io/install/repositories/rabbitmq/erlang/script.rpm.sh | os="${ERLANG_DIST_NAME}" dist="${ERLANG_DIST_VER}" bash
+	fi
 fi
 
 #add nodejs repo
@@ -128,7 +136,7 @@ curl -fsSL -o /etc/yum.repos.d/openresty.repo "https://openresty.org/package/${O
 [ "$DIST" = "centos" ] && [ "$REV" -ge 10 ] && sed -i 's/^gpgcheck=.*/gpgcheck=0/' /etc/yum.repos.d/openresty.repo
 
 if [ "${DIST}" = "redhat" ] && [ "${REV}" = "8" ]; then
-  CRB_REPO=$(dnf -q repolist all | awk '/^codeready-builder-for-rhel-8-x86_64-rpms/ {print $1; exit} /^codeready-builder-for-rhel-8-rhui-rpms/ {print $1; exit}')
+  CRB_REPO=$(dnf -q repolist all | awk "/^codeready-builder-for-rhel-8-${ARCH}-rpms/ {print \$1; exit} /^codeready-builder-for-rhel-8-rhui-rpms/ {print \$1; exit}")
   [ -n "${CRB_REPO}" ] && subscription-manager repos --enable="${CRB_REPO}" || true
   CRB_REPO=${CRB_REPO:+--enablerepo=${CRB_REPO}}
   ${package_manager} -y install https://download1.rpmfusion.org/free/el/rpmfusion-free-release-${REV}.noarch.rpm
