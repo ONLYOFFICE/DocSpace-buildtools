@@ -33,6 +33,8 @@ x-service: &x-service-base
     ELK_HOST: ${ELK_HOST}
     ELK_PORT: ${ELK_PORT}
     SPRING_PROFILES_ACTIVE: minified,stage
+    SPRING_APPLICATION_SIGNATURE_SECRET: ${APP_CORE_MACHINEKEY}
+    SPRING_APPLICATION_ENCRYPTION_SECRET: secret_key
 
 services:
   onlyoffice-docspace-preview:
