@@ -32,6 +32,9 @@ x-service: &x-service-base
     ELK_SHEME: ${ELK_SHEME}
     ELK_HOST: ${ELK_HOST}
     ELK_PORT: ${ELK_PORT}
+    SPRING_PROFILES_ACTIVE: minified,stage
+    SPRING_APPLICATION_SIGNATURE_SECRET: ${APP_CORE_MACHINEKEY}
+    SPRING_APPLICATION_ENCRYPTION_SECRET: secret_key
 
 services:
   onlyoffice-docspace-preview:
@@ -40,7 +43,6 @@ services:
     volumes:
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}app_data:/app/onlyoffice/data
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
-      -  certbot:/var/www/certbot
     ports:
       - "${EXTERNAL_PORT:-80}:80"
     user: root
@@ -54,7 +56,7 @@ services:
       args:
         - GIT_BRANCH=${GIT_BRANCH}
         - DEPLOY_ARGS=deploy:preview
-      dockerfile: Dockerfile.app
+      dockerfile: Dockerfile.app 
       target: preview
     container_name: onlyoffice-docspace-preview  
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-preview:${DOCKER_TAG}"

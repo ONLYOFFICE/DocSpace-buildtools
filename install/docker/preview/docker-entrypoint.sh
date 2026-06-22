@@ -33,6 +33,109 @@ export MYSQL_PWD="$MYSQL_PASSWORD"
 MYSQL_ARGS=(-h "$MYSQL_HOST" -P "$MYSQL_PORT" -u "$MYSQL_USER")
 export CONNECTION_STRING="Server=${MYSQL_HOST};Port=${MYSQL_PORT};Database=${MYSQL_DATABASE};User ID=${MYSQL_USER};Password=${MYSQL_PASSWORD}"
 
+SSL_MODE=${SSL_MODE:-"none"}
+SSL_DOMAIN=${SSL_DOMAIN:-""}
+SSL_CERT_PATH=${SSL_CERT_PATH:-""}
+SSL_KEY_PATH=${SSL_KEY_PATH:-""}
+SSL_EMAIL=${SSL_EMAIL:-""}
+LETSENCRYPT_STAGING=${LETSENCRYPT_STAGING:-"false"}
+LETSENCRYPT_FORCE_RENEW=${LETSENCRYPT_FORCE_RENEW:-"false"}
+LETSENCRYPT_FAIL_OPEN=${LETSENCRYPT_FAIL_OPEN:-"false"}
+
+setup_nginx_ssl() {
+    mkdir -p /var/www/certbot /etc/letsencrypt
+
+    write_http_nginx_conf() {
+        cp /app/onlyoffice/template/nginx/onlyoffice-proxy.http.conf \
+            /etc/nginx/conf.d/onlyoffice-proxy.conf
+    }
+
+    write_ssl_nginx_conf() {
+        SERVER_NAME="$1" \
+        SSL_CERTIFICATE="$2" \
+        SSL_CERTIFICATE_KEY="$3" \
+        envsubst '${SERVER_NAME} ${SSL_CERTIFICATE} ${SSL_CERTIFICATE_KEY}' \
+            < /app/onlyoffice/template/nginx/onlyoffice-proxy.ssl.conf.template \
+            > /etc/nginx/conf.d/onlyoffice-proxy.conf
+    }
+
+    if [[ "$SSL_MODE" == "custom" ]]; then
+        if [[ -z "$SSL_DOMAIN" || -z "$SSL_CERT_PATH" || -z "$SSL_KEY_PATH" ]]; then
+            log "SSL_MODE=custom requires SSL_DOMAIN, SSL_CERT_PATH, SSL_KEY_PATH"
+            exit 1
+        fi
+
+        if [[ ! -f "$SSL_CERT_PATH" || ! -f "$SSL_KEY_PATH" ]]; then
+            log "Custom SSL cert/key not found"
+            exit 1
+        fi
+
+        write_ssl_nginx_conf "$SSL_DOMAIN" "$SSL_CERT_PATH" "$SSL_KEY_PATH"
+        log "Using custom SSL certificate"
+        return 0
+    fi
+
+    if [[ "$SSL_MODE" == "letsencrypt" ]]; then
+        if [[ -z "$SSL_DOMAIN" ]]; then
+            log "SSL_MODE=letsencrypt requires SSL_DOMAIN"
+            exit 1
+        fi
+
+        if [[ -z "$SSL_EMAIL" ]]; then
+            log "SSL_MODE=letsencrypt requires SSL_EMAIL"
+            exit 1
+        fi
+
+        if ! command -v certbot >/dev/null 2>&1; then
+            log "certbot is not installed in this image"
+            log "Install certbot in Dockerfile or use a separate certbot service"
+            exit 1
+        fi
+
+        local cert_file="/etc/letsencrypt/live/$SSL_DOMAIN/fullchain.pem"
+        local key_file="/etc/letsencrypt/live/$SSL_DOMAIN/privkey.pem"
+
+        if [[ ! -f "$cert_file" || ! -f "$key_file" || "$LETSENCRYPT_FORCE_RENEW" == "true" ]]; then
+            log "Requesting Let's Encrypt certificate for $SSL_DOMAIN"
+            log "Port 80 must be reachable from the Internet and point to this container"
+
+            local staging_arg=()
+            local renew_arg=()
+            [[ "$LETSENCRYPT_STAGING" == "true" ]] && staging_arg=(--staging)
+            [[ "$LETSENCRYPT_FORCE_RENEW" == "true" ]] && renew_arg=(--force-renewal)
+
+            if certbot certonly \
+                --standalone \
+                --preferred-challenges http \
+                --http-01-port 80 \
+                --non-interactive \
+                --agree-tos \
+                --email "$SSL_EMAIL" \
+                -d "$SSL_DOMAIN" \
+                "${staging_arg[@]}" \
+                "${renew_arg[@]}"; then
+                log "Let's Encrypt certificate created"
+            else
+                log "Let's Encrypt certificate request failed"
+                if [[ "$LETSENCRYPT_FAIL_OPEN" == "true" ]]; then
+                    log "LETSENCRYPT_FAIL_OPEN=true, starting with HTTP only"
+                    write_http_nginx_conf
+                    return 0
+                fi
+                exit 1
+            fi
+        else
+            log "Existing Let's Encrypt certificate found for $SSL_DOMAIN"
+        fi
+
+        write_ssl_nginx_conf "$SSL_DOMAIN" "$cert_file" "$key_file"
+        log "Using Let's Encrypt certificate"
+        return 0
+    fi
+
+    log "SSL disabled - HTTP only"
+    write_http_nginx_conf
+}
 log() { echo "[$(date +'%F %T')] $1"; }
 
 migration_count() {
@@ -113,6 +216,7 @@ main() {
     log "=== Starting initialization ==="
     update_configs
     run_migrations || { log "❌ Migration failed - exiting"; exit 1; }
+    setup_nginx_ssl
     log "🌐 Initializing nginx..." && /nginx/docker-entrypoint.sh
     log "✅ Initialization complete - starting supervisord"
     log "=================================="
@@ -120,3 +224,4 @@ main() {
 }
 
 main
+

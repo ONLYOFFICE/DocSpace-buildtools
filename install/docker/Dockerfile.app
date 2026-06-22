@@ -7,7 +7,7 @@ ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:10.0"
 ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:10.0-noble"
 ARG BUSYBOX_VERSION="1.37"
 ARG PYTHON_VERSION="3.12-slim"
-ARG NODE_VERSION="24-trixie-slim"
+ARG NODE_VERSION="24.16-trixie-slim"
 ARG JAVA_VERSION="25"
 ARG JAVA_RUN_VERSION="${JAVA_VERSION}-jre"
 ARG MAVEN_VERSION="3.9-eclipse-temurin-${JAVA_VERSION}"
@@ -168,10 +168,13 @@ COPY --from=src ${SRC_PATH}/server/common/ASC.Identity/ .
 
 RUN mkdir -p ${SRC_PATH}/publish/services/ASC.Identity.Registration && \
     mkdir -p ${SRC_PATH}/publish/services/ASC.Identity.Authorization && \
+    mkdir -p ${SRC_PATH}/publish/services/ASC.Identity.minified && \
     mvn -Dmaven.repo.local=/tmp/m2/repository -B dependency:go-offline && \
     mvn -Dmaven.repo.local=/tmp/m2/repository clean package -B -DskipTests -pl authorization/authorization-container,registration/registration-container -am && \
+    mvn clean package -Pminified -DskipTests -Dfmt.skip=true -T1 -pl minified -am -B && \
     mv -f ${SRC_PATH}/server/common/ASC.Identity/authorization/authorization-container/target/*.jar ${SRC_PATH}/publish/services/ASC.Identity.Authorization/app.jar && \
     mv -f ${SRC_PATH}/server/common/ASC.Identity/registration/registration-container/target/*.jar ${SRC_PATH}/publish/services/ASC.Identity.Registration/app.jar && \
+    mv -f ${SRC_PATH}/server/common/ASC.Identity/minified/target/*.jar ${SRC_PATH}/publish/services/ASC.Identity.minified/app.jar && \
     rm -rf ${SRC_PATH}/server /tmp/m2
 
 FROM $DOTNET_RUN AS dotnetrun
@@ -604,7 +607,7 @@ RUN set -eux; \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         mysql-client ca-certificates wget gnupg \
-        gettext-base supervisor libcap2-bin; \
+        gettext-base supervisor libcap2-bin certbot; \
     curl -fsSL https://github.com/trentm/json/raw/master/lib/json.js -o /usr/local/bin/json && chmod +x /usr/local/bin/json; \
     wget -qO- https://openresty.org/package/pubkey.gpg | gpg --dearmor -o /usr/share/keyrings/openresty.gpg; \
     echo "deb [arch=$TARGETARCH signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/$([ "$TARGETARCH" = arm64 ] && echo arm64/)ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") main" > /etc/apt/sources.list.d/openresty.list; \
@@ -628,8 +631,11 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/docker-entrypoint.sh /nginx/docker-entrypoint.sh
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/nginx.conf.template /etc/nginx/nginx.conf.template
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/preview/config/nginx/conf.d/onlyoffice-proxy.conf /etc/nginx/conf.d/
+#COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/preview/config/nginx/conf.d/onlyoffice-proxy.conf /etc/nginx/conf.d/
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/preview/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
+
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/preview/config/nginx/templates/onlyoffice-proxy.ssl.conf.template /app/onlyoffice/template/nginx/onlyoffice-proxy.ssl.conf.template
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/preview/config/nginx/templates/onlyoffice-proxy.http.conf /app/onlyoffice/template/nginx/onlyoffice-proxy.http.conf
 
 # nodejs static and dynamic files
 COPY --from=node:24-bookworm-slim /usr/local/bin/node /usr/local/bin/node
@@ -644,10 +650,18 @@ COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TAR
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Migration.Runner/service ${SRC_PATH}/publish/services/backend/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Files/service/DocStore/ ${SRC_PATH}/publish/services/backend/DocStore/
 
+# java Identity (OAuth)
+ENV JAVA_HOME=/opt/java
+ENV PATH=/opt/java/bin:${PATH}
+
+COPY --from=javarun /opt/java/openjdk /opt/java
+COPY --from=build-java --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.minified/app.jar ${SRC_PATH}/publish/services/ASC.Identity.minified/app.jar
+
 RUN set -eux; \
     sed -i -e 's#$public_root#/var/www/public/#' -e "/map \$scheme \$document_server {/,/}/ s|default \"http://[^\"]*\";|default \$document_server_vs_path;|" /etc/nginx/conf.d/onlyoffice.conf; \
     # route every .NET backend upstream to the single monolith port
     sed -i -E "s#default \"(http://127.0.0.1):(5000|5003|5004|5007|5010|5012|5157)\";#default \"\1:5051\";#g" "/etc/nginx/conf.d/onlyoffice.conf"; \
+    sed -i 's#http://127.0.0.1:9090#http://127.0.0.1:8080#g' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i '/client_body_temp_path/ i \ \ \ \ $MAP_HASH_BUCKET_SIZE' /etc/nginx/nginx.conf.template && \
     sed -i 's/\(worker_connections\).*;/\1 $COUNT_WORKER_CONNECTIONS;/' /etc/nginx/nginx.conf.template && \
     sed -i -e '/^user/s/^/#/' -e 's#/tmp/nginx.pid#nginx.pid#' -e 's#/etc/nginx/mime.types#mime.types#' /etc/nginx/nginx.conf.template && \
