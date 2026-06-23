@@ -162,18 +162,32 @@ jobs:
           sed -i "s~\(DOCSPACE_VERSION=\)\"[^\"]*\"~\1\"${DOCSPACE_VERSION}\"~g" "${INSTALL_PATH}/common/offline-self-extracting.sh"
 
           echo "Downloading Docker static binaries for offline installation..."
+
+          download_verify() {
+            curl -fsSL "$1" -o "$2"
+            [ -z "${3:-}" ] && return 0
+            CHECKSUM=$(curl -fsSL "$3" | awk '{print $1}')
+            [ -n "$CHECKSUM" ] || { echo "::error::Failed to get checksum for $1"; return 1; }
+            echo "${CHECKSUM}  $2" | sha256sum -c
+          }
+
           DOCKER_ARCH=$( [ "${{ matrix.arch }}" = "arm" ] && echo "aarch64" || echo "x86_64" )
           CNI_ARCH=$( [ "${{ matrix.arch }}" = "arm" ] && echo "arm64" || echo "amd64" )
+          DOCKER_STATIC_BASE_URL="https://download.docker.com/linux/static/stable/${DOCKER_ARCH}"
+          DOCKER_STATIC_ARCHIVE=$(curl -fsSL "${DOCKER_STATIC_BASE_URL}/" | grep -oE 'docker-[0-9]+\.[0-9]+\.[0-9]+\.tgz' | sort -V | tail -n1)
+          DOCKER_STATIC_VERSION="${DOCKER_STATIC_ARCHIVE#docker-}"; DOCKER_STATIC_VERSION="${DOCKER_STATIC_VERSION%.tgz}"
+          COMPOSE_VERSION=$(curl -fsSL https://api.github.com/repos/docker/compose/releases/latest | jq -r .tag_name)
+          CNI_VERSION=$(curl -fsSL https://api.github.com/repos/containernetworking/plugins/releases/latest | jq -r .tag_name)
+          DOCKER_STATIC_URL="${DOCKER_STATIC_BASE_URL}/docker-${DOCKER_STATIC_VERSION}.tgz"
+          COMPOSE_URL="https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-${DOCKER_ARCH}"
+          CNI_URL="https://github.com/containernetworking/plugins/releases/download/${CNI_VERSION}/cni-plugins-linux-${CNI_ARCH}-${CNI_VERSION}.tgz"
+
           mkdir -p "${INSTALL_PATH}/docker-static"
           cp -r "${INSTALL_PATH}/common/systemd/offline" "${INSTALL_PATH}/docker-static/systemd"
 
-          download_verify() { curl -fsSL "$1" -o "$2" && echo "$(curl -fsSL "$1.sha256")  $2" | sha256sum -c; }
-          DOCKER_STATIC_VERSION=$(curl -fsSL "https://download.docker.com/linux/static/stable/${DOCKER_ARCH}/" | grep -oE 'docker-[0-9]+\.[0-9]+\.[0-9]+\.tgz' | sort -V | tail -n1 | sed 's/docker-\(.*\)\.tgz/\1/')
-          COMPOSE_VERSION=$(curl -fsSL https://api.github.com/repos/docker/compose/releases/latest | jq -r .tag_name)
-          CNI_VERSION=$(curl -fsSL https://api.github.com/repos/containernetworking/plugins/releases/latest | jq -r .tag_name)
-          download_verify "https://download.docker.com/linux/static/stable/${DOCKER_ARCH}/docker-${DOCKER_STATIC_VERSION}.tgz" "${INSTALL_PATH}/docker-static/docker.tgz"
-          download_verify "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-${DOCKER_ARCH}" "${INSTALL_PATH}/docker-static/docker-compose"
-          download_verify "https://github.com/containernetworking/plugins/releases/download/${CNI_VERSION}/cni-plugins-linux-${CNI_ARCH}-${CNI_VERSION}.tgz" "${INSTALL_PATH}/docker-static/cni-plugins.tgz"
+          download_verify "$DOCKER_STATIC_URL" "${INSTALL_PATH}/docker-static/docker.tgz"
+          download_verify "$COMPOSE_URL" "${INSTALL_PATH}/docker-static/docker-compose" "${COMPOSE_URL}.sha256"
+          download_verify "$CNI_URL" "${INSTALL_PATH}/docker-static/cni-plugins.tgz" "${CNI_URL}.sha256"
 
           echo "Creating Docs compressed archives..."
           docker save $(docker images --format "{{.Repository}}:{{.Tag}}" | grep -E 'onlyoffice/documentserver') | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docs_images.tar.xz
