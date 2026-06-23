@@ -54,4 +54,5 @@ jobs:
         DOCKER_USERNAME_PAT: ${{ secrets.docker-username-pat }}
         DOCKER_TOKEN_PAT: ${{ secrets.docker-usertoken-pat }}
       run: |
+         chmod +x ${GITHUB_WORKSPACE}/.github/scripts/release-docspace.sh
          ${GITHUB_WORKSPACE}/.github/scripts/release-docspace.sh
