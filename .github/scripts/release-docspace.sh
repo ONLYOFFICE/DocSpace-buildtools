@@ -107,11 +107,11 @@ function make_repo_public() {
 
   local http_status
   http_status=$(curl -s -o /dev/null -w "%{http_code}" \
-    -X PATCH \
-    -H "Authorization: Bearer ${HUB_JWT}" \
+    -X POST \
+    -H "Authorization: JWT ${HUB_JWT}" \
     -H "Content-Type: application/json" \
     -d '{"is_private": false}' \
-    "https://hub.docker.com/v2/repositories/${namespace}/${repository}/")
+    "https://hub.docker.com/v2/repositories/${namespace}/${repository}/privacy")
 
   if [[ "${http_status}" != "200" ]]; then
     gha_warning "Cannot set ${namespace}/${repository} to public (HTTP ${http_status})"
