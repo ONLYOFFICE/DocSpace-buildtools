@@ -84,26 +84,11 @@ function get_hub_jwt() {
   hub_login "${DOCKER_USERNAME_PAT}" "${DOCKER_TOKEN_PAT}" HUB_JWT || { gha_error "Docker Hub login failed: ${_HUB_LOGIN_ERROR}"; exit 1; }
 }
 
-function is_repo_private() {
-  local full_repo="${1%:*}"
-  local namespace="${full_repo%%/*}"
-  local repository="${full_repo#*/}"
-
-  local is_private
-  is_private=$(curl -s \
-    -H "Authorization: JWT ${HUB_JWT}" \
-    "https://hub.docker.com/v2/repositories/${namespace}/${repository}/" | jq -r '.is_private')
-
-  [[ "${is_private}" == "true" ]]
-}
-
 function make_repo_public() {
   [[ -z "${HUB_JWT}" ]] && return 0
   local full_repo="${1%:*}"
   local namespace="${full_repo%%/*}"
   local repository="${full_repo#*/}"
-
-  is_repo_private "${full_repo}" || return 0
 
   local http_status
   http_status=$(curl -s -o /dev/null -w "%{http_code}" \
