@@ -59,7 +59,7 @@ jobs:
         run: |
           echo "Waiting for images with tag ${{ env.DOCKER_TAG }} to appear on Docker Hub..."
           curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/docker-images-availability.sh \
-            | sudo GITHUB_REPOSITORY=${{ github.repository }} BRANCH=${{ github.ref_name }} DOCKER_REPOSITORY=${{ github.event.inputs.repo }} DOCKER_PREFIX=docspace DOCKER_TAG=${{ env.DOCKER_TAG }} bash
+            | sudo GITHUB_REPOSITORY=${{ github.repository }} BRANCH=${{ github.ref_name }} DOCKER_REPOSITORY=${{ github.event.inputs.repo }} DOCKER_PREFIX=docspace DOCKER_TAG=${{ env.DOCKER_TAG }} DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }} DOCKERHUB_TOKEN=${{ secrets.DOCKERHUB_TOKEN }} bash
 
       - name: Trigger offline release
         env:
