@@ -271,13 +271,44 @@ jobs:
 
       - name: Start preview
         working-directory: install/docker/preview
+        env:
+          DOCKERHUB_USERNAME_PAT: ${{ secrets.DOCKERHUB_USERNAME_PAT }}
+          DOCKERHUB_TOKEN_PAT: ${{ secrets.DOCKERHUB_TOKEN_PAT }}
         run: |
           set -eux
           # Point the stack at the pushed 4testing images and the requested tag.
           if [ "${IS_4TESTING:-true}" != "false" ]; then
             sed -i 's~^\(\s*DOCKER_IMAGE_PREFIX=\).*~\14testing-docspace~' .env
           fi
-          [ -n "$DOCKER_TAG" ] && sed -i "s~^\(\s*DOCKER_TAG=\).*~\1${DOCKER_TAG}~" .env
+
+          if [ -z "$DOCKER_TAG" ]; then
+            ARCH="$(uname -m | sed -E 's/^(x86_64|amd64)$/amd64/; s/^(aarch64|arm64)$/arm64/')"
+            IMAGE_PREFIX="$(awk -F= '/^[[:space:]]*DOCKER_IMAGE_PREFIX=/ {print $2}' .env)"
+            TAG_REGEX='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
+            if [ "${GITHUB_REF_NAME:-}" = "develop" ] && [ "${IS_4TESTING:-true}" != "false" ]; then
+              TAG_REGEX='^develop\.[0-9]+$'
+            fi
+
+            AUTH_HEADER=()
+            if [ -n "${DOCKERHUB_USERNAME_PAT:-}" ] && [ -n "${DOCKERHUB_TOKEN_PAT:-}" ]; then
+              set +x
+              DOCKERHUB_JWT=$(curl -fsSL -X POST "https://hub.docker.com/v2/users/login" \
+                -H "Content-Type: application/json" \
+                -d "{\"username\":\"${DOCKERHUB_USERNAME_PAT}\",\"password\":\"${DOCKERHUB_TOKEN_PAT}\"}" \
+                | jq -r '.token // empty' || true)
+              [ -n "$DOCKERHUB_JWT" ] || { set -x; echo "::error::Docker Hub PAT login failed"; exit 1; }
+              AUTH_HEADER=(-H "Authorization: JWT ${DOCKERHUB_JWT}")
+              set -x
+            fi
+
+            set +x
+            DOCKER_TAG=$(curl -fsSL "${AUTH_HEADER[@]}" "https://hub.docker.com/v2/repositories/onlyoffice/${IMAGE_PREFIX}-preview/tags?page_size=100" \
+              | jq -r '.results[] | select(.name | test("^(?!99\\.).*")) | select(.images[]?.architecture=="'"$ARCH"'") | .name // empty' \
+              | grep -E "$TAG_REGEX" | sort -V | tail -n 1)
+            set -x
+            [ -n "$DOCKER_TAG" ] || { echo "::error::Failed to get Docker tag for onlyoffice/${IMAGE_PREFIX}-preview"; exit 1; }
+          fi
+          sed -i "s~^\(\s*DOCKER_TAG=\).*~\1${DOCKER_TAG}~" .env
 
           docker compose up -d --quiet-pull
           echo "Waiting for containers to become ready..."
