@@ -136,13 +136,17 @@ function release_service() {
    fi
 
    # If specifyed tag look like 2.5.1.1 it will release like 3 different tags: 2.5.1 2.5.1.1 latest
-   # Make new image manigest and push it to stable images repository
-   
+   # Make new image manifest and push it to stable images repository
    local STATUS=0
-   docker buildx imagetools create --tag "${service_release_tag}:${RELEASE_VERSION%.*}" \
-                                   --tag "${service_release_tag}:${RELEASE_VERSION}" \
-                                   --tag "${service_release_tag}:latest" \
-                                   "${service_source_tag}" || STATUS=$?
+   local attempt
+   for attempt in 1 2 3; do
+     docker buildx imagetools create --tag "${service_release_tag}:${RELEASE_VERSION%.*}" \
+                                     --tag "${service_release_tag}:${RELEASE_VERSION}" \
+                                     --tag "${service_release_tag}:latest" \
+                                     "${service_source_tag}" && STATUS=0 && break
+     STATUS=$?
+     [[ ${attempt} -lt 3 ]] && gha_warning "imagetools create failed (attempt ${attempt}/3), retrying in 10s..." && sleep 10
+   done
 
    # Make alert
    if [[ ${STATUS} -eq 0 ]]; then
