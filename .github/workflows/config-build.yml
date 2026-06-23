@@ -1,4 +1,4 @@
-name: 4testing multiarch-config-build
+name: Trigger Build [Config]
 
 on:
   push:

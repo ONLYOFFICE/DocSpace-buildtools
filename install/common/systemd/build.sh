@@ -61,14 +61,14 @@ SERVICE_NAME=(
 	notify 
 	people-server
 	files
-	files-services
+	files-worker
 	studio
 	backup
 	ssoauth
 	identity-authorization
 	identity-api
 	clear-events
-	backup-background
+	backup-worker
 	doceditor
 	migration-runner
 	login
@@ -77,7 +77,7 @@ SERVICE_NAME=(
 	management
 	telegram
 	ai
-	ai-service
+	ai-worker
 	mcp
 	)
 
@@ -108,6 +108,7 @@ reassign_values (){
 		SERVICE_PORT="5006"
 		WORK_DIR="${BASE_DIR}/services/ASC.Studio.Notify/"
 		EXEC_FILE="ASC.Studio.Notify.dll"
+		CORE_EVENT_BUS=" --core:eventBus:subscriptionClientName=asc_event_bus_studio_notify_queue"
 	;;
 	notify )
 		SERVICE_PORT="5005"
@@ -125,10 +126,10 @@ reassign_values (){
 		WORK_DIR="${BASE_DIR}/products/ASC.Files/server/"
 		EXEC_FILE="ASC.Files.dll"
 	;;
-	files-services )
+	files-worker )
 		SERVICE_PORT="5009"
 		WORK_DIR="${BASE_DIR}/products/ASC.Files/service/"
-		EXEC_FILE="ASC.Files.Service.dll"
+		EXEC_FILE="ASC.Files.Worker.dll"
 		CORE_EVENT_BUS=" --core:eventBus:subscriptionClientName=asc_event_bus_files_service_queue"
 		DEPENDENCY_LIST="${DEPENDENCY_LIST} opensearch.service"
 	;;
@@ -166,10 +167,10 @@ reassign_values (){
 		WORK_DIR="${BASE_DIR}/services/ASC.ClearEvents/"
 		EXEC_FILE="ASC.ClearEvents.dll"
 	;;
-	backup-background )
+	backup-worker )
 		SERVICE_PORT="5032"
-		WORK_DIR="${BASE_DIR}/services/ASC.Data.Backup.BackgroundTasks/"
-		EXEC_FILE="ASC.Data.Backup.BackgroundTasks.dll"
+		WORK_DIR="${BASE_DIR}/services/ASC.Data.Backup.Worker/"
+		EXEC_FILE="ASC.Data.Backup.Worker.dll"
 		CORE_EVENT_BUS=" --core:eventBus:subscriptionClientName=asc_event_bus_backup_queue"
 	;;
 	doceditor )
@@ -217,10 +218,10 @@ reassign_values (){
 		WORK_DIR="${BASE_DIR}/products/ASC.AI/server/"
 		EXEC_FILE="ASC.AI.dll"
 	;;
-	ai-service )
+	ai-worker )
 		SERVICE_PORT="5124"
 		WORK_DIR="${BASE_DIR}/products/ASC.AI/service/"
-		EXEC_FILE="ASC.AI.Service.dll"
+		EXEC_FILE="ASC.AI.Worker.dll"
 		CORE_EVENT_BUS=" --core:eventBus:subscriptionClientName=asc_event_bus_ai_service_queue"
 	;;
 	mcp )

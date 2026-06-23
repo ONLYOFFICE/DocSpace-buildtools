@@ -1,4 +1,4 @@
-name: Install OneClickInstall Docker
+name: OCI Docker
 
 on:
   schedule:
@@ -12,6 +12,7 @@ on:
       - ".github/workflows/ci-oci-docker-install.yml"
       - "install/OneClickInstall/install-Docker.sh"
       - "install/docker/*.yml"
+      - "install/docker/preview/docker-compose.yml"
   workflow_dispatch:
     inputs:
       testing:
@@ -24,35 +25,64 @@ on:
         required: true
         default: false
         type: boolean
+      tag:
+        description: "Docker tag (optional)"
+        required: false
+        default: ''
+        type: string
+
+env:
+  IS_4TESTING: ${{ github.event.inputs.testing }}
+  DOCKER_TAG: ${{ github.event.inputs.tag }}
 
 jobs:
-  Install-OneClickInstall-Docker:
-    runs-on: ubuntu-22.04
+  Install-OCI-Docker:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        mode:
+          - name: "standard"
+            services: "docspace healthchecks identity notify dashboards db ds fluent opensearch proxy rabbitmq redis"
+            args: ""
+          - name: "stack"
+            services: "docspace-stack dashboards db ds fluent opensearch proxy rabbitmq redis "
+            args: "-sm true"
+        include:
+          - runner: ubuntu-24.04
+            arch: amd
+          - runner: ubuntu-24.04-arm
+            arch: arm
+        runner:
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+    name: OCI (${{ matrix.mode.name }}) [${{ matrix.arch }}]
+
     steps:
       - name: Free Disk Space
-        run: |
-          sudo docker image prune --all --force
-          sudo rm -rf /usr/local/lib/android || true
+        run: curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/free-disk-space-linux.sh | sudo bash
 
       - name: Login to DockerHub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Test OCI docker scripts
         run: |
-          IS_4TESTING="${{ github.event.inputs.testing }}"
-          wget https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/install/OneClickInstall/install-Docker.sh
-          sed -i "1i set -x" install-Docker.sh && sed -i "/docker-compose.*up -d/ s/$/ --quiet-pull/" install-Docker.sh
-          sudo bash install-Docker.sh -skiphc true -noni true -gb ${{ github.ref_name }} $([ "${IS_4TESTING:-true}" != "false" ] && echo "-s 4testing-") || exit $?
-
-          echo -n "Waiting for all containers to start..."
-          timeout 300 bash -c 'while docker ps | grep -q "starting"; do sleep 5; done' && echo "OK" || echo "container_status=timeout" >> $GITHUB_ENV
+          INSTALL_CMD="sudo bash install-Docker.sh -skiphc true -noni true -gb ${{ github.ref_name }} ${{ matrix.mode.args }}"
+          [ "${IS_4TESTING:-true}" != "false" ] && INSTALL_CMD="$INSTALL_CMD -s 4testing- -un ${{ secrets.DOCKERHUB_USERNAME_PAT }} -p ${{ secrets.DOCKERHUB_TOKEN_PAT }}"
+          [ -n "$DOCKER_TAG" ] && INSTALL_CMD="$INSTALL_CMD -dsv $DOCKER_TAG"
+          
+          wget -q https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/install/OneClickInstall/install-Docker.sh
+          sed -i -e "1i set -x" -e "/DOCKER_COMPOSE.*up -d/ s/$/ --quiet-pull/" install-Docker.sh
+          
+          eval $INSTALL_CMD || exit $?
+          echo "Waiting for containers..." && timeout 300 bash -c 'while docker ps | grep -q "starting"; do sleep 5; done' || echo "container_status=timeout" >> $GITHUB_ENV
 
       - name: Check container status
         run: |
-          SERVICES=(dashboards db docspace ds fluent healthchecks identity notify opensearch proxy rabbitmq redis)
+          read -ra SERVICES <<< "${{ matrix.mode.services }}"
           for SERVICE in "${SERVICES[@]}"; do YML_ARGS+=( -f "/app/onlyoffice/${SERVICE}.yml" ); done
           for SVC in $(docker compose "${YML_ARGS[@]}" config --services); do
             docker compose "${YML_ARGS[@]}" ps "$SVC" | grep -q ${SVC} || { echo "::error::$SVC was not created"; MISSING_COUNT=$((MISSING_COUNT+1)); }
@@ -68,7 +98,7 @@ jobs:
               printf "%-50s ${color}%s\033[0m\n" "{}:" "$status";
           '
 
-      - name: Print logs for crashed container
+      - name: Print logs for crashed containers
         run: |
           docker ps --all --format "{{.Names}}" | xargs -I {} sh -c '
               status=$(docker inspect --format="{{if .State.Health}}{{.State.Health.Status}}{{else}}no healthcheck{{end}}" {});
@@ -86,11 +116,13 @@ jobs:
           esac
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        if: startsWith(matrix.mode.name, 'stack') && (matrix.runner == 'ubuntu-24.04' || github.event.inputs.offline == 'true')
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.ref_name }}
 
-      - name: "Checking Docker scripts for errors"
+      - name: Check Docker scripts for errors
+        if: matrix.mode.name == 'stack' && matrix.runner == 'ubuntu-24.04'
         run: |
           set -eux
           sudo apt-get install -y shellcheck
@@ -98,58 +130,108 @@ jobs:
             | xargs shellcheck --exclude="$(awk '!/^#|^$/ {print $1}' tests/lint/sc_ignore | paste -sd ",")" --severity=warning | tee sc_output
           awk '/\(warning\):/ {w++} /\(error\):/ {e++} END {if (w+e) printf "::warning ::ShellCheck detected %d warnings and %d errors\n", w+0, e+0}' sc_output
 
-      - name: Free Disk Space
-        if: ${{ success() && github.event.inputs.offline == 'true' }}
+      - name: Prepare offline environment
+        if: success() && github.event.inputs.offline == 'true' && startsWith(matrix.mode.name, 'stack')
         run: |
-          docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q) && docker volume rm $(docker volume ls -q)
+          # Clean up and free space
+          docker stop $(docker ps -a -q) && docker rm $(docker ps -a -q) && docker volume rm $(docker volume ls -q) 2>/dev/null || true
           curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/free-disk-space-linux.sh | sudo CLEAN_DOCKER=0 bash
-
-      - name: Creating 4testing offline self-extracting archive
-        if: ${{ success() && github.event.inputs.offline == 'true' }}
-        run: |
-          INSTALL_PATH=${{ github.workspace }}/install
-          IS_4TESTING="${{ github.event.inputs.testing }}"
-
+          
+          # Pull and process DocumentServer images
           for repo in onlyoffice/$( [ "${IS_4TESTING:-true}" != "false" ] && echo 4testing- )documentserver{,-de}; do
             tag=$(curl -s "https://registry.hub.docker.com/v2/repositories/${repo}/tags?page_size=100" \
                   | jq -r '.results[].name' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -Vr | head -n1)
-            [ -z "$tag" ] && exit 1
+            [ -z "$tag" ] && { echo "Failed to get tag for $repo"; exit 1; }
             docker pull "${repo}:${tag}"
           done
 
+          # Retag 4testing images to standard format
           docker images --format "{{.Repository}}:{{.Tag}}" | grep "4testing-" | xargs -I{} bash -c '
             docker tag "$1" $(echo "${1/4testing-/}" | sed -E "s/([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+/\1/")
             docker rmi "$1"
           ' _ {}
 
-          sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\).*"$~\1true"~' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
+      - name: Create compressed archives
+        if: success() && github.event.inputs.offline == 'true' && startsWith(matrix.mode.name, 'stack')
+        run: |
+          INSTALL_PATH="${{ github.workspace }}/install"
+          
+          # Prepare installation script for offline mode
+          sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\|STACK_MODE="\|NON_INTERACTIVE="\).*"$~\1true"~g' "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
+          DOCSPACE_VERSION=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "docspace-" | sed -E "s/.*:([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+.*/\1/" | head -n1)
+          sed -i "s~\(DOCSPACE_VERSION=\)\"[^\"]*\"~\1\"${DOCSPACE_VERSION}\"~g" "${INSTALL_PATH}/common/offline-self-extracting.sh"
 
-          echo "Creating offline self-extracting archive..."
+          echo "Downloading Docker static binaries for offline installation..."
+          DOCKER_ARCH=$( [ "${{ matrix.arch }}" = "arm" ] && echo "aarch64" || echo "x86_64" )
+          CNI_ARCH=$( [ "${{ matrix.arch }}" = "arm" ] && echo "arm64" || echo "amd64" )
+          mkdir -p "${INSTALL_PATH}/docker-static"
+          cp -r "${INSTALL_PATH}/common/systemd/offline" "${INSTALL_PATH}/docker-static/systemd"
+
+          download_verify() { curl -fsSL "$1" -o "$2" && echo "$(curl -fsSL "$1.sha256")  $2" | sha256sum -c; }
+          DOCKER_STATIC_VERSION=$(curl -fsSL "https://download.docker.com/linux/static/stable/${DOCKER_ARCH}/" | grep -oE 'docker-[0-9]+\.[0-9]+\.[0-9]+\.tgz' | sort -V | tail -n1 | sed 's/docker-\(.*\)\.tgz/\1/')
+          COMPOSE_VERSION=$(curl -fsSL https://api.github.com/repos/docker/compose/releases/latest | jq -r .tag_name)
+          CNI_VERSION=$(curl -fsSL https://api.github.com/repos/containernetworking/plugins/releases/latest | jq -r .tag_name)
+          download_verify "https://download.docker.com/linux/static/stable/${DOCKER_ARCH}/docker-${DOCKER_STATIC_VERSION}.tgz" "${INSTALL_PATH}/docker-static/docker.tgz"
+          download_verify "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-${DOCKER_ARCH}" "${INSTALL_PATH}/docker-static/docker-compose"
+          download_verify "https://github.com/containernetworking/plugins/releases/download/${CNI_VERSION}/cni-plugins-linux-${CNI_ARCH}-${CNI_VERSION}.tgz" "${INSTALL_PATH}/docker-static/cni-plugins.tgz"
+
+          echo "Creating Docs compressed archives..."
           docker save $(docker images --format "{{.Repository}}:{{.Tag}}" | grep -E 'onlyoffice/documentserver') | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docs_images.tar.xz
           docker rmi $(docker images --format "{{.Repository}}:{{.Tag}}" | grep -E 'onlyoffice/documentserver')
-          docker save $(docker images --format "{{.Repository}}:{{.Tag}}") | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docker_images.tar.xz
-          cd ${INSTALL_PATH}/docker && tar -czvf ${INSTALL_PATH}/docker.tar.gz --exclude='config/supervisor*' *.yml .env config/
+          docker save $(docker images --format "{{.Repository}}:{{.Tag}}") | xz --verbose -T0 -z -9e > ${INSTALL_PATH}/docspace_images.tar.xz
 
-          tar -cvf ${INSTALL_PATH}/offline-docspace.tar \
-          -C "${INSTALL_PATH}/OneClickInstall" install-Docker.sh install-Docker-args.sh \
-          -C "${INSTALL_PATH}" docker_images.tar.xz docs_images.tar.xz \
-          -C "${INSTALL_PATH}" docker.tar.gz
-          rm -rf ${INSTALL_PATH}/docker_images.tar.xz ${INSTALL_PATH}/docs_images.tar.xz ${INSTALL_PATH}/docker.tar.gz
+          echo "Creating docker configuration archive..."
+          cd ${INSTALL_PATH}/docker
 
-          echo "ARTIFACT_NAME=${ARTIFACT_NAME:=4testing-offline-docspace-installation.sh}" >> $GITHUB_ENV
-          cat ${INSTALL_PATH}/common/self-extracting.sh ${INSTALL_PATH}/offline-docspace.tar > ${INSTALL_PATH}/${ARTIFACT_NAME}
+          tar -czvf ${INSTALL_PATH}/docker-stack.tar.gz \
+            --exclude='build.yml' \
+            --exclude='db.dev.yml' \
+            --exclude='dnsmasq.yml' \
+            --exclude='docspace.overcome.yml' \
+            --exclude='docspace.profiles.yml' \
+            --exclude='config/supervisor*' \
+            --exclude='config/mysql*' \
+            --exclude='config/nginx/router/' \
+            --exclude='config/createdb.sql' \
+            --exclude='build-*' \
+            --exclude='docspace.yml' \
+            --exclude='healthchecks.yml' \
+            --exclude='identity.yml' \
+            --exclude='migration-runner.yml' \
+            --exclude='notify.yml' \
+            *.yml .env config
+
+      - name: Build self-extracting archive
+        if: success() && github.event.inputs.offline == 'true' && startsWith(matrix.mode.name, 'stack')
+        run: |
+          INSTALL_PATH="${{ github.workspace }}/install"
+          
+          # Create combined offline archive
+          tar -cf "${INSTALL_PATH}/offline-docspace.tar" \
+            -C "${INSTALL_PATH}/OneClickInstall" install-Docker-args.sh install-Docker.sh \
+            -C "${INSTALL_PATH}" docker-static docker-stack.tar.gz docspace_images.tar.xz docs_images.tar.xz
+
+          # Clean up temporary archives
+          rm -rf "${INSTALL_PATH}"/{docspace_images.tar.xz,docs_images.tar.xz,docker-stack.tar.gz,docker-static}
+
+          # Create final self-extracting archive
+          SUFFIX=$( [ "${{ matrix.arch }}" = "arm" ] && echo "-arm" || echo "" )
+          echo "ARTIFACT_NAME=${ARTIFACT_NAME:=4testing-offline-docspace-installation${SUFFIX}.sh}" >> $GITHUB_ENV
+          cat ${INSTALL_PATH}/common/offline-self-extracting.sh ${INSTALL_PATH}/offline-docspace.tar > ${INSTALL_PATH}/${ARTIFACT_NAME}
           chmod +x ${INSTALL_PATH}/${ARTIFACT_NAME}
 
+          echo "::notice::Archive sizes — $(cd "${INSTALL_PATH}" && du -sh "${ARTIFACT_NAME}" | awk '{printf "%s: %s", $2, $1}')"
+
       - name: Configure AWS Credentials
-        if: ${{ success() && github.event.inputs.offline == 'true' }}
-        uses: aws-actions/configure-aws-credentials@v4
+        if: success() && github.event.inputs.offline == 'true' && startsWith(matrix.mode.name, 'stack')
+        uses: aws-actions/configure-aws-credentials@v6.0.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_OCI }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_OCI }}
           aws-region: us-east-1
 
       - name: Upload 4testing offline self-extracting archive
-        if: ${{ success() && github.event.inputs.offline == 'true' }}
+        if: success() && github.event.inputs.offline == 'true' && startsWith(matrix.mode.name, 'stack')
         run: |
           aws s3 cp "${{ github.workspace }}/install/${{ env.ARTIFACT_NAME }}" \
             "${{ secrets.AWS_BUCKET_URL_OCI }}/${{ env.ARTIFACT_NAME }}" \
@@ -160,38 +242,50 @@ jobs:
             --region us-east-1 --query 'status' --output text || :)
           echo "API Gateway test-invoke status: ${API_STATUS:-<failed>}"
 
-  Install-OCI-Docker-Stack-Mode:
-    runs-on: ubuntu-22.04
+  Install-Preview:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd
+          - runner: ubuntu-24.04-arm
+            arch: arm
+    name: Preview [${{ matrix.arch }}]
+
     steps:
       - name: Free Disk Space
-        run: |
-          sudo docker image prune --all --force
-          sudo rm -rf /usr/local/lib/android || true
+        run: curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/free-disk-space-linux.sh | sudo bash
 
       - name: Login to DockerHub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Test OCI docker scripts in stack mode
-        run: |
-          IS_4TESTING="${{ github.event.inputs.testing }}"
-          wget https://raw.githubusercontent.com/${{ github.repository }}/${{ github.ref_name }}/install/OneClickInstall/install-Docker.sh
-          sed -i "1i set -x" install-Docker.sh && sed -i "/docker-compose.*up -d/ s/$/ --quiet-pull/" install-Docker.sh
-          sudo bash install-Docker.sh -skiphc true -noni true -sm true -gb ${{ github.ref_name }} $([ "${IS_4TESTING:-true}" != "false" ] && echo "-s 4testing-") || exit $?
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref_name }}
 
-          echo -n "Waiting for all containers to start..."
-          timeout 300 bash -c 'while docker ps | grep -q "starting"; do sleep 5; done' && echo "OK" || echo "container_status=timeout" >> $GITHUB_ENV
+      - name: Start preview
+        working-directory: install/docker/preview
+        run: |
+          set -eux
+          # Point the stack at the pushed 4testing images and the requested tag.
+          if [ "${IS_4TESTING:-true}" != "false" ]; then
+            sed -i 's~^\(\s*DOCKER_IMAGE_PREFIX=\).*~\14testing-docspace~' .env
+          fi
+          [ -n "$DOCKER_TAG" ] && sed -i "s~^\(\s*DOCKER_TAG=\).*~\1${DOCKER_TAG}~" .env
+
+          docker compose up -d --quiet-pull
+          echo "Waiting for containers to become ready..."
+          timeout 600 bash -c 'while docker ps --format "{{.Status}}" | grep -q "health: starting"; do sleep 5; done' \
+            || echo "container_status=timeout" >> "$GITHUB_ENV"
 
       - name: Check container status
         run: |
-          SERVICES=(dashboards db ds fluent opensearch proxy rabbitmq redis docspace-stack)
-          for SERVICE in "${SERVICES[@]}"; do YML_ARGS+=( -f "/app/onlyoffice/${SERVICE}.yml" ); done
-          for SVC in $(docker compose "${YML_ARGS[@]}" config --services); do
-            docker compose "${YML_ARGS[@]}" ps "$SVC" | grep -q ${SVC} || { echo "::error::$SVC was not created"; MISSING_COUNT=$((MISSING_COUNT+1)); }
-          done; [ "${MISSING_COUNT:=0}" -gt 0 ] && { echo "::error::$MISSING_COUNT service(s) were not created."; exit 1; }
-
           docker ps --all --format "{{.Names}}" | xargs -I {} sh -c '
               status=$(docker inspect --format="{{if .State.Health}}{{.State.Health.Status}}{{else}}no healthcheck{{end}}" {});
               case "$status" in
@@ -202,7 +296,8 @@ jobs:
               printf "%-50s ${color}%s\033[0m\n" "{}:" "$status";
           '
 
-      - name: Print logs for crashed container
+      - name: Print logs for crashed containers
+        if: always()
         run: |
           docker ps --all --format "{{.Names}}" | xargs -I {} sh -c '
               status=$(docker inspect --format="{{if .State.Health}}{{.State.Health.Status}}{{else}}no healthcheck{{end}}" {});
@@ -210,11 +305,11 @@ jobs:
                 healthy | "no healthcheck") ;;
                 *)
                   echo "Logs for container {}:";
-                  docker logs --tail 30 {} | sed "s/^/\t/g";
+                  docker logs --tail 50 {} | sed "s/^/\t/g";
                   ;;
               esac;
           '
           case "${{ env.container_status }}" in
-              timeout) echo "::error:: Timeout reached. Not all containers are running."; exit 1 ;;
-              red) echo "::error:: One or more containers have status 'red'. Job will fail."; exit 1 ;;
+              timeout) echo "::error:: Timeout reached. Not all preview containers are running."; exit 1 ;;
+              red) echo "::error:: One or more preview containers have status 'red'. Job will fail."; exit 1 ;;
           esac

@@ -1,5 +1,41 @@
 #!/usr/bin/env bash
 
+ #
+ # Copyright (C) Ascensio System SIA, 2009-2026
+ #
+ # This program is a free software product. You can redistribute it and/or
+ # modify it under the terms of the GNU Affero General Public License (AGPL)
+ # version 3 as published by the Free Software Foundation, together with the
+ # additional terms provided in the LICENSE file.
+ #
+ # This program is distributed WITHOUT ANY WARRANTY; without even the implied
+ # warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. For
+ # details, see the GNU AGPL at: https://www.gnu.org/licenses/agpl-3.0.html
+ #
+ # You can contact Ascensio System SIA by email at info@onlyoffice.com
+ # or by postal mail at 20A-6 Ernesta Birznieka-Upisha Street, Riga,
+ # LV-1050, Latvia, European Union.
+ #
+ # The interactive user interfaces in modified versions of the Program
+ # are required to display Appropriate Legal Notices in accordance with
+ # Section 5 of the GNU AGPL version 3.
+ #
+ # No trademark rights are granted under this License.
+ #
+ # All non-code elements of the Product, including illustrations,
+ # icon sets, and technical writing content, are licensed under the
+ # Creative Commons Attribution-ShareAlike 4.0 International License:
+ # https://creativecommons.org/licenses/by-sa/4.0/legalcode
+ #
+ # This license applies only to such non-code elements and does not
+ # modify or replace the licensing terms applicable to the Program's
+ # source code, which remains licensed under the GNU Affero General
+ # Public License v3.
+ #
+ # SPDX-License-Identifier: AGPL-3.0-only
+ #
+
+
 PACKAGE_SYSNAME="onlyoffice"
 PRODUCT_NAME="DocSpace"
 PRODUCT=$(tr '[:upper:]' '[:lower:]' <<< ${PRODUCT_NAME})
@@ -30,10 +66,11 @@ while [ "$1" != "" ]; do
         -skiphc  | --skiphardwarecheck   ) [ -n "$2" ] && SKIP_HARDWARE_CHECK=$2                                                  && shift ;;
         -sm      | --stack-mode          ) [ -n "$2" ] && STACK_MODE=$2                                                           && shift ;;
         -ep      | --externalport        ) [ -n "$2" ] && EXTERNAL_PORT=$2                                                        && shift ;;
+        -eph     | --externalporthttps   ) [ -n "$2" ] && EXTERNAL_PORT_HTTPS=$2                                                  && shift ;;
         -dsh     | --docspacehost        ) [ -n "$2" ] && APP_URL_PORTAL=$2                                                       && shift ;;
         -mk      | --machinekey          ) [ -n "$2" ] && APP_CORE_MACHINEKEY=$2                                                  && shift ;;
         -env     | --environment         ) [ -n "$2" ] && ENV_EXTENSION=$2                                                        && shift ;;
-        -s       | --status              ) [ -n "$2" ] && STATUS=$2 && IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-api"    && shift ;;
+        -s       | --status              ) [ -n "$2" ] && STATUS=$2                                                               && shift ;;
         -dsv     | --docspaceversion     ) [ -n "$2" ] && DOCKER_TAG=$2                                                           && shift ;;
         -gb      | --gitbranch           ) [ -n "$2" ] && PARAMETERS="$PARAMETERS $1" && GIT_BRANCH=$2                            && shift ;;
         -docsi   | --docsimage           ) [ -n "$2" ] && DOCUMENT_SERVER_IMAGE_NAME=$2                                           && shift ;;
@@ -112,7 +149,8 @@ while [ "$1" != "" ]; do
             echo "  --stack-mode        <true|false>        Install services in containers with the appropriate runtime"
             echo "  --docspaceversion   <version>           ${PRODUCT_NAME} version tag (e.g., 3.2.0)"
             echo "  --docspacehost      <hostname>          Hostname or IP for ${PRODUCT_NAME} (default: localhost)"
-            echo "  --externalport      <port>              External port for ${PRODUCT_NAME} (default: 80)"
+            echo "  --externalport      <port>              External port for ${PRODUCT_NAME} HTTP (default: 80)"
+            echo "  --externalporthttps <port>              External port for ${PRODUCT_NAME} HTTPS (default: 443)"
             echo "  --machinekey        <key>               core.machinekey for encryption (default: random key)"
 
             echo 
@@ -178,4 +216,3 @@ while [ "$1" != "" ]; do
     esac
     shift
 done
-

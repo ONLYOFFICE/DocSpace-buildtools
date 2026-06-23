@@ -21,6 +21,7 @@ get_colors() {
 check_hw() {
     echo "${COLOR_RED} $(free -h) ${COLOR_RESET}"
     echo "${COLOR_RED} $(nproc) ${COLOR_RESET}"
+    echo "${COLOR_RED} $(df -h) ${COLOR_RESET}"
 }
 
 add-repo-deb() {
@@ -102,57 +103,29 @@ esac
 }
 
 install_docspace() {
+  INSTALL_START_TIME=$(date +%s)
   [[ "${DOWNLOAD_SCRIPTS}" == 'true' ]] && curl -fsSLO https://download.onlyoffice.com/docspace/docspace-install.sh || sed 's/set -e/set -xe/' -i *.sh
   bash docspace-install.sh package ${ARGUMENTS} -log false || { echo "Exit code non-zero. Exit with 1."; exit 1; }
-  echo "Exit code 0. Continue..."
-}
-
-healthcheck_systemd_services() {
-  for service in "${SERVICES_SYSTEMD[@]}"; do
-    [[ "$service" == *migration* ]] && continue;
-    if systemctl is-active --quiet "${service}"; then
-      echo "${COLOR_GREEN}[OK] Service ${service} is running${COLOR_RESET}"
-    else
-      echo "${COLOR_RED}[FAILED] Service ${service} is not running${COLOR_RESET}"
-      echo "::error::Service ${service} is not running"
-      SYSTEMD_SVC_FAILED="true"
-    fi
-  done
-  if [ -n "${SYSTEMD_SVC_FAILED}" ]; then
-    exit 1
-  fi
-}
-
-services_logs() {
-  mapfile -t SERVICES_SYSTEMD < <(awk '/SERVICE_NAME=\(/{flag=1; next} /\)/{flag=0} flag' "build.sh" | sed -E 's/^[[:space:]]*|[[:space:]]*$//g; s/^/docspace-/; s/$/.service/')
-  SERVICES_SYSTEMD+=("ds-converter.service" "ds-docservice.service" "ds-metrics.service")
-
-  for service in "${SERVICES_SYSTEMD[@]}"; do
-    echo $LINE_SEPARATOR && echo "${COLOR_GREEN}Check logs for systemd service: $service${COLOR_RESET}" && echo $LINE_SEPARATOR
-    journalctl -u "$service" -n 30 || true
-  done
-
-  local DOCSPACE_LOGS_DIR="/var/log/onlyoffice/docspace"
-  local DOCUMENTSERVER_LOGS_DIR="/var/log/onlyoffice/documentserver"
-
-  for LOGS_DIR in "${DOCSPACE_LOGS_DIR}" "${DOCUMENTSERVER_LOGS_DIR}"; do
-    echo $LINE_SEPARATOR && echo "${COLOR_YELLOW}Check logs for $(basename "${LOGS_DIR}"| tr '[:lower:]' '[:upper:]') ${COLOR_RESET}" && echo $LINE_SEPARATOR
-
-    find "${LOGS_DIR}" -type f -name "*.log" ! -name "*sql*" ! -name "*nginx*" | while read -r FILE; do
-      echo $LINE_SEPARATOR && echo "${COLOR_GREEN}Logs from file: ${FILE}${COLOR_RESET}" && echo $LINE_SEPARATOR
-      tail -30 "${FILE}" || true
-    done
-  done
+  echo "::notice::Installation on "${ID:-unknown} ${VERSION_ID:-}" took $((($(date +%s) - INSTALL_START_TIME) / 60))m"
 }
 
 main() {
   get_colors
+  
+  echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
+  echo "${COLOR_BLUE}STEP 1: Preparing VM environment${COLOR_RESET}"
+  echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
   prepare_vm
+  
+  echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
+  echo "${COLOR_BLUE}STEP 2: Checking hardware${COLOR_RESET}"
+  echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
   check_hw
+  
+  echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
+  echo "${COLOR_BLUE}STEP 3: Installing${COLOR_RESET}"
+  echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
   install_docspace
-  sleep 180
-  services_logs
-  healthcheck_systemd_services
 }
 
 main

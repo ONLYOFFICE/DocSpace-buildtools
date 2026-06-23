@@ -1,4 +1,11 @@
-name: 4testing multiarch-build
+name: Build Docker
+
+run-name: >-
+  Build Docker
+  ${{ github.event.action == 'cron-trigger-action'   && '[Cron]'   ||
+      github.event.action == 'config-trigger-action' && '[Config]' ||
+      github.event.action == 'client-trigger-action' && '[Client]' ||
+      github.event.action == 'server-trigger-action' && '[Server]' || '' }}
 
 on:
   workflow_dispatch:
@@ -23,27 +30,22 @@ env:
 
 jobs:
   build:
+    name: ${{ matrix.service }} (${{ matrix.branch }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        platform: [linux/amd64]
         branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches) }}
-    outputs:
-      DOCKER_TAG: ${{ steps.prepare.outputs.DOCKER_TAG }}
+        service: [dotnet, node, java, preview]
     steps:
-      - name: Free Disk Space
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ matrix.branch }}/.github/scripts/free-disk-space-linux.sh | sudo bash
-
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
         with:
           ref: ${{ matrix.branch }}
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v4
 
-      - name: Setup BuildKit
+      - name: Setup BuildKit with /mnt support
         run: |
           docker rm -f buildkitd || true
           mountpoint -q /mnt && { sudo mkdir -p /mnt/buildkit; sudo chmod 777 /mnt/buildkit; STORAGE_ARGS="-v /mnt/buildkit:/var/lib/buildkit"; } || STORAGE_ARGS=""
@@ -52,64 +54,64 @@ jobs:
           docker buildx inspect --bootstrap
 
       - name: Login to DockerHub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Prepare build variables
-        id: prepare
         run: |
-          PRODUCT_VERSION=$(echo "${{ matrix.branch }}" | sed '/^release\b\|^hotfix\b\|^feature\b/s/release.*\/\|hotfix.*\/\|feature.*\///; s/-git-action$//; s/^v//')
+          PRODUCT_VERSION=$(echo "${{ matrix.branch }}" | sed '/^release\b\|^hotfix\b\|^feature\b\|^bugfix\b/s/release.*\/\|hotfix.*\/\|feature.*\/\|bugfix.*\///; s/-git-action$//; s/^v//')
           [ "${PRODUCT_VERSION}" = "develop" ] && PRODUCT_VERSION="develop"
-          echo "DOCKER_TAG=${PRODUCT_VERSION}.${{ github.run_number }}" | tee -a "${GITHUB_ENV}" | tee -a "${GITHUB_OUTPUT}"
-          echo "BAKE_ARGS=--sbom=true --provenance=mode=max --set *.args.GIT_BRANCH=${{ matrix.branch }} \
-            --set *.args.PRODUCT_VERSION=${PRODUCT_VERSION} --set *.args.BUILD_NUMBER=${{ github.run_number }} \
-            --set *.platform=linux/amd64 --push" >> $GITHUB_ENV
+          echo "DOCKER_TAG=${PRODUCT_VERSION}.${{ github.run_number }}" >> $GITHUB_ENV
+          echo "PRODUCT_VERSION=${PRODUCT_VERSION}" >> $GITHUB_ENV
         shell: bash
 
-      - name: Build dotnet-services
+      - name: Build ${{ matrix.service }}
+        timeout-minutes: 90
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           cd .${DOCKER_PATH}
-          docker buildx bake -f build.hcl dotnet-services ${{ env.BAKE_ARGS }}
-          printf '%.0s=' {1..80}; echo -e "\nDISK SPACE AFTER BUILD DOTNET SERVICES"; df -h; docker system df; printf '%.0s=' {1..80}; echo
-          docker buildx prune -a -f; docker system prune -a -f --volumes
+          docker buildx bake -f build.hcl ${{ matrix.service }}-services \
+            --set "*.args.GIT_BRANCH=${{ matrix.branch }}" \
+            --set "*.args.PRODUCT_VERSION=${{ env.PRODUCT_VERSION }}" \
+            --set "*.args.BUILD_NUMBER=${{ github.run_number }}" \
+            --set "*.platform=linux/amd64,linux/arm64" \
+            --set "*.secrets=id=github_token,env=GITHUB_TOKEN" \
+            --sbom=true --provenance=mode=max --push
           
-      - name: Build node-services
-        run: |
-          cd .${DOCKER_PATH}
-          docker buildx bake -f build.hcl node-services ${{ env.BAKE_ARGS }}
-          printf '%.0s=' {1..80}; echo -e "\nDISK SPACE AFTER BUILD NODE SERVICES"; df -h; docker system df; printf '%.0s=' {1..80}; echo
-          docker buildx prune -a -f; docker system prune -a -f --volumes
-
-      - name: Build java-services
-        run: |
-          cd .${DOCKER_PATH}
-          docker buildx bake -f build.hcl java-services ${{ env.BAKE_ARGS }}
-          printf '%.0s=' {1..80}; echo -e "\nDISK SPACE AFTER BUILD JAVA SERVICES"; df -h; docker system df; printf '%.0s=' {1..80}; echo
+          # Clean up disk space after build
+          printf '%.0s=' {1..80}; echo -e "\nDISK SPACE AFTER BUILD $(echo ${{ matrix.service }} | tr '[:lower:]' '[:upper:]')"; df -h; docker system df; printf '%.0s=' {1..80}; echo
           docker buildx prune -a -f; docker system prune -a -f --volumes
 
   trigger-oci-docker:
-    name: Trigger ci-oci-docker-install Workflow
+    name: OCI (${{ matrix.branch }})
     needs: build
-    if: ${{ needs.build.result == 'success' }}
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    continue-on-error: true
     runs-on: ubuntu-latest
     strategy:
       matrix:
         branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches) }}
     steps:
-      - name: Wait for Docker Hub tag to appear
-        shell: bash
-        env:
-          DOCKER_TAG: ${{ needs.build.outputs.DOCKER_TAG }}
-        run: |
-          echo "Waiting for images with tag ${{ env.DOCKER_TAG }} to appear on Docker Hub..."
-          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ matrix.branch }}/.github/scripts/docker-images-availability.sh \
-            | sudo GITHUB_REPOSITORY=${{ github.repository }} BRANCH=${{ matrix.branch }} DOCKER_REPOSITORY=${{ env.REPO }} DOCKER_PREFIX=${{ env.DOCKER_IMAGE_PREFIX }} DOCKER_TAG=${{ env.DOCKER_TAG }} bash
+      - name: Checkout ${{ matrix.branch }}
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ matrix.branch }}
 
-      - name: Trigger ci-oci-docker-install Workflow
+      - name: Process branch ${{ matrix.branch }}
         env:
           GH_TOKEN: ${{ secrets.TOKEN }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME_PAT }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN_PAT }}
         run: |
-          echo "OCI docker test on branch ${{ matrix.branch }}"
-          gh workflow run "ci-oci-docker-install.yml" --repo "${{ github.repository }}" --ref "${{ matrix.branch }}" --field offline=false --field testing=true
+          PRODUCT_VERSION=$(echo "${{ matrix.branch }}" | sed '/^release\b\|^hotfix\b\|^feature\b\|^bugfix\b/s/release.*\/\|hotfix.*\/\|feature.*\/\|bugfix.*\///; s/-git-action$//; s/^v//')
+          DOCKER_TAG="${PRODUCT_VERSION}.${{ github.run_number }}"
+
+          sudo GITHUB_REPOSITORY=${{ github.repository }} BRANCH=${{ matrix.branch }} \
+            DOCKER_REPOSITORY=${{ env.REPO }} DOCKER_PREFIX=${{ env.DOCKER_IMAGE_PREFIX }} DOCKER_TAG=$DOCKER_TAG \
+            DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME} DOCKERHUB_TOKEN=${DOCKERHUB_TOKEN} \
+            bash .github/scripts/docker-images-availability.sh
+
+          gh workflow run "ci-oci-docker-install.yml" --repo "${{ github.repository }}" --ref "${{ matrix.branch }}" --field offline=false --field testing=true --field tag=$DOCKER_TAG

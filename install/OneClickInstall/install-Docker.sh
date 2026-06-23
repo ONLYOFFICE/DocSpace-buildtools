@@ -1,34 +1,38 @@
 #!/bin/bash
 
  #
- # (c) Copyright Ascensio System SIA 2025
+ # Copyright (C) Ascensio System SIA, 2009-2026
  #
  # This program is a free software product. You can redistribute it and/or
  # modify it under the terms of the GNU Affero General Public License (AGPL)
- # version 3 as published by the Free Software Foundation. In accordance with
- # Section 7(a) of the GNU AGPL its Section 15 shall be amended to the effect
- # that Ascensio System SIA expressly excludes the warranty of non-infringement
- # of any third-party rights.
+ # version 3 as published by the Free Software Foundation, together with the
+ # additional terms provided in the LICENSE file.
  #
  # This program is distributed WITHOUT ANY WARRANTY; without even the implied
  # warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. For
- # details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
+ # details, see the GNU AGPL at: https://www.gnu.org/licenses/agpl-3.0.html
  #
- # You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
- # street, Riga, Latvia, EU, LV-1050.
+ # You can contact Ascensio System SIA by email at info@onlyoffice.com
+ # or by postal mail at 20A-6 Ernesta Birznieka-Upisha Street, Riga,
+ # LV-1050, Latvia, European Union.
  #
- # The interactive user interfaces in modified source and object code versions
- # of the Program must display Appropriate Legal Notices, as required under
+ # The interactive user interfaces in modified versions of the Program
+ # are required to display Appropriate Legal Notices in accordance with
  # Section 5 of the GNU AGPL version 3.
  #
- # Pursuant to Section 7(b) of the License you must retain the original Product
- # logo when distributing the program. Pursuant to Section 7(e) we decline to
- # grant you any rights under trademark law for use of our trademarks.
+ # No trademark rights are granted under this License.
  #
- # All the Product's GUI elements, including illustrations and icon sets, as
- # well as technical writing content are licensed under the terms of the
- # Creative Commons Attribution-ShareAlike 4.0 International. See the License
- # terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
+ # All non-code elements of the Product, including illustrations,
+ # icon sets, and technical writing content, are licensed under the
+ # Creative Commons Attribution-ShareAlike 4.0 International License:
+ # https://creativecommons.org/licenses/by-sa/4.0/legalcode
+ #
+ # This license applies only to such non-code elements and does not
+ # modify or replace the licensing terms applicable to the Program's
+ # source code, which remains licensed under the GNU Affero General
+ # Public License v3.
+ #
+ # SPDX-License-Identifier: AGPL-3.0-only
  #
 
 PACKAGE_SYSNAME="onlyoffice"
@@ -38,8 +42,6 @@ BASE_DIR="/app/$PACKAGE_SYSNAME"
 STATUS=""
 DOCKER_TAG=""
 INSTALLATION_TYPE="ENTERPRISE"
-IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-api"
-CONTAINER_NAME="${PACKAGE_SYSNAME}-api"
 IDENTITY_CONTAINER_NAME="${PACKAGE_SYSNAME}-identity-api"
 
 NETWORK_NAME=${PACKAGE_SYSNAME}
@@ -104,16 +106,16 @@ LETS_ENCRYPT_DOMAIN=""
 LETS_ENCRYPT_MAIL=""
 IDENTITY_ENCRYPTION_SECRET=""
 
+STACK_MODE="false"
 OFFLINE_INSTALLATION="false"
+NON_INTERACTIVE="false"
 SKIP_HARDWARE_CHECK="false"
 
-SERVICES=(migration-runner identity notify "${PRODUCT}" healthchecks proxy)
-COMPOSE_FILES=($(printf '%s\n' "${SERVICES[@]}" | sed "s|^|-f ${BASE_DIR}/|; s|\$|.yml|"));
-
 EXTERNAL_PORT="80"
+EXTERNAL_PORT_HTTPS="443"
 ARGS_SCRIPT="install-Docker-args.sh"
 DOWNLOAD_URL_PREFIX="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}"
-GIT_BRANCH=$(echo "$@" | grep -oP '(?<=-gb )\S+')
+GIT_BRANCH=$(echo "$@" | grep -oP '(?<=-gb )\S+' | tail -n 1)
 
 if [[ -n "${GIT_BRANCH:-}" ]]; then
   DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${PACKAGE_SYSNAME^^}/${PRODUCT}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
@@ -121,7 +123,20 @@ fi
 
 [[ "$LOCAL_SCRIPTS" = "true" ]] || [[ "$OFFLINE_INSTALLATION" = "true" ]] && source "./${ARGS_SCRIPT}" || source <(curl "${DOWNLOAD_URL_PREFIX}/${ARGS_SCRIPT}")
 
+if [ "${STACK_MODE}" = "true" ]; then
+  CONTAINER_NAME="${PACKAGE_SYSNAME}-dotnet-services"
+  IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-dotnet"
+  SERVICES=("${PRODUCT}-stack" proxy)
+  COMPOSE_FILES=($(printf '%s\n' "${SERVICES[@]}" | sed "s|^|-f ${BASE_DIR}/|; s|\$|.yml|"));
+else
+  CONTAINER_NAME="${PACKAGE_SYSNAME}-api"
+  IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-api"
+  SERVICES=(migration-runner identity notify "${PRODUCT}" healthchecks proxy)
+  COMPOSE_FILES=($(printf '%s\n' "${SERVICES[@]}" | sed "s|^|-f ${BASE_DIR}/|; s|\$|.yml|"));
+fi
+
 uninstall() {
+    DOCKER_COMPOSE="$(docker compose version >/dev/null 2>&1 && echo 'docker compose' || echo 'docker-compose')"
     read -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " REMOVE_DATA_SERVICES
 
 	if [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]]; then
@@ -131,15 +146,15 @@ uninstall() {
     for SERVICE in "${SERVICES[@]}" "ds"; do
         if [[ -f "$BASE_DIR/$SERVICE.yml" ]]; then
             echo "Uninstallation of  $SERVICE and its volumes..."
-            docker-compose -f "$BASE_DIR/$SERVICE.yml" down -v || echo "Failed to remove $SERVICE."
+            ${DOCKER_COMPOSE} -f "$BASE_DIR/$SERVICE.yml" down -v || echo "Failed to remove $SERVICE."
         fi
     done
 
-	docker network rm "${NETWORK_NAME}" 2>/dev/null && NETWORK_REMOVED=true || echo "Failed to remove network ${NETWORK_NAME}."
+	docker network rm "${NETWORK_NAME}" 2>/dev/null || echo "Failed to remove network ${NETWORK_NAME}."
 
 	read -p "Do you want to retain data (keep .env file)? (Y/n): " KEEP_DATA
 
-	if [[ "$NETWORK_REMOVED" == "true" && -d "$BASE_DIR" ]]; then
+	if ! docker network inspect "${NETWORK_NAME}" >/dev/null 2>&1 && [[ -d "$BASE_DIR" ]]; then
 		if [[ "${KEEP_DATA,,}" =~ ^(y|yes)?$ ]]; then
 			find "$BASE_DIR" -mindepth 1 ! -name ".env" -exec rm -rf {} +
 		else
@@ -176,12 +191,6 @@ get_os_info () {
     esac
 
 	if [ "$OS" == "linux" ]; then
-        MACH=$(uname -m)
-		if [ "${MACH}" != "x86_64" ]; then
-			echo "Currently only supports 64bit OS's"
-			exit 1
-		fi
-
 		KERNEL=$(uname -r)
 
 		if [ -f /etc/redhat-release ]; then
@@ -223,10 +232,6 @@ check_os_info () {
 		echo "$KERNEL, $DIST, $REV"
 		echo "Not supported OS"
 		exit 1
-	fi
-
-	if [ -f /etc/needrestart/needrestart.conf ]; then
-		sed -e "s_#\$nrconf{restart}_\$nrconf{restart}_" -e "s_\(\$nrconf{restart} =\).*_\1 'a';_" -i /etc/needrestart/needrestart.conf
 	fi
 }
 
@@ -294,7 +299,7 @@ install_package () {
 
 install_docker_compose () {
 	curl -sL "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/bin/docker-compose
-	chmod +x /usr/bin/docker-compose
+	chmod +x /usr/bin/docker-compose && DOCKER_COMPOSE="docker-compose"
 }
 
 check_ports () {
@@ -315,8 +320,24 @@ check_ports () {
 		exit 1
 	fi
 
+	if [ "${EXTERNAL_PORT_HTTPS//[0-9]}" = "" ]; then
+		for RESERVED_PORT in "${RESERVED_PORTS[@]}"
+		do
+			if [ "$RESERVED_PORT" -eq "$EXTERNAL_PORT_HTTPS" ] ; then
+				echo "External HTTPS port $EXTERNAL_PORT_HTTPS is reserved. Select another port"
+				exit 1
+			fi
+		done
+	else
+		echo "Invalid external HTTPS port $EXTERNAL_PORT_HTTPS"
+		exit 1
+	fi
+
 	if [ "$INSTALL_PRODUCT" == "true" ]; then
 		ARRAY_PORTS+=("$EXTERNAL_PORT")
+		if [[ -n "$CERTIFICATE_PATH" ]] || [[ -n "$LETS_ENCRYPT_DOMAIN" ]]; then
+			ARRAY_PORTS+=("$EXTERNAL_PORT_HTTPS")
+		fi
 	fi
 
 	for PORT in "${ARRAY_PORTS[@]}"
@@ -341,28 +362,13 @@ check_ports () {
 
 install_docker () {
 
-	if [ "${DIST}" == "Ubuntu" ] || [ "${DIST}" == "Debian" ] || [[ "${DIST}" == CentOS* ]] || [ "${DIST}" == "Fedora" ]; then
+	if [ "${DIST}" == "Ubuntu" ] || [ "${DIST}" == "Debian" ] || [[ "${DIST}" == CentOS* ]] || [ "${DIST}" == "Fedora" ] || [[ "${DIST}" == "Red Hat Enterprise Linux"* ]]; then
 
-		curl -fsSL https://get.docker.com | bash
+		TMP=$(mktemp); trap 'rm -f "${TMP}"' EXIT
+		curl -fsSL https://get.docker.com -o "${TMP}" || { echo -e "\nFailed to download Docker install script.\n"; exit 1; }
+		bash "${TMP}" || { echo -e "\nDocker installation failed.\n"; exit 1; }
 		systemctl start docker
 		systemctl enable docker
-
-	elif [[ "${DIST}" == Red\ Hat\ Enterprise\ Linux* ]]; then
-
-		if [[ "${REV}" -gt "7" ]]; then
-			yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine podman runc > null
-			yum install -y yum-utils
-			yum-config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
-			yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin
-			systemctl start docker
-			systemctl enable docker
-		else
-			echo ""
-			echo "Your operating system does not allow Docker CE installation."
-			echo "You can install Docker EE using the manual here - https://docs.docker.com/engine/installation/linux/rhel/"
-			echo ""
-			exit 1
-		fi
 
 	elif [ "${DIST}" == "SuSe" ]; then
 
@@ -414,57 +420,9 @@ create_network () {
 	fi
 }
 
-read_continue_installation () {
-	[ "$NON_INTERACTIVE" = "true" ] && INSTALLATION_CHOICE="Y" && return 0
-
-	while true; do
-        read -p "Continue installation [Y/C/N]? " CHOICE
-        case "$CHOICE" in
-            [yY]) INSTALLATION_CHOICE="Y"; return 0 ;;
-            [cC]) INSTALLATION_CHOICE="C"; return 0 ;;
-            [nN]) exit 0 ;;
-            *) echo "Please, enter Y, C or N" ;;
-        esac
-    done
-}
-
 domain_check () {
 	APP_DOMAIN_PORTAL=$(cut -d ',' -f 1 <<< "$LETS_ENCRYPT_DOMAIN")
 	APP_DOMAIN_PORTAL=${APP_DOMAIN_PORTAL:-${APP_URL_PORTAL:-$(get_env_parameter "APP_URL_PORTAL" "${PACKAGE_SYSNAME}-files" | awk -F[/:] '{if ($1 == "https") print $4; else print ""}')}}
-
-	while IFS= read -r DOMAIN; do
-		IP_ADDRESS=$( [ -n "${DOMAIN}" ] && ping -c 1 -W 1 ${DOMAIN} | grep -oP '(\d+\.\d+\.\d+\.\d+)' | head -n 1 )
-		if [[ -n "$IP_ADDRESS" && "$IP_ADDRESS" =~ ^(10\.|127\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.) ]]; then
-			LOCAL_RESOLVED_DOMAINS+="$DOMAIN"
-		fi
-	done <<< "${APP_DOMAIN_PORTAL:-$(dig +short -x "$(curl -s -4 ifconfig.me)" | sed 's/\.$//')}"
-	
-	# check if the domain is a loopback IP or NAT
-	if [[ -n "${LOCAL_RESOLVED_DOMAINS}" ]] || [[ $(ip route get 8.8.8.8 | awk '{print $7}') != $(curl -s -4 ifconfig.me) ]]; then 
-		DOCKER_DAEMON_FILE="/etc/docker/daemon.json"
-		if ! grep -q '"dns"' "$DOCKER_DAEMON_FILE" 2>/dev/null; then
-			echo "DNS issue detected for ${APP_DOMAIN_PORTAL:-$LOCAL_RESOLVED_DOMAINS} (loopback IP or NAT)."
-			echo "[Y] Use Google DNS | [C] Use custom DNS | [N] Cancel installation"
-			if read_continue_installation; then
-				case "$INSTALLATION_CHOICE" in
-					Y)  DNS=("8.8.8.8" "8.8.4.4") ;;
-					C)  while true; do
-							read -p "Enter custom DNS (e.g. 8.8.8.8 8.8.4.4): " INPUT; IFS=' ' read -ra DNS <<< "$INPUT"
-							for IP in "${DNS[@]}"; do 
-								[[ $IP =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || { echo "Invalid DNS: $IP"; continue 2; }
-							done && break
-						done ;;
-				esac
-				if ((${#DNS[@]})); then
-					echo "Updating Docker DNS config with: ${DNS[*]}"
-					jq -e . "${DOCKER_DAEMON_FILE}" > /dev/null 2>&1 || echo '{}' > "${DOCKER_DAEMON_FILE}"
-					echo "$(jq --argjson dns "$(printf '%s\n' "${DNS[@]}" | jq -R . | jq -s .)" '.dns = $dns' "${DOCKER_DAEMON_FILE}")" > "${DOCKER_DAEMON_FILE}"
-					systemctl restart docker || { echo "Failed to restart Docker service"; exit 1; }
-				fi
-			fi
-		fi
-	fi
-
 	APP_URL_PORTAL=${APP_DOMAIN_PORTAL:+http://${APP_DOMAIN_PORTAL}:${EXTERNAL_PORT}}
 }
 
@@ -596,6 +554,7 @@ set_docspace_params() {
 	VOLUMES_DIR=${VOLUMES_DIR:-$(get_env_parameter "VOLUMES_DIR")}
 	APP_CORE_BASE_DOMAIN=${APP_CORE_BASE_DOMAIN:-$(get_env_parameter "APP_CORE_BASE_DOMAIN" "${CONTAINER_NAME}")}
 	EXTERNAL_PORT=${EXTERNAL_PORT:-$(get_env_parameter "EXTERNAL_PORT" "${CONTAINER_NAME}")}
+	EXTERNAL_PORT_HTTPS=${EXTERNAL_PORT_HTTPS:-$(get_env_parameter "EXTERNAL_PORT_HTTPS" "${CONTAINER_NAME}")}
 
 	PREVIOUS_ELK_VERSION=$(get_env_parameter "ELK_VERSION")
 	ELK_SCHEME=${ELK_SCHEME:-$(get_env_parameter "ELK_SCHEME" "${CONTAINER_NAME}")}
@@ -641,27 +600,27 @@ set_installation_type_data () {
 }
 
 download_files () {
-	[ "${OFFLINE_INSTALLATION}" = "false" ] && echo -n "Downloading configuration files to ${BASE_DIR}..." || echo "Unzip docker.tar.gz to ${BASE_DIR}..."
+	DOCKER_TARBALL="$( [ "${STACK_MODE}" = "true" ] && echo "docker-stack.tar.gz" || echo "docker.tar.gz" )"
+
+	[ "${OFFLINE_INSTALLATION}" = "false" ] && echo -n "Downloading configuration files to ${BASE_DIR}..." || echo "Unzip ${DOCKER_TARBALL} to ${BASE_DIR}..."
 
 	rm -rf "${BASE_DIR:?}"
 	mkdir -p ${BASE_DIR}
 
-	
 	if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
 		if [ -z "${GIT_BRANCH}" ]; then
-			DOWNLOAD_URL="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/docker.tar.gz"
+			DOWNLOAD_URL="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/${DOCKER_TARBALL}"
 		else
 			DOWNLOAD_URL="https://codeload.github.com/${PACKAGE_SYSNAME}/${PRODUCT}-buildtools/tar.gz/${GIT_BRANCH}"
 			STRIP_COMPONENTS="--strip-components=3 --wildcards */install/docker/*"
 		fi
-
 		curl -sL "${DOWNLOAD_URL}" | tar -xzf - -C "${BASE_DIR}" ${STRIP_COMPONENTS}
 	else
-		if [ -f "$(dirname "$0")/docker.tar.gz" ]; then
-			tar -xf "$(dirname "$0")/docker.tar.gz" -C "${BASE_DIR}"
+		if [ -f "$(dirname "$0")/${DOCKER_TARBALL}" ]; then
+			tar -xf "$(dirname "$0")/${DOCKER_TARBALL}" -C "${BASE_DIR}"
 		else
-			echo "Error: docker.tar.gz not found in the same directory as the script."
-			echo "You need to download the docker.tar.gz file from https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/docker.tar.gz"
+			echo "Error: ${DOCKER_TARBALL} not found in the same directory as the script."
+			echo "You need to download the ${DOCKER_TARBALL} file from https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/${DOCKER_TARBALL}"
 			exit 1
 		fi
 	fi
@@ -688,12 +647,12 @@ install_mysql_server () {
 	if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ]; then
 		if [ -n "${VOLUMES_DIR}" ]; then
 			mkdir -p "${VOLUMES_DIR}/mysql_data"
-			chown $(docker run --rm "$(docker-compose -f ${BASE_DIR}/db.yml config | awk '/image:/ {print $2; exit}')" stat -c '%u:%g' /var/lib/mysql) "${VOLUMES_DIR}/mysql_data"
-			chmod $(docker run --rm "$(docker-compose -f ${BASE_DIR}/db.yml config | awk '/image:/ {print $2; exit}')" stat -c '%a' /var/lib/mysql) "${VOLUMES_DIR}/mysql_data"
+			chown $(docker run --rm "$(${DOCKER_COMPOSE} -f ${BASE_DIR}/db.yml config | awk '/image:/ {print $2; exit}')" stat -c '%u:%g' /var/lib/mysql) "${VOLUMES_DIR}/mysql_data"
+			chmod $(docker run --rm "$(${DOCKER_COMPOSE} -f ${BASE_DIR}/db.yml config | awk '/image:/ {print $2; exit}')" stat -c '%a' /var/lib/mysql) "${VOLUMES_DIR}/mysql_data"
 		fi
-		docker-compose -f $BASE_DIR/db.yml up -d --force-recreate
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/db.yml up -d --force-recreate
 	elif [ "$INSTALL_MYSQL_SERVER" == "pull" ]; then
-		docker-compose -f $BASE_DIR/db.yml pull
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/db.yml pull
 	fi
 }
 
@@ -701,25 +660,25 @@ install_document_server () {
 	reconfigure DOCUMENT_SERVER_JWT_HEADER ${DOCUMENT_SERVER_JWT_HEADER}
 	reconfigure DOCUMENT_SERVER_JWT_SECRET ${DOCUMENT_SERVER_JWT_SECRET}
 	if [[ -z ${DOCUMENT_SERVER_HOST} ]] && [ "$INSTALL_DOCUMENT_SERVER" == "true" ]; then
-		docker-compose -f $BASE_DIR/ds.yml up -d
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/ds.yml up -d
 	elif [ "$INSTALL_DOCUMENT_SERVER" == "pull" ]; then
-		docker-compose -f $BASE_DIR/ds.yml pull
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/ds.yml pull
 	fi
 }
 
 install_rabbitmq () {
 	if [[ -z ${RABBIT_HOST} ]] && [ "$INSTALL_RABBITMQ" == "true" ]; then
-		docker-compose -f $BASE_DIR/rabbitmq.yml up -d
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/rabbitmq.yml up -d
 	elif [ "$INSTALL_RABBITMQ" == "pull" ]; then
-		docker-compose -f $BASE_DIR/rabbitmq.yml pull
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/rabbitmq.yml pull
 	fi
 }
 
 install_redis () {
 	if [[ -z ${REDIS_HOST} ]] && [ "$INSTALL_REDIS" == "true" ]; then
-		docker-compose -f $BASE_DIR/redis.yml up -d
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/redis.yml up -d
 	elif [ "$INSTALL_REDIS" == "pull" ]; then
-		docker-compose -f $BASE_DIR/redis.yml pull
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/redis.yml pull
 	fi
 }
 
@@ -727,16 +686,16 @@ install_elasticsearch () {
 	if [[ -z ${ELK_HOST} ]] && [ "$INSTALL_ELASTICSEARCH" == "true" ]; then
 		if [ -n "${VOLUMES_DIR}" ]; then
 			mkdir -p "${VOLUMES_DIR}/os_data"
-			chown $(docker run --rm "$(docker-compose -f ${BASE_DIR}/opensearch.yml config | awk '/image:/ {print $2; exit}')" stat -c '%u:%g' /usr/share/opensearch/data) "${VOLUMES_DIR}/os_data"
+			chown $(docker run --rm "$(${DOCKER_COMPOSE} -f ${BASE_DIR}/opensearch.yml config | awk '/image:/ {print $2; exit}')" stat -c '%u:%g' /usr/share/opensearch/data) "${VOLUMES_DIR}/os_data"
 		fi
 
 		SAFE_MEMORY=$(( ( $(free --mega | grep -oP '\d+' | head -n 1) - 1024 ) / 2 )) # half of the remaining memory after the 1 GB reserve for the OS
 		HEAP=$(( SAFE_MEMORY < 2048 ? 1 : SAFE_MEMORY < 4096 ? 2 : 4 ))  #if <2GB → 1GB; <4GB → 2GB; otherwise → 4GB
 		sed -i "s/Xms[0-9]g/Xms${HEAP}g/g; s/Xmx[0-9]g/Xmx${HEAP}g/g" $BASE_DIR/opensearch.yml
 
-		docker-compose -f $BASE_DIR/opensearch.yml up -d
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/opensearch.yml up -d
 	elif [ "$INSTALL_ELASTICSEARCH" == "pull" ]; then
-		docker-compose -f $BASE_DIR/opensearch.yml pull
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/opensearch.yml pull
 	fi
 }
 
@@ -757,9 +716,9 @@ install_fluent_bit () {
 		reconfigure DASHBOARDS_USERNAME "${DASHBOARDS_USERNAME:-"${PACKAGE_SYSNAME}"}"
 		reconfigure DASHBOARDS_PASSWORD "${DASHBOARDS_PASSWORD:-$(get_random_str 20)}"
 		
-		docker-compose -f ${BASE_DIR}/fluent.yml -f ${BASE_DIR}/dashboards.yml up -d
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/fluent.yml -f ${BASE_DIR}/dashboards.yml up -d
 	elif [ "$INSTALL_FLUENT_BIT" == "pull" ]; then
-		docker-compose -f ${BASE_DIR}/fluent.yml -f ${BASE_DIR}/dashboards.yml pull
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/fluent.yml -f ${BASE_DIR}/dashboards.yml pull
 	fi
 }
 
@@ -770,11 +729,17 @@ install_product () {
 			echo "Updating images from tag ${LOCAL_CONTAINER_TAG} to ${DOCKER_TAG}..."
 
 			if [ "$LOCAL_CONTAINER_TAG" != "$DOCKER_TAG" ]; then
+				# (DS v3.7.0) Remove legacy service containers after renaming
+				for _svc in "files-services" "backup-background-tasks" "ai-service"; do
+					docker ps -q --filter "name=^${PACKAGE_SYSNAME}-${_svc}$" | xargs -r docker rm -f
+				done
+
 				if [ "$STACK_MODE" = "true" ]; then
-					docker-compose -f $BASE_DIR/docspace-stack.yml -f $BASE_DIR/proxy.yml down
+					${DOCKER_COMPOSE} -f ${BASE_DIR}/docspace-stack.yml -f ${BASE_DIR}/proxy.yml down
 				else
-					docker-compose "${COMPOSE_FILES[@]}" down
+					${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" down
 				fi
+				docker images --format "{{.Repository}}:{{.Tag}}" | grep ":${LOCAL_CONTAINER_TAG}$" | xargs -r docker rmi
 			fi
 		fi
 
@@ -785,6 +750,7 @@ install_product () {
 		reconfigure APP_CORE_BASE_DOMAIN ${APP_CORE_BASE_DOMAIN}
 		reconfigure APP_URL_PORTAL "${APP_URL_PORTAL:-"http://${PACKAGE_SYSNAME}-router:8092"}"
 		reconfigure EXTERNAL_PORT ${EXTERNAL_PORT}
+		reconfigure EXTERNAL_PORT_HTTPS ${EXTERNAL_PORT_HTTPS}
 
 		if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ] && [[ -n $(docker ps -q --filter "name=${PACKAGE_SYSNAME}-mysql-server") ]]; then
 			echo -n "Waiting for MySQL container to become healthy..."
@@ -792,17 +758,17 @@ install_product () {
 		fi
 
 		if [ "$STACK_MODE" = "true" ]; then
-			docker-compose -f "$BASE_DIR/docspace-stack.yml" up -d
-			docker-compose -f "$BASE_DIR/proxy.yml" up -d
+			${DOCKER_COMPOSE} -f "${BASE_DIR}/docspace-stack.yml" up -d
+			${DOCKER_COMPOSE} -f "${BASE_DIR}/proxy.yml" up -d
 		else
-			docker-compose -f "$BASE_DIR/migration-runner.yml" up -d
+			${DOCKER_COMPOSE} -f "${BASE_DIR}/migration-runner.yml" up -d
 
 			if [[ -n $(docker ps -q --filter "name=${PACKAGE_SYSNAME}-migration-runner") ]]; then
 				echo -n "Waiting for database migration to complete..."
 				timeout 30 bash -c "while [ $(docker wait ${PACKAGE_SYSNAME}-migration-runner) -ne 0 ]; do sleep 1; done;" && echo "OK" || echo "FAILED"
 			fi
 
-			docker-compose "${COMPOSE_FILES[@]}" up -d
+			${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" up -d
 		fi
 
 		if [[ -n "${PREVIOUS_ELK_VERSION}" && "$(get_env_parameter "ELK_VERSION")" != "${PREVIOUS_ELK_VERSION}" ]]; then
@@ -828,7 +794,7 @@ install_product () {
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -r
 		fi
 	elif [ "$INSTALL_PRODUCT" == "pull" ]; then
-		docker-compose "${COMPOSE_FILES[@]}" pull
+		${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" pull
 	fi
 }
 
@@ -857,7 +823,7 @@ make_swap () {
 
 offline_check_docker_image() {
 	[ ! -f "$1" ] && { echo "Error: File '$1' does not exist."; exit 1; }
-	docker-compose -f "$1" config | grep -oP 'image:\s*\K\S+' | while IFS= read -r IMAGE_TAG; do
+	${DOCKER_COMPOSE} -f "$1" config | grep -oP 'image:\s*\K\S+' | while IFS= read -r IMAGE_TAG; do
 		docker images --format="{{.Repository}}:{{.Tag}}" "${IMAGE_TAG}"  | grep -q "${IMAGE_TAG%%:*}" || { echo "Error: The image '${IMAGE_TAG}' is not found in the local Docker registry."; kill -s TERM $PID; }
 	done
 }
@@ -867,18 +833,23 @@ check_registry_connection() {
 	[ -z "${TAGS_RESP[*]}" ] && { echo -e "Unable to download tags from ${REGISTRY_URL:-https://hub.docker.com}.\nTry specifying another docker registry URL using -reg"; exit 1; }
 }
 
+check_docker_compose() {
+	local COMPOSE_REQ=2018000 v
+	for DOCKER_COMPOSE in "docker compose" docker-compose; do
+		VERSION=$(${DOCKER_COMPOSE} version --short 2>/dev/null) || continue
+		awk -F. -v R="$COMPOSE_REQ" 'NF>=3{exit !($1*1e6+$2*1e3+$3>=R)}' <<<"${VERSION%%[^0-9.]*}" && return 0
+	done
+	return 1
+}
+
 dependency_installation() {
-	is_command_exists apt-get && apt-get -y update -qq
+	[ "$NON_INTERACTIVE" = "true" ] && export NEEDRESTART_MODE=a
+
+	[ "${OFFLINE_INSTALLATION}" = "false" ] && is_command_exists apt-get && apt-get -y update -qq
 
 	install_package tar
 	install_package curl
 	install_package netstat net-tools
-
-	if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
-		install_package dig  "dnsutils|bind-utils"
-		install_package ping "iputils-ping|iputils"
-		install_package ip   "iproute2|iproute"
-	fi
 
 	[ "$INSTALL_FLUENT_BIT" = "true" ] && install_package crontab "cron|cronie"
 
@@ -895,9 +866,7 @@ dependency_installation() {
 		systemctl start docker
 	fi
 
-	if ! is_command_exists docker-compose || [ $(docker-compose -v | awk '{sub(/^v/,"",$NF);split($NF,a,".");printf "%d%03d%03d",a[1],a[2],a[3]}') -lt 2018000 ]; then
-		[ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker_compose || { echo "docker-compose not installed or outdated version"; exit 1; }
-	fi
+	check_docker_compose || { [ "${OFFLINE_INSTALLATION}" = "false" ] && install_docker_compose || { echo "docker compose not installed or outdated version"; exit 1; }; }
 }
 
 check_docker_image () {
@@ -1000,7 +969,7 @@ start_installation () {
 
 	create_network
 
-	[ "${OFFLINE_INSTALLATION}" = "false" ] && domain_check
+	domain_check
 
 	if [ "$UPDATE" = "true" ]; then
 		set_docspace_params

@@ -1,8 +1,4 @@
----
-name: Scanning DocSpace with ZAP
-
-run-name: > 
-     ZAP scanning DocSpace
+name: ZAP Docker Scan
 
 on:
   schedule:

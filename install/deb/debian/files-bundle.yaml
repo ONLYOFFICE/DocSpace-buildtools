@@ -1,7 +1,7 @@
 files:
-  - name: "{{product}}-ai-service.install"
+  - name: "{{product}}-ai-worker.install"
     content: |
-      debian/build/publish/services/ASC.AI.Service/service var/www/{{product}}/products/ASC.AI
+      debian/build/publish/services/ASC.AI.Worker/service var/www/{{product}}/products/ASC.AI
 
   - name: "{{product}}-ai.install"
     content: |
@@ -19,9 +19,9 @@ files:
     content: |
       debian/build/publish/services/ASC.Web.Api/service/* var/www/{{product}}/studio/ASC.Web.Api
 
-  - name: "{{product}}-backup-background.install"
+  - name: "{{product}}-backup-worker.install"
     content: |
-      debian/build/publish/services/ASC.Data.Backup.BackgroundTasks/service/* var/www/{{product}}/services/ASC.Data.Backup.BackgroundTasks
+      debian/build/publish/services/ASC.Data.Backup.Worker/service/* var/www/{{product}}/services/ASC.Data.Backup.Worker
 
   - name: "{{product}}-backup.install"
     content: |
@@ -46,9 +46,9 @@ files:
     content: |
       debian/build/publish/web/editor var/www/{{product}}/products/ASC.Files
 
-  - name: "{{product}}-files-services.install"
+  - name: "{{product}}-files-worker.install"
     content: |
-      debian/build/publish/services/ASC.Files.Service/service var/www/{{product}}/products/ASC.Files
+      debian/build/publish/services/ASC.Files.Worker/service var/www/{{product}}/products/ASC.Files
 
   - name: "{{product}}-files.install"
     content: |
@@ -94,11 +94,11 @@ files:
   - name: "{{product}}-proxy.install"
     content: |
       debian/build/buildtools/install/common/{{product}}-ssl-setup usr/bin
-      debian/build/buildtools/install/docker/config/nginx/templates/*.template etc/onlyoffice/{{product}}/openresty
+      debian/build/buildtools/install/docker/config/nginx/nginx.conf.template etc/onlyoffice/{{product}}/openresty
       debian/build/buildtools/config/nginx/html/*.html etc/openresty/html
-      debian/build/buildtools/install/docker/config/nginx/onlyoffice* etc/openresty/conf.d
+      debian/build/buildtools/install/docker/config/nginx/proxy/onlyoffice* etc/openresty/conf.d
       debian/build/buildtools/config/nginx/onlyoffice*.conf etc/openresty/conf.d
-      debian/build/buildtools/install/docker/config/nginx/letsencrypt* etc/openresty/includes
+      debian/build/buildtools/install/docker/config/nginx/proxy/letsencrypt* etc/openresty/includes
       debian/build/buildtools/config/nginx/includes/*.conf etc/openresty/includes
       debian/build/publish/web/public var/www/{{product}}
       debian/build/campaigns/src/campaigns var/www/{{product}}/public

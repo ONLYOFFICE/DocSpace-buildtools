@@ -1,0 +1,182 @@
+name: Claude Code Review
+description: Runs Claude AI code review on a pull request
+
+inputs:
+  anthropic_api_key:
+    required: true
+  gitea_token:
+    required: true
+  model:
+    required: false
+    default: claude-sonnet-4-6
+
+runs:
+  using: composite
+  steps:
+    - name: Claude Code Review
+      uses: markwylde/claude-code-gitea-action@92631f4d12a7f117d0318802d6350f24c7b24c27
+      with:
+        anthropic_api_key: ${{ inputs.anthropic_api_key }}
+        gitea_token: ${{ inputs.gitea_token }}
+        model: ${{ inputs.model }}
+        direct_prompt: |
+          Read CLAUDE.md from the repository root to understand the repository context (tech stack, project structure, review focus, coding standards).
+          Then review this pull request following ALL instructions below precisely.
+
+          **Environment**: Gitea Actions (not GitHub), standard git operations, some GitHub Actions features may differ
+
+          ## Review Workflow
+
+          **Context**: Read README.md and CLAUDE.md for project architecture and coding standards before reviewing.
+
+          ### 1. Gather context
+
+          - Use the PR diff already available in context as the source of truth for all output sections
+          - Only run `git diff origin/<base_branch>...HEAD` if the available diff appears to cover only the latest commit (e.g., previous review references issues absent from the current context diff)
+          - Search PR comments for one containing `Claude Code Review` — this is the previous review
+
+          ### 2. Build the review
+
+          - **If previous review found**: for each issue check if it is still present in the full PR diff
+            - Fixed → replace its `<details>` block with a ⚪️ Fixed entry (preserving original severity)
+            - Not fixed → keep it as-is
+          - Add any new issues found in the diff not already in the previous review
+          - PR Summary and Positive Observations reflect the full PR, not just the latest commit
+
+          ### 3. Verdict Logic
+
+          **Determine [VERDICT] FIRST before writing any output.**
+          Set [VERDICT] based only on **currently open** issues (⚪️ Fixed entries do NOT count):
+          - `✅ APPROVE` — zero open 🔴 Critical AND zero open 🟡 Medium issues (only 🔵 Low / ✅ Positive / ⚪️ Fixed allowed)
+          - `❌ BLOCKED` — **one or more** open 🔴 Critical **OR** 🟡 Medium issues → **ALWAYS BLOCKED, no exceptions**
+
+          ### 4. Output Format
+
+          Respond with exactly this structure (no extra lines outside it):
+
+          <details>
+          <summary>[VERDICT] - Claude Code Review</summary>
+
+            > 🔴 **X** Critical · 🟡 **X** Medium · 🔵 **X** Low · ✅ **X** Positive · ⚪️ **X** Fixed
+
+          ---
+
+          ### 📋 PR Summary
+          - **What**: Brief description of the main changes.
+          - **Why**: Reason or motivation for the changes.
+          - **Scope**: Which files, components, directories are affected.
+          - **Details** (optional):
+            - If the changes affect project structure, list new, deleted, or moved files/directories.
+            - If there are important technical decisions, briefly describe them.
+            - If there are breaking changes, state them explicitly.
+
+          ---
+
+          ### 🔒 Security Issues
+            <details><summary>⚪️ Fixed [🔴/🟡/🔵]: [title]</summary>
+
+            - **Was**: original severity description
+            - **Fix applied**: what exactly was changed and where (`path/file.ext:line`)
+
+            </details>
+            <details><summary>[🔴 Critical/🟡 Medium/🔵 Low]: Issue Title</summary>
+
+            - **File**: `path/file.ext:42`
+            - **Why**: Problem explanation
+            - **Fix**: Solution with code example
+
+            </details>
+
+          ---
+
+          ### 🐛 Code Quality
+
+          ---
+
+          ### ⚡ Performance
+
+          ---
+
+          ### 📦 Dependencies
+
+          ---
+
+          ### 🎨 Style
+
+          ---
+
+          ### ✅ Positive Observations
+          - **Feature**: Description
+
+          ---
+
+          ### 📝 Documentation Updates Required
+          - **README.md**: [what and why]
+          - **CLAUDE.md**: [what and why]
+
+          ---
+
+          </details>
+
+          ### 5. Formatting Rules
+
+          - Severity in `<summary>`: assigned based on actual impact, **not** tied to category — 🔴 **Critical**: must fix before merge (data loss, security breach, broken functionality) · 🟡 **Medium**: should fix (incorrect behaviour, bad practice, meaningful technical debt) · 🔵 **Low**: nice to fix (style, naming, minor inconsistency)
+          - **Omit rule**: omit entire block (header + all entries + trailing `---`) if the block has no open issues AND no fixed items; omit `📝 Documentation` block if nothing to update; omit `✅ Positive Observations` block if none
+          - Issue and Fixed `<details>` entries may repeat as needed within a block; all issue blocks follow the same `<details>` structure as 🔒 Security Issues
+          - Always include file:line, impact, actionable fix; add before/after code examples where helpful
+          - **Issue counter**: replace each `X` with actual count (`0` if none); Fixed = total ⚪️ Fixed across all categories
+          - **Strict format**: output ONLY the structure from section 4 — do not add any extra lines, summaries, or sections outside it
+
+    - name: Replace previous review with new one
+      shell: bash
+      env:
+        GITEA_TOKEN: ${{ inputs.gitea_token }}
+        GITEA_URL: ${{ github.server_url }}
+        REPO: ${{ github.repository }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+      run: |
+        set -euo pipefail
+
+        # Fetch all comments with pagination
+        ALL_COMMENTS="[]"
+        PAGE=1
+        while true; do
+          BATCH=$(curl -sf \
+            -H "Authorization: token $GITEA_TOKEN" \
+            "$GITEA_URL/api/v1/repos/$REPO/issues/$PR_NUMBER/comments?limit=50&page=$PAGE") || break
+          BATCH_COUNT=$(echo "$BATCH" | jq 'length')
+          [ "$BATCH_COUNT" -eq 0 ] && break
+          ALL_COMMENTS=$(jq -n --argjson a "$ALL_COMMENTS" --argjson b "$BATCH" '$a + $b')
+          [ "$BATCH_COUNT" -lt 50 ] && break
+          PAGE=$((PAGE + 1))
+        done
+
+        MARKED=$(echo "$ALL_COMMENTS" | jq '[.[] | select(.body | contains("Claude Code Review") and (.body | contains("<!-- Claude-Review -->") | not))] | sort_by(.id)')
+        COUNT=$(echo "$MARKED" | jq 'length')
+
+        # Need at least 2: one old + one new just created by Claude
+        if [ "$COUNT" -lt 2 ]; then
+          echo "Only $COUNT review comment(s) found, nothing to merge"
+          exit 0
+        fi
+
+        OLD_ID=$(echo "$MARKED" | jq -r 'first | .id')
+        NEW_BODY=$(echo "$MARKED" | jq -r 'last | .body')
+
+        # Patch the oldest comment with the new content
+        if curl -sf -X PATCH \
+          -H "Authorization: token $GITEA_TOKEN" \
+          -H "Content-Type: application/json" \
+          -d "{\"body\": $(echo "$NEW_BODY" | jq -Rs .)}" \
+          "$GITEA_URL/api/v1/repos/$REPO/issues/comments/$OLD_ID"; then
+
+          # Delete all other review comments only if PATCH succeeded
+          echo "$MARKED" | jq -r '.[1:] | .[].id' | while read -r DEL_ID; do
+            curl -sf -X DELETE \
+              -H "Authorization: token $GITEA_TOKEN" \
+              "$GITEA_URL/api/v1/repos/$REPO/issues/comments/$DEL_ID" || true
+          done
+        else
+          echo "PATCH failed, skipping delete to avoid data loss"
+          exit 1
+        fi

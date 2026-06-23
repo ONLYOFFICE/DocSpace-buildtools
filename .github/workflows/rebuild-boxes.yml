@@ -1,6 +1,6 @@
-name: Rebuild DocSpace vagrant boxes
+name: Rebuild Vagrant Boxes
 
-run-name: "Rebuild DocSpace vagrant boxes version: ${{ github.event.inputs.box-version }} (OS: ${{ github.event.inputs.os-name }})"
+run-name: "Rebuild Vagrant Boxes [${{ github.event.inputs.os-name }}] v${{ github.event.inputs.box-version }}"
 
 on:
   workflow_dispatch:
@@ -21,7 +21,8 @@ on:
           debian12,
           debian13,
           ubuntu2204,
-          ubuntu2404
+          ubuntu2404,
+          ubuntu2604
 
 jobs:
   prepare:
@@ -49,7 +50,8 @@ jobs:
             "debian12":  {"distr":"onlyoffice","os":"base-debian12"},
             "debian13":  {"distr":"onlyoffice","os":"base-debian13"},
             "ubuntu2204":{"distr":"onlyoffice","os":"base-ubuntu2204"},
-            "ubuntu2404":{"distr":"onlyoffice","os":"base-ubuntu2404"}
+            "ubuntu2404":{"distr":"onlyoffice","os":"base-ubuntu2404"},
+            "ubuntu2604":{"distr":"onlyoffice","os":"base-ubuntu2604"}
           }
           JSON
           )
@@ -93,7 +95,7 @@ jobs:
           curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/free-disk-space-linux.sh | sudo VBOX_SAFE=1 bash
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 'Download hcp CLI'
         uses: 'hashicorp/hcp-setup-action@v0'

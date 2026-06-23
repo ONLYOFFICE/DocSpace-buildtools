@@ -1,0 +1,264 @@
+resolver $DNS_NAMESERVER valid=30s;
+
+# Mapping document service
+map "$DOCUMENT_SERVER_URL_EXTERNAL" "$document_server" {
+    volatile;
+    
+    # If external URL provided, use it directly
+    default "$DOCUMENT_SERVER_URL_EXTERNAL";
+    
+    # If no external URL
+    ""          "$document_server_host:$document_server_port";
+    "null"      "$document_server_host:$document_server_port";
+    "~^\\s*$"   "$document_server_host:$document_server_port";
+}
+
+map "$DOCUMENT_CONTAINER_NAME" "$document_server_host" {
+    volatile;
+
+    ""          "http://127.0.0.1";
+    "null"      "http://127.0.0.1"; 
+    "~^\\s*$"   "http://127.0.0.1";
+
+    default     $DOCUMENT_CONTAINER_NAME;
+}
+
+map "$DOCUMENT_CONTAINER_NAME" "$document_server_port" {
+    volatile;
+
+    "~^(127.0.0.1|localhost)$"    8085;
+
+    default                        80;
+}
+
+
+map $SERVICE_CLIENT $client_service_url {
+    volatile;
+    
+    ""          "http://127.0.0.1:5001";
+    "null"      "http://127.0.0.1:5001";
+    "~^\\s*$"   "http://127.0.0.1:5001";
+    "undefined" "http://127.0.0.1:5001";
+    
+    default $SERVICE_CLIENT;
+}
+
+map $SERVICE_MANAGEMENT $management_service_url {
+    volatile;
+    
+    ""          "http://127.0.0.1:5015";
+    "null"      "http://127.0.0.1:5015";
+    "~^\\s*$"   "http://127.0.0.1:5015";
+    "undefined" "http://127.0.0.1:5015";
+    
+    default $SERVICE_MANAGEMENT;
+}
+
+map $SERVICE_DOCEDITOR $doceditor_service_url {
+    volatile;
+    
+    ""          "http://127.0.0.1:5013";
+    "null"      "http://127.0.0.1:5013";
+    "~^\\s*$"   "http://127.0.0.1:5013";
+    "undefined" "http://127.0.0.1:5013";
+    
+    default $SERVICE_DOCEDITOR;
+}
+
+map $SERVICE_PEOPLE_SERVER $people_service_url {
+    volatile;
+    
+    ""          "http://127.0.0.1:5004";
+    "null"      "http://127.0.0.1:5004";
+    "~^\\s*$"   "http://127.0.0.1:5004";
+    "undefined" "http://127.0.0.1:5004";
+    
+    default $SERVICE_PEOPLE_SERVER;
+}
+
+map $SERVICE_SDK $sdk_node_url {
+    volatile;
+
+    ""          "http://127.0.0.1:5099";
+    "null"      "http://127.0.0.1:5099";
+    "~^\\s*$"   "http://127.0.0.1:5099";
+    "undefined" "http://127.0.0.1:5099";
+    
+    default $SERVICE_SDK;
+}
+
+map $SERVICE_LOGIN $login_service_url {
+    volatile;
+    
+    ""          "http://127.0.0.1:5011";
+    "null"      "http://127.0.0.1:5011";
+    "~^\\s*$"   "http://127.0.0.1:5011";
+    "undefined" "http://127.0.0.1:5011";
+    
+    default $SERVICE_LOGIN;
+}
+
+map $SERVICE_API_SYSTEM $api_system_url {
+    volatile;
+    
+    ""          "http://127.0.0.1:5010";
+    "null"      "http://127.0.0.1:5010";
+    "~^\\s*$"   "http://127.0.0.1:5010";
+    "undefined" "http://127.0.0.1:5010";
+    
+    default $SERVICE_API_SYSTEM;
+}
+
+map $SERVICE_API $webapi_service_url {
+    volatile;
+    
+    ""          "http://127.0.0.1:5000";
+    "null"      "http://127.0.0.1:5000";
+    "~^\\s*$"   "http://127.0.0.1:5000";
+    "undefined" "http://127.0.0.1:5000";
+    
+    default $SERVICE_API;
+}
+
+map $SERVICE_STUDIO $webstudio_service_url {
+    volatile;
+    
+    ""          "http://127.0.0.1:5003";
+    "null"      "http://127.0.0.1:5003";
+    "~^\\s*$"   "http://127.0.0.1:5003";
+    "undefined" "http://127.0.0.1:5003";
+    
+    default $SERVICE_STUDIO;
+}
+
+map $SERVICE_FILES $files_service_url {
+    volatile;
+    
+    ""          "http://127.0.0.1:5007";
+    "null"      "http://127.0.0.1:5007";
+    "~^\\s*$"   "http://127.0.0.1:5007";
+    "undefined" "http://127.0.0.1:5007";
+    
+    default $SERVICE_FILES;
+}
+
+map $SERVICE_BACKUP $backup_service_url {
+    volatile;
+    
+    ""          "http://127.0.0.1:5012";
+    "null"      "http://127.0.0.1:5012";
+    "~^\\s*$"   "http://127.0.0.1:5012";
+    "undefined" "http://127.0.0.1:5012";
+    
+    default $SERVICE_BACKUP;
+}
+
+map $SERVICE_IDENTITY_API $clients_service_url {
+    volatile;
+    
+    ""          "http://127.0.0.1:9090";
+    "null"      "http://127.0.0.1:9090";
+    "~^\\s*$"   "http://127.0.0.1:9090";
+    "undefined" "http://127.0.0.1:9090";
+    
+    default $SERVICE_IDENTITY_API;
+}
+
+map $SERVICE_IDENTITY $oauth2_service_url {
+    volatile;
+    
+    ""          "http://127.0.0.1:8080";
+    "null"      "http://127.0.0.1:8080";
+    "~^\\s*$"   "http://127.0.0.1:8080";
+    "undefined" "http://127.0.0.1:8080";
+    
+    default $SERVICE_IDENTITY;
+}
+
+map $SERVICE_SSOAUTH $sso_service_url {
+    volatile;
+    
+    ""          "http://127.0.0.1:9834";
+    "null"      "http://127.0.0.1:9834";
+    "~^\\s*$"   "http://127.0.0.1:9834";
+    "undefined" "http://127.0.0.1:9834";
+    
+    default $SERVICE_SSOAUTH;
+}
+
+map $SERVICE_SOCKET $socket_io_url {
+    volatile;
+    
+    ""          "http://127.0.0.1:9899";
+    "null"      "http://127.0.0.1:9899";
+    "~^\\s*$"   "http://127.0.0.1:9899";
+    "undefined" "http://127.0.0.1:9899";
+    
+    default $SERVICE_SOCKET;
+}
+
+map $SERVICE_HELTHCHECKS $health_checks_url {
+    volatile;
+    
+    ""          "http://127.0.0.1:5033";
+    "null"      "http://127.0.0.1:5033";
+    "~^\\s*$"   "http://127.0.0.1:5033";
+    "undefined" "http://127.0.0.1:5033";
+    
+    default $SERVICE_HELTHCHECKS;
+}
+
+map $SERVICE_AI $ai_service_url {
+    volatile;
+    
+    ""          "http://127.0.0.1:5157";
+    "null"      "http://127.0.0.1:5157";
+    "~^\\s*$"   "http://127.0.0.1:5157";
+    "undefined" "http://127.0.0.1:5157";
+    
+    default $SERVICE_AI;
+}
+
+map $SERVICE_PLUGINS $plugins_service_url {
+    volatile;
+    
+    ""          "http://127.0.0.1:5014";
+    "null"      "http://127.0.0.1:5014";
+    "~^\\s*$"   "http://127.0.0.1:5014";
+    "undefined" "http://127.0.0.1:5014";
+    
+    default $SERVICE_PLUGINS;
+}
+
+map $SERVICE_MIGRATION $migration_service_url {
+    volatile;
+    
+    ""          "http://127.0.0.1:5034";
+    "null"      "http://127.0.0.1:5034";
+    "~^\\s*$"   "http://127.0.0.1:5034";
+    "undefined" "http://127.0.0.1:5034";
+    
+    default $SERVICE_MIGRATION;
+}
+
+map $SERVICE_API_CACHE $api_cache_url {
+    volatile;
+    
+    ""          "http://127.0.0.1:5100";
+    "null"      "http://127.0.0.1:5100";
+    "~^\\s*$"   "http://127.0.0.1:5100";
+    "undefined" "http://127.0.0.1:5100";
+    
+    default $SERVICE_API_CACHE;
+}
+
+map $DASHBOARDS_CONTAINER_NAME $dashboards_service_url {
+    volatile;
+
+    ""          "http://127.0.0.1:5601";
+    "null"      "http://127.0.0.1:5601";
+    "~^\\s*$"   "http://127.0.0.1:5601";
+    "undefined" "http://127.0.0.1:5601";
+
+    default $DASHBOARDS_CONTAINER_NAME;
+}

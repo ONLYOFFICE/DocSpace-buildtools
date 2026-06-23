@@ -8,8 +8,8 @@ BUILD_DOTNET_CORE_ARGS=${BUILD_DOTNET_CORE_ARGS:-"false"}
 PROPERTY_BUILD=${PROPERTY_BUILD:-"all"}
 
 BACKEND_NODEJS_SERVICES=${BACKEND_NODEJS_SERVICES:-"ASC.Socket.IO, ASC.SsoAuth"}
-BACKEND_DOTNETCORE_SERVICES=${BACKEND_DOTNETCORE_SERVICES:-"ASC.Files, ASC.People, ASC.Data.Backup, ASC.Files.Service, ASC.Notify, \
-ASC.Studio.Notify, ASC.Web.Api, ASC.Web.Studio, ASC.Data.Backup.BackgroundTasks, ASC.ClearEvents, ASC.ApiSystem, ASC.Web.HealthChecks.UI"}
+BACKEND_DOTNETCORE_SERVICES=${BACKEND_DOTNETCORE_SERVICES:-"ASC.Files, ASC.People, ASC.Data.Backup, ASC.Files.Worker, ASC.Notify, \
+ASC.Studio.Notify, ASC.Web.Api, ASC.Web.Studio, ASC.Data.Backup.Worker, ASC.ClearEvents, ASC.ApiSystem, ASC.Web.HealthChecks.UI"}
 SELF_CONTAINED=${SELF_CONTAINED:-"false"}
 PUBLISH_BACKEND_ARGS=${PUBLISH_BACKEND_ARGS:-"false"}
 PUBLISH_CNF=${PUBLISH_CNF:-"Release"}
@@ -122,11 +122,11 @@ function get_services_name {
 function build_dotnetcore_backend {
   if [[ ${BUILD_DOTNET_CORE_ARGS} == "false" ]]
   then
-    echo "== Build ASC.Web.slnf =="
-    dotnet build server/ASC.Web.slnf
+    echo "== Build ASC.Web.slnx =="
+    dotnet build server/ASC.Web.slnx
   else
-    echo "== Build ASC.Web.slnf ${BUILD_DOTNET_CORE_ARGS} =="
-    dotnet build server/ASC.Web.slnf ${BUILD_DOTNET_CORE_ARGS}
+    echo "== Build ASC.Web.slnx ${BUILD_DOTNET_CORE_ARGS} =="
+    dotnet build server/ASC.Web.slnx ${BUILD_DOTNET_CORE_ARGS}
   fi
   
   if [[ $# -gt 0 ]]
@@ -134,8 +134,8 @@ function build_dotnetcore_backend {
     local migration_check=$(echo $1 | tr '[:upper:]' '[:lower:]' | tr -d ' ')
     if [[ ${migration_check} == "true" ]]
     then
-      echo "== Build ASC.Migrations.sln =="
-      dotnet build server/ASC.Migrations.sln -o ${BUILD_PATH}/services/ASC.Migration.Runner/service/
+      echo "== Build ASC.Migrations.slnx =="
+      dotnet build server/ASC.Migrations.slnx -o ${BUILD_PATH}/services/ASC.Migration.Runner/service/
     fi
     if [[ ${DOCKER_ENTRYPOINT} != "false" ]]
     then
@@ -150,13 +150,13 @@ function backend-dotnet-publish {
   # List of names for nodejs backend projects
   get_services_name "${BACKEND_DOTNETCORE_SERVICES}"
   
-  echo "== Publish ASC.Web.slnf =="
+  echo "== Publish ASC.Web.slnx =="
 
   if [[ ${PUBLISH_BACKEND_ARGS} == "false" ]]
   then
-    dotnet publish $SRC_PATH/server/ASC.Web.slnf -p "PublishProfile=FolderProfile"
+    dotnet publish $SRC_PATH/server/ASC.Web.slnx -p "PublishProfile=FolderProfile"
   else
-    dotnet publish $SRC_PATH/server/ASC.Web.slnf ${PUBLISH_BACKEND_ARGS} -p "PublishProfile=FolderProfile"
+    dotnet publish $SRC_PATH/server/ASC.Web.slnx ${PUBLISH_BACKEND_ARGS} -p "PublishProfile=FolderProfile"
   fi
 
   if [[ ${DOCKER_ENTRYPOINT} != "false" ]]

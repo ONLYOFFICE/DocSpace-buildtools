@@ -1,5 +1,41 @@
 #!/bin/bash
 
+ #
+ # Copyright (C) Ascensio System SIA, 2009-2026
+ #
+ # This program is a free software product. You can redistribute it and/or
+ # modify it under the terms of the GNU Affero General Public License (AGPL)
+ # version 3 as published by the Free Software Foundation, together with the
+ # additional terms provided in the LICENSE file.
+ #
+ # This program is distributed WITHOUT ANY WARRANTY; without even the implied
+ # warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. For
+ # details, see the GNU AGPL at: https://www.gnu.org/licenses/agpl-3.0.html
+ #
+ # You can contact Ascensio System SIA by email at info@onlyoffice.com
+ # or by postal mail at 20A-6 Ernesta Birznieka-Upisha Street, Riga,
+ # LV-1050, Latvia, European Union.
+ #
+ # The interactive user interfaces in modified versions of the Program
+ # are required to display Appropriate Legal Notices in accordance with
+ # Section 5 of the GNU AGPL version 3.
+ #
+ # No trademark rights are granted under this License.
+ #
+ # All non-code elements of the Product, including illustrations,
+ # icon sets, and technical writing content, are licensed under the
+ # Creative Commons Attribution-ShareAlike 4.0 International License:
+ # https://creativecommons.org/licenses/by-sa/4.0/legalcode
+ #
+ # This license applies only to such non-code elements and does not
+ # modify or replace the licensing terms applicable to the Program's
+ # source code, which remains licensed under the GNU Affero General
+ # Public License v3.
+ #
+ # SPDX-License-Identifier: AGPL-3.0-only
+ #
+
+
 set -e
 
 cat<<EOF
@@ -20,6 +56,18 @@ case "${INSTALLATION_TYPE}" in
 	"DEVELOPER") ds_pkg_name+="-de" ;;
 	"ENTERPRISE") ds_pkg_name+="-ee" ;;
 esac
+
+DS_COMMON_NAME=${DS_COMMON_NAME:-ds}
+setup_postgres_db() {
+	DS_DB_NAME=${DS_DB_NAME:-$DS_COMMON_NAME}
+	DS_DB_USER=${DS_DB_USER:-$DS_COMMON_NAME}
+	DS_DB_PWD=${DS_DB_PWD:-$DS_COMMON_NAME}
+
+	if ! su - postgres -s /bin/bash -c "psql -lqt" | cut -d \| -f 1 | grep -q "${DS_DB_NAME}"; then
+		su - postgres -s /bin/bash -c "psql -c \"CREATE USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';\""
+		su - postgres -s /bin/bash -c "psql -c \"CREATE DATABASE ${DS_DB_NAME} OWNER ${DS_DB_USER};\""
+	fi
+}
 
 if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ]; then
 	ds_pkg_installed_name=$(rpm -qa --qf '%{NAME}\n' | grep "${package_sysname}"-documentserver)
@@ -67,23 +115,12 @@ fi
 
 if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
     declare -x DS_PORT=${DS_PORT:-8083}
-
-    if [ "$INSTALLATION_TYPE" != "COMMUNITY" ]; then
-    	DS_COMMON_NAME=${DS_COMMON_NAME:-ds}
-        DS_DB_NAME=${DS_DB_NAME:-$DS_COMMON_NAME}
-        DS_DB_USER=${DS_DB_USER:-$DS_COMMON_NAME}
-        DS_DB_PWD=${DS_DB_PWD:-$DS_COMMON_NAME}
-
-        if ! su - postgres -s /bin/bash -c "psql -lqt" | cut -d \| -f 1 | grep -q ${DS_DB_NAME}; then
-            su - postgres -s /bin/bash -c "psql -c \"CREATE USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';\""
-            su - postgres -s /bin/bash -c "psql -c \"CREATE DATABASE ${DS_DB_NAME} OWNER ${DS_DB_USER};\""
-        fi
-    fi
-
     declare -x JWT_ENABLED=${JWT_ENABLED:-true}
     declare -x JWT_SECRET=${JWT_SECRET:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)}
     declare -x JWT_HEADER=${JWT_HEADER:-AuthorizationJwt}
     [ -n "${WOPI_ENABLED}" ] && declare -x WOPI_ENABLED
+
+    [ "$INSTALLATION_TYPE" != "COMMUNITY" ] && setup_postgres_db
 
     ${package_manager} -y install ${ds_pkg_name} --nobest # --nobest for rhel 8 compatibility
 
@@ -109,7 +146,8 @@ fi
 
 { ${package_manager} check-update ${product}; PRODUCT_CHECK_UPDATE=$?; } || true
 if [ "$PRODUCT_INSTALLED" = "false" ]; then
-	${package_manager} install -y ${product} --best --allowerasing $TESTING_REPO
+	[[ ${PRODUCT_VERSION} =~ ^[0-9]+(\.[0-9]+){3}$ ]] && PRODUCT_VERSION="${PRODUCT_VERSION%.*}-${PRODUCT_VERSION##*.}"
+	${package_manager} install -y "${product}${PRODUCT_VERSION:+-${PRODUCT_VERSION}}" --best --allowerasing $TESTING_REPO
 	"${product}"-configuration \
 		-mysqlh "${MYSQL_SERVER_HOST}" \
 		-mysqlport "${MYSQL_SERVER_PORT}" \

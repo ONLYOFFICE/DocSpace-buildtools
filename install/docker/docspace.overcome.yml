@@ -8,18 +8,18 @@ x-profiles-local: &x-profiles-local
     ENV_EXTENSION: ${ENV_EXTENSION}
 
 services:
-  onlyoffice-backup-background-tasks:
+  onlyoffice-backup-worker:
     <<: *x-profiles-local
     image: ${Baseimage_Dotnet_Run}
-    working_dir: ${BUILD_PATH}/services/ASC.Data.Backup.BackgroundTasks/
+    working_dir: ${BUILD_PATH}/services/ASC.Data.Backup.Worker/
     command:
       [
-        "ASC.Data.Backup.BackgroundTasks.dll",
-        "ASC.Data.Backup.BackgroundTasks",
+        "ASC.Data.Backup.Worker.dll",
+        "ASC.Data.Backup.Worker",
         "core:eventBus:subscriptionClientName=asc_event_bus_backup_queue",
       ]
     volumes:
-      - ${ROOT_DIR}/server/common/services/ASC.Data.Backup.BackgroundTasks/${BIN_DIR}:${BUILD_PATH}/services/ASC.Data.Backup.BackgroundTasks/
+      - ${ROOT_DIR}/server/common/services/ASC.Data.Backup.Worker/${BIN_DIR}:${BUILD_PATH}/services/ASC.Data.Backup.Worker/
       - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
       - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
       - ${ROOT_DIR}/buildtools/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json:/app/onlyoffice/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json
@@ -54,18 +54,18 @@ services:
       onlyoffice-migration-runner:
         condition: service_completed_successfully
 
-  onlyoffice-files-services:
+  onlyoffice-files-worker:
     <<: *x-profiles-local
     image: ${Baseimage_Dotnet_Run}
     working_dir: ${BUILD_PATH}/products/ASC.Files/service/
     command:
       [
-        "ASC.Files.Service.dll",
-        "ASC.Files.Service",
+        "ASC.Files.Worker.dll",
+        "ASC.Files.Worker",
         "core:eventBus:subscriptionClientName=asc_event_bus_files_service_queue",
       ]
     volumes:
-      - ${ROOT_DIR}/server/products/ASC.Files/Service/${BIN_DIR}:${BUILD_PATH}/products/ASC.Files/service/
+      - ${ROOT_DIR}/server/products/ASC.Files/Worker/${BIN_DIR}:${BUILD_PATH}/products/ASC.Files/service/
       - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
       - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
       - ${ROOT_DIR}/buildtools/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json:/app/onlyoffice/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json
@@ -101,7 +101,7 @@ services:
     <<: *x-profiles-local
     image: ${Baseimage_Dotnet_Run}
     working_dir: ${BUILD_PATH}/services/ASC.Studio.Notify/service/
-    command: ["ASC.Studio.Notify.dll", "ASC.Studio.Notify"]
+    command: ["ASC.Studio.Notify.dll", "ASC.Studio.Notify", "core:eventBus:subscriptionClientName=asc_event_bus_studio_notify_queue"]
     volumes:
       - ${ROOT_DIR}/server/common/services/ASC.Studio.Notify/${BIN_DIR}:${BUILD_PATH}/services/ASC.Studio.Notify/service/
       - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
@@ -172,13 +172,13 @@ services:
       onlyoffice-migration-runner:
         condition: service_completed_successfully
 
-  onlyoffice-ai-service:
+  onlyoffice-ai-worker:
     <<: *x-profiles-local
     image: ${Baseimage_Dotnet_Run}
     working_dir: ${BUILD_PATH}/products/ASC.AI/service/
-    command: ["ASC.AI.Service.dll", "ASC.AI.Service", "core:eventBus:subscriptionClientName=asc_event_bus_ai_service_queue"]
+    command: ["ASC.AI.Worker.dll", "ASC.AI.Worker", "core:eventBus:subscriptionClientName=asc_event_bus_ai_service_queue"]
     volumes:
-      - ${ROOT_DIR}/server/products/ASC.AI/Service/${BIN_DIR}:${BUILD_PATH}/products/ASC.AI/service/
+      - ${ROOT_DIR}/server/products/ASC.AI/Worker/${BIN_DIR}:${BUILD_PATH}/products/ASC.AI/service/
       - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
       - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
       - ${ROOT_DIR}/buildtools/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json:/app/onlyoffice/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json

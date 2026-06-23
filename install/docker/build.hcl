@@ -4,11 +4,11 @@ variable "REPO" {}
 variable "DOCKER_IMAGE_PREFIX" {}
 variable "DOCKER_TAG" {}
 
-target "onlyoffice-backup-background-tasks" {
+target "onlyoffice-backup-worker" {
   context    = "."
   dockerfile = "${DOCKERFILE}"
-  target     = "backup_background"
-  tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-backup-background:${DOCKER_TAG}"]
+  target     = "backup_worker"
+  tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-backup-worker:${DOCKER_TAG}"]
 }
 
 target "onlyoffice-clear-events" {
@@ -32,11 +32,11 @@ target "onlyoffice-files" {
   tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-files:${DOCKER_TAG}"]
 }
 
-target "onlyoffice-files-services" {
+target "onlyoffice-files-worker" {
   context    = "."
   dockerfile = "${DOCKERFILE}"
-  target     = "files_services"
-  tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-files-services:${DOCKER_TAG}"]
+  target     = "files_worker"
+  tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-files-worker:${DOCKER_TAG}"]
 }
 
 target "onlyoffice-notify" {
@@ -102,11 +102,11 @@ target "onlyoffice-ai" {
   tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-ai:${DOCKER_TAG}"]
 }
 
-target "onlyoffice-ai-service" {
+target "onlyoffice-ai-worker" {
   context    = "."
   dockerfile = "${DOCKERFILE}"
-  target     = "ai_service"
-  tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-ai-service:${DOCKER_TAG}"]
+  target     = "ai_worker"
+  tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-ai-worker:${DOCKER_TAG}"]
 }
 
 target "onlyoffice-bin-share" {
@@ -214,20 +214,30 @@ target "onlyoffice-node-services" {
   tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-node:${DOCKER_TAG}"]
 }
 
+target "onlyoffice-preview" {
+  context    = "."
+  dockerfile = "${DOCKERFILE}"
+  target     = "preview"
+  tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-preview:${DOCKER_TAG}"]
+  args = {
+    DEPLOY_ARGS = "deploy:preview"
+  }
+}
+
 group "default" {
   targets = [
     "onlyoffice-ai",
-    "onlyoffice-ai-service",
+    "onlyoffice-ai-worker",
     "onlyoffice-api",
     "onlyoffice-api-system",
     "onlyoffice-backup",
-    "onlyoffice-backup-background-tasks",
+    "onlyoffice-backup-worker",
     "onlyoffice-bin-share",
     "onlyoffice-clear-events",
     "onlyoffice-doceditor",
     "onlyoffice-dotnet-services",
     "onlyoffice-files",
-    "onlyoffice-files-services",
+    "onlyoffice-files-worker",
     "onlyoffice-healthchecks",
     "onlyoffice-identity-api",
     "onlyoffice-identity-authorization",
@@ -252,16 +262,16 @@ group "default" {
 group "dotnet-services" {
   targets = [
     "onlyoffice-ai",
-    "onlyoffice-ai-service",
+    "onlyoffice-ai-worker",
     "onlyoffice-api",
     "onlyoffice-api-system",
     "onlyoffice-backup",
-    "onlyoffice-backup-background-tasks",
+    "onlyoffice-backup-worker",
     "onlyoffice-bin-share",
     "onlyoffice-clear-events",
     "onlyoffice-dotnet-services",
     "onlyoffice-files",
-    "onlyoffice-files-services",
+    "onlyoffice-files-worker",
     "onlyoffice-healthchecks",
     "onlyoffice-migration-runner",
     "onlyoffice-notify",
@@ -291,6 +301,12 @@ group "java-services" {
     "onlyoffice-identity-api",
     "onlyoffice-identity-authorization",
     "onlyoffice-java-services",
+  ]
+}
+
+group "preview-services" {
+  targets = [
+    "onlyoffice-preview",
   ]
 }
 

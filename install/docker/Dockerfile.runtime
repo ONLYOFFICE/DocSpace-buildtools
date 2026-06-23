@@ -53,7 +53,7 @@ COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config /app/onlyo
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
 
-FROM node:22-slim AS noderun
+FROM node:24-slim AS noderun
 ARG BUILD_PATH
 ARG SRC_PATH 
 ENV BUILD_PATH=${BUILD_PATH}
@@ -100,11 +100,11 @@ COPY --from=base /etc/nginx/includes /etc/nginx/includes
 COPY --from=base /etc/nginx/conf.d /etc/nginx/conf.d
 COPY --from=base /etc/nginx/html /etc/nginx/html
 
-COPY /buildtools/install/docker/config/nginx/docker-entrypoint.sh /docker-entrypoint.sh
-COPY /buildtools/install/docker/config/nginx/docker-entrypoint.d /docker-entrypoint.d
+COPY /buildtools/install/docker/config/nginx/router/docker-entrypoint.sh /docker-entrypoint.sh
+COPY /buildtools/install/docker/config/nginx/router/docker-entrypoint.d /docker-entrypoint.d
 
-COPY /buildtools/install/docker/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
-COPY /buildtools/install/docker/config/nginx/templates/nginx.conf.template /etc/nginx/nginx.conf.template
+COPY /buildtools/install/docker/config/nginx/router/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
+COPY /buildtools/install/docker/config/nginx/nginx.conf.template /etc/nginx/nginx.conf.template
 COPY /buildtools/install/docker/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
 
 RUN dos2unix /docker-entrypoint.d/* && \

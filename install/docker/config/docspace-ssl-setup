@@ -20,6 +20,10 @@ else
   echo "Error: configuration files not found." && exit 1
 fi
 
+PROXY_SSL_CONF="${DOCKERCOMPOSE}/config/nginx/proxy/onlyoffice-proxy-ssl.conf"
+EXTERNAL_PORT_HTTPS=$(awk -F= '/^[[:space:]]*EXTERNAL_PORT_HTTPS=/{gsub(/^[[:space:]]*/,"",$2); gsub(/"/,"",$2); print $2; exit}' "${DOCKERCOMPOSE}/.env")
+EXTERNAL_PORT_HTTPS="${EXTERNAL_PORT_HTTPS:-443}"
+
 help(){
   echo 
   echo "This script provided to automatically setup SSL Certificates for DocSpace"
@@ -67,7 +71,7 @@ create_renew_script() {
         echo "    -v /var/lib/letsencrypt:/var/lib/letsencrypt \\" >> ${CRON_FILE}
         echo "    -v onlyoffice_webroot_path:$WEBROOT_PATH \\" >> ${CRON_FILE}
         echo "    certbot/certbot renew -v --force-renewal 2>&1 | tee -a /var/log/${PRODUCT}-renew-letsencrypt.log" >> ${CRON_FILE}
-        echo "$(command -v docker-compose) -f ${DOCKERCOMPOSE}/proxy-ssl.yml up -d --force-recreate" >> ${CRON_FILE}
+        echo "$(echo "$(command -v ${DOCKER_COMPOSE%% *})${DOCKER_COMPOSE#${DOCKER_COMPOSE%% *}}") -f ${DOCKERCOMPOSE}/proxy-ssl.yml up -d --force-recreate" >> ${CRON_FILE}
         chmod a+x "${CRON_FILE}"
     else
       echo "Error: directory /etc/cron.weekly does not exist." >&2
@@ -112,6 +116,17 @@ db() {
       mysql -h"${MYSQL_HOST:-$MYSQL_CONTAINER_NAME}" -P"${MYSQL_PORT:-3306}" -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DATABASE}" "$@"
 }
 
+check_docker_compose() {
+  local COMPOSE_REQ=2018000 v
+  for DOCKER_COMPOSE in "docker compose" docker-compose; do
+    VERSION=$(${DOCKER_COMPOSE} version --short 2>/dev/null) || continue
+    awk -F. -v R="$COMPOSE_REQ" 'NF>=3{exit !($1*1e6+$2*1e3+$3>=R)}' <<<"${VERSION%%[^0-9.]*}" && return 0
+  done
+  return 1
+}
+
+check_docker_compose || { echo "docker compose not installed or outdated version"; exit 1; }
+
 case $1 in 
   -f | --file )
     if [ -n "$2" ] && [ -n "$3" ]; then
@@ -146,7 +161,7 @@ case $1 in
 
     if docker ps -f "name=onlyoffice-proxy" --format '{{.Names}}' | grep -q "onlyoffice-proxy"; then
       if docker ps -f "name=onlyoffice-proxy" --format "{{.Ports}}" | grep -q "443"; then
-        docker-compose -f ${DOCKERCOMPOSE}/proxy-ssl.yml down
+        ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/proxy-ssl.yml down
       fi
     fi
 
@@ -157,12 +172,12 @@ case $1 in
     if grep -q '^[[:space:]]*-[[:space:]]*.*${CERTIFICATE_PATH}' ${DOCKERCOMPOSE}/docspace.yml; then
       sed -i '/USE_UNAUTHORIZED_STORAGE/d' ${DOCKERCOMPOSE}/ds.yml
       sed -i 's/^\([[:space:]]*\)-\(.*${CERTIFICATE_PATH}.*\)/\1#-\2/' ${DOCKERCOMPOSE}/docspace.yml ${DOCKERCOMPOSE}/ds.yml
-      docker-compose -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-doceditor onlyoffice-sdk onlyoffice-login onlyoffice-socket onlyoffice-ssoauth
-      docker-compose -f ${DOCKERCOMPOSE}/ds.yml up --force-recreate -d
+      ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-doceditor onlyoffice-sdk onlyoffice-login onlyoffice-socket onlyoffice-ssoauth
+      ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/ds.yml up --force-recreate -d
     fi
 
-    docker-compose -f ${DOCKERCOMPOSE}/proxy.yml up --force-recreate -d
-    docker-compose -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-files
+    ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/proxy.yml up --force-recreate -d
+    ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-files
     
     echo "OK"
     exit 0
@@ -204,11 +219,20 @@ case $1 in
           --cert-name "$PRODUCT" --agree-tos --email "$MAIL" \
           -d "${DOMAINS[@]}"
       else
-        ${DOCKER_CMD} -v onlyoffice_webroot_path:$WEBROOT_PATH \
-          certbot/certbot certonly \
-          --expand --webroot -w "$WEBROOT_PATH" --key-type rsa \
-          --cert-name "$PRODUCT" --non-interactive --agree-tos --email "$MAIL" \
-          -d "${DOMAINS[@]}"
+        if docker port onlyoffice-proxy 80/tcp 2>/dev/null | grep -q ':80$'; then
+          ${DOCKER_CMD} -v onlyoffice_webroot_path:$WEBROOT_PATH \
+            certbot/certbot certonly \
+            --expand --webroot -w "$WEBROOT_PATH" --key-type rsa \
+            --cert-name "$PRODUCT" --non-interactive --agree-tos --email "$MAIL" \
+            -d "${DOMAINS[@]}"
+        else
+          ss -lnt sport = :80 | grep -q LISTEN && { echo "Error: port 80 is in use. Let's Encrypt requires it for verification, so free it and retry." >&2; exit 1; }
+          ${DOCKER_CMD} --network host \
+            certbot/certbot certonly \
+            --expand --standalone --http-01-port 80 --key-type rsa \
+            --cert-name "$PRODUCT" --non-interactive --agree-tos --email "$MAIL" \
+            -d "${DOMAINS[@]}"
+        fi
       fi
     else
       help
@@ -224,8 +248,9 @@ PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${PRODUCT}/privkey.pem"}"
 
 if [ -f "${CERTIFICATE_FILE}" ]; then 
   if [ -f "${PRIVATEKEY_FILE}" ]; then
-    sed -i "s~\(APP_CORE_SERVER_ROOT=\).*~\1\"https://*/\"~g" ${DOCKERCOMPOSE}/.env
-    sed -i "s~\(APP_URL_PORTAL=\).*~\1\"https://${DOMAIN}\"~g" ${DOCKERCOMPOSE}/.env
+    sed -i "s~\(APP_CORE_SERVER_ROOT=\).*~\1\"https://*$( [ "$EXTERNAL_PORT_HTTPS" = "443" ] || echo ":$EXTERNAL_PORT_HTTPS" )/\"~g" ${DOCKERCOMPOSE}/.env
+    sed -i "s~\(APP_URL_PORTAL=\).*~\1\"https://${DOMAIN}$( [ "$EXTERNAL_PORT_HTTPS" = "443" ] || echo ":$EXTERNAL_PORT_HTTPS" )\"~g" ${DOCKERCOMPOSE}/.env
+    sed -i -E "s#https://\\\$host(:[0-9]+)?#https://\\\$host$( [ "$EXTERNAL_PORT_HTTPS" = "443" ] || echo ":$EXTERNAL_PORT_HTTPS" )#g" "$PROXY_SSL_CONF"
     sed -i "s~\(CERTIFICATE_PATH=\).*~\1\"${CERTIFICATE_FILE}\"~g" ${DOCKERCOMPOSE}/.env
     sed -i "s~\(CERTIFICATE_KEY_PATH=\).*~\1\"${PRIVATEKEY_FILE}\"~g" ${DOCKERCOMPOSE}/.env
     sed -i "s~\(DHPARAM_PATH=\).*~\1\"${DHPARAM_PATH}\"~g" ${DOCKERCOMPOSE}/.env
@@ -241,18 +266,18 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
       if [ "$CONTAINER_STATUS" = "healthy" ]; then
         docker cp "$(readlink -f "${CERTIFICATE_FILE}")" "${CONTAINER_NAME}:${TEMP_PATH}" >/dev/null
         echo -n "Checking certificate trust inside ${CONTAINER_NAME}... "
-        docker exec "${CONTAINER_NAME}" openssl verify -CAfile /etc/ssl/certs/ca-certificates.crt -untrusted "${TEMP_PATH}" "${TEMP_PATH}" >/dev/null \
+        docker exec "${CONTAINER_NAME}" openssl verify -untrusted "${TEMP_PATH}" "${TEMP_PATH}" >/dev/null \
           && { echo "true"; CERT_TRUST_REQUIRED=false; } || { echo "false"; CERT_TRUST_REQUIRED=true; }
         docker exec "${CONTAINER_NAME}" rm -f "${TEMP_PATH}" >/dev/null
       else
         echo -n "Checking certificate trust on host... "
-        openssl verify -CAfile /etc/ssl/certs/ca-certificates.crt -untrusted "${CERTIFICATE_FILE}" "${CERTIFICATE_FILE}" >/dev/null \
+        openssl verify -untrusted "${CERTIFICATE_FILE}" "${CERTIFICATE_FILE}" >/dev/null \
           && { echo "true"; CERT_TRUST_REQUIRED=false; } || { echo "false"; CERT_TRUST_REQUIRED=true; }
       fi
 
       if [ "$CERT_TRUST_REQUIRED" = true ]; then
         sed -i 's/^\([[:space:]]*\)#-\(.*${CERTIFICATE_PATH}.*\)/\1-\2/' ${DOCKERCOMPOSE}/docspace.yml ${DOCKERCOMPOSE}/ds.yml
-        docker-compose -f "${DOCKERCOMPOSE}/ds.yml" up --force-recreate -d
+        ${DOCKER_COMPOSE} -f "${DOCKERCOMPOSE}/ds.yml" up --force-recreate -d
       fi
     fi
     
@@ -261,8 +286,8 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
       db -e "UPDATE tenants_tenants SET mappeddomain='${DOMAIN}' WHERE alias='localhost';"
     fi
     
-    docker-compose -f ${DOCKERCOMPOSE}/proxy-ssl.yml up --force-recreate -d
-    docker-compose -f ${DOCKERCOMPOSE}/docspace.yml -f ${DOCKERCOMPOSE}/notify.yml up --force-recreate -d
+    ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/proxy-ssl.yml up --force-recreate -d
+    ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/docspace.yml -f ${DOCKERCOMPOSE}/notify.yml up --force-recreate -d
 
     echo "OK"
   else

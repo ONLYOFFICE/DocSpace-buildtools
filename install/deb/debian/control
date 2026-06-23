@@ -17,11 +17,11 @@ Depends: debconf, openssl,
          {{product}}-api (= {{package_header_tag_version}}),
          {{product}}-api-system (= {{package_header_tag_version}}),
          {{product}}-backup (= {{package_header_tag_version}}),
-         {{product}}-backup-background (= {{package_header_tag_version}}),
+         {{product}}-backup-worker (= {{package_header_tag_version}}),
          {{product}}-clear-events (= {{package_header_tag_version}}),
          {{product}}-doceditor (= {{package_header_tag_version}}),
          {{product}}-files (= {{package_header_tag_version}}),
-         {{product}}-files-services (= {{package_header_tag_version}}),
+         {{product}}-files-worker (= {{package_header_tag_version}}),
          {{product}}-healthchecks (= {{package_header_tag_version}}),
          {{product}}-login (= {{package_header_tag_version}}),
          {{product}}-management (= {{package_header_tag_version}}),
@@ -39,7 +39,7 @@ Depends: debconf, openssl,
          {{product}}-sdk (= {{package_header_tag_version}}),
          {{product}}-telegram (= {{package_header_tag_version}}),
          {{product}}-ai (= {{package_header_tag_version}}),
-         {{product}}-ai-service (= {{package_header_tag_version}}),
+         {{product}}-ai-worker (= {{package_header_tag_version}}),
          {{product}}-mcp (= {{package_header_tag_version}}),
 Description: {{product}}
 	ONLYOFFICE {{product}} is a new way to collaborate on documents with teams, 
@@ -70,12 +70,12 @@ Description: {{product}}-files
 	The REST API server for working with documents. The service which handles
 	API requests related to documents and launches the OFormService service.
 
-Package: {{product}}-files-services
+Package: {{product}}-files-worker
 Architecture: all
 Multi-Arch: foreign
 Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-10.0, ${misc:Depends}, ${shlibs:Depends}
 Recommends: ffmpeg, opensearch (= 2.11.1)
-Description: {{product}}-files-services
+Description: {{product}}-files-worker
 	The service which launches additional services related to file management:
 	 - ElasticSearchIndexService - indexes documents using elasticsearch;
 	 - FeedAggregatorService - aggregates notifications;
@@ -177,11 +177,11 @@ Description: {{product}}-identity-authorization
 	The service responsible for authentication methods used to access
 	DocSpace, e.g., the OAuth technology.
 
-Package: {{product}}-backup-background
+Package: {{product}}-backup-worker
 Architecture: all
 Multi-Arch: foreign
 Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-10.0, ${misc:Depends}, ${shlibs:Depends}
-Description: {{product}}-backup-background
+Description: {{product}}-backup-worker
 	The service which launches additional services related to backup creation:
 	 - BackupWorkerService - launches WorkerService which runs backup/restore, etc;
 	 - BackupListenerService - waits for a signal to delete backups;
@@ -265,11 +265,11 @@ Description: {{product}}-ai
 	The REST API server for working with AI features. The service which
 	handles API requests related to AI.
 
-Package: {{product}}-ai-service
+Package: {{product}}-ai-worker
 Architecture: all
 Multi-Arch: foreign
 Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-10.0, ${misc:Depends}, ${shlibs:Depends}
-Description: {{product}}-ai-service
+Description: {{product}}-ai-worker
 	The service for background tasks related with AI. It vectorizes documents
 	from the knowledge base for subsequent semantic search and performs
 	chat/message export.

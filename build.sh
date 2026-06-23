@@ -20,7 +20,7 @@ echo "FRONT-END (for start run command 'pnpm start' inside the root folder)"
 pnpm install
 
 echo "BACK-END"
-dotnet build $dir/asc.web.slnf  /fl1 /flp1:logfile=asc.web.log;verbosity=normal
+dotnet build $dir/ASC.Web.slnx  /fl1 /flp1:logfile=asc.web.log;verbosity=normal
 
 echo "install nodejs projects dependencies..."
 pushd $dir/common/ASC.Socket.IO/

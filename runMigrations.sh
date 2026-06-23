@@ -8,8 +8,8 @@ echo "Run script directory:" $rd
 dir=$(builtin cd $rd/../; pwd)
 echo "Root directory:" $dir
 
-dotnet build $dir/server/asc.web.slnf
-dotnet build $dir/server/ASC.Migrations.sln
+dotnet build $dir/server/ASC.Web.slnx
+dotnet build $dir/server/ASC.Migrations.slnx
 
 pushd $dir/server/common/Tools/ASC.Migration.Runner/bin/Debug/
 

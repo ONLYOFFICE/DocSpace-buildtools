@@ -13,7 +13,7 @@ print(f"SRC_PATH = {SRC_PATH}")
 print(f"BUILD_PATH = {BUILD_PATH}")
 
 BACKEND_NODEJS_SERVICES = ["ASC.Socket.IO", "ASC.SsoAuth"]
-BACKEND_DOTNETCORE_SERVICES = ["ASC.Files", "ASC.People", "ASC.Data.Backup", "ASC.Files.Service", "ASC.Notify", "ASC.Studio.Notify", "ASC.Web.Api", "ASC.Web.Studio", "ASC.Data.Backup.BackgroundTasks", "ASC.ClearEvents", "ASC.ApiSystem", "ASC.Web.HealthChecks.UI"]
+BACKEND_DOTNETCORE_SERVICES = ["ASC.Files", "ASC.People", "ASC.Data.Backup", "ASC.Files.Worker", "ASC.Notify", "ASC.Studio.Notify", "ASC.Web.Api", "ASC.Web.Studio", "ASC.Data.Backup.Worker", "ASC.ClearEvents", "ASC.ApiSystem", "ASC.Web.HealthChecks.UI"]
 
 DOCKER_ENTRYPOINT="docker-entrypoint.py"
 DOCKER_ENTRYPOINT_PATH = os.path.join(SRC_PATH, "buildtools", "install", "docker", DOCKER_ENTRYPOINT)
@@ -22,11 +22,11 @@ if os.path.exists(os.path.join(BUILD_PATH, "services")):
     print("== Clean up services ==")
     shutil.rmtree(os.path.join(BUILD_PATH, "services"))
 
-print("== Build ASC.Web.slnf ==")
-subprocess.run(["dotnet", "build", os.path.join(SRC_PATH, "server", "ASC.Web.slnf")])
+print("== Build ASC.Web.slnx ==")
+subprocess.run(["dotnet", "build", os.path.join(SRC_PATH, "server", "ASC.Web.slnx")])
 
-print("== Build ASC.Migrations.sln ==")
-subprocess.run(["dotnet", "build", os.path.join(SRC_PATH, "server", "ASC.Migrations.sln"), "-o", os.path.join(BUILD_PATH, "services", "ASC.Migration.Runner", "service")])
+print("== Build ASC.Migrations.slnx ==")
+subprocess.run(["dotnet", "build", os.path.join(SRC_PATH, "server", "ASC.Migrations.slnx"), "-o", os.path.join(BUILD_PATH, "services", "ASC.Migration.Runner", "service")])
 
 print("== Add docker-migration-entrypoint.sh to ASC.Migration.Runner ==")
 file_path = os.path.join(BUILD_PATH, "services", "ASC.Migration.Runner", "service", "docker-migration-entrypoint.sh")
@@ -78,8 +78,8 @@ for service in BACKEND_NODEJS_SERVICES:
     print(f"== Add docker-entrypoint.py to {service}")
     shutil.copyfile(DOCKER_ENTRYPOINT_PATH, os.path.join(dst, DOCKER_ENTRYPOINT))
 
-print("== Publish ASC.Web.slnf ==")
-subprocess.run(["dotnet", "publish", os.path.join(SRC_PATH, "server", "ASC.Web.slnf"), "-p", "PublishProfile=FolderProfile"])
+print("== Publish ASC.Web.slnx ==")
+subprocess.run(["dotnet", "publish", os.path.join(SRC_PATH, "server", "ASC.Web.slnx"), "-p", "PublishProfile=FolderProfile"])
 
 for service in BACKEND_DOTNETCORE_SERVICES:
     print(f"== Add {DOCKER_ENTRYPOINT} to {service}")

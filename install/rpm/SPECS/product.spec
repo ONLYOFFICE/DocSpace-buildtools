@@ -18,7 +18,7 @@ BuildArch:      noarch
 URL:            http://onlyoffice.com
 Vendor:         Ascensio System SIA
 Packager:       %{packager}
-License:        AGPLv3
+License:        AGPL-3.0-only AND CC-BY-SA-4.0
 
 Source0:        %{product}.rpmlintrc
 Source1:        https://codeload.github.com/ONLYOFFICE/%{product}-buildtools/tar.gz/master#/buildtools.tar.gz
@@ -29,6 +29,7 @@ Source5:        https://codeload.github.com/ONLYOFFICE/ASC.Web.Campaigns/tar.gz/
 Source6:        https://codeload.github.com/ONLYOFFICE/%{product}-plugins/tar.gz/master#/plugins.tar.gz
 Source7:        https://codeload.github.com/ONLYOFFICE/document-formats/tar.gz/master#/document-formats.tar.gz
 Source8:        https://codeload.github.com/ONLYOFFICE/%{product}-mcp/tar.gz/main#/mcp.tar.gz
+Source9:        https://codeload.github.com/ONLYOFFICE/%{product}-ui-kit-react/tar.gz/master#/ui-kit.tar.gz
 
 BuildRequires:  nodejs >= 22.0
 BuildRequires:  yarn
@@ -38,16 +39,16 @@ BuildRequires:  java-21-openjdk-headless
 BuildRequires:  maven
 
 Requires:       %name-ai = %version-%release
-Requires:       %name-ai-service = %version-%release
+Requires:       %name-ai-worker = %version-%release
 Requires:       %name-mcp = %version-%release
 Requires:       %name-api = %version-%release
 Requires:       %name-api-system = %version-%release
 Requires:       %name-backup = %version-%release
-Requires:       %name-backup-background = %version-%release
+Requires:       %name-backup-worker = %version-%release
 Requires:       %name-clear-events = %version-%release
 Requires:       %name-doceditor = %version-%release
 Requires:       %name-files = %version-%release
-Requires:       %name-files-services = %version-%release
+Requires:       %name-files-worker = %version-%release
 Requires:       %name-healthchecks = %version-%release
 Requires:       %name-login = %version-%release
 Requires:       %name-management = %version-%release
@@ -87,6 +88,7 @@ tar -xf %{SOURCE6} --transform='s,^[^/]\+,plugins,'          -C %{_builddir} &
 wait
 tar -xf %{SOURCE7} --transform='s,^[^/]\+,document-formats,' -C %{_builddir}/buildtools/config
 tar -xf %{SOURCE8} --transform='s,^[^/]\+,mcp,'              -C %{_builddir}
+tar -xf %{SOURCE9} --transform='s,^[^/]\+,ui-kit,'          -C %{_builddir}/client/libs
 cp -rf %{SOURCE0} .
 
 %include build.spec
@@ -98,6 +100,11 @@ cp -rf %{SOURCE0} .
 %pre
 
 %pre common
+
+if [ "$1" -eq 2 ]; then
+    systemctl stop '%{product}-*.service' >/dev/null 2>&1 || true
+    systemctl daemon-reload >/dev/null 2>&1 || true
+fi
 
 getent group onlyoffice >/dev/null || groupadd -r onlyoffice
 getent passwd onlyoffice >/dev/null || useradd -r -g onlyoffice -s /usr/sbin/nologin -d %{_sysconfdir}/onlyoffice/%{product} onlyoffice
@@ -119,6 +126,13 @@ if [ -f ${PROXY_CONF} ]; then
 fi
 
 %post 
+
+%posttrans
+
+if [ "$1" -ge 2 ]; then
+    find /etc/systemd/system -type l -name '%{product}-*.service' ! -exec test -e {} \; -delete
+    systemctl daemon-reload >/dev/null 2>&1 || true
+fi
 
 %preun
 
