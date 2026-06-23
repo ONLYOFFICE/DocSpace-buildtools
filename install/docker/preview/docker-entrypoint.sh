@@ -27,6 +27,13 @@ MYSQL_USER=${MYSQL_USER:-"onlyoffice_user"}
 MYSQL_PASSWORD=${MYSQL_PASSWORD:-"onlyoffice_pass"}
 COMMAND_TIMEOUT=${COMMAND_TIMEOUT:-"100"}
 
+ELK_CONTAINER_NAME=${ELK_CONTAINER_NAME:-"onlyoffice-opensearch"}
+ELK_SCHEME=${ELK_SCHEME:-"http"}
+ELK_HOST=${ELK_HOST:-""}
+ELK_PORT=${ELK_PORT:-"9200"}
+export ELK_THREADS=${ELK_THREADS:-1}
+export ELK_CONNECTION_HOST=${ELK_HOST:-"$ELK_CONTAINER_NAME"}
+
 MIGRATION_TYPE=${MIGRATION_TYPE:-"STANDALONE"}  # STANDALONE or SAAS
 
 export MYSQL_PWD="$MYSQL_PASSWORD"
@@ -167,6 +174,13 @@ update_configs() {
         -e "this.ConnectionStrings.default.connectionString=process.env.CONNECTION_STRING+';Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;ConnectionReset=false;AllowPublicKeyRetrieval=true'" \
         -e "this.core['base-domain']=process.env.APP_CORE_BASE_DOMAIN" \
         -e "this.core.machinekey=process.env.APP_CORE_MACHINEKEY"
+
+    # Elastic/OpenSearch configuration
+    ${JSON} "${PATH_TO_CONF}/elastic.json" \
+        -e "this.elastic.Scheme=process.env.ELK_SCHEME" \
+        -e "this.elastic.Host=process.env.ELK_CONNECTION_HOST" \
+        -e "this.elastic.Port=process.env.ELK_PORT" \
+        -e "this.elastic.Threads=process.env.ELK_THREADS"
 
     # OAuth redirect
     sed -i -E "s!\"https://service\.teamlab\.info/oauth2\.aspx\"!\"${OAUTH_REDIRECT_URL}\"!g" "${PATH_TO_CONF}/autofac.consumers.json"

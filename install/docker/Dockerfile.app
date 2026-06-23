@@ -608,6 +608,7 @@ RUN set -eux; \
 
 # Services config + entrypoint + supervisor config
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/preview/docker-entrypoint.sh /docker-entrypoint.sh
+# COPY --chown=onlyoffice:onlyoffice preview/docker-entrypoint.sh /docker-entrypoint.sh
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/preview/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # nginx config, static files, router scripts
@@ -623,6 +624,7 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/preview/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
 
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/preview/config/nginx/templates/onlyoffice-proxy.ssl.conf.template /app/onlyoffice/template/nginx/onlyoffice-proxy.ssl.conf.template
+# COPY --chown=onlyoffice:onlyoffice preview/config/nginx/templates/onlyoffice-proxy.ssl.conf.template /app/onlyoffice/template/nginx/onlyoffice-proxy.ssl.conf.template
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/preview/config/nginx/templates/onlyoffice-proxy.http.conf /app/onlyoffice/template/nginx/onlyoffice-proxy.http.conf
 
 # nodejs static and dynamic files
