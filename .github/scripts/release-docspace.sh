@@ -54,31 +54,44 @@ function check_source_image_exists() {
   fi
 }
 
-function get_hub_jwt() {
-  if [[ -z "${DOCKER_USERNAME_PAT}" || -z "${DOCKER_TOKEN_PAT}" ]]; then
-    gha_error "DOCKER_USERNAME_PAT / DOCKER_TOKEN_PAT are not set — cannot authenticate with Docker Hub"
-    exit 1
-  fi
+_HUB_LOGIN_ERROR=""
 
-  local response
-  response=$(curl -sSL \
+function hub_login() {
+  local USERNAME="${1}" PASSWORD="${2}" OUT_VAR="${3}"
+  local RESPONSE TOKEN
+
+  RESPONSE=$(curl -sSL \
     -X POST \
     -H "Content-Type: application/json" \
-    -d "{\"username\":\"${DOCKER_USERNAME_PAT}\",\"password\":\"${DOCKER_TOKEN_PAT}\"}" \
+    -d "{\"username\":\"${USERNAME}\",\"password\":\"${PASSWORD}\"}" \
     "https://hub.docker.com/v2/users/login/" 2>/dev/null)
 
-  HUB_JWT=$(echo "${response}" | jq -r '.token // empty' 2>/dev/null) || true
+  TOKEN=$(echo "${RESPONSE}" | jq -r '.token // empty' 2>/dev/null) || true
 
-  if [[ -z "${HUB_JWT}" ]]; then
-    local error_msg
-    error_msg=$(echo "${response}" | jq -r '.detail // .message // "unknown error"' 2>/dev/null) || error_msg="unknown error"
-    gha_error "Docker Hub login failed: ${error_msg}"
+  if [[ -z "${TOKEN}" ]]; then
+    _HUB_LOGIN_ERROR=$(echo "${RESPONSE}" | jq -r '.detail // .message // "unknown error"' 2>/dev/null) || _HUB_LOGIN_ERROR="unknown error"
+    return 1
+  fi
+
+  printf -v "${OUT_VAR}" '%s' "${TOKEN}"
+}
+
+function get_hub_jwt() {
+  if [[ -z "${DOCKER_USERNAME}" || -z "${DOCKER_TOKEN}" ]]; then
+    gha_error "DOCKER_USERNAME / DOCKER_TOKEN are not set — cannot authenticate with Docker Hub"
     exit 1
   fi
+  hub_login "${DOCKER_USERNAME}" "${DOCKER_TOKEN}" HUB_JWT || { gha_error "Docker Hub login failed: ${_HUB_LOGIN_ERROR}"; exit 1; }
+}
+
+function get_hub_jwt_pat() {
+  [[ -z "${DOCKER_USERNAME_PAT}" || -z "${DOCKER_TOKEN_PAT}" ]] && return 0
+  hub_login "${DOCKER_USERNAME_PAT}" "${DOCKER_TOKEN_PAT}" HUB_JWT_PAT || \
+    gha_warning "Docker Hub PAT login failed: ${_HUB_LOGIN_ERROR} — repository visibility will not be changed"
 }
 
 function make_repo_public() {
-  [[ -z "${HUB_JWT}" ]] && return 0
+  [[ -z "${HUB_JWT_PAT}" ]] && return 0
   local full_repo="${1%:*}"
   local namespace="${full_repo%%/*}"
   local repository="${full_repo#*/}"
@@ -86,7 +99,7 @@ function make_repo_public() {
   local http_status
   http_status=$(curl -s -o /dev/null -w "%{http_code}" \
     -X POST \
-    -H "Authorization: JWT ${HUB_JWT}" \
+    -H "Authorization: JWT ${HUB_JWT_PAT}" \
     -H "Content-Type: application/json" \
     -d '{"is_private": false}' \
     "https://hub.docker.com/v2/repositories/${namespace}/${repository}/privacy")
@@ -157,6 +170,7 @@ function main() {
   validate_version_format "${RELEASE_VERSION}" "release_version (RELEASE_VERSION)"
 
   get_hub_jwt
+  get_hub_jwt_pat
 
   cd "${GITHUB_WORKSPACE}/install/docker"
   
