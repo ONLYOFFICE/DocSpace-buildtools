@@ -38,8 +38,14 @@ function check_source_image_exists() {
   local namespace="${image%%/*}"
   local repository="${image#*/}"
 
+  if [[ -z "${HUB_JWT}" ]]; then
+    gha_error "HUB_JWT is not set — cannot check image existence for private repositories"
+    return 1
+  fi
+
   local http_status
   http_status=$(curl -s -o /dev/null -w "%{http_code}" \
+    -H "Authorization: JWT ${HUB_JWT}" \
     "https://hub.docker.com/v2/repositories/${namespace}/${repository}/tags/${tag}/")
 
   if [[ "${http_status}" != "200" ]]; then
@@ -50,8 +56,8 @@ function check_source_image_exists() {
 
 function get_hub_jwt() {
   if [[ -z "${DOCKER_USERNAME_PAT}" || -z "${DOCKER_TOKEN_PAT}" ]]; then
-    gha_warning "DOCKER_USERNAME_PAT / DOCKER_TOKEN_PAT are not set - repository visibility will not be changed automatically"
-    return 0
+    gha_error "DOCKER_USERNAME_PAT / DOCKER_TOKEN_PAT are not set — cannot authenticate with Docker Hub"
+    exit 1
   fi
 
   local response
@@ -64,8 +70,10 @@ function get_hub_jwt() {
   HUB_JWT=$(echo "${response}" | jq -r '.token // empty' 2>/dev/null) || true
 
   if [[ -z "${HUB_JWT}" ]]; then
+    local error_msg
     error_msg=$(echo "${response}" | jq -r '.detail // .message // "unknown error"' 2>/dev/null) || error_msg="unknown error"
-    gha_warning "Docker Hub login failed: ${error_msg}"
+    gha_error "Docker Hub login failed: ${error_msg}"
+    exit 1
   fi
 }
 
@@ -117,7 +125,6 @@ function release_service() {
    # Make alert
    if [[ ${STATUS} -eq 0 ]]; then
      RELEASED_SERVICES+=("${service_release_tag}")
-     get_hub_jwt
      make_repo_public "${service_release_tag}"
    else
      gha_error "docker buildx imagetools create failed for ${service_release_tag} (exit code ${STATUS})"
@@ -148,6 +155,8 @@ function main() {
   # Validate version formats early to fail fast
   validate_version_format "${DOCKER_TAG}"      "source_version (DOCKER_TAG)"
   validate_version_format "${RELEASE_VERSION}" "release_version (RELEASE_VERSION)"
+
+  get_hub_jwt
 
   cd "${GITHUB_WORKSPACE}/install/docker"
   
