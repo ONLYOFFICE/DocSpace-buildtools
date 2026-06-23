@@ -29,10 +29,13 @@ x-service: &x-service-base
     DOCUMENT_SERVER_URL_EXTERNAL: ${DOCUMENT_SERVER_URL_EXTERNAL}
     DOCUMENT_SERVER_JWT_SECRET: ${DOCUMENT_SERVER_JWT_SECRET}
     DOCUMENT_SERVER_JWT_HEADER: ${DOCUMENT_SERVER_JWT_HEADER}
-    ELK_SHEME: ${ELK_SHEME}
+    ELK_CONTAINER_NAME: ${ELK_CONTAINER_NAME}
+    ELK_SCHEME: ${ELK_SCHEME}
     ELK_HOST: ${ELK_HOST}
     ELK_PORT: ${ELK_PORT}
     SPRING_PROFILES_ACTIVE: minified,stage
+    SPRING_APPLICATION_SIGNATURE_SECRET: ${APP_CORE_MACHINEKEY}
+    SPRING_APPLICATION_ENCRYPTION_SECRET: secret_key
 
 services:
   onlyoffice-docspace-preview:
@@ -88,6 +91,39 @@ services:
     volumes:
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}mysql_data:/var/lib/mysql
 
+  onlyoffice-opensearch:
+    image: ${REGISTRY}${ELK_IMAGE_NAME} 
+    container_name: ${ELK_CONTAINER_NAME}
+    restart: always
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms4g -Xmx4g -Dlog4j2.formatMsgNoLookups=true"
+      - "indices.fielddata.cache.size=30%"
+      - "indices.memory.index_buffer_size=30%"
+      - "DISABLE_INSTALL_DEMO_CONFIG=true"
+      - "DISABLE_SECURITY_PLUGIN=true"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536 # maximum number of open files for the OpenSearch user, set to at least 65536 on modern systems
+        hard: 65536
+    volumes:
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}os_data:/usr/share/opensearch/data
+    expose:
+      - "9200"
+      - "9600" # required for Performance Analyzer
+    ports:
+      - 127.0.0.1:9200:9200
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health?pretty"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 10s
+
   onlyoffice-document-server:
     image: "${REGISTRY}${DOCUMENT_SERVER_IMAGE_NAME}"
     container_name: ${DOCUMENT_CONTAINER_NAME}
@@ -130,3 +166,4 @@ volumes:
   ds_fonts:
   certbot:
   mysql_data:
+  os_data:

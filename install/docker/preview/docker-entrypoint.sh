@@ -27,6 +27,13 @@ MYSQL_USER=${MYSQL_USER:-"onlyoffice_user"}
 MYSQL_PASSWORD=${MYSQL_PASSWORD:-"onlyoffice_pass"}
 COMMAND_TIMEOUT=${COMMAND_TIMEOUT:-"100"}
 
+ELK_CONTAINER_NAME=${ELK_CONTAINER_NAME:-"onlyoffice-opensearch"}
+ELK_SCHEME=${ELK_SCHEME:-"http"}
+ELK_HOST=${ELK_HOST:-""}
+ELK_PORT=${ELK_PORT:-"9200"}
+export ELK_THREADS=${ELK_THREADS:-1}
+export ELK_CONNECTION_HOST=${ELK_HOST:-"$ELK_CONTAINER_NAME"}
+
 MIGRATION_TYPE=${MIGRATION_TYPE:-"STANDALONE"}  # STANDALONE or SAAS
 
 export MYSQL_PWD="$MYSQL_PASSWORD"
@@ -37,9 +44,27 @@ SSL_MODE=${SSL_MODE:-"none"}
 SSL_DOMAIN=${SSL_DOMAIN:-""}
 SSL_CERT_PATH=${SSL_CERT_PATH:-""}
 SSL_KEY_PATH=${SSL_KEY_PATH:-""}
+SSL_EMAIL=${SSL_EMAIL:-""}
+LETSENCRYPT_STAGING=${LETSENCRYPT_STAGING:-"false"}
+LETSENCRYPT_FORCE_RENEW=${LETSENCRYPT_FORCE_RENEW:-"false"}
+LETSENCRYPT_FAIL_OPEN=${LETSENCRYPT_FAIL_OPEN:-"false"}
 
 setup_nginx_ssl() {
-    mkdir -p /var/www/certbot
+    mkdir -p /var/www/certbot /etc/letsencrypt
+
+    write_http_nginx_conf() {
+        cp /app/onlyoffice/template/nginx/onlyoffice-proxy.http.conf \
+            /etc/nginx/conf.d/onlyoffice-proxy.conf
+    }
+
+    write_ssl_nginx_conf() {
+        SERVER_NAME="$1" \
+        SSL_CERTIFICATE="$2" \
+        SSL_CERTIFICATE_KEY="$3" \
+        envsubst '${SERVER_NAME} ${SSL_CERTIFICATE} ${SSL_CERTIFICATE_KEY}' \
+            < /app/onlyoffice/template/nginx/onlyoffice-proxy.ssl.conf.template \
+            > /etc/nginx/conf.d/onlyoffice-proxy.conf
+    }
 
     if [[ "$SSL_MODE" == "custom" ]]; then
         if [[ -z "$SSL_DOMAIN" || -z "$SSL_CERT_PATH" || -z "$SSL_KEY_PATH" ]]; then
@@ -52,14 +77,8 @@ setup_nginx_ssl() {
             exit 1
         fi
 
-        SERVER_NAME="$SSL_DOMAIN" \
-        SSL_CERTIFICATE="$SSL_CERT_PATH" \
-        SSL_CERTIFICATE_KEY="$SSL_KEY_PATH" \
-        envsubst '${SERVER_NAME} ${SSL_CERTIFICATE} ${SSL_CERTIFICATE_KEY}' \
-            < /app/onlyoffice/template/nginx/onlyoffice-proxy.ssl.conf.template \
-            > /etc/nginx/conf.d/onlyoffice-proxy.conf
-	log "Using self-signed certificate"  
-
+        write_ssl_nginx_conf "$SSL_DOMAIN" "$SSL_CERT_PATH" "$SSL_KEY_PATH"
+        log "Using custom SSL certificate"
         return 0
     fi
 
@@ -69,28 +88,61 @@ setup_nginx_ssl() {
             exit 1
         fi
 
-        if [[ -f "/etc/letsencrypt/live/$SSL_DOMAIN/fullchain.pem" && -f "/etc/letsencrypt/live/$SSL_DOMAIN/privkey.pem" ]]; then
-            SERVER_NAME="$SSL_DOMAIN" \
-            SSL_CERTIFICATE="/etc/letsencrypt/live/$SSL_DOMAIN/fullchain.pem" \
-            SSL_CERTIFICATE_KEY="/etc/letsencrypt/live/$SSL_DOMAIN/privkey.pem" \
-            envsubst '${SERVER_NAME} ${SSL_CERTIFICATE} ${SSL_CERTIFICATE_KEY}' \
-                < /app/onlyoffice/template/nginx/onlyoffice-proxy.ssl.conf.template \
-                > /etc/nginx/conf.d/onlyoffice-proxy.conf
-	    log "Using Let's Encrypt certificate"
-        else
-            log "Let's Encrypt cert not found yet - HTTP only"
-            cp /app/onlyoffice/template/nginx/onlyoffice-proxy.http.conf \
-                /etc/nginx/conf.d/onlyoffice-proxy.conf
+        if [[ -z "$SSL_EMAIL" ]]; then
+            log "SSL_MODE=letsencrypt requires SSL_EMAIL"
+            exit 1
         fi
 
+        if ! command -v certbot >/dev/null 2>&1; then
+            log "certbot is not installed in this image"
+            log "Install certbot in Dockerfile or use a separate certbot service"
+            exit 1
+        fi
+
+        local cert_file="/etc/letsencrypt/live/$SSL_DOMAIN/fullchain.pem"
+        local key_file="/etc/letsencrypt/live/$SSL_DOMAIN/privkey.pem"
+
+        if [[ ! -f "$cert_file" || ! -f "$key_file" || "$LETSENCRYPT_FORCE_RENEW" == "true" ]]; then
+            log "Requesting Let's Encrypt certificate for $SSL_DOMAIN"
+            log "Port 80 must be reachable from the Internet and point to this container"
+
+            local staging_arg=()
+            local renew_arg=()
+            [[ "$LETSENCRYPT_STAGING" == "true" ]] && staging_arg=(--staging)
+            [[ "$LETSENCRYPT_FORCE_RENEW" == "true" ]] && renew_arg=(--force-renewal)
+
+            if certbot certonly \
+                --standalone \
+                --preferred-challenges http \
+                --http-01-port 80 \
+                --non-interactive \
+                --agree-tos \
+                --email "$SSL_EMAIL" \
+                -d "$SSL_DOMAIN" \
+                "${staging_arg[@]}" \
+                "${renew_arg[@]}"; then
+                log "Let's Encrypt certificate created"
+            else
+                log "Let's Encrypt certificate request failed"
+                if [[ "$LETSENCRYPT_FAIL_OPEN" == "true" ]]; then
+                    log "LETSENCRYPT_FAIL_OPEN=true, starting with HTTP only"
+                    write_http_nginx_conf
+                    return 0
+                fi
+                exit 1
+            fi
+        else
+            log "Existing Let's Encrypt certificate found for $SSL_DOMAIN"
+        fi
+
+        write_ssl_nginx_conf "$SSL_DOMAIN" "$cert_file" "$key_file"
+        log "Using Let's Encrypt certificate"
         return 0
     fi
 
     log "SSL disabled - HTTP only"
-    cp  /app/onlyoffice/template/nginx/onlyoffice-proxy.http.conf \
-        /etc/nginx/conf.d/onlyoffice-proxy.conf
+    write_http_nginx_conf
 }
-
 log() { echo "[$(date +'%F %T')] $1"; }
 
 migration_count() {
@@ -122,6 +174,13 @@ update_configs() {
         -e "this.ConnectionStrings.default.connectionString=process.env.CONNECTION_STRING+';Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;ConnectionReset=false;AllowPublicKeyRetrieval=true'" \
         -e "this.core['base-domain']=process.env.APP_CORE_BASE_DOMAIN" \
         -e "this.core.machinekey=process.env.APP_CORE_MACHINEKEY"
+
+    # Elastic/OpenSearch configuration
+    ${JSON} "${PATH_TO_CONF}/elastic.json" \
+        -e "this.elastic.Scheme=process.env.ELK_SCHEME" \
+        -e "this.elastic.Host=process.env.ELK_CONNECTION_HOST" \
+        -e "this.elastic.Port=process.env.ELK_PORT" \
+        -e "this.elastic.Threads=process.env.ELK_THREADS"
 
     # OAuth redirect
     sed -i -E "s!\"https://service\.teamlab\.info/oauth2\.aspx\"!\"${OAUTH_REDIRECT_URL}\"!g" "${PATH_TO_CONF}/autofac.consumers.json"
@@ -171,11 +230,12 @@ main() {
     log "=== Starting initialization ==="
     update_configs
     run_migrations || { log "❌ Migration failed - exiting"; exit 1; }
+    setup_nginx_ssl
     log "🌐 Initializing nginx..." && /nginx/docker-entrypoint.sh
     log "✅ Initialization complete - starting supervisord"
     log "=================================="
-    setup_nginx_ssl
     exec supervisord -n
 }
 
 main
+
