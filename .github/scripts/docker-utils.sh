@@ -84,12 +84,15 @@ start_community() {
 test_install() {
   local MODE_ARGS="${1:-}"
   local INSTALL_SCRIPT="${GITHUB_WORKSPACE}/install/OneClickInstall/install-Docker.sh"
-  local INSTALL_CMD="sudo bash $INSTALL_SCRIPT -skiphc true -noni true -gb $GITHUB_REF_NAME $MODE_ARGS"
+  local PATCHED_SCRIPT; PATCHED_SCRIPT=$(mktemp --suffix=.sh)
+  cp "$INSTALL_SCRIPT" "$PATCHED_SCRIPT"
+
+  local INSTALL_CMD="sudo bash $PATCHED_SCRIPT -skiphc true -noni true -gb $GITHUB_REF_NAME $MODE_ARGS"
   [ "${IS_4TESTING:-true}" != "false" ] && \
     INSTALL_CMD="$INSTALL_CMD -s 4testing- -un $DOCKERHUB_USERNAME_PAT -p $DOCKERHUB_TOKEN_PAT"
   [ -n "${DOCKER_TAG:-}" ] && INSTALL_CMD="$INSTALL_CMD -dsv $DOCKER_TAG"
 
-  sed -i -e "1i set -x" -e "/DOCKER_COMPOSE.*up -d/ s/$/ --quiet-pull/" "$INSTALL_SCRIPT"
+  sed -i -e "1i set -x" -e "/DOCKER_COMPOSE.*up -d/ s/$/ --quiet-pull/" "$PATCHED_SCRIPT"
 
   eval "$INSTALL_CMD" || exit $?
   echo "Waiting for containers..." && \
