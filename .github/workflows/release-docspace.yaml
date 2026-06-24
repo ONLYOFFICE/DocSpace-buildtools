@@ -23,6 +23,11 @@ on:
         description: 'Targets to release (ex. onlyoffice-community onlyoffice-api). Empty = all.'
         required: false
         default: ''
+      trigger_offline_release:
+        type: boolean
+        description: 'Trigger offline release'
+        required: false
+        default: true
 
 jobs:
   docker-release:
@@ -55,7 +60,7 @@ jobs:
 
   trigger-offline-release:
     needs: docker-release
-    if: ${{ needs.docker-release.result == 'success' }}
+    if: ${{ needs.docker-release.result == 'success' && github.event.inputs.trigger_offline_release == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Wait for Docker Hub tag to appear
