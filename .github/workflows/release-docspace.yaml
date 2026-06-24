@@ -1,6 +1,6 @@
 name: Release Docker Images
 
-run-name: "Release Docker Images [${{ github.event.inputs.release_version }}]"
+run-name: "Release Docker Images [${{ github.event.inputs.release_version }}]${{ github.event.inputs.services_filter != '' && ' (partial release)' || '' }}"
 
 on:
   workflow_dispatch:
@@ -16,8 +16,13 @@ on:
         required: true
       source_version:
         type: string
-        description: '4testing tag from which the release will be created (ex. 2.5.1.2678)'
+        description: '4testing source tag (ex. 2.5.1.2678)'
         required: true
+      services_filter:
+        type: string
+        description: 'Targets to release (ex. onlyoffice-community onlyoffice-api). Empty = all.'
+        required: false
+        default: ''
 
 jobs:
   docker-release:
@@ -43,6 +48,7 @@ jobs:
         DOCKER_IMAGE_PREFIX: "4testing-docspace"
         DOCKER_USERNAME_PAT: ${{ secrets.DOCKERHUB_USERNAME_PAT }}
         DOCKER_TOKEN_PAT: ${{ secrets.DOCKERHUB_TOKEN_PAT }}
+        SERVICES_FILTER: ${{ github.event.inputs.services_filter }}
       run: |
         chmod +x ${GITHUB_WORKSPACE}/.github/scripts/release-docspace.sh
         ${GITHUB_WORKSPACE}/.github/scripts/release-docspace.sh

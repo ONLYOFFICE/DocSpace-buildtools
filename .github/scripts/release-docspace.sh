@@ -171,10 +171,17 @@ function main() {
 
   cd "${GITHUB_WORKSPACE}/install/docker"
   
-  SERVICES=($(docker buildx bake -f build.yml --print | jq -r '.target | .[] | .tags[]'))
+  FILTER_TARGETS=()
+  [[ -n "${SERVICES_FILTER}" ]] && read -ra FILTER_TARGETS <<< "${SERVICES_FILTER}"
+  local BAKE_PRINT_OUTPUT
+  BAKE_PRINT_OUTPUT=$(docker buildx bake -f build.hcl --print "${FILTER_TARGETS[@]}") || {
+    gha_error "docker buildx bake failed — check that all target names in SERVICES_FILTER exist in build.hcl"
+    exit 1
+  }
+  mapfile -t SERVICES < <(jq -r '.target | .[] | .tags[]' <<< "${BAKE_PRINT_OUTPUT}")
 
   if [[ ${#SERVICES[@]} -eq 0 ]]; then
-    gha_error "No services found in build.yml — bake returned an empty target list"
+    gha_error "No services found in build.hcl — bake returned an empty target list"
     exit 1
   fi
 
