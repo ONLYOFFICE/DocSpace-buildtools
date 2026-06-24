@@ -1,0 +1,102 @@
+map $http_host $this_host {
+  "" $host;
+  default $http_host;
+}
+
+map $http_cloudfront_forwarded_proto $cloudfront_forwarded_proto {
+  default $http_cloudfront_forwarded_proto;
+  "" $scheme;
+}
+
+map $http_x_forwarded_proto $proxy_x_forwarded_proto {
+  default $http_x_forwarded_proto;
+  "" $cloudfront_forwarded_proto;
+}
+
+map $http_x_forwarded_port $proxy_x_forwarded_port {
+  default $http_x_forwarded_port;
+  '' $server_port;
+}
+
+map $http_x_forwarded_host $proxy_x_forwarded_host {
+  default $http_x_forwarded_host;
+  "" $this_host;
+}
+
+map $scheme $proxy_x_forwarded_ssl {
+  default off;
+  https on;
+}
+
+map $http_upgrade $proxy_connection {
+  default upgrade;
+  '' close;
+}
+
+server {
+    listen 0.0.0.0:80;
+    listen [::]:80 default_server;
+
+    server_name ${SERVER_NAME};
+
+    location /.well-known/acme-challenge/ {
+      root /var/www/certbot;
+      try_files $uri =404;
+    }
+
+    location / {
+      return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 0.0.0.0:443 ssl;
+    listen [::]:443 ssl;
+
+    server_name ${SERVER_NAME};
+
+    ssl_certificate ${SSL_CERTIFICATE};
+    ssl_certificate_key ${SSL_CERTIFICATE_KEY};
+
+    client_max_body_size 4G;
+
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $proxy_connection;
+    proxy_set_header Host $this_host;
+    proxy_set_header X-Forwarded-Host $proxy_x_forwarded_host;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+    proxy_hide_header 'Server';
+    proxy_hide_header 'X-Powered-By';
+    proxy_buffering off;
+
+    access_by_lua '
+        local accept_header = ngx.req.get_headers()["Accept"]
+    
+    if ngx.req.get_method() == "GET" and 
+       accept_header ~= nil and 
+       string.find(accept_header, "html") and 
+       not ngx.re.match(ngx.var.request_uri, "ds-vpath|/api/") then
+        
+        -- 🎯 Use SSL_DOMAIN from environment
+        local ssl_domain = os.getenv("SSL_DOMAIN") or ""
+        
+        if ssl_domain ~= "" then
+            -- Allow framing from the SSL domain and its subdomains
+            ngx.header["Content-Security-Policy"] = string.format("frame-ancestors *.%s %s;", ssl_domain, ssl_domain)
+        else
+            -- Fallback: allow all domains (community mode)
+            ngx.header["Content-Security-Policy"] = "frame-ancestors *;"
+        end
+        
+        ngx.header["X-Frame-Options"] = nil
+        ngx.log(ngx.INFO, "CSP set using SSL_DOMAIN: ", ssl_domain)
+    end
+    ';
+
+
+    location / {
+        proxy_pass http://127.0.0.1:8092;
+    }
+}
