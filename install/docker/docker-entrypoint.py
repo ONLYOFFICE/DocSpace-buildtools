@@ -435,11 +435,19 @@ if os.path.isfile(filePath):
         sys.stdout.write(line)
 
 if LOG_LEVEL:
-    NLOG_PATH = "/app/onlyoffice/config/nlog.config"
-    with open(NLOG_PATH) as f: NLOG = f.read()
-    NLOG = re.sub(r'^(?!.*ZiggyCreatures)(.*minlevel=")\w+(")', rf'\1{LOG_LEVEL}\2', NLOG, flags=re.M)
-    with open(NLOG_PATH, "w") as f:
-        f.write(NLOG)
+    try:
+        with open("/etc/supervisor/conf.d/supervisord.conf") as f:
+            IS_DOTNET_SUPERVISOR = RUN_FILE == "supervisord" and "command=dotnet" in f.read()
+    except OSError:
+        IS_DOTNET_SUPERVISOR = False
+    if RUN_FILE.endswith(".dll") or IS_DOTNET_SUPERVISOR:
+        NLOG_PATH = "/app/onlyoffice/config/nlog.config"
+        try:
+            with open(NLOG_PATH) as f: NLOG = f.read()
+            NLOG = re.sub(r'^(?!.*ZiggyCreatures)(.*minlevel=")\w+(")', rf'\1{LOG_LEVEL}\2', NLOG, flags=re.M)
+            with open(NLOG_PATH, "w") as f: f.write(NLOG)
+        except OSError:
+            print(f"[WARNING] {NLOG_PATH} is read-only, skipping LOG_LEVEL patch", flush=True)
 
 RELEASE_PLUGINS_DIR = "/var/www/studio/plugins/"
 USER_PLUGINS_DIR = "/app/onlyoffice/data/Studio/webplugins/"
