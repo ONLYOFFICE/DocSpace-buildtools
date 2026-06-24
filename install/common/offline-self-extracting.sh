@@ -129,12 +129,12 @@ mv -f "${TEMP_DIR}/docker-stack.tar.gz" "${TEMP_DIR}/install-Docker.sh" "${TEMP_
 
 echo "Running the install-Docker.sh script..."
 chmod +x "${SCRIPT_DIR}/install-Docker.sh"
-if ! "${SCRIPT_DIR}/install-Docker.sh" "${UPDATE}" "$@"; then
+if ! "${SCRIPT_DIR}/install-Docker.sh" "$@" --offline true --stack-mode true; then
   echo ""
   echo "ERROR: Installation failed. Fix the issue and re-run this script."
   echo "To clean up before retrying:"
   echo "  docker stop \$(docker ps -a -q); docker container prune -f; rm -rf /app/"
-  echo "Then re-run: ${SCRIPT_DIR}/install-Docker.sh ${UPDATE} $@"
+  echo "Then re-run: ${SCRIPT_DIR}/install-Docker.sh $* --offline true --stack-mode true"
   exit 1
 fi
 
