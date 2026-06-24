@@ -304,18 +304,15 @@ jobs:
             fi
 
             AUTH_HEADER=()
+            set +x
             if [ -n "${DOCKERHUB_USERNAME_PAT:-}" ] && [ -n "${DOCKERHUB_TOKEN_PAT:-}" ]; then
-              set +x
               DOCKERHUB_JWT=$(curl -fsSL -X POST "https://hub.docker.com/v2/users/login" \
                 -H "Content-Type: application/json" \
                 -d "{\"username\":\"${DOCKERHUB_USERNAME_PAT}\",\"password\":\"${DOCKERHUB_TOKEN_PAT}\"}" \
                 | jq -r '.token // empty' || true)
               [ -n "$DOCKERHUB_JWT" ] || { set -x; echo "::error::Docker Hub PAT login failed"; exit 1; }
               AUTH_HEADER=(-H "Authorization: JWT ${DOCKERHUB_JWT}")
-              set -x
             fi
-
-            set +x
             DOCKER_TAG=$(curl -fsSL "${AUTH_HEADER[@]}" "https://hub.docker.com/v2/repositories/onlyoffice/${IMAGE_PREFIX}-preview/tags?page_size=100" \
               | jq -r '.results[] | select(.name | test("^(?!99\\.).*")) | select(.images[]?.architecture=="'"$ARCH"'") | .name // empty' \
               | grep -E "$TAG_REGEX" | sort -V | tail -n 1)
@@ -324,7 +321,7 @@ jobs:
           fi
           sed -i "s~^\(\s*DOCKER_TAG=\).*~\1${DOCKER_TAG}~" .env
 
-          docker compose up -d --quiet-pull
+          docker compose up -d --quiet-pull --no-build
           echo "Waiting for containers to become ready..."
           timeout 600 bash -c 'while docker ps --format "{{.Status}}" | grep -q "health: starting"; do sleep 5; done' \
             || echo "container_status=timeout" >> "$GITHUB_ENV"
