@@ -103,25 +103,40 @@ fi
 echo "Extracting docker images to ${TEMP_DIR}..."
 tail -n +"${PAYLOAD_LINE}" "$0" | tar x -C "${TEMP_DIR}" --exclude='docker-static'
 
-_load_image() {
-  local file="$1" mb=$(( $(stat -c%s "$1") / 1024 / 1024 )) s='|/-\' i=0 t=0
-  local tmpout; tmpout=$(mktemp)
-  docker load -i "$file" >"$tmpout" 2>&1 &
-  local pid=$!
-  while kill -0 "$pid" 2>/dev/null; do
-    printf "\r  Loading %s (~%dMB) %s %ds" "$(basename "$file")" "$mb" "${s:i++%4:1}" "$t"
-    sleep 1; (( t++ )) || true
+_load_images_parallel() {
+  local SPINNER="|/-\\" SPIN_IDX=0 ELAPSED=0 PIDS=() OUTFILES=() LABELS=()
+  for ARCHIVE in "$@"; do
+    local OUTFILE; OUTFILE=$(mktemp -p "${TEMP_DIR}")
+    local LABEL="${ARCHIVE##*/}"; LABEL="${LABEL%%.*}"
+    OUTFILES+=("$OUTFILE"); LABELS+=("$LABEL")
+    docker load -i "$ARCHIVE" >"$OUTFILE" 2>&1 &
+    PIDS+=($!)
   done
-  wait "$pid"
-  printf "\r  Loaded  %s (~%dMB) in %ds\n" "$(basename "$file")" "$mb" "$t"
-  while IFS= read -r line; do printf "    %s\n" "$line"; done <"$tmpout"
-  rm -f "$tmpout"
+  while :; do
+    local STATUS="" ALIVE=0
+    for IDX in "${!PIDS[@]}"; do
+      if kill -0 "${PIDS[$IDX]}" 2>/dev/null; then
+        ALIVE=$(( ALIVE + 1 )); STATUS+="  ${LABELS[$IDX]}: loading"
+      else
+        STATUS+="  ${LABELS[$IDX]}: done   "
+      fi
+    done
+    printf "\r%s  %s %ds" "$STATUS" "${SPINNER:SPIN_IDX++%4:1}" "$ELAPSED"
+    sleep 1; (( ELAPSED++ )) || true
+    [ "$ALIVE" -eq 0 ] && break
+  done
+  local EXIT_CODE=0
+  for PID in "${PIDS[@]}"; do wait "$PID" || EXIT_CODE=$?; done
+  printf "\r  All images loaded in %ds\n" "$ELAPSED"
+  for OUTFILE in "${OUTFILES[@]}"; do while IFS= read -r LINE; do printf "    %s\n" "$LINE"; done <"$OUTFILE"; done
+  [ "$EXIT_CODE" -eq 0 ] || exit "$EXIT_CODE"
 }
 
 if [ "$OFFLINE_IMAGE_LOAD" != "true" ]; then
   echo "Loading docker images (this may take a few minutes)..."
-  _load_image "${TEMP_DIR}/docspace_images.tar.xz"
-  _load_image "${TEMP_DIR}/docs_images.tar.xz"
+  _load_images_parallel \
+    "${TEMP_DIR}/docspace_images.tar.xz" \
+    "${TEMP_DIR}/docs_images.tar.xz"
 fi
 
 echo "Extracting OneClickInstall files to the current directory..."
