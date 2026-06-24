@@ -71,31 +71,6 @@ server {
     proxy_hide_header 'X-Powered-By';
     proxy_buffering off;
 
-    access_by_lua '
-        local accept_header = ngx.req.get_headers()["Accept"]
-    
-    if ngx.req.get_method() == "GET" and 
-       accept_header ~= nil and 
-       string.find(accept_header, "html") and 
-       not ngx.re.match(ngx.var.request_uri, "ds-vpath|/api/") then
-        
-        -- 🎯 Use SSL_DOMAIN from environment
-        local ssl_domain = os.getenv("SSL_DOMAIN") or ""
-        
-        if ssl_domain ~= "" then
-            -- Allow framing from the SSL domain and its subdomains
-            ngx.header["Content-Security-Policy"] = string.format("frame-ancestors *.%s %s;", ssl_domain, ssl_domain)
-        else
-            -- Fallback: allow all domains (community mode)
-            ngx.header["Content-Security-Policy"] = "frame-ancestors *;"
-        end
-        
-        ngx.header["X-Frame-Options"] = nil
-        ngx.log(ngx.INFO, "CSP set using SSL_DOMAIN: ", ssl_domain)
-    end
-    ';
-
-
     location / {
         proxy_pass http://127.0.0.1:8092;
     }
