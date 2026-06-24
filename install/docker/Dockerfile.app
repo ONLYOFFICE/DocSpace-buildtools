@@ -581,6 +581,8 @@ COPY --from=build-java --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/service
 
 CMD ["supervisord", "-n"]
 
+FROM onlyoffice/4testing-docspace-mcp:latest AS mcp
+
 ## Image Preview ##
 FROM dotnetrun AS preview
 USER root
@@ -610,6 +612,7 @@ RUN set -eux; \
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/preview/docker-entrypoint.sh /docker-entrypoint.sh
 # COPY --chown=onlyoffice:onlyoffice preview/docker-entrypoint.sh /docker-entrypoint.sh
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/preview/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+# COPY --chown=onlyoffice:onlyoffice preview/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # nginx config, static files, router scripts
 COPY --from=src --exclude=onlyoffice-login.conf --exclude=onlyoffice-management.conf --chown=onlyoffice:onlyoffice /etc/nginx/conf.d /etc/nginx/conf.d
@@ -646,6 +649,10 @@ ENV PATH=/opt/java/bin:${PATH}
 
 COPY --from=javarun /opt/java/openjdk /opt/java
 COPY --from=build-java --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.minified/app.jar ${SRC_PATH}/publish/services/ASC.Identity.minified/app.jar
+
+# mcp
+COPY --from=mcp --chown=onlyoffice:onlyoffice  /srv/onlyoffice-docspace-mcp/bin ${SRC_PATH}/publish/services/onlyoffice-docspace-mcp/bin
+COPY --from=mcp --chown=onlyoffice:onlyoffice  /srv/onlyoffice-docspace-mcp/LICENSE ${SRC_PATH}/publish/services/onlyoffice-docspace-mcp/LICENSE
 
 RUN set -eux; \
     sed -i -e 's#$public_root#/var/www/public/#' -e "/map \$scheme \$document_server {/,/}/ s|default \"http://[^\"]*\";|default \$document_server_vs_path;|" /etc/nginx/conf.d/onlyoffice.conf; \

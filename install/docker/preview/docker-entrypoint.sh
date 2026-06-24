@@ -34,6 +34,8 @@ ELK_PORT=${ELK_PORT:-"9200"}
 export ELK_THREADS=${ELK_THREADS:-1}
 export ELK_CONNECTION_HOST=${ELK_HOST:-"$ELK_CONTAINER_NAME"}
 
+export MCP_ENDPOINT=${MCP_ENDPOINT:-"http://127.0.0.1:5158/mcp"}
+
 MIGRATION_TYPE=${MIGRATION_TYPE:-"STANDALONE"}  # STANDALONE or SAAS
 
 export MYSQL_PWD="$MYSQL_PASSWORD"
@@ -49,6 +51,11 @@ LETSENCRYPT_STAGING=${LETSENCRYPT_STAGING:-"false"}
 LETSENCRYPT_FORCE_RENEW=${LETSENCRYPT_FORCE_RENEW:-"false"}
 LETSENCRYPT_FAIL_OPEN=${LETSENCRYPT_FAIL_OPEN:-"false"}
 
+log() { echo "[$(date +'%F %T')] $1"; }
+
+# ============================================
+# NGINX SSL SETUP
+# ============================================
 setup_nginx_ssl() {
     mkdir -p /var/www/certbot /etc/letsencrypt
 
@@ -143,14 +150,134 @@ setup_nginx_ssl() {
     log "SSL disabled - HTTP only"
     write_http_nginx_conf
 }
-log() { echo "[$(date +'%F %T')] $1"; }
 
+# ============================================
+# REPLACE CSP LUA USING MARKERS
+# ============================================
+replace_csp_lua() {
+    local NGINX_CONF="/etc/nginx/conf.d/onlyoffice.conf"
+    local OPENRESTY_CONF="/usr/local/openresty/nginx/conf/nginx.conf"
+
+    if [[ ! -f "$NGINX_CONF" ]]; then
+        log "⚠️ onlyoffice.conf not found at $NGINX_CONF"
+        return 1
+    fi
+
+    log "🔧 Replacing Redis CSP Lua with shared_dict version"
+
+    # Add lua_shared_dict if missing
+    if [[ -f "$OPENRESTY_CONF" ]]; then
+        if ! grep -q "lua_shared_dict csp_cache" "$OPENRESTY_CONF"; then
+            log "Adding lua_shared_dict csp_cache 10m"
+            sed -i '/^http {/a\    lua_shared_dict csp_cache 10m;' "$OPENRESTY_CONF"
+            log "✅ lua_shared_dict added"
+        else
+            log "✅ lua_shared_dict already exists"
+        fi
+    fi
+
+    # Verify markers exist
+    if ! grep -q "# BEGIN_CSP_LUA" "$NGINX_CONF"; then
+        log "❌ BEGIN_CSP_LUA marker not found"
+        return 1
+    fi
+
+    if ! grep -q "# END_CSP_LUA" "$NGINX_CONF"; then
+        log "❌ END_CSP_LUA marker not found"
+        return 1
+    fi
+
+    # Create replacement block
+    local TEMP_LUA
+    TEMP_LUA=$(mktemp)
+
+    cat > "$TEMP_LUA" <<'EOF'
+# BEGIN_CSP_LUA
+	access_by_lua '
+		local accept = ngx.req.get_headers()["Accept"]
+
+		if ngx.req.get_method() ~= "GET"
+		   or not accept
+		   or not string.find(accept, "html")
+		   or ngx.re.match(ngx.var.request_uri, "ds-vpath|/api/")
+		then
+			return
+		end
+
+		local cache = ngx.shared.csp_cache
+		local host  = ngx.var.host
+
+		local cached = cache:get(host)
+		if cached then
+			ngx.header.Content_Security_Policy = cached
+			return
+		end
+
+		local res = ngx.location.capture("/api/2.0/security/csp", {
+			method = ngx.HTTP_GET
+		})
+
+		if res and res.status == 200 and res.body then
+			local ok, data = pcall(require("cjson").decode, res.body)
+
+			if ok and data and data.response and data.response.header then
+				local header = data.response.header
+
+				ngx.header.Content_Security_Policy = header
+				cache:set(host, header, 15)
+
+				ngx.log(ngx.INFO, "CSP cached for host: ", host)
+			end
+		end
+	';
+# END_CSP_LUA
+EOF
+
+    # Replace block between markers
+    local TEMP_CONF
+    TEMP_CONF=$(mktemp)
+
+    LUA_FILE="$TEMP_LUA" perl -0777 -pe '
+BEGIN {
+    open my $fh, "<", $ENV{LUA_FILE} or die "Cannot open LUA_FILE: $!";
+    local $/;
+    $lua = <$fh>;
+}
+s/# BEGIN_CSP_LUA.*?# END_CSP_LUA/$lua/s;
+' "$NGINX_CONF" > "$TEMP_CONF"
+
+    if [[ $? -ne 0 ]]; then
+        log "❌ Failed to replace CSP Lua block"
+        rm -f "$TEMP_LUA" "$TEMP_CONF"
+        return 1
+    fi
+
+    mv "$TEMP_CONF" "$NGINX_CONF"
+
+    rm -f "$TEMP_LUA"
+
+    # Verify replacement
+    if grep -q "ngx.shared.csp_cache" "$NGINX_CONF"; then
+        log "✅ CSP Lua successfully replaced"
+        return 0
+    else
+        log "❌ CSP replacement verification failed"
+        return 1
+    fi
+}
+
+# ============================================
+# MYSQL MIGRATION HELPERS
+# ============================================
 migration_count() {
     mysql "${MYSQL_ARGS[@]}" -sN -e "SELECT COUNT(*) FROM __EFMigrationsHistory;" \
         "$MYSQL_DATABASE" 2>/dev/null || echo "?"
 }
 
-# Function to update configuration files
+
+# ============================================
+# CONFIGURATION UPDATES
+# ============================================
 update_configs() {
     log "📝 Updating configuration files..."
 
@@ -167,7 +294,8 @@ update_configs() {
         -e "this.files.docservice.secret.value=process.env.DOCUMENT_SERVER_JWT_SECRET" \
         -e "this.files.docservice.secret.header=process.env.DOCUMENT_SERVER_JWT_HEADER" \
         -e "this.files.docservice.url.portal=process.env.APP_URL_PORTAL" \
-        -e "this.core.notify.postman='services'"
+        -e "this.core.notify.postman='services'" \
+        -e "this.ai.mcp[0].endpoint=process.env.MCP_ENDPOINT"
 
     # API system (connection + core)
     ${JSON} "${PATH_TO_CONF}/apisystem.json" \
@@ -190,7 +318,9 @@ update_configs() {
     log "✅ Configuration files updated"
 }
 
-# Function to wait for MySQL and run migrations
+# ============================================
+# DATABASE MIGRATIONS
+# ============================================
 run_migrations() {
     migration_args=()
     [[ ${MIGRATION_TYPE} == "STANDALONE" ]] && migration_args=(standalone=true)
@@ -224,12 +354,17 @@ run_migrations() {
     return 1
 }
 
+# ============================================
+# MAIN
+# ============================================
 main() {
     echo "🚀 Starting Docker entrypoint..."
     echo "=================================="
     log "=== Starting initialization ==="
     update_configs
     run_migrations || { log "❌ Migration failed - exiting"; exit 1; }
+    # Replace Redis Lua with shared_dict version 
+    replace_csp_lua
     setup_nginx_ssl
     log "🌐 Initializing nginx..." && /nginx/docker-entrypoint.sh
     log "✅ Initialization complete - starting supervisord"
