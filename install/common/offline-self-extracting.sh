@@ -105,7 +105,8 @@ tail -n +"${PAYLOAD_LINE}" "$0" | tar x -C "${TEMP_DIR}" --exclude='docker-stati
 
 _load_image() {
   local file="$1" mb=$(( $(stat -c%s "$1") / 1024 / 1024 )) s='|/-\' i=0 t=0
-  docker load -i "$file" &
+  local tmpout; tmpout=$(mktemp)
+  docker load -i "$file" >"$tmpout" 2>&1 &
   local pid=$!
   while kill -0 "$pid" 2>/dev/null; do
     printf "\r  Loading %s (~%dMB) %s %ds" "$(basename "$file")" "$mb" "${s:i++%4:1}" "$t"
@@ -113,6 +114,8 @@ _load_image() {
   done
   wait "$pid"
   printf "\r  Loaded  %s (~%dMB) in %ds\n" "$(basename "$file")" "$mb" "$t"
+  while IFS= read -r line; do printf "    %s\n" "$line"; done <"$tmpout"
+  rm -f "$tmpout"
 }
 
 if [ "$OFFLINE_IMAGE_LOAD" != "true" ]; then
