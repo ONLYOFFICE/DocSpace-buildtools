@@ -68,7 +68,7 @@ RUN <<EOF
     mkdir -p /etc/nginx/conf.d && cp -f buildtools/config/nginx/onlyoffice*.conf /etc/nginx/conf.d/
     mkdir -p /etc/nginx/includes/ && cp -f buildtools/config/nginx/includes/onlyoffice*.conf /etc/nginx/includes/ && cp -f buildtools/config/nginx/includes/server-*.conf /etc/nginx/includes/
     sed -i "s/\"number\".*,/\"number\": \"${PRODUCT_VERSION}.${BUILD_NUMBER}\",/g" /app/onlyoffice/config/appsettings.json
-    sed -e 's/#//' -i /etc/nginx/conf.d/onlyoffice.conf
+#    sed -e 's/#//' -i /etc/nginx/conf.d/onlyoffice.conf
     if [[ "${DEBUG_INFO,,}" =~ ^(true|1|yes)$ ]]; then
         pip install --no-cache-dir -r ${SRC_PATH}/buildtools/requirements.txt --break-system-packages && \
         python3 ${SRC_PATH}/buildtools/debuginfo.py && \

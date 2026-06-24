@@ -156,14 +156,26 @@ setup_nginx_ssl() {
 # ============================================
 replace_csp_lua() {
     local NGINX_CONF="/etc/nginx/conf.d/onlyoffice.conf"
-    local OPENRESTY_CONF="/usr/local/openresty/nginx/conf/nginx.conf"
 
-    if [[ ! -f "$NGINX_CONF" ]]; then
-        log "⚠️ onlyoffice.conf not found at $NGINX_CONF"
-        return 1
+    # Add lua_shared_dict if missing
+    if ! grep -q "lua_shared_dict csp_cache" "$NGINX_CONF"; then
+        log "Adding lua_shared_dict csp_cache 10m to onlyoffice.conf"
+
+        sed -i '/server_names_hash_bucket_size 128;/a\
+    lua_shared_dict csp_cache 10m;
+    ' "$NGINX_CONF"
+
+        log "✅ lua_shared_dict added to onlyoffice.conf"
+    else
+        log "✅ lua_shared_dict already exists in onlyoffice.conf"
     fi
 
-    log "🔧 Replacing Redis CSP Lua with shared_dict version"
+        if [[ ! -f "$NGINX_CONF" ]]; then
+            log "⚠️ onlyoffice.conf not found at $NGINX_CONF"
+            return 1
+        fi
+ 
+        log "🔧 Replacing Redis CSP Lua with shared_dict version"
 
     # Add lua_shared_dict if missing
     if [[ -f "$OPENRESTY_CONF" ]]; then
