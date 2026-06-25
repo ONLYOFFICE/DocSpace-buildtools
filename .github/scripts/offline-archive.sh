@@ -97,8 +97,13 @@ build() {
 
   rm -rf "${INSTALL_PATH}"/{docspace_images.tar.xz,docs_images.tar.xz,docker-stack.tar.gz,docker-static}
 
-  cat "${INSTALL_PATH}/common/offline-self-extracting.sh" "${INSTALL_PATH}/offline-docspace.tar" \
+  awk '/^__ARGS_SCRIPT_START__$/{print; while((getline line < ARGS_FILE)>0) print line; close(ARGS_FILE); next} 1' \
+    ARGS_FILE="${INSTALL_PATH}/OneClickInstall/install-Docker-args.sh" \
+    "${INSTALL_PATH}/common/offline-self-extracting.sh" > "${INSTALL_PATH}/offline-self-extracting-patched.sh"
+
+  cat "${INSTALL_PATH}/offline-self-extracting-patched.sh" "${INSTALL_PATH}/offline-docspace.tar" \
     > "${INSTALL_PATH}/${ARTIFACT_NAME}"
+  rm -f "${INSTALL_PATH}/offline-self-extracting-patched.sh"
   chmod +x "${INSTALL_PATH}/${ARTIFACT_NAME}"
 
   echo "ARTIFACT_NAME=${ARTIFACT_NAME}" >> "$GITHUB_ENV"
