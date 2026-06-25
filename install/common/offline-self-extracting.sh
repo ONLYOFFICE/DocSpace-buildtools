@@ -3,6 +3,7 @@ set -e
 
 DOCSPACE_VERSION=""
 
+ARGS_SCRIPT=$(awk '/^__ARGS_SCRIPT_START__$/{f=1;next}/^__ARGS_SCRIPT_END__$/{exit}f' "$0")
 PAYLOAD_LINE=$(awk '/^__END_OF_SHELL_SCRIPT__$/ {print NR+1; exit}' "$0")
 TEMP_DIR=$(mktemp -d)
 trap 'echo "Cleaning up temporary files..."; rm -rf "${TEMP_DIR}"' EXIT
@@ -14,8 +15,7 @@ for arg in "$@"; do
       echo "Offline DocSpace installer. Docker images are bundled in this archive."
       echo "All options are passed to install-Docker.sh. Available options:"
       echo
-      tail -n +"${PAYLOAD_LINE}" "$0" | tar -x -C "$TEMP_DIR" install-Docker-args.sh
-      bash "$TEMP_DIR/install-Docker-args.sh" --help
+      echo "$ARGS_SCRIPT" | bash /dev/stdin --help
       exit 0
     ;;
     -v|-V|--version)
@@ -29,8 +29,7 @@ done
 
 SCRIPT_DIR=$(dirname "$0")
 
-tail -n +"${PAYLOAD_LINE}" "$0" | tar -x -C "$TEMP_DIR" install-Docker-args.sh
-source "$TEMP_DIR/install-Docker-args.sh" "$@"
+source <(echo "$ARGS_SCRIPT") "$@"
 
 _MISSING=0
 _error_missing() {
@@ -155,4 +154,6 @@ fi
 
 exit 0
 
+__ARGS_SCRIPT_START__
+__ARGS_SCRIPT_END__
 __END_OF_SHELL_SCRIPT__
