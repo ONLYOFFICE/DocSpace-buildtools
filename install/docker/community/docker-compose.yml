@@ -1,0 +1,167 @@
+x-service: &x-service-base
+  env_file: "./.env"
+  environment:
+    APP_DOTNET_ENV: ${APP_DOTNET_ENV}
+    APP_CORE_BASE_DOMAIN: ${APP_CORE_BASE_DOMAIN}
+    APP_CORE_MACHINEKEY: "" 
+    APP_URL_PORTAL: ${APP_URL_PORTAL}
+    APP_KNOWN_NETWORKS: ${APP_KNOWN_NETWORKS}
+    APP_KNOWN_PROXIES: ${APP_KNOWN_PROXIES}
+    INSTALLATION_TYPE: ${INSTALLATION_TYPE}
+    OAUTH_REDIRECT_URL: ${OAUTH_REDIRECT_URL}
+    WRONG_PORTAL_NAME_URL: ${WRONG_PORTAL_NAME_URL}
+    DATABASE_MIGRATION: ${DATABASE_MIGRATION}
+    LOG_LEVEL: ${LOG_LEVEL}
+    DEBUG_INFO: ${DEBUG_INFO}
+    NODE_OPTIONS: ${NODE_OPTIONS}
+    CERTIFICATE_PATH: ${CERTIFICATE_PATH}
+    MYSQL_PORT: ${MYSQL_PORT}
+    MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    MYSQL_DATABASE: ${MYSQL_DATABASE}
+    MYSQL_USER: ${MYSQL_USER}
+    MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    JDBC_URL: ${MYSQL_CONTAINER_NAME}
+    JDBC_DATABASE: ${MYSQL_DATABASE}
+    JDBC_USER_NAME: ${MYSQL_USER}
+    JDBC_PASSWORD: ${MYSQL_PASSWORD}
+    DOCUMENT_CONTAINER_NAME: ${DOCUMENT_CONTAINER_NAME}
+    DOCUMENT_SERVER_URL_PUBLIC: ${DOCUMENT_SERVER_URL_PUBLIC}
+    DOCUMENT_SERVER_URL_EXTERNAL: ${DOCUMENT_SERVER_URL_EXTERNAL}
+    DOCUMENT_SERVER_JWT_SECRET: ${DOCUMENT_SERVER_JWT_SECRET}
+    DOCUMENT_SERVER_JWT_HEADER: ${DOCUMENT_SERVER_JWT_HEADER}
+    ELK_CONTAINER_NAME: ${ELK_CONTAINER_NAME}
+    ELK_SCHEME: ${ELK_SCHEME}
+    ELK_HOST: ${ELK_HOST}
+    ELK_PORT: ${ELK_PORT}
+    SPRING_PROFILES_ACTIVE: minified,stage
+
+services:
+  onlyoffice-docspace:
+    <<: [*x-service-base]
+    restart: always
+    volumes:
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}app_data:/app/onlyoffice/data
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
+    ports:
+      - "${EXTERNAL_PORT:-80}:80"
+    user: root
+    cap_add:
+      - SYS_NICE
+    extra_hosts:
+      - "localhost:host-gateway"
+      - "host.docker.internal:host-gateway"
+    build:
+      context: ..
+      args:
+        - GIT_BRANCH=${GIT_BRANCH}
+        - DEPLOY_ARGS=deploy:preview
+      dockerfile: Dockerfile.app 
+      target: community
+    container_name: onlyoffice-docspace  
+    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}:${DOCKER_TAG}"
+  
+  onlyoffice-mysql-server:
+    image: ${REGISTRY}${MYSQL_IMAGE}
+    cap_add:
+      - SYS_NICE
+    container_name: ${MYSQL_CONTAINER_NAME}
+    restart: always
+    tty: true
+    user: mysql
+    expose:
+      - "3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    command:
+      - "--sql-mode=NO_ENGINE_SUBSTITUTION"
+      - "--max_connections=1000"
+      - "--max_allowed_packet=1048576000"
+      - "--group_concat_max_len=2048"    
+    healthcheck:
+      test: ["CMD", "mysql", "-u", "${MYSQL_USER}", "--password=${MYSQL_PASSWORD}", "-e", ";"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    volumes:
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}mysql_data:/var/lib/mysql
+
+  onlyoffice-opensearch:
+    image: ${REGISTRY}${ELK_IMAGE_NAME} 
+    container_name: ${ELK_CONTAINER_NAME}
+    restart: always
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms4g -Xmx4g -Dlog4j2.formatMsgNoLookups=true"
+      - "indices.fielddata.cache.size=30%"
+      - "indices.memory.index_buffer_size=30%"
+      - "DISABLE_INSTALL_DEMO_CONFIG=true"
+      - "DISABLE_SECURITY_PLUGIN=true"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536 # maximum number of open files for the OpenSearch user, set to at least 65536 on modern systems
+        hard: 65536
+    volumes:
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}os_data:/usr/share/opensearch/data
+    expose:
+      - "9200"
+      - "9600" # required for Performance Analyzer
+    ports:
+      - 127.0.0.1:9200:9200
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health?pretty"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 10s
+
+  onlyoffice-document-server:
+    image: "${REGISTRY}${DOCUMENT_SERVER_IMAGE_NAME}"
+    container_name: ${DOCUMENT_CONTAINER_NAME}
+    # Strings below enable the JSON Web Token validation.
+    environment:
+      - JWT_ENABLED=true
+      - JWT_SECRET=${DOCUMENT_SERVER_JWT_SECRET}
+      - JWT_HEADER=${DOCUMENT_SERVER_JWT_HEADER}
+      - JWT_IN_BODY=true
+        #- AMQP_URI=${RABBIT_PROTOCOL}://${RABBIT_USER_NAME}:${RABBIT_PASSWORD}@${RABBIT_CONTAINER_NAME}:${RABBIT_PORT}${RABBIT_VIRTUAL_HOST}
+        #- REDIS_SERVER_HOST=${REDIS_HOST:-${REDIS_CONTAINER_NAME}}
+        #- REDIS_SERVER_PORT=${REDIS_PORT:-6379}
+        #- REDIS_SERVER_USER=${REDIS_USER_NAME}
+        #- REDIS_SERVER_PASS=${REDIS_PASSWORD}
+        #- REDIS_SERVER_DB=${REDIS_DB}
+    volumes:
+      #- ${CERTIFICATE_PATH}:/var/www/onlyoffice/Data/certs/extra-ca-certs.pem
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}app_data:/var/www/onlyoffice/Data
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}ds_fonts:/usr/share/fonts
+    expose:
+      - '80'
+    extra_hosts:
+      #- "${EXTRA_HOSTS:-placeholder.local:127.0.0.1}"
+      #- "localhost:host-gateway"
+       - "host.docker.internal:host-gateway"
+    stdin_open: true
+    restart: always
+    stop_grace_period: 60s
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/info/info.json"]
+      interval: 30s
+      retries: 5
+      start_period: 60s
+      timeout: 10s      
+
+volumes:
+  log_data:
+  app_data:
+  ds_fonts:
+  certbot:
+  mysql_data:
+  os_data:

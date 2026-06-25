@@ -12,7 +12,7 @@ on:
       - ".github/workflows/ci-oci-docker-install.yml"
       - "install/OneClickInstall/install-Docker.sh"
       - "install/docker/*.yml"
-      - "install/docker/preview/docker-compose.yml"
+      - "install/docker/community/docker-compose.yml"
   workflow_dispatch:
     inputs:
       testing:
@@ -130,7 +130,7 @@ jobs:
           AWS_RESOURCE_ID: ${{ secrets.AWS_RESOURCE_ID }}
         run: bash .github/scripts/offline-archive.sh upload
 
-  Install-Preview:
+  Install-Community:
     if: github.event.inputs.offline != 'true'
     runs-on: ${{ matrix.runner }}
     strategy:
@@ -141,7 +141,7 @@ jobs:
             arch: amd
           - runner: ubuntu-24.04-arm
             arch: arm
-    name: Preview [${{ matrix.arch }}]
+    name: Community [${{ matrix.arch }}]
 
     steps:
       - name: Checkout repository
@@ -158,12 +158,12 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Start preview
-        working-directory: install/docker/preview
+      - name: Start community
+        working-directory: install/docker/community
         env:
           DOCKERHUB_USERNAME_PAT: ${{ secrets.DOCKERHUB_USERNAME_PAT }}
           DOCKERHUB_TOKEN_PAT: ${{ secrets.DOCKERHUB_TOKEN_PAT }}
-        run: bash "$GITHUB_WORKSPACE/.github/scripts/docker-utils.sh" start-preview
+        run: bash "$GITHUB_WORKSPACE/.github/scripts/docker-utils.sh" start-community
 
       - name: Check container status
         run: bash .github/scripts/docker-utils.sh status

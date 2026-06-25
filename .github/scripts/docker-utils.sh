@@ -5,7 +5,7 @@
 #   docker-utils.sh status                    — print health status for all containers
 #   docker-utils.sh logs [TAIL]               — print logs for unhealthy containers and exit on failure
 #   docker-utils.sh shellcheck                — run ShellCheck on all docker scripts
-#   docker-utils.sh start-preview             — resolve tag, patch .env and start preview stack (run from preview dir)
+#   docker-utils.sh start-community           — resolve tag, patch .env and start community stack (run from community dir)
 
 set -e
 
@@ -41,7 +41,7 @@ print_logs() {
   esac
 }
 
-start_preview() {
+start_community() {
   set -x
   if [ "${IS_4TESTING:-true}" != "false" ]; then
     sed -i 's~^\(\s*DOCKER_IMAGE_PREFIX=\).*~\14testing-docspace~' .env
@@ -67,11 +67,11 @@ start_preview() {
       AUTH_HEADER=(-H "Authorization: JWT ${DOCKERHUB_JWT}")
     fi
     DOCKER_TAG=$(curl -fsSL "${AUTH_HEADER[@]}" \
-      "https://hub.docker.com/v2/repositories/onlyoffice/${IMAGE_PREFIX}-preview/tags?page_size=100" \
+      "https://hub.docker.com/v2/repositories/onlyoffice/${IMAGE_PREFIX}/tags?page_size=100" \
       | jq -r '.results[] | select(.name | test("^(?!99\\.).*")) | select(.images[]?.architecture=="'"$ARCH"'") | .name // empty' \
       | grep -E "$TAG_REGEX" | sort -V | tail -n 1)
     set -x
-    [ -n "$DOCKER_TAG" ] || { echo "::error::Failed to get Docker tag for onlyoffice/${IMAGE_PREFIX}-preview"; exit 1; }
+    [ -n "$DOCKER_TAG" ] || { echo "::error::Failed to get Docker tag for onlyoffice/${IMAGE_PREFIX}"; exit 1; }
   fi
   sed -i "s~^\(\s*DOCKER_TAG=\).*~\1${DOCKER_TAG}~" .env
 
@@ -127,6 +127,6 @@ case "$COMMAND" in
   status)         print_status ;;
   logs)           print_logs ;;
   shellcheck)     run_shellcheck ;;
-  start-preview)  start_preview ;;
+  start-community)  start_community ;;
   *)              echo "Unknown command: $COMMAND"; exit 1 ;;
 esac
