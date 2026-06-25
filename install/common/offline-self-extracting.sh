@@ -18,7 +18,7 @@ for arg in "$@"; do
       bash "$TEMP_DIR/install-Docker-args.sh" --help
       exit 0
     ;;
-    --version)
+    -v|-V|--version)
       echo "DocSpace Stack v${DOCSPACE_VERSION:-unknown}"
       exit 0
     ;;
