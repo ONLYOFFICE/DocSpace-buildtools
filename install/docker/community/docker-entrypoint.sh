@@ -54,6 +54,24 @@ LETSENCRYPT_FAIL_OPEN=${LETSENCRYPT_FAIL_OPEN:-"false"}
 log() { echo "[$(date +'%F %T')] $1"; }
 
 # ============================================
+# CONFIGURE NLOG LEVEL
+# ============================================
+update_nlog_level() {
+    if [ -n "${LOG_LEVEL:-}" ]; then
+        NLOG_PATH="${PATH_TO_CONF}/nlog.config"
+
+        if [ ! -f "$NLOG_PATH" ]; then
+            log "nlog.config not found: $NLOG_PATH"
+            return 1
+        fi
+
+        log "Updating NLog minlevel to ${LOG_LEVEL}"
+
+        sed -i '/ZiggyCreatures/! s/minlevel="[A-Za-z0-9_]*"/minlevel="'"$LOG_LEVEL"'"/g' "$NLOG_PATH"
+    fi
+}
+
+# ============================================
 # CONFIGURE SECRETS
 # ============================================
 ensure_secret() {
@@ -429,6 +447,7 @@ main() {
     echo "🚀 Starting Docker entrypoint..."
     echo "=================================="
     log "=== Starting initialization ==="
+    update_nlog_level
     ensure_secret APP_CORE_MACHINEKEY 32
     export SPRING_APPLICATION_SIGNATURE_SECRET="$APP_CORE_MACHINEKEY"
     ensure_secret SPRING_APPLICATION_ENCRYPTION_SECRET 32
