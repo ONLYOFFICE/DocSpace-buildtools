@@ -8,7 +8,7 @@ BACKEND_PATH="${SRC_PATH}/publish/services/backend"
 DEBUG_INFO=${DEBUG_INFO:-"false"}
 APP_CORE_BASE_DOMAIN=${APP_CORE_BASE_DOMAIN:-"localhost"}
 APP_URL_PORTAL=${APP_URL_PORTAL:-"http://127.0.0.1:8092"}
-: "${APP_CORE_MACHINEKEY:?APP_CORE_MACHINEKEY must be set}"
+#: "${APP_CORE_MACHINEKEY:?APP_CORE_MACHINEKEY must be set}"
 
 DOCUMENT_CONTAINER_NAME=${DOCUMENT_CONTAINER_NAME:-"onlyoffice-document-server"}
 DOCUMENT_SERVER_URL_PUBLIC=${DOCUMENT_SERVER_URL_PUBLIC:-"/ds-vpath/"}
@@ -54,11 +54,44 @@ LETSENCRYPT_FAIL_OPEN=${LETSENCRYPT_FAIL_OPEN:-"false"}
 log() { echo "[$(date +'%F %T')] $1"; }
 
 # ============================================
+# CONFIGURE SECRETS
+# ============================================
+ensure_secret() {
+    local var_name="$1"
+    local length="${2:-32}"
+
+    local secrets_dir="/app/onlyoffice/data/.secrets"
+    local secret_file="${secrets_dir}/${var_name}"
+
+    # Read current value from environment
+    eval "local value=\${$var_name:-}"
+
+    # 1. Environment variable has highest priority
+    if [ -n "$value" ]; then
+        log "Using $var_name from environment."
+        return
+    fi
+
+    mkdir -p "$secrets_dir"
+
+    # 2. Use saved value if present
+    if [ -f "$secret_file" ]; then
+        value="$(cat "$secret_file")"
+        log "Using persisted $var_name."
+    else
+    # 3. Generate a new value
+        value="$(openssl rand -base64 64 | tr -dc 'A-Za-z0-9' | head -c "$length")"
+        printf '%s' "$value" > "$secret_file"
+        chmod 600 "$secret_file"
+        log "Generated and persisted $var_name."
+    fi
+
+    export "$var_name=$value"
+}
+
+# ============================================
 # NGINX SSL SETUP
 # ============================================
-#
-#
-#
 setup_nginx_ssl() {
     mkdir -p /var/www/certbot /etc/letsencrypt
 
@@ -396,6 +429,9 @@ main() {
     echo "🚀 Starting Docker entrypoint..."
     echo "=================================="
     log "=== Starting initialization ==="
+    ensure_secret APP_CORE_MACHINEKEY 32
+    export SPRING_APPLICATION_SIGNATURE_SECRET="$APP_CORE_MACHINEKEY"
+    ensure_secret SPRING_APPLICATION_ENCRYPTION_SECRET 32
     update_configs
     run_migrations || { log "❌ Migration failed - exiting"; exit 1; }
     # Replace Redis Lua with shared_dict version 
