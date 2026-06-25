@@ -47,7 +47,7 @@ create() {
   sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\|STACK_MODE="\|NON_INTERACTIVE="\).*"$~\1true"~g' \
     "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
   DOCSPACE_VERSION=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "docspace-" \
-    | sed -E "s/.*:([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+.*/\1/" | head -n1)
+    | sed -E "s/.*:([0-9]+\.[0-9]+\.[0-9]+).*/\1/" | head -n1)
   sed -i "s~\(DOCSPACE_VERSION=\)\"[^\"]*\"~\1\"${DOCSPACE_VERSION}\"~g" \
     "${INSTALL_PATH}/common/offline-self-extracting.sh"
 
