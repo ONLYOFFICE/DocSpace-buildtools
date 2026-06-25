@@ -56,6 +56,9 @@ log() { echo "[$(date +'%F %T')] $1"; }
 # ============================================
 # NGINX SSL SETUP
 # ============================================
+#
+#
+#
 setup_nginx_ssl() {
     mkdir -p /var/www/certbot /etc/letsencrypt
 
@@ -73,6 +76,32 @@ setup_nginx_ssl() {
             > /etc/nginx/conf.d/onlyoffice-proxy.conf
     }
 
+    parse_ssl_domains() {
+        IFS=',' read -ra SSL_DOMAINS <<< "$SSL_DOMAIN"
+
+        CERTBOT_DOMAIN_ARGS=()
+        NGINX_SERVER_NAMES=""
+
+        for domain in "${SSL_DOMAINS[@]}"; do
+            domain="$(echo "$domain" | xargs)"
+
+            if [[ -z "$domain" ]]; then
+                continue
+            fi
+
+            CERTBOT_DOMAIN_ARGS+=("-d" "$domain")
+            NGINX_SERVER_NAMES="${NGINX_SERVER_NAMES} ${domain}"
+        done
+
+        NGINX_SERVER_NAMES="$(echo "$NGINX_SERVER_NAMES" | xargs)"
+        PRIMARY_SSL_DOMAIN="$(echo "${SSL_DOMAINS[0]}" | xargs)"
+
+        if [[ -z "$PRIMARY_SSL_DOMAIN" || ${#CERTBOT_DOMAIN_ARGS[@]} -eq 0 ]]; then
+            log "SSL_DOMAIN is empty or invalid"
+            exit 1
+        fi
+    }
+
     if [[ "$SSL_MODE" == "custom" ]]; then
         if [[ -z "$SSL_DOMAIN" || -z "$SSL_CERT_PATH" || -z "$SSL_KEY_PATH" ]]; then
             log "SSL_MODE=custom requires SSL_DOMAIN, SSL_CERT_PATH, SSL_KEY_PATH"
@@ -84,8 +113,10 @@ setup_nginx_ssl() {
             exit 1
         fi
 
-        write_ssl_nginx_conf "$SSL_DOMAIN" "$SSL_CERT_PATH" "$SSL_KEY_PATH"
-        log "Using custom SSL certificate"
+        parse_ssl_domains
+
+        write_ssl_nginx_conf "$NGINX_SERVER_NAMES" "$SSL_CERT_PATH" "$SSL_KEY_PATH"
+        log "Using custom SSL certificate for: $NGINX_SERVER_NAMES"
         return 0
     fi
 
@@ -106,15 +137,18 @@ setup_nginx_ssl() {
             exit 1
         fi
 
-        local cert_file="/etc/letsencrypt/live/$SSL_DOMAIN/fullchain.pem"
-        local key_file="/etc/letsencrypt/live/$SSL_DOMAIN/privkey.pem"
+        parse_ssl_domains
+
+        local cert_file="/etc/letsencrypt/live/$PRIMARY_SSL_DOMAIN/fullchain.pem"
+        local key_file="/etc/letsencrypt/live/$PRIMARY_SSL_DOMAIN/privkey.pem"
 
         if [[ ! -f "$cert_file" || ! -f "$key_file" || "$LETSENCRYPT_FORCE_RENEW" == "true" ]]; then
-            log "Requesting Let's Encrypt certificate for $SSL_DOMAIN"
-            log "Port 80 must be reachable from the Internet and point to this container"
+            log "Requesting Let's Encrypt certificate for: $NGINX_SERVER_NAMES"
+            log "Port 80 must be reachable from the Internet for all domains"
 
             local staging_arg=()
             local renew_arg=()
+
             [[ "$LETSENCRYPT_STAGING" == "true" ]] && staging_arg=(--staging)
             [[ "$LETSENCRYPT_FORCE_RENEW" == "true" ]] && renew_arg=(--force-renewal)
 
@@ -125,7 +159,7 @@ setup_nginx_ssl() {
                 --non-interactive \
                 --agree-tos \
                 --email "$SSL_EMAIL" \
-                -d "$SSL_DOMAIN" \
+                "${CERTBOT_DOMAIN_ARGS[@]}" \
                 "${staging_arg[@]}" \
                 "${renew_arg[@]}"; then
                 log "Let's Encrypt certificate created"
@@ -139,11 +173,11 @@ setup_nginx_ssl() {
                 exit 1
             fi
         else
-            log "Existing Let's Encrypt certificate found for $SSL_DOMAIN"
+            log "Existing Let's Encrypt certificate found for $PRIMARY_SSL_DOMAIN"
         fi
 
-        write_ssl_nginx_conf "$SSL_DOMAIN" "$cert_file" "$key_file"
-        log "Using Let's Encrypt certificate"
+        write_ssl_nginx_conf "$NGINX_SERVER_NAMES" "$cert_file" "$key_file"
+        log "Using Let's Encrypt certificate for: $NGINX_SERVER_NAMES"
         return 0
     fi
 

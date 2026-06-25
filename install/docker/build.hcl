@@ -221,11 +221,11 @@ target "onlyoffice-node-services" {
   tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-node:${DOCKER_TAG}"]
 }
 
-target "onlyoffice-preview" {
+target "onlyoffice-community" {
   context    = "."
   dockerfile = "${DOCKERFILE}"
-  target     = "preview"
-  tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-preview:${DOCKER_TAG}"]
+  target     = "community"
+  tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}:${DOCKER_TAG}"]
   args = {
     DEPLOY_ARGS = "deploy:preview"
   }
@@ -313,9 +313,9 @@ group "java-services" {
   ]
 }
 
-group "preview-services" {
+group "community-services" {
   targets = [
-    "onlyoffice-preview",
+    "onlyoffice-community",
   ]
 }
 

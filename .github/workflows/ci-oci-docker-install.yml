@@ -12,7 +12,7 @@ on:
       - ".github/workflows/ci-oci-docker-install.yml"
       - "install/OneClickInstall/install-Docker.sh"
       - "install/docker/*.yml"
-      - "install/docker/preview/docker-compose.yml"
+      - "install/docker/community/docker-compose.yml"
   workflow_dispatch:
     inputs:
       testing:
@@ -242,7 +242,7 @@ jobs:
             --region us-east-1 --query 'status' --output text || :)
           echo "API Gateway test-invoke status: ${API_STATUS:-<failed>}"
 
-  Install-Preview:
+  Install-Community:
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -252,7 +252,7 @@ jobs:
             arch: amd
           - runner: ubuntu-24.04-arm
             arch: arm
-    name: Preview [${{ matrix.arch }}]
+    name: Community [${{ matrix.arch }}]
 
     steps:
       - name: Free Disk Space
@@ -269,8 +269,8 @@ jobs:
         with:
           ref: ${{ github.ref_name }}
 
-      - name: Start preview
-        working-directory: install/docker/preview
+      - name: Start community
+        working-directory: install/docker/community
         run: |
           set -eux
           # Point the stack at the pushed 4testing images and the requested tag.
@@ -310,6 +310,6 @@ jobs:
               esac;
           '
           case "${{ env.container_status }}" in
-              timeout) echo "::error:: Timeout reached. Not all preview containers are running."; exit 1 ;;
-              red) echo "::error:: One or more preview containers have status 'red'. Job will fail."; exit 1 ;;
+              timeout) echo "::error:: Timeout reached. Not all community containers are running."; exit 1 ;;
+              red) echo "::error:: One or more community containers have status 'red'. Job will fail."; exit 1 ;;
           esac
