@@ -47,29 +47,23 @@ start_community() {
     sed -i 's~^\(\s*DOCKER_IMAGE_PREFIX=\).*~\14testing-docspace~' .env
   fi
 
-  if [ -z "${DOCKER_TAG:-}" ]; then
-    local ARCH; ARCH="$(uname -m | sed -E 's/^(x86_64|amd64)$/amd64/; s/^(aarch64|arm64)$/arm64/')"
-    local IMAGE_PREFIX; IMAGE_PREFIX="$(awk -F= '/^[[:space:]]*DOCKER_IMAGE_PREFIX=/ {print $2}' .env)"
-    local TAG_REGEX='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
-    if [ "${GITHUB_REF_NAME:-}" = "develop" ] && [ "${IS_4TESTING:-true}" != "false" ]; then
-      TAG_REGEX='^develop\.[0-9]+$'
-    fi
+  DOCKER_TAG="" # Temperary workaround while build not automated for community
 
+  if [ -z "${DOCKER_TAG:-}" ]; then
+    local IMAGE_PREFIX; IMAGE_PREFIX="$(awk -F= '/^[[:space:]]*DOCKER_IMAGE_PREFIX=/ {print $2}' .env)"
+    local TAG_REGEX='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'; [ "${GITHUB_REF_NAME:-}" = "develop" ] && TAG_REGEX='^develop\.[0-9]+$' 
     local AUTH_HEADER=()
     set +x
     if [ -n "${DOCKERHUB_USERNAME_PAT:-}" ] && [ -n "${DOCKERHUB_TOKEN_PAT:-}" ]; then
       local DOCKERHUB_JWT
-      DOCKERHUB_JWT=$(curl -fsSL -X POST "https://hub.docker.com/v2/users/login" \
-        -H "Content-Type: application/json" \
-        -d "{\"username\":\"${DOCKERHUB_USERNAME_PAT}\",\"password\":\"${DOCKERHUB_TOKEN_PAT}\"}" \
-        | jq -r '.token // empty' || true)
+      DOCKERHUB_JWT=$(curl -fsSL -X POST "https://hub.docker.com/v2/users/login" -H "Content-Type: application/json" \
+        -d "{\"username\":\"${DOCKERHUB_USERNAME_PAT}\",\"password\":\"${DOCKERHUB_TOKEN_PAT}\"}" | jq -r '.token // empty' || true)
       [ -n "$DOCKERHUB_JWT" ] || { set -x; echo "::error::Docker Hub PAT login failed"; exit 1; }
       AUTH_HEADER=(-H "Authorization: JWT ${DOCKERHUB_JWT}")
     fi
     DOCKER_TAG=$(curl -fsSL "${AUTH_HEADER[@]}" \
       "https://hub.docker.com/v2/repositories/onlyoffice/${IMAGE_PREFIX}/tags?page_size=100" \
-      | jq -r '.results[] | select(.name | test("^(?!99\\.).*")) | select(.images[]?.architecture=="'"$ARCH"'") | .name // empty' \
-      | grep -E "$TAG_REGEX" | sort -V | tail -n 1)
+      | jq -r '.results[] | select(.name | test("^(?!99\\.).*")) | .name // empty' | grep -E "$TAG_REGEX" | sort -V | tail -n 1)
     set -x
     [ -n "$DOCKER_TAG" ] || { echo "::error::Failed to get Docker tag for onlyoffice/${IMAGE_PREFIX}"; exit 1; }
   fi
