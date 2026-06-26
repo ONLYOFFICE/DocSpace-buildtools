@@ -54,6 +54,24 @@ LETSENCRYPT_FAIL_OPEN=${LETSENCRYPT_FAIL_OPEN:-"false"}
 log() { echo "[$(date +'%F %T')] $1"; }
 
 # ============================================
+# CONFIGURE NLOG LEVEL
+# ============================================
+update_nlog_level() {
+    if [ -n "${LOG_LEVEL:-}" ]; then
+        NLOG_PATH="${PATH_TO_CONF}/nlog.config"
+
+        if [ ! -f "$NLOG_PATH" ]; then
+            log "nlog.config not found: $NLOG_PATH"
+            return 1
+        fi
+
+        log "Updating NLog minlevel to ${LOG_LEVEL}"
+
+        sed -i '/ZiggyCreatures/! s/minlevel="[A-Za-z0-9_]*"/minlevel="'"$LOG_LEVEL"'"/g' "$NLOG_PATH"
+    fi
+}
+
+# ============================================
 # CONFIGURE SECRETS
 # ============================================
 ensure_secret() {
@@ -261,43 +279,53 @@ replace_csp_lua() {
 
     cat > "$TEMP_LUA" <<'EOF'
 # BEGIN_CSP_LUA
-	access_by_lua '
-		local accept = ngx.req.get_headers()["Accept"]
+    access_by_lua '
+	local accept = ngx.req.get_headers()["Accept"]
 
-		if ngx.req.get_method() ~= "GET"
-		   or not accept
-		   or not string.find(accept, "html")
-		   or ngx.re.match(ngx.var.request_uri, "ds-vpath|/api/")
-		then
-			return
+	if ngx.req.get_method() ~= "GET"
+	   or not accept
+	   or not string.find(accept, "html")
+	   or ngx.re.match(ngx.var.request_uri, "ds-vpath|/api/")
+	then
+		return
+	end
+
+	local cache = ngx.shared.csp_cache
+	if not cache then
+		ngx.log(ngx.ERR, "csp_cache shared dict is not configured")
+		return
+	end
+
+	local headers = ngx.req.get_headers()
+	local host = ngx.var.host or ""
+	local origin = headers["Origin"] or ""
+	local referer = headers["Referer"] or ""
+
+	local cache_key = host .. "|" .. origin .. "|" .. referer
+
+	local cached = cache:get(cache_key)
+	if cached then
+		ngx.header.Content_Security_Policy = cached
+		return
+	end
+
+	local res = ngx.location.capture("/api/2.0/security/csp", {
+		method = ngx.HTTP_GET
+	})
+
+	if res and res.status == 200 and res.body then
+		local ok, data = pcall(require("cjson").decode, res.body)
+
+		if ok and data and data.response and data.response.header then
+			local header = data.response.header
+
+			ngx.header.Content_Security_Policy = header
+			cache:set(cache_key, header, 3)
+
+			ngx.log(ngx.INFO, "CSP cached for key: ", cache_key)
 		end
-
-		local cache = ngx.shared.csp_cache
-		local host  = ngx.var.host
-
-		local cached = cache:get(host)
-		if cached then
-			ngx.header.Content_Security_Policy = cached
-			return
-		end
-
-		local res = ngx.location.capture("/api/2.0/security/csp", {
-			method = ngx.HTTP_GET
-		})
-
-		if res and res.status == 200 and res.body then
-			local ok, data = pcall(require("cjson").decode, res.body)
-
-			if ok and data and data.response and data.response.header then
-				local header = data.response.header
-
-				ngx.header.Content_Security_Policy = header
-				cache:set(host, header, 15)
-
-				ngx.log(ngx.INFO, "CSP cached for host: ", host)
-			end
-		end
-	';
+	end
+';
 # END_CSP_LUA
 EOF
 
@@ -369,7 +397,8 @@ update_configs() {
     ${JSON} "${PATH_TO_CONF}/apisystem.json" \
         -e "this.ConnectionStrings.default.connectionString=process.env.CONNECTION_STRING+';Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;ConnectionReset=false;AllowPublicKeyRetrieval=true'" \
         -e "this.core['base-domain']=process.env.APP_CORE_BASE_DOMAIN" \
-        -e "this.core.machinekey=process.env.APP_CORE_MACHINEKEY"
+        -e "this.core.machinekey=process.env.APP_CORE_MACHINEKEY" \
+	-e "this.core.notify.postman='services'"
 
     # Elastic/OpenSearch configuration
     ${JSON} "${PATH_TO_CONF}/elastic.json" \
@@ -429,6 +458,7 @@ main() {
     echo "🚀 Starting Docker entrypoint..."
     echo "=================================="
     log "=== Starting initialization ==="
+    update_nlog_level
     ensure_secret APP_CORE_MACHINEKEY 32
     export SPRING_APPLICATION_SIGNATURE_SECRET="$APP_CORE_MACHINEKEY"
     ensure_secret SPRING_APPLICATION_ENCRYPTION_SECRET 32

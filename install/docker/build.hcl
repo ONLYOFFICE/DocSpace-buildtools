@@ -264,6 +264,7 @@ group "default" {
     "onlyoffice-studio-notify",
     "onlyoffice-telegram",
     "onlyoffice-wait-bin-share",
+    "onlyoffice-community",
   ]
 }
 
