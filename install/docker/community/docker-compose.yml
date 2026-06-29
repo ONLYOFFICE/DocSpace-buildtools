@@ -3,7 +3,7 @@ x-service: &x-service-base
   environment:
     APP_DOTNET_ENV: ${APP_DOTNET_ENV}
     APP_CORE_BASE_DOMAIN: ${APP_CORE_BASE_DOMAIN}
-    APP_CORE_MACHINEKEY: ${APP_CORE_MACHINEKEY}
+    APP_CORE_MACHINEKEY: "" 
     APP_URL_PORTAL: ${APP_URL_PORTAL}
     APP_KNOWN_NETWORKS: ${APP_KNOWN_NETWORKS}
     APP_KNOWN_PROXIES: ${APP_KNOWN_PROXIES}
@@ -34,11 +34,9 @@ x-service: &x-service-base
     ELK_HOST: ${ELK_HOST}
     ELK_PORT: ${ELK_PORT}
     SPRING_PROFILES_ACTIVE: minified,stage
-    SPRING_APPLICATION_SIGNATURE_SECRET: ${APP_CORE_MACHINEKEY}
-    SPRING_APPLICATION_ENCRYPTION_SECRET: secret_key
 
 services:
-  onlyoffice-docspace-preview:
+  onlyoffice-docspace:
     <<: [*x-service-base]
     restart: always
     volumes:
@@ -58,9 +56,9 @@ services:
         - GIT_BRANCH=${GIT_BRANCH}
         - DEPLOY_ARGS=deploy:preview
       dockerfile: Dockerfile.app 
-      target: preview
-    container_name: onlyoffice-docspace-preview  
-    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-preview:${DOCKER_TAG}"
+      target: community
+    container_name: onlyoffice-docspace  
+    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}:${DOCKER_TAG}"
   
   onlyoffice-mysql-server:
     image: ${REGISTRY}${MYSQL_IMAGE}

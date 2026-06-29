@@ -68,7 +68,7 @@ RUN <<EOF
     mkdir -p /etc/nginx/conf.d && cp -f buildtools/config/nginx/onlyoffice*.conf /etc/nginx/conf.d/
     mkdir -p /etc/nginx/includes/ && cp -f buildtools/config/nginx/includes/onlyoffice*.conf /etc/nginx/includes/ && cp -f buildtools/config/nginx/includes/server-*.conf /etc/nginx/includes/
     sed -i "s/\"number\".*,/\"number\": \"${PRODUCT_VERSION}.${BUILD_NUMBER}\",/g" /app/onlyoffice/config/appsettings.json
-    sed -e 's/#//' -i /etc/nginx/conf.d/onlyoffice.conf
+#    sed -e 's/#//' -i /etc/nginx/conf.d/onlyoffice.conf
     if [[ "${DEBUG_INFO,,}" =~ ^(true|1|yes)$ ]]; then
         pip install --no-cache-dir -r ${SRC_PATH}/buildtools/requirements.txt --break-system-packages && \
         python3 ${SRC_PATH}/buildtools/debuginfo.py && \
@@ -593,8 +593,10 @@ COPY --from=build-java --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/service
 
 CMD ["supervisord", "-n"]
 
-## Image Preview ##
-FROM dotnetrun AS preview
+FROM onlyoffice/4testing-docspace-mcp:latest AS mcp
+
+## Image community ##
+FROM dotnetrun AS community
 USER root
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -619,8 +621,10 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb /tmp/*
 
 # Services config + entrypoint + supervisor config
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/preview/docker-entrypoint.sh /docker-entrypoint.sh
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/preview/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/community/docker-entrypoint.sh /docker-entrypoint.sh
+# COPY --chown=onlyoffice:onlyoffice community/docker-entrypoint.sh /docker-entrypoint.sh
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/community/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+# COPY --chown=onlyoffice:onlyoffice community/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # nginx config, static files, router scripts
 COPY --from=src --exclude=onlyoffice-login.conf --exclude=onlyoffice-management.conf --chown=onlyoffice:onlyoffice /etc/nginx/conf.d /etc/nginx/conf.d
@@ -631,11 +635,12 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/docker-entrypoint.sh /nginx/docker-entrypoint.sh
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/nginx.conf.template /etc/nginx/nginx.conf.template
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
-#COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/preview/config/nginx/conf.d/onlyoffice-proxy.conf /etc/nginx/conf.d/
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/preview/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
+#COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/community/config/nginx/conf.d/onlyoffice-proxy.conf /etc/nginx/conf.d/
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/community/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
 
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/preview/config/nginx/templates/onlyoffice-proxy.ssl.conf.template /app/onlyoffice/template/nginx/onlyoffice-proxy.ssl.conf.template
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/preview/config/nginx/templates/onlyoffice-proxy.http.conf /app/onlyoffice/template/nginx/onlyoffice-proxy.http.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/community/config/nginx/templates/onlyoffice-proxy.ssl.conf.template /app/onlyoffice/template/nginx/onlyoffice-proxy.ssl.conf.template
+# COPY --chown=onlyoffice:onlyoffice community/config/nginx/templates/onlyoffice-proxy.ssl.conf.template /app/onlyoffice/template/nginx/onlyoffice-proxy.ssl.conf.template
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/community/config/nginx/templates/onlyoffice-proxy.http.conf /app/onlyoffice/template/nginx/onlyoffice-proxy.http.conf
 
 # nodejs static and dynamic files
 COPY --from=node:24-bookworm-slim /usr/local/bin/node /usr/local/bin/node
@@ -657,6 +662,10 @@ ENV PATH=/opt/java/bin:${PATH}
 COPY --from=javarun /opt/java/openjdk /opt/java
 COPY --from=build-java --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.minified/app.jar ${SRC_PATH}/publish/services/ASC.Identity.minified/app.jar
 
+# mcp
+COPY --from=mcp --chown=onlyoffice:onlyoffice  /srv/onlyoffice-docspace-mcp/bin ${SRC_PATH}/publish/services/onlyoffice-docspace-mcp/bin
+COPY --from=mcp --chown=onlyoffice:onlyoffice  /srv/onlyoffice-docspace-mcp/LICENSE ${SRC_PATH}/publish/services/onlyoffice-docspace-mcp/LICENSE
+
 RUN set -eux; \
     sed -i -e 's#$public_root#/var/www/public/#' -e "/map \$scheme \$document_server {/,/}/ s|default \"http://[^\"]*\";|default \$document_server_vs_path;|" /etc/nginx/conf.d/onlyoffice.conf; \
     # route every .NET backend upstream to the single monolith port
@@ -668,7 +677,7 @@ RUN set -eux; \
     echo '{ "Redis": {} }' > /app/onlyoffice/config/redis.json && \
     echo '{ "RabbitMQ": {} }' > /app/onlyoffice/config/rabbitmq.json
     # Note: redis.json / rabbitmq.json are baked as empty objects in the image
-    # (no Redis/RabbitMQ container in the preview stack), so they are left as-is.
+    # (no Redis/RabbitMQ container in the community stack), so they are left as-is.
 
 USER onlyoffice
 EXPOSE 80
