@@ -103,20 +103,24 @@ function make_repo_public() {
   fi
 }
 function release_service() {
-   
    # ex. service_source_tag=onlyoffice/4testing-docspace-service-name:2.5.1.1473
    local service_source_tag="${1}"
+   local result_dir="${2}"
    local service_release_tag
-   
-   echo "${service_source_tag}"
-   
+   local safe_name
+
    # ex. service_release_tag=onlyoffice/docspace-service-name:2.5.1.1
    # NOTE: latest tag also will be updated
    service_release_tag=$(echo "${service_source_tag%:*}" | sed 's/4testing-//')
+   safe_name="${service_release_tag//\//_}"
+
+   # Pre-mark as unreleased so unexpected subshell exits are caught
+   echo "UNRELEASED:${service_release_tag}" > "${result_dir}/${safe_name}"
+
+   echo "${service_source_tag}"
 
    # Verify source image is available before attempting release
    if ! check_source_image_exists "${service_source_tag}"; then
-     UNRELEASED_SERVICES+=("${service_release_tag}")
      return
    fi
 
@@ -133,13 +137,12 @@ function release_service() {
      [[ ${attempt} -lt 3 ]] && gha_warning "imagetools create failed (attempt ${attempt}/3), retrying in 10s..." && sleep 10
    done
 
-   # Make alert
    if [[ ${STATUS} -eq 0 ]]; then
-     RELEASED_SERVICES+=("${service_release_tag}")
+     echo "RELEASED:${service_release_tag}" > "${result_dir}/${safe_name}"
      make_repo_public "${service_release_tag}"
    else
      gha_error "docker buildx imagetools create failed for ${service_release_tag} (exit code ${STATUS})"
-     UNRELEASED_SERVICES+=("${service_release_tag}")
+     echo "UNRELEASED:${service_release_tag}" > "${result_dir}/${safe_name}"
    fi
 }
 
@@ -185,9 +188,29 @@ function main() {
     exit 1
   fi
 
+  local RESULT_DIR
+  RESULT_DIR=$(mktemp -d)
+
+  local -a pids=()
   for service in "${SERVICES[@]}"; do
-    release_service "${service}"
+    release_service "${service}" "${RESULT_DIR}" &
+    pids+=($!)
   done
+
+  for pid in "${pids[@]}"; do
+    wait "${pid}" || true
+  done
+
+  local line
+  while IFS= read -r line; do
+    if [[ "${line}" == RELEASED:* ]]; then
+      RELEASED_SERVICES+=("${line#RELEASED:}")
+    elif [[ "${line}" == UNRELEASED:* ]]; then
+      UNRELEASED_SERVICES+=("${line#UNRELEASED:}")
+    fi
+  done < <(cat "${RESULT_DIR}"/* 2>/dev/null | sort)
+
+  rm -rf "${RESULT_DIR}"
 
   # Output Result
   gha_group "Released services (${#RELEASED_SERVICES[@]})"
