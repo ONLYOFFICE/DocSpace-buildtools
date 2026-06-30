@@ -1,5 +1,5 @@
 services:
-  onlyoffice-docspace-preview:
+  onlyoffice-docspace:
     ports:
       - "443:443"
     environment:

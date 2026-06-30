@@ -8,7 +8,7 @@ BACKEND_PATH="${SRC_PATH}/publish/services/backend"
 DEBUG_INFO=${DEBUG_INFO:-"false"}
 APP_CORE_BASE_DOMAIN=${APP_CORE_BASE_DOMAIN:-"localhost"}
 APP_URL_PORTAL=${APP_URL_PORTAL:-"http://127.0.0.1:8092"}
-: "${APP_CORE_MACHINEKEY:?APP_CORE_MACHINEKEY must be set}"
+#: "${APP_CORE_MACHINEKEY:?APP_CORE_MACHINEKEY must be set}"
 
 DOCUMENT_CONTAINER_NAME=${DOCUMENT_CONTAINER_NAME:-"onlyoffice-document-server"}
 DOCUMENT_SERVER_URL_PUBLIC=${DOCUMENT_SERVER_URL_PUBLIC:-"/ds-vpath/"}
@@ -34,6 +34,8 @@ ELK_PORT=${ELK_PORT:-"9200"}
 export ELK_THREADS=${ELK_THREADS:-1}
 export ELK_CONNECTION_HOST=${ELK_HOST:-"$ELK_CONTAINER_NAME"}
 
+export MCP_ENDPOINT=${MCP_ENDPOINT:-"http://127.0.0.1:5158/mcp"}
+
 MIGRATION_TYPE=${MIGRATION_TYPE:-"STANDALONE"}  # STANDALONE or SAAS
 
 export MYSQL_PWD="$MYSQL_PASSWORD"
@@ -49,6 +51,65 @@ LETSENCRYPT_STAGING=${LETSENCRYPT_STAGING:-"false"}
 LETSENCRYPT_FORCE_RENEW=${LETSENCRYPT_FORCE_RENEW:-"false"}
 LETSENCRYPT_FAIL_OPEN=${LETSENCRYPT_FAIL_OPEN:-"false"}
 
+log() { echo "[$(date +'%F %T')] $1"; }
+
+# ============================================
+# CONFIGURE NLOG LEVEL
+# ============================================
+update_nlog_level() {
+    if [ -n "${LOG_LEVEL:-}" ]; then
+        NLOG_PATH="${PATH_TO_CONF}/nlog.config"
+
+        if [ ! -f "$NLOG_PATH" ]; then
+            log "nlog.config not found: $NLOG_PATH"
+            return 1
+        fi
+
+        log "Updating NLog minlevel to ${LOG_LEVEL}"
+
+        sed -i '/ZiggyCreatures/! s/minlevel="[A-Za-z0-9_]*"/minlevel="'"$LOG_LEVEL"'"/g' "$NLOG_PATH"
+    fi
+}
+
+# ============================================
+# CONFIGURE SECRETS
+# ============================================
+ensure_secret() {
+    local var_name="$1"
+    local length="${2:-32}"
+
+    local secrets_dir="/app/onlyoffice/data/.secrets"
+    local secret_file="${secrets_dir}/${var_name}"
+
+    # Read current value from environment
+    eval "local value=\${$var_name:-}"
+
+    # 1. Environment variable has highest priority
+    if [ -n "$value" ]; then
+        log "Using $var_name from environment."
+        return
+    fi
+
+    mkdir -p "$secrets_dir"
+
+    # 2. Use saved value if present
+    if [ -f "$secret_file" ]; then
+        value="$(cat "$secret_file")"
+        log "Using persisted $var_name."
+    else
+    # 3. Generate a new value
+        value="$(openssl rand -base64 64 | tr -dc 'A-Za-z0-9' | head -c "$length")"
+        printf '%s' "$value" > "$secret_file"
+        chmod 600 "$secret_file"
+        log "Generated and persisted $var_name."
+    fi
+
+    export "$var_name=$value"
+}
+
+# ============================================
+# NGINX SSL SETUP
+# ============================================
 setup_nginx_ssl() {
     mkdir -p /var/www/certbot /etc/letsencrypt
 
@@ -66,6 +127,32 @@ setup_nginx_ssl() {
             > /etc/nginx/conf.d/onlyoffice-proxy.conf
     }
 
+    parse_ssl_domains() {
+        IFS=',' read -ra SSL_DOMAINS <<< "$SSL_DOMAIN"
+
+        CERTBOT_DOMAIN_ARGS=()
+        NGINX_SERVER_NAMES=""
+
+        for domain in "${SSL_DOMAINS[@]}"; do
+            domain="$(echo "$domain" | xargs)"
+
+            if [[ -z "$domain" ]]; then
+                continue
+            fi
+
+            CERTBOT_DOMAIN_ARGS+=("-d" "$domain")
+            NGINX_SERVER_NAMES="${NGINX_SERVER_NAMES} ${domain}"
+        done
+
+        NGINX_SERVER_NAMES="$(echo "$NGINX_SERVER_NAMES" | xargs)"
+        PRIMARY_SSL_DOMAIN="$(echo "${SSL_DOMAINS[0]}" | xargs)"
+
+        if [[ -z "$PRIMARY_SSL_DOMAIN" || ${#CERTBOT_DOMAIN_ARGS[@]} -eq 0 ]]; then
+            log "SSL_DOMAIN is empty or invalid"
+            exit 1
+        fi
+    }
+
     if [[ "$SSL_MODE" == "custom" ]]; then
         if [[ -z "$SSL_DOMAIN" || -z "$SSL_CERT_PATH" || -z "$SSL_KEY_PATH" ]]; then
             log "SSL_MODE=custom requires SSL_DOMAIN, SSL_CERT_PATH, SSL_KEY_PATH"
@@ -77,8 +164,10 @@ setup_nginx_ssl() {
             exit 1
         fi
 
-        write_ssl_nginx_conf "$SSL_DOMAIN" "$SSL_CERT_PATH" "$SSL_KEY_PATH"
-        log "Using custom SSL certificate"
+        parse_ssl_domains
+
+        write_ssl_nginx_conf "$NGINX_SERVER_NAMES" "$SSL_CERT_PATH" "$SSL_KEY_PATH"
+        log "Using custom SSL certificate for: $NGINX_SERVER_NAMES"
         return 0
     fi
 
@@ -99,15 +188,18 @@ setup_nginx_ssl() {
             exit 1
         fi
 
-        local cert_file="/etc/letsencrypt/live/$SSL_DOMAIN/fullchain.pem"
-        local key_file="/etc/letsencrypt/live/$SSL_DOMAIN/privkey.pem"
+        parse_ssl_domains
+
+        local cert_file="/etc/letsencrypt/live/$PRIMARY_SSL_DOMAIN/fullchain.pem"
+        local key_file="/etc/letsencrypt/live/$PRIMARY_SSL_DOMAIN/privkey.pem"
 
         if [[ ! -f "$cert_file" || ! -f "$key_file" || "$LETSENCRYPT_FORCE_RENEW" == "true" ]]; then
-            log "Requesting Let's Encrypt certificate for $SSL_DOMAIN"
-            log "Port 80 must be reachable from the Internet and point to this container"
+            log "Requesting Let's Encrypt certificate for: $NGINX_SERVER_NAMES"
+            log "Port 80 must be reachable from the Internet for all domains"
 
             local staging_arg=()
             local renew_arg=()
+
             [[ "$LETSENCRYPT_STAGING" == "true" ]] && staging_arg=(--staging)
             [[ "$LETSENCRYPT_FORCE_RENEW" == "true" ]] && renew_arg=(--force-renewal)
 
@@ -118,7 +210,7 @@ setup_nginx_ssl() {
                 --non-interactive \
                 --agree-tos \
                 --email "$SSL_EMAIL" \
-                -d "$SSL_DOMAIN" \
+                "${CERTBOT_DOMAIN_ARGS[@]}" \
                 "${staging_arg[@]}" \
                 "${renew_arg[@]}"; then
                 log "Let's Encrypt certificate created"
@@ -132,25 +224,156 @@ setup_nginx_ssl() {
                 exit 1
             fi
         else
-            log "Existing Let's Encrypt certificate found for $SSL_DOMAIN"
+            log "Existing Let's Encrypt certificate found for $PRIMARY_SSL_DOMAIN"
         fi
 
-        write_ssl_nginx_conf "$SSL_DOMAIN" "$cert_file" "$key_file"
-        log "Using Let's Encrypt certificate"
+        write_ssl_nginx_conf "$NGINX_SERVER_NAMES" "$cert_file" "$key_file"
+        log "Using Let's Encrypt certificate for: $NGINX_SERVER_NAMES"
         return 0
     fi
 
     log "SSL disabled - HTTP only"
     write_http_nginx_conf
 }
-log() { echo "[$(date +'%F %T')] $1"; }
 
+# ============================================
+# REPLACE CSP LUA USING MARKERS
+# ============================================
+replace_csp_lua() {
+    local NGINX_CONF="/etc/nginx/conf.d/onlyoffice.conf"
+
+    if [[ ! -f "$NGINX_CONF" ]]; then
+        log "⚠️ onlyoffice.conf not found at $NGINX_CONF"
+        return 1
+    fi
+
+    log "🔧 Replacing Redis CSP Lua with shared_dict version"
+
+    # Add lua_shared_dict if missing
+    if ! grep -q "lua_shared_dict csp_cache" "$NGINX_CONF"; then
+        log "Adding lua_shared_dict csp_cache 10m to onlyoffice.conf"
+
+        sed -i '/server_names_hash_bucket_size 128;/a\
+    lua_shared_dict csp_cache 10m;
+    ' "$NGINX_CONF"
+
+        log "✅ lua_shared_dict added to onlyoffice.conf"
+    else
+        log "✅ lua_shared_dict already exists in onlyoffice.conf"
+    fi
+
+    # Verify markers exist
+    if ! grep -q "# BEGIN_CSP_LUA" "$NGINX_CONF"; then
+        log "❌ BEGIN_CSP_LUA marker not found"
+        return 1
+    fi
+
+    if ! grep -q "# END_CSP_LUA" "$NGINX_CONF"; then
+        log "❌ END_CSP_LUA marker not found"
+        return 1
+    fi
+
+    # Create replacement block
+    local TEMP_LUA
+    TEMP_LUA=$(mktemp)
+
+    cat > "$TEMP_LUA" <<'EOF'
+# BEGIN_CSP_LUA
+    access_by_lua '
+	local accept = ngx.req.get_headers()["Accept"]
+
+	if ngx.req.get_method() ~= "GET"
+	   or not accept
+	   or not string.find(accept, "html")
+	   or ngx.re.match(ngx.var.request_uri, "ds-vpath|/api/")
+	then
+		return
+	end
+
+	local cache = ngx.shared.csp_cache
+	if not cache then
+		ngx.log(ngx.ERR, "csp_cache shared dict is not configured")
+		return
+	end
+
+	local headers = ngx.req.get_headers()
+	local host = ngx.var.host or ""
+	local origin = headers["Origin"] or ""
+	local referer = headers["Referer"] or ""
+
+	local cache_key = host .. "|" .. origin .. "|" .. referer
+
+	local cached = cache:get(cache_key)
+	if cached then
+		ngx.header.Content_Security_Policy = cached
+		return
+	end
+
+	local res = ngx.location.capture("/api/2.0/security/csp", {
+		method = ngx.HTTP_GET
+	})
+
+	if res and res.status == 200 and res.body then
+		local ok, data = pcall(require("cjson").decode, res.body)
+
+		if ok and data and data.response and data.response.header then
+			local header = data.response.header
+
+			ngx.header.Content_Security_Policy = header
+			cache:set(cache_key, header, 3)
+
+			ngx.log(ngx.INFO, "CSP cached for key: ", cache_key)
+		end
+	end
+';
+# END_CSP_LUA
+EOF
+
+    # Replace block between markers
+    local TEMP_CONF
+    TEMP_CONF=$(mktemp)
+
+    LUA_FILE="$TEMP_LUA" perl -0777 -pe '
+BEGIN {
+    open my $fh, "<", $ENV{LUA_FILE} or die "Cannot open LUA_FILE: $!";
+    local $/;
+    $lua = <$fh>;
+}
+s/# BEGIN_CSP_LUA.*?# END_CSP_LUA/$lua/s;
+' "$NGINX_CONF" > "$TEMP_CONF"
+
+    if [[ $? -ne 0 ]]; then
+        log "❌ Failed to replace CSP Lua block"
+        rm -f "$TEMP_LUA" "$TEMP_CONF"
+        return 1
+    fi
+
+    mv "$TEMP_CONF" "$NGINX_CONF"
+
+    rm -f "$TEMP_LUA"
+
+    # Verify replacement
+    if grep -q "ngx.shared.csp_cache" "$NGINX_CONF"; then
+        log "✅ CSP Lua successfully replaced"
+        return 0
+    else
+        log "❌ CSP replacement verification failed"
+        return 1
+    fi
+}
+
+# ============================================
+# MYSQL MIGRATION HELPERS
+# ============================================
 migration_count() {
     mysql "${MYSQL_ARGS[@]}" -sN -e "SELECT COUNT(*) FROM __EFMigrationsHistory;" \
         "$MYSQL_DATABASE" 2>/dev/null || echo "?"
 }
 
-# Function to update configuration files
+
+# ============================================
+# CONFIGURATION UPDATES
+# ============================================
 update_configs() {
     log "📝 Updating configuration files..."
 
@@ -167,13 +390,15 @@ update_configs() {
         -e "this.files.docservice.secret.value=process.env.DOCUMENT_SERVER_JWT_SECRET" \
         -e "this.files.docservice.secret.header=process.env.DOCUMENT_SERVER_JWT_HEADER" \
         -e "this.files.docservice.url.portal=process.env.APP_URL_PORTAL" \
-        -e "this.core.notify.postman='services'"
+        -e "this.core.notify.postman='services'" \
+        -e "this.ai.mcp[0].endpoint=process.env.MCP_ENDPOINT"
 
     # API system (connection + core)
     ${JSON} "${PATH_TO_CONF}/apisystem.json" \
         -e "this.ConnectionStrings.default.connectionString=process.env.CONNECTION_STRING+';Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;ConnectionReset=false;AllowPublicKeyRetrieval=true'" \
         -e "this.core['base-domain']=process.env.APP_CORE_BASE_DOMAIN" \
-        -e "this.core.machinekey=process.env.APP_CORE_MACHINEKEY"
+        -e "this.core.machinekey=process.env.APP_CORE_MACHINEKEY" \
+	-e "this.core.notify.postman='services'"
 
     # Elastic/OpenSearch configuration
     ${JSON} "${PATH_TO_CONF}/elastic.json" \
@@ -190,7 +415,9 @@ update_configs() {
     log "✅ Configuration files updated"
 }
 
-# Function to wait for MySQL and run migrations
+# ============================================
+# DATABASE MIGRATIONS
+# ============================================
 run_migrations() {
     migration_args=()
     [[ ${MIGRATION_TYPE} == "STANDALONE" ]] && migration_args=(standalone=true)
@@ -224,12 +451,21 @@ run_migrations() {
     return 1
 }
 
+# ============================================
+# MAIN
+# ============================================
 main() {
     echo "🚀 Starting Docker entrypoint..."
     echo "=================================="
     log "=== Starting initialization ==="
+    update_nlog_level
+    ensure_secret APP_CORE_MACHINEKEY 32
+    export SPRING_APPLICATION_SIGNATURE_SECRET="$APP_CORE_MACHINEKEY"
+    ensure_secret SPRING_APPLICATION_ENCRYPTION_SECRET 32
     update_configs
     run_migrations || { log "❌ Migration failed - exiting"; exit 1; }
+    # Replace Redis Lua with shared_dict version 
+    replace_csp_lua
     setup_nginx_ssl
     log "🌐 Initializing nginx..." && /nginx/docker-entrypoint.sh
     log "✅ Initialization complete - starting supervisord"
