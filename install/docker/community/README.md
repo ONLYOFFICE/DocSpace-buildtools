@@ -2,7 +2,6 @@
 
 > **Note:** Not for production use.
 > This guide deploys a development/testing build of ONLYOFFICE DocSpace.
-> It serves over plain HTTP (no TLS), ships without identity/OAuth services, and runs a reduced feature set.
 > For production deployments, use the: [Production Version of ONLYOFFICE DocSpace](https://www.onlyoffice.com/download.aspx#docspace-enterprise)
 
 ### Overview
@@ -17,11 +16,9 @@ This community ships ONLYOFFICE DocSpace as a monolithic build: all ONLYOFFICE D
 | **onlyoffice-opensearch** | OpenSearch |
 
 Differences from the standard multi-container deployment:
+
 •	All ONLYOFFICE DocSpace services are consolidated into a single container.
-•	Simplified search.
 •	No thumbnail generation.
-•	HTTP only — no TLS/HTTPS.
-•	No identity/OAuth services.
 
 **Prerequisites:** Docker Engine with the Compose plugin (docker compose).
 
@@ -131,7 +128,7 @@ docker compose \
 > SSL_KEY_PATH – Path to the private key.
 > APP_URL_PORTAL – Public HTTPS URL of your portal.
 
-> **Note:** By default, the ssl.yml configuration mounts the local ./config/nginx/certs directory to /etc/nginx/certs into the container.
+> **Note:** By default, the ssl.yml configuration mounts the local ./config/nginx/certs directory to /etc/nginx/certs inside the container.
 
 
 Access ONLYOFFICE DocSpace at https://example.com/.
