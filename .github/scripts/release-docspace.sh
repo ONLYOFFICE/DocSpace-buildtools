@@ -109,16 +109,18 @@ function release_service() {
    local service_release_tag
    local safe_name
 
-   echo "${service_source_tag}"
-
    # ex. service_release_tag=onlyoffice/docspace-service-name:2.5.1.1
    # NOTE: latest tag also will be updated
    service_release_tag=$(echo "${service_source_tag%:*}" | sed 's/4testing-//')
    safe_name="${service_release_tag//\//_}"
 
+   # Pre-mark as unreleased so unexpected subshell exits are caught
+   echo "UNRELEASED:${service_release_tag}" > "${result_dir}/${safe_name}"
+
+   echo "${service_source_tag}"
+
    # Verify source image is available before attempting release
    if ! check_source_image_exists "${service_source_tag}"; then
-     echo "UNRELEASED:${service_release_tag}" > "${result_dir}/${safe_name}"
      return
    fi
 
