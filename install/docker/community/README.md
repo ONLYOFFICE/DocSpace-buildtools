@@ -100,8 +100,8 @@ docker compose \
 ```bash
 SSL_MODE="custom" \
 SSL_DOMAIN="example.com" \
-SSL_CERT_PATH="/path/to/fullchain.crt" \
-SSL_KEY_PATH="/path/to/private.key" \
+SSL_CERT_PATH="/etc/nginx/certs/fullchain.crt" \
+SSL_KEY_PATH="/etc/nginx/certs/private.key" \
 APP_URL_PORTAL="https://example.com/" \
 docker compose \
   -f docker-compose.yml \
@@ -112,8 +112,38 @@ docker compose \
 > SSL_DOMAIN – Portal domain name.
 > SSL_CERT_PATH – Path to the SSL certificate.
 > SSL_KEY_PATH – Path to the private key.
-> PP_URL_PORTAL – Public HTTPS URL of your portal.
+> APP_URL_PORTAL – Public HTTPS URL of your portal.
 
-> **Note:** By default, the ssl.yml configuration mounts the local ./config/nginx/certs directory to /etc/nginx/certs:
+> **Note:** By default, the ssl.yml configuration mounts the local ./config/nginx/certs directory to /etc/nginx/certs into conatainer.
+
+
+If you are using a self-signed certificate or a certificate issued by a private Certificate Authority (CA), the ONLYOFFICE Document Server must also trust this certificate.
+
+Uncomment the following volume in `docker-compose.yml`:
+
+```yaml
+services:
+   onlyoffice-document-server:
+     volumes:
+       - ${CERTIFICATE_PATH}:/var/www/onlyoffice/Data/certs/extra-ca-certs.pem
+```
+
+Then specify the certificate path on the host:
+
+```bash
+SSL_MODE="custom" \
+SSL_DOMAIN="example.com" \
+SSL_CERT_PATH="/etc/nginx/certs/fullchain.crt" \
+SSL_KEY_PATH="/etc/nginx/certs/private.key" \
+CERTIFICATE_PATH="./config/nginx/certs/fullchain.crt" \
+APP_URL_PORTAL="https://example.com/" \
+docker compose \
+  -f docker-compose.yml \
+  -f ssl.yml \
+  up -d
+```
+
+> **Note:** `CERTIFICATE_PATH` must point to the certificate file **on the Docker host**, not the path inside the container. This option is typically required only for self-signed certificates or certificates issued by a private CA. Certificates issued by public CAs (for example, Let's Encrypt, DigiCert, or GoDaddy) usually do not require this additional configuration.
+
 
 Access ONLYOFFICE DocSpace at https://example.com/.
