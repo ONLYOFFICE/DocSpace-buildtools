@@ -1,27 +1,24 @@
-## Running ONLYOFFICE DocSpace in Docker (draft)
+## Running ONLYOFFICE DocSpace in Docker
 
 > **Note:** Not for production use.
 > This guide deploys a development/testing build of ONLYOFFICE DocSpace.
-> It serves over plain HTTP (no TLS), ships without identity/OAuth services, and runs a reduced feature set.
 > For production deployments, use the: [Production Version of ONLYOFFICE DocSpace](https://www.onlyoffice.com/download.aspx#docspace-enterprise)
 
 ### Overview
 
-This community ships ONLYOFFICE DocSpace as a monolithic build: all ONLYOFFICE DocSpace services run in a single container rather than as separate per-service containers. The full stack consists of three containers:
+This community ships ONLYOFFICE DocSpace as a monolithic build: all ONLYOFFICE DocSpace services run in a single container rather than as separate per-service containers. The full stack consists of four containers:
 
 | Container | Role |
 | :---- | :---- |
-| **onlyoffice-docspaceiew** | All ONLYOFFICE DocSpace services (consolidated) |
-| **docspaceonlyoffice-document-server** | Document Server (editors) |
+| **onlyoffice-docspace** | All ONLYOFFICE DocSpace services (consolidated) |
+| **onlyoffice-document-server** | Document Server (editors) |
 | **onlyoffice-mysql-server** | MySQL database |
 | **onlyoffice-opensearch** | OpenSearch |
 
 Differences from the standard multi-container deployment:
-•	All ONLYOFFICE DocSpace services are consolidated into a single container.
-•	Simplified search.
-•	No thumbnail generation.
-•	HTTP only — no TLS/HTTPS.
-•	No identity/OAuth services.
+
+- All ONLYOFFICE DocSpace services are consolidated into a single container.
+- No thumbnail generation.
 
 **Prerequisites:** Docker Engine with the Compose plugin (docker compose).
 
@@ -131,7 +128,7 @@ docker compose \
 > SSL_KEY_PATH – Path to the private key.
 > APP_URL_PORTAL – Public HTTPS URL of your portal.
 
-> **Note:** By default, the ssl.yml configuration mounts the local ./config/nginx/certs directory to /etc/nginx/certs into conatainer.
+> **Note:** By default, the ssl.yml configuration mounts the local ./config/nginx/certs directory to /etc/nginx/certs inside the container.
 
 
 Access ONLYOFFICE DocSpace at https://example.com/.
