@@ -17,8 +17,8 @@ This community ships ONLYOFFICE DocSpace as a monolithic build: all ONLYOFFICE D
 
 Differences from the standard multi-container deployment:
 
-•	All ONLYOFFICE DocSpace services are consolidated into a single container.
-•	No thumbnail generation.
+- All ONLYOFFICE DocSpace services are consolidated into a single container.
+- No thumbnail generation.
 
 **Prerequisites:** Docker Engine with the Compose plugin (docker compose).
 
