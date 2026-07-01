@@ -90,6 +90,12 @@ if [ "$SKIP_HARDWARE_CHECK" != "true" ]; then
 fi
 
 UPDATE_AVAILABLE_CODE=100
+ARCH="$(rpm --eval '%{_arch}')"
+if [[ "$ARCH" != "x86_64" && "$ARCH" != "aarch64" ]]; then
+    echo "${package_sysname^^} ${product^^} doesn't support architecture '$ARCH'"
+    exit 1
+fi
+
 DIST=$(rpm -qa --queryformat '%{NAME}\n' | grep -E 'centos-release|redhat-release|fedora-release' | awk -F '-' '{print $1}' | head -n 1)
 DIST=${DIST:-$(awk -F= '/^ID=/ {gsub(/"/, "", $2); print tolower($2)}' /etc/os-release)}
 [[ "$DIST" =~ ^(centos|redhat|fedora)$ ]] || DIST="centos"
