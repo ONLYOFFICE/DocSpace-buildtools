@@ -8,6 +8,7 @@ ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:10.0-noble"
 ARG BUSYBOX_VERSION="1.37"
 ARG PYTHON_VERSION="3.12-slim"
 ARG NODE_VERSION="24.16-trixie-slim"
+ARG PLUGIN_NODE_TYPES_VERSION="18.19.0"
 ARG JAVA_VERSION="21"
 ARG JAVA_RUN_VERSION="${JAVA_VERSION}-jre"
 ARG MAVEN_VERSION="3.9-eclipse-temurin-${JAVA_VERSION}"
@@ -146,6 +147,9 @@ RUN find "${SRC_PATH}/publish/web" -mindepth 4 -maxdepth 4 -name ".next" -type d
 # build plugins
 FROM --platform=$BUILDPLATFORM node:${NODE_VERSION} AS build-plugins
 ARG SRC_PATH
+ARG PLUGIN_NODE_TYPES_VERSION
+ENV PLUGIN_NODE_TYPES_VERSION=${PLUGIN_NODE_TYPES_VERSION}
+
 COPY --from=src ${SRC_PATH}/plugins ${SRC_PATH}/plugins
 COPY --from=src ${SRC_PATH}/buildtools/install/common/plugins-build.sh ${SRC_PATH}/buildtools/install/common/plugins-build.sh
 WORKDIR ${SRC_PATH}/buildtools/install/common
