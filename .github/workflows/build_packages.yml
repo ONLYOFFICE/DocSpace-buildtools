@@ -104,14 +104,14 @@ jobs:
           echo "PRODUCT_VERSION=${PRODUCT_VERSION:-3.6.1}" >> $GITHUB_ENV
 
       - name: Import GPG
-        uses: crazy-max/ghaction-import-gpg@v6
+        uses: crazy-max/ghaction-import-gpg@v7.0.0
         id: gpg_step
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PRIVATE_KEY_PASS }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6.4.0
         with:
           node-version: '${{ env.NODE_VERSION }}.x'
 
