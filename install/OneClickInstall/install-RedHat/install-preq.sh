@@ -153,7 +153,7 @@ gpgkey=https://packages.adoptium.net/artifactory/api/gpg/key/public
 END
 fi
 
-JAVA_VERSION=21
+JAVA_VERSION=25
 JAVA_PKG=$([ "$DIST" = "fedora" ] && [ "$REV" -ge 44 ] && echo "jre-${JAVA_VERSION}-headless" || echo "java-${JAVA_VERSION}-openjdk-headless")
 ${package_manager} ${WEAK_OPT} -y install $([ "$DIST" != "fedora" ] && echo "epel-release") \
 			python3 \

@@ -35,7 +35,7 @@ BuildRequires:  nodejs >= %{node_version}.0
 BuildRequires:  yarn
 BuildRequires:  dotnet-sdk-10.0
 BuildRequires:  unzip
-BuildRequires:  java-21-openjdk-headless
+BuildRequires:  java-%{java_version}-openjdk-headless
 BuildRequires:  maven
 
 Requires:       %name-ai = %version-%release

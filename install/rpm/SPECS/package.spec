@@ -142,7 +142,7 @@ easy and secure way to access DocSpace for users.
 %package        identity-authorization
 Summary:        Identity-Authorization
 Requires:       %name-common  = %version-%release
-Requires:       java-21-openjdk-headless
+Requires:       java-%{java_version}-openjdk-headless
 AutoReqProv:    no
 BuildArch:      noarch
 %description    identity-authorization
@@ -152,7 +152,7 @@ DocSpace, e.g., the OAuth technology.
 %package        identity-api
 Summary:        Identity-Api
 Requires:       %name-common  = %version-%release
-Requires:       java-21-openjdk-headless
+Requires:       java-%{java_version}-openjdk-headless
 AutoReqProv:    no
 BuildArch:      noarch
 %description    identity-api

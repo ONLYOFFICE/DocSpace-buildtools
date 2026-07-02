@@ -41,6 +41,7 @@ env:
   BRANCH_CLIENT: ${{ github.event.inputs.branch-client || github.ref_name || 'develop' }}
   BRANCH_SERVER: ${{ github.event.inputs.branch-server || github.ref_name || 'develop' }}
   NODE_VERSION: "24"
+  JAVA_VERSION: "25"
 
 jobs:
   prepare:
@@ -115,7 +116,6 @@ jobs:
 
       - name: Prepare build
         run: |
-          JAVA_VERSION=21
           wget -O - https://dl.yarnpkg.com/debian/pubkey.gpg | \
           sudo gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/yarnkey.gpg --import
           sudo chmod 644 /usr/share/keyrings/yarnkey.gpg
@@ -170,7 +170,7 @@ jobs:
           fi
           
           rename -f -v "s/product([^\/]*)$/${PRODUCT,,}\$1/g" debian/*
-          find debian/ -type f -exec sed -i -e "s/{{product}}/${PRODUCT,,}/g" -e "s/{{package_header_tag_version}}/${PRODUCT_VERSION}.${GITHUB_RUN_NUMBER}/g" -e "s/{{node_version}}/${NODE_VERSION}/g" {} +
+          find debian/ -type f -exec sed -i -e "s/{{product}}/${PRODUCT,,}/g" -e "s/{{package_header_tag_version}}/${PRODUCT_VERSION}.${GITHUB_RUN_NUMBER}/g" -e "s/{{node_version}}/${NODE_VERSION}/g" -e "s/{{java_version}}/${JAVA_VERSION}/g" {} +
           yq -r '.files[] | .name as $n | "cat <<EOF > debian/\($n)\n" + .content + "\nEOF"' debian/files-bundle.yaml | bash
           export DEB_BUILD_OPTIONS="parallel=$(nproc)"
           dpkg-buildpackage -uc -us
@@ -195,7 +195,8 @@ jobs:
                    -D "_topdir $(pwd)" \
                    -D "version ${PRODUCT_VERSION}" \
                    -D "release ${GITHUB_RUN_NUMBER}" \
-                   -D "node_version ${NODE_VERSION}" -ba product.spec
+                   -D "node_version ${NODE_VERSION}" \
+                   -D "java_version ${JAVA_VERSION}" -ba product.spec
 
       - name: Sign DEB Packages
         if: matrix.packageType == 'deb'
