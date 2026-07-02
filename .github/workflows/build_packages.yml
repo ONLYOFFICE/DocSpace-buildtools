@@ -43,6 +43,7 @@ env:
   NODE_VERSION: "24"
   JAVA_VERSION: "25"
   DOTNET_VERSION: "10.0"
+  OPENSEARCH_VERSION: "3.5.0"
 
 jobs:
   prepare:
@@ -171,7 +172,7 @@ jobs:
           fi
           
           rename -f -v "s/product([^\/]*)$/${PRODUCT,,}\$1/g" debian/*
-          find debian/ -type f -exec sed -i -e "s/{{product}}/${PRODUCT,,}/g" -e "s/{{package_header_tag_version}}/${PRODUCT_VERSION}.${GITHUB_RUN_NUMBER}/g" -e "s/{{node_version}}/${NODE_VERSION}/g" -e "s/{{java_version}}/${JAVA_VERSION}/g" -e "s/{{dotnet_version}}/${DOTNET_VERSION}/g" {} +
+          find debian/ -type f -exec sed -i -e "s/{{product}}/${PRODUCT,,}/g" -e "s/{{package_header_tag_version}}/${PRODUCT_VERSION}.${GITHUB_RUN_NUMBER}/g" -e "s/{{node_version}}/${NODE_VERSION}/g" -e "s/{{java_version}}/${JAVA_VERSION}/g" -e "s/{{dotnet_version}}/${DOTNET_VERSION}/g" -e "s/{{opensearch_version}}/${OPENSEARCH_VERSION}/g" {} +
           yq -r '.files[] | .name as $n | "cat <<EOF > debian/\($n)\n" + .content + "\nEOF"' debian/files-bundle.yaml | bash
           export DEB_BUILD_OPTIONS="parallel=$(nproc)"
           dpkg-buildpackage -uc -us
