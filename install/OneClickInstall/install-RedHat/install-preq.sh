@@ -84,7 +84,7 @@ if [ "$DIST" != "fedora" ]; then
 fi
 
 #add nodejs repo
-NODE_VERSION="22"
+NODE_VERSION="24"
 curl -fsSL https://rpm.nodesource.com/setup_${NODE_VERSION}.x | bash -
 
 # Distro modularity exists only on EL8/EL9; on EL10 and Fedora there are no modules.

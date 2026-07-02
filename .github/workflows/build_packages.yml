@@ -40,6 +40,7 @@ env:
   BRANCH_BUILDTOOLS: ${{ github.event.inputs.branch-buildtools || github.ref_name || 'develop' }}
   BRANCH_CLIENT: ${{ github.event.inputs.branch-client || github.ref_name || 'develop' }}
   BRANCH_SERVER: ${{ github.event.inputs.branch-server || github.ref_name || 'develop' }}
+  NODE_VERSION: "24"
 
 jobs:
   prepare:
@@ -110,7 +111,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24.x'
+          node-version: '${{ env.NODE_VERSION }}.x'
 
       - name: Prepare build
         run: |
@@ -120,7 +121,7 @@ jobs:
           sudo chmod 644 /usr/share/keyrings/yarnkey.gpg
           echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian/ stable main" | \
           sudo tee /etc/apt/sources.list.d/yarn.list
-          curl -fsSL https://deb.nodesource.com/setup_24.x | sudo bash -
+          curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | sudo bash -
           sudo add-apt-repository -y ppa:dotnet/backports
           sudo apt install -y dotnet-sdk-10.0 yarn nodejs rename unzip maven openjdk-${JAVA_VERSION}-jdk-headless
           JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | head -1)
@@ -169,7 +170,7 @@ jobs:
           fi
           
           rename -f -v "s/product([^\/]*)$/${PRODUCT,,}\$1/g" debian/*
-          find debian/ -type f -exec sed -i -e "s/{{product}}/${PRODUCT,,}/g" -e "s/{{package_header_tag_version}}/${PRODUCT_VERSION}.${GITHUB_RUN_NUMBER}/g" {} +
+          find debian/ -type f -exec sed -i -e "s/{{product}}/${PRODUCT,,}/g" -e "s/{{package_header_tag_version}}/${PRODUCT_VERSION}.${GITHUB_RUN_NUMBER}/g" -e "s/{{node_version}}/${NODE_VERSION}/g" {} +
           yq -r '.files[] | .name as $n | "cat <<EOF > debian/\($n)\n" + .content + "\nEOF"' debian/files-bundle.yaml | bash
           export DEB_BUILD_OPTIONS="parallel=$(nproc)"
           dpkg-buildpackage -uc -us
@@ -193,7 +194,8 @@ jobs:
           rpmbuild -D "packager Ascensio System SIA <support@onlyoffice.com>" \
                    -D "_topdir $(pwd)" \
                    -D "version ${PRODUCT_VERSION}" \
-                   -D "release ${GITHUB_RUN_NUMBER}" -ba product.spec
+                   -D "release ${GITHUB_RUN_NUMBER}" \
+                   -D "node_version ${NODE_VERSION}" -ba product.spec
 
       - name: Sign DEB Packages
         if: matrix.packageType == 'deb'
