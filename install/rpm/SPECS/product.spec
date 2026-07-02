@@ -33,7 +33,7 @@ Source9:        https://codeload.github.com/ONLYOFFICE/%{product}-ui-kit-react/t
 
 BuildRequires:  nodejs >= %{node_version}.0
 BuildRequires:  yarn
-BuildRequires:  dotnet-sdk-10.0
+BuildRequires:  dotnet-sdk-%{dotnet_version}
 BuildRequires:  unzip
 BuildRequires:  java-%{java_version}-openjdk-headless
 BuildRequires:  maven

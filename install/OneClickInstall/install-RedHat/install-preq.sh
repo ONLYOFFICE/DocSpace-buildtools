@@ -155,10 +155,11 @@ fi
 
 JAVA_VERSION=25
 JAVA_PKG=$([ "$DIST" = "fedora" ] && [ "$REV" -ge 44 ] && echo "jre-${JAVA_VERSION}-headless" || echo "java-${JAVA_VERSION}-openjdk-headless")
+DOTNET_VERSION="10.0"
 ${package_manager} ${WEAK_OPT} -y install $([ "$DIST" != "fedora" ] && echo "epel-release") \
 			python3 \
 			nodejs \
-			dotnet-sdk-10.0 \
+			dotnet-sdk-${DOTNET_VERSION} \
 			opensearch-${ELASTIC_VERSION} \
 			mysql-community-server \
 			rabbitmq-server \

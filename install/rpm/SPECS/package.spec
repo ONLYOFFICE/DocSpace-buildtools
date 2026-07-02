@@ -1,7 +1,7 @@
 %package        backup
 Summary:        Backup
 Requires:       %name-common  = %version-%release 
-Requires:       dotnet-sdk-10.0
+Requires:       dotnet-sdk-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    backup
@@ -16,7 +16,7 @@ A package containing configs and scripts.
 %package        files-worker
 Summary:        Files-worker
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-10.0
+Requires:       dotnet-sdk-%{dotnet_version}
 Requires:       /usr/bin/ffmpeg
 AutoReqProv:    no
 BuildArch:      noarch
@@ -32,7 +32,7 @@ The service which launches additional services related to file management:
 %package        notify
 Summary:        Notify
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-10.0
+Requires:       dotnet-sdk-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    notify
@@ -43,7 +43,7 @@ base, and NotifyCleanerService which removes messages.
 %package        files
 Summary:        Files
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-10.0
+Requires:       dotnet-sdk-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    files
@@ -65,7 +65,7 @@ receives a response from them and returns it to the client.
 %package        studio-notify
 Summary:        Studio-notify
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-10.0
+Requires:       dotnet-sdk-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    studio-notify
@@ -75,7 +75,7 @@ sending them to other services, for example, TelegramService and NotifyService.
 %package        people-server
 Summary:        People-server
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-10.0
+Requires:       dotnet-sdk-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    people-server
@@ -102,7 +102,7 @@ The service which provides AI chat features and MCP tool integrations.
 %package        studio
 Summary:        Studio
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-10.0
+Requires:       dotnet-sdk-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    studio
@@ -111,7 +111,7 @@ The service which processes storage handlers.
 %package        api
 Summary:        Api
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-10.0
+Requires:       dotnet-sdk-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    api
@@ -122,7 +122,7 @@ module, for example, requests related to settings, audit, authentication, etc.
 %package        api-system
 Summary:        Api-system
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-10.0
+Requires:       dotnet-sdk-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    api-system
@@ -162,7 +162,7 @@ within DocSpace by using the OAuth technology.
 %package        clear-events
 Summary:        Clear-events
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-10.0
+Requires:       dotnet-sdk-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    clear-events
@@ -173,7 +173,7 @@ after a timeout.
 %package        backup-worker
 Summary:        Backup-worker
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-10.0
+Requires:       dotnet-sdk-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    backup-worker
@@ -196,7 +196,7 @@ The service which allows interaction with document-server.
 %package        migration-runner
 Summary:        Migration-runner
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-10.0
+Requires:       dotnet-sdk-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    migration-runner
@@ -216,7 +216,7 @@ The service which is used for logging users and displaying the wizard.
 %package        healthchecks
 Summary:        Healthchecks
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-10.0
+Requires:       dotnet-sdk-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    healthchecks
@@ -252,7 +252,7 @@ The service responsible for creating and managing several spaces.
 %package        telegram
 Summary:        Telegram
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-10.0
+Requires:       dotnet-sdk-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    telegram
@@ -261,7 +261,7 @@ The service which is used for receiving DocSpace notifications via Telegram.
 %package        ai
 Summary:        AI
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-10.0
+Requires:       dotnet-sdk-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    ai
@@ -271,7 +271,7 @@ handles API requests related to AI.
 %package        ai-worker
 Summary:        AI-Worker
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-10.0
+Requires:       dotnet-sdk-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    ai-worker
