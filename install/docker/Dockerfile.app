@@ -8,6 +8,7 @@ ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:10.0-noble"
 ARG BUSYBOX_VERSION="1.37"
 ARG PYTHON_VERSION="3.12-slim"
 ARG NODE_VERSION="24.16-trixie-slim"
+ARG PLUGIN_NODE_TYPES_VERSION="18.19.0"
 ARG JAVA_VERSION="25"
 ARG JAVA_RUN_VERSION="${JAVA_VERSION}-jre"
 ARG MAVEN_VERSION="3.9-eclipse-temurin-${JAVA_VERSION}"
@@ -101,27 +102,25 @@ RUN PUBLISH_ARGS='-c Release --self-contained false -p:DebugType=None -p:DebugSy
     rm -rf ${SRC_PATH}/server
 
 # node build
-FROM --platform=$BUILDPLATFORM node:${NODE_VERSION} AS build-node
+FROM node:${NODE_VERSION} AS build-node-services
 ARG SRC_PATH
-ARG BUILD_ARGS="build"
-ARG DEPLOY_ARGS="deploy"
-
-# build services Socket, SsoAuth from DocSpace-server 
 WORKDIR ${SRC_PATH}/server
 COPY --from=src ${SRC_PATH}/server/common/ASC.Socket.IO ./common/ASC.Socket.IO
 COPY --from=src ${SRC_PATH}/server/common/ASC.SsoAuth ./common/ASC.SsoAuth
 COPY --from=src ${SRC_PATH}/server/common/ASC.NewAi ./common/ASC.NewAi
 
-RUN cd ${SRC_PATH}/server/common/ASC.Socket.IO && \
-    yarn install --immutable && \
-    cd ${SRC_PATH}/server/common/ASC.SsoAuth && \
-    yarn install --immutable && \
-    cd ${SRC_PATH}/server/common/ASC.NewAi && \
-    yarn install --immutable && \
+RUN for svc in ASC.Socket.IO ASC.SsoAuth ASC.NewAi; do \
+    (cd ${SRC_PATH}/server/common/$svc && yarn install --immutable); \
+    done && \
     yarn cache clean --all && \
     find ${SRC_PATH}/server/common -type f \( -name "*.js.map" -o -name "*.css.map" \) -delete
 
-# build frondend from DocSpace-client
+# build frondend from client
+FROM --platform=$BUILDPLATFORM node:${NODE_VERSION} AS build-node
+ARG SRC_PATH
+ARG BUILD_ARGS="build"
+ARG DEPLOY_ARGS="deploy"
+
 WORKDIR ${SRC_PATH}
 COPY --from=src ${SRC_PATH}/buildtools/config ./buildtools/config
 COPY --from=src ${SRC_PATH}/client/ ./client
@@ -149,6 +148,9 @@ RUN find "${SRC_PATH}/publish/web" -mindepth 4 -maxdepth 4 -name ".next" -type d
 # build plugins
 FROM --platform=$BUILDPLATFORM node:${NODE_VERSION} AS build-plugins
 ARG SRC_PATH
+ARG PLUGIN_NODE_TYPES_VERSION
+ENV PLUGIN_NODE_TYPES_VERSION=${PLUGIN_NODE_TYPES_VERSION}
+
 COPY --from=src ${SRC_PATH}/plugins ${SRC_PATH}/plugins
 COPY --from=src ${SRC_PATH}/buildtools/install/common/plugins-build.sh ${SRC_PATH}/buildtools/install/common/plugins-build.sh
 WORKDIR ${SRC_PATH}/buildtools/install/common
@@ -417,21 +419,21 @@ CMD ["ASC.AI.Worker.dll", "ASC.AI.Worker", "core:eventBus:subscriptionClientName
 ## ASC.Socket.IO ##
 FROM noderun AS socket
 WORKDIR ${BUILD_PATH}/services/ASC.Socket.IO/
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Socket.IO .
+COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Socket.IO .
 
 CMD  ["server.js", "ASC.Socket.IO"]
 
 ## ASC.NewAi ##
 FROM noderun AS newai
 WORKDIR ${BUILD_PATH}/services/ASC.NewAi/
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.NewAi .
+COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.NewAi .
 
 CMD  ["server.js", "ASC.NewAi"]
 
 ## ASC.SsoAuth ##
 FROM noderun AS ssoauth
 WORKDIR ${BUILD_PATH}/services/ASC.SsoAuth/
-COPY --from=build-node --chown=onlyoffice:onlyoffice  ${SRC_PATH}/server/common/ASC.SsoAuth .
+COPY --from=build-node-services --chown=onlyoffice:onlyoffice  ${SRC_PATH}/server/common/ASC.SsoAuth .
 
 CMD ["app.js", "ASC.SsoAuth"]
 
@@ -573,9 +575,9 @@ COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/edi
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/login/ ${BUILD_PATH}/products/ASC.Login/login/
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management/ ${BUILD_PATH}/products/ASC.Management/management/
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/ ${BUILD_PATH}/products/ASC.Sdk/sdk/
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Socket.IO ${BUILD_PATH}/services/ASC.Socket.IO/
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.NewAi ${BUILD_PATH}/services/ASC.NewAi/
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.SsoAuth ${BUILD_PATH}/services/ASC.SsoAuth/
+COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Socket.IO ${BUILD_PATH}/services/ASC.Socket.IO/
+COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.NewAi ${BUILD_PATH}/services/ASC.NewAi/
+COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.SsoAuth ${BUILD_PATH}/services/ASC.SsoAuth/
 
 CMD ["supervisord", "-n"]
 
@@ -646,8 +648,8 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
 COPY --from=node:24-bookworm-slim /usr/local/bin/node /usr/local/bin/node
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/ ${BUILD_PATH}/
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/static ${BUILD_PATH}/build
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Socket.IO ${SRC_PATH}/publish/services/ASC.Socket.IO
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.SsoAuth ${SRC_PATH}/publish/services/ASC.SsoAuth
+COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Socket.IO ${SRC_PATH}/publish/services/ASC.Socket.IO
+COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.SsoAuth ${SRC_PATH}/publish/services/ASC.SsoAuth
 COPY --from=build-plugins --chown=onlyoffice:onlyoffice ${SRC_PATH}/plugins/publish/ ${APP_STORAGE_ROOT}/Studio/webplugins
 
 # .NET Monolith and Migration Runner, plugins

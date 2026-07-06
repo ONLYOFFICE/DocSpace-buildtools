@@ -84,7 +84,7 @@ if [ "$DIST" != "fedora" ]; then
 fi
 
 #add nodejs repo
-NODE_VERSION="22"
+NODE_VERSION="24"
 curl -fsSL https://rpm.nodesource.com/setup_${NODE_VERSION}.x | bash -
 
 # Distro modularity exists only on EL8/EL9; on EL10 and Fedora there are no modules.
@@ -107,7 +107,7 @@ rpm -q mysql-community-server >/dev/null 2>&1 || MYSQL_FIRST_TIME_INSTALL="true"
 
 #add opensearch repo
 curl -fsSL https://artifacts.opensearch.org/releases/bundle/opensearch/3.x/opensearch-3.x.repo -o /etc/yum.repos.d/opensearch-3.x.repo
-ELASTIC_VERSION="3.5.0"
+OPENSEARCH_VERSION="3.5.0"
 export OPENSEARCH_INITIAL_ADMIN_PASSWORD="$(echo "${package_sysname}!A1")"
 
 #add opensearch dashboards repo
@@ -153,13 +153,14 @@ gpgkey=https://packages.adoptium.net/artifactory/api/gpg/key/public
 END
 fi
 
-JAVA_VERSION=21
+JAVA_VERSION=25
 JAVA_PKG=$([ "$DIST" = "fedora" ] && [ "$REV" -ge 44 ] && echo "jre-${JAVA_VERSION}-headless" || echo "java-${JAVA_VERSION}-openjdk-headless")
+DOTNET_VERSION="10.0"
 ${package_manager} ${WEAK_OPT} -y install $([ "$DIST" != "fedora" ] && echo "epel-release") \
 			python3 \
 			nodejs \
-			dotnet-sdk-10.0 \
-			opensearch-${ELASTIC_VERSION} \
+			dotnet-sdk-${DOTNET_VERSION} \
+			opensearch-${OPENSEARCH_VERSION} \
 			mysql-community-server \
 			rabbitmq-server \
 			${REDIS_PACKAGE} \
