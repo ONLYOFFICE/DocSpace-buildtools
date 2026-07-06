@@ -38,8 +38,14 @@ function check_source_image_exists() {
   local namespace="${image%%/*}"
   local repository="${image#*/}"
 
+  if [[ -z "${HUB_JWT}" ]]; then
+    gha_error "HUB_JWT is not set — cannot check image existence for private repositories"
+    return 1
+  fi
+
   local http_status
   http_status=$(curl -s -o /dev/null -w "%{http_code}" \
+    -H "Authorization: JWT ${HUB_JWT}" \
     "https://hub.docker.com/v2/repositories/${namespace}/${repository}/tags/${tag}/")
 
   if [[ "${http_status}" != "200" ]]; then
@@ -48,25 +54,34 @@ function check_source_image_exists() {
   fi
 }
 
-function get_hub_jwt() {
-  if [[ -z "${DOCKER_USERNAME_PAT}" || -z "${DOCKER_TOKEN_PAT}" ]]; then
-    gha_warning "DOCKER_USERNAME_PAT / DOCKER_TOKEN_PAT are not set - repository visibility will not be changed automatically"
-    return 0
-  fi
+_HUB_LOGIN_ERROR=""
 
-  local response
-  response=$(curl -sSL \
+function hub_login() {
+  local USERNAME="${1}" PASSWORD="${2}" OUT_VAR="${3}"
+  local RESPONSE TOKEN
+
+  RESPONSE=$(curl -sSL \
     -X POST \
     -H "Content-Type: application/json" \
-    -d "{\"username\":\"${DOCKER_USERNAME_PAT}\",\"password\":\"${DOCKER_TOKEN_PAT}\"}" \
+    -d "{\"username\":\"${USERNAME}\",\"password\":\"${PASSWORD}\"}" \
     "https://hub.docker.com/v2/users/login/" 2>/dev/null)
 
-  HUB_JWT=$(echo "${response}" | jq -r '.token // empty' 2>/dev/null) || true
+  TOKEN=$(echo "${RESPONSE}" | jq -r '.token // empty' 2>/dev/null) || true
 
-  if [[ -z "${HUB_JWT}" ]]; then
-    error_msg=$(echo "${response}" | jq -r '.detail // .message // "unknown error"' 2>/dev/null) || error_msg="unknown error"
-    gha_warning "Docker Hub login failed: ${error_msg}"
+  if [[ -z "${TOKEN}" ]]; then
+    _HUB_LOGIN_ERROR=$(echo "${RESPONSE}" | jq -r '.detail // .message // "unknown error"' 2>/dev/null) || _HUB_LOGIN_ERROR="unknown error"
+    return 1
   fi
+
+  printf -v "${OUT_VAR}" '%s' "${TOKEN}"
+}
+
+function get_hub_jwt() {
+  if [[ -z "${DOCKER_USERNAME_PAT}" || -z "${DOCKER_TOKEN_PAT}" ]]; then
+    gha_error "DOCKER_USERNAME_PAT / DOCKER_TOKEN_PAT are not set — cannot authenticate with Docker Hub API"
+    exit 1
+  fi
+  hub_login "${DOCKER_USERNAME_PAT}" "${DOCKER_TOKEN_PAT}" HUB_JWT || { gha_error "Docker Hub login failed: ${_HUB_LOGIN_ERROR}"; exit 1; }
 }
 
 function make_repo_public() {
@@ -88,40 +103,46 @@ function make_repo_public() {
   fi
 }
 function release_service() {
-   
    # ex. service_source_tag=onlyoffice/4testing-docspace-service-name:2.5.1.1473
    local service_source_tag="${1}"
+   local result_dir="${2}"
    local service_release_tag
-   
-   echo "${service_source_tag}"
-   
+   local safe_name
+
    # ex. service_release_tag=onlyoffice/docspace-service-name:2.5.1.1
    # NOTE: latest tag also will be updated
    service_release_tag=$(echo "${service_source_tag%:*}" | sed 's/4testing-//')
+   safe_name="${service_release_tag//\//_}"
+
+   # Pre-mark as unreleased so unexpected subshell exits are caught
+   echo "UNRELEASED:${service_release_tag}" > "${result_dir}/${safe_name}"
+
+   echo "${service_source_tag}"
 
    # Verify source image is available before attempting release
    if ! check_source_image_exists "${service_source_tag}"; then
-     UNRELEASED_SERVICES+=("${service_release_tag}")
      return
    fi
 
    # If specifyed tag look like 2.5.1.1 it will release like 3 different tags: 2.5.1 2.5.1.1 latest
-   # Make new image manigest and push it to stable images repository
-   
+   # Make new image manifest and push it to stable images repository
    local STATUS=0
-   docker buildx imagetools create --tag "${service_release_tag}:${RELEASE_VERSION%.*}" \
-                                   --tag "${service_release_tag}:${RELEASE_VERSION}" \
-                                   --tag "${service_release_tag}:latest" \
-                                   "${service_source_tag}" || STATUS=$?
+   local attempt
+   for attempt in 1 2 3; do
+     docker buildx imagetools create --tag "${service_release_tag}:${RELEASE_VERSION%.*}" \
+                                     --tag "${service_release_tag}:${RELEASE_VERSION}" \
+                                     --tag "${service_release_tag}:latest" \
+                                     "${service_source_tag}" && STATUS=0 && break
+     STATUS=$?
+     [[ ${attempt} -lt 3 ]] && gha_warning "imagetools create failed (attempt ${attempt}/3), retrying in 10s..." && sleep 10
+   done
 
-   # Make alert
    if [[ ${STATUS} -eq 0 ]]; then
-     RELEASED_SERVICES+=("${service_release_tag}")
-     get_hub_jwt
+     echo "RELEASED:${service_release_tag}" > "${result_dir}/${safe_name}"
      make_repo_public "${service_release_tag}"
    else
      gha_error "docker buildx imagetools create failed for ${service_release_tag} (exit code ${STATUS})"
-     UNRELEASED_SERVICES+=("${service_release_tag}")
+     echo "UNRELEASED:${service_release_tag}" > "${result_dir}/${safe_name}"
    fi
 }
 
@@ -149,18 +170,47 @@ function main() {
   validate_version_format "${DOCKER_TAG}"      "source_version (DOCKER_TAG)"
   validate_version_format "${RELEASE_VERSION}" "release_version (RELEASE_VERSION)"
 
+  get_hub_jwt
+
   cd "${GITHUB_WORKSPACE}/install/docker"
   
-  SERVICES=($(docker buildx bake -f build.yml --print | jq -r '.target | .[] | .tags[]'))
+  FILTER_TARGETS=()
+  [[ -n "${SERVICES_FILTER}" ]] && read -ra FILTER_TARGETS <<< "${SERVICES_FILTER}"
+  local BAKE_PRINT_OUTPUT
+  BAKE_PRINT_OUTPUT=$(docker buildx bake -f build.hcl --print "${FILTER_TARGETS[@]}") || {
+    gha_error "docker buildx bake failed — check that all target names in SERVICES_FILTER exist in build.hcl"
+    exit 1
+  }
+  mapfile -t SERVICES < <(jq -r '.target | .[] | .tags[]' <<< "${BAKE_PRINT_OUTPUT}")
 
   if [[ ${#SERVICES[@]} -eq 0 ]]; then
-    gha_error "No services found in build.yml — bake returned an empty target list"
+    gha_error "No services found in build.hcl — bake returned an empty target list"
     exit 1
   fi
 
+  local RESULT_DIR
+  RESULT_DIR=$(mktemp -d)
+
+  local -a pids=()
   for service in "${SERVICES[@]}"; do
-    release_service "${service}"
+    release_service "${service}" "${RESULT_DIR}" &
+    pids+=($!)
   done
+
+  for pid in "${pids[@]}"; do
+    wait "${pid}" || true
+  done
+
+  local line
+  while IFS= read -r line; do
+    if [[ "${line}" == RELEASED:* ]]; then
+      RELEASED_SERVICES+=("${line#RELEASED:}")
+    elif [[ "${line}" == UNRELEASED:* ]]; then
+      UNRELEASED_SERVICES+=("${line#UNRELEASED:}")
+    fi
+  done < <(cat "${RESULT_DIR}"/* 2>/dev/null | sort)
+
+  rm -rf "${RESULT_DIR}"
 
   # Output Result
   gha_group "Released services (${#RELEASED_SERVICES[@]})"

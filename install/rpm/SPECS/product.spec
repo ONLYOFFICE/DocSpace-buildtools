@@ -31,11 +31,11 @@ Source7:        https://codeload.github.com/ONLYOFFICE/document-formats/tar.gz/m
 Source8:        https://codeload.github.com/ONLYOFFICE/%{product}-mcp/tar.gz/main#/mcp.tar.gz
 Source9:        https://codeload.github.com/ONLYOFFICE/%{product}-ui-kit-react/tar.gz/master#/ui-kit.tar.gz
 
-BuildRequires:  nodejs >= 22.0
+BuildRequires:  nodejs >= %{node_version}.0
 BuildRequires:  yarn
-BuildRequires:  dotnet-sdk-10.0
+BuildRequires:  dotnet-sdk-%{dotnet_version}
 BuildRequires:  unzip
-BuildRequires:  java-21-openjdk-headless
+BuildRequires:  java-%{java_version}-openjdk-headless
 BuildRequires:  maven
 
 Requires:       %name-ai = %version-%release

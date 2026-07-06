@@ -3,6 +3,7 @@ set -e
 
 DOCSPACE_VERSION=""
 
+ARGS_SCRIPT=$(awk '/^__ARGS_SCRIPT_START__$/{f=1;next}/^__ARGS_SCRIPT_END__$/{exit}f' "$0")
 PAYLOAD_LINE=$(awk '/^__END_OF_SHELL_SCRIPT__$/ {print NR+1; exit}' "$0")
 TEMP_DIR=$(mktemp -d)
 trap 'echo "Cleaning up temporary files..."; rm -rf "${TEMP_DIR}"' EXIT
@@ -14,11 +15,10 @@ for arg in "$@"; do
       echo "Offline DocSpace installer. Docker images are bundled in this archive."
       echo "All options are passed to install-Docker.sh. Available options:"
       echo
-      tail -n +"${PAYLOAD_LINE}" "$0" | tar -x -C "$TEMP_DIR" install-Docker-args.sh
-      bash "$TEMP_DIR/install-Docker-args.sh" --help
+      echo "$ARGS_SCRIPT" | bash /dev/stdin --help
       exit 0
     ;;
-    --version)
+    -v|-V|--version)
       echo "DocSpace Stack v${DOCSPACE_VERSION:-unknown}"
       exit 0
     ;;
@@ -29,8 +29,7 @@ done
 
 SCRIPT_DIR=$(dirname "$0")
 
-tail -n +"${PAYLOAD_LINE}" "$0" | tar -x -C "$TEMP_DIR" install-Docker-args.sh
-source "$TEMP_DIR/install-Docker-args.sh" "$@"
+source <(echo "$ARGS_SCRIPT") "$@"
 
 _MISSING=0
 _error_missing() {
@@ -103,22 +102,40 @@ fi
 echo "Extracting docker images to ${TEMP_DIR}..."
 tail -n +"${PAYLOAD_LINE}" "$0" | tar x -C "${TEMP_DIR}" --exclude='docker-static'
 
-_load_image() {
-  local file="$1" mb=$(( $(stat -c%s "$1") / 1024 / 1024 )) s='|/-\' i=0 t=0
-  docker load -i "$file" &
-  local pid=$!
-  while kill -0 "$pid" 2>/dev/null; do
-    printf "\r  Loading %s (~%dMB) %s %ds" "$(basename "$file")" "$mb" "${s:i++%4:1}" "$t"
-    sleep 1; (( t++ )) || true
+_load_images_parallel() {
+  local SPINNER="|/-\\" SPIN_IDX=0 ELAPSED=0 PIDS=() OUTFILES=() LABELS=()
+  for ARCHIVE in "$@"; do
+    local OUTFILE; OUTFILE=$(mktemp -p "${TEMP_DIR}")
+    local LABEL="${ARCHIVE##*/}"; LABEL="${LABEL%%.*}"
+    OUTFILES+=("$OUTFILE"); LABELS+=("$LABEL")
+    docker load -i "$ARCHIVE" >"$OUTFILE" 2>&1 &
+    PIDS+=($!)
   done
-  wait "$pid"
-  printf "\r  Loaded  %s (~%dMB) in %ds\n" "$(basename "$file")" "$mb" "$t"
+  while :; do
+    local STATUS="" ALIVE=0
+    for IDX in "${!PIDS[@]}"; do
+      if kill -0 "${PIDS[$IDX]}" 2>/dev/null; then
+        ALIVE=$(( ALIVE + 1 )); STATUS+="  ${LABELS[$IDX]}: loading"
+      else
+        STATUS+="  ${LABELS[$IDX]}: done   "
+      fi
+    done
+    printf "\r%s  %s %ds" "$STATUS" "${SPINNER:SPIN_IDX++%4:1}" "$ELAPSED"
+    sleep 1; (( ELAPSED++ )) || true
+    [ "$ALIVE" -eq 0 ] && break
+  done
+  local EXIT_CODE=0
+  for PID in "${PIDS[@]}"; do wait "$PID" || EXIT_CODE=$?; done
+  printf "\r  All images loaded in %ds\n" "$ELAPSED"
+  for OUTFILE in "${OUTFILES[@]}"; do while IFS= read -r LINE; do printf "    %s\n" "$LINE"; done <"$OUTFILE"; done
+  [ "$EXIT_CODE" -eq 0 ] || exit "$EXIT_CODE"
 }
 
 if [ "$OFFLINE_IMAGE_LOAD" != "true" ]; then
   echo "Loading docker images (this may take a few minutes)..."
-  _load_image "${TEMP_DIR}/docspace_images.tar.xz"
-  _load_image "${TEMP_DIR}/docs_images.tar.xz"
+  _load_images_parallel \
+    "${TEMP_DIR}/docspace_images.tar.xz" \
+    "${TEMP_DIR}/docs_images.tar.xz"
 fi
 
 echo "Extracting OneClickInstall files to the current directory..."
@@ -126,15 +143,17 @@ mv -f "${TEMP_DIR}/docker-stack.tar.gz" "${TEMP_DIR}/install-Docker.sh" "${TEMP_
 
 echo "Running the install-Docker.sh script..."
 chmod +x "${SCRIPT_DIR}/install-Docker.sh"
-if ! "${SCRIPT_DIR}/install-Docker.sh" "${UPDATE}" "$@"; then
+if ! "${SCRIPT_DIR}/install-Docker.sh" "$@" --offline true --stack-mode true; then
   echo ""
   echo "ERROR: Installation failed. Fix the issue and re-run this script."
   echo "To clean up before retrying:"
   echo "  docker stop \$(docker ps -a -q); docker container prune -f; rm -rf /app/"
-  echo "Then re-run: ${SCRIPT_DIR}/install-Docker.sh ${UPDATE} $@"
+  echo "Then re-run: ${SCRIPT_DIR}/install-Docker.sh $* --offline true --stack-mode true"
   exit 1
 fi
 
 exit 0
 
+__ARGS_SCRIPT_START__
+__ARGS_SCRIPT_END__
 __END_OF_SHELL_SCRIPT__

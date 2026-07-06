@@ -71,7 +71,7 @@ locale-gen en_US.UTF-8
 # add opensearch repo
 curl -fsSL https://artifacts.opensearch.org/publickeys/opensearch-release.pgp | gpg --dearmor --batch --yes -o /usr/share/keyrings/opensearch-keyring
 echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch/3.x/apt stable main" > /etc/apt/sources.list.d/opensearch-3.x.list
-ELASTIC_VERSION="3.5.0"
+OPENSEARCH_VERSION="3.5.0"
 export OPENSEARCH_INITIAL_ADMIN_PASSWORD="$(echo "${package_sysname}!A1")"
 
 #add opensearch dashboards repo
@@ -82,7 +82,7 @@ if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then
 fi
 
 # add nodejs repo
-NODE_VERSION="22"
+NODE_VERSION="24"
 curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
 
 #add dotnet repo
@@ -140,7 +140,7 @@ chmod 644 /usr/share/keyrings/openresty.gpg
 curl -fsSL https://packages.adoptium.net/artifactory/api/gpg/key/public | gpg --dearmor | tee /usr/share/keyrings/adoptium.gpg > /dev/null
 echo "deb [signed-by=/usr/share/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb $DISTRIB_CODENAME main" | tee /etc/apt/sources.list.d/adoptium.list
 chmod 644 /usr/share/keyrings/adoptium.gpg
-JAVA_VERSION="21"
+JAVA_VERSION="25"
 
 # setup msttcorefonts
 echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
@@ -179,10 +179,10 @@ if ! apt-get install -yq "${DOTNET_PKG}"; then
 fi
 
 if ! dpkg -l | grep -q "opensearch"; then
-	apt-get install -yq opensearch=${ELASTIC_VERSION}
+	apt-get install -yq opensearch=${OPENSEARCH_VERSION}
 else
 	ELASTIC_PLUGIN="/usr/share/opensearch/bin/opensearch-plugin"
-	if dpkg --compare-versions "$(dpkg-query -W -f='${Version}\n' opensearch 2>/dev/null || true)" ne "$ELASTIC_VERSION"; then
+	if dpkg --compare-versions "$(dpkg-query -W -f='${Version}\n' opensearch 2>/dev/null || true)" ne "$OPENSEARCH_VERSION"; then
 		"${ELASTIC_PLUGIN}" list | grep -q ingest-attachment && "${ELASTIC_PLUGIN}" remove -s ingest-attachment
 		systemctl restart opensearch || true
 	fi
