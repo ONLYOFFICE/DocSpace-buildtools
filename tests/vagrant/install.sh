@@ -57,11 +57,19 @@ prepare_vm() {
     source /etc/os-release
 case $ID in
   ubuntu|debian)
-      [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-deb
+      if [[ "${TEST_REPO_ENABLE}" == 'true' ]]; then
+        add-repo-deb
+      else
+        rm -f /etc/apt/sources.list.d/onlyoffice4testing.list
+      fi
       ;;
 
   centos|fedora|rhel)
-      [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-rpm
+      if [[ "${TEST_REPO_ENABLE}" == 'true' ]]; then
+        add-repo-rpm
+      else
+        rm -f /etc/yum.repos.d/onlyoffice4testing.repo
+      fi
 
       if [ "$ID" = "rhel" ] && [ "${VERSION_ID%%.*}" = "9" ]; then
           cat <<'EOF' | sudo tee /etc/yum.repos.d/centos-stream-9.repo
