@@ -69,6 +69,16 @@ setup_postgres_db() {
 	fi
 }
 
+cleanup_dead_systemd_services() {
+	mapfile -t DEAD_SYSTEMD_SERVICES < <(find /etc/systemd/system -type l -name "${product}-*.service" ! -exec test -e {} \; -print)
+	[ "${#DEAD_SYSTEMD_SERVICES[@]}" -eq 0 ] && return
+
+	echo "Removing dead systemd service symlinks:"
+	printf '%s\n' "${DEAD_SYSTEMD_SERVICES[@]}"
+	rm -f "${DEAD_SYSTEMD_SERVICES[@]}"
+	systemctl daemon-reload >/dev/null 2>&1 || true
+}
+
 if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ]; then
 	ds_pkg_installed_name=$(rpm -qa --qf '%{NAME}\n' | grep "${package_sysname}"-documentserver)
 	if [ -n "${ds_pkg_installed_name}" ] && [ "${ds_pkg_installed_name}" != "${ds_pkg_name}" ]; then
@@ -156,6 +166,7 @@ if [ "$PRODUCT_INSTALLED" = "false" ]; then
 		-mysqlp "${MYSQL_ROOT_PASS}"
 elif [[ "${PRODUCT_CHECK_UPDATE}" -eq "${UPDATE_AVAILABLE_CODE}" || "${RECONFIGURE_PRODUCT}" = "true" ]]; then
 	${package_manager} -y update "${product}" --best --allowerasing $TESTING_REPO
+	cleanup_dead_systemd_services
 	if [[ "${RECONFIGURE_PRODUCT}" = "true" ]]; then
 		ENVIRONMENT=$(grep -oP 'ENVIRONMENT=\K.*' /etc/"${package_sysname}"/"${product}"/systemd.env || grep -oP 'ENVIRONMENT=\K.*' /usr/lib/systemd/system/"${product}"-api.service)
 		CONNECTION_STRING=$(json -f /etc/"${package_sysname}"/"${product}"/appsettings."$ENVIRONMENT".json ConnectionStrings.default.connectionString)

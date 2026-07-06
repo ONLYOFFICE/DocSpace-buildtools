@@ -44,6 +44,14 @@ gpgkey=https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE
 END
 }
 
+remove-repo-deb() {
+  rm -f /etc/apt/sources.list.d/onlyoffice4testing.list
+}
+
+remove-repo-rpm() {
+  rm -f /etc/yum.repos.d/onlyoffice4testing.repo
+}
+
 prepare_vm() {
   # Ensure curl and gpg are installed
   if ! command -v curl >/dev/null 2>&1; then
@@ -57,11 +65,19 @@ prepare_vm() {
     source /etc/os-release
 case $ID in
   ubuntu|debian)
-      [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-deb
+      if [[ "${TEST_REPO_ENABLE}" == 'true' ]]; then
+        add-repo-deb
+      else
+        remove-repo-deb
+      fi
       ;;
 
   centos|fedora|rhel)
-      [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-rpm
+      if [[ "${TEST_REPO_ENABLE}" == 'true' ]]; then
+        add-repo-rpm
+      else
+        remove-repo-rpm
+      fi
 
       if [ "$ID" = "rhel" ] && [ "${VERSION_ID%%.*}" = "9" ]; then
           cat <<'EOF' | sudo tee /etc/yum.repos.d/centos-stream-9.repo
