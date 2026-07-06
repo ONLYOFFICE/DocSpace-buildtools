@@ -53,6 +53,7 @@ DOCUMENT_SERVER_URL_INTERNAL = os.environ.get("DOCUMENT_SERVER_URL_INTERNAL") or
 DOCUMENT_SERVER_URL_EXTERNAL = os.environ.get("DOCUMENT_SERVER_URL_EXTERNAL") or None
 DOCUMENT_SERVER_URL_PUBLIC = DOCUMENT_SERVER_URL_EXTERNAL if DOCUMENT_SERVER_URL_EXTERNAL else os.environ.get("DOCUMENT_SERVER_URL_PUBLIC") or "/ds-vpath/"
 DOCUMENT_SERVER_CONNECTION_HOST = DOCUMENT_SERVER_URL_EXTERNAL if DOCUMENT_SERVER_URL_EXTERNAL else DOCUMENT_SERVER_URL_INTERNAL
+DOCUMENT_SERVER_REQUIRED = {"true": True, "false": False}.get(os.environ.get("DOCUMENT_SERVER_REQUIRED", "").lower())
 
 ELK_CONTAINER_NAME = os.environ.get("ELK_CONTAINER_NAME") or "onlyoffice-opensearch"
 ELK_SCHEME = os.environ.get("ELK_SCHEME") or "http"
@@ -318,8 +319,13 @@ def check_docs_connection(wait=True):
     updateJsonData(jsonData, "$.files.docservice.secret.value", DOCUMENT_SERVER_JWT_SECRET)
     updateJsonData(jsonData, "$.files.docservice.secret.header", DOCUMENT_SERVER_JWT_HEADER)
 
-    if wait and not waitForHostAvailable(DOCUMENT_SERVER_CONNECTION_HOST, TIMEOUT=10, INTERVAL=3, MAX_RETRIES=5, RETRY_INTERVAL=15):
+    if DOCUMENT_SERVER_REQUIRED is False:
         deleteJsonPath(jsonData, "$.files.docservice")
+    elif wait and not waitForHostAvailable(DOCUMENT_SERVER_CONNECTION_HOST, TIMEOUT=10, INTERVAL=3, MAX_RETRIES=5, RETRY_INTERVAL=15):
+        if DOCUMENT_SERVER_REQUIRED is None:
+            deleteJsonPath(jsonData, "$.files.docservice")
+        else:
+            print(f"[WARNING] {DOCUMENT_SERVER_CONNECTION_HOST} did not become available within the timeout; keeping $.files.docservice in config (DOCUMENT_SERVER_REQUIRED=true)", flush=True)
 
     writeJsonFile(filePath, jsonData)
 
