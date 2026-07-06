@@ -138,7 +138,7 @@ ${package_manager} ${WEAK_OPT} -y install $([ "$DIST" != "fedora" ] && echo "epe
 			nodejs \
 			dotnet-sdk-10.0 \
 			opensearch-${ELASTIC_VERSION} \
-			mysql-community-server \
+			$([ "${MYSQL_FIRST_TIME_INSTALL}" = "true" ] && echo "mysql-community-server") \
 			rabbitmq-server \
 			${REDIS_PACKAGE} \
 			SDL2 \
