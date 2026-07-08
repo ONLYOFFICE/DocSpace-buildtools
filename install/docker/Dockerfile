@@ -47,8 +47,7 @@ RUN apt-get -y update && \
     locale-gen en_US.UTF-8 && \
     npm install --global yarn && \
     echo "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_18.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list && \
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/nodesource.gpg --import && \
-    chmod 644 /usr/share/keyrings/nodesource.gpg && \
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --batch --yes --dearmor -o /usr/share/keyrings/nodesource.gpg && \
     apt-get -y update && \
     apt-get install -y nodejs && \
     rm -rf /var/lib/apt/lists/*

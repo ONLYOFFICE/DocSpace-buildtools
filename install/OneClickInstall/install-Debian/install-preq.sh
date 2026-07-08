@@ -124,20 +124,18 @@ elif dpkg -l | grep -q "mysql-apt-config" && [ "$(apt-cache policy mysql-apt-con
 	rm -f "${MYSQL_PACKAGE_NAME}"
 fi
 
-if [ "$DIST" = "ubuntu" ]; then	
-	curl -fsSL https://packages.redis.io/gpg | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/redis.gpg --import
+if [ "$DIST" = "ubuntu" ]; then
+	curl -fsSL https://packages.redis.io/gpg | gpg --batch --yes --dearmor -o /usr/share/keyrings/redis.gpg
 	echo "deb [signed-by=/usr/share/keyrings/redis.gpg] https://packages.redis.io/deb ${DISTRIB_CODENAME} main" | tee /etc/apt/sources.list.d/redis.list
-	chmod 644 /usr/share/keyrings/redis.gpg
 fi
 
-curl -fsSL https://openresty.org/package/pubkey.gpg | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/openresty.gpg --import
+curl -fsSL https://openresty.org/package/pubkey.gpg | gpg --batch --yes --dearmor -o /usr/share/keyrings/openresty.gpg
 # Temporary workaround Debian 13 (trixie) and Ubuntu 26.04 (resolute) use previous LTS codename for OpenResty
 OPENRESTY_CODENAME=$([ "${DISTRIB_CODENAME}" = "trixie" ] && echo "bookworm" || echo "${DISTRIB_CODENAME/resolute/noble}")
 echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/$DIST ${OPENRESTY_CODENAME} $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
-chmod 644 /usr/share/keyrings/openresty.gpg
 
 #add java repo
-curl -fsSL https://packages.adoptium.net/artifactory/api/gpg/key/public | gpg --dearmor | tee /usr/share/keyrings/adoptium.gpg > /dev/null
+curl -fsSL https://packages.adoptium.net/artifactory/api/gpg/key/public | gpg --batch --yes --dearmor -o /usr/share/keyrings/adoptium.gpg
 echo "deb [signed-by=/usr/share/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb $DISTRIB_CODENAME main" | tee /etc/apt/sources.list.d/adoptium.list
 chmod 644 /usr/share/keyrings/adoptium.gpg
 JAVA_VERSION="21"
