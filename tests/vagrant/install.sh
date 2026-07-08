@@ -25,12 +25,10 @@ check_hw() {
 }
 
 add-repo-deb() {
-  mkdir -p "$HOME"/.gnupg && chmod 700 "$HOME"/.gnupg
   echo "deb [signed-by=/usr/share/keyrings/onlyoffice.gpg] https://nexus.onlyoffice.com/repository/4testing-debian stable main" | \
   sudo tee /etc/apt/sources.list.d/onlyoffice4testing.list
   curl -fsSL https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE | \
-  gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/onlyoffice.gpg --import
-  chmod 644 /usr/share/keyrings/onlyoffice.gpg
+  gpg --batch --yes --dearmor -o /usr/share/keyrings/onlyoffice.gpg
 }
 
 add-repo-rpm() {
