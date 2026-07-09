@@ -106,7 +106,7 @@ jobs:
           RAM: 8192
           CPU: 3
           DOWNLOAD_SCRIPT: '-ds false'
-          TEST_REPO: '-tr true'
+          TEST_REPO: "${{ github.ref_name == 'master' && '-tr false' || '-tr true' }}"
           ARGUMENTS: "-arg '--skiphardwarecheck true --makeswap false --localscripts true --update true'"
         run: |
           set -eux
