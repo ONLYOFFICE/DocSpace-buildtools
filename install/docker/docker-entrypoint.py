@@ -89,6 +89,13 @@ RABBIT_URI = (
     if RABBIT_PROTOCOL == "amqps" and RABBIT_HOST else None
 )
 
+LOG_PRIORITY = dict(CRITICAL=0, ERROR=1, WARNING=2, INFORMATION=3, DEBUG=4, TRACE=5)
+CURRENT_PRIORITY = LOG_PRIORITY.get((os.getenv("LOG_LEVEL") or "INFORMATION").upper(), 3)
+
+def LOG(LEVEL, MESSAGE):
+    if LOG_PRIORITY.get(LEVEL, 3) <= CURRENT_PRIORITY:
+        print(f"[{LEVEL}] {MESSAGE}", flush=True)
+
 class RunServices:
     def __init__(self, SERVICE_PORT, PATH_TO_CONF):
         self.SERVICE_PORT = SERVICE_PORT
@@ -168,13 +175,6 @@ def waitForHostAvailable(HOST_URL, TIMEOUT=10, INTERVAL=3, MAX_RETRIES=5, RETRY_
         bool: True if host becomes available, otherwise False.
     """
 
-    LOG_PRIORITY = dict(CRITICAL=0, ERROR=1, WARNING=2, INFORMATION=3, DEBUG=4, TRACE=5)
-    CURRENT_PRIORITY = LOG_PRIORITY.get((os.getenv("LOG_LEVEL") or "INFORMATION").upper(), 3)
-
-    def LOG(LEVEL, MESSAGE):
-        if LOG_PRIORITY.get(LEVEL, 3) <= CURRENT_PRIORITY:
-            print(f"[{LEVEL}] {MESSAGE}", flush=True)
-
     ATTEMPT = 0
     while True:
         ATTEMPT += 1
@@ -221,13 +221,6 @@ def waitForHostAvailable(HOST_URL, TIMEOUT=10, INTERVAL=3, MAX_RETRIES=5, RETRY_
             return False
 
 def maintain_plugins():
-    LOG_PRIORITY = dict(CRITICAL=0, ERROR=1, WARNING=2, INFORMATION=3, DEBUG=4, TRACE=5)
-    CURRENT_PRIORITY = LOG_PRIORITY.get((os.getenv("LOG_LEVEL") or "INFORMATION").upper(), 3)
-
-    def LOG(LEVEL, MESSAGE):
-        if LOG_PRIORITY.get(LEVEL, 3) <= CURRENT_PRIORITY:
-            print(f"[{LEVEL}] {MESSAGE}", flush=True)
-
     LOG("INFORMATION", "Plugins maintenance started...")
 
     os.makedirs(USER_PLUGINS_DIR, exist_ok=True)
@@ -325,7 +318,7 @@ def check_docs_connection(wait=True):
         if DOCUMENT_SERVER_REQUIRED is None:
             deleteJsonPath(jsonData, "$.files.docservice")
         else:
-            print(f"[WARNING] {DOCUMENT_SERVER_CONNECTION_HOST} did not become available within the timeout; keeping $.files.docservice in config (DOCUMENT_SERVER_REQUIRED=true)", flush=True)
+            LOG("WARNING", f"{DOCUMENT_SERVER_CONNECTION_HOST} did not become available within the timeout; keeping $.files.docservice in config (DOCUMENT_SERVER_REQUIRED=true)")
 
     writeJsonFile(filePath, jsonData)
 
@@ -455,7 +448,7 @@ if LOG_LEVEL:
             NLOG = re.sub(r'^(?!.*ZiggyCreatures)(.*minlevel=")\w+(")', rf'\1{LOG_LEVEL}\2', NLOG, flags=re.M)
             with open(NLOG_PATH, "w") as f: f.write(NLOG)
         except OSError:
-            print(f"[WARNING] {NLOG_PATH} is read-only, skipping LOG_LEVEL patch", flush=True)
+            LOG("WARNING", f"{NLOG_PATH} is read-only, skipping LOG_LEVEL patch")
 
 RELEASE_PLUGINS_DIR = "/var/www/studio/plugins/"
 USER_PLUGINS_DIR = "/app/onlyoffice/data/Studio/webplugins/"
