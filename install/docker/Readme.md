@@ -34,14 +34,20 @@ install/docker/
 │   ├── Dockerfile.ffvideo    #   ffmpeg helper image
 │   ├── build.hcl             #   buildx bake definition (multi-arch)
 │   ├── build.yml             #   compose build definition
-│   ├── build-identity.yml    #   ASC.Identity (Java) build
-│   ├── docker-entrypoint.py  #   main service entrypoint
-│   ├── *-entrypoint*.sh      #   container entrypoints
-│   ├── stack/supervisor/     #   supervisor configs baked into the image
-│   ├── db.dev.yml            #   local-dev MySQL overrides (exposed ports)
-│   ├── docspace.profiles.yml #   local-dev application stack
-│   ├── docspace.overcome.yml #   local-dev overrides
-│   └── dnsmasq.yml           #   local DNS for development
+│   ├── entrypoints/          #   scripts COPY'd into images at build time
+│   │   ├── docker-entrypoint.py
+│   │   ├── docker-identity-entrypoint.sh
+│   │   ├── docker-migration-entrypoint.sh
+│   │   ├── docker-healthchecks-entrypoint.sh
+│   │   ├── bin-share-docker-entrypoint.sh / wait-bin-share-docker-entrypoint.sh
+│   │   └── prepare-nginx-router.sh
+│   ├── dev/                  #   local-dev-only Compose overlays (build.backend.docker.py)
+│   │   ├── db.dev.yml            #   MySQL dev overrides (exposed ports)
+│   │   ├── docspace.profiles.yml #   local-dev application stack
+│   │   ├── docspace.overcome.yml #   local-dev overrides
+│   │   ├── dnsmasq.yml           #   local DNS for development
+│   │   └── build-identity.yml    #   ASC.Identity (Java) build
+│   └── stack/supervisor/     #   supervisor configs baked into the image
 └── community/                # single-container community edition stack
 ```
 

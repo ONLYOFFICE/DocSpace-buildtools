@@ -61,20 +61,23 @@ install/
       Dockerfile            — Main multi-stage DocSpace image
       Dockerfile.runtime    — Runtime dependencies
       Dockerfile.ffvideo    — FFmpeg video processing
-      docker-entrypoint.py    — Main service entrypoint
-      docker-identity-entrypoint.sh
-      docker-migration-entrypoint.sh
-      docker-healthchecks-entrypoint.sh
-      bin-share-docker-entrypoint.sh / wait-bin-share-docker-entrypoint.sh
-      prepare-nginx-router.sh
       build.hcl             — BuildX multi-arch config
-      build.yml / build-identity.yml
+      build.yml
       .dockerignore
+      entrypoints/          — Scripts COPY'd into images at build time:
+        docker-entrypoint.py
+        docker-identity-entrypoint.sh
+        docker-migration-entrypoint.sh
+        docker-healthchecks-entrypoint.sh
+        bin-share-docker-entrypoint.sh / wait-bin-share-docker-entrypoint.sh
+        prepare-nginx-router.sh
+      dev/                  — Local-dev-only Compose overlays (build.backend.docker.py):
+        db.dev.yml            — MySQL dev overrides (exposed ports)
+        docspace.profiles.yml — Profile-based configs (local dev)
+        docspace.overcome.yml — Local dev overrides
+        dnsmasq.yml           — DNS for local dev
+        build-identity.yml    — ASC.Identity (Java) build
       stack/supervisor/     — Supervisor service configs baked into the image
-      db.dev.yml            — MySQL dev overrides (exposed ports)
-      docspace.profiles.yml — Profile-based configs (local dev)
-      docspace.overcome.yml — Local dev overrides
-      dnsmasq.yml           — DNS for local dev
     community/              — Single-container community edition stack
     docspace.yml            — All DocSpace app services
     docspace-stack.yml      — Full stack (app + all dependencies)
@@ -121,7 +124,7 @@ docker compose -f docspace.yml up -d
 docker compose -f docspace-stack.yml up -d
 
 # With local dev overrides
-docker compose --env-file .env -f docspace.yml -f build/docspace.overcome.yml up -d
+docker compose --env-file .env -f docspace.yml -f build/dev/docspace.overcome.yml up -d
 ```
 
 ## CI/CD Workflows

@@ -198,7 +198,7 @@ RUN apt-get -y update && \
     rm -rf /var/lib/apt/lists/* /tmp/*
 
 COPY --from=src --chown=onlyoffice:onlyoffice /app/onlyoffice/config /app/onlyoffice/config/
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/docker-entrypoint.py /usr/bin/docker-entrypoint.py
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-entrypoint.py /usr/bin/docker-entrypoint.py
 
 USER onlyoffice
 EXPOSE 5050
@@ -222,7 +222,7 @@ RUN apt-get -y update && \
     rm -rf /var/lib/apt/lists/* /tmp/*
 
 COPY --from=src --chown=onlyoffice:onlyoffice /app/onlyoffice/config /app/onlyoffice/config/
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/docker-entrypoint.py /usr/bin/docker-entrypoint.py
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-entrypoint.py /usr/bin/docker-entrypoint.py
 USER onlyoffice
 EXPOSE 5050
 ENTRYPOINT ["python3", "/usr/bin/docker-entrypoint.py"]
@@ -241,7 +241,7 @@ RUN apt-get -y update && \
     chown -R onlyoffice:onlyoffice /var/log /var/www /run && \
     rm -rf /var/lib/apt/lists/* /tmp/*
 
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/docker-identity-entrypoint.sh /usr/bin/docker-identity-entrypoint.sh
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-identity-entrypoint.sh /usr/bin/docker-identity-entrypoint.sh
 USER onlyoffice
 ENTRYPOINT ["/bin/bash", "/usr/bin/docker-identity-entrypoint.sh"]
 
@@ -272,7 +272,7 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/nginx.conf.template /etc/nginx/nginx.conf.template
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
 
 # changes for upstream configure
 RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.conf && \
@@ -454,7 +454,7 @@ CMD ["ASC.Web.Studio.dll", "ASC.Web.Studio", "core:eventBus:subscriptionClientNa
 FROM dotnetrun AS healthchecks
 WORKDIR ${BUILD_PATH}/services/ASC.Web.HealthChecks.UI/service
 
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/docker-healthchecks-entrypoint.sh /usr/bin/docker-healthchecks-entrypoint.sh
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-healthchecks-entrypoint.sh /usr/bin/docker-healthchecks-entrypoint.sh
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Web.HealthChecks.UI/service/ .
 
 ENTRYPOINT ["/bin/bash", "/usr/bin/docker-healthchecks-entrypoint.sh"]
@@ -471,7 +471,7 @@ CMD ["ASC.TelegramService.dll", "ASC.TelegramService", "core:eventBus:subscripti
 FROM dotnetrun AS onlyoffice-migration-runner
 WORKDIR ${BUILD_PATH}/services/ASC.Migration.Runner/
 
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/docker-migration-entrypoint.sh /usr/bin/docker-migration-entrypoint.sh
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-migration-entrypoint.sh /usr/bin/docker-migration-entrypoint.sh
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Migration.Runner/service/ .
 
 ENTRYPOINT ["/bin/bash", "/usr/bin/docker-migration-entrypoint.sh"]
@@ -498,7 +498,7 @@ RUN mkdir -p /app/ASC.Files/server && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -u 104 onlyoffice --home /var/www/onlyoffice --system -G onlyoffice
 USER onlyoffice
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/bin-share-docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/bin-share-docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
 COPY --from=files --chown=onlyoffice:onlyoffice ${BUILD_PATH}/products/ASC.Files/server/ /app/ASC.Files/server/
 COPY --from=people_server --chown=onlyoffice:onlyoffice ${BUILD_PATH}/products/ASC.People/server/ /app/ASC.People/server/
 COPY --from=ai --chown=onlyoffice:onlyoffice ${BUILD_PATH}/products/ASC.AI/server/ /app/ASC.AI/server/
@@ -511,7 +511,7 @@ RUN addgroup --system --gid 107 onlyoffice && \
     adduser -u 104 onlyoffice --home /var/www/onlyoffice --system -G onlyoffice && \
     mkdir /app
 USER onlyoffice
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/wait-bin-share-docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/wait-bin-share-docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
 ENTRYPOINT ["/bin/sh", "/usr/bin/docker-entrypoint.sh"]
 
 ## Dotnet Services ##
@@ -532,8 +532,8 @@ RUN set -eux; \
 
 USER onlyoffice
 
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/dotnet_services.conf /etc/supervisor/conf.d/supervisord.conf
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/start-after-migration.py /usr/local/bin/start-after-migration.py
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/stack/supervisor/dotnet_services.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/stack/supervisor/start-after-migration.py /usr/local/bin/start-after-migration.py
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.AI/service/ ${BUILD_PATH}/products/ASC.AI/server/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.AI.Worker/service/ ${BUILD_PATH}/products/ASC.AI/service/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.ApiSystem/service/  ${BUILD_PATH}/services/ASC.ApiSystem/service/
@@ -561,7 +561,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 USER onlyoffice
 
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/node_services.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/stack/supervisor/node_services.conf /etc/supervisor/conf.d/supervisord.conf
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/editor/ ${BUILD_PATH}/products/ASC.Editors/editor/
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/login/ ${BUILD_PATH}/products/ASC.Login/login/
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management/ ${BUILD_PATH}/products/ASC.Management/management/
@@ -579,7 +579,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 USER onlyoffice
 
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/supervisor/java_services.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/stack/supervisor/java_services.conf /etc/supervisor/conf.d/supervisord.conf
 COPY --from=build-java --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.Authorization/app.jar ${BUILD_PATH}/services/ASC.Identity.Authorization/app.jar
 COPY --from=build-java --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.Registration/app.jar ${BUILD_PATH}/services/ASC.Identity.Registration/app.jar
 
@@ -626,7 +626,7 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/campaigns/src/campaign
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/docker-entrypoint.d /docker-entrypoint.d
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/docker-entrypoint.sh /nginx/docker-entrypoint.sh
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/nginx.conf.template /etc/nginx/nginx.conf.template
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
 #COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/community/config/nginx/conf.d/onlyoffice-proxy.conf /etc/nginx/conf.d/
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/community/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
 

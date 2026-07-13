@@ -16,7 +16,7 @@ BACKEND_NODEJS_SERVICES = ["ASC.Socket.IO", "ASC.SsoAuth"]
 BACKEND_DOTNETCORE_SERVICES = ["ASC.Files", "ASC.People", "ASC.Data.Backup", "ASC.Files.Worker", "ASC.Notify", "ASC.Studio.Notify", "ASC.Web.Api", "ASC.Web.Studio", "ASC.Data.Backup.Worker", "ASC.ClearEvents", "ASC.ApiSystem", "ASC.Web.HealthChecks.UI"]
 
 DOCKER_ENTRYPOINT="docker-entrypoint.py"
-DOCKER_ENTRYPOINT_PATH = os.path.join(SRC_PATH, "buildtools", "install", "docker", "build", DOCKER_ENTRYPOINT)
+DOCKER_ENTRYPOINT_PATH = os.path.join(SRC_PATH, "buildtools", "install", "docker", "build", "entrypoints", DOCKER_ENTRYPOINT)
 
 if os.path.exists(os.path.join(BUILD_PATH, "services")):
     print("== Clean up services ==")
@@ -30,7 +30,7 @@ subprocess.run(["dotnet", "build", os.path.join(SRC_PATH, "server", "ASC.Migrati
 
 print("== Add docker-migration-entrypoint.sh to ASC.Migration.Runner ==")
 file_path = os.path.join(BUILD_PATH, "services", "ASC.Migration.Runner", "service", "docker-migration-entrypoint.sh")
-src_file_path = os.path.join(SRC_PATH, "buildtools", "install", "docker", "build", "docker-migration-entrypoint.sh")
+src_file_path = os.path.join(SRC_PATH, "buildtools", "install", "docker", "build", "entrypoints", "docker-migration-entrypoint.sh")
 
 WINDOWS_LINE_ENDING = b'\r\n'
 UNIX_LINE_ENDING = b'\n'

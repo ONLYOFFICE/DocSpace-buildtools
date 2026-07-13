@@ -139,8 +139,8 @@ function build_dotnetcore_backend {
     fi
     if [[ ${DOCKER_ENTRYPOINT} != "false" ]]
     then
-       echo "== ADD ${SRC_PATH}/buildtools/install/docker/build/docker-migration-entrypoint.sh to ASC.Migration.Runner =="
-       cp ${SRC_PATH}/buildtools/install/docker/build/docker-migration-entrypoint.sh ${BUILD_PATH}/services/ASC.Migration.Runner/service/
+       echo "== ADD ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-migration-entrypoint.sh to ASC.Migration.Runner =="
+       cp ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-migration-entrypoint.sh ${BUILD_PATH}/services/ASC.Migration.Runner/service/
     fi
   fi
 }
