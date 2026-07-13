@@ -11,5 +11,5 @@ dockerDir = os.path.join(dir, "buildtools", "install", "docker")
 
 print("Run local dns server")
 os.environ["ROOT_DIR"] = dir
-subprocess.run(["docker", "compose", "--env-file", os.path.join(dockerDir, ".env"), "-f",
-    os.path.join(dockerDir, "build", "dnsmasq.yml"), "up", "-d"])
+subprocess.run(["docker", "compose", "-f",
+    os.path.join(dockerDir, "dnsmasq.yml"), "up", "-d"])
