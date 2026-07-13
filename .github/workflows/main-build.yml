@@ -26,7 +26,7 @@ env:
   DOCKER_PATH: "/install/docker"
   REPO: "onlyoffice"
   DOCKER_IMAGE_PREFIX: "4testing-docspace"
-  DOCKERFILE: "Dockerfile"
+  DOCKERFILE: "Dockerfile.app"
 
 jobs:
   build:
@@ -73,7 +73,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           cd .${DOCKER_PATH}
-          docker buildx bake -f build/build.hcl ${{ matrix.service }}-services \
+          docker buildx bake -f build.hcl ${{ matrix.service }}-services \
             --set "*.args.GIT_BRANCH=${{ matrix.branch }}" \
             --set "*.args.PRODUCT_VERSION=${{ env.PRODUCT_VERSION }}" \
             --set "*.args.BUILD_NUMBER=${{ github.run_number }}" \

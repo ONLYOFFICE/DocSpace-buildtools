@@ -77,7 +77,10 @@ create() {
 
   echo "Creating docker configuration archive..."
   ( cd "${INSTALL_PATH}/docker" && tar -czvf "${INSTALL_PATH}/docker-stack.tar.gz" \
-      --exclude='config/nginx/router/' \
+      --exclude='build.yml'            --exclude='db.dev.yml'          --exclude='dnsmasq.yml' \
+      --exclude='docspace.overcome.yml' --exclude='docspace.profiles.yml' \
+      --exclude='config/supervisor*'   --exclude='config/mysql*'       --exclude='config/nginx/router/' \
+      --exclude='config/createdb.sql'  --exclude='build-*' \
       --exclude='docspace.yml'         --exclude='healthchecks.yml'    --exclude='identity.yml' \
       --exclude='migration-runner.yml' --exclude='notify.yml' \
       ./*.yml .env config )
