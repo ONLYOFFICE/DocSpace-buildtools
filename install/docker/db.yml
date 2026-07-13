@@ -22,7 +22,7 @@ services:
       retries: 3
     volumes:
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}mysql_data:/var/lib/mysql
-      - ./config/mysql/conf.d/:/etc/mysql/conf.d
+      - ./config/mysql.cnf:/etc/mysql/conf.d/mysql.cnf
     networks:
       - ${NETWORK_NAME}
 

@@ -1,4 +1,4 @@
-variable "DOCKERFILE" { default = "Dockerfile.app" }
+variable "DOCKERFILE" { default = "Dockerfile" }
 variable "REGISTRY" { default = "" }
 variable "REPO" {}
 variable "DOCKER_IMAGE_PREFIX" {}
