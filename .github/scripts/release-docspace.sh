@@ -177,7 +177,7 @@ function main() {
   FILTER_TARGETS=()
   [[ -n "${SERVICES_FILTER}" ]] && read -ra FILTER_TARGETS <<< "${SERVICES_FILTER}"
   local BAKE_PRINT_OUTPUT
-  BAKE_PRINT_OUTPUT=$(docker buildx bake -f build.hcl --print "${FILTER_TARGETS[@]}") || {
+  BAKE_PRINT_OUTPUT=$(docker buildx bake -f build/build.hcl --print "${FILTER_TARGETS[@]}") || {
     gha_error "docker buildx bake failed — check that all target names in SERVICES_FILTER exist in build.hcl"
     exit 1
   }
