@@ -97,7 +97,6 @@ install/
   win/                      — Windows installer (Advanced Installer .aip, WinSW, Nginx, OpenSearch)
   deb/                      — Debian package metadata
   rpm/                      — RPM spec files
-  snap/                     — Snap package config
 
 scripts/                    — All local dev tooling
   run/                      — Per-service launch scripts (28 services)

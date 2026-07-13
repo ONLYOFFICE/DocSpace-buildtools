@@ -51,8 +51,7 @@ buildtools/
 │   ├── common/                # Shared build and packaging scripts
 │   ├── win/                   # Windows Advanced Installer projects
 │   ├── deb/                   # Debian package metadata
-│   ├── rpm/                   # RPM package metadata
-│   └── snap/                  # Snap package configuration
+│   └── rpm/                   # RPM package metadata
 ├── scripts/                    # All local dev tooling
 │   ├── run/                    #   Per-service executables (28 services)
 │   │   ├── windows/             #     .bat/.xml launchers
