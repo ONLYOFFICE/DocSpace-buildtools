@@ -51,7 +51,6 @@ config/                     — Application configuration (41 JSON + nginx)
   redis.json / rabbitmq.json / elastic.json / socket.json / notify.json
   nlog.config               — Structured logging (NLog)
   dnsmasq.conf              — DNS for local dev
-  radicale.*                — CalDAV/CardDAV server configs
   nginx/                    — Nginx configs + templates + docker-entrypoint.d/
   document-formats/         — Document format definitions (git submodule)
 
