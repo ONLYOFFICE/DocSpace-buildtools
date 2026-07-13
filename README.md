@@ -26,7 +26,6 @@ This repository contains the **build, deployment, and infrastructure** tooling f
 - [Database Migrations](#database-migrations)
 - [CI/CD](#cicd)
   - [GitHub Actions](#github-actions)
-  - [Jenkins](#jenkins)
 - [Licensing](#licensing)
 
 ## Project Structure
@@ -64,8 +63,7 @@ buildtools/
 │   ├── dev/                    #   Misc dev utilities (Python)
 │   └── runasadmin.bat          #   Shared Windows elevation helper
 ├── tests/                      # Test utilities (lint, vagrant)
-├── .github/workflows/          # GitHub Actions (14 workflows)
-└── Jenkinsfile                 # Jenkins pipeline
+└── .github/workflows/          # GitHub Actions (14 workflows)
 ```
 
 ## Installation
@@ -218,13 +216,6 @@ Docker-based migrations are handled by `migration-runner.yml` Compose service.
 |----------|---------|
 | `rebuild-boxes.yml` | VM box rebuilding |
 | `readme-update.yml` | Documentation automation |
-
-### Jenkins
-
-`Jenkinsfile` defines a declarative pipeline with:
-- Parallel Unix/Windows build stages
-- Automated testing
-- Telegram notifications
 
 ## Licensing
 

@@ -112,7 +112,6 @@ scripts/                    — All local dev tooling
   runasadmin.bat            — Shared Windows elevation helper
 tests/                      — lint/, vagrant/
 .github/workflows/          — 14 GitHub Actions workflows (see CI/CD section)
-Jenkinsfile                 — Jenkins declarative pipeline
 ```
 
 ## Docker Compose Architecture
