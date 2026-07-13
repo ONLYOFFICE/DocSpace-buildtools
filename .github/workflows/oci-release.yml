@@ -36,16 +36,7 @@ jobs:
         run: |
           cd ${{ env.DOCKER_DIR }}
           COMMON_EXCLUDES="
-            --exclude='build.yml'
-            --exclude='db.dev.yml'
-            --exclude='dnsmasq.yml'
-            --exclude='docspace.overcome.yml'
-            --exclude='docspace.profiles.yml'
-            --exclude='config/supervisor*'
-            --exclude='config/mysql*'
-            --exclude='config/nginx/router/'
-            --exclude='config/createdb.sql'
-            --exclude='build-*'"
+            --exclude='config/nginx/router/'"
 
           tar -czvf ${{ env.SCRIPT_DIR }}/docker.tar.gz \
             ${COMMON_EXCLUDES} \
