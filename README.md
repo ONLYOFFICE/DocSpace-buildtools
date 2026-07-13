@@ -20,9 +20,14 @@ This repository contains the **build, deployment, and infrastructure** tooling f
   - [Linux Packages](#linux-packages)
   - [Windows Installer](#windows-installer)
 - [Docker](#docker)
+  - [Dockerfiles](#dockerfiles)
+  - [Docker Compose Services](#docker-compose-services)
+  - [Environment Variables](#environment-variables)
 - [Configuration](#configuration)
   - [Application Settings](#application-settings)
   - [Nginx](#nginx)
+  - [Database](#database)
+  - [Process Management](#process-management)
 - [Database Migrations](#database-migrations)
 - [CI/CD](#cicd)
   - [GitHub Actions](#github-actions)
@@ -42,7 +47,8 @@ buildtools/
 │   │   ├── onlyoffice.conf
 │   │   ├── includes/
 │   │   └── templates/
-│   ├── mysql.cnf               # Database configuration
+│   ├── mysql/                 # Database configuration
+│   ├── supervisor/            # Process management
 │   ├── document-formats/      # Document format definitions (submodule)
 │   └── *.json                 # Service-specific configs (redis, rabbitmq, etc.)
 ├── install/                    # Installation infrastructure
@@ -106,10 +112,52 @@ See the [Windows installation guide](https://guides.onlyoffice.com/installation/
 
 ## Docker
 
-DocSpace runs from Docker images built out of `install/docker/`. The Compose stack is **modular** — each component (`docspace.yml`, `db.yml`, `redis.yml`, `rabbitmq.yml`, `opensearch.yml`, `ds.yml`, …) is a separate file combined with `-f`, while `docspace-stack.yml` bundles the application services into a single container. Images are built with Buildx Bake from `install/docker/build/` (`Dockerfile`, `Dockerfile.runtime`, `build.hcl`), and `.env` (~200 variables) drives all settings.
+### Dockerfiles
 
-For the full Compose reference, `.env` variables, image-building, HTTPS/SSL, nginx, MySQL, and Supervisor details, see the **[Docker README](install/docker/Readme.md)**.
-For a lightweight single-container community edition setup, see the **[Docker community README](install/docker/community/README.md)**.
+Located in `install/docker/`:
+
+| Dockerfile | Purpose |
+|-----------|---------|
+| `Dockerfile.app` | Main multi-stage build for DocSpace |
+| `Dockerfile.runtime` | Runtime dependencies image |
+
+Multi-platform builds are supported via `build.hcl` (Docker Buildx).
+
+### Docker Compose Services
+
+Located in `install/docker/`, the Compose setup is modular — each infrastructure component has its own file:
+
+| File | Services |
+|------|----------|
+| `docspace.yml` | All DocSpace application services |
+| `docspace-stack.yml` | Full stack with all dependencies |
+| `docspace.profiles.yml` | Profile-based service configurations |
+| `docspace.overcome.yml` | Overrides for local development |
+| `db.yml` / `db.dev.yml` | MySQL database |
+| `redis.yml` | Redis cache |
+| `rabbitmq.yml` | RabbitMQ message broker |
+| `opensearch.yml` | OpenSearch engine |
+| `identity.yml` | OAuth2 identity service |
+| `proxy.yml` / `proxy-ssl.yml` | Nginx reverse proxy (with/without SSL) |
+| `ds.yml` | ONLYOFFICE Document Server |
+| `migration-runner.yml` | Database migration runner |
+| `fluent.yml` | Fluent Bit log collector |
+| `dashboards.yml` | OpenSearch dashboards |
+| `healthchecks.yml` | Health check monitoring |
+| `notify.yml` | Notification services |
+| `dnsmasq.yml` | DNS resolution for local development |
+
+### Environment Variables
+
+The `.env` file in `install/docker/` contains ~200 configuration variables covering all services. Key categories:
+
+- Service ports and endpoints
+- Database credentials
+- Redis and RabbitMQ connections
+- OpenSearch settings
+- Document Server integration
+- SSL/TLS configuration
+- Edition selection (Community/Enterprise/Developer)
 
 ## Configuration
 
@@ -165,6 +213,21 @@ Two separate nginx roles, each with its own config directory.
 
 **Shared** (`install/docker/config/nginx/`):
 - `nginx.conf.template` — base nginx.conf used by both the proxy and router containers
+
+### Database
+
+- `config/mysql/conf.d/mysql.cnf` — MySQL server tuning
+
+### Process Management
+
+Supervisor configurations in `config/supervisor/`:
+
+| File | Purpose |
+|------|---------|
+| `supervisord.conf` | Supervisor daemon settings |
+| `dotnet_services.conf` | .NET service management |
+| `node_services.conf` | Node.js service management |
+| `java_services.conf` | Java service management |
 
 ## Database Migrations
 
