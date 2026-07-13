@@ -197,14 +197,14 @@ if arch_name == "x86_64" or arch_name == "AMD64":
     os.environ["MYSQL_DATABASE"] = mysql_database
     subprocess.run(["docker", "compose",
                     "-f", os.path.join(dockerDir, "db.yml"),
-                    "-f", os.path.join(dockerDir, "build", "db.dev.yml"), "up", "-d"])
+                    "-f", os.path.join(dockerDir, "build", "dev", "db.dev.yml"), "up", "-d"])
 elif arch_name == "arm64":
     print("CPU Type: arm64 -> run db.yml with arm64v8 image")
     os.environ["MYSQL_IMAGE"] = "arm64v8/mysql:8.3.0-oracle"
     os.environ["MYSQL_DATABASE"] = mysql_database
     subprocess.run(["docker", "compose",
                     "-f", os.path.join(dockerDir, "db.yml"),
-                    "-f", os.path.join(dockerDir, "build", "db.dev.yml"), "up", "-d"])
+                    "-f", os.path.join(dockerDir, "build", "dev", "db.dev.yml"), "up", "-d"])
 else:
     print("Error: Unknown CPU Type:", arch_name)
     sys.exit(1)
@@ -213,7 +213,7 @@ if dns == True:
     print("Run local dns server")
     os.environ["ROOT_DIR"] = dir
     subprocess.run(["docker", "compose", "--env-file", os.path.join(dockerDir, ".env"), "-f",
-                   os.path.join(dockerDir, "build", "dnsmasq.yml"), "up", "-d"])
+                   os.path.join(dockerDir, "build", "dev", "dnsmasq.yml"), "up", "-d"])
 
 if skip_build == False:
     # print("Clear publish folder")
@@ -231,7 +231,7 @@ if skip_build == False:
 
     DOCKER_ENTRYPOINT = "docker-entrypoint.py"
     DOCKER_ENTRYPOINT_PATH = os.path.join(
-        dir, "buildtools", "install", "docker", "build", DOCKER_ENTRYPOINT)
+        dir, "buildtools", "install", "docker", "build", "entrypoints", DOCKER_ENTRYPOINT)
 
     BACKEND_NODEJS_SERVICES = ["ASC.Socket.IO", "ASC.SsoAuth", "ASC.NewAi"]
     for service in BACKEND_NODEJS_SERVICES:
@@ -270,7 +270,7 @@ if skip_build == False:
     file_path = os.path.join(dir, "server", "common", "Tools", "ASC.Migration.Runner",
                              bin_dir, "docker-migration-entrypoint.sh")
     src_file_path = os.path.join(
-        dir, "buildtools", "install", "docker", "build", "docker-migration-entrypoint.sh")
+        dir, "buildtools", "install", "docker", "build", "entrypoints", "docker-migration-entrypoint.sh")
 
     WINDOWS_LINE_ENDING = b'\r\n'
     UNIX_LINE_ENDING = b'\n'
@@ -343,13 +343,13 @@ os.environ["APP_URL_PORTAL"] = portal_url
 os.environ["MIGRATION_TYPE"] = migration_type
 os.environ["MYSQL_DATABASE"] = mysql_database
 os.environ["BIN_DIR"] = bin_dir
-subprocess.run(["docker", "compose", "--env-file", os.path.join(dockerDir, ".env"), "-f", os.path.join(dockerDir, "build", "docspace.profiles.yml"), "-f", os.path.join(
-    dockerDir, "build", "docspace.overcome.yml"), "--profile", "migration-runner", "--profile", "backend-local", "up", "-d"])
+subprocess.run(["docker", "compose", "--env-file", os.path.join(dockerDir, ".env"), "-f", os.path.join(dockerDir, "build", "dev", "docspace.profiles.yml"), "-f", os.path.join(
+    dockerDir, "build", "dev", "docspace.overcome.yml"), "--profile", "migration-runner", "--profile", "backend-local", "up", "-d"])
 
 if identity:
     print("Run identity")
     subprocess.run(["docker-compose", "--env-file", os.path.join(dockerDir, ".env"), "-f",
-                   os.path.join(dockerDir, "build", "build-identity.yml"), "up", "-d"])
+                   os.path.join(dockerDir, "build", "dev", "build-identity.yml"), "up", "-d"])
 
 if opensearch:
     print("Run opensearch")

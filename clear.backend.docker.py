@@ -25,7 +25,7 @@ if containers or images:
     os.environ["BUILD_PATH"] = "/var/www"
     os.environ["SRC_PATH"] = os.path.join(root_dir, "publish/services")
     os.environ["DATA_DIR"] = os.path.join(root_dir, "data")
-    subprocess.run(["docker-compose", "--env-file", os.path.join(docker_dir, ".env"), "-f", os.path.join(docker_dir, "build", "docspace.profiles.yml"), "-f", os.path.join(docker_dir, "build", "docspace.overcome.yml"), "--profile", "migration-runner", "--profile", "backend-local", "down", "--volumes"])
+    subprocess.run(["docker-compose", "--env-file", os.path.join(docker_dir, ".env"), "-f", os.path.join(docker_dir, "build", "dev", "docspace.profiles.yml"), "-f", os.path.join(docker_dir, "build", "dev", "docspace.overcome.yml"), "--profile", "migration-runner", "--profile", "backend-local", "down", "--volumes"])
 
     print("Remove docker contatiners 'mysql'")
     db_command = f"docker compose -f {os.path.join(docker_dir, 'db.yml')} down --volumes"
