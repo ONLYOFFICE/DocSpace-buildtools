@@ -10,20 +10,20 @@ ONLYOFFICE DocSpace Build Tools — build scripts, Docker configurations, instal
 
 ```bash
 # Build
-./build.sh                          # Full backend + frontend build (Linux)
-./build.backend.sh                  # Backend only
-./build.backend.docker.py           # Backend via Docker
-./build.static.sh                   # Static assets
+./scripts/build/build.sh                          # Full backend + frontend build (Linux)
+./scripts/build/build.backend.sh                   # Backend only
+./scripts/build/build.backend.docker.py            # Backend via Docker
+./scripts/build/build.static.sh                    # Static assets
 
 # Database migrations
-./runMigrations.sh                  # Linux
-runMigrations.bat                   # Windows
-runMigrations.standalone.bat        # Windows (standalone mode)
+./scripts/migrations/runMigrations.sh               # Linux
+scripts\migrations\runMigrations.bat                # Windows
+scripts\migrations\runMigrations.standalone.bat      # Windows (standalone mode)
 
 # Service lifecycle (dev)
-./start/start.sh                    # Start all services
-./start/stop.sh                     # Stop all services
-./start/restart.sh                  # Restart all services
+./scripts/start/start.sh                    # Start all services
+./scripts/start/stop.sh                     # Stop all services
+./scripts/start/restart.sh                  # Restart all services
 
 # Docker Compose (from install/docker/)
 docker compose -f docspace.yml -f db.yml -f redis.yml -f rabbitmq.yml up -d
@@ -36,8 +36,8 @@ bash install/OneClickInstall/install-Debian.sh        # Debian/Ubuntu
 bash install/OneClickInstall/install-RedHat.sh        # RHEL/CentOS
 
 # Translation tests
-./run.translations.tests.py
-./run.backend.translations.tests.sh
+./scripts/test/run.translations.tests.py
+./scripts/test/run.backend.translations.tests.sh
 ```
 
 ## Project Structure
@@ -100,14 +100,20 @@ install/
   rpm/                      — RPM spec files
   snap/                     — Snap package config
 
-run/                        — Per-service launch scripts (28 services, .bat + .xml)
+scripts/                    — All local dev tooling
+  run/                      — Per-service launch scripts (28 services)
                               WebApi, Files, People, Notify, Backup, AI, Identity, etc.
-scripts/                    — Service startup: identity, socketio, ssoauth, webdav (.sh + .bat)
-start/                      — Dev lifecycle: start/stop/restart (.sh + .bat + .py)
+    windows/                — .bat + .xml launchers (WinSW for Node/Java services)
+    macos/                  — launchd .plist files
+  start/                    — Dev lifecycle: start/stop/restart (.sh + .bat + .py)
+  build/                    — build.sh/.bat, build.backend.*, buildAndDeploy.*, publish.bat, etc.
+    service-build/          — Per-service dependency prep: identity, socketio, ssoauth, webdav (.sh + .bat)
+  migrations/               — runMigrations.*, createMigrations.bat
+  test/                     — run.e2e.*, run.translations.tests.*, run.backend.translations.tests.*
+  dev/                      — campaigns.downloader.py, clear.backend.docker.py, debuginfo.py, run.dnsmasq.py
+  runasadmin.bat            — Shared Windows elevation helper
 tests/                      — lint/, vagrant/
-tools/                      — check.sh
-templates/                  — gitea-claude-review (AI code review templates)
-.github/workflows/          — 18 GitHub Actions workflows (see CI/CD section)
+.github/workflows/          — 14 GitHub Actions workflows (see CI/CD section)
 Jenkinsfile                 — Jenkins declarative pipeline
 ```
 
@@ -141,6 +147,7 @@ docker compose --env-file .env -f docspace.yml -f build/dev/docspace.overcome.ym
 | `release-docspace.yaml` | Production release |
 | `offline-release.yml` | Offline package build |
 | `oci-release.yml` | Container registry release |
+| `readme-update.yml` | Update OS-SUPPORT-LIST |
 
 **Testing & Quality:**
 
@@ -150,15 +157,15 @@ docker compose --env-file .env -f docspace.yml -f build/dev/docspace.overcome.ym
 | `ci-oci-install.yml` | Linux package install tests |
 | `ci-oci-update.yml` | Update mechanism tests |
 | `zap-scanner.yaml` | OWASP ZAP security scan |
-| `claude-auto-review.yml` | Automated PR review with Claude |
+| `rebuild-boxes.yml` | Rebuild Vagrant test boxes |
 
 ## Key Patterns
 
 - Docker Compose is modular: each infra component has its own `.yml`, combined with `-f`
 - All config via `.env` in `install/docker/` (~200 vars) and JSON in `config/`
 - Three editions: Community, Enterprise, Developer (toggled via env vars and appsettings overrides)
-- `run/` contains per-service launchers; `start/` orchestrates all services together
-- Windows services managed with WinSW (`run/*.xml`); Linux with Supervisor or systemd
+- `scripts/run/` contains per-service launchers; `scripts/start/` orchestrates all services together
+- Windows services managed with WinSW (`scripts/run/windows/*.xml`); Linux with Supervisor or systemd
 
 ## Review Focus
 

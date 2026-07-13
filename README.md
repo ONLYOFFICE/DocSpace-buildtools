@@ -53,15 +53,19 @@ buildtools/
 │   ├── deb/                   # Debian package metadata
 │   ├── rpm/                   # RPM package metadata
 │   └── snap/                  # Snap package configuration
-├── run/                        # Per-service executables (28 services, .bat)
-├── scripts/                    # Service startup scripts (identity, socketio, sso, webdav)
-├── start/                      # Service lifecycle (start.sh, stop.sh, restart.sh)
+├── scripts/                    # All local dev tooling
+│   ├── run/                    #   Per-service executables (28 services)
+│   │   ├── windows/             #     .bat/.xml launchers
+│   │   └── macos/               #     launchd .plist files
+│   ├── start/                  #   Service lifecycle (start.sh, stop.sh, restart.sh)
+│   ├── build/                  #   Platform-specific build scripts
+│   │   └── service-build/       #     Per-service dependency prep (identity, socketio, sso, webdav)
+│   ├── migrations/             #   Migration runners
+│   ├── test/                   #   e2e/translation test runners
+│   ├── dev/                    #   Misc dev utilities (Python)
+│   └── runasadmin.bat          #   Shared Windows elevation helper
 ├── tests/                      # Test utilities (lint, vagrant)
-├── tools/                      # Utility scripts
-├── .github/workflows/          # GitHub Actions (18 workflows)
-├── build*.sh, build*.bat       # Platform-specific build scripts
-├── run*.sh, run*.bat           # Test and migration runners
-├── *.py                        # Python orchestration utilities
+├── .github/workflows/          # GitHub Actions (14 workflows)
 └── Jenkinsfile                 # Jenkins pipeline
 ```
 
@@ -170,13 +174,13 @@ Two separate nginx roles, each with its own config directory.
 
 ```bash
 # Linux/macOS
-./runMigrations.sh
+./scripts/migrations/runMigrations.sh
 
 # Windows
-runMigrations.bat
+scripts\migrations\runMigrations.bat
 
 # Windows (standalone mode)
-runMigrations.standalone.bat
+scripts\migrations\runMigrations.standalone.bat
 ```
 
 Docker-based migrations are handled by `migration-runner.yml` Compose service.
@@ -185,7 +189,7 @@ Docker-based migrations are handled by `migration-runner.yml` Compose service.
 
 ### GitHub Actions
 
-18 workflows in `.github/workflows/`:
+14 workflows in `.github/workflows/`:
 
 **Build & Release:**
 
@@ -208,8 +212,6 @@ Docker-based migrations are handled by `migration-runner.yml` Compose service.
 | `ci-oci-install.yml` | Linux package installation testing |
 | `ci-oci-update.yml` | Update mechanism testing |
 | `zap-scanner.yaml` | OWASP ZAP security scanning |
-| `check-comments.yml` | Code review automation |
-| `claude-auto-review.yml` | Automated PR code review with Claude |
 
 **Infrastructure:**
 

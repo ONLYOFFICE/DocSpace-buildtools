@@ -71,8 +71,8 @@ RUN <<EOF
     sed -i "s/\"number\".*,/\"number\": \"${PRODUCT_VERSION}.${BUILD_NUMBER}\",/g" /app/onlyoffice/config/appsettings.json
 #    sed -e 's/#//' -i /etc/nginx/conf.d/onlyoffice.conf
     if [[ "${DEBUG_INFO,,}" =~ ^(true|1|yes)$ ]]; then
-        pip install --no-cache-dir -r ${SRC_PATH}/buildtools/requirements.txt --break-system-packages && \
-        python3 ${SRC_PATH}/buildtools/debuginfo.py && \
+        pip install --no-cache-dir -r ${SRC_PATH}/buildtools/scripts/dev/requirements.txt --break-system-packages && \
+        python3 ${SRC_PATH}/buildtools/scripts/dev/debuginfo.py && \
         pip cache purge
     fi
     find ${SRC_PATH}/buildtools/install/docker -name "*.sh" -exec chmod +x {} +

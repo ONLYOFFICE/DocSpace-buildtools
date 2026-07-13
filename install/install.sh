@@ -17,7 +17,7 @@ echo "Current project path: $PROJECT_ROOT"
 echo "Temporary directory for modified plists: $TEMP_DIR"
 
 # Copy and modify all plist files
-for plist in "$CURRENT_PATH/run/macos/"*.plist; do
+for plist in "$CURRENT_PATH/scripts/units/macos/"*.plist; do
     filename=$(basename "$plist")
     echo "Processing $filename..."
     

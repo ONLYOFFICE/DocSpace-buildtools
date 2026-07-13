@@ -8,22 +8,25 @@ fi
 
 # Get the current directory path
 CURRENT_PATH=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+PROJECT_ROOT=$(dirname "$CURRENT_PATH")
 
-echo "Current project path: $CURRENT_PATH"
+#echo "Current project path: $PROJECT_ROOT"
 
-# Copy and modify all plist files
-for plist in "$CURRENT_PATH/scripts/units/macos/"*.plist; do
+for plist in "$CURRENT_PATH/units/macos/"*.plist; do
     filename=$(basename "$plist")
-        
-    # Load the service
-    echo "Unloading $filename..."
+    echo "Processing $filename..."
+    
     launchctl unload ~/Library/LaunchAgents/$filename 2>/dev/null || true
-	rm -fr ~/Library/LaunchAgents/$filename 2>/dev/null || true
 done
 
-sleep 3s
+#echo
+
+#echo "Waiting 3 seconds for services to stop"
+#sleep 3s
+
+echo
 
 # because dotnet does not support launch.d. removed orphaned dotnet processes
-pkill -9 -f dotnet  
+#pkill -9 -f dotnet  
 
-echo "All services have been removed and unloaded."
+echo "All services have been stopped and unloaded."
