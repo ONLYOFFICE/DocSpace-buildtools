@@ -39,6 +39,7 @@ RUN --mount=type=secret,id=github_token,env=GITHUB_TOKEN sh -ec '\
       ${GITHUB_TOKEN:+-H "Authorization: Bearer ${GITHUB_TOKEN}"} \
       "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/git/refs/heads/${GIT_BRANCH}" -o version.json'
 
+# BEGIN_SOURCE
 RUN <<'EOF'
 #!/bin/bash
     set -e
@@ -59,6 +60,7 @@ RUN <<'EOF'
 
     for PID in "${PIDS[@]}"; do wait "${PID}" || exit 1; done
 EOF
+# END_SOURCE
 
 WORKDIR ${SRC_PATH}/buildtools/config
 RUN <<EOF
