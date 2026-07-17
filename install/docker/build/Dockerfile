@@ -248,6 +248,22 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
 USER onlyoffice
 ENTRYPOINT ["/bin/bash", "/usr/bin/docker-identity-entrypoint.sh"]
 
+## Nginx router otel lua dependencies ##
+FROM openresty/openresty:bullseye-fat AS otel-build
+ARG OPENTELEMETRY_LUA_VERSION=0.2.6
+ARG LUA_RESTY_HTTP_VERSION=0.16.1
+ARG LUA_PROTOBUF_VERSION=0.3.3
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc libc6-dev wget ca-certificates && \
+    /usr/local/openresty/luajit/bin/luarocks install lua-protobuf ${LUA_PROTOBUF_VERSION} && \
+    mkdir -p /usr/local/openresty/site/lualib/resty && \
+    wget -qO- https://github.com/yangxikun/opentelemetry-lua/archive/refs/tags/v${OPENTELEMETRY_LUA_VERSION}.tar.gz | tar -xz -C /tmp && \
+    cp -r /tmp/opentelemetry-lua-${OPENTELEMETRY_LUA_VERSION}/lib/opentelemetry /usr/local/openresty/site/lualib/ && \
+    wget -qO- https://github.com/ledgetech/lua-resty-http/archive/refs/tags/v${LUA_RESTY_HTTP_VERSION}.tar.gz | tar -xz -C /tmp && \
+    cp -r /tmp/lua-resty-http-${LUA_RESTY_HTTP_VERSION}/lib/resty/. /usr/local/openresty/site/lualib/resty/ && \
+    rm -rf /var/lib/apt/lists/* /tmp/*
+
 ## Nginx image ##
 FROM openresty/openresty:bullseye AS router
 ARG SRC_PATH
@@ -276,6 +292,14 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/nginx.conf.template /etc/nginx/nginx.conf.template
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
+
+# opentelemetry tracing: lua sdk + deps and the otel nginx wiring
+COPY --from=otel-build --chown=onlyoffice:onlyoffice /usr/local/openresty/site/lualib /usr/local/openresty/site/lualib
+COPY --from=otel-build --chown=onlyoffice:onlyoffice /usr/local/openresty/luajit/lib/lua/5.1 /usr/local/openresty/luajit/lib/lua/5.1
+COPY --from=otel-build --chown=onlyoffice:onlyoffice /usr/local/openresty/luajit/share/lua/5.1 /usr/local/openresty/luajit/share/lua/5.1
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/config/nginx/lua /etc/nginx/lua
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/otel.conf /etc/nginx/conf.d/00-otel.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/server-otel.conf /etc/nginx/includes/server-otel.conf
 
 # changes for upstream configure
 RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.conf && \

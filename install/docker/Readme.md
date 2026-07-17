@@ -164,6 +164,47 @@ config/docspace-ssl-setup --default
 > docker compose up -d        # then just use plain compose commands
 > ```
 
+### OpenTelemetry (router)
+
+The `onlyoffice-router` container can emit distributed traces and a
+trace-correlated JSON access log for an external OpenTelemetry Collector
+(none is bundled). Disabled by default; enable via `.env`:
+
+| Variable | Purpose |
+|----------|---------|
+| `OTEL_TRACES_ENABLED` | `true` enables tracing and the JSON access log |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP/HTTP collector base URL, e.g. `http://otel-collector:4318` |
+| `OTEL_SERVICE_NAME` | `service.name` resource attribute (default `onlyoffice-router`) |
+| `OTEL_EXPORTER_OTLP_HEADERS` | Extra export headers, `key1=value1,key2=value2` |
+
+Traces are pushed to `<endpoint>/v1/traces`; the `traceparent` header is
+propagated to the upstream DocSpace services. The JSON access log (with
+`trace_id`/`span_id` fields) goes to the container **stdout**, while the plain
+access log keeps flowing to `/var/log/nginx/access.log` for Fluent Bit.
+
+Collector side — receive traces via `otlp` and tail the router's container log
+with `filelog`, lifting the ids onto the log records:
+
+```yaml
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+  filelog:
+    include: [ /var/lib/docker/containers/*/*-json.log ]
+    operators:
+      - type: json_parser              # docker json-file wrapper
+        parse_from: body
+      - type: json_parser              # nginx otel_json line
+        parse_from: attributes.log
+      - type: trace_parser
+        trace_id:
+          parse_from: attributes.trace_id
+        span_id:
+          parse_from: attributes.span_id
+```
+
 ## Building images
 
 Images are built with **buildx bake** from the `build/` definition. The build
