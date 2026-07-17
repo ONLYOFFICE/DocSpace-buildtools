@@ -92,6 +92,7 @@ install/
     healthchecks.yml        — Health check UI
     notify.yml              — Notification service
     dashboards.yml          — Monitoring dashboards
+    proxy.yml / proxy-ssl.yml — Standalone Nginx reverse proxy (HTTP / Let's Encrypt SSL)
   OneClickInstall/          — Installer scripts (Debian, RedHat, Docker, universal)
   common/                   — Shared packaging: build-services.py/sh, changelog.sh,
                               packages-build.sh, plugins-build.sh, systemd/, product-ssl-setup/
@@ -107,7 +108,7 @@ start/                      — Dev lifecycle: start/stop/restart (.sh + .bat + 
 tests/                      — lint/, vagrant/
 tools/                      — check.sh
 templates/                  — gitea-claude-review (AI code review templates)
-.github/workflows/          — 18 GitHub Actions workflows (see CI/CD section)
+.github/workflows/          — 14 GitHub Actions workflows (see CI/CD section)
 Jenkinsfile                 — Jenkins declarative pipeline
 ```
 
@@ -141,6 +142,8 @@ docker compose --env-file .env -f docspace.yml -f build/dev/docspace.overcome.ym
 | `release-docspace.yaml` | Production release |
 | `offline-release.yml` | Offline package build |
 | `oci-release.yml` | Container registry release |
+| `rebuild-boxes.yml` | Rebuild Vagrant test boxes |
+| `readme-update.yml` | Auto-update README |
 
 **Testing & Quality:**
 
@@ -150,7 +153,6 @@ docker compose --env-file .env -f docspace.yml -f build/dev/docspace.overcome.ym
 | `ci-oci-install.yml` | Linux package install tests |
 | `ci-oci-update.yml` | Update mechanism tests |
 | `zap-scanner.yaml` | OWASP ZAP security scan |
-| `claude-auto-review.yml` | Automated PR review with Claude |
 
 ## Key Patterns
 
