@@ -164,7 +164,7 @@ semanage permissive -a httpd_t
 
 package_services="rabbitmq-server ${REDIS_PACKAGE} mysqld"
 
-if [ "$INSTALLATION_TYPE" != "COMMUNITY" ]; then
+if [ "$INSTALLATION_TYPE" != "community" ]; then
 	{ yum check-update postgresql; PSQLExitCode=$?; } || true
 	${package_manager} -y install postgresql postgresql-server
 	if [[ $PSQLExitCode -eq $UPDATE_AVAILABLE_CODE ]]; then

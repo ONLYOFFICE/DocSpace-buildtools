@@ -158,7 +158,7 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 				temurin-${JAVA_VERSION}-jre \
 				ffmpeg 
 
-if [ "$INSTALLATION_TYPE" != "COMMUNITY" ]; then
+if [ "$INSTALLATION_TYPE" != "community" ]; then
 	apt-get install -yq postgresql
 fi
 

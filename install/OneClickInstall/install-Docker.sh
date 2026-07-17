@@ -41,7 +41,7 @@ PRODUCT=$(tr '[:upper:]' '[:lower:]' <<< ${PRODUCT_NAME})
 BASE_DIR="/app/$PACKAGE_SYSNAME"
 STATUS=""
 DOCKER_TAG=""
-INSTALLATION_TYPE="ENTERPRISE"
+INSTALLATION_TYPE="enterprise"
 IDENTITY_CONTAINER_NAME="${PACKAGE_SYSNAME}-identity-api"
 
 NETWORK_NAME=${PACKAGE_SYSNAME}
@@ -594,8 +594,8 @@ set_installation_type_data () {
 	if [ -z "${DOCUMENT_SERVER_IMAGE_NAME}" ]; then
 		DOCUMENT_SERVER_IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}documentserver"
 		case "${INSTALLATION_TYPE}" in
-			"DEVELOPER") DOCUMENT_SERVER_IMAGE_NAME+="-de" ;;
-			"ENTERPRISE") DOCUMENT_SERVER_IMAGE_NAME+="-ee" ;;
+			"developer") DOCUMENT_SERVER_IMAGE_NAME+="-de" ;;
+			"enterprise") DOCUMENT_SERVER_IMAGE_NAME+="-ee" ;;
 		esac
 	fi
 }

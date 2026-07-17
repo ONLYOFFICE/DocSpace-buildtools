@@ -49,8 +49,8 @@ apt-get -y update
 
 ds_pkg_name="${package_sysname}-documentserver"
 case "${INSTALLATION_TYPE}" in
-	"DEVELOPER") ds_pkg_name+="-de" ;;
-	"ENTERPRISE") ds_pkg_name+="-ee" ;;
+	"developer") ds_pkg_name+="-de" ;;
+	"enterprise") ds_pkg_name+="-ee" ;;
 esac
 
 DS_COMMON_NAME=${DS_COMMON_NAME:-ds}
@@ -92,7 +92,7 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
 	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/jwt-secret select "${DS_JWT_SECRET}" | debconf-set-selections
 	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/jwt-header select "${DS_JWT_HEADER}" | debconf-set-selections
 
-	[ "$INSTALLATION_TYPE" != "COMMUNITY" ] && setup_postgres_db
+	[ "$INSTALLATION_TYPE" != "community" ] && setup_postgres_db
 
 	apt-get install -yq "${ds_pkg_name}"
 fi
