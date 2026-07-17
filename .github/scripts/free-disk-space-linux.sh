@@ -29,7 +29,7 @@ printSavedSpace(){ local b=${1:-0}; local t=${2:-}; local a=$(getAvailableSpace)
 
 # ======= Cleanup functions =======
 cleanPackages(){ 
-  local patterns='^(temurin-|llvm-|libllvm|libclang-cpp|gcc-|postgresql-|mysql-|kubectl|python3-botocore|linux-azure-.*-headers).*|(google-chrome-stable|microsoft-edge-stable|firefox|azure-cli|google-cloud-cli|google-cloud-cli-anthoscli|powershell|snapd)$'
+  local patterns='^(temurin-|llvm-|libllvm|libclang-cpp|gcc-|postgresql-|mysql-|kubectl|python3-botocore|linux-azure-.*-headers).*|(microsoft-edge-stable|firefox|azure-cli|google-cloud-cli|google-cloud-cli-anthoscli|powershell|snapd)$'
   local pkgs=$(dpkg-query -W -f='${Package}\n' | grep -E "$patterns" || true)
   [[ -n "$pkgs" ]] && sudo dpkg --purge --force-all $pkgs || true
   sudo rm -rf /var/lib/apt/lists/* /var/cache/apt/* || true
@@ -56,11 +56,11 @@ cleanSwap() {
 removeDirs() {
   if [[ "${VBOX_SAFE}" == "1" ]]; then
     rm_rf \
-      /opt/google/chrome /opt/microsoft/msedge /usr/lib/firefox* \
+      /opt/microsoft/msedge /usr/lib/firefox* \
       /usr/lib/google-cloud-sdk /opt/az /opt/microsoft/powershell \
       /var/lib/snapd /snap /usr/lib/{postgresql,mysql} /var/lib/{postgresql,mysql} \
       /usr/local/{aws-sam-cli,julia*,lib/android,.ghcup} \
-      /usr/local/share/{chromedriver-*,chromium,edge_driver,emacs,gecko_driver,icons,vcpkg,vim} \
+      /usr/local/share/{chromium,edge_driver,emacs,gecko_driver,icons,vcpkg,vim} \
       /usr/share/{apache-maven-*,gradle-*,kotlinc,miniconda,php,ri,swift,az_*} \
       /usr/local/bin/{azcopy,bicep,helm,kind,kustomize,minikube,packer,phpunit,pulumi*,stack,node,npm} \
       /usr/local/lib/node_modules
@@ -68,11 +68,11 @@ removeDirs() {
     rm_rf \
       /usr/lib/jvm/temurin-* /usr/lib/llvm-* /usr/lib/clang /usr/include/clang \
       /usr/lib/gcc /usr/include/c++ \
-      /opt/google/chrome /opt/microsoft/msedge /usr/lib/firefox* \
+      /opt/microsoft/msedge /usr/lib/firefox* \
       /usr/lib/google-cloud-sdk /opt/az /opt/microsoft/powershell \
       /var/lib/snapd /snap /usr/lib/{postgresql,mysql} /var/lib/{postgresql,mysql} \
       /usr/local/{aws-sam-cli,julia*,lib/android,.ghcup} \
-      /usr/local/share/{chromedriver-*,chromium,cmake-*,edge_driver,emacs,gecko_driver,icons,vcpkg,vim} \
+      /usr/local/share/{chromium,cmake-*,edge_driver,emacs,gecko_driver,icons,vcpkg,vim} \
       /usr/share/{apache-maven-*,gradle-*,kotlinc,miniconda,php,ri,swift,az_*} \
       /usr/local/bin/{azcopy,bicep,cmake*,cpack,ctest,helm,kind,kustomize,minikube,packer,phpunit,pulumi*,stack,node,npm} \
       /usr/local/lib/node_modules /opt/hostedtoolcache/*

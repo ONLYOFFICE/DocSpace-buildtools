@@ -118,8 +118,8 @@ jobs:
           
           # Install tools
           sudo apt-get update -y
-          sudo apt-get install -y vagrant shellcheck
-          
+          sudo apt-get install -y vagrant shellcheck aria2
+
           # Install specific VirtualBox version
           curl -fsSL "https://download.virtualbox.org/virtualbox/7.1.12/virtualbox-7.1_7.1.12-169651~Ubuntu~jammy_amd64.deb" -o /tmp/vbox.deb
           sudo apt-get install -y /tmp/vbox.deb
@@ -130,7 +130,42 @@ jobs:
             | xargs shellcheck --exclude="$(awk '!/^#|^$/ {print $1}' tests/lint/sc_ignore | paste -sd ",")" --severity=warning | tee sc_output || true
           awk '/\(warning\):/ {w++} /\(error\):/ {e++} END {if (w+e) printf "::warning ::ShellCheck: %d warnings, %d errors\n", w+0, e+0}' sc_output
 
+      - name: "Boot VM for ${{matrix.name}}"
+        timeout-minutes: 45
+        env:
+          DISTR: ${{ matrix.distr }}
+          OS: ${{ matrix.os }}
+          RAM: 8192
+          CPU: 3
+        run: |
+          set -eux
+          cd tests/vagrant
+
+          # Prefetch the box with multi-connection aria2 — vagrant's own downloader is single-stream (falls back to it below if aria2 fails, e.g. a CDN rate-limit near completion on large boxes)
+          box_name="${DISTR}/${OS}"
+          box_url=$(curl -fsSL "https://vagrantcloud.com/api/v2/vagrant/${box_name}" \
+            | jq -r '[.versions[0].providers[] | select(.name == "virtualbox" and (.architecture // "amd64") == "amd64")][0].url // empty' || true)
+          if [ -n "$box_url" ]; then
+            aria2_opts=(-x16 -s16 -k4M --max-tries=5 --retry-wait=3 --file-allocation=none --console-log-level=warn --summary-interval=30 -d /tmp -o vagrant.box)
+            # a failure typically happens near completion — resume with -c instead of restarting from scratch
+            (aria2c "${aria2_opts[@]}" "$box_url" || aria2c -c "${aria2_opts[@]}" "$box_url") \
+              && vagrant box add --name "${box_name}" /tmp/vagrant.box \
+              || echo "Box prefetch failed, vagrant will download it itself"
+            rm -f /tmp/vagrant.box /tmp/vagrant.box.aria2
+          fi
+
+          # VM boot on shared runners is flaky — destroy and retry once on failure or hang
+          timeout --kill-after=60s 20m vagrant up --no-provision --provider=virtualbox || {
+            echo "VM boot failed or timed out after 20 minutes, retrying..."
+            pkill -TERM -f '[v]agrant|[r]uby.*vagrant' || true
+            sleep 5
+            pkill -KILL -f '[v]agrant|[r]uby.*vagrant' || true
+            vagrant destroy --force || true
+            timeout --kill-after=60s 20m vagrant up --no-provision --provider=virtualbox
+          }
+
       - name: "Install on ${{matrix.name}}"
+        timeout-minutes: 55
         env:
           DISTR: ${{ matrix.distr }}
           OS: ${{ matrix.os }}
@@ -140,7 +175,7 @@ jobs:
         run: |
           set -eux
           cd tests/vagrant
-          
+
           # Configure parameters based on 4testing mode
           if [[ "$USE_4TESTING" == "true" ]]; then
             export DOWNLOAD_SCRIPT='-ds false'
@@ -153,8 +188,8 @@ jobs:
             export ARGUMENTS="-arg '--skiphardwarecheck true'"
             echo -e "\e[32mUsing production packages\e[0m"
           fi
-          
-          vagrant up --provider=virtualbox
+
+          vagrant provision
 
       - name: "Health check for ${{matrix.name}}"
         run: |
@@ -163,6 +198,23 @@ jobs:
             vagrant ssh -c "sudo bash /vagrant/post-install.sh healthcheck" || true
           else
             echo "VM is not running, skipping health check"
+          fi
+
+      - name: "Smoke test on ${{matrix.name}}"
+        timeout-minutes: 20
+        env:
+          LICENSE: ${{ secrets.LICENSE_ENTERPRISE }}
+        run: bash tests/vagrant/smoke-test.sh
+
+      - name: "Uninstall on ${{matrix.name}}"
+        timeout-minutes: 10
+        run: |
+          cd tests/vagrant
+          if vagrant status | grep -q "running"; then
+            vagrant ssh -c "sudo bash /vagrant/post-install.sh uninstall"
+          else
+            echo "VM is not running, cannot run uninstall test"
+            exit 1
           fi
 
       - name: "Collect logs for ${{matrix.name}}"

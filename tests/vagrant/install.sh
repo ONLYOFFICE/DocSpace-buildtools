@@ -100,6 +100,11 @@ esac
       echo "${COLOR_RED}File /etc/os-release doesn't exist${COLOR_RESET}"; exit 1
   fi
 
+  # Some RPM boxes ship firewalld enabled — it blocks the port forwarded to the host
+  if command -v firewall-cmd >/dev/null 2>&1; then
+    systemctl disable --now firewalld 2>/dev/null || true
+  fi
+
   # Clean up home folder
   rm -rf /home/vagrant/*
   [ -d /tmp/docspace ] && mv /tmp/docspace/* /home/vagrant

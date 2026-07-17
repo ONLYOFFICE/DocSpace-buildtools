@@ -95,6 +95,12 @@ jobs:
           bash .github/scripts/docker-utils.sh check-services "${{ matrix.mode.services }}"
           bash .github/scripts/docker-utils.sh status
 
+      - name: Smoke test
+        timeout-minutes: 20
+        env:
+          LICENSE: ${{ secrets.LICENSE_ENTERPRISE }}
+        run: bash .github/scripts/docker-utils.sh smoke-test
+
       - name: Print logs for crashed containers
         run: bash .github/scripts/docker-utils.sh logs 30
 
@@ -167,6 +173,10 @@ jobs:
 
       - name: Check container status
         run: bash .github/scripts/docker-utils.sh status
+
+      - name: Smoke test
+        timeout-minutes: 20
+        run: bash .github/scripts/docker-utils.sh smoke-test
 
       - name: Print logs for crashed containers
         if: always()
