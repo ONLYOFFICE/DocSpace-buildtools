@@ -143,9 +143,10 @@ jobs:
           set -eux
           cd tests/vagrant
 
-          # retrying a boot on this same runner can't help if its L0 hypervisor never exposed (nested) VT-x/AMD-V at all — fail fast instead of burning 40 minutes
-          if ! grep -qE 'vmx|svm' /proc/cpuinfo || ! VBoxManage list hostinfo | grep -qi 'nested HW virtualization:\s*yes'; then
-            echo "::error::This runner host doesn't expose (nested) hardware virtualization to VirtualBox — re-run the job for a different host"
+          # retrying a boot on this same runner can't help if the host never exposed VT-x/AMD-V at all — fail fast instead of burning 40 minutes
+          # (plain HW virtualization is enough for our guests; 'nested' would only matter for VT-x inside the guest and is off on many healthy hosts)
+          if ! grep -qE 'vmx|svm' /proc/cpuinfo || ! VBoxManage list hostinfo | grep -qiE '^Processor supports HW virtualization:\s*yes'; then
+            echo "::error::This runner host doesn't expose hardware virtualization to VirtualBox — re-run the job for a different host"
             exit 1
           fi
 
