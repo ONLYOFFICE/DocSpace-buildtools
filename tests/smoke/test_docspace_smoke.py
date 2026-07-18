@@ -79,6 +79,8 @@ def make_driver():
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
     chrome_options.add_argument('--window-size=1920,1080')
+    # capture the browser console so editor-load timeouts can show the actual JS error
+    chrome_options.set_capability('goog:loggingPrefs', {'browser': 'ALL'})
 
     # Remote WebDriver (e.g. selenium/standalone-chromium container on ARM)
     remote_url = os.environ.get('SELENIUM_REMOTE_URL')
@@ -107,23 +109,27 @@ def wait_editor_loaded(driver, web_url):
     """Open an editor page with the auth cookie and wait until the document renders."""
     driver.get(SERVER_URL)
     driver.add_cookie({'name': 'asc_auth_key', 'value': state['token']})
-    step(f"Editor: {web_url}")
-    driver.get(web_url)
-    WebDriverWait(driver, 60).until(EC.frame_to_be_available_and_switch_to_it((By.TAG_NAME, 'iframe')))
-    done('iframe ok')
 
-    step('Loading document in the editor')
-    editor_timeout = 180
-    start = time.time()
-    while time.time() - start < editor_timeout:
-        try:
-            if driver.execute_script(LOAD_COMPLETE_JS):
-                done(f"done in {time.time() - start:.1f}s")
-                return
-        except WebDriverException:
-            pass
-        time.sleep(1)
-    fail(f"timeout after {editor_timeout}s")
+    # a stuck editor never recovers on its own — short waits with page reloads beat one long wait
+    editor_timeout = 30
+    attempts = 3
+    for attempt in range(1, attempts + 1):
+        step(f"Editor: {web_url}" + (f" (attempt {attempt})" if attempt > 1 else ""))
+        driver.get(web_url)
+        WebDriverWait(driver, 60).until(EC.frame_to_be_available_and_switch_to_it((By.TAG_NAME, 'iframe')))
+        done('iframe ok')
+
+        step('Loading document in the editor')
+        start = time.time()
+        while time.time() - start < editor_timeout:
+            try:
+                if driver.execute_script(LOAD_COMPLETE_JS):
+                    done(f"done in {time.time() - start:.1f}s")
+                    return
+            except WebDriverException:
+                pass
+            time.sleep(1)
+        fail(f"not loaded within {editor_timeout}s" + (", reloading" if attempt < attempts else ""))
     print(driver.execute_script(
         "var api = window.editor || (window.Asc && window.Asc.editor);"
         " var sdk = document.getElementById('editor_sdk');"
@@ -133,7 +139,13 @@ def wait_editor_loaded(driver, web_url):
         " sdkChildren: sdk ? sdk.children.length : null,"
         " iframes: document.getElementsByTagName('iframe').length,"
         " scripts: [].map.call(document.scripts, function(s){return s.src;}).filter(Boolean).slice(0, 5)}"))
-    raise AssertionError(f"Editor did not load within {editor_timeout}s")
+    try:
+        print('Browser console (last 30 entries):')
+        for entry in driver.get_log('browser')[-30:]:
+            print(f"  [{entry.get('level')}] {entry.get('message')}")
+    except WebDriverException as log_error:
+        print(f"Could not collect browser console: {log_error}")
+    raise AssertionError(f"Editor did not load in {attempts} attempts of {editor_timeout}s")
 
 def password_hash():
     hash_params = state['settings']['passwordHash']
