@@ -1,6 +1,6 @@
 -- Reads OpenTelemetry settings from the environment (see the `env` directives
--- in nginx.conf.template). Tracing stays off unless OTEL_TRACES_ENABLED=true
--- and an OTLP endpoint is configured.
+-- in nginx.conf.template). Everything stays off unless an OTLP endpoint is
+-- configured and the corresponding OTEL_*_ENABLED flag is set to true.
 local _M = {}
 
 local function getenv(name)
@@ -28,7 +28,8 @@ if raw_headers then
     end
 end
 
-_M.enabled = getenv("OTEL_TRACES_ENABLED") == "true" and endpoint ~= nil
+_M.traces_enabled = getenv("OTEL_TRACES_ENABLED") == "true" and endpoint ~= nil
+_M.logs_enabled = getenv("OTEL_LOGS_ENABLED") == "true" and endpoint ~= nil
 _M.endpoint = endpoint
 _M.service_name = getenv("OTEL_SERVICE_NAME") or "onlyoffice-router"
 _M.headers = headers
