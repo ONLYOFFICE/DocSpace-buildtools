@@ -299,7 +299,6 @@ COPY --from=otel-build --chown=onlyoffice:onlyoffice /usr/local/openresty/luajit
 COPY --from=otel-build --chown=onlyoffice:onlyoffice /usr/local/openresty/luajit/share/lua/5.1 /usr/local/openresty/luajit/share/lua/5.1
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/config/nginx/lua /etc/nginx/lua
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/otel.conf /etc/nginx/conf.d/00-otel.conf
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/server-otel.conf /etc/nginx/includes/server-otel.conf
 
 # changes for upstream configure
 RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.conf && \

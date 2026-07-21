@@ -166,24 +166,25 @@ config/docspace-ssl-setup --default
 
 ### OpenTelemetry (router)
 
-The `onlyoffice-router` container can emit distributed traces and a
-trace-correlated JSON access log for an external OpenTelemetry Collector
-(none is bundled). Disabled by default; enable via `.env`:
+The `onlyoffice-router` container can push distributed traces and
+trace-correlated request logs straight to an external OpenTelemetry Collector
+over OTLP/HTTP (none is bundled). Disabled by default; enable via `.env`:
 
 | Variable | Purpose |
 |----------|---------|
-| `OTEL_TRACES_ENABLED` | `true` enables tracing and the JSON access log |
+| `OTEL_TRACES_ENABLED` | `true` enables tracing (spans to `<endpoint>/v1/traces`) |
+| `OTEL_LOGS_ENABLED` | `true` enables request logs (records to `<endpoint>/v1/logs`) |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP/HTTP collector base URL, e.g. `http://otel-collector:4318` |
 | `OTEL_SERVICE_NAME` | `service.name` resource attribute (default `onlyoffice-router`) |
 | `OTEL_EXPORTER_OTLP_HEADERS` | Extra export headers, `key1=value1,key2=value2` |
 
-Traces are pushed to `<endpoint>/v1/traces`; the `traceparent` header is
-propagated to the upstream DocSpace services. The JSON access log (with
-`trace_id`/`span_id` fields) goes to the container **stdout**, while the plain
-access log keeps flowing to `/var/log/nginx/access.log` for Fluent Bit.
+Both signals are batched in the background and never block request
+processing; the `traceparent` header is propagated to the upstream DocSpace
+services. With both flags on, each log record carries the `traceId`/`spanId`
+of the request's server span. The plain access log keeps flowing to
+`/var/log/nginx/access.log` for Fluent Bit.
 
-Collector side — receive traces via `otlp` and tail the router's container log
-with `filelog`, lifting the ids onto the log records:
+Collector side — a single `otlp` receiver covers both pipelines:
 
 ```yaml
 receivers:
@@ -191,18 +192,15 @@ receivers:
     protocols:
       http:
         endpoint: 0.0.0.0:4318
-  filelog:
-    include: [ /var/lib/docker/containers/*/*-json.log ]
-    operators:
-      - type: json_parser              # docker json-file wrapper
-        parse_from: body
-      - type: json_parser              # nginx otel_json line
-        parse_from: attributes.log
-      - type: trace_parser
-        trace_id:
-          parse_from: attributes.trace_id
-        span_id:
-          parse_from: attributes.span_id
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [...]
+    logs:
+      receivers: [otlp]
+      exporters: [...]
 ```
 
 ## Building images

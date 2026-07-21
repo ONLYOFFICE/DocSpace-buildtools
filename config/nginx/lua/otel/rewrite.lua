@@ -1,8 +1,8 @@
--- rewrite: start a server span, propagate W3C trace context to the upstream
--- and expose trace/span ids to the access log ($otel_trace_id/$otel_span_id).
+-- rewrite: start a server span and propagate W3C trace context to the
+-- upstream; the span is finished (and logged) in the log phase.
 local conf = require("otel.config")
 
-if not conf.enabled then
+if not conf.traces_enabled then
     return
 end
 
@@ -33,12 +33,3 @@ local new_context, span = global.tracer("onlyoffice-router"):start(upstream_cont
 
 propagator:inject(new_context, ngx.req)
 ngx.ctx.otel_span = span
-
--- $otel_* variables are declared only in server blocks that include
--- server-otel.conf; elsewhere the assignment is a harmless no-op
-local span_context = span:context()
-pcall(function()
-    ngx.var.otel_trace_id = span_context.trace_id
-    ngx.var.otel_span_id = span_context.span_id
-    ngx.var.otel_log = 1
-end)
