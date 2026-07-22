@@ -61,7 +61,8 @@ local function flush(premature)
     if not res then
         ngx.log(ngx.WARN, "otel: logs export failed: ", err)
     elseif res.status >= 300 then
-        ngx.log(ngx.WARN, "otel: logs export failed: HTTP ", res.status)
+        ngx.log(ngx.WARN, "otel: logs export failed: HTTP ", res.status,
+            " body: ", res.body and res.body:sub(1, 256) or "")
     end
 end
 
