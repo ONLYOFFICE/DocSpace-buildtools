@@ -12,7 +12,14 @@ if conf.traces_enabled then
     local http_client = require("opentelemetry.trace.exporter.http_client")
     local always_on_sampler = require("opentelemetry.trace.sampling.always_on_sampler")
 
-    local exporter = otlp_exporter.new(http_client.new(conf.endpoint, 3, conf.headers))
+    -- pass a copy: http_client.new mutates the headers table (sets
+    -- Content-Type: application/x-protobuf) and conf.headers is shared with
+    -- the logs exporter, which must keep sending JSON
+    local trace_headers = {}
+    for key, value in pairs(conf.headers) do
+        trace_headers[key] = value
+    end
+    local exporter = otlp_exporter.new(http_client.new(conf.endpoint, 3, trace_headers))
     -- never block request processing when the collector is unreachable
     local processor = batch_span_processor.new(exporter, { drop_on_queue_full = true })
 

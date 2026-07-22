@@ -46,10 +46,13 @@ local function flush(premature)
         } },
     })
 
-    local headers = { ["Content-Type"] = "application/json" }
+    local headers = {}
     for key, value in pairs(conf.headers) do
         headers[key] = value
     end
+    -- force our encoding last: the shared conf.headers table gets a
+    -- Content-Type: application/x-protobuf entry from the traces http_client
+    headers["Content-Type"] = "application/json"
 
     local httpc = require("resty.http").new()
     httpc:set_timeout(3000)
