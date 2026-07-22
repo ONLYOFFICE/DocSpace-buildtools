@@ -68,6 +68,12 @@ create() {
   download_verify "$COMPOSE_URL"                           "${INSTALL_PATH}/docker-static/docker-compose" "${COMPOSE_URL}.sha256"
   download_verify "$CNI_URL"                               "${INSTALL_PATH}/docker-static/cni-plugins.tgz" "${CNI_URL}.sha256"
 
+  echo "Measuring on-disk image size for the disk-space check..."
+  local DOCKER_ROOT_DIR; DOCKER_ROOT_DIR=$(docker info -f '{{.DockerRootDir}}')
+  local DOCKER_SPACE_MB; DOCKER_SPACE_MB=$(du -sm "${DOCKER_ROOT_DIR}" | awk '{print $1}')
+  sed -i "s~\(REQUIRED_DOCKER_SPACE_MB=\)\"[^\"]*\"~\1\"${DOCKER_SPACE_MB}\"~g" \
+    "${INSTALL_PATH}/common/offline-self-extracting.sh"
+
   echo "Creating Docs compressed archives..."
   mapfile -t DOCS_IMAGES < <(docker images --format "{{.Repository}}:{{.Tag}}" | grep -E 'onlyoffice/documentserver')
   docker save "${DOCS_IMAGES[@]}" | xz --verbose -T0 -z -9e > "${INSTALL_PATH}/docs_images.tar.xz"
@@ -91,6 +97,12 @@ build() {
   tar -cf "${INSTALL_PATH}/offline-docspace.tar" \
     -C "${INSTALL_PATH}/OneClickInstall" install-Docker-args.sh install-Docker.sh \
     -C "${INSTALL_PATH}" docker-static docker-stack.tar.gz docspace_images.tar.xz docs_images.tar.xz
+
+  local TEMP_BYTES; TEMP_BYTES=$(stat -c%s "${INSTALL_PATH}/docker-stack.tar.gz" \
+    "${INSTALL_PATH}/docspace_images.tar.xz" "${INSTALL_PATH}/docs_images.tar.xz" | awk '{s+=$1} END{print s}')
+  local TEMP_SPACE_MB=$(( (TEMP_BYTES + 1024*1024 - 1) / 1024 / 1024 ))
+  sed -i "s~\(REQUIRED_TEMP_SPACE_MB=\)\"[^\"]*\"~\1\"${TEMP_SPACE_MB}\"~g" \
+    "${INSTALL_PATH}/common/offline-self-extracting.sh"
 
   rm -rf "${INSTALL_PATH}"/{docspace_images.tar.xz,docs_images.tar.xz,docker-stack.tar.gz,docker-static}
 
