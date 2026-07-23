@@ -11,6 +11,9 @@ ngx.ctx.otel_span = nil
 
 local status = tonumber(ngx.var.status) or 0
 
+-- path only, without the query string (it may carry tokens/session ids)
+local path = ngx.var.request_uri:match("^[^?]*") or ngx.var.request_uri
+
 if conf.logs_enabled then
     local severity_number, severity_text = 9, "INFO"
     if status >= 500 then
@@ -23,10 +26,10 @@ if conf.logs_enabled then
         timeUnixNano = string.format("%.0f", ngx.now() * 1e9),
         severityNumber = severity_number,
         severityText = severity_text,
-        body = { stringValue = ngx.var.request_method .. " " .. ngx.var.request_uri .. " " .. status },
+        body = { stringValue = ngx.var.request_method .. " " .. path .. " " .. status },
         attributes = {
             { key = "http.request.method", value = { stringValue = ngx.var.request_method } },
-            { key = "url.path", value = { stringValue = ngx.var.request_uri } },
+            { key = "url.path", value = { stringValue = path } },
             { key = "http.response.status_code", value = { intValue = tostring(status) } },
             { key = "http.response.body.size", value = { intValue = tostring(tonumber(ngx.var.body_bytes_sent) or 0) } },
             { key = "http.server.request.duration", value = { doubleValue = tonumber(ngx.var.request_time) or 0 } },

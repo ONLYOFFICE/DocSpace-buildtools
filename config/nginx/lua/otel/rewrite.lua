@@ -19,12 +19,15 @@ local propagator = require("opentelemetry.trace.propagation.text_map.trace_conte
 
 local upstream_context = propagator:extract(context, ngx.req)
 
+-- path only, without the query string (it may carry tokens/session ids)
+local path = ngx.var.request_uri:match("^[^?]*") or ngx.var.request_uri
+
 local new_context, span = global.tracer("onlyoffice-router"):start(upstream_context,
     ngx.var.request_method .. " " .. ngx.var.uri, {
     kind = span_kind.server,
     attributes = {
         attribute.string("http.method", ngx.var.request_method),
-        attribute.string("http.target", ngx.var.request_uri),
+        attribute.string("http.target", path),
         attribute.string("http.host", ngx.var.http_host or ""),
         attribute.string("http.scheme", ngx.var.scheme),
         attribute.string("net.peer.ip", ngx.var.remote_addr or ""),
