@@ -767,6 +767,20 @@ install_product () {
 			(timeout 30 bash -c "while ! docker inspect --format '{{json .State.Health.Status }}' ${PACKAGE_SYSNAME}-mysql-server | grep -q 'healthy'; do sleep 1; done") && echo "OK" || (echo "FAILED")
 		fi
 
+		# (DS v3.8.0) Own app_data/log_data as the container's non-root user before starting app services (fixes host binds and volumes left root-owned by older installs).
+		VOLUME_OWNER="$(get_env_parameter "UID"):$(get_env_parameter "GID")"
+		if [ -n "${VOLUMES_DIR}" ]; then
+			mkdir -p "${VOLUMES_DIR}/app_data" "${VOLUMES_DIR}/log_data"
+			chown -R "${VOLUME_OWNER}" "${VOLUMES_DIR}/app_data" "${VOLUMES_DIR}/log_data"
+		else
+			# only app_data/log_data of this Compose project — never touch other stacks on the host
+			PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$PACKAGE_SYSNAME}"
+			PROJECT_FILTER=(--filter "label=com.docker.compose.project=${PROJECT_NAME}" --filter name=app_data --filter name=log_data)
+			for VOLUME_NAME in $(docker volume ls -q "${PROJECT_FILTER[@]}"); do
+				chown -R "${VOLUME_OWNER}" "$(docker volume inspect --format '{{.Mountpoint}}' "${VOLUME_NAME}")"
+			done
+		fi
+
 		if [ "$STACK_MODE" = "true" ]; then
 			${DOCKER_COMPOSE} -f "${BASE_DIR}/docspace-stack.yml" up -d
 			${DOCKER_COMPOSE} -f "${BASE_DIR}/proxy.yml" up -d

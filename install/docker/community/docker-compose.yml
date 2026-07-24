@@ -44,9 +44,11 @@ services:
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
     ports:
       - "${EXTERNAL_PORT:-80}:80"
-    user: root
+    user: "${UID}:${GID}"
     cap_add:
       - SYS_NICE
+    sysctls:
+      - net.ipv4.ip_unprivileged_port_start=80 # allow non-root to bind :80/:443 (nginx, certbot)
     extra_hosts:
       - "localhost:host-gateway"
       - "host.docker.internal:host-gateway"
@@ -139,7 +141,7 @@ services:
         #- REDIS_SERVER_DB=${REDIS_DB}
     volumes:
       #- ${CERTIFICATE_PATH}:/var/www/onlyoffice/Data/certs/extra-ca-certs.pem
-      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}app_data:/var/www/onlyoffice/Data
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}ds_data:/var/www/onlyoffice/Data
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}ds_fonts:/usr/share/fonts
     expose:
@@ -161,6 +163,7 @@ services:
 volumes:
   log_data:
   app_data:
+  ds_data:
   ds_fonts:
   certbot:
   mysql_data:

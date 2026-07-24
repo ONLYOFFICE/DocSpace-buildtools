@@ -519,6 +519,7 @@ FROM dotnetrun AS dotnet-services
 USER root
 RUN apt-get update && \
     apt-get install -y --no-install-recommends supervisor && \
+    mkdir -p /var/log/supervisor && chown -R onlyoffice:onlyoffice /var/log/supervisor && \
     rm -rf /var/lib/apt/lists/*
 
 ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
@@ -558,6 +559,7 @@ FROM noderun AS node-services
 USER root
 RUN apt-get update && \
     apt-get install -y --no-install-recommends supervisor && \
+    mkdir -p /var/log/supervisor && chown -R onlyoffice:onlyoffice /var/log/supervisor && \
     rm -rf /var/lib/apt/lists/*
 USER onlyoffice
 
@@ -576,6 +578,7 @@ FROM javarun AS java-services
 USER root
 RUN apt-get update && \
     apt-get install -y --no-install-recommends supervisor && \
+    mkdir -p /var/log/supervisor && chown -R onlyoffice:onlyoffice /var/log/supervisor && \
     rm -rf /var/lib/apt/lists/*
 USER onlyoffice
 
@@ -608,8 +611,8 @@ RUN set -eux; \
     apt-get update && apt-get install -y --no-install-recommends openresty; \
     # let the unprivileged onlyoffice user bind :80, then prepare nginx dirs
     setcap 'cap_net_bind_service=+ep' /usr/local/openresty/nginx/sbin/nginx; \
-    mkdir -p /var/log/nginx /var/log/openresty /var/log/supervisor /etc/nginx/conf.d /etc/nginx/includes /etc/nginx/templates; \
-    chown -R onlyoffice:onlyoffice /etc/nginx /var/log/nginx /var/log/openresty /var/log/supervisor /usr/local/openresty; \
+    mkdir -p /var/log/nginx /var/log/openresty /var/log/supervisor /etc/nginx/conf.d /etc/nginx/includes /etc/nginx/templates /etc/letsencrypt /var/www/certbot; \
+    chown -R onlyoffice:onlyoffice /etc/nginx /var/log/nginx /var/log/openresty /var/log/supervisor /usr/local/openresty /etc/letsencrypt /var/www/certbot; \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb /tmp/*
 
 # Services config + entrypoint + supervisor config
