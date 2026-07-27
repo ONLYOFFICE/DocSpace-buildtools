@@ -6,6 +6,7 @@
 #   docker-utils.sh logs [TAIL]               — print logs for unhealthy containers and exit on failure
 #   docker-utils.sh shellcheck                — run ShellCheck on all docker scripts
 #   docker-utils.sh start-community           — resolve tag, patch .env and start community stack (run from community dir)
+#   docker-utils.sh smoke-test                — run browser smoke tests via the selenium container (env: LICENSE)
 
 set -e
 
@@ -115,6 +116,21 @@ run_shellcheck() {
   awk '/\(warning\):/ {w++} /\(error\):/ {e++} END {if (w+e) printf "::warning ::ShellCheck detected %d warnings and %d errors\n", w+0, e+0}' sc_output
 }
 
+
+smoke_test() {
+  PIP_BREAK_SYSTEM_PACKAGES=1 pip install -q --disable-pip-version-check -r tests/smoke/requirements.txt
+
+  # arm64 runners have no Chrome/chromedriver builds — fall back to the selenium container there
+  if ! command -v google-chrome >/dev/null; then
+    docker pull -q selenium/standalone-chromium:latest
+    docker run -d --name selenium --network host --shm-size 2g selenium/standalone-chromium:latest
+    timeout 60 bash -c 'until curl -sf http://localhost:4444/status | grep -qE "\"ready\":\s*true"; do sleep 2; done'       || { echo "::error::selenium container is not ready"; exit 1; }
+    export SELENIUM_REMOTE_URL=http://localhost:4444
+  fi
+
+  python3 -m pytest tests/smoke/test_docspace_smoke.py -v -s
+}
+
 case "$COMMAND" in
   test-install)   test_install "$2" ;;
   check-services) check_services "$2" ;;
@@ -122,5 +138,6 @@ case "$COMMAND" in
   logs)           print_logs ;;
   shellcheck)     run_shellcheck ;;
   start-community)  start_community ;;
+  smoke-test)     smoke_test ;;
   *)              echo "Unknown command: $COMMAND"; exit 1 ;;
 esac

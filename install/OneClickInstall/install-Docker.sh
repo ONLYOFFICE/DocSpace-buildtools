@@ -41,7 +41,7 @@ PRODUCT=$(tr '[:upper:]' '[:lower:]' <<< ${PRODUCT_NAME})
 BASE_DIR="/app/$PACKAGE_SYSNAME"
 STATUS=""
 DOCKER_TAG=""
-INSTALLATION_TYPE="ENTERPRISE"
+INSTALLATION_TYPE="enterprise"
 IDENTITY_CONTAINER_NAME="${PACKAGE_SYSNAME}-identity-api"
 
 NETWORK_NAME=${PACKAGE_SYSNAME}
@@ -601,8 +601,8 @@ set_installation_type_data () {
 	if [ -z "${DOCUMENT_SERVER_IMAGE_NAME}" ]; then
 		DOCUMENT_SERVER_IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}documentserver"
 		case "${INSTALLATION_TYPE}" in
-			"DEVELOPER") DOCUMENT_SERVER_IMAGE_NAME+="-de" ;;
-			"ENTERPRISE") DOCUMENT_SERVER_IMAGE_NAME+="-ee" ;;
+			"developer") DOCUMENT_SERVER_IMAGE_NAME+="-de" ;;
+			"enterprise") DOCUMENT_SERVER_IMAGE_NAME+="-ee" ;;
 		esac
 	fi
 }
@@ -772,6 +772,20 @@ install_product () {
 		if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ] && [[ -n $(docker ps -q --filter "name=${PACKAGE_SYSNAME}-mysql-server") ]]; then
 			echo -n "Waiting for MySQL container to become healthy..."
 			(timeout 30 bash -c "while ! docker inspect --format '{{json .State.Health.Status }}' ${PACKAGE_SYSNAME}-mysql-server | grep -q 'healthy'; do sleep 1; done") && echo "OK" || (echo "FAILED")
+		fi
+
+		# (DS v3.8.0) Own app_data/log_data as the container's non-root user before starting app services (fixes host binds and volumes left root-owned by older installs).
+		VOLUME_OWNER="$(get_env_parameter "UID"):$(get_env_parameter "GID")"
+		if [ -n "${VOLUMES_DIR}" ]; then
+			mkdir -p "${VOLUMES_DIR}/app_data" "${VOLUMES_DIR}/log_data"
+			chown -R "${VOLUME_OWNER}" "${VOLUMES_DIR}/app_data" "${VOLUMES_DIR}/log_data"
+		else
+			# only app_data/log_data of this Compose project — never touch other stacks on the host
+			PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$PACKAGE_SYSNAME}"
+			PROJECT_FILTER=(--filter "label=com.docker.compose.project=${PROJECT_NAME}" --filter name=app_data --filter name=log_data)
+			for VOLUME_NAME in $(docker volume ls -q "${PROJECT_FILTER[@]}"); do
+				chown -R "${VOLUME_OWNER}" "$(docker volume inspect --format '{{.Mountpoint}}' "${VOLUME_NAME}")"
+			done
 		fi
 
 		if [ "$STACK_MODE" = "true" ]; then

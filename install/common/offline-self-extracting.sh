@@ -2,6 +2,8 @@
 set -e
 
 DOCSPACE_VERSION=""
+REQUIRED_TEMP_SPACE_MB=""
+REQUIRED_DOCKER_SPACE_MB=""
 
 ARGS_SCRIPT=$(awk '/^__ARGS_SCRIPT_START__$/{f=1;next}/^__ARGS_SCRIPT_END__$/{exit}f' "$0")
 PAYLOAD_LINE=$(awk '/^__END_OF_SHELL_SCRIPT__$/ {print NR+1; exit}' "$0")
@@ -93,10 +95,31 @@ for pkg in tar iptables jq 'netstat:net-tools:net-tools' 'crontab:cron:cronie'; 
 done
 [ "$_MISSING" -eq 1 ] && exit 1
 
-ARCHIVE_SIZE=$(( $(stat -c%s "$0") / 1024 / 1024 ))
-AVAIL_MB=$(df -m "${TEMP_DIR}" | awk 'NR==2 {print $4}')
-if [ "${AVAIL_MB}" -lt $(( ARCHIVE_SIZE * 3 )) ]; then
-  echo "Warning: Low disk space. Archive is ~${ARCHIVE_SIZE}MB, available: ${AVAIL_MB}MB (recommended: $(( ARCHIVE_SIZE * 3 ))MB)"
+if [ "$SKIP_HARDWARE_CHECK" != "true" ]; then
+  echo "Checking free disk space..."
+ 
+  _check_free_space() {
+    local path="$1" required_mb="$2" label="$3"
+    local avail_mb; avail_mb=$(df -m "${path}" | awk 'NR==2 {print $4}')
+    if [ "${avail_mb}" -lt "${required_mb}" ]; then
+      echo "ERROR: Not enough free disk space on ${label} (${path}): available ${avail_mb}MB, required ~${required_mb}MB"
+      exit 1
+    fi
+  }
+ 
+  ARCHIVE_SIZE=$(( $(stat -c%s "$0") / 1024 / 1024 ))
+  DOCKER_ROOT_DIR=$(docker info -f '{{.DockerRootDir}}' 2>/dev/null || echo /var/lib/docker)
+
+  # +10% margin over the measured/estimated requirement for fs overhead and temp files created during install
+  REQUIRED_TEMP_MB=$(( ( ${REQUIRED_TEMP_SPACE_MB:-$(( ARCHIVE_SIZE * 3 ))} * 110 + 99 ) / 100 ))
+  REQUIRED_DOCKER_MB=$(( ( ${REQUIRED_DOCKER_SPACE_MB:-$(( ARCHIVE_SIZE * 4 ))} * 110 + 99 ) / 100 ))
+
+  if [ "$(df -P "${TEMP_DIR}" | awk 'NR==2{print $1}')" = "$(df -P "${DOCKER_ROOT_DIR}" | awk 'NR==2{print $1}')" ]; then
+    _check_free_space "${TEMP_DIR}" "$(( REQUIRED_TEMP_MB + REQUIRED_DOCKER_MB ))" "temp + Docker root (same filesystem)"
+  else
+    _check_free_space "${TEMP_DIR}" "${REQUIRED_TEMP_MB}" "temporary extraction directory"
+    _check_free_space "${DOCKER_ROOT_DIR}" "${REQUIRED_DOCKER_MB}" "Docker root directory"
+  fi
 fi
 
 echo "Extracting docker images to ${TEMP_DIR}..."

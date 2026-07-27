@@ -176,6 +176,12 @@ if ( $args.Count -ge 2 ) {
       Write-Error $_.Exception.Message
       exit 1
     }
+
+    $ssl_cert = $ssl_cert.Replace('\', '/')
+
+    if ($ssl_key) {
+      $ssl_key = $ssl_key.Replace('\', '/')
+    }
   }
 
   else {

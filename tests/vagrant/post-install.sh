@@ -111,9 +111,16 @@ services_logs() {
   done
 }
 
+uninstall_docspace() {
+  cd /home/vagrant
+  DEBIAN_FRONTEND=noninteractive bash docspace-install.sh package -uni true -log false <<< "Y" \
+    || { echo "::error::Uninstall failed"; exit 1; }
+  echo "${COLOR_GREEN}[OK] Package uninstalled${COLOR_RESET}"
+}
+
 main() {
   get_colors
-  
+
   case "${1:-logs}" in
     "healthcheck")
       echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
@@ -122,6 +129,12 @@ main() {
       healthcheck_systemd_services
       healthcheck_dead_systemd_services
       ;;
+    "uninstall")
+      echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
+      echo "${COLOR_BLUE}UNINSTALL${COLOR_RESET}"
+      echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
+      uninstall_docspace
+      ;;
     "logs")
       echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
       echo "${COLOR_BLUE}COLLECTING SERVICE LOGS${COLOR_RESET}"
@@ -129,7 +142,7 @@ main() {
       services_logs
       ;;
     *)
-      echo "Usage: $0 [healthcheck|logs]"
+      echo "Usage: $0 [healthcheck|uninstall|logs]"
       exit 1
       ;;
   esac
