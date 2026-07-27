@@ -84,7 +84,6 @@ hold_package_version() {
 }
 
 check_hardware () {
-	local failed=0
 	local DISK_REQUIREMENTS=40960
 	local MEMORY_REQUIREMENTS=8000
 	local CORE_REQUIREMENTS=4
@@ -93,25 +92,22 @@ check_hardware () {
 	TOTAL_MEMORY=$(free --mega | awk '/^Mem:/ { print $2 }')
 	CPU_CORES_NUMBER=$(nproc)
 
+	local requirements_not_met=""
+
 	if (( AVAILABLE_DISK_SPACE < DISK_REQUIREMENTS )); then
-		echo "Minimal requirements are not met: need at least ${DISK_REQUIREMENTS} MB of free disk space"
-		echo "Available disk space: ${AVAILABLE_DISK_SPACE} MB"
-		failed=1
+		requirements_not_met="${requirements_not_met}\n  - at least ${DISK_REQUIREMENTS} MB of free disk space (available: ${AVAILABLE_DISK_SPACE} MB)"
 	fi
 
 	if (( TOTAL_MEMORY < MEMORY_REQUIREMENTS )); then
-		echo "Minimal requirements are not met: need at least ${MEMORY_REQUIREMENTS} MB of RAM"
-		echo "Available RAM: ${TOTAL_MEMORY} MB"
-		failed=1
+		requirements_not_met="${requirements_not_met}\n  - at least ${MEMORY_REQUIREMENTS} MB of RAM (available: ${TOTAL_MEMORY} MB)"
 	fi
 
 	if (( CPU_CORES_NUMBER < CORE_REQUIREMENTS )); then
-		echo "Minimal requirements are not met: CPU with at least ${CORE_REQUIREMENTS} cores is required"
-		echo "Available CPU cores: ${CPU_CORES_NUMBER}"
-		failed=1
+		requirements_not_met="${requirements_not_met}\n  - a CPU with at least ${CORE_REQUIREMENTS} cores (available: ${CPU_CORES_NUMBER})"
 	fi
 
-	if (( failed )); then
+	if [ -n "${requirements_not_met}" ]; then
+		printf "Minimal requirements are not met, your system needs:%b\n\nTo skip this check, use the --skiphardwarecheck true parameter\n" "${requirements_not_met}"
 		exit 1
 	fi
 }
