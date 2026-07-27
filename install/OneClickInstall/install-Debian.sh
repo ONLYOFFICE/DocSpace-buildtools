@@ -47,7 +47,7 @@ MAKESWAP="true"
 RES_APP_INSTALLED="is already installed"
 RES_CHECK_PORTS="Please make sure that the ports are free."
 RES_INSTALL_SUCCESS="Thank you for installing ONLYOFFICE ${product_name}."
-RES_QUESTIONS="In case you have any questions contact us via http://support.onlyoffice.com or visit our forum at http://forum.onlyoffice.com"
+RES_QUESTIONS="In case you have any questions contact us via http://support.onlyoffice.com or visit our forum at http://community.onlyoffice.com"
 INSTALL_FLUENT_BIT="true"
 
 while [ "$1" != "" ]; do

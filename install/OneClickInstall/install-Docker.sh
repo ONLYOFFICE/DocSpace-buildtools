@@ -1031,7 +1031,7 @@ start_installation () {
 
 	echo ""
 	echo "Thank you for installing ${PACKAGE_SYSNAME^^} ${PRODUCT_NAME}."
-	echo "In case you have any questions contact us via http://support.${PACKAGE_SYSNAME}.com or visit our forum at http://forum.${PACKAGE_SYSNAME}.com"
+	echo "In case you have any questions contact us via http://support.${PACKAGE_SYSNAME}.com or visit our forum at http://community.${PACKAGE_SYSNAME}.com"
 	echo ""
 
 	exit 0
