@@ -98,6 +98,8 @@ if fuser /var/lib/dpkg/lock-frontend &>/dev/null; then
    timeout 60 bash -c 'while fuser /var/lib/dpkg/lock-frontend &>/dev/null; do sleep 1; done'
 fi
 
+# Suppress interactive apt/needrestart prompts during automated installs
+export DEBIAN_FRONTEND=noninteractive
 export NEEDRESTART_MODE=a
 apt-get update -y --allow-releaseinfo-change
 apt-get install -yq sudo curl dirmngr debian-archive-keyring
