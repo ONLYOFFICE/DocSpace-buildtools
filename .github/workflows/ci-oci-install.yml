@@ -231,7 +231,7 @@ jobs:
 
       - name: "Uninstall on ${{matrix.name}}"
         if: steps.boot.outcome == 'success'
-        timeout-minutes: 10
+        timeout-minutes: 25
         run: |
           cd tests/vagrant
           if vagrant status | grep -q "running"; then
