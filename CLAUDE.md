@@ -43,7 +43,7 @@ bash install/OneClickInstall/install-RedHat.sh        # RHEL/CentOS
 ## Project Structure
 
 ```
-config/                     — Application configuration (41 JSON + nginx)
+config/                     — Application configuration (~30 JSON + nginx)
   appsettings*.json         — App configs (base, developer, enterprise, test, services)
   autofac*.json             — DI container (base, consumers, products)
   storage.json              — Storage backend
@@ -52,7 +52,7 @@ config/                     — Application configuration (41 JSON + nginx)
   nlog.config               — Structured logging (NLog)
   dnsmasq.conf              — DNS for local dev
   radicale.*                — CalDAV/CardDAV server configs
-  nginx/                    — Nginx configs + templates + docker-entrypoint.d/
+  nginx/                    — Nginx configs + includes/ + sites-enabled/
   document-formats/         — Document format definitions (git submodule)
 
 install/
@@ -100,14 +100,14 @@ install/
   rpm/                      — RPM spec files
   snap/                     — Snap package config
 
-run/                        — Per-service launch scripts (28 services, .bat + .xml)
+run/                        — Per-service launch scripts (~15 services, .bat + .xml)
                               WebApi, Files, People, Notify, Backup, AI, Identity, etc.
 scripts/                    — Service startup: identity, socketio, ssoauth, webdav (.sh + .bat)
 start/                      — Dev lifecycle: start/stop/restart (.sh + .bat + .py)
 tests/                      — lint/, vagrant/
 tools/                      — check.sh
-templates/                  — gitea-claude-review (AI code review templates)
-.github/workflows/          — 18 GitHub Actions workflows (see CI/CD section)
+.gitea/actions/             — claude-review (Gitea AI code review action)
+.github/workflows/          — GitHub Actions workflows (see CI/CD section)
 Jenkinsfile                 — Jenkins declarative pipeline
 ```
 
@@ -141,6 +141,7 @@ docker compose --env-file .env -f docspace.yml -f build/dev/docspace.overcome.ym
 | `release-docspace.yaml` | Production release |
 | `offline-release.yml` | Offline package build |
 | `oci-release.yml` | Container registry release |
+| `readme-update.yml` | Update OS support list in README |
 
 **Testing & Quality:**
 
@@ -150,7 +151,7 @@ docker compose --env-file .env -f docspace.yml -f build/dev/docspace.overcome.ym
 | `ci-oci-install.yml` | Linux package install tests |
 | `ci-oci-update.yml` | Update mechanism tests |
 | `zap-scanner.yaml` | OWASP ZAP security scan |
-| `claude-auto-review.yml` | Automated PR review with Claude |
+| `rebuild-boxes.yml` | Rebuild Vagrant boxes for install tests |
 
 ## Key Patterns
 

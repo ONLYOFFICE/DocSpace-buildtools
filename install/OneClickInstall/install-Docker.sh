@@ -41,7 +41,7 @@ PRODUCT=$(tr '[:upper:]' '[:lower:]' <<< ${PRODUCT_NAME})
 BASE_DIR="/app/$PACKAGE_SYSNAME"
 STATUS=""
 DOCKER_TAG=""
-INSTALLATION_TYPE="ENTERPRISE"
+INSTALLATION_TYPE="enterprise"
 IDENTITY_CONTAINER_NAME="${PACKAGE_SYSNAME}-identity-api"
 
 NETWORK_NAME=${PACKAGE_SYSNAME}
@@ -258,24 +258,31 @@ check_kernel () {
 }
 
 check_hardware () {
-	AVAILABLE_DISK_SPACE=$(df -m /  | tail -1 | awk '{ print $4 }')
+	local failed=0
 
-	if [ ${AVAILABLE_DISK_SPACE} -lt ${DISK_REQUIREMENTS} ]; then
-		echo "Minimal requirements are not met: need at least $DISK_REQUIREMENTS MB of free HDD space"
-		exit 1
+	AVAILABLE_DISK_SPACE=$(df -Pm / | awk 'NR == 2 { print $4 }')
+	TOTAL_MEMORY=$(free --mega | awk '/^Mem:/ { print $2 }')
+	CPU_CORES_NUMBER=$(nproc)
+
+	if (( AVAILABLE_DISK_SPACE < DISK_REQUIREMENTS )); then
+		echo "Minimal requirements are not met: need at least ${DISK_REQUIREMENTS} MB of free disk space"
+		echo "Available disk space: ${AVAILABLE_DISK_SPACE} MB"
+		failed=1
 	fi
 
-	TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1)
-
-	if [ ${TOTAL_MEMORY} -lt ${MEMORY_REQUIREMENTS} ]; then
-		echo "Minimal requirements are not met: need at least $MEMORY_REQUIREMENTS MB of RAM"
-		exit 1
+	if (( TOTAL_MEMORY < MEMORY_REQUIREMENTS )); then
+		echo "Minimal requirements are not met: need at least ${MEMORY_REQUIREMENTS} MB of RAM"
+		echo "Available RAM: ${TOTAL_MEMORY} MB"
+		failed=1
 	fi
 
-	CPU_CORES_NUMBER=$(grep -c ^processor /proc/cpuinfo)
+	if (( CPU_CORES_NUMBER < CORE_REQUIREMENTS )); then
+		echo "Minimal requirements are not met: CPU with at least ${CORE_REQUIREMENTS} cores is required"
+		echo "Available CPU cores: ${CPU_CORES_NUMBER}"
+		failed=1
+	fi
 
-	if [ ${CPU_CORES_NUMBER} -lt ${CORE_REQUIREMENTS} ]; then
-		echo "The system does not meet the minimal hardware requirements. CPU with at least $CORE_REQUIREMENTS cores is required"
+	if (( failed )); then
 		exit 1
 	fi
 }
@@ -594,8 +601,8 @@ set_installation_type_data () {
 	if [ -z "${DOCUMENT_SERVER_IMAGE_NAME}" ]; then
 		DOCUMENT_SERVER_IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}documentserver"
 		case "${INSTALLATION_TYPE}" in
-			"DEVELOPER") DOCUMENT_SERVER_IMAGE_NAME+="-de" ;;
-			"ENTERPRISE") DOCUMENT_SERVER_IMAGE_NAME+="-ee" ;;
+			"developer") DOCUMENT_SERVER_IMAGE_NAME+="-de" ;;
+			"enterprise") DOCUMENT_SERVER_IMAGE_NAME+="-ee" ;;
 		esac
 	fi
 }
@@ -767,6 +774,20 @@ install_product () {
 			(timeout 30 bash -c "while ! docker inspect --format '{{json .State.Health.Status }}' ${PACKAGE_SYSNAME}-mysql-server | grep -q 'healthy'; do sleep 1; done") && echo "OK" || (echo "FAILED")
 		fi
 
+		# (DS v3.8.0) Own app_data/log_data as the container's non-root user before starting app services (fixes host binds and volumes left root-owned by older installs).
+		VOLUME_OWNER="$(get_env_parameter "UID"):$(get_env_parameter "GID")"
+		if [ -n "${VOLUMES_DIR}" ]; then
+			mkdir -p "${VOLUMES_DIR}/app_data" "${VOLUMES_DIR}/log_data"
+			chown -R "${VOLUME_OWNER}" "${VOLUMES_DIR}/app_data" "${VOLUMES_DIR}/log_data"
+		else
+			# only app_data/log_data of this Compose project — never touch other stacks on the host
+			PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$PACKAGE_SYSNAME}"
+			PROJECT_FILTER=(--filter "label=com.docker.compose.project=${PROJECT_NAME}" --filter name=app_data --filter name=log_data)
+			for VOLUME_NAME in $(docker volume ls -q "${PROJECT_FILTER[@]}"); do
+				chown -R "${VOLUME_OWNER}" "$(docker volume inspect --format '{{.Mountpoint}}' "${VOLUME_NAME}")"
+			done
+		fi
+
 		if [ "$STACK_MODE" = "true" ]; then
 			${DOCKER_COMPOSE} -f "${BASE_DIR}/docspace-stack.yml" up -d
 			${DOCKER_COMPOSE} -f "${BASE_DIR}/proxy.yml" up -d
@@ -812,8 +833,8 @@ make_swap () {
 	DISK_REQUIREMENTS=6144 #6Gb free space
 	MEMORY_REQUIREMENTS=12000 #RAM ~12Gb
 
-	AVAILABLE_DISK_SPACE=$(df -m /  | tail -1 | awk '{ print $4 }')
-	TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1)
+	AVAILABLE_DISK_SPACE=$(df -Pm / | awk 'NR == 2 { print $4 }')
+	TOTAL_MEMORY=$(free --mega | awk '/^Mem:/ { print $2 }')
 	EXIST=$(swapon -s | awk '{ print $1 }' | { grep -x ${SWAPFILE} || true; })
 
 	if [[ -z $EXIST ]] && [ ${TOTAL_MEMORY} -lt ${MEMORY_REQUIREMENTS} ] && [ ${AVAILABLE_DISK_SPACE} -gt ${DISK_REQUIREMENTS} ]; then
