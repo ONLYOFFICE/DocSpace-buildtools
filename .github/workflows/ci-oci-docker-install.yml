@@ -44,12 +44,13 @@ jobs:
       - id: modes
         name: Configure matrix modes
         run: |
-          STACK=$(jq -cn '{name:"stack", services:"docspace-stack dashboards db ds fluent opensearch proxy rabbitmq redis ", args:"-sm true"}')
+          STACK=$(jq -cn '{name:"stack", services:"docspace-stack dashboards db ds fluent opensearch proxy rabbitmq redis ", args:"-dm stack"}')
           STANDARD=$(jq -cn '{name:"standard", services:"docspace healthchecks identity notify dashboards db ds fluent opensearch proxy rabbitmq redis", args:""}')
+          COMMUNITY=$(jq -cn '{name:"community", services:"docker-compose", args:"-dm community"}')
 
           VALUE=$([ "${{ github.event.inputs.offline }}" = "true" ] \
             && echo "[$STACK]" \
-            || jq -cn --argjson a "$STANDARD" --argjson b "$STACK" '[$a,$b]')
+            || jq -cn --argjson a "$STANDARD" --argjson b "$STACK" --argjson c "$COMMUNITY" '[$a,$b,$c]')
           echo "value=$VALUE" >> "$GITHUB_OUTPUT"
 
   Install-OCI-Docker:
@@ -135,49 +136,3 @@ jobs:
           AWS_REST_API_ID: ${{ secrets.AWS_REST_API_ID }}
           AWS_RESOURCE_ID: ${{ secrets.AWS_RESOURCE_ID }}
         run: bash .github/scripts/offline-archive.sh upload
-
-  Install-Community:
-    if: github.event.inputs.offline != 'true'
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - runner: ubuntu-24.04
-            arch: amd
-          - runner: ubuntu-24.04-arm
-            arch: arm
-    name: Community [${{ matrix.arch }}]
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ github.ref_name }}
-
-      - name: Free Disk Space
-        run: sudo bash .github/scripts/free-disk-space-linux.sh
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Start community
-        working-directory: install/docker/community
-        env:
-          DOCKERHUB_USERNAME_PAT: ${{ secrets.DOCKERHUB_USERNAME_PAT }}
-          DOCKERHUB_TOKEN_PAT: ${{ secrets.DOCKERHUB_TOKEN_PAT }}
-        run: bash "$GITHUB_WORKSPACE/.github/scripts/docker-utils.sh" start-community
-
-      - name: Check container status
-        run: bash .github/scripts/docker-utils.sh status
-
-      - name: Smoke test
-        timeout-minutes: 20
-        run: bash .github/scripts/docker-utils.sh smoke-test
-
-      - name: Print logs for crashed containers
-        if: always()
-        run: bash .github/scripts/docker-utils.sh logs 50

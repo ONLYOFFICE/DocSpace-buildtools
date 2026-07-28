@@ -106,7 +106,7 @@ LETS_ENCRYPT_DOMAIN=""
 LETS_ENCRYPT_MAIL=""
 IDENTITY_ENCRYPTION_SECRET=""
 
-STACK_MODE="false"
+DEPLOYMENT_MODE=""
 OFFLINE_INSTALLATION="false"
 NON_INTERACTIVE="false"
 SKIP_HARDWARE_CHECK="false"
@@ -123,32 +123,77 @@ fi
 
 [[ "$LOCAL_SCRIPTS" = "true" ]] || [[ "$OFFLINE_INSTALLATION" = "true" ]] && source "./${ARGS_SCRIPT}" || source <(curl "${DOWNLOAD_URL_PREFIX}/${ARGS_SCRIPT}")
 
-if [ "${STACK_MODE}" = "true" ]; then
-  CONTAINER_NAME="${PACKAGE_SYSNAME}-dotnet-services"
-  IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-dotnet"
-  SERVICES=("${PRODUCT}-stack" proxy)
-  COMPOSE_FILES=($(printf '%s\n' "${SERVICES[@]}" | sed "s|^|-f ${BASE_DIR}/|; s|\$|.yml|"));
-else
-  CONTAINER_NAME="${PACKAGE_SYSNAME}-api"
-  IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-api"
-  SERVICES=(migration-runner identity notify "${PRODUCT}" healthchecks proxy)
-  COMPOSE_FILES=($(printf '%s\n' "${SERVICES[@]}" | sed "s|^|-f ${BASE_DIR}/|; s|\$|.yml|"));
-fi
+select_deployment_mode () {
+  case "${DEPLOYMENT_MODE}" in
+    community)
+      CONTAINER_NAME="${PACKAGE_SYSNAME}-docspace"
+      IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}"
+      SERVICES=("${PRODUCT}")
+      COMPOSE_FILES=(-f "${BASE_DIR}/docker-compose.yml")
+      { [ "$INSTALL_RABBITMQ" = "true" ] || [ "$INSTALL_REDIS" = "true" ]; } && \
+        echo "Note: --installrabbitmq/--installredis are ignored in --deployment-mode community (no separate Redis/RabbitMQ containers)."
+      ;;
+    stack)
+      CONTAINER_NAME="${PACKAGE_SYSNAME}-dotnet-services"
+      IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-dotnet"
+      SERVICES=("${PRODUCT}-stack" proxy)
+      COMPOSE_FILES=($(printf '%s\n' "${SERVICES[@]}" | sed "s|^|-f ${BASE_DIR}/|; s|\$|.yml|"));
+      ;;
+    *)
+      CONTAINER_NAME="${PACKAGE_SYSNAME}-api"
+      IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-api"
+      SERVICES=(migration-runner identity notify "${PRODUCT}" healthchecks proxy)
+      COMPOSE_FILES=($(printf '%s\n' "${SERVICES[@]}" | sed "s|^|-f ${BASE_DIR}/|; s|\$|.yml|"));
+      ;;
+  esac
+}
 
-uninstall() {
-    DOCKER_COMPOSE="$(docker compose version >/dev/null 2>&1 && echo 'docker compose' || echo 'docker-compose')"
-    read -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " REMOVE_DATA_SERVICES
+detect_current_deployment_mode () {
+	is_command_exists docker || return 0
 
-	if [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]]; then
-		SERVICES+=("db" "rabbitmq" "redis" "opensearch" "dashboards" "fluent")
+	if [ -n "$(docker ps -a -q -f "name=^${PACKAGE_SYSNAME}-docspace$")" ]; then
+		CURRENT_DEPLOYMENT_MODE="community"
+	elif [ -n "$(docker ps -a -q -f "name=^${PACKAGE_SYSNAME}-dotnet-services$")" ]; then
+		CURRENT_DEPLOYMENT_MODE="stack"
+	elif [ -n "$(docker ps -a -q -f "name=^${PACKAGE_SYSNAME}-api$")" ]; then
+		CURRENT_DEPLOYMENT_MODE="standard"
 	fi
 
-    for SERVICE in "${SERVICES[@]}" "ds"; do
-        if [[ -f "$BASE_DIR/$SERVICE.yml" ]]; then
-            echo "Uninstallation of  $SERVICE and its volumes..."
-            ${DOCKER_COMPOSE} -f "$BASE_DIR/$SERVICE.yml" down -v || echo "Failed to remove $SERVICE."
+	if [ -n "${CURRENT_DEPLOYMENT_MODE}" ] && [ "${DEPLOYMENT_MODE_SET}" != "true" ] && [ "${DEPLOYMENT_MODE}" != "${CURRENT_DEPLOYMENT_MODE}" ]; then
+		DEPLOYMENT_MODE="${CURRENT_DEPLOYMENT_MODE}"
+		select_deployment_mode
+	fi
+}
+
+uninstall() {
+    select_deployment_mode
+    detect_current_deployment_mode
+
+    DOCKER_COMPOSE="$(docker compose version >/dev/null 2>&1 && echo 'docker compose' || echo 'docker-compose')"
+
+    if [ "${DEPLOYMENT_MODE}" = "community" ]; then
+        echo "Uninstallation of ${PRODUCT_NAME} (community)..."
+        COMMUNITY_FILES=("${COMPOSE_FILES[@]}")
+        [ -f "${BASE_DIR}/ssl.yml" ] && COMMUNITY_FILES+=(-f "${BASE_DIR}/ssl.yml")
+
+        read -p "Also remove data volumes (mysql, opensearch, documents)? (Y/n): " REMOVE_DATA_SERVICES
+        DOWN_ARGS=(down)
+        [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]] && DOWN_ARGS+=(-v)
+        ${DOCKER_COMPOSE} "${COMMUNITY_FILES[@]}" "${DOWN_ARGS[@]}" || echo "Failed to remove ${PRODUCT_NAME}."
+    else
+        read -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " REMOVE_DATA_SERVICES
+
+        if [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]]; then
+            SERVICES+=("db" "rabbitmq" "redis" "opensearch" "dashboards" "fluent")
         fi
-    done
+
+        for SERVICE in "${SERVICES[@]}" "ds"; do
+            if [[ -f "$BASE_DIR/$SERVICE.yml" ]]; then
+                echo "Uninstallation of  $SERVICE and its volumes..."
+                ${DOCKER_COMPOSE} -f "$BASE_DIR/$SERVICE.yml" down -v || echo "Failed to remove $SERVICE."
+            fi
+        done
+    fi
 
 	docker network rm "${NETWORK_NAME}" 2>/dev/null || echo "Failed to remove network ${NETWORK_NAME}."
 
@@ -482,11 +527,11 @@ get_tag_from_registry () {
 		JQ_FILTER='.results[] | select(.name | test("^(?!99\\.).*")) | select(.images[]?.architecture=="'"$ARCH"'") | .name // empty'
 	fi
 
-	mapfile -t TAGS_RESP < <(curl -s -H "${AUTH_HEADER}" -X GET "${REGISTRY_TAGS_URL}" | jq -r "${JQ_FILTER}")
+	mapfile -t TAGS_RESP < <(curl -s -H "${AUTH_HEADER}" -X GET "${REGISTRY_TAGS_URL}" | jq -r "${JQ_FILTER}" | grep -v -x "latest")
 }
 
 get_available_version () {
-	[ "${OFFLINE_INSTALLATION}" = "false" ] && get_tag_from_registry ${1} || mapfile -t TAGS_RESP < <(docker images --format "{{.Tag}}" "${1}")
+	[ "${OFFLINE_INSTALLATION}" = "false" ] && get_tag_from_registry ${1} || mapfile -t TAGS_RESP < <(docker images --format "{{.Tag}}" "${1}" | grep -v -x "latest")
 
 	VERSION_REGEX='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
 	[ ${#TAGS_RESP[@]} -eq 1 ] && LATEST_TAG="${TAGS_RESP[0]}" || \
@@ -586,13 +631,8 @@ set_docspace_params() {
 }
 
 set_installation_type_data () {
-	if is_command_exists docker; then
-		if [ -n "$(docker ps -a -q -f "name=^${PACKAGE_SYSNAME}-dotnet-services$")" ]; then
-			STACK_MODE=true; CONTAINER_NAME="${PACKAGE_SYSNAME}-dotnet-services"
-		fi
-		UPDATE=${UPDATE:-$(test -n "$(docker ps -aqf name=${CONTAINER_NAME})" && echo true)}
-		[ "${STACK_MODE}" = "true" ] && UPDATE=${UPDATE:-$(test -n "$(docker ps -a -q -f "name=^${PACKAGE_SYSNAME}-api$")" && echo true)}
-	fi
+	detect_current_deployment_mode
+	is_command_exists docker && UPDATE=${UPDATE:-$(test -n "${CURRENT_DEPLOYMENT_MODE}" && echo true)}
 	if [ -z "${DOCUMENT_SERVER_IMAGE_NAME}" ]; then
 		DOCUMENT_SERVER_IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}documentserver"
 		case "${INSTALLATION_TYPE}" in
@@ -603,7 +643,11 @@ set_installation_type_data () {
 }
 
 download_files () {
-	DOCKER_TARBALL="$( [ "${STACK_MODE}" = "true" ] && echo "docker-stack.tar.gz" || echo "docker.tar.gz" )"
+	case "${DEPLOYMENT_MODE}" in
+		community) DOCKER_TARBALL="docker-community.tar.gz" ;;
+		stack)     DOCKER_TARBALL="docker-stack.tar.gz" ;;
+		*)         DOCKER_TARBALL="docker.tar.gz" ;;
+	esac
 
 	[ "${OFFLINE_INSTALLATION}" = "false" ] && echo -n "Downloading configuration files to ${BASE_DIR}..." || echo "Unzip ${DOCKER_TARBALL} to ${BASE_DIR}..."
 
@@ -615,7 +659,11 @@ download_files () {
 			DOWNLOAD_URL="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/${DOCKER_TARBALL}"
 		else
 			DOWNLOAD_URL="https://codeload.github.com/${PACKAGE_SYSNAME}/${PRODUCT}-buildtools/tar.gz/${GIT_BRANCH}"
-			STRIP_COMPONENTS="--strip-components=3 --wildcards */install/docker/*"
+			if [ "${DEPLOYMENT_MODE}" = "community" ]; then
+				STRIP_COMPONENTS="--strip-components=4 --wildcards */install/docker/community/*"
+			else
+				STRIP_COMPONENTS="--strip-components=3 --wildcards */install/docker/*"
+			fi
 		fi
 		curl -sL "${DOWNLOAD_URL}" | tar -xzf - -C "${BASE_DIR}" ${STRIP_COMPONENTS}
 	else
@@ -637,6 +685,36 @@ reconfigure () {
 
 	if [[ -n ${VARIABLE_VALUE} ]]; then
 		sed -i "s~${VARIABLE_NAME}=.*~${VARIABLE_NAME}=${VARIABLE_VALUE}~g" $BASE_DIR/.env
+	fi
+}
+
+opensearch_set_heap_size () {
+	local TARGET_FILE="$1"
+	local SAFE_MEMORY HEAP
+
+	SAFE_MEMORY=$(( ( $(free --mega | grep -oP '\d+' | head -n 1) - 1024 ) / 2 )) # half of the remaining memory after the 1 GB reserve for the OS
+	HEAP=$(( SAFE_MEMORY < 2048 ? 1 : SAFE_MEMORY < 4096 ? 2 : 4 ))  #if <2GB → 1GB; <4GB → 2GB; otherwise → 4GB
+	sed -i "s/Xms[0-9]g/Xms${HEAP}g/g; s/Xmx[0-9]g/Xmx${HEAP}g/g" "${TARGET_FILE}"
+}
+
+wait_mysql_healthy () {
+	echo -n "Waiting for MySQL container to become healthy..."
+	(timeout 30 bash -c "while ! docker inspect --format '{{json .State.Health.Status }}' ${PACKAGE_SYSNAME}-mysql-server | grep -q 'healthy'; do sleep 1; done") && echo "OK" || echo "FAILED"
+}
+
+chown_app_volumes () {
+	# (DS v3.8.0) Own app_data/log_data as the container's non-root user before starting app services (fixes host binds and volumes left root-owned by older installs).
+	local VOLUME_OWNER="$(get_env_parameter "UID"):$(get_env_parameter "GID")"
+	if [ -n "${VOLUMES_DIR}" ]; then
+		mkdir -p "${VOLUMES_DIR}/app_data" "${VOLUMES_DIR}/log_data"
+		chown -R "${VOLUME_OWNER}" "${VOLUMES_DIR}/app_data" "${VOLUMES_DIR}/log_data"
+	else
+		# only app_data/log_data of this Compose project — never touch other stacks on the host
+		local PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$PACKAGE_SYSNAME}"
+		local PROJECT_FILTER=(--filter "label=com.docker.compose.project=${PROJECT_NAME}" --filter name=app_data --filter name=log_data)
+		for VOLUME_NAME in $(docker volume ls -q "${PROJECT_FILTER[@]}"); do
+			chown -R "${VOLUME_OWNER}" "$(docker volume inspect --format '{{.Mountpoint}}' "${VOLUME_NAME}")"
+		done
 	fi
 }
 
@@ -692,9 +770,7 @@ install_elasticsearch () {
 			chown $(docker run --rm "$(${DOCKER_COMPOSE} -f ${BASE_DIR}/opensearch.yml config | awk '/image:/ {print $2; exit}')" stat -c '%u:%g' /usr/share/opensearch/data) "${VOLUMES_DIR}/os_data"
 		fi
 
-		SAFE_MEMORY=$(( ( $(free --mega | grep -oP '\d+' | head -n 1) - 1024 ) / 2 )) # half of the remaining memory after the 1 GB reserve for the OS
-		HEAP=$(( SAFE_MEMORY < 2048 ? 1 : SAFE_MEMORY < 4096 ? 2 : 4 ))  #if <2GB → 1GB; <4GB → 2GB; otherwise → 4GB
-		sed -i "s/Xms[0-9]g/Xms${HEAP}g/g; s/Xmx[0-9]g/Xmx${HEAP}g/g" $BASE_DIR/opensearch.yml
+		opensearch_set_heap_size "${BASE_DIR}/opensearch.yml"
 
 		${DOCKER_COMPOSE} -f ${BASE_DIR}/opensearch.yml up -d
 	elif [ "$INSTALL_ELASTICSEARCH" == "pull" ]; then
@@ -729,7 +805,7 @@ install_product () {
 	if [ "$INSTALL_PRODUCT" == "true" ]; then
 		if [ "${UPDATE}" = "true" ]; then
 			ACTUAL_CONTAINER="${CONTAINER_NAME}"
-			if [ "${STACK_MODE}" = "true" ] && \
+			if [ "${DEPLOYMENT_MODE}" = "stack" ] && \
 				[ -z "$(docker ps -a -q -f "name=^${CONTAINER_NAME}$")" ] && \
 				[ -n "$(docker ps -a -q -f "name=^${PACKAGE_SYSNAME}-api$")" ]; then
 				ACTUAL_CONTAINER="${PACKAGE_SYSNAME}-api"
@@ -743,7 +819,7 @@ install_product () {
 					docker ps -q --filter "name=^${PACKAGE_SYSNAME}-${_svc}$" | xargs -r docker rm -f
 				done
 
-				if [ "$STACK_MODE" = "true" ]; then
+				if [ "${DEPLOYMENT_MODE}" = "stack" ]; then
 					${DOCKER_COMPOSE} -f ${BASE_DIR}/docspace-stack.yml -f ${BASE_DIR}/proxy.yml down
 					if [ "${ACTUAL_CONTAINER}" = "${PACKAGE_SYSNAME}-api" ]; then
 						docker ps -a --format '{{.ID}} {{.Image}}' | grep ":${LOCAL_CONTAINER_TAG}$" | awk '{print $1}' | xargs -r docker rm -f
@@ -765,25 +841,12 @@ install_product () {
 		reconfigure EXTERNAL_PORT_HTTPS ${EXTERNAL_PORT_HTTPS}
 
 		if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ] && [[ -n $(docker ps -q --filter "name=${PACKAGE_SYSNAME}-mysql-server") ]]; then
-			echo -n "Waiting for MySQL container to become healthy..."
-			(timeout 30 bash -c "while ! docker inspect --format '{{json .State.Health.Status }}' ${PACKAGE_SYSNAME}-mysql-server | grep -q 'healthy'; do sleep 1; done") && echo "OK" || (echo "FAILED")
+			wait_mysql_healthy
 		fi
 
-		# (DS v3.8.0) Own app_data/log_data as the container's non-root user before starting app services (fixes host binds and volumes left root-owned by older installs).
-		VOLUME_OWNER="$(get_env_parameter "UID"):$(get_env_parameter "GID")"
-		if [ -n "${VOLUMES_DIR}" ]; then
-			mkdir -p "${VOLUMES_DIR}/app_data" "${VOLUMES_DIR}/log_data"
-			chown -R "${VOLUME_OWNER}" "${VOLUMES_DIR}/app_data" "${VOLUMES_DIR}/log_data"
-		else
-			# only app_data/log_data of this Compose project — never touch other stacks on the host
-			PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$PACKAGE_SYSNAME}"
-			PROJECT_FILTER=(--filter "label=com.docker.compose.project=${PROJECT_NAME}" --filter name=app_data --filter name=log_data)
-			for VOLUME_NAME in $(docker volume ls -q "${PROJECT_FILTER[@]}"); do
-				chown -R "${VOLUME_OWNER}" "$(docker volume inspect --format '{{.Mountpoint}}' "${VOLUME_NAME}")"
-			done
-		fi
+		chown_app_volumes
 
-		if [ "$STACK_MODE" = "true" ]; then
+		if [ "${DEPLOYMENT_MODE}" = "stack" ]; then
 			${DOCKER_COMPOSE} -f "${BASE_DIR}/docspace-stack.yml" up -d
 			${DOCKER_COMPOSE} -f "${BASE_DIR}/proxy.yml" up -d
 		else
@@ -818,6 +881,83 @@ install_product () {
 		#Fix for bug 70537 to ensure proper migration to version 3.0.0
 		if [ "${UPDATE}" = "true" ] && [ -f "/etc/cron.weekly/${PRODUCT}-letsencrypt" ]; then
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -r
+		fi
+	elif [ "$INSTALL_PRODUCT" == "pull" ]; then
+		${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" pull
+	fi
+}
+
+# Removes the app-layer container(s) of a deployment mode that's being switched away from,
+# leaving MySQL/OpenSearch/Document Server (shared across all modes) running untouched.
+teardown_previous_deployment_mode () {
+	echo "Switching deployment mode from ${CURRENT_DEPLOYMENT_MODE} to ${DEPLOYMENT_MODE}; removing the previous app layer (MySQL/OpenSearch/Document Server are kept)..."
+
+	local TARGET_DEPLOYMENT_MODE="${DEPLOYMENT_MODE}"
+	DEPLOYMENT_MODE="${CURRENT_DEPLOYMENT_MODE}"
+	select_deployment_mode
+
+	if [ "${CURRENT_DEPLOYMENT_MODE}" = "community" ]; then
+		${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" rm -sf onlyoffice-docspace
+	else
+		${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" down
+	fi
+
+	DEPLOYMENT_MODE="${TARGET_DEPLOYMENT_MODE}"
+	select_deployment_mode
+}
+
+install_community () {
+	if [ "$INSTALL_PRODUCT" == "true" ]; then
+		if [ "${UPDATE}" = "true" ]; then
+			LOCAL_CONTAINER_TAG="$(docker inspect --format='{{index .Config.Image}}' "${CONTAINER_NAME}" 2>/dev/null | awk -F':' '{print $2}';)"
+			echo "Updating images from tag ${LOCAL_CONTAINER_TAG} to ${DOCKER_TAG}..."
+
+			if [ "$LOCAL_CONTAINER_TAG" != "$DOCKER_TAG" ]; then
+				${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" rm -sf onlyoffice-docspace
+				docker images --format "{{.Repository}}:{{.Tag}}" | grep ":${LOCAL_CONTAINER_TAG}$" | xargs -r docker rmi
+			fi
+		fi
+
+		reconfigure ENV_EXTENSION ${ENV_EXTENSION}
+		reconfigure APP_CORE_BASE_DOMAIN ${APP_CORE_BASE_DOMAIN}
+		reconfigure APP_URL_PORTAL ${APP_URL_PORTAL}
+		reconfigure EXTERNAL_PORT ${EXTERNAL_PORT}
+		reconfigure EXTERNAL_PORT_HTTPS ${EXTERNAL_PORT_HTTPS}
+		reconfigure DATABASE_MIGRATION ${DATABASE_MIGRATION}
+		reconfigure MYSQL_DATABASE ${MYSQL_DATABASE}
+		reconfigure MYSQL_USER ${MYSQL_USER}
+		reconfigure MYSQL_PASSWORD ${MYSQL_PASSWORD}
+		reconfigure MYSQL_ROOT_PASSWORD ${MYSQL_ROOT_PASSWORD}
+		reconfigure DOCUMENT_SERVER_JWT_HEADER ${DOCUMENT_SERVER_JWT_HEADER}
+		reconfigure DOCUMENT_SERVER_JWT_SECRET ${DOCUMENT_SERVER_JWT_SECRET}
+
+		opensearch_set_heap_size "${BASE_DIR}/docker-compose.yml"
+
+		chown_app_volumes
+
+		local COMMUNITY_FILES=("${COMPOSE_FILES[@]}")
+
+		# ssl.yml contract (community-only): SSL_MODE/SSL_DOMAIN/SSL_EMAIL/SSL_CERT_PATH/SSL_KEY_PATH,
+		# different from the standard mode's config/${PRODUCT}-ssl-setup script.
+		if [ -n "${CERTIFICATE_PATH}" ] && [ -n "${APP_DOMAIN_PORTAL}" ]; then
+			mkdir -p "${BASE_DIR}/config/nginx/certs"
+			cp "${CERTIFICATE_PATH}" "${BASE_DIR}/config/nginx/certs/"
+			cp "${CERTIFICATE_KEY_PATH}" "${BASE_DIR}/config/nginx/certs/"
+			COMMUNITY_FILES+=(-f "${BASE_DIR}/ssl.yml")
+			SSL_MODE="custom" SSL_DOMAIN="${APP_DOMAIN_PORTAL}" \
+				SSL_CERT_PATH="/etc/nginx/certs/$(basename "${CERTIFICATE_PATH}")" \
+				SSL_KEY_PATH="/etc/nginx/certs/$(basename "${CERTIFICATE_KEY_PATH}")" \
+				${DOCKER_COMPOSE} "${COMMUNITY_FILES[@]}" up -d
+		elif [ -n "${LETS_ENCRYPT_DOMAIN}" ] && [ -n "${LETS_ENCRYPT_MAIL}" ]; then
+			mkdir -p "${BASE_DIR}/config/nginx/ssl/letsencrypt"
+			COMMUNITY_FILES+=(-f "${BASE_DIR}/ssl.yml")
+			SSL_MODE="letsencrypt" SSL_DOMAIN="${LETS_ENCRYPT_DOMAIN}" SSL_EMAIL="${LETS_ENCRYPT_MAIL}" \
+				${DOCKER_COMPOSE} "${COMMUNITY_FILES[@]}" up -d
+		elif [[ -n "${CERTIFICATE_KEY_PATH}${CERTIFICATE_PATH}${LETS_ENCRYPT_DOMAIN}${LETS_ENCRYPT_MAIL}" ]]; then
+			echo -e "\e[31mERROR:\e[0m Missing required parameters for SSL setup"
+			exit 1
+		else
+			${DOCKER_COMPOSE} "${COMMUNITY_FILES[@]}" up -d
 		fi
 	elif [ "$INSTALL_PRODUCT" == "pull" ]; then
 		${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" pull
@@ -911,16 +1051,20 @@ check_docker_image () {
 	DOCKER_TAG="${DOCKER_TAG:-$(get_available_version ${IMAGE_NAME})}"
 	reconfigure DOCKER_TAG ${DOCKER_TAG}
 	if [ "${OFFLINE_INSTALLATION}" != "false" ]; then
-		[ "$INSTALL_RABBITMQ" == "true" ]           && offline_check_docker_image ${BASE_DIR}/db.yml
-		[ "$INSTALL_RABBITMQ" == "true" ]           && offline_check_docker_image ${BASE_DIR}/rabbitmq.yml
-		[ "$INSTALL_REDIS" == "true" ]              && offline_check_docker_image ${BASE_DIR}/redis.yml
-		[ "$INSTALL_FLUENT_BIT" == "true" ]         && offline_check_docker_image ${BASE_DIR}/fluent.yml
-		[ "$INSTALL_FLUENT_BIT" == "true" ]         && offline_check_docker_image ${BASE_DIR}/dashboards.yml
-		[ "$INSTALL_ELASTICSEARCH" == "true" ]      && offline_check_docker_image ${BASE_DIR}/opensearch.yml
-		[ "$INSTALL_DOCUMENT_SERVER" == "true" ]    && offline_check_docker_image ${BASE_DIR}/ds.yml
+		if [ "${DEPLOYMENT_MODE}" = "community" ]; then
+			[ "$INSTALL_PRODUCT" == "true" ] && offline_check_docker_image "${BASE_DIR}/docker-compose.yml"
+		else
+			[ "$INSTALL_RABBITMQ" == "true" ]           && offline_check_docker_image ${BASE_DIR}/db.yml
+			[ "$INSTALL_RABBITMQ" == "true" ]           && offline_check_docker_image ${BASE_DIR}/rabbitmq.yml
+			[ "$INSTALL_REDIS" == "true" ]              && offline_check_docker_image ${BASE_DIR}/redis.yml
+			[ "$INSTALL_FLUENT_BIT" == "true" ]         && offline_check_docker_image ${BASE_DIR}/fluent.yml
+			[ "$INSTALL_FLUENT_BIT" == "true" ]         && offline_check_docker_image ${BASE_DIR}/dashboards.yml
+			[ "$INSTALL_ELASTICSEARCH" == "true" ]      && offline_check_docker_image ${BASE_DIR}/opensearch.yml
+			[ "$INSTALL_DOCUMENT_SERVER" == "true" ]    && offline_check_docker_image ${BASE_DIR}/ds.yml
 
-		if [ "$INSTALL_PRODUCT" == "true" ]; then
-			for SVC in "${SERVICES[@]}"; do offline_check_docker_image "${BASE_DIR}/${SVC}.yml"; done
+			if [ "$INSTALL_PRODUCT" == "true" ]; then
+				for SVC in "${SERVICES[@]}"; do offline_check_docker_image "${BASE_DIR}/${SVC}.yml"; done
+			fi
 		fi
 	fi
 }
@@ -968,7 +1112,8 @@ services_check_connection () {
 
 start_installation () {
 	root_checking
-
+	
+	select_deployment_mode
 	set_installation_type_data
 
 	get_os_info
@@ -1009,25 +1154,33 @@ start_installation () {
 
 	set_mysql_params
 
+	if [ -n "${CURRENT_DEPLOYMENT_MODE}" ] && [ "${CURRENT_DEPLOYMENT_MODE}" != "${DEPLOYMENT_MODE}" ]; then
+		teardown_previous_deployment_mode
+	fi
+
 	download_files
 
 	check_docker_image
 
 	services_check_connection
 
-	install_elasticsearch
+	if [ "${DEPLOYMENT_MODE}" = "community" ]; then
+		install_community
+	else
+		install_elasticsearch
 
-	install_fluent_bit
+		install_fluent_bit
 
-	install_mysql_server
+		install_mysql_server
 
-	install_rabbitmq
+		install_rabbitmq
 
-	install_redis
+		install_redis
 
-	install_document_server
+		install_document_server
 
-	install_product
+		install_product
+	fi
 
 	echo ""
 	echo "Thank you for installing ${PACKAGE_SYSNAME^^} ${PRODUCT_NAME}."
