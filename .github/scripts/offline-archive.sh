@@ -44,7 +44,7 @@ create() {
   if [ "$ARCH" = "arm" ]; then DOCKER_ARCH="aarch64"; CNI_ARCH="arm64";
   else                          DOCKER_ARCH="x86_64";  CNI_ARCH="amd64"; fi
 
-  sed -i 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\|STACK_MODE="\|NON_INTERACTIVE="\).*"$~\1true"~g' \
+  sed -i -e 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\|NON_INTERACTIVE="\).*"$~\1true"~g' -e 's~^\(DEPLOYMENT_MODE="\).*"$~\1stack"~g' \
     "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
   DOCSPACE_VERSION=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "docspace-" \
     | sed -E "s/.*:([0-9]+\.[0-9]+\.[0-9]+).*/\1/" | head -n1)

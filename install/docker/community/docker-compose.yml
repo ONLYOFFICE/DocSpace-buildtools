@@ -168,3 +168,8 @@ volumes:
   certbot:
   mysql_data:
   os_data:
+
+networks:
+  default:
+    name: ${NETWORK_NAME}
+    external: true
