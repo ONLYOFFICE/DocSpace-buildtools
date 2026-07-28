@@ -43,6 +43,20 @@ healthcheck_dead_systemd_services() {
   echo "${COLOR_GREEN}[OK] No dead systemd services found${COLOR_RESET}"
 }
 
+healthcheck_api() {
+  for _ in $(seq 1 60); do
+    if curl -fs --max-time 3 -o /dev/null "http://localhost/api/2.0/settings"; then
+      echo "${COLOR_GREEN}[OK] DocSpace API is ready${COLOR_RESET}"
+      return 0
+    fi
+    sleep 1
+  done
+
+  echo "${COLOR_RED}[FAILED] DocSpace API failed to become ready${COLOR_RESET}"
+  echo "::error::DocSpace API failed to become ready"
+  return 1
+}
+
 service_exists() {
   systemctl list-unit-files "$1" --no-legend 2>/dev/null | grep -q .
 }
@@ -124,10 +138,11 @@ main() {
   case "${1:-logs}" in
     "healthcheck")
       echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
-      echo "${COLOR_BLUE}HEALTH CHECK OF SYSTEMD SERVICES${COLOR_RESET}"
+      echo "${COLOR_BLUE}HEALTH CHECK${COLOR_RESET}"
       echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
       healthcheck_systemd_services
       healthcheck_dead_systemd_services
+      healthcheck_api
       ;;
     "uninstall")
       echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
