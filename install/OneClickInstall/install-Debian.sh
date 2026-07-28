@@ -47,7 +47,7 @@ MAKESWAP="true"
 RES_APP_INSTALLED="is already installed"
 RES_CHECK_PORTS="Please make sure that the ports are free."
 RES_INSTALL_SUCCESS="Thank you for installing ONLYOFFICE ${product_name}."
-RES_QUESTIONS="In case you have any questions contact us via http://support.onlyoffice.com or visit our forum at http://forum.onlyoffice.com"
+RES_QUESTIONS="In case you have any questions contact us via http://support.onlyoffice.com or visit our forum at http://community.onlyoffice.com"
 INSTALL_FLUENT_BIT="true"
 
 while [ "$1" != "" ]; do
@@ -98,6 +98,8 @@ if fuser /var/lib/dpkg/lock-frontend &>/dev/null; then
    timeout 60 bash -c 'while fuser /var/lib/dpkg/lock-frontend &>/dev/null; do sleep 1; done'
 fi
 
+# Suppress interactive apt/needrestart prompts during automated installs
+export DEBIAN_FRONTEND=noninteractive
 export NEEDRESTART_MODE=a
 apt-get update -y --allow-releaseinfo-change
 apt-get install -yq sudo curl dirmngr debian-archive-keyring
