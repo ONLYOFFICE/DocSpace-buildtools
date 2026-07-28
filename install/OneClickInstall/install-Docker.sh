@@ -527,11 +527,11 @@ get_tag_from_registry () {
 		JQ_FILTER='.results[] | select(.name | test("^(?!99\\.).*")) | select(.images[]?.architecture=="'"$ARCH"'") | .name // empty'
 	fi
 
-	mapfile -t TAGS_RESP < <(curl -s -H "${AUTH_HEADER}" -X GET "${REGISTRY_TAGS_URL}" | jq -r "${JQ_FILTER}")
+	mapfile -t TAGS_RESP < <(curl -s -H "${AUTH_HEADER}" -X GET "${REGISTRY_TAGS_URL}" | jq -r "${JQ_FILTER}" | grep -v -x "latest")
 }
 
 get_available_version () {
-	[ "${OFFLINE_INSTALLATION}" = "false" ] && get_tag_from_registry ${1} || mapfile -t TAGS_RESP < <(docker images --format "{{.Tag}}" "${1}")
+	[ "${OFFLINE_INSTALLATION}" = "false" ] && get_tag_from_registry ${1} || mapfile -t TAGS_RESP < <(docker images --format "{{.Tag}}" "${1}" | grep -v -x "latest")
 
 	VERSION_REGEX='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
 	[ ${#TAGS_RESP[@]} -eq 1 ] && LATEST_TAG="${TAGS_RESP[0]}" || \
