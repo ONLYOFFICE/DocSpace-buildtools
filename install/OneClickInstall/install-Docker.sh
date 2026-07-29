@@ -919,6 +919,7 @@ install_community () {
 		fi
 
 		reconfigure ENV_EXTENSION ${ENV_EXTENSION}
+		reconfigure GIT_BRANCH ${GIT_BRANCH}
 		reconfigure APP_CORE_BASE_DOMAIN ${APP_CORE_BASE_DOMAIN}
 		reconfigure APP_URL_PORTAL ${APP_URL_PORTAL}
 		reconfigure EXTERNAL_PORT ${EXTERNAL_PORT}
