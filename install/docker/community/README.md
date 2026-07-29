@@ -37,13 +37,19 @@ git clone https://github.com/ONLYOFFICE/DocSpace-buildtools.git
 cd DocSpace-buildtools/install/docker/community
 ```
 
-3.	Start the stack in detached mode:
+3.	Create the shared Docker network (the stack expects it to already exist; this is a no-op if it's already there):
+
+```bash
+docker network create onlyoffice 2>/dev/null || true
+```
+
+4.	Start the stack in detached mode:
 
 ```bash
 docker compose up -d
 ```
 
-4.	Access ONLYOFFICE DocSpace at http://localhost or http://your-ip-address.
+5.	Access ONLYOFFICE DocSpace at http://localhost or http://your-ip-address.
 ---
 
 ### Option 2. Build Images from Source
@@ -62,7 +68,13 @@ git clone https://github.com/ONLYOFFICE/DocSpace-buildtools.git
 cd DocSpace-buildtools/install/docker/community
 ```
 
-3. Build and start the containers:
+3. Create the shared Docker network (the stack expects it to already exist; this is a no-op if it's already there):
+
+```bash
+docker network create onlyoffice 2>/dev/null || true
+```
+
+4. Build and start the containers:
 
 ```bash
 docker compose up -d --build
@@ -71,12 +83,14 @@ docker compose up -d --build
 > **Note:** By default, the images are built from the `master` branch.
 > To build from another branch, specify the build argument `GIT_BRANCH`: `GIT_BRANCH=your-branch docker compose up -d --build`
 
-4.	Access ONLYOFFICE DocSpace at http://localhost or http://your-ip-address.
+5.	Access ONLYOFFICE DocSpace at http://localhost or http://your-ip-address.
 ---
 
 ### Option 3. Running with SSL
 
 DocSpace supports both Let's Encrypt and custom SSL certificates.
+
+> Requires the shared network to exist (see step 3 in Option 1/2): `docker network create onlyoffice 2>/dev/null || true`
 
 ```bash
 SSL_MODE="letsencrypt" \

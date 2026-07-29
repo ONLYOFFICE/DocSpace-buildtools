@@ -103,7 +103,7 @@ root_checking
 
 is_command_exists curl || install_curl
 
-if is_command_exists docker && docker ps -a --format '{{.Names}}' | grep -qE "${product_sysname}-api|${product_sysname}-dotnet-services"; then
+if is_command_exists docker && docker ps -a --format '{{.Names}}' | grep -qE "${product_sysname}-api|${product_sysname}-dotnet-services|${product_sysname}-docspace"; then
     DOCKER="true"
     PARAMETERS="-u true $PARAMETERS"
 elif (is_command_exists dpkg && dpkg -s ${product}-api >/dev/null 2>&1) || (is_command_exists rpm && rpm -q ${product}-api >/dev/null 2>&1); then

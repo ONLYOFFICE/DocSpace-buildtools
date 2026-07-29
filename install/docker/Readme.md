@@ -77,7 +77,7 @@ the whole stack - the recommended path for most users:
 bash install/OneClickInstall/install-Docker.sh
 
 # stack mode (single bundled application container)
-bash install/OneClickInstall/install-Docker.sh -sm true
+bash install/OneClickInstall/install-Docker.sh -dm stack
 ```
 
 > [!TIP]
