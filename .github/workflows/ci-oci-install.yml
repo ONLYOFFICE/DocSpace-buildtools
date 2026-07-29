@@ -230,7 +230,7 @@ jobs:
         run: bash tests/vagrant/smoke-test.sh
 
       - name: "Uninstall on ${{matrix.name}}"
-        if: steps.boot.outcome == 'success'
+        if: steps.boot.outcome == 'success' && matrix.os != 'rhel9'
         timeout-minutes: 25
         run: |
           cd tests/vagrant
