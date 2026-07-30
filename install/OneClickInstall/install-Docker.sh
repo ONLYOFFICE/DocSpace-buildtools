@@ -110,6 +110,7 @@ DEPLOYMENT_MODE=""
 OFFLINE_INSTALLATION="false"
 NON_INTERACTIVE="false"
 SKIP_HARDWARE_CHECK="false"
+CONFIG_OVERRIDE=${CONFIG_OVERRIDE:-""}
 
 EXTERNAL_PORT="80"
 EXTERNAL_PORT_HTTPS="443"
@@ -130,6 +131,7 @@ select_deployment_mode () {
       IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}"
       SERVICES=("${PRODUCT}")
       COMPOSE_FILES=(-f "${BASE_DIR}/docker-compose.yml")
+      APP_COMPOSE_FILES=(-f "${BASE_DIR}/docker-compose.yml")
       { [ "$INSTALL_RABBITMQ" = "true" ] || [ "$INSTALL_REDIS" = "true" ]; } && \
         echo "Note: --installrabbitmq/--installredis are ignored in --deployment-mode community (no separate Redis/RabbitMQ containers)."
       ;;
@@ -138,12 +140,14 @@ select_deployment_mode () {
       IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-dotnet"
       SERVICES=("${PRODUCT}-stack" proxy)
       COMPOSE_FILES=($(printf '%s\n' "${SERVICES[@]}" | sed "s|^|-f ${BASE_DIR}/|; s|\$|.yml|"));
+      APP_COMPOSE_FILES=(-f "${BASE_DIR}/${PRODUCT}-stack.yml")
       ;;
     *)
       CONTAINER_NAME="${PACKAGE_SYSNAME}-api"
       IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-api"
       SERVICES=(migration-runner identity notify "${PRODUCT}" healthchecks proxy)
       COMPOSE_FILES=($(printf '%s\n' "${SERVICES[@]}" | sed "s|^|-f ${BASE_DIR}/|; s|\$|.yml|"));
+      APP_COMPOSE_FILES=(-f "${BASE_DIR}/notify.yml" -f "${BASE_DIR}/${PRODUCT}.yml")
       ;;
   esac
 }
@@ -628,6 +632,7 @@ set_docspace_params() {
 	CERTIFICATE_KEY_PATH=${CERTIFICATE_KEY_PATH:-$(get_env_parameter "CERTIFICATE_KEY_PATH")}
 	DHPARAM_PATH=${DHPARAM_PATH:-$(get_env_parameter "DHPARAM_PATH")}
 	EXTRA_HOSTS=${EXTRA_HOSTS:-$(get_env_parameter "EXTRA_HOSTS")}
+	CONFIG_OVERRIDE=${CONFIG_OVERRIDE:-$(get_env_parameter "CONFIG_OVERRIDE")}
 }
 
 set_installation_type_data () {
@@ -716,6 +721,20 @@ chown_app_volumes () {
 			chown -R "${VOLUME_OWNER}" "$(docker volume inspect --format '{{.Mountpoint}}' "${VOLUME_NAME}")"
 		done
 	fi
+}
+
+setup_custom_config () {
+	[ -n "${CONFIG_OVERRIDE}" ] || return 0
+	[ -d "${CONFIG_OVERRIDE}" ] && CONFIG_OVERRIDE="${CONFIG_OVERRIDE%/}/appsettings.${INSTALLATION_TYPE}.json"
+	mkdir -p "$(dirname "${CONFIG_OVERRIDE}")"
+	if [ ! -f "${CONFIG_OVERRIDE}" ]; then
+		if [ "${INSTALLATION_TYPE}" = "community" ]; then
+			echo '{}' > "${CONFIG_OVERRIDE}"
+		elif ! docker run --rm --entrypoint cat "$(get_env_parameter "REGISTRY")${IMAGE_NAME}:${DOCKER_TAG}" "/app/onlyoffice/config/appsettings.${INSTALLATION_TYPE}.json" > "${CONFIG_OVERRIDE}" 2>/dev/null; then
+			rm -f "${CONFIG_OVERRIDE}"; echo "Error: failed to seed ${CONFIG_OVERRIDE} from the image." >&2; exit 1
+		fi
+	fi
+	sed -i 's|^\(\s*\)#\(-\s*${CONFIG_OVERRIDE}:\)|\1\2|' $(printf '%s\n' "${APP_COMPOSE_FILES[@]}" | grep -v '^-f$')
 }
 
 install_mysql_server () {
@@ -1040,6 +1059,7 @@ check_docker_image () {
 	reconfigure REGISTRY "${REGISTRY_URL:+$(sed -E 's~^https?://~~; s~/*$~~' <<< "$REGISTRY_URL")/}"
 	reconfigure STATUS ${STATUS}
 	reconfigure INSTALLATION_TYPE ${INSTALLATION_TYPE}
+	reconfigure CONFIG_OVERRIDE ${CONFIG_OVERRIDE}
 	reconfigure NETWORK_NAME ${NETWORK_NAME}
 	reconfigure VOLUMES_DIR ${VOLUMES_DIR}
 	reconfigure EXTRA_HOSTS ${EXTRA_HOSTS}
@@ -1164,6 +1184,8 @@ start_installation () {
 	check_docker_image
 
 	services_check_connection
+
+	setup_custom_config
 
 	if [ "${DEPLOYMENT_MODE}" = "community" ]; then
 		install_community

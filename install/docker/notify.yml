@@ -58,6 +58,7 @@ x-service:
     #- /app/onlyoffice/CommunityServer/data:/app/onlyoffice/data
     - ${VOLUMES_DIR:+${VOLUMES_DIR}/}app_data:/app/onlyoffice/data
     - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
+    #- ${CONFIG_OVERRIDE}:/app/onlyoffice/config/appsettings.${INSTALLATION_TYPE}.json
 
 services:
   onlyoffice-notify:

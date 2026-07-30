@@ -64,7 +64,7 @@ while [ "$1" != "" ]; do
         -esh     | --elastichost         ) [ -n "$2" ] && ELK_HOST=$2                                                             && shift ;;
         -esp     | --elasticport         ) [ -n "$2" ] && ELK_PORT=$2                                                             && shift ;;
         -skiphc  | --skiphardwarecheck   ) [ -n "$2" ] && SKIP_HARDWARE_CHECK=$2                                                  && shift ;;
-        -dm      | --deployment-mode     ) [ -n "$2" ] && DEPLOYMENT_MODE="${2,,}" && DEPLOYMENT_MODE_SET="true"                   && shift ;;
+        -dm      | --deployment-mode     ) [ -n "$2" ] && DEPLOYMENT_MODE="${2,,}" && DEPLOYMENT_MODE_SET="true"                  && shift ;;
         -ep      | --externalport        ) [ -n "$2" ] && EXTERNAL_PORT=$2                                                        && shift ;;
         -eph     | --externalporthttps   ) [ -n "$2" ] && EXTERNAL_PORT_HTTPS=$2                                                  && shift ;;
         -dsh     | --docspacehost        ) [ -n "$2" ] && APP_URL_PORTAL=$2                                                       && shift ;;
@@ -109,6 +109,14 @@ while [ "$1" != "" ]; do
             [[ "$VOLUMES_DIR" == "$BASE_DIR"* ]] && { echo "Warning: Please change the volumes directory, as $BASE_DIR will be removed during an update."; exit 1; }
             shift
         ;;
+        -co      | --configoverride      )
+            [ -n "$2" ] || { echo "Error: --configoverride requires a path argument" >&2; exit 1; }
+            CONFIG_OVERRIDE="$2"
+            mkdir -p "$(dirname "$CONFIG_OVERRIDE")"
+            [[ "$CONFIG_OVERRIDE" != /* ]] && CONFIG_OVERRIDE="$(cd "$(dirname "$CONFIG_OVERRIDE")" && pwd)/$(basename "$CONFIG_OVERRIDE")"
+            [[ "$CONFIG_OVERRIDE" == "$BASE_DIR"* ]] && { echo "Warning: Please change the config override path, as $BASE_DIR will be removed during an update."; exit 1; }
+            shift
+        ;;
         -cf      | --certfile            )
             [ -n "$2" ] && CERTIFICATE_PATH="$2"
             [[ "$CERTIFICATE_PATH" != /* ]] && CERTIFICATE_PATH="$(cd "$(dirname "$CERTIFICATE_PATH")" && pwd)/$(basename "$CERTIFICATE_PATH")"
@@ -142,6 +150,7 @@ while [ "$1" != "" ]; do
             echo "  --makeswap          <true|false>        Create swap file (default: true)"
             echo "  --extrahosts        <DOMAIN:IP>         Specify extra hostname resolution"
             echo "  --volumesdir        <path>              Host dir for Docker volumes (default: /var/lib/docker/volumes)"
+            echo "  --configoverride    <path>              Mount a custom appsettings.<edition>.json overlay from this host path into all app containers"
 
             echo 
             echo "${PRODUCT_NAME^^} OPTIONS:"
