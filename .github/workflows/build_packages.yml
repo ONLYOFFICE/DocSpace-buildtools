@@ -119,8 +119,7 @@ jobs:
       - name: Prepare build
         run: |
           wget -O - https://dl.yarnpkg.com/debian/pubkey.gpg | \
-          sudo gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/yarnkey.gpg --import
-          sudo chmod 644 /usr/share/keyrings/yarnkey.gpg
+          sudo gpg --batch --yes --dearmor -o /usr/share/keyrings/yarnkey.gpg
           echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian/ stable main" | \
           sudo tee /etc/apt/sources.list.d/yarn.list
           curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | sudo bash -

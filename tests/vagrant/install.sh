@@ -25,12 +25,10 @@ check_hw() {
 }
 
 add-repo-deb() {
-  mkdir -p "$HOME"/.gnupg && chmod 700 "$HOME"/.gnupg
   echo "deb [signed-by=/usr/share/keyrings/onlyoffice.gpg] https://nexus.onlyoffice.com/repository/4testing-debian stable main" | \
   sudo tee /etc/apt/sources.list.d/onlyoffice4testing.list
   curl -fsSL https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE | \
-  gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/onlyoffice.gpg --import
-  chmod 644 /usr/share/keyrings/onlyoffice.gpg
+  gpg --batch --yes --dearmor -o /usr/share/keyrings/onlyoffice.gpg
 }
 
 add-repo-rpm() {
@@ -57,11 +55,19 @@ prepare_vm() {
     source /etc/os-release
 case $ID in
   ubuntu|debian)
-      [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-deb
+      if [[ "${TEST_REPO_ENABLE}" == 'true' ]]; then
+        add-repo-deb
+      else
+        rm -f /etc/apt/sources.list.d/onlyoffice4testing.list
+      fi
       ;;
 
   centos|fedora|rhel)
-      [[ "${TEST_REPO_ENABLE}" == 'true' ]] && add-repo-rpm
+      if [[ "${TEST_REPO_ENABLE}" == 'true' ]]; then
+        add-repo-rpm
+      else
+        rm -f /etc/yum.repos.d/onlyoffice4testing.repo
+      fi
 
       if [ "$ID" = "rhel" ] && [ "${VERSION_ID%%.*}" = "9" ]; then
           cat <<'EOF' | sudo tee /etc/yum.repos.d/centos-stream-9.repo
@@ -92,6 +98,11 @@ esac
     fi
   else
       echo "${COLOR_RED}File /etc/os-release doesn't exist${COLOR_RESET}"; exit 1
+  fi
+
+  # Some RPM boxes ship firewalld enabled — it blocks the port forwarded to the host
+  if command -v firewall-cmd >/dev/null 2>&1; then
+    systemctl disable --now firewalld 2>/dev/null || true
   fi
 
   # Clean up home folder

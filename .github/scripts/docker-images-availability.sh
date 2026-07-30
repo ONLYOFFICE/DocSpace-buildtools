@@ -42,10 +42,11 @@ check_image() {
 }
 
 mapfile -t SERVICES < <(
-  curl -sSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/refs/heads/${BRANCH}/install/docker/build.yml" \
-    | docker compose -f- config 2>/dev/null \
-    | grep -oP 'image: [^/]*/-?\K[^:]+' \
-    | grep -vE '^(dotnet|java|node)$'
+  curl -sSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/refs/heads/${BRANCH}/install/docker/build/build.hcl" \
+    | REPO=r DOCKER_IMAGE_PREFIX=p DOCKER_TAG=t docker buildx bake -f - --print 2>/dev/null \
+    | jq -r '.target | .[] | .tags[]' \
+    | sed -E 's#^r/p-?##; s#:t$##' \
+    | grep -vE '^(dotnet|java|node|)$'
 )
 
 PIDS=()

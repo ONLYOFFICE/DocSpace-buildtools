@@ -5,7 +5,7 @@
 #   docker-utils.sh status                    — print health status for all containers
 #   docker-utils.sh logs [TAIL]               — print logs for unhealthy containers and exit on failure
 #   docker-utils.sh shellcheck                — run ShellCheck on all docker scripts
-#   docker-utils.sh start-community           — resolve tag, patch .env and start community stack (run from community dir)
+#   docker-utils.sh smoke-test                — run browser smoke tests via the selenium container (env: LICENSE)
 
 set -e
 
@@ -39,40 +39,6 @@ print_logs() {
     timeout) echo "::error:: Timeout reached. Not all containers are running."; exit 1 ;;
     red)     echo "::error:: One or more containers have status 'red'. Job will fail."; exit 1 ;;
   esac
-}
-
-start_community() {
-  set -x
-  if [ "${IS_4TESTING:-true}" != "false" ]; then
-    sed -i 's~^\(\s*DOCKER_IMAGE_PREFIX=\).*~\14testing-docspace~' .env
-  fi
-
-  DOCKER_TAG="" # Temperary workaround while build not automated for community
-
-  if [ -z "${DOCKER_TAG:-}" ]; then
-    local IMAGE_PREFIX; IMAGE_PREFIX="$(awk -F= '/^[[:space:]]*DOCKER_IMAGE_PREFIX=/ {print $2}' .env)"
-    local TAG_REGEX='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'; [ "${GITHUB_REF_NAME:-}" = "develop" ] && TAG_REGEX='^develop\.[0-9]+$' 
-    local AUTH_HEADER=()
-    set +x
-    if [ -n "${DOCKERHUB_USERNAME_PAT:-}" ] && [ -n "${DOCKERHUB_TOKEN_PAT:-}" ]; then
-      local DOCKERHUB_JWT
-      DOCKERHUB_JWT=$(curl -fsSL -X POST "https://hub.docker.com/v2/users/login" -H "Content-Type: application/json" \
-        -d "{\"username\":\"${DOCKERHUB_USERNAME_PAT}\",\"password\":\"${DOCKERHUB_TOKEN_PAT}\"}" | jq -r '.token // empty' || true)
-      [ -n "$DOCKERHUB_JWT" ] || { set -x; echo "::error::Docker Hub PAT login failed"; exit 1; }
-      AUTH_HEADER=(-H "Authorization: JWT ${DOCKERHUB_JWT}")
-    fi
-    DOCKER_TAG=$(curl -fsSL "${AUTH_HEADER[@]}" \
-      "https://hub.docker.com/v2/repositories/onlyoffice/${IMAGE_PREFIX}/tags?page_size=100" \
-      | jq -r '.results[] | select(.name | test("^(?!99\\.).*")) | .name // empty' | grep -E "$TAG_REGEX" | sort -V | tail -n 1)
-    set -x
-    [ -n "$DOCKER_TAG" ] || { echo "::error::Failed to get Docker tag for onlyoffice/${IMAGE_PREFIX}"; exit 1; }
-  fi
-  sed -i "s~^\(\s*DOCKER_TAG=\).*~\1${DOCKER_TAG}~" .env
-
-  docker compose up -d --quiet-pull --no-build
-  echo "Waiting for containers to become ready..."
-  timeout 600 bash -c 'while docker ps --format "{{.Status}}" | grep -q "health: starting"; do sleep 5; done' \
-    || echo "container_status=timeout" >> "$GITHUB_ENV"
 }
 
 test_install() {
@@ -115,12 +81,27 @@ run_shellcheck() {
   awk '/\(warning\):/ {w++} /\(error\):/ {e++} END {if (w+e) printf "::warning ::ShellCheck detected %d warnings and %d errors\n", w+0, e+0}' sc_output
 }
 
+
+smoke_test() {
+  PIP_BREAK_SYSTEM_PACKAGES=1 pip install -q --disable-pip-version-check -r tests/smoke/requirements.txt
+
+  # arm64 runners have no Chrome/chromedriver builds — fall back to the selenium container there
+  if ! command -v google-chrome >/dev/null; then
+    docker pull -q selenium/standalone-chromium:latest
+    docker run -d --name selenium --network host --shm-size 2g selenium/standalone-chromium:latest
+    timeout 60 bash -c 'until curl -sf http://localhost:4444/status | grep -qE "\"ready\":\s*true"; do sleep 2; done'       || { echo "::error::selenium container is not ready"; exit 1; }
+    export SELENIUM_REMOTE_URL=http://localhost:4444
+  fi
+
+  python3 -m pytest tests/smoke/test_docspace_smoke.py -v -s
+}
+
 case "$COMMAND" in
   test-install)   test_install "$2" ;;
   check-services) check_services "$2" ;;
   status)         print_status ;;
   logs)           print_logs ;;
   shellcheck)     run_shellcheck ;;
-  start-community)  start_community ;;
+  smoke-test)     smoke_test ;;
   *)              echo "Unknown command: $COMMAND"; exit 1 ;;
 esac

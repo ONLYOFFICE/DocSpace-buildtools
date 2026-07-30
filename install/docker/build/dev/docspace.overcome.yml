@@ -1,0 +1,252 @@
+x-profiles-local: &x-profiles-local
+  profiles: ["backend-local"]
+  environment:
+    BUILD_PATH: "/var/www"
+    SRC_PATH: "/app/services"
+    BIN_DIR: ${BIN_DIR}
+    ROOT_DIR: ${ROOT_DIR}
+    ENV_EXTENSION: ${ENV_EXTENSION}
+
+services:
+  onlyoffice-backup-worker:
+    <<: *x-profiles-local
+    image: ${Baseimage_Dotnet_Run}
+    working_dir: ${BUILD_PATH}/services/ASC.Data.Backup.Worker/
+    command:
+      [
+        "ASC.Data.Backup.Worker.dll",
+        "ASC.Data.Backup.Worker",
+        "core:eventBus:subscriptionClientName=asc_event_bus_backup_queue",
+      ]
+    volumes:
+      - ${ROOT_DIR}/server/common/services/ASC.Data.Backup.Worker/${BIN_DIR}:${BUILD_PATH}/services/ASC.Data.Backup.Worker/
+      - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
+      - ${ROOT_DIR}/buildtools/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json:/app/onlyoffice/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json
+    depends_on:
+      onlyoffice-migration-runner:
+        condition: service_completed_successfully
+
+  onlyoffice-backup:
+    <<: *x-profiles-local
+    image: ${Baseimage_Dotnet_Run}
+    working_dir: ${BUILD_PATH}/services/ASC.Data.Backup/service/
+    command: ["ASC.Data.Backup.dll", "ASC.Data.Backup"]
+    volumes:
+      - ${ROOT_DIR}/server/common/services/ASC.Data.Backup/${BIN_DIR}:${BUILD_PATH}/services/ASC.Data.Backup/service/
+      - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
+      - ${ROOT_DIR}/buildtools/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json:/app/onlyoffice/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json
+    depends_on:
+      onlyoffice-migration-runner:
+        condition: service_completed_successfully
+
+  onlyoffice-files:
+    <<: *x-profiles-local
+    image: ${Baseimage_Dotnet_Run}
+    working_dir: ${BUILD_PATH}/products/ASC.Files/server/
+    command: ["ASC.Files.dll", "ASC.Files"]
+    volumes:
+      - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
+      - ${ROOT_DIR}/buildtools/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json:/app/onlyoffice/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json
+    depends_on:
+      onlyoffice-migration-runner:
+        condition: service_completed_successfully
+
+  onlyoffice-files-worker:
+    <<: *x-profiles-local
+    image: ${Baseimage_Dotnet_Run}
+    working_dir: ${BUILD_PATH}/products/ASC.Files/service/
+    command:
+      [
+        "ASC.Files.Worker.dll",
+        "ASC.Files.Worker",
+        "core:eventBus:subscriptionClientName=asc_event_bus_files_service_queue",
+      ]
+    volumes:
+      - ${ROOT_DIR}/server/products/ASC.Files/Worker/${BIN_DIR}:${BUILD_PATH}/products/ASC.Files/service/
+      - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
+      - ${ROOT_DIR}/buildtools/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json:/app/onlyoffice/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json
+    depends_on:
+      onlyoffice-migration-runner:
+        condition: service_completed_successfully
+
+  onlyoffice-people-server:
+    <<: *x-profiles-local
+    image: ${Baseimage_Dotnet_Run}
+    working_dir: ${BUILD_PATH}/products/ASC.People/server/
+    command: ["ASC.People.dll", "ASC.People"]
+    volumes:
+      - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
+      - ${ROOT_DIR}/buildtools/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json:/app/onlyoffice/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json
+    depends_on:
+      onlyoffice-migration-runner:
+        condition: service_completed_successfully
+
+  onlyoffice-socket:
+    <<: *x-profiles-local
+    image: ${Baseimage_Nodejs_Run}
+    working_dir: ${BUILD_PATH}/services/ASC.Socket.IO/
+    command: ["server.js", "ASC.Socket.IO"]
+    volumes:
+      - ${ROOT_DIR}/server/common/ASC.Socket.IO/:${BUILD_PATH}/services/ASC.Socket.IO/
+    depends_on:
+      onlyoffice-migration-runner:
+        condition: service_completed_successfully
+
+  onlyoffice-newai:
+    <<: *x-profiles-local
+    image: ${Baseimage_Nodejs_Run}
+    working_dir: ${BUILD_PATH}/services/ASC.NewAi/
+    command: ["server.js", "ASC.NewAi"]
+    volumes:
+      - ${ROOT_DIR}/server/common/ASC.NewAi/:${BUILD_PATH}/services/ASC.NewAi/
+    depends_on:
+      onlyoffice-migration-runner:
+        condition: service_completed_successfully
+
+  onlyoffice-studio-notify:
+    <<: *x-profiles-local
+    image: ${Baseimage_Dotnet_Run}
+    working_dir: ${BUILD_PATH}/services/ASC.Studio.Notify/service/
+    command: ["ASC.Studio.Notify.dll", "ASC.Studio.Notify", "core:eventBus:subscriptionClientName=asc_event_bus_studio_notify_queue"]
+    volumes:
+      - ${ROOT_DIR}/server/common/services/ASC.Studio.Notify/${BIN_DIR}:${BUILD_PATH}/services/ASC.Studio.Notify/service/
+      - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
+      - ${ROOT_DIR}/buildtools/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json:/app/onlyoffice/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json
+    depends_on:
+      onlyoffice-migration-runner:
+        condition: service_completed_successfully
+
+  onlyoffice-api:
+    <<: *x-profiles-local
+    image: ${Baseimage_Dotnet_Run}
+    working_dir: ${BUILD_PATH}/studio/ASC.Web.Api/
+    command: ["ASC.Web.Api.dll", "ASC.Web.Api"]
+    volumes:
+      - ${ROOT_DIR}/server/web/ASC.Web.Api/${BIN_DIR}:${BUILD_PATH}/studio/ASC.Web.Api/
+      - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
+      - ${ROOT_DIR}/buildtools/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json:/app/onlyoffice/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json
+    depends_on:
+      onlyoffice-migration-runner:
+        condition: service_completed_successfully
+
+  onlyoffice-api-system:
+    <<: *x-profiles-local
+    image: ${Baseimage_Dotnet_Run}
+    working_dir: ${BUILD_PATH}/services/ASC.ApiSystem/service/
+    command: ["ASC.ApiSystem.dll", "ASC.ApiSystem"]
+    volumes:
+      - ${ROOT_DIR}/server/common/services/ASC.ApiSystem/${BIN_DIR}:${BUILD_PATH}/services/ASC.ApiSystem/service/
+      - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
+      - ${ROOT_DIR}/buildtools/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json:/app/onlyoffice/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json
+    depends_on:
+      onlyoffice-migration-runner:
+        condition: service_completed_successfully
+
+  onlyoffice-studio:
+    <<: *x-profiles-local
+    image: ${Baseimage_Dotnet_Run}
+    working_dir: ${BUILD_PATH}/studio/ASC.Web.Studio/
+    command:
+      [
+        "ASC.Web.Studio.dll",
+        "ASC.Web.Studio",
+        "core:eventBus:subscriptionClientName=asc_event_bus_webstudio_queue",
+      ]
+    volumes:
+      - ${ROOT_DIR}/server/web/ASC.Web.Studio/${BIN_DIR}:${BUILD_PATH}/studio/ASC.Web.Studio/
+      - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
+      - ${ROOT_DIR}/buildtools/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json:/app/onlyoffice/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json
+    depends_on:
+      onlyoffice-migration-runner:
+        condition: service_completed_successfully
+
+  onlyoffice-ai:
+    <<: *x-profiles-local
+    image: ${Baseimage_Dotnet_Run}
+    working_dir: ${BUILD_PATH}/products/ASC.AI/server/
+    command: ["ASC.AI.dll", "ASC.AI"]
+    volumes:
+      - ${ROOT_DIR}/server/products/ASC.AI/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.AI/server/
+      - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
+      - ${ROOT_DIR}/buildtools/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json:/app/onlyoffice/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json
+    depends_on:
+      onlyoffice-migration-runner:
+        condition: service_completed_successfully
+
+  onlyoffice-ai-worker:
+    <<: *x-profiles-local
+    image: ${Baseimage_Dotnet_Run}
+    working_dir: ${BUILD_PATH}/products/ASC.AI/service/
+    command: ["ASC.AI.Worker.dll", "ASC.AI.Worker", "core:eventBus:subscriptionClientName=asc_event_bus_ai_service_queue"]
+    volumes:
+      - ${ROOT_DIR}/server/products/ASC.AI/Worker/${BIN_DIR}:${BUILD_PATH}/products/ASC.AI/service/
+      - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
+      - ${ROOT_DIR}/buildtools/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json:/app/onlyoffice/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json
+    depends_on:
+      onlyoffice-migration-runner:
+        condition: service_completed_successfully 
+
+  onlyoffice-ssoauth:
+    <<: *x-profiles-local
+    image: ${Baseimage_Nodejs_Run}
+    working_dir: ${BUILD_PATH}/services/ASC.SsoAuth/
+    command: ["app.js", "ASC.SsoAuth"]
+    volumes:
+      - ${ROOT_DIR}/server/common/ASC.SsoAuth/:${BUILD_PATH}/services/ASC.SsoAuth/
+    depends_on:
+      onlyoffice-migration-runner:
+        condition: service_completed_successfully
+
+  onlyoffice-migration-runner:
+    image: ${Baseimage_Dotnet_Run}
+    entrypoint: ${BUILD_PATH}/services/ASC.Migration.Runner/docker-migration-entrypoint.sh
+    working_dir: ${BUILD_PATH}/services/ASC.Migration.Runner/
+    volumes:
+      - ${ROOT_DIR}/server/common/Tools/ASC.Migration.Runner/${BIN_DIR}:${BUILD_PATH}/services/ASC.Migration.Runner/
+
+  onlyoffice-telegram:
+    <<: *x-profiles-local
+    image: ${Baseimage_Dotnet_Run}
+    working_dir: ${BUILD_PATH}/services/ASC.TelegramService/service/
+    command: ["ASC.TelegramService.dll", "ASC.TelegramService"]
+    volumes:
+      - ${ROOT_DIR}/server/common/services/ASC.TelegramService/${BIN_DIR}:${BUILD_PATH}/services/ASC.TelegramService/service/
+      - ${ROOT_DIR}/server/products/ASC.Files/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.Files/server/
+      - ${ROOT_DIR}/server/products/ASC.People/Server/${BIN_DIR}/:${BUILD_PATH}/products/ASC.People/server/
+      - ${ROOT_DIR}/buildtools/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json:/app/onlyoffice/config/appsettings${ENV_EXTENSION:+.${ENV_EXTENSION}}.json
+    depends_on:
+      onlyoffice-migration-runner:
+        condition: service_completed_successfully
+
+  onlyoffice-router:
+    <<: *x-profiles-local
+    image: ${Baseimage_Proxy_Run}
+    environment:
+      - SERVICE_CLIENT=${SERVICE_CLIENT}
+      - SERVICE_MANAGEMENT=${SERVICE_MANAGEMENT}
+    volumes:
+      - ${ROOT_DIR}/client/public:/var/www/public/
+
+  onlyoffice-rabbitmq:
+    <<: *x-profiles-local
+
+  onlyoffice-redis:
+    <<: *x-profiles-local
+
+  onlyoffice-document-server:
+    <<: *x-profiles-local
+    volumes:
+      - ${DATA_DIR}:/var/www/onlyoffice/Data
+    ports:
+      - 8085:80

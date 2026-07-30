@@ -8,6 +8,7 @@ on:
       - 'install/docker/*.yml'
       - 'install/docker/*.env'
       - 'install/docker/config/**'
+      - 'install/docker/community/**'
       - 'install/OneClickInstall/**'
   workflow_dispatch:
 
@@ -20,6 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DOCKER_DIR: "${{ github.workspace }}/install/docker"
+      COMMUNITY_DIR: "${{ github.workspace }}/install/docker/community"
       SCRIPT_DIR: "${{ github.workspace }}/install/OneClickInstall"
     steps:
       - name: Checkout
@@ -36,16 +38,7 @@ jobs:
         run: |
           cd ${{ env.DOCKER_DIR }}
           COMMON_EXCLUDES="
-            --exclude='build.yml'
-            --exclude='db.dev.yml'
-            --exclude='dnsmasq.yml'
-            --exclude='docspace.overcome.yml'
-            --exclude='docspace.profiles.yml'
-            --exclude='config/supervisor*'
-            --exclude='config/mysql*'
-            --exclude='config/nginx/router/'
-            --exclude='config/createdb.sql'
-            --exclude='build-*'"
+            --exclude='config/nginx/router/'"
 
           tar -czvf ${{ env.SCRIPT_DIR }}/docker.tar.gz \
             ${COMMON_EXCLUDES} \
@@ -60,6 +53,10 @@ jobs:
             --exclude='migration-runner.yml' \
             --exclude='notify.yml' \
             *.yml .env config
+
+          cd ${{ env.COMMUNITY_DIR }}
+          tar -czvf ${{ env.SCRIPT_DIR }}/docker-community.tar.gz \
+            docker-compose.yml ssl.yml .env
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6.0.0
@@ -88,7 +85,8 @@ jobs:
             --include="install-Docker.sh" \
             --include="install-Docker-args.sh" \
             --include="docker.tar.gz" \
-            --include="docker-stack.tar.gz"
+            --include="docker-stack.tar.gz" \
+            --include="docker-community.tar.gz"
 
       - name: Invalidate AWS CloudFront cache
         run: |

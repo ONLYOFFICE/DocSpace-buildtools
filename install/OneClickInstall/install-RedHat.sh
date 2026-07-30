@@ -42,12 +42,12 @@ package_manager="yum"
 package_sysname="onlyoffice"
 product_name="DocSpace"
 product=$(tr '[:upper:]' '[:lower:]' <<< ${product_name})
-INSTALLATION_TYPE="ENTERPRISE"
+INSTALLATION_TYPE="enterprise"
 MAKESWAP="true"
 RES_APP_INSTALLED="is already installed"
 RES_CHECK_PORTS="Please make sure that the ports are free."
 RES_INSTALL_SUCCESS="Thank you for installing ONLYOFFICE ${product_name}."
-RES_QUESTIONS="In case you have any questions contact us via http://support.onlyoffice.com or visit our forum at http://forum.onlyoffice.com"
+RES_QUESTIONS="In case you have any questions contact us via http://support.onlyoffice.com or visit our forum at http://community.onlyoffice.com"
 RES_MARIADB="To continue the installation, you need to remove MariaDB"
 INSTALL_FLUENT_BIT="true"
 
@@ -65,7 +65,7 @@ while [ "$1" != "" ]; do
         -dp | --dashboardspassword )        [ -n "$2" ] && DASHBOARDS_PASSWORD=$2 && shift ;;
         -ls | --localscripts )              [ -n "$2" ] && LOCAL_SCRIPTS=$2 && shift ;;
         -skiphc | --skiphardwarecheck )     [ -n "$2" ] && SKIP_HARDWARE_CHECK=$2 && shift ;;
-        -it | --installationtype | --installation_type ) [ -n "$2" ] && INSTALLATION_TYPE="${2^^}" && shift ;;
+        -it | --installationtype | --installation_type ) [ -n "$2" ] && INSTALLATION_TYPE="${2,,}" && shift ;;
         -ms | --makeswap )                  [ -n "$2" ] && MAKESWAP=$2 && shift ;;
         -h | -? | --help )
             echo "  Usage $0 [PARAMETER] [[PARAMETER], ...]"

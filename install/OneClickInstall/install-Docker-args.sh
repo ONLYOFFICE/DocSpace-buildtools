@@ -64,7 +64,7 @@ while [ "$1" != "" ]; do
         -esh     | --elastichost         ) [ -n "$2" ] && ELK_HOST=$2                                                             && shift ;;
         -esp     | --elasticport         ) [ -n "$2" ] && ELK_PORT=$2                                                             && shift ;;
         -skiphc  | --skiphardwarecheck   ) [ -n "$2" ] && SKIP_HARDWARE_CHECK=$2                                                  && shift ;;
-        -sm      | --stack-mode          ) [ -n "$2" ] && STACK_MODE=$2                                                           && shift ;;
+        -dm      | --deployment-mode     ) [ -n "$2" ] && DEPLOYMENT_MODE="${2,,}" && DEPLOYMENT_MODE_SET="true"                   && shift ;;
         -ep      | --externalport        ) [ -n "$2" ] && EXTERNAL_PORT=$2                                                        && shift ;;
         -eph     | --externalporthttps   ) [ -n "$2" ] && EXTERNAL_PORT_HTTPS=$2                                                  && shift ;;
         -dsh     | --docspacehost        ) [ -n "$2" ] && APP_URL_PORTAL=$2                                                       && shift ;;
@@ -79,7 +79,7 @@ while [ "$1" != "" ]; do
         -dbm     | --databasemigration   ) [ -n "$2" ] && DATABASE_MIGRATION=$2                                                   && shift ;;
         -jh      | --jwtheader           ) [ -n "$2" ] && DOCUMENT_SERVER_JWT_HEADER=$2                                           && shift ;;
         -js      | --jwtsecret           ) [ -n "$2" ] && DOCUMENT_SERVER_JWT_SECRET=$2                                           && shift ;;
-        -it      | --installationtype | --installation_type ) [ -n "$2" ] && INSTALLATION_TYPE="${2^^}"                           && shift ;;
+        -it      | --installationtype | --installation_type ) [ -n "$2" ] && INSTALLATION_TYPE="${2,,}"                           && shift ;;
         -ms      | --makeswap            ) [ -n "$2" ] && MAKESWAP=$2                                                             && shift ;;
         -ies     | --installelastic      ) [ -n "$2" ] && INSTALL_ELASTICSEARCH=$2                                                && shift ;;
         -ifb     | --installfluentbit    ) [ -n "$2" ] && INSTALL_FLUENT_BIT=$2                                                   && shift ;;
@@ -146,7 +146,7 @@ while [ "$1" != "" ]; do
             echo 
             echo "${PRODUCT_NAME^^} OPTIONS:"
             echo "  --installdocspace   <true|false>        Install/update ${PRODUCT_NAME} (true to install/update)"
-            echo "  --stack-mode        <true|false>        Install services in containers with the appropriate runtime"
+            echo "  --deployment-mode   <standard|stack|community>  Deployment topology (default: standard)"
             echo "  --docspaceversion   <version>           ${PRODUCT_NAME} version tag (e.g., 3.2.0)"
             echo "  --docspacehost      <hostname>          Hostname or IP for ${PRODUCT_NAME} (default: localhost)"
             echo "  --externalport      <port>              External port for ${PRODUCT_NAME} HTTP (default: 80)"
@@ -216,3 +216,10 @@ while [ "$1" != "" ]; do
     esac
     shift
 done
+
+DEPLOYMENT_MODE="${DEPLOYMENT_MODE:-standard}"
+
+case "${DEPLOYMENT_MODE}" in
+    standard | stack | community ) ;;
+    * ) echo "Error: Invalid --deployment-mode '${DEPLOYMENT_MODE}'. Valid values: standard, stack, community." >&2; exit 1 ;;
+esac

@@ -42,12 +42,12 @@ package_sysname="onlyoffice"
 DS_COMMON_NAME="onlyoffice"
 product_name="DocSpace"
 product=$(tr '[:upper:]' '[:lower:]' <<< ${product_name})
-INSTALLATION_TYPE="ENTERPRISE"
+INSTALLATION_TYPE="enterprise"
 MAKESWAP="true"
 RES_APP_INSTALLED="is already installed"
 RES_CHECK_PORTS="Please make sure that the ports are free."
 RES_INSTALL_SUCCESS="Thank you for installing ONLYOFFICE ${product_name}."
-RES_QUESTIONS="In case you have any questions contact us via http://support.onlyoffice.com or visit our forum at http://forum.onlyoffice.com"
+RES_QUESTIONS="In case you have any questions contact us via http://support.onlyoffice.com or visit our forum at http://community.onlyoffice.com"
 INSTALL_FLUENT_BIT="true"
 
 while [ "$1" != "" ]; do
@@ -64,7 +64,7 @@ while [ "$1" != "" ]; do
         -dp | --dashboardspassword )        [ -n "$2" ] && DASHBOARDS_PASSWORD=$2 && shift ;;
         -ls | --localscripts )              [ -n "$2" ] && LOCAL_SCRIPTS=$2 && shift ;;
         -skiphc | --skiphardwarecheck )     [ -n "$2" ] && SKIP_HARDWARE_CHECK=$2 && shift ;;
-        -it | --installationtype | --installation_type ) [ -n "$2" ] && INSTALLATION_TYPE="${2^^}" && shift ;;
+        -it | --installationtype | --installation_type ) [ -n "$2" ] && INSTALLATION_TYPE="${2,,}" && shift ;;
         -ms | --makeswap )                  [ -n "$2" ] && MAKESWAP=$2 && shift ;;
         -h | -? | --help )
             echo "  Usage $0 [PARAMETER] [[PARAMETER], ...]"
@@ -98,6 +98,8 @@ if fuser /var/lib/dpkg/lock-frontend &>/dev/null; then
    timeout 60 bash -c 'while fuser /var/lib/dpkg/lock-frontend &>/dev/null; do sleep 1; done'
 fi
 
+# Suppress interactive apt/needrestart prompts during automated installs
+export DEBIAN_FRONTEND=noninteractive
 export NEEDRESTART_MODE=a
 apt-get update -y --allow-releaseinfo-change
 apt-get install -yq sudo curl dirmngr debian-archive-keyring
@@ -116,10 +118,8 @@ if [ "${UNINSTALL}" == "true" ]; then
 fi
 
 # add onlyoffice repo
-mkdir -p "$HOME/.gnupg" && chmod 700 "$HOME/.gnupg"
 echo "deb [signed-by=/usr/share/keyrings/onlyoffice.gpg] http://download.onlyoffice.com/repo/debian squeeze main" | tee /etc/apt/sources.list.d/onlyoffice.list
-curl -fsSL https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/onlyoffice.gpg --import
-chmod 644 /usr/share/keyrings/onlyoffice.gpg
+curl -fsSL https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE | gpg --batch --yes --dearmor -o /usr/share/keyrings/onlyoffice.gpg
 
 declare -x LANG="en_US.UTF-8"
 declare -x LANGUAGE="en_US:en"

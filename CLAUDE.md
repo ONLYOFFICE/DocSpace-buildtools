@@ -43,7 +43,7 @@ bash install/OneClickInstall/install-RedHat.sh        # RHEL/CentOS
 ## Project Structure
 
 ```
-config/                     — Application configuration (41 JSON + nginx)
+config/                     — Application configuration (~30 JSON + nginx)
   appsettings*.json         — App configs (base, developer, enterprise, test, services)
   autofac*.json             — DI container (base, consumers, products)
   storage.json              — Storage backend
@@ -52,38 +52,46 @@ config/                     — Application configuration (41 JSON + nginx)
   nlog.config               — Structured logging (NLog)
   dnsmasq.conf              — DNS for local dev
   radicale.*                — CalDAV/CardDAV server configs
-  nginx/                    — Nginx configs + templates + docker-entrypoint.d/
+  nginx/                    — Nginx configs + includes/ + sites-enabled/
   document-formats/         — Document format definitions (git submodule)
-  supervisor/               — Supervisor configs (dotnet_services, node_services, java_services)
 
 install/
-  docker/                   — Dockerfiles, Compose files, entrypoints
-    Dockerfile.app          — Main multi-stage DocSpace image
-    Dockerfile.runtime      — Runtime dependencies
-    Dockerfile.ffvideo       — FFmpeg video processing
-    docker-entrypoint.py/sh — Main service entrypoints
-    docker-identity-entrypoint.sh
-    docker-migration-entrypoint.sh
-    docker-healthchecks-entrypoint.sh
-    bin-share-docker-entrypoint.sh / wait-bin-share-docker-entrypoint.sh
-    build.hcl               — BuildX multi-arch config
-    build.yml / build-identity.yml
+  docker/                   — Production Compose files (shipped in OCI tarballs)
+    build/                  — Build + local-dev assets (NOT shipped to end users):
+      Dockerfile            — Main multi-stage DocSpace image
+      Dockerfile.runtime    — Runtime dependencies
+      Dockerfile.ffvideo    — FFmpeg video processing
+      build.hcl             — BuildX multi-arch config
+      build.yml
+      .dockerignore
+      entrypoints/          — Scripts COPY'd into images at build time:
+        docker-entrypoint.py
+        docker-identity-entrypoint.sh
+        docker-migration-entrypoint.sh
+        docker-healthchecks-entrypoint.sh
+        bin-share-docker-entrypoint.sh / wait-bin-share-docker-entrypoint.sh
+        prepare-nginx-router.sh
+      dev/                  — Local-dev-only Compose overlays (build.backend.docker.py):
+        db.dev.yml            — MySQL dev overrides (exposed ports)
+        docspace.profiles.yml — Profile-based configs (local dev)
+        docspace.overcome.yml — Local dev overrides
+        dnsmasq.yml           — DNS for local dev
+        build-identity.yml    — ASC.Identity (Java) build
+      stack/supervisor/     — Supervisor service configs baked into the image
+    community/              — Single-container community edition stack
     docspace.yml            — All DocSpace app services
     docspace-stack.yml      — Full stack (app + all dependencies)
-    docspace.profiles.yml   — Profile-based configs
-    docspace.overcome.yml   — Local dev overrides
-    db.yml / db.dev.yml     — MySQL
+    db.yml                  — MySQL
     redis.yml               — Redis
     rabbitmq.yml            — RabbitMQ
     opensearch.yml          — OpenSearch
     identity.yml            — OAuth2 identity service
-    proxy.yml / proxy-ssl.yml — Nginx reverse proxy
     ds.yml                  — ONLYOFFICE Document Server
     migration-runner.yml    — DB migration runner container
     fluent.yml              — Fluent Bit log collector
     healthchecks.yml        — Health check UI
     notify.yml              — Notification service
-    dnsmasq.yml             — DNS for local dev
+    dashboards.yml          — Monitoring dashboards
   OneClickInstall/          — Installer scripts (Debian, RedHat, Docker, universal)
   common/                   — Shared packaging: build-services.py/sh, changelog.sh,
                               packages-build.sh, plugins-build.sh, systemd/, product-ssl-setup/
@@ -92,14 +100,14 @@ install/
   rpm/                      — RPM spec files
   snap/                     — Snap package config
 
-run/                        — Per-service launch scripts (28 services, .bat + .xml)
+run/                        — Per-service launch scripts (~15 services, .bat + .xml)
                               WebApi, Files, People, Notify, Backup, AI, Identity, etc.
 scripts/                    — Service startup: identity, socketio, ssoauth, webdav (.sh + .bat)
 start/                      — Dev lifecycle: start/stop/restart (.sh + .bat + .py)
 tests/                      — lint/, vagrant/
 tools/                      — check.sh
-templates/                  — gitea-claude-review (AI code review templates)
-.github/workflows/          — 18 GitHub Actions workflows (see CI/CD section)
+.gitea/actions/             — claude-review (Gitea AI code review action)
+.github/workflows/          — GitHub Actions workflows (see CI/CD section)
 Jenkinsfile                 — Jenkins declarative pipeline
 ```
 
@@ -116,7 +124,7 @@ docker compose -f docspace.yml up -d
 docker compose -f docspace-stack.yml up -d
 
 # With local dev overrides
-docker compose -f docspace.yml -f docspace.overcome.yml up -d
+docker compose --env-file .env -f docspace.yml -f build/dev/docspace.overcome.yml up -d
 ```
 
 ## CI/CD Workflows
@@ -133,6 +141,7 @@ docker compose -f docspace.yml -f docspace.overcome.yml up -d
 | `release-docspace.yaml` | Production release |
 | `offline-release.yml` | Offline package build |
 | `oci-release.yml` | Container registry release |
+| `readme-update.yml` | Update OS support list in README |
 
 **Testing & Quality:**
 
@@ -142,7 +151,7 @@ docker compose -f docspace.yml -f docspace.overcome.yml up -d
 | `ci-oci-install.yml` | Linux package install tests |
 | `ci-oci-update.yml` | Update mechanism tests |
 | `zap-scanner.yaml` | OWASP ZAP security scan |
-| `claude-auto-review.yml` | Automated PR review with Claude |
+| `rebuild-boxes.yml` | Rebuild Vagrant boxes for install tests |
 
 ## Key Patterns
 

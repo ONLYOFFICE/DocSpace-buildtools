@@ -94,10 +94,22 @@ sudo bash <script-name> package -h
 | Flag                    | Value placeholder                         | Default value             | Description                    |
 |-------------------------|-------------------------------------------|---------------------------|--------------------------------|
 | `--installdocspace`     | `true` \| `false`                         | `true`                    | Install / update DocSpace      |
+| `--deployment-mode`     | `standard` \| `stack` \| `community`      | `standard`                | Deployment topology (see below)|
 | `--docspaceversion`     | `<VERSION>`                               | *(latest stable)*         | DocSpace version               |
 | `--docspacehost`        | `<HOST>`                                  | `localhost`               | Hostname / IP                  |
 | `--externalport`        | `<PORT>`                                  | `80`                      | External HTTP port             |
 | `--machinekey`          | `<KEY>`                                   | *(auto-generated)*        | `core.machinekey` value        |
+
+`--deployment-mode` selects how DocSpace is deployed via Docker:
+- `standard` — modular multi-container deployment (default), one container per service.
+- `stack` — services grouped into fewer containers sharing a common runtime.
+- `community` — a single all-in-one `onlyoffice-docspace` container (plus MySQL, OpenSearch and
+  Document Server), intended for quick evaluation/testing rather than production.
+
+You can switch topology on an existing install with `--update true --deployment-mode <mode>`:
+MySQL/OpenSearch/Document Server are reused as-is (no data loss), only the app layer is replaced.
+Not all Docker-specific flags apply in `community` mode (e.g. `--installrabbitmq`/`--installredis`
+are ignored, since that topology has no separate Redis/RabbitMQ containers).
 
 #### Document Server (ONLYOFFICE Docs)
 | Flag                    | Value placeholder           | Default value                  | Description                             |
@@ -319,6 +331,16 @@ sudo bash docspace-install.sh \
   --elasticprotocol https
 ```
 
+17. Install the single-container community stack, then switch to the standard topology
+    (MySQL/OpenSearch/Document Server data is preserved)
+```bash
+sudo bash docspace-install.sh docker --deployment-mode community
+
+sudo bash docspace-install.sh docker \
+  --update true \
+  --deployment-mode standard
+```
+
 ## 🖥 System Requirements
 
 | Resource   | Minimum              |
@@ -357,7 +379,7 @@ The installation scripts support the following operating systems, which are **re
 | Docs installer   | <https://github.com/ONLYOFFICE/OneClickInstall-Docs>                 |
 | Help Center      | <https://helpcenter.onlyoffice.com/docspace/installation>            |
 | Product page     | <https://www.onlyoffice.com/docspace.aspx>                           |
-| Community Forum  | <https://forum.onlyoffice.com>                                       |
+| Community Forum  | <https://community.onlyoffice.com>                                   |
 | Stack Overflow   | <https://stackoverflow.com/questions/tagged/onlyoffice>              |
 
 ## 📝 License

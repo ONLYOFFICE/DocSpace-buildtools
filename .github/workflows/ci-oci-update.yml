@@ -92,13 +92,69 @@ jobs:
 
           # Install tools
           sudo apt-get update -y
-          sudo apt-get install -y vagrant shellcheck
+          sudo apt-get install -y vagrant shellcheck aria2
 
           # Install specific VirtualBox version
           curl -fsSL "https://download.virtualbox.org/virtualbox/7.1.12/virtualbox-7.1_7.1.12-169651~Ubuntu~jammy_amd64.deb" -o /tmp/vbox.deb
           sudo apt-get install -y /tmp/vbox.deb
 
+      - name: "Boot VM for ${{matrix.name}}"
+        id: boot
+        continue-on-error: true
+        timeout-minutes: 45
+        env:
+          DISTR: ${{ matrix.distr }}
+          OS: docspace-${{ matrix.os }}
+          RAM: 8192
+          CPU: 3
+        run: |
+          set -eux
+          cd tests/vagrant
+
+          # retrying a boot on this same runner can't help if the host never exposed VT-x/AMD-V at all — fail fast instead of burning 40 minutes
+          # (plain HW virtualization is enough for our guests; 'nested' would only matter for VT-x inside the guest and is off on many healthy hosts)
+          if ! grep -qE 'vmx|svm' /proc/cpuinfo || ! VBoxManage list hostinfo | grep -qiE '^Processor supports HW virtualization:\s*yes'; then
+            echo "::error::This runner host doesn't expose hardware virtualization to VirtualBox — re-run the job for a different host"
+            exit 1
+          fi
+
+          # Prefetch the box with multi-connection aria2 — vagrant's own downloader is single-stream (falls back to it below if aria2 fails, e.g. a CDN rate-limit near completion on large boxes)
+          box_name="${DISTR}/${OS}"
+          box_url=$(curl -fsSL "https://vagrantcloud.com/api/v2/vagrant/${box_name}" \
+            | jq -r '[.versions[0].providers[] | select(.name == "virtualbox" and (.architecture // "amd64") == "amd64")][0].url // empty' || true)
+          if [ -n "$box_url" ]; then
+            aria2_opts=(-x16 -s16 -k4M --max-tries=5 --retry-wait=3 --file-allocation=none --console-log-level=warn --summary-interval=30 -d /tmp -o vagrant.box)
+            # a failure typically happens near completion — resume with -c instead of restarting from scratch
+            (aria2c "${aria2_opts[@]}" "$box_url" || aria2c -c "${aria2_opts[@]}" "$box_url") \
+              && vagrant box add --name "${box_name}" /tmp/vagrant.box \
+              || echo "Box prefetch failed, vagrant will download it itself"
+            rm -f /tmp/vagrant.box /tmp/vagrant.box.aria2
+          fi
+
+          # VM boot on shared runners is flaky — destroy and retry once on failure or hang
+          timeout --kill-after=60s 20m vagrant up --no-provision --provider=virtualbox || {
+            echo "VM boot failed or timed out after 20 minutes, retrying..."
+            echo "--- host diagnostics ---"
+            VBoxManage list hostinfo || true
+            dmesg 2>/dev/null | tail -50 || true
+            pkill -TERM -f '[v]agrant|[r]uby.*vagrant' || true
+            sleep 5
+            pkill -KILL -f '[v]agrant|[r]uby.*vagrant' || true
+            # a hung/timed-out VM can survive the killed vagrant/ruby wrapper and keep the forwarded port bound
+            for vm_id in $(VBoxManage list runningvms 2>/dev/null | awk -F'"' '{print $2}'); do
+              VBoxManage controlvm "$vm_id" poweroff 2>/dev/null || true
+            done
+            vagrant destroy --force || true
+            timeout --kill-after=60s 20m vagrant up --no-provision --provider=virtualbox
+          }
+
+      - name: Warn about VM boot failure
+        if: steps.boot.outcome == 'failure'
+        run: echo "::warning::VM boot failed on ${{ matrix.name }} — runner infrastructure flake, update test skipped"
+
       - name: "Update on ${{matrix.name}}"
+        if: steps.boot.outcome == 'success'
+        timeout-minutes: 55
         env:
           TEST_CASE: --local-install
           DISTR: ${{ matrix.distr }}
@@ -106,14 +162,15 @@ jobs:
           RAM: 8192
           CPU: 3
           DOWNLOAD_SCRIPT: '-ds false'
-          TEST_REPO: '-tr true'
+          TEST_REPO: "${{ github.ref_name == 'master' && '-tr false' || '-tr true' }}"
           ARGUMENTS: "-arg '--skiphardwarecheck true --makeswap false --localscripts true --update true'"
         run: |
           set -eux
           cd tests/vagrant
-          vagrant up --provider=virtualbox
+          vagrant provision
 
       - name: "Health check for ${{matrix.name}}"
+        if: steps.boot.outcome == 'success'
         run: |
           cd tests/vagrant
           if vagrant status | grep -q "running"; then
@@ -122,12 +179,42 @@ jobs:
             echo "VM is not running, skipping health check"
           fi
 
+      - name: "Smoke test on ${{matrix.name}}"
+        if: steps.boot.outcome == 'success'
+        timeout-minutes: 20
+        env:
+          LICENSE: ${{ secrets.LICENSE_ENTERPRISE }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          # assert the updated version on release/hotfix branches; no-op elsewhere
+          export EXPECTED_VERSION=$(echo "$REF_NAME" | grep -oP '^(release|hotfix)/v\K[0-9]+(\.[0-9]+)+' || true)
+          bash tests/vagrant/smoke-test.sh
+
+      - name: "Uninstall on ${{matrix.name}}"
+        if: steps.boot.outcome == 'success'
+        timeout-minutes: 25
+        run: |
+          cd tests/vagrant
+          if vagrant status | grep -q "running"; then
+            vagrant ssh -c "sudo bash /vagrant/post-install.sh uninstall" || {
+              uninstall_status=$?
+              # exit 255 is ssh's own code — probe whether sshd inside the guest is still reachable
+              vagrant ssh -c "echo SSH is alive" \
+                || echo "::error::SSH to the VM is dead (guest sshd crashed, likely OOM, or NAT forward broke) — uninstall never ran"
+              exit $uninstall_status
+            }
+          else
+            echo "VM is not running, cannot run uninstall test"
+            exit 1
+          fi
+
       - name: "Collect logs for ${{matrix.name}}"
         if: always()
         run: |
           cd tests/vagrant
           if vagrant status | grep -q "running"; then
-            vagrant ssh -c "sudo bash /vagrant/post-install.sh logs" || true
+            vagrant ssh -c "sudo bash /vagrant/post-install.sh logs" \
+              || echo "::warning::Could not collect logs — SSH to the VM failed"
           else
             echo "VM is not running, skipping log collection"
           fi

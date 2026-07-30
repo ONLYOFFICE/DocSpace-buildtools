@@ -1,0 +1,12 @@
+node_modules
+bin
+.yarn
+.nx
+.git
+.vscode
+.github
+Logs
+Data
+TestsResults
+i18next
+*.bat

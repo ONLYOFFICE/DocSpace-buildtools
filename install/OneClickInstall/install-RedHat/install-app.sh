@@ -53,8 +53,8 @@ done
 
 ds_pkg_name="${package_sysname}-documentserver"
 case "${INSTALLATION_TYPE}" in
-	"DEVELOPER") ds_pkg_name+="-de" ;;
-	"ENTERPRISE") ds_pkg_name+="-ee" ;;
+	"developer") ds_pkg_name+="-de" ;;
+	"enterprise") ds_pkg_name+="-ee" ;;
 esac
 
 DS_COMMON_NAME=${DS_COMMON_NAME:-ds}
@@ -120,12 +120,12 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
     declare -x JWT_HEADER=${JWT_HEADER:-AuthorizationJwt}
     [ -n "${WOPI_ENABLED}" ] && declare -x WOPI_ENABLED
 
-    [ "$INSTALLATION_TYPE" != "COMMUNITY" ] && setup_postgres_db
+    [ "$INSTALLATION_TYPE" != "community" ] && setup_postgres_db
 
     ${package_manager} -y install ${ds_pkg_name} --nobest # --nobest for rhel 8 compatibility
 
 	ds_configure_args=()
-	if [ "$INSTALLATION_TYPE" != "COMMUNITY" ]; then
+	if [ "$INSTALLATION_TYPE" != "community" ]; then
 		ds_configure_args=(
 			--redishost "${DS_REDIS_HOST:-localhost}"
 			--amqphost "${DS_RABBITMQ_HOST:-localhost}"
