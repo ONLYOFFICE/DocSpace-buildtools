@@ -1055,7 +1055,7 @@ check_docker_image () {
 		if [ "${DEPLOYMENT_MODE}" = "community" ]; then
 			[ "$INSTALL_PRODUCT" == "true" ] && offline_check_docker_image "${BASE_DIR}/docker-compose.yml"
 		else
-			[ "$INSTALL_RABBITMQ" == "true" ]           && offline_check_docker_image ${BASE_DIR}/db.yml
+			[ "$INSTALL_MYSQL_SERVER" == "true" ]       && offline_check_docker_image ${BASE_DIR}/db.yml
 			[ "$INSTALL_RABBITMQ" == "true" ]           && offline_check_docker_image ${BASE_DIR}/rabbitmq.yml
 			[ "$INSTALL_REDIS" == "true" ]              && offline_check_docker_image ${BASE_DIR}/redis.yml
 			[ "$INSTALL_FLUENT_BIT" == "true" ]         && offline_check_docker_image ${BASE_DIR}/fluent.yml
