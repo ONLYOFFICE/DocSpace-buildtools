@@ -1,7 +1,7 @@
 # ONLYOFFICE DocSpace Build Tools
 
 [![Release Notes](https://img.shields.io/github/release/ONLYOFFICE/DocSpace?style=flat-square)](https://github.com/ONLYOFFICE/DocSpace/releases)
-[![License](https://img.shields.io/badge/license-AGPLv3-orange)](https://opensource.org/license/agpl-v3)
+[![License](https://img.shields.io/badge/license-AGPLv3-orange)](https://docspace.onlyoffice.com/s/gnC2xcxWjHhHmsM)
 [![GitHub stars](https://img.shields.io/github/stars/ONLYOFFICE/DocSpace?style=flat-square)](https://star-history.com/#ONLYOFFICE/DocSpace)
 [![Open Issues](https://img.shields.io/github/issues-raw/ONLYOFFICE/DocSpace?style=flat-square)](https://github.com/ONLYOFFICE/DocSpace/issues)
 
@@ -287,6 +287,10 @@ Docker-based migrations are handled by `migration-runner.yml` Compose service.
 - Parallel Unix/Windows build stages
 - Automated testing
 - Telegram notifications
+
+## The lightweight installation option
+
+The lightweight build of ONLYOFFICE DocSpace Community is intended for quick evaluation and testing. Unlike the standard multi-container deployment, it combines all DocSpace services into a single container. [Check the instructions ➡️](https://github.com/ONLYOFFICE/DocSpace-buildtools/tree/master/install/docker/community)
 
 ## Licensing
 
