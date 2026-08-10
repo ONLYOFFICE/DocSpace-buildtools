@@ -153,7 +153,7 @@ jobs:
           download "document-formats"      "master"                  document-formats & PIDS+=($!)
           download "$PRODUCT-plugins"      "$PLUGINS_BRANCH"         plugins & PIDS+=($!)
           download "$PRODUCT-mcp"          "$MCP_BRANCH"             mcp & PIDS+=($!)
-          download "$PRODUCT-ui-kit-react" "$BRANCH_CLIENT"            ui-kit & PIDS+=($!)
+          download "$PRODUCT-ui-kit-react" "$BRANCH_CLIENT"          ui-kit & PIDS+=($!)
           DOWNLOAD_STATUS=0
           for PID in "${PIDS[@]}"; do wait "$PID" || DOWNLOAD_STATUS=1; done
           exit $DOWNLOAD_STATUS
