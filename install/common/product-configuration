@@ -413,13 +413,15 @@ change_elasticsearch_config(){
 	ELASTIC_SEARCH_JAVA_CONF_PATH="/etc/opensearch/jvm.options"
 
 	sed -i '/^plugins\.security\./,/^[^ ]/d' /etc/opensearch/opensearch.yml
-	/usr/share/opensearch/bin/opensearch-plugin list | grep -qx "opensearch-security" && \
+	/usr/share/opensearch/bin/opensearch-plugin list 2>/dev/null | grep -qx "opensearch-security" && \
 		/usr/share/opensearch/bin/opensearch-plugin remove opensearch-security >/dev/null 2>&1
 
 	if [[ ! -f "$APP_DIR/.private/opensearch-version" || $(cat "$APP_DIR/.private/opensearch-version") != *"${ELASTIC_VERSION}"* ]]; then
-		/usr/share/opensearch/bin/opensearch-plugin list | grep -q "ingest-attachment" && \
-			/usr/share/opensearch/bin/opensearch-plugin remove -s ingest-attachment
-		/usr/share/opensearch/bin/opensearch-plugin install -s -b ingest-attachment
+		/usr/share/opensearch/bin/opensearch-plugin list 2>/dev/null | grep -q "ingest-attachment" && \
+			/usr/share/opensearch/bin/opensearch-plugin remove -s ingest-attachment >/dev/null 2>&1
+		if ! INGEST_ATTACHMENT_ERROR=$(/usr/share/opensearch/bin/opensearch-plugin install -s -b ingest-attachment 2>&1); then
+			echo "${INGEST_ATTACHMENT_ERROR}" >&2
+		fi
 	fi
 
 	[ -f "${ELASTIC_SEARCH_CONF_PATH}.rpmnew" ] && cp -f "${ELASTIC_SEARCH_CONF_PATH}.rpmnew" "${ELASTIC_SEARCH_CONF_PATH}"
