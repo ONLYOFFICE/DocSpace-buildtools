@@ -108,7 +108,8 @@ Multi-Arch: foreign
 Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
 Recommends: redis-server
 Description: {{product}}-socket
-	The service which provides two-way communication between a web browser and the server.
+	The service which provides two-way communication between a web browser
+	and the server.
 
 Package: {{product}}-newai
 Architecture: all
@@ -140,7 +141,8 @@ Architecture: all
 Multi-Arch: foreign
 Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
 Description: {{product}}-api-system
-	The service which is used for working with portals (creating, removing portals, etc.)
+	The service which is used for working with portals (creating, removing
+	portals, etc.)
 
 Package: {{product}}-studio
 Architecture: all

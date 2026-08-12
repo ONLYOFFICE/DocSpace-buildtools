@@ -88,7 +88,8 @@ Requires:       nodejs >= %{node_version}.0
 AutoReqProv:    no
 BuildArch:      noarch
 %description    socket
-The service which provides two-way communication between a web browser and the server.
+The service which provides two-way communication between a web browser
+and the server.
 
 %package        newai
 Summary:        NewAi
@@ -126,7 +127,8 @@ Requires:       dotnet-sdk-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    api-system
-The service which is used for working with portals (creating, removing portals, etc.)
+The service which is used for working with portals (creating, removing
+portals, etc.)
 
 %package        ssoauth
 Summary:        Ssoauth

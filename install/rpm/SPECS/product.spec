@@ -87,7 +87,7 @@ tar -xf %{SOURCE4} --transform='s,^[^/]\+,DocStore,'         -C %{_builddir} &
 tar -xf %{SOURCE5} --transform='s,^[^/]\+,campaigns,'        -C %{_builddir} &
 tar -xf %{SOURCE6} --transform='s,^[^/]\+,plugins,'          -C %{_builddir} &
 wait
-tar -xf %{SOURCE7} --transform='s,^[^/]\+,document-formats,' -C %{_builddir}/buildtools/config
+tar -xf %{SOURCE7} --wildcards --strip-components=1 -C %{_builddir}/buildtools/config/document-formats '*/onlyoffice-docs-formats.json'
 tar -xf %{SOURCE8} --transform='s,^[^/]\+,mcp,'              -C %{_builddir}
 tar -xf %{SOURCE9} --transform='s,^[^/]\+,ui-kit,'          -C %{_builddir}/client/libs
 cp -rf %{SOURCE0} .

@@ -44,7 +44,8 @@ check_archives:
 	$(call extract_archive,${SOURCE_PATH}/plugins.tar.gz,plugins,-C ${BUILD_PATH}) & \
 	$(call extract_archive,${SOURCE_PATH}/mcp.tar.gz,mcp,-C ${BUILD_PATH}) & \
 	wait; \
-	$(call extract_archive,${SOURCE_PATH}/document-formats.tar.gz,document-formats,-C ${BUILDTOOLS_PATH}/config); \
+	tar -xf ${SOURCE_PATH}/document-formats.tar.gz --wildcards --strip-components=1 -C ${BUILDTOOLS_PATH}/config/document-formats '*/onlyoffice-docs-formats.json' \
+		|| { echo "Error: failed to extract onlyoffice-docs-formats.json from document-formats.tar.gz"; exit 1; }; \
 	$(call extract_archive,${SOURCE_PATH}/ui-kit.tar.gz,ui-kit,-C ${CLIENT_PATH}/libs); \
 	echo "Source archives check passed."
 

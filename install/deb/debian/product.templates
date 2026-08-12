@@ -1,97 +1,97 @@
 Template: {{product}}/host
 Type: string
-Description: {{product}} host address
+Description: {{product}} host address:
 
 Template: {{product}}/port
 Type: string
-Description: {{product}} port number
+Description: {{product}} port number:
 
 Template: {{product}}/db-host
 Type: string
-Description: Database host address
+Description: Database host address:
 
 Template: {{product}}/db-port
 Type: string
-Description: Database port number
+Description: Database port number:
 
 Template: {{product}}/db-user
 Type: string
-Description: Database username
+Description: Database username:
 
 Template: {{product}}/db-pwd
 Type: password
-Description: Database user password
+Description: Database user password:
 
 Template: {{product}}/db-name
 Type: string
-Description: Database name
+Description: Database name:
 
 Template: {{product}}/ds-url
 Type: string
-Description: External Docs server URL (e.g., http://docs.example.com:8083)
+Description: External Docs server URL (e.g., http://docs.example.com:8083):
 
 Template: {{product}}/elasticsearch-scheme
 Type: select
 Choices: http, https
-Description: OpenSearch protocol
+Description: OpenSearch protocol:
 
 Template: {{product}}/elasticsearch-host
 Type: string
-Description: OpenSearch host address
+Description: OpenSearch host address:
 
 Template: {{product}}/elasticsearch-port
 Type: string
-Description: OpenSearch port number
+Description: OpenSearch port number:
 
 Template: {{product}}/redis-host
 Type: string
-Description: Redis host address
+Description: Redis host address:
 
 Template: {{product}}/redis-port
 Type: string
-Description: Redis port number
+Description: Redis port number:
 
 Template: {{product}}/redis-username
 Type: string
-Description: Redis username (optional)
+Description: Redis username (optional):
 
 Template: {{product}}/redis-password
 Type: password
-Description: Redis password (optional)
+Description: Redis password (optional):
 
 Template: {{product}}/redis-db
 Type: string
-Description: Redis database index
+Description: Redis database index:
 
 Template: {{product}}/rabbitmq-protocol
 Type: select
 Choices: amqp, amqps
-Description: RabbitMQ protocol
+Description: RabbitMQ protocol:
 
 Template: {{product}}/rabbitmq-host
 Type: string
-Description: RabbitMQ host address
+Description: RabbitMQ host address:
 
 Template: {{product}}/rabbitmq-port
 Type: string
-Description: RabbitMQ port number
+Description: RabbitMQ port number:
 
 Template: {{product}}/rabbitmq-user
 Type: string
-Description: RabbitMQ username
+Description: RabbitMQ username:
 
 Template: {{product}}/rabbitmq-password
-Type: string
-Description: RabbitMQ user password
+Type: password
+Description: RabbitMQ user password:
 
 Template: {{product}}/machinekey
-Type: string
-Description: Machine key for encryption 
+Type: password
+Description: Machine key for encryption:
 
 Template: {{product}}/jwt-header
 Type: string
-Description: JWT header name
+Description: JWT header name:
 
 Template: {{product}}/jwt-secret
-Type: string
-Description: JWT secret key
+Type: password
+Description: JWT secret key:

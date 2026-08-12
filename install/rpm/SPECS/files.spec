@@ -21,9 +21,9 @@
 
 %files common
 %defattr(-, onlyoffice, onlyoffice, -)
-%config %attr(640, onlyoffice, onlyoffice) %{_sysconfdir}/onlyoffice/%{product}/*
-%exclude %{_sysconfdir}/onlyoffice/%{product}/openresty
-%attr(740, onlyoffice, onlyoffice) %{_sysconfdir}/onlyoffice/%{product}/document-formats/
+%config %attr(640, onlyoffice, onlyoffice) %{_sysconfdir}/onlyoffice/%{product}/*.*
+%dir %attr(750, onlyoffice, onlyoffice) %{_sysconfdir}/onlyoffice/%{product}/document-formats/
+%config %attr(640, onlyoffice, onlyoffice) %{_sysconfdir}/onlyoffice/%{product}/document-formats/onlyoffice-docs-formats.json
 %license %{_datadir}/licenses/%{name}/LICENSE
 %license %{_datadir}/licenses/%{name}/LICENSE-CC-BY-SA
 %{_var}/log/onlyoffice/%{product}/
