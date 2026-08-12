@@ -130,7 +130,7 @@ jobs:
             | xargs shellcheck --exclude="$(awk '!/^#|^$/ {print $1}' tests/lint/sc_ignore | paste -sd ",")" --severity=warning | tee sc_output || true
           awk '/\(warning\):/ {w++} /\(error\):/ {e++} END {if (w+e) printf "::warning ::ShellCheck: %d warnings, %d errors\n", w+0, e+0}' sc_output
 
-      - name: "Boot VM for ${{matrix.name}}"
+      - name: Boot VM
         id: boot
         continue-on-error: true
         timeout-minutes: 45
@@ -184,7 +184,7 @@ jobs:
         if: steps.boot.outcome == 'failure'
         run: echo "::warning::VM boot failed on ${{ matrix.name }} — runner infrastructure flake, install test skipped"
 
-      - name: "Install on ${{matrix.name}}"
+      - name: Install
         if: steps.boot.outcome == 'success'
         timeout-minutes: 55
         env:
@@ -212,7 +212,7 @@ jobs:
 
           vagrant provision
 
-      - name: "Health check for ${{matrix.name}}"
+      - name: Health check
         if: steps.boot.outcome == 'success'
         run: |
           cd tests/vagrant
@@ -229,14 +229,14 @@ jobs:
           cd tests/vagrant
           vagrant ssh -c "sudo bash /vagrant/post-install.sh external-ports"
 
-      - name: "Smoke test on ${{matrix.name}}"
+      - name: Smoke test
         if: steps.boot.outcome == 'success'
         timeout-minutes: 20
         env:
           LICENSE: ${{ secrets.LICENSE_ENTERPRISE }}
         run: bash tests/vagrant/smoke-test.sh
 
-      - name: "Uninstall on ${{matrix.name}}"
+      - name: Uninstall
         if: steps.boot.outcome == 'success' && matrix.os != 'rhel9'
         timeout-minutes: 25
         run: |
@@ -254,7 +254,7 @@ jobs:
             exit 1
           fi
 
-      - name: "Collect logs for ${{matrix.name}}"
+      - name: Collect logs
         if: always()
         run: |
           cd tests/vagrant
