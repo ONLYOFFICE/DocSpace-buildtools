@@ -57,6 +57,19 @@ healthcheck_api() {
   return 1
 }
 
+check_external_ports() {
+  LISTENERS=$(ss -H -lntp)
+  LISTENERS=$(awk '$4 !~ /^(127\.|\[::1\]:|\[::ffff:127\.|::1:)/ && $4 !~ /:(22|80|443)$/' <<< "$LISTENERS")
+
+  if [[ -n "$LISTENERS" ]]; then
+    echo "${COLOR_YELLOW}[WARN] Unexpected external TCP listeners:${COLOR_RESET}"
+    printf '%s\n' "$LISTENERS"
+    echo "::warning title=External ports::Unexpected TCP listeners"
+  else
+    echo "${COLOR_GREEN}[OK] No unexpected external TCP listeners found${COLOR_RESET}"
+  fi
+}
+
 service_exists() {
   systemctl list-unit-files "$1" --no-legend 2>/dev/null | grep -q .
 }
@@ -150,6 +163,12 @@ main() {
       echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
       uninstall_docspace
       ;;
+    "external-ports")
+      echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
+      echo "${COLOR_BLUE}EXTERNAL PORTS${COLOR_RESET}"
+      echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
+      check_external_ports
+      ;;
     "logs")
       echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
       echo "${COLOR_BLUE}COLLECTING SERVICE LOGS${COLOR_RESET}"
@@ -157,7 +176,7 @@ main() {
       services_logs
       ;;
     *)
-      echo "Usage: $0 [healthcheck|uninstall|logs]"
+      echo "Usage: $0 [healthcheck|external-ports|uninstall|logs]"
       exit 1
       ;;
   esac

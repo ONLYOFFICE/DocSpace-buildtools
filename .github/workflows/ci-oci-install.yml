@@ -222,6 +222,13 @@ jobs:
             echo "VM is not running, skipping health check"
           fi
 
+      - name: External ports
+        if: steps.boot.outcome == 'success'
+        continue-on-error: true
+        run: |
+          cd tests/vagrant
+          vagrant ssh -c "sudo bash /vagrant/post-install.sh external-ports"
+
       - name: "Smoke test on ${{matrix.name}}"
         if: steps.boot.outcome == 'success'
         timeout-minutes: 20
