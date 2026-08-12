@@ -101,7 +101,7 @@ while [ "$1" != "" ]; do
         -uni     | --uninstall           ) [ -n "$2" ] && UNINSTALL=$2 && [ "$UNINSTALL" = "true" ] && OFFLINE_IMAGE_LOAD="true"  && shift ;;
         -off     | --offline             ) [ -n "$2" ] && OFFLINE_INSTALLATION=$2                                                 && shift ;;
         -eh      | --extrahosts          ) [ -n "$2" ] && EXTRA_HOSTS=$2                                                          && shift ;;
-        -ls      | --localscripts        )                                                                                           shift ;;
+        -ls      | --localscripts        ) [ -n "$2" ] && LOCAL_SCRIPTS=$2                                                        && shift ;;
         -vd      | --volumesdir          )
             [ -n "$2" ] && VOLUMES_DIR="$2"
             [[ "$VOLUMES_DIR" != /* ]] && VOLUMES_DIR="$(cd "$(dirname "$VOLUMES_DIR")" && pwd)/$(basename "$VOLUMES_DIR")"

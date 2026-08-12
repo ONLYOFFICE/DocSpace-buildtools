@@ -107,7 +107,6 @@ LETS_ENCRYPT_MAIL=""
 IDENTITY_ENCRYPTION_SECRET=""
 
 DEPLOYMENT_MODE=""
-OFFLINE_INSTALLATION="false"
 NON_INTERACTIVE="false"
 SKIP_HARDWARE_CHECK="false"
 
@@ -116,12 +115,15 @@ EXTERNAL_PORT_HTTPS="443"
 ARGS_SCRIPT="install-Docker-args.sh"
 DOWNLOAD_URL_PREFIX="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}"
 GIT_BRANCH=$(echo "$@" | grep -oP '(?<=-gb )\S+' | tail -n 1)
+LOCAL_SCRIPTS=$(echo "$@" | grep -oP '(?<=-ls |--localscripts )\S+' | tail -n 1)
+OFFLINE_INSTALLATION="$(echo "$@" | grep -oP '(?<=-off |--offline )\S+' | tail -n 1)"
+OFFLINE_INSTALLATION="${OFFLINE_INSTALLATION:-false}"
 
 if [[ -n "${GIT_BRANCH:-}" ]]; then
   DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${PACKAGE_SYSNAME^^}/${PRODUCT}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
 fi
 
-[[ "$LOCAL_SCRIPTS" = "true" ]] || [[ "$OFFLINE_INSTALLATION" = "true" ]] && source "./${ARGS_SCRIPT}" || source <(curl "${DOWNLOAD_URL_PREFIX}/${ARGS_SCRIPT}")
+if [[ "$LOCAL_SCRIPTS" = "true" ]] || [[ "$OFFLINE_INSTALLATION" = "true" ]]; then source "./${ARGS_SCRIPT}"; else source <(curl "${DOWNLOAD_URL_PREFIX}/${ARGS_SCRIPT}"); fi
 
 select_deployment_mode () {
   case "${DEPLOYMENT_MODE}" in
