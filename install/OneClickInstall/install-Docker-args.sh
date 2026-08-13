@@ -64,7 +64,7 @@ while [ "$1" != "" ]; do
         -esh     | --elastichost         ) [ -n "$2" ] && ELK_HOST=$2                                                             && shift ;;
         -esp     | --elasticport         ) [ -n "$2" ] && ELK_PORT=$2                                                             && shift ;;
         -skiphc  | --skiphardwarecheck   ) [ -n "$2" ] && SKIP_HARDWARE_CHECK=$2                                                  && shift ;;
-        -dm      | --deployment-mode     ) [ -n "$2" ] && DEPLOYMENT_MODE="${2,,}" && DEPLOYMENT_MODE_SET="true"                   && shift ;;
+        -dm      | --deployment-mode     ) [ -n "$2" ] && DEPLOYMENT_MODE="${2,,}" && DEPLOYMENT_MODE_SET="true"                  && shift ;;
         -ep      | --externalport        ) [ -n "$2" ] && EXTERNAL_PORT=$2                                                        && shift ;;
         -eph     | --externalporthttps   ) [ -n "$2" ] && EXTERNAL_PORT_HTTPS=$2                                                  && shift ;;
         -dsh     | --docspacehost        ) [ -n "$2" ] && APP_URL_PORTAL=$2                                                       && shift ;;
@@ -102,25 +102,9 @@ while [ "$1" != "" ]; do
         -off     | --offline             ) [ -n "$2" ] && OFFLINE_INSTALLATION=$2                                                 && shift ;;
         -eh      | --extrahosts          ) [ -n "$2" ] && EXTRA_HOSTS=$2                                                          && shift ;;
         -ls      | --localscripts        ) [ -n "$2" ] && LOCAL_SCRIPTS=$2                                                        && shift ;;
-        -vd      | --volumesdir          )
-            [ -n "$2" ] && VOLUMES_DIR="$2"
-            [[ "$VOLUMES_DIR" != /* ]] && VOLUMES_DIR="$(cd "$(dirname "$VOLUMES_DIR")" && pwd)/$(basename "$VOLUMES_DIR")"
-            [ -d "$VOLUMES_DIR" ] || { echo "Error: Volumes directory not found: ${VOLUMES_DIR}" >&2; exit 1; }
-            [[ "$VOLUMES_DIR" == "$BASE_DIR"* ]] && { echo "Warning: Please change the volumes directory, as $BASE_DIR will be removed during an update."; exit 1; }
-            shift
-        ;;
-        -cf      | --certfile            )
-            [ -n "$2" ] && CERTIFICATE_PATH="$2"
-            [[ "$CERTIFICATE_PATH" != /* ]] && CERTIFICATE_PATH="$(cd "$(dirname "$CERTIFICATE_PATH")" && pwd)/$(basename "$CERTIFICATE_PATH")"
-            [ -f "$CERTIFICATE_PATH" ] || { echo "Error: Certificate file not found: ${CERTIFICATE_PATH}" >&2; exit 1; }
-            shift
-        ;;
-        -ckf     | --certkeyfile         )
-            [ -n "$2" ] && CERTIFICATE_KEY_PATH="$2"
-            [[ "$CERTIFICATE_KEY_PATH" != /* ]] && CERTIFICATE_KEY_PATH="$(cd "$(dirname "$CERTIFICATE_KEY_PATH")" && pwd)/$(basename "$CERTIFICATE_KEY_PATH")"
-            [ -f "$CERTIFICATE_KEY_PATH" ] || { echo "Error: Certificate key file not found: ${CERTIFICATE_KEY_PATH}" >&2; exit 1; }
-            shift
-        ;;
+        -vd      | --volumesdir          ) [ -n "$2" ] && VOLUMES_DIR="$2"                                                        && shift ;;
+        -cf      | --certfile            ) [ -n "$2" ] && CERTIFICATE_PATH="$2"                                                   && shift ;;
+        -ckf     | --certkeyfile         ) [ -n "$2" ] && CERTIFICATE_KEY_PATH="$2"                                               && shift ;;
         -h | -? | --help )
             echo 
             echo "PRELIMINARY PARAMETERS (Docker registry auth):"
@@ -223,3 +207,57 @@ case "${DEPLOYMENT_MODE}" in
     standard | stack | community ) ;;
     * ) echo "Error: Invalid --deployment-mode '${DEPLOYMENT_MODE}'. Valid values: standard, stack, community." >&2; exit 1 ;;
 esac
+
+case "${INSTALLATION_TYPE}" in
+    community | developer | enterprise ) ;;
+    * ) echo "Error: Invalid --installationtype '${INSTALLATION_TYPE}'. Valid values: community, developer, enterprise." >&2; exit 1 ;;
+esac
+
+validate_bool() {
+    [ -z "$2" ] && return 0
+    case "$2" in
+        true | false ) ;;
+        * ) echo "Error: Invalid ${1} '${2}'. Valid values: true, false." >&2; exit 1 ;;
+    esac
+}
+
+validate_bool_or_pull() {
+    [ -z "$2" ] && return 0
+    case "$2" in
+        true | false | pull ) ;;
+        * ) echo "Error: Invalid ${1} '${2}'. Valid values: true, false, pull." >&2; exit 1 ;;
+    esac
+}
+
+validate_bool --update "$UPDATE"
+validate_bool --uninstall "$UNINSTALL"
+validate_bool --noninteractive "$NON_INTERACTIVE"
+validate_bool --skiphardwarecheck "$SKIP_HARDWARE_CHECK"
+validate_bool --offline "$OFFLINE_INSTALLATION"
+validate_bool --makeswap "$MAKESWAP"
+validate_bool --localscripts "$LOCAL_SCRIPTS"
+validate_bool --databasemigration "$DATABASE_MIGRATION"
+
+validate_bool_or_pull --installdocspace "$INSTALL_PRODUCT"
+validate_bool_or_pull --installdocs "$INSTALL_DOCUMENT_SERVER"
+validate_bool_or_pull --installmysql "$INSTALL_MYSQL_SERVER"
+validate_bool_or_pull --installrabbitmq "$INSTALL_RABBITMQ"
+validate_bool_or_pull --installredis "$INSTALL_REDIS"
+validate_bool_or_pull --installelastic "$INSTALL_ELASTICSEARCH"
+validate_bool_or_pull --installfluentbit "$INSTALL_FLUENT_BIT"
+
+if [ -n "$VOLUMES_DIR" ]; then
+    [[ "$VOLUMES_DIR" != /* ]] && VOLUMES_DIR="$(cd "$(dirname "$VOLUMES_DIR")" && pwd)/$(basename "$VOLUMES_DIR")"
+    [ -d "$VOLUMES_DIR" ] || { echo "Error: Volumes directory not found: ${VOLUMES_DIR}" >&2; exit 1; }
+    [[ "$VOLUMES_DIR" == "$BASE_DIR"* ]] && { echo "Warning: Please change the volumes directory, as $BASE_DIR will be removed during an update."; exit 1; }
+fi
+
+if [ -n "$CERTIFICATE_PATH" ]; then
+    [[ "$CERTIFICATE_PATH" != /* ]] && CERTIFICATE_PATH="$(cd "$(dirname "$CERTIFICATE_PATH")" && pwd)/$(basename "$CERTIFICATE_PATH")"
+    [ -f "$CERTIFICATE_PATH" ] || { echo "Error: Certificate file not found: ${CERTIFICATE_PATH}" >&2; exit 1; }
+fi
+
+if [ -n "$CERTIFICATE_KEY_PATH" ]; then
+    [[ "$CERTIFICATE_KEY_PATH" != /* ]] && CERTIFICATE_KEY_PATH="$(cd "$(dirname "$CERTIFICATE_KEY_PATH")" && pwd)/$(basename "$CERTIFICATE_KEY_PATH")"
+    [ -f "$CERTIFICATE_KEY_PATH" ] || { echo "Error: Certificate key file not found: ${CERTIFICATE_KEY_PATH}" >&2; exit 1; }
+fi

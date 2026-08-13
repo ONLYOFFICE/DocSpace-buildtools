@@ -93,6 +93,26 @@ UPDATE="${UPDATE:-false}"
 LOCAL_SCRIPTS="${LOCAL_SCRIPTS:-false}"
 SKIP_HARDWARE_CHECK="${SKIP_HARDWARE_CHECK:-false}"
 
+case "${INSTALLATION_TYPE}" in
+    community | developer | enterprise ) ;;
+    * ) echo "Error: Invalid --installationtype '${INSTALLATION_TYPE}'. Valid values: community, developer, enterprise." >&2; exit 1 ;;
+esac
+
+validate_bool() {
+    case "$2" in
+        true | false ) ;;
+        * ) echo "Error: Invalid ${1} '${2}'. Valid values: true, false." >&2; exit 1 ;;
+    esac
+}
+
+validate_bool --update "$UPDATE"
+validate_bool --localscripts "$LOCAL_SCRIPTS"
+validate_bool --skiphardwarecheck "$SKIP_HARDWARE_CHECK"
+validate_bool --makeswap "$MAKESWAP"
+validate_bool --installfluentbit "$INSTALL_FLUENT_BIT"
+[ -n "$UNINSTALL" ] && validate_bool --uninstall "$UNINSTALL"
+[ -n "$DS_JWT_ENABLED" ] && validate_bool --jwtenabled "$DS_JWT_ENABLED"
+
 # Pause apt's auto-update timers so they don't grab the dpkg lock mid-install; EXIT trap restarts them regardless of how this script exits.
 systemctl stop apt-daily.timer apt-daily-upgrade.timer unattended-upgrades.service >/dev/null 2>&1 || true
 trap 'systemctl start apt-daily.timer apt-daily-upgrade.timer >/dev/null 2>&1 || true' EXIT

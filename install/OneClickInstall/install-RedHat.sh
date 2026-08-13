@@ -94,6 +94,26 @@ UPDATE="${UPDATE:-false}"
 LOCAL_SCRIPTS="${LOCAL_SCRIPTS:-false}"
 SKIP_HARDWARE_CHECK="${SKIP_HARDWARE_CHECK:-false}"
 
+case "${INSTALLATION_TYPE}" in
+    community | developer | enterprise ) ;;
+    * ) echo "Error: Invalid --installationtype '${INSTALLATION_TYPE}'. Valid values: community, developer, enterprise." >&2; exit 1 ;;
+esac
+
+validate_bool() {
+    case "$2" in
+        true | false ) ;;
+        * ) echo "Error: Invalid ${1} '${2}'. Valid values: true, false." >&2; exit 1 ;;
+    esac
+}
+
+validate_bool --update "$UPDATE"
+validate_bool --localscripts "$LOCAL_SCRIPTS"
+validate_bool --skiphardwarecheck "$SKIP_HARDWARE_CHECK"
+validate_bool --makeswap "$MAKESWAP"
+validate_bool --installfluentbit "$INSTALL_FLUENT_BIT"
+[ -n "$UNINSTALL" ] && validate_bool --uninstall "$UNINSTALL"
+[ -n "$JWT_ENABLED" ] && validate_bool --jwtenabled "$JWT_ENABLED"
+
 DOWNLOAD_URL_PREFIX="https://download.onlyoffice.com/${product}"
 [ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
 
