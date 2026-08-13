@@ -169,18 +169,20 @@ jobs:
           cd tests/vagrant
           vagrant provision
 
-      - name: "Health check for ${{matrix.name}}"
+      - name: "Healthcheck"
+        id: healthcheck
         if: steps.boot.outcome == 'success'
+        continue-on-error: true
         run: |
           cd tests/vagrant
           if vagrant status | grep -q "running"; then
-            vagrant ssh -c "sudo bash /vagrant/post-install.sh healthcheck" || true
+            vagrant ssh -c "sudo bash /vagrant/post-install.sh healthcheck"
           else
             echo "VM is not running, skipping health check"
           fi
 
-      - name: "Smoke test on ${{matrix.name}}"
-        if: steps.boot.outcome == 'success'
+      - name: "Smoke test"
+        if: steps.healthcheck.outcome == 'success'
         timeout-minutes: 20
         env:
           LICENSE: ${{ secrets.LICENSE_ENTERPRISE }}
@@ -190,7 +192,7 @@ jobs:
           export EXPECTED_VERSION=$(echo "$REF_NAME" | grep -oP '^(release|hotfix)/v\K[0-9]+(\.[0-9]+)+' || true)
           bash tests/vagrant/smoke-test.sh
 
-      - name: "Uninstall on ${{matrix.name}}"
+      - name: "Uninstall"
         if: steps.boot.outcome == 'success'
         timeout-minutes: 25
         run: |
@@ -208,7 +210,7 @@ jobs:
             exit 1
           fi
 
-      - name: "Collect logs for ${{matrix.name}}"
+      - name: "Collect logs"
         if: always()
         run: |
           cd tests/vagrant

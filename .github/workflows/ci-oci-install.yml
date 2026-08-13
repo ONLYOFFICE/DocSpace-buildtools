@@ -213,11 +213,13 @@ jobs:
           vagrant provision
 
       - name: Health check
+        id: healthcheck
         if: steps.boot.outcome == 'success'
+        continue-on-error: true
         run: |
           cd tests/vagrant
           if vagrant status | grep -q "running"; then
-            vagrant ssh -c "sudo bash /vagrant/post-install.sh healthcheck" || true
+            vagrant ssh -c "sudo bash /vagrant/post-install.sh healthcheck"
           else
             echo "VM is not running, skipping health check"
           fi
@@ -230,7 +232,7 @@ jobs:
           vagrant ssh -c "sudo bash /vagrant/post-install.sh external-ports"
 
       - name: Smoke test
-        if: steps.boot.outcome == 'success'
+        if: steps.healthcheck.outcome == 'success'
         timeout-minutes: 20
         env:
           LICENSE: ${{ secrets.LICENSE_ENTERPRISE }}

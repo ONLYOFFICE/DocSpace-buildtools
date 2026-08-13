@@ -13,6 +13,7 @@ healthcheck_systemd_services() {
   mapfile -t SERVICES_SYSTEMD < <(awk '/SERVICE_NAME=\(/{flag=1; next} /\)/{flag=0} flag' "build.sh" | sed -E 's/^[[:space:]]*|[[:space:]]*$//g; s/^/docspace-/; s/$/.service/')
   SERVICES_SYSTEMD+=("ds-converter.service" "ds-docservice.service" "ds-metrics.service")
 
+  local FAILED=0
   for service in "${SERVICES_SYSTEMD[@]}"; do
     [[ "$service" == *migration* ]] && continue;
     if systemctl is-active --quiet "${service}"; then
@@ -20,9 +21,11 @@ healthcheck_systemd_services() {
     else
       echo "${COLOR_RED}[FAILED] Service ${service} is not running${COLOR_RESET}"
       echo "::error::Service ${service} is not running"
-      return 1
+      FAILED=1
     fi
   done
+
+  return "$FAILED"
 }
 
 healthcheck_dead_systemd_services() {
@@ -153,9 +156,11 @@ main() {
       echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
       echo "${COLOR_BLUE}HEALTH CHECK${COLOR_RESET}"
       echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
-      healthcheck_systemd_services
-      healthcheck_dead_systemd_services
-      healthcheck_api
+      local STATUS=0
+      healthcheck_systemd_services || STATUS=1
+      healthcheck_dead_systemd_services || STATUS=1
+      healthcheck_api || STATUS=1
+      return "$STATUS"
       ;;
     "uninstall")
       echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
