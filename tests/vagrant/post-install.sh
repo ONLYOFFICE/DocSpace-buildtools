@@ -10,7 +10,7 @@ get_colors() {
 }
 
 healthcheck_systemd_services() {
-  mapfile -t SERVICES_SYSTEMD < <(awk '/SERVICE_NAME=\(/{flag=1; next} /\)/{flag=0} flag' "build.sh" | sed -E 's/^[[:space:]]*|[[:space:]]*$//g; s/^/docspace-/; s/$/.service/')
+  mapfile -t SERVICES_SYSTEMD < <(awk '/SERVICE_NAME=\(/{flag=1; next} /\)/{flag=0} flag' "build.sh" | sed -E 's/^[[:space:]]*|[[:space:]]*$//g; s/^/apps-/; s/$/.service/')
   SERVICES_SYSTEMD+=("ds-converter.service" "ds-docservice.service" "ds-metrics.service")
 
   local FAILED=0
@@ -31,8 +31,8 @@ healthcheck_systemd_services() {
 healthcheck_dead_systemd_services() {
   mapfile -t SERVICES_SYSTEMD_DEAD < <(
     {
-      find /etc/systemd/system -type l -name 'docspace-*.service' ! -exec test -e {} \; -print
-      systemctl list-units --type=service --all --no-legend | awk '$1 ~ /^docspace-.*\.service$/ && $2 == "not-found" {print $1}'
+      find /etc/systemd/system -type l -name 'apps-*.service' ! -exec test -e {} \; -print
+      systemctl list-units --type=service --all --no-legend | awk '$1 ~ /^apps-.*\.service$/ && $2 == "not-found" {print $1}'
     } | sort -u
   )
 
@@ -49,14 +49,14 @@ healthcheck_dead_systemd_services() {
 healthcheck_api() {
   for _ in $(seq 1 60); do
     if curl -fs --max-time 3 -o /dev/null "http://localhost/api/2.0/settings"; then
-      echo "${COLOR_GREEN}[OK] DocSpace API is ready${COLOR_RESET}"
+      echo "${COLOR_GREEN}[OK] ONLYOFFICE Apps API is ready${COLOR_RESET}"
       return 0
     fi
     sleep 1
   done
 
-  echo "${COLOR_RED}[FAILED] DocSpace API failed to become ready${COLOR_RESET}"
-  echo "::error::DocSpace API failed to become ready"
+  echo "${COLOR_RED}[FAILED] ONLYOFFICE Apps API failed to become ready${COLOR_RESET}"
+  echo "::error::ONLYOFFICE Apps API failed to become ready"
   return 1
 }
 
@@ -113,7 +113,7 @@ dependency_logs() {
 }
 
 services_logs() {
-  mapfile -t SERVICES_SYSTEMD < <(awk '/SERVICE_NAME=\(/{flag=1; next} /\)/{flag=0} flag' "build.sh" | sed -E 's/^[[:space:]]*|[[:space:]]*$//g; s/^/docspace-/; s/$/.service/')
+  mapfile -t SERVICES_SYSTEMD < <(awk '/SERVICE_NAME=\(/{flag=1; next} /\)/{flag=0} flag' "build.sh" | sed -E 's/^[[:space:]]*|[[:space:]]*$//g; s/^/apps-/; s/$/.service/')
   SERVICES_SYSTEMD+=("ds-converter.service" "ds-docservice.service" "ds-metrics.service")
 
   echo $LINE_SEPARATOR && echo "${COLOR_YELLOW}Failed systemd units${COLOR_RESET}" && echo $LINE_SEPARATOR
@@ -126,10 +126,10 @@ services_logs() {
 
   dependency_logs
 
-  local DOCSPACE_LOGS_DIR="/var/log/onlyoffice/docspace"
+  local APPS_LOGS_DIR="/var/log/onlyoffice/apps"
   local DOCUMENTSERVER_LOGS_DIR="/var/log/onlyoffice/documentserver"
 
-  for LOGS_DIR in "${DOCSPACE_LOGS_DIR}" "${DOCUMENTSERVER_LOGS_DIR}"; do
+  for LOGS_DIR in "${APPS_LOGS_DIR}" "${DOCUMENTSERVER_LOGS_DIR}"; do
     echo $LINE_SEPARATOR && echo "${COLOR_YELLOW}Check logs for $(basename "${LOGS_DIR}"| tr '[:lower:]' '[:upper:]') ${COLOR_RESET}" && echo $LINE_SEPARATOR
 
     [ -d "${LOGS_DIR}" ] || { echo "${COLOR_YELLOW}Logs directory ${LOGS_DIR} not found${COLOR_RESET}"; continue; }
@@ -141,9 +141,11 @@ services_logs() {
   done
 }
 
-uninstall_docspace() {
+uninstall_apps() {
   cd /home/vagrant
-  DEBIAN_FRONTEND=noninteractive bash docspace-install.sh package -uni true -log false <<< "Y" \
+  # --localscripts true: reuse the platform script already placed here by install.sh instead of
+  # downloading it from download.onlyoffice.com/apps, which doesn't exist until this release ships.
+  DEBIAN_FRONTEND=noninteractive bash apps-install.sh package -uni true -log false -ls true <<< "Y" \
     || { echo "::error::Uninstall failed"; exit 1; }
   echo "${COLOR_GREEN}[OK] Package uninstalled${COLOR_RESET}"
 }
@@ -166,7 +168,7 @@ main() {
       echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
       echo "${COLOR_BLUE}UNINSTALL${COLOR_RESET}"
       echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
-      uninstall_docspace
+      uninstall_apps
       ;;
     "external-ports")
       echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"

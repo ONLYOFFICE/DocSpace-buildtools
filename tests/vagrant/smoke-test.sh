@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run browser smoke tests from the host against the DocSpace VM (forwarded localhost:8080).
+# Run browser smoke tests from the host against the ONLYOFFICE Apps VM (forwarded localhost:8080).
 # Optional env: LICENSE (content) or LICENSE_FILE (path) — wizard license (standalone requires one).
 
 set -e
@@ -14,7 +14,7 @@ PIP_BREAK_SYSTEM_PACKAGES=1 pip install -q --disable-pip-version-check -r ../smo
 
 # Capture the exit code separately so a failure can be reported as a readable annotation, not just "exit code 1"
 set +e
-SERVER_URL=http://localhost:8080 python3 -m pytest ../smoke/test_docspace_smoke.py -v -s | tee smoke-output.log
+SERVER_URL=http://localhost:8080 python3 -m pytest ../smoke/smoke_test.py -v -s | tee smoke-output.log
 exit_code=${PIPESTATUS[0]}
 set -e
 

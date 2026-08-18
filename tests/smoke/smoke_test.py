@@ -70,7 +70,7 @@ def _start_progress_block():
     yield
 
 def api(path, method='GET', data=None, headers=None, raw_body=None, timeout=60):
-    """Call the DocSpace REST API; returns (status, parsed json)."""
+    """Call the ONLYOFFICE Apps REST API; returns (status, parsed json)."""
     all_headers = {'Content-Type': 'application/json', **(headers or {})}
     body = raw_body if raw_body is not None else (json.dumps(data).encode() if data else None)
     request = urllib.request.Request(SERVER_URL + '/api/2.0' + path, method=method, headers=all_headers, data=body)
@@ -296,7 +296,7 @@ def test_people_self():
     done(profile.get('displayName') or profile['email'])
 
 def test_create_room():
-    """A custom room must be created — the core DocSpace collaboration entity."""
+    """A custom room must be created — the core ONLYOFFICE Apps collaboration entity."""
     step('Creating a custom room')
     status, body = api('/files/rooms', 'POST', {'title': 'smoke room', 'roomType': 5}, auth_headers())
     room = body.get('response', {})
@@ -307,7 +307,7 @@ def test_create_room():
 
 def test_upload_download():
     """An uploaded file must come back byte-identical — storage round-trip."""
-    content = b'DocSpace smoke upload check'
+    content = b'ONLYOFFICE Apps smoke upload check'
 
     step('Uploading smoke-upload.txt to My Documents')
     multipart, content_type = multipart_body('file', 'smoke-upload.txt', content)

@@ -6,18 +6,18 @@
     <string>com.onlyoffice.filesworker</string>
 
     <key>WorkingDirectory</key>
-    <string>${DOCSPACE_ROOT}</string>
+    <string>${APPS_ROOT}</string>
    
     <key>ProgramArguments</key>
     <array>
         <string>/usr/local/share/dotnet/dotnet</string>
         <string>server/products/ASC.Files/Worker/bin/Debug/ASC.Files.Worker.dll</string>
         <string>urls=http://0.0.0.0:5009</string>
-        <string>$STORAGE_ROOT=${DOCSPACE_ROOT}/Data</string>
-        <string>log:dir=${DOCSPACE_ROOT}/Logs</string>
+        <string>$STORAGE_ROOT=${APPS_ROOT}/Data</string>
+        <string>log:dir=${APPS_ROOT}/Logs</string>
         <string>log:name=files.worker</string>
-        <string>pathToConf=${DOCSPACE_ROOT}/buildtools/config</string>
-        <string>core:products:folder=${DOCSPACE_ROOT}/server/products</string>
+        <string>pathToConf=${APPS_ROOT}/buildtools/config</string>
+        <string>core:products:folder=${APPS_ROOT}/server/products</string>
         <string>core:eventBus:subscriptionClientName=asc_event_bus_files_service_queue</string>
     </array>
 
@@ -25,10 +25,10 @@
     <false/>
 
     <!--<key>StandardErrorPath</key>
-    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.filesworker.err</string>-->
+    <string>${APPS_ROOT}/Logs/com.onlyoffice.filesworker.err</string>-->
 
     <!--<key>StandardOutPath</key>
-    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.filesworker.log</string>-->
+    <string>${APPS_ROOT}/Logs/com.onlyoffice.filesworker.log</string>-->
 
     <key>KeepAlive</key>
     <true/>

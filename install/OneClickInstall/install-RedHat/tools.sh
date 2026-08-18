@@ -94,7 +94,7 @@ fi
 UPDATE_AVAILABLE_CODE=100
 ARCH="$(rpm --eval '%{_arch}')"
 if [[ "$ARCH" != "x86_64" && "$ARCH" != "aarch64" ]]; then
-    echo "${package_sysname^^} ${product^^} doesn't support architecture '$ARCH'"
+    echo "${product_name} doesn't support architecture '$ARCH'"
     exit 1
 fi
 
@@ -128,7 +128,7 @@ if [ "$DIST" == "fedora" ]; then
 	OPENRESTY_REV=$([ "$REV" -ge 37 ] && echo 36 || echo "$REV")
 fi
 
-# Disable Cockpit to free 9090 needed by docspace-identity-api
+# Disable Cockpit to free 9090 needed by identity-api
 systemctl list-sockets | awk '$1 ~ /:9090$/ && $2 ~ /cockpit/ {print $2; exit}' | xargs -r systemctl disable --now 2>/dev/null || true
 
 # Check if it's Centos less than 8 or Fedora release is out of service

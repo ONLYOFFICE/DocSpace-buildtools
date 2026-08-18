@@ -102,28 +102,30 @@ if [ "$MAKESWAP" == "true" ]; then
 fi
 
 if [ "$PRODUCT_INSTALLED" = "false" ]; then
-	echo "${product}" "${product}"/db-host select "$MYSQL_SERVER_HOST" | debconf-set-selections
-	echo "${product}" "${product}"/db-port select "$MYSQL_SERVER_PORT" | debconf-set-selections
-	echo "${product}" "${product}"/db-name select "$MYSQL_SERVER_DB_NAME" | debconf-set-selections
-	echo "${product}" "${product}"/db-user select "$MYSQL_SERVER_USER" | debconf-set-selections
-	echo "${product}" "${product}"/db-pwd select "$MYSQL_SERVER_PASS" | debconf-set-selections
+	echo "${package}" "${package}"/db-host select "$MYSQL_SERVER_HOST" | debconf-set-selections
+	echo "${package}" "${package}"/db-port select "$MYSQL_SERVER_PORT" | debconf-set-selections
+	echo "${package}" "${package}"/db-name select "$MYSQL_SERVER_DB_NAME" | debconf-set-selections
+	echo "${package}" "${package}"/db-user select "$MYSQL_SERVER_USER" | debconf-set-selections
+	echo "${package}" "${package}"/db-pwd select "$MYSQL_SERVER_PASS" | debconf-set-selections
 
-	if apt-get install -y "${product}${PRODUCT_VERSION:+*=${PRODUCT_VERSION}}"; then
+	if apt-get install -y "${package}${PRODUCT_VERSION:+*=${PRODUCT_VERSION}}"; then
 		# Clear the password in debconf for a successful update when using external MySQL
-		if [ "$(echo "GET ${PRODUCT}/db-pwd" | debconf-communicate "$PRODUCT" | awk '{print $2}')" = "$MYSQL_SERVER_PASS" ]; then
-			printf "SET ${product}/db-host\nSET ${product}/db-name\nSET ${product}/db-user\nSET ${product}/db-pwd\nSET ${product}/db-port\n" | debconf-communicate ${product} >/dev/null
+		if [ "$(echo "GET ${package}/db-pwd" | debconf-communicate "${package}" | awk '{print $2}')" = "$MYSQL_SERVER_PASS" ]; then
+			printf "SET ${package}/db-host\nSET ${package}/db-name\nSET ${package}/db-user\nSET ${package}/db-pwd\nSET ${package}/db-port\n" | debconf-communicate "${package}" >/dev/null
 		fi
 	else
-		echo "Error: installation of ${product} failed."
+		echo "Error: installation of ${package} failed."
 		exit 1
 	fi
 elif [ "$UPDATE" = "true" ] && [ "$PRODUCT_INSTALLED" = "true" ]; then
-	CURRENT_VERSION=$(dpkg-query -W -f='${Version}' "${product}" 2>/dev/null)
-	AVAILABLE_VERSIONS=$(apt show "${product}" 2>/dev/null | grep -E '^Version:' | awk '{print $2}')
-	if [[ "$AVAILABLE_VERSIONS" != *"$CURRENT_VERSION"* ]]; then
-		apt-get install -o DPkg::options::="--force-confnew" -y --only-upgrade "${product}" opensearch="${ELASTIC_VERSION}"
+	CURRENT_VERSION=$(dpkg-query -W -f='${Version}' "${package}" 2>/dev/null) || true
+	AVAILABLE_VERSIONS=$(apt show "${package}" 2>/dev/null | grep -E '^Version:' | awk '{print $2}')
+	if [ -z "${CURRENT_VERSION}" ]; then # (DS v4.0.0) take over an installation made before the rename to ONLYOFFICE Apps
+		apt-get install -o DPkg::options::="--force-confnew" -y "${package}" opensearch="${OPENSEARCH_VERSION}"
+	elif [[ "$AVAILABLE_VERSIONS" != *"$CURRENT_VERSION"* ]]; then
+		apt-get install -o DPkg::options::="--force-confnew" -y --only-upgrade "${package}" opensearch="${OPENSEARCH_VERSION}"
 	elif [ "${RECONFIGURE_PRODUCT}" = "true" ]; then
-		DEBIAN_FRONTEND=noninteractive dpkg-reconfigure "${product}"
+		DEBIAN_FRONTEND=noninteractive dpkg-reconfigure "${package}"
 	fi
 fi
 

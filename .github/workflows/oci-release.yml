@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
 
 env:
-  PRODUCT: docspace
+  PRODUCT: apps
 
 jobs:
   release:
@@ -42,12 +42,12 @@ jobs:
 
           tar -czvf ${{ env.SCRIPT_DIR }}/docker.tar.gz \
             ${COMMON_EXCLUDES} \
-            --exclude='docspace-stack.yml' \
+            --exclude='apps-stack.yml' \
             *.yml .env config
 
           tar -czvf ${{ env.SCRIPT_DIR }}/docker-stack.tar.gz \
             ${COMMON_EXCLUDES} \
-            --exclude='docspace.yml' \
+            --exclude='apps.yml' \
             --exclude='healthchecks.yml' \
             --exclude='identity.yml' \
             --exclude='migration-runner.yml' \

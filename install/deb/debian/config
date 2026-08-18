@@ -4,101 +4,101 @@ set -e
 
 . /usr/share/debconf/confmodule
 
-db_fset {{product}}/host hidden false
-db_fset {{product}}/port hidden false
-db_fset {{product}}/machinekey hidden false
-db_input low {{product}}/host || true
-db_input low {{product}}/port || true
-db_input low {{product}}/machinekey || true
+db_fset {{package_name}}/host hidden false
+db_fset {{package_name}}/port hidden false
+db_fset {{package_name}}/machinekey hidden false
+db_input low {{package_name}}/host || true
+db_input low {{package_name}}/port || true
+db_input low {{package_name}}/machinekey || true
 db_go
 
 # OpenSearch
-db_input low {{product}}/elasticsearch-host || true
+db_input low {{package_name}}/elasticsearch-host || true
 db_go
-db_get {{product}}/elasticsearch-host
+db_get {{package_name}}/elasticsearch-host
 if [ -n "$RET" ] && [ "$RET" != "localhost" ]; then
-    db_fset {{product}}/elasticsearch-scheme hidden false
-    db_fset {{product}}/elasticsearch-port hidden false
-    db_input high {{product}}/elasticsearch-scheme || true
-    db_input high {{product}}/elasticsearch-port || true
+    db_fset {{package_name}}/elasticsearch-scheme hidden false
+    db_fset {{package_name}}/elasticsearch-port hidden false
+    db_input high {{package_name}}/elasticsearch-scheme || true
+    db_input high {{package_name}}/elasticsearch-port || true
     db_go
 else
-    db_fset {{product}}/elasticsearch-scheme hidden true
-    db_fset {{product}}/elasticsearch-port hidden true
+    db_fset {{package_name}}/elasticsearch-scheme hidden true
+    db_fset {{package_name}}/elasticsearch-port hidden true
 fi
 
 # Redis
-db_input low {{product}}/redis-host || true
+db_input low {{package_name}}/redis-host || true
 db_go
-db_get {{product}}/redis-host
+db_get {{package_name}}/redis-host
 if [ -n "$RET" ] && [ "$RET" != "localhost" ]; then
-    db_fset {{product}}/redis-port hidden false
-    db_fset {{product}}/redis-username hidden false
-    db_fset {{product}}/redis-db hidden false
-    db_fset {{product}}/redis-password hidden false
-    db_input high {{product}}/redis-port || true
-    db_input high {{product}}/redis-username || true
-    db_input high {{product}}/redis-db || true
-    db_input critical {{product}}/redis-password || true
+    db_fset {{package_name}}/redis-port hidden false
+    db_fset {{package_name}}/redis-username hidden false
+    db_fset {{package_name}}/redis-db hidden false
+    db_fset {{package_name}}/redis-password hidden false
+    db_input high {{package_name}}/redis-port || true
+    db_input high {{package_name}}/redis-username || true
+    db_input high {{package_name}}/redis-db || true
+    db_input critical {{package_name}}/redis-password || true
     db_go
 else
-    db_fset {{product}}/redis-port hidden true
-    db_fset {{product}}/redis-username hidden true
-    db_fset {{product}}/redis-db hidden true
-    db_fset {{product}}/redis-password hidden true
+    db_fset {{package_name}}/redis-port hidden true
+    db_fset {{package_name}}/redis-username hidden true
+    db_fset {{package_name}}/redis-db hidden true
+    db_fset {{package_name}}/redis-password hidden true
 fi
 
 # RabbitMQ
-db_input low {{product}}/rabbitmq-host || true
+db_input low {{package_name}}/rabbitmq-host || true
 db_go
-db_get {{product}}/rabbitmq-host
+db_get {{package_name}}/rabbitmq-host
 if [ -n "$RET" ] && [ "$RET" != "localhost" ]; then
-    db_fset {{product}}/rabbitmq-protocol hidden false
-    db_fset {{product}}/rabbitmq-port hidden false
-    db_fset {{product}}/rabbitmq-user hidden false
-    db_fset {{product}}/rabbitmq-password hidden false
-    db_input high {{product}}/rabbitmq-protocol || true
-    db_input high {{product}}/rabbitmq-port || true
-    db_input high {{product}}/rabbitmq-user || true
-    db_input critical {{product}}/rabbitmq-password || true
+    db_fset {{package_name}}/rabbitmq-protocol hidden false
+    db_fset {{package_name}}/rabbitmq-port hidden false
+    db_fset {{package_name}}/rabbitmq-user hidden false
+    db_fset {{package_name}}/rabbitmq-password hidden false
+    db_input high {{package_name}}/rabbitmq-protocol || true
+    db_input high {{package_name}}/rabbitmq-port || true
+    db_input high {{package_name}}/rabbitmq-user || true
+    db_input critical {{package_name}}/rabbitmq-password || true
     db_go
 else
-    db_fset {{product}}/rabbitmq-protocol hidden true
-    db_fset {{product}}/rabbitmq-port hidden true
-    db_fset {{product}}/rabbitmq-user hidden true
-    db_fset {{product}}/rabbitmq-password hidden true
+    db_fset {{package_name}}/rabbitmq-protocol hidden true
+    db_fset {{package_name}}/rabbitmq-port hidden true
+    db_fset {{package_name}}/rabbitmq-user hidden true
+    db_fset {{package_name}}/rabbitmq-password hidden true
 fi
 
 # Database
-db_input low {{product}}/db-host || true
+db_input low {{package_name}}/db-host || true
 db_go
-db_get {{product}}/db-host
+db_get {{package_name}}/db-host
 if [ -n "$RET" ] && [ "$RET" != "localhost" ]; then
-    db_fset {{product}}/db-name hidden false
-    db_fset {{product}}/db-user hidden false
-    db_fset {{product}}/db-pwd hidden false
-    db_input high {{product}}/db-port || true
-    db_input high {{product}}/db-name || true
-    db_input high {{product}}/db-user || true
-    db_input critical {{product}}/db-pwd || true
+    db_fset {{package_name}}/db-name hidden false
+    db_fset {{package_name}}/db-user hidden false
+    db_fset {{package_name}}/db-pwd hidden false
+    db_input high {{package_name}}/db-port || true
+    db_input high {{package_name}}/db-name || true
+    db_input high {{package_name}}/db-user || true
+    db_input critical {{package_name}}/db-pwd || true
     db_go
 else
-    db_fset {{product}}/db-name hidden true
-    db_fset {{product}}/db-user hidden true
-    db_fset {{product}}/db-pwd hidden true
+    db_fset {{package_name}}/db-name hidden true
+    db_fset {{package_name}}/db-user hidden true
+    db_fset {{package_name}}/db-pwd hidden true
 fi
 
 # External Docs
-db_input low {{product}}/ds-url || true
+db_input low {{package_name}}/ds-url || true
 db_go
-db_get {{product}}/ds-url
+db_get {{package_name}}/ds-url
 if [ -n "$RET" ] && [ "$RET" != "localhost" ]; then
-    db_fset {{product}}/jwt-header hidden false
-    db_fset {{product}}/jwt-secret hidden false
-    db_input critical {{product}}/jwt-header || true
-    db_input critical {{product}}/jwt-secret || true
+    db_fset {{package_name}}/jwt-header hidden false
+    db_fset {{package_name}}/jwt-secret hidden false
+    db_input critical {{package_name}}/jwt-header || true
+    db_input critical {{package_name}}/jwt-secret || true
     db_go
 else
-    db_fset {{product}}/jwt-header hidden true
-    db_fset {{product}}/jwt-secret hidden true
+    db_fset {{package_name}}/jwt-header hidden true
+    db_fset {{package_name}}/jwt-secret hidden true
 fi

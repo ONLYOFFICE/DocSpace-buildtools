@@ -1,0 +1,18 @@
+#!/bin/bash
+#
+# see: dh_installdeb(1)
+
+set -e
+
+# (DS v4.0.0) take over an installation made before the rename to ONLYOFFICE Apps
+LEGACY_CONF_DIR="/etc/{{package_sysname}}/{{legacy_product}}"
+CONF_DIR="/etc/{{package_sysname}}/{{product}}"
+if [ -d "${LEGACY_CONF_DIR}" ]; then
+    systemctl stop '{{legacy_product}}-*.service' >/dev/null 2>&1 || true
+    mkdir -p "${CONF_DIR}"
+    cp -an "${LEGACY_CONF_DIR}/." "${CONF_DIR}/" || true
+fi
+
+#DEBHELPER#
+
+exit 0

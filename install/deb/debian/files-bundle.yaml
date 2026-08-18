@@ -1,133 +1,133 @@
 files:
-  - name: "{{product}}-ai-worker.install"
+  - name: "{{package_name}}-ai-worker.install"
     content: |
-      debian/build/publish/services/ASC.AI.Worker/service var/www/{{product}}/products/ASC.AI
+      debian/build/publish/services/ASC.AI.Worker/service var/www/{{package_sysname}}/{{product}}/products/ASC.AI
 
-  - name: "{{product}}-ai.install"
+  - name: "{{package_name}}-ai.install"
     content: |
-      debian/build/publish/services/ASC.AI/service/* var/www/{{product}}/products/ASC.AI/server/
+      debian/build/publish/services/ASC.AI/service/* var/www/{{package_sysname}}/{{product}}/products/ASC.AI/server/
 
-  - name: "{{product}}-mcp.install"
+  - name: "{{package_name}}-mcp.install"
     content: |
-      debian/build/publish/services/ASC.AI.MCP/service/* var/www/{{product}}/products/ASC.AI/mcp
+      debian/build/publish/services/ASC.AI.MCP/service/* var/www/{{package_sysname}}/{{product}}/products/ASC.AI/mcp
 
-  - name: "{{product}}-api-system.install"
+  - name: "{{package_name}}-api-system.install"
     content: |
-      debian/build/publish/services/ASC.ApiSystem/service/* var/www/{{product}}/services/ASC.ApiSystem
+      debian/build/publish/services/ASC.ApiSystem/service/* var/www/{{package_sysname}}/{{product}}/services/ASC.ApiSystem
 
-  - name: "{{product}}-api.install"
+  - name: "{{package_name}}-api.install"
     content: |
-      debian/build/publish/services/ASC.Web.Api/service/* var/www/{{product}}/studio/ASC.Web.Api
+      debian/build/publish/services/ASC.Web.Api/service/* var/www/{{package_sysname}}/{{product}}/studio/ASC.Web.Api
 
-  - name: "{{product}}-backup-worker.install"
+  - name: "{{package_name}}-backup-worker.install"
     content: |
-      debian/build/publish/services/ASC.Data.Backup.Worker/service/* var/www/{{product}}/services/ASC.Data.Backup.Worker
+      debian/build/publish/services/ASC.Data.Backup.Worker/service/* var/www/{{package_sysname}}/{{product}}/services/ASC.Data.Backup.Worker
 
-  - name: "{{product}}-backup.install"
+  - name: "{{package_name}}-backup.install"
     content: |
-      debian/build/publish/services/ASC.Data.Backup/service/* var/www/{{product}}/services/ASC.Data.Backup
+      debian/build/publish/services/ASC.Data.Backup/service/* var/www/{{package_sysname}}/{{product}}/services/ASC.Data.Backup
 
-  - name: "{{product}}-clear-events.install"
+  - name: "{{package_name}}-clear-events.install"
     content: |
-      debian/build/publish/services/ASC.ClearEvents/service/* var/www/{{product}}/services/ASC.ClearEvents
+      debian/build/publish/services/ASC.ClearEvents/service/* var/www/{{package_sysname}}/{{product}}/services/ASC.ClearEvents
 
-  - name: "{{product}}-common.install"
+  - name: "{{package_name}}-common.install"
     content: |
-      debian/build/buildtools/config/* etc/onlyoffice/{{product}}
+      debian/build/buildtools/config/* etc/{{package_sysname}}/{{product}}
       debian/build/buildtools/install/common/{{product}}-configuration usr/bin
-      debian/build/buildtools/install/docker/config/fluent-bit.conf etc/onlyoffice/{{product}}
+      debian/build/buildtools/install/docker/config/fluent-bit.conf etc/{{package_sysname}}/{{product}}
 
-  - name: "{{product}}-common.dirs"
+  - name: "{{package_name}}-common.dirs"
     content: |
-      /var/log/onlyoffice/{{product}}
-      /etc/onlyoffice/{{product}}/.private
+      /var/log/{{package_sysname}}/{{product}}
+      /etc/{{package_sysname}}/{{product}}/.private
 
-  - name: "{{product}}-doceditor.install"
+  - name: "{{package_name}}-doceditor.install"
     content: |
-      debian/build/publish/web/editor var/www/{{product}}/products/ASC.Files
+      debian/build/publish/web/editor var/www/{{package_sysname}}/{{product}}/products/ASC.Files
 
-  - name: "{{product}}-files-worker.install"
+  - name: "{{package_name}}-files-worker.install"
     content: |
-      debian/build/publish/services/ASC.Files.Worker/service var/www/{{product}}/products/ASC.Files
+      debian/build/publish/services/ASC.Files.Worker/service var/www/{{package_sysname}}/{{product}}/products/ASC.Files
 
-  - name: "{{product}}-files.install"
+  - name: "{{package_name}}-files.install"
     content: |
-      debian/build/publish/services/ASC.Files/service/* var/www/{{product}}/products/ASC.Files/server/
-      debian/build/DocStore var/www/{{product}}/products/ASC.Files/server
+      debian/build/publish/services/ASC.Files/service/* var/www/{{package_sysname}}/{{product}}/products/ASC.Files/server/
+      debian/build/DocStore var/www/{{package_sysname}}/{{product}}/products/ASC.Files/server
 
-  - name: "{{product}}-healthchecks.install"
+  - name: "{{package_name}}-healthchecks.install"
     content: |
-      debian/build/publish/services/ASC.Web.HealthChecks.UI/service/* var/www/{{product}}/services/ASC.Web.HealthChecks.UI
+      debian/build/publish/services/ASC.Web.HealthChecks.UI/service/* var/www/{{package_sysname}}/{{product}}/services/ASC.Web.HealthChecks.UI
 
-  - name: "{{product}}-identity-api.install"
+  - name: "{{package_name}}-identity-api.install"
     content: |
-      debian/build/publish/services/ASC.Identity.Registration/app.jar var/www/{{product}}/services/ASC.Identity.Registration
+      debian/build/publish/services/ASC.Identity.Registration/app.jar var/www/{{package_sysname}}/{{product}}/services/ASC.Identity.Registration
 
-  - name: "{{product}}-identity-authorization.install"
+  - name: "{{package_name}}-identity-authorization.install"
     content: |
-      debian/build/publish/services/ASC.Identity.Authorization/app.jar var/www/{{product}}/services/ASC.Identity.Authorization
+      debian/build/publish/services/ASC.Identity.Authorization/app.jar var/www/{{package_sysname}}/{{product}}/services/ASC.Identity.Authorization
 
-  - name: "{{product}}-login.install"
+  - name: "{{package_name}}-login.install"
     content: |
-      debian/build/publish/web/login var/www/{{product}}/products/ASC.Login
+      debian/build/publish/web/login var/www/{{package_sysname}}/{{product}}/products/ASC.Login
 
-  - name: "{{product}}-management.install"
+  - name: "{{package_name}}-management.install"
     content: |
-      debian/build/publish/web/management var/www/{{product}}/products/ASC.Management
+      debian/build/publish/web/management var/www/{{package_sysname}}/{{product}}/products/ASC.Management
 
-  - name: "{{product}}-migration-runner.install"
+  - name: "{{package_name}}-migration-runner.install"
     content: |
-      debian/build/publish/services/ASC.Migration.Runner/service/* var/www/{{product}}/services/ASC.Migration.Runner
+      debian/build/publish/services/ASC.Migration.Runner/service/* var/www/{{package_sysname}}/{{product}}/services/ASC.Migration.Runner
 
-  - name: "{{product}}-notify.install"
+  - name: "{{package_name}}-notify.install"
     content: |
-      debian/build/publish/services/ASC.Notify/service/* var/www/{{product}}/services/ASC.Notify
+      debian/build/publish/services/ASC.Notify/service/* var/www/{{package_sysname}}/{{product}}/services/ASC.Notify
 
-  - name: "{{product}}-people-server.install"
+  - name: "{{package_name}}-people-server.install"
     content: |
-      debian/build/publish/services/ASC.People/service/* var/www/{{product}}/products/ASC.People/server/
+      debian/build/publish/services/ASC.People/service/* var/www/{{package_sysname}}/{{product}}/products/ASC.People/server/
 
-  - name: "{{product}}-plugins.install"
+  - name: "{{package_name}}-plugins.install"
     content: |
-      debian/build/plugins/publish/* var/www/onlyoffice/Data/Studio/webplugins
+      debian/build/plugins/publish/* var/www/{{package_sysname}}/Data/Studio/webplugins
 
-  - name: "{{product}}-proxy.install"
+  - name: "{{package_name}}-proxy.install"
     content: |
       debian/build/buildtools/install/common/{{product}}-ssl-setup usr/bin
-      debian/build/buildtools/install/docker/config/nginx/nginx.conf.template etc/onlyoffice/{{product}}/openresty
+      debian/build/buildtools/install/docker/config/nginx/nginx.conf.template etc/{{package_sysname}}/{{product}}/openresty
       debian/build/buildtools/config/nginx/html/*.html etc/openresty/html
       debian/build/buildtools/install/docker/config/nginx/proxy/onlyoffice* etc/openresty/conf.d
       debian/build/buildtools/config/nginx/onlyoffice*.conf etc/openresty/conf.d
       debian/build/buildtools/install/docker/config/nginx/proxy/letsencrypt* etc/openresty/includes
       debian/build/buildtools/config/nginx/includes/*.conf etc/openresty/includes
-      debian/build/publish/web/public var/www/{{product}}
-      debian/build/campaigns/src/campaigns var/www/{{product}}/public
-      debian/build/publish/web/client var/www/{{product}}
+      debian/build/publish/web/public var/www/{{package_sysname}}/{{product}}
+      debian/build/campaigns/src/campaigns var/www/{{package_sysname}}/{{product}}/public
+      debian/build/publish/web/client var/www/{{package_sysname}}/{{product}}
 
-  - name: "{{product}}-sdk.install"
+  - name: "{{package_name}}-sdk.install"
     content: |
-      debian/build/publish/web/sdk var/www/{{product}}/products/ASC.Sdk
+      debian/build/publish/web/sdk var/www/{{package_sysname}}/{{product}}/products/ASC.Sdk
 
-  - name: "{{product}}-socket.install"
+  - name: "{{package_name}}-socket.install"
     content: |
-      debian/build/publish/services/ASC.Socket.IO var/www/{{product}}/services
+      debian/build/publish/services/ASC.Socket.IO var/www/{{package_sysname}}/{{product}}/services
 
-  - name: "{{product}}-newai.install"
+  - name: "{{package_name}}-newai.install"
     content: |
-      debian/build/publish/services/ASC.NewAi var/www/{{product}}/services
+      debian/build/publish/services/ASC.NewAi var/www/{{package_sysname}}/{{product}}/services
 
-  - name: "{{product}}-ssoauth.install"
+  - name: "{{package_name}}-ssoauth.install"
     content: |
-      debian/build/publish/services/ASC.SsoAuth var/www/{{product}}/services
+      debian/build/publish/services/ASC.SsoAuth var/www/{{package_sysname}}/{{product}}/services
 
-  - name: "{{product}}-studio-notify.install"
+  - name: "{{package_name}}-studio-notify.install"
     content: |
-      debian/build/publish/services/ASC.Studio.Notify/service/* var/www/{{product}}/services/ASC.Studio.Notify
+      debian/build/publish/services/ASC.Studio.Notify/service/* var/www/{{package_sysname}}/{{product}}/services/ASC.Studio.Notify
 
-  - name: "{{product}}-studio.install"
+  - name: "{{package_name}}-studio.install"
     content: |
-      debian/build/publish/services/ASC.Web.Studio/service/* var/www/{{product}}/studio/ASC.Web.Studio
+      debian/build/publish/services/ASC.Web.Studio/service/* var/www/{{package_sysname}}/{{product}}/studio/ASC.Web.Studio
 
-  - name: "{{product}}-telegram.install"
+  - name: "{{package_name}}-telegram.install"
     content: |
-      debian/build/publish/services/ASC.TelegramService/service/* var/www/{{product}}/services/ASC.TelegramService
+      debian/build/publish/services/ASC.TelegramService/service/* var/www/{{package_sysname}}/{{product}}/services/ASC.TelegramService

@@ -37,8 +37,8 @@
 
 
 PACKAGE_SYSNAME="onlyoffice"
-PRODUCT_NAME="DocSpace"
-PRODUCT=$(tr '[:upper:]' '[:lower:]' <<< ${PRODUCT_NAME})
+PRODUCT="apps"
+PRODUCT_NAME="${PACKAGE_SYSNAME^^} Apps"
 HELP_TARGET="install-Docker.sh"
 OFFLINE_IMAGE_LOAD="false"
 
@@ -48,7 +48,7 @@ while [ "$1" != "" ]; do
         -reg     | --registry            ) [ -n "$2" ] && REGISTRY_URL=$2                                                         && shift ;;
         -un      | --username            ) [ -n "$2" ] && USERNAME=$2                                                             && shift ;;
         -p       | --password            ) [ -n "$2" ] && PASSWORD=$2                                                             && shift ;;
-        -ids     | --installdocspace     ) [ -n "$2" ] && INSTALL_PRODUCT=$2                                                      && shift ;;
+        -ia      | --installapps         | -ids | --installdocspace ) [ -n "$2" ] && INSTALL_PRODUCT=$2                           && shift ;;
         -idocs   | --installdocs         ) [ -n "$2" ] && INSTALL_DOCUMENT_SERVER=$2                                              && shift ;;
         -imysql  | --installmysql        ) [ -n "$2" ] && INSTALL_MYSQL_SERVER=$2                                                 && shift ;;
         -irbt    | --installrabbitmq     ) [ -n "$2" ] && INSTALL_RABBITMQ=$2                                                     && shift ;;
@@ -67,11 +67,11 @@ while [ "$1" != "" ]; do
         -dm      | --deployment-mode     ) [ -n "$2" ] && DEPLOYMENT_MODE="${2,,}" && DEPLOYMENT_MODE_SET="true"                  && shift ;;
         -ep      | --externalport        ) [ -n "$2" ] && EXTERNAL_PORT=$2                                                        && shift ;;
         -eph     | --externalporthttps   ) [ -n "$2" ] && EXTERNAL_PORT_HTTPS=$2                                                  && shift ;;
-        -dsh     | --docspacehost        ) [ -n "$2" ] && APP_URL_PORTAL=$2                                                       && shift ;;
+        -ah      | --appshost            | -dsh | --docspacehost    ) [ -n "$2" ] && APP_URL_PORTAL=$2                            && shift ;;
         -mk      | --machinekey          ) [ -n "$2" ] && APP_CORE_MACHINEKEY=$2                                                  && shift ;;
         -env     | --environment         ) [ -n "$2" ] && ENV_EXTENSION=$2                                                        && shift ;;
         -s       | --status              ) [ -n "$2" ] && STATUS=$2                                                               && shift ;;
-        -dsv     | --docspaceversion     ) [ -n "$2" ] && DOCKER_TAG=$2                                                           && shift ;;
+        -av      | --appsversion         | -dsv | --docspaceversion ) [ -n "$2" ] && DOCKER_TAG=$2                                && shift ;;
         -gb      | --gitbranch           ) [ -n "$2" ] && PARAMETERS="$PARAMETERS $1" && GIT_BRANCH=$2                            && shift ;;
         -docsi   | --docsimage           ) [ -n "$2" ] && DOCUMENT_SERVER_IMAGE_NAME=$2                                           && shift ;;
         -docsv   | --docsversion         ) [ -n "$2" ] && DOCUMENT_SERVER_VERSION=$2                                              && shift ;;
@@ -116,7 +116,7 @@ while [ "$1" != "" ]; do
             echo "INSTALL/UPGRADE MODE:"
             echo "  --installationtype  <edition>           Edition to install: community, developer, enterprise"
             echo "  --update            <true|false>        true to upgrade existing components"
-            echo "  --uninstall         <true|false>        true to remove existing ${PRODUCT} (containers, volumes, configs)"
+            echo "  --uninstall         <true|false>        true to remove existing ${PRODUCT_NAME} (containers, volumes, configs)"
             echo "  --noninteractive    <true|false>        true to auto-confirm prompts (default: false)"
 
             echo 
@@ -129,10 +129,10 @@ while [ "$1" != "" ]; do
 
             echo 
             echo "${PRODUCT_NAME^^} OPTIONS:"
-            echo "  --installdocspace   <true|false>        Install/update ${PRODUCT_NAME} (true to install/update)"
+            echo "  --installapps       <true|false>        Install/update ${PRODUCT_NAME} (true to install/update)"
             echo "  --deployment-mode   <standard|stack|community>  Deployment topology (default: standard)"
-            echo "  --docspaceversion   <version>           ${PRODUCT_NAME} version tag (e.g., 3.2.0)"
-            echo "  --docspacehost      <hostname>          Hostname or IP for ${PRODUCT_NAME} (default: localhost)"
+            echo "  --appsversion       <version>           ${PRODUCT_NAME} version tag (e.g., 4.0.0)"
+            echo "  --appshost          <hostname>          Hostname or IP for ${PRODUCT_NAME} (default: localhost)"
             echo "  --externalport      <port>              External port for ${PRODUCT_NAME} HTTP (default: 80)"
             echo "  --externalporthttps <port>              External port for ${PRODUCT_NAME} HTTPS (default: 443)"
             echo "  --machinekey        <key>               core.machinekey for encryption (default: random key)"
@@ -194,6 +194,9 @@ while [ "$1" != "" ]; do
             echo "  --certdomain     <domain>             Domain for existing SSL cert (example.com / *.example.com / s1.example.com, s2.example.com)"
             echo "  --certfile       <path>               Path to SSL cert (.pem, .pfx, .der, .cer, PKCS#7)"
             echo "  --certkeyfile    <path>               Path to SSL key (used with --certfile)"
+            echo
+            echo "DEPRECATED (still accepted, use the ${PRODUCT_NAME} options above instead):"
+            echo "  --installdocspace, --docspaceversion, --docspacehost"
             exit 0
         ;;
         * ) echo "Unknown parameter $1" 1>&2; exit 1 ;;

@@ -1,11 +1,11 @@
-# ONLYOFFICE DocSpace Build Tools
+# ONLYOFFICE Apps Build Tools
 
 [![Release Notes](https://img.shields.io/github/release/ONLYOFFICE/DocSpace?style=flat-square)](https://github.com/ONLYOFFICE/DocSpace/releases)
 [![License](https://img.shields.io/badge/license-AGPLv3-orange)](https://docspace.onlyoffice.com/s/gnC2xcxWjHhHmsM)
 [![GitHub stars](https://img.shields.io/github/stars/ONLYOFFICE/DocSpace?style=flat-square)](https://star-history.com/#ONLYOFFICE/DocSpace)
 [![Open Issues](https://img.shields.io/github/issues-raw/ONLYOFFICE/DocSpace?style=flat-square)](https://github.com/ONLYOFFICE/DocSpace/issues)
 
-This repository contains the **build, deployment, and infrastructure** tooling for [ONLYOFFICE DocSpace](https://github.com/ONLYOFFICE/DocSpace) — build scripts, Docker configurations, installation packages, CI/CD pipelines, and application configuration.
+This repository contains the **build, deployment, and infrastructure** tooling for [ONLYOFFICE Apps](https://github.com/ONLYOFFICE/DocSpace) — build scripts, Docker configurations, installation packages, CI/CD pipelines, and application configuration.
 
 > For the full product overview, see the [main repository README](https://github.com/ONLYOFFICE/DocSpace#readme).
 > For backend development, see the [server README](https://github.com/ONLYOFFICE/DocSpace-server#readme).
@@ -75,7 +75,7 @@ The primary deployment method. Located in `install/OneClickInstall/`.
 **Universal installer:**
 ```bash
 # Quick install
-bash install/OneClickInstall/docspace-install.sh
+bash install/OneClickInstall/apps-install.sh
 ```
 
 <a id="docker-install"></a>
@@ -106,7 +106,7 @@ See the [Windows installation guide](https://guides.onlyoffice.com/installation/
 
 ## Docker
 
-DocSpace runs from Docker images built out of `install/docker/`. The Compose stack is **modular** — each component (`docspace.yml`, `db.yml`, `redis.yml`, `rabbitmq.yml`, `opensearch.yml`, `ds.yml`, …) is a separate file combined with `-f`, while `docspace-stack.yml` bundles the application services into a single container. Images are built with Buildx Bake from `install/docker/build/` (`Dockerfile`, `Dockerfile.runtime`, `build.hcl`), and `.env` (~200 variables) drives all settings.
+ONLYOFFICE Apps runs from Docker images built out of `install/docker/`. The Compose stack is **modular** — each component (`apps.yml`, `db.yml`, `redis.yml`, `rabbitmq.yml`, `opensearch.yml`, `ds.yml`, …) is a separate file combined with `-f`, while `apps-stack.yml` bundles the application services into a single container. Images are built with Buildx Bake from `install/docker/build/` (`Dockerfile`, `Dockerfile.runtime`, `build.hcl`), and `.env` (~200 variables) drives all settings.
 
 For the full Compose reference, `.env` variables, image-building, HTTPS/SSL, nginx, MySQL, and Supervisor details, see the **[Docker README](install/docker/Readme.md)**.
 For a lightweight single-container community edition setup, see the **[Docker community README](install/docker/community/README.md)**.
@@ -195,8 +195,7 @@ Docker-based migrations are handled by `migration-runner.yml` Compose service.
 | `build_packages.yml` | DEB/RPM package building |
 | `config-build.yml` | Configuration-triggered builds |
 | `cron-build.yml` | Scheduled nightly builds |
-| `windows-build.yml` | Windows installer build |
-| `release-docspace.yaml` | Production release automation |
+| `release-docker.yaml` | Production release automation |
 | `offline-release.yml` | Offline package building |
 | `oci-release.yml` | Container registry release |
 
@@ -207,7 +206,6 @@ Docker-based migrations are handled by `migration-runner.yml` Compose service.
 | `ci-oci-docker-install.yml` | OneClickInstall Docker testing |
 | `ci-oci-install.yml` | Linux package installation testing |
 | `ci-oci-update.yml` | Update mechanism testing |
-| `zap-scanner.yaml` | OWASP ZAP security scanning |
 | `check-comments.yml` | Code review automation |
 | `claude-auto-review.yml` | Automated PR code review with Claude |
 
@@ -231,7 +229,7 @@ The lightweight build of ONLYOFFICE DocSpace Community is intended for quick eva
 
 ## Licensing
 
-ONLYOFFICE DocSpace is released under AGPLv3 license. See the LICENSE file for more information.
+ONLYOFFICE Apps is released under AGPLv3 license. See the LICENSE file for more information.
 
 ## Need help for developers? 
 

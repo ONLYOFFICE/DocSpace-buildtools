@@ -36,7 +36,10 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PRODUCT: "DocSpace"
+  PACKAGE_SYSNAME: "onlyoffice"
+  PRODUCT: "Apps"
+  LEGACY_PRODUCT: "docspace"
+  SOURCE_REPO: "DocSpace"
   BRANCH_BUILDTOOLS: ${{ github.event.inputs.branch-buildtools || github.ref_name || 'develop' }}
   BRANCH_CLIENT: ${{ github.event.inputs.branch-client || github.ref_name || 'develop' }}
   BRANCH_SERVER: ${{ github.event.inputs.branch-server || github.ref_name || 'develop' }}
@@ -145,17 +148,17 @@ jobs:
             rpm) SOURCE_DIR="${BUILD_WORKSPACE}/install/${{ matrix.packageType }}/SPECS/SOURCES" ;;
           esac
           [[ "${BRANCH_SERVER}" != "master" ]] && { PLUGINS_BRANCH="develop"; MCP_BRANCH="develop"; } || { PLUGINS_BRANCH="master"; MCP_BRANCH="main"; }
-          download() { wget -q -O "${SOURCE_DIR}/$3.tar.gz" "https://codeload.github.com/ONLYOFFICE/$1/tar.gz/$2" && echo -e "\e[32m[OK] $3\e[0m" || { echo -e "\e[31m[FAILED] $3\e[0m"; return 1; }; }
+          download() { wget -q -O "${SOURCE_DIR}/$3.tar.gz" "https://codeload.github.com/${PACKAGE_SYSNAME}/$1/tar.gz/$2" && echo -e "\e[32m[OK] $3\e[0m" || { echo -e "\e[31m[FAILED] $3\e[0m"; return 1; }; }
           PIDS=()
-          download "$PRODUCT-buildtools"   "$BRANCH_BUILDTOOLS"      buildtools & PIDS+=($!)
-          download "$PRODUCT-client"       "$BRANCH_CLIENT"          client & PIDS+=($!)
-          download "$PRODUCT-server"       "$BRANCH_SERVER"          server & PIDS+=($!)
-          download "document-templates"    "main/community-server"   DocStore & PIDS+=($!)
-          download "ASC.Web.Campaigns"     "master"                  campaigns & PIDS+=($!)
-          download "document-formats"      "master"                  document-formats & PIDS+=($!)
-          download "$PRODUCT-plugins"      "$PLUGINS_BRANCH"         plugins & PIDS+=($!)
-          download "$PRODUCT-mcp"          "$MCP_BRANCH"             mcp & PIDS+=($!)
-          download "$PRODUCT-ui-kit-react" "$BRANCH_CLIENT"          ui-kit & PIDS+=($!)
+          download  "$SOURCE_REPO-buildtools"    "$BRANCH_BUILDTOOLS"        buildtools & PIDS+=($!)
+          download  "$SOURCE_REPO-client"        "$BRANCH_CLIENT"            client & PIDS+=($!)
+          download  "$SOURCE_REPO-server"        "$BRANCH_SERVER"            server & PIDS+=($!)
+          download  "document-templates"         "main/community-server"     DocStore & PIDS+=($!)
+          download  "$SOURCE_REPO-plugins"       "$PLUGINS_BRANCH"           plugins & PIDS+=($!)
+          download  "$SOURCE_REPO-mcp"           "$MCP_BRANCH"               mcp & PIDS+=($!)
+          download  "$SOURCE_REPO-ui-kit-react"  "$BRANCH_CLIENT"            ui-kit & PIDS+=($!)
+          download  "ASC.Web.Campaigns"          "master"                    campaigns & PIDS+=($!)
+          download  "document-formats"           "master"                    document-formats & PIDS+=($!)
           DOWNLOAD_STATUS=0
           for PID in "${PIDS[@]}"; do wait "$PID" || DOWNLOAD_STATUS=1; done
           exit $DOWNLOAD_STATUS
@@ -166,15 +169,15 @@ jobs:
         run: |
           if ! grep -qF "${PRODUCT_VERSION}" debian/changelog; then
             TMP=$(mktemp)
-            { printf '{{product}} ({{package_header_tag_version}}) unstable; urgency=medium\n\n'
+            { printf '{{package_name}} ({{package_header_tag_version}}) unstable; urgency=medium\n\n'
               printf '  * Upstream has been updated to version %s.\n\n' "${PRODUCT_VERSION}"
               printf ' -- Ascensio System SIA <support@onlyoffice.com>  %s\n\n' "$(date -R)"
               cat debian/changelog
             } > "${TMP}" && mv "${TMP}" debian/changelog
           fi
           
-          rename -f -v "s/product([^\/]*)$/${PRODUCT,,}\$1/g" debian/*
-          find debian/ -type f -exec sed -i -e "s/{{product}}/${PRODUCT,,}/g" -e "s/{{package_header_tag_version}}/${PRODUCT_VERSION}.${GITHUB_RUN_NUMBER}/g" -e "s/{{node_version}}/${NODE_VERSION}/g" -e "s/{{java_version}}/${JAVA_VERSION}/g" -e "s/{{dotnet_version}}/${DOTNET_VERSION}/g" -e "s/{{opensearch_version}}/${OPENSEARCH_VERSION}/g" {} +
+          rename -f -v "s/product([^\/]*)$/${PACKAGE_SYSNAME}-${PRODUCT,,}\$1/g" debian/*
+          find debian/ -type f -exec sed -i -e "s/{{package_name}}/${PACKAGE_SYSNAME}-${PRODUCT,,}/g" -e "s/{{package_sysname}}/${PACKAGE_SYSNAME}/g" -e "s/{{product}}/${PRODUCT,,}/g" -e "s/{{product_name}}/${PACKAGE_SYSNAME^^} ${PRODUCT}/g" -e "s/{{legacy_product}}/${LEGACY_PRODUCT}/g" -e "s/{{package_header_tag_version}}/${PRODUCT_VERSION}.${GITHUB_RUN_NUMBER}/g" -e "s/{{node_version}}/${NODE_VERSION}/g" -e "s/{{java_version}}/${JAVA_VERSION}/g" -e "s/{{dotnet_version}}/${DOTNET_VERSION}/g" -e "s/{{opensearch_version}}/${OPENSEARCH_VERSION}/g" {} +
           yq -r '.files[] | .name as $n | "cat <<EOF > debian/\($n)\n" + .content + "\nEOF"' debian/files-bundle.yaml | bash
           export DEB_BUILD_OPTIONS="parallel=$(nproc)"
           dpkg-buildpackage -uc -us

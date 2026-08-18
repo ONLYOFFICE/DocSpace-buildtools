@@ -6,18 +6,18 @@
     <string>com.onlyoffice.notifyservice</string>
 
     <key>WorkingDirectory</key>
-    <string>${DOCSPACE_ROOT}</string>
+    <string>${APPS_ROOT}</string>
    
     <key>ProgramArguments</key>
     <array>
         <string>/usr/local/share/dotnet/dotnet</string>
         <string>server/common/services/ASC.Notify/bin/Debug/ASC.Notify.dll</string>
         <string>urls=http://0.0.0.0:5005</string>
-        <string>$STORAGE_ROOT=${DOCSPACE_ROOT}/Data</string>
-        <string>log:dir=${DOCSPACE_ROOT}/Logs</string>
+        <string>$STORAGE_ROOT=${APPS_ROOT}/Data</string>
+        <string>log:dir=${APPS_ROOT}/Logs</string>
         <string>log:name=notify</string>
-        <string>pathToConf=${DOCSPACE_ROOT}/buildtools/config</string>
-        <string>core:products:folder=${DOCSPACE_ROOT}/server/products</string>
+        <string>pathToConf=${APPS_ROOT}/buildtools/config</string>
+        <string>core:products:folder=${APPS_ROOT}/server/products</string>
         <string>core:eventBus:subscriptionClientName=asc_event_bus_notify_queue</string>
     </array>
 
@@ -25,10 +25,10 @@
     <false/>
 
     <!--<key>StandardErrorPath</key>
-    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.notifyservice.err</string>-->
+    <string>${APPS_ROOT}/Logs/com.onlyoffice.notifyservice.err</string>-->
 
     <!--<key>StandardOutPath</key>
-    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.notifyservice.log</string>-->
+    <string>${APPS_ROOT}/Logs/com.onlyoffice.notifyservice.log</string>-->
 
     <key>KeepAlive</key>
     <true/>

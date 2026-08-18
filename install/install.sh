@@ -22,7 +22,7 @@ for plist in "$CURRENT_PATH/run/macos/"*.plist; do
     echo "Processing $filename..."
     
     # Copy to temp directory and replace the variable
-    sed "s|\${DOCSPACE_ROOT}|$PROJECT_ROOT|g" "$plist" > "$TEMP_DIR/$filename"
+    sed "s|\${APPS_ROOT}|$PROJECT_ROOT|g" "$plist" > "$TEMP_DIR/$filename"
     
     # Copy modified file to ~/Library/LaunchAgents/
     cp "$TEMP_DIR/$filename" ~/Library/LaunchAgents/

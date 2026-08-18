@@ -99,7 +99,7 @@ while [ "$1" != "" ]; do
             echo -e " -mc, --migration-check \t check migration build (by default=true)"
             echo " -?, -h, --help              this help"
             echo "  Examples"
-            echo "  bash build-services.sh -sp /app/DocSpace"
+            echo "  bash build-services.sh -sp /app/${PROJECT_REPOSITORY_NAME}"
             exit 0
       ;;
 		    * )

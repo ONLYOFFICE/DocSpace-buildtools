@@ -4,9 +4,9 @@
 
 set -e
 
-getent passwd onlyoffice >/dev/null || adduser --quiet --home /var/www/{{product}} --system --group onlyoffice
+getent passwd {{package_sysname}} >/dev/null || adduser --quiet --home /var/www/{{package_sysname}}/{{product}} --system --group {{package_sysname}}
 getent group nginx >/dev/null || addgroup --quiet --system nginx
 getent passwd nginx >/dev/null || adduser --quiet --system --no-create-home --home /nonexistent --group nginx
-usermod -aG onlyoffice,nginx onlyoffice
+usermod -aG {{package_sysname}},nginx {{package_sysname}}
 
 #DEBHELPER#

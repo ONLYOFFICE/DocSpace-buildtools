@@ -2,11 +2,17 @@
 
 set -e
 
-PRODUCT="docspace"
+PRODUCT="apps"
+LEGACY_PRODUCT="docspace"
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 DOCKERCOMPOSE=$(dirname "$DIR")
 LETSENCRYPT="/etc/letsencrypt/live"
 CRON_FILE="/etc/cron.weekly/${PRODUCT}-renew-letsencrypt"
+LEGACY_CRON_FILE="/etc/cron.weekly/${LEGACY_PRODUCT}-renew-letsencrypt"
+
+# Reuse the certificate issued under the former product name, so an existing installation is not re-issued a new one.
+CERT_NAME="${PRODUCT}"
+[ ! -d "${LETSENCRYPT}/${PRODUCT}" ] && [ -d "${LETSENCRYPT}/${LEGACY_PRODUCT}" ] && CERT_NAME="${LEGACY_PRODUCT}"
 DHPARAM_PATH=${DHPARAM_PATH:-"/etc/ssl/certs/dhparam.pem"}
 WEBROOT_PATH="/letsencrypt"
 
@@ -26,9 +32,9 @@ EXTERNAL_PORT_HTTPS="${EXTERNAL_PORT_HTTPS:-443}"
 
 help(){
   echo 
-  echo "This script provided to automatically setup SSL Certificates for DocSpace"
+  echo "This script provided to automatically setup SSL Certificates for ONLYOFFICE Apps"
   echo "Automatically get Let's Encrypt SSL Certificates:"
-  echo "  docspace-ssl-setup EMAIL DOMAIN"
+  echo "  apps-ssl-setup EMAIL DOMAIN"
   echo "    EMAIL         Email used for registration and recovery contact."
   echo "                  Use commas to specify multiple emails."
   echo "    DOMAIN        Domain name(s) to apply the certificate to."
@@ -36,27 +42,28 @@ help(){
   echo "                  Wildcard domains (no auto-renew): require DNS-01 challenge and ability to create DNS TXT records."
   echo
   echo "    Example:"
-  echo "      docspace-ssl-setup u1@example.com,u2@example.com example.com,s1.example.com,s2.example.com"
-  echo "      docspace-ssl-setup support@example.com example.com,*.example.com"
+  echo "      apps-ssl-setup u1@example.com,u2@example.com example.com,s1.example.com,s2.example.com"
+  echo "      apps-ssl-setup support@example.com example.com,*.example.com"
   echo
   echo "Using your own certificates via the -f or --file parameter:"
-  echo "  docspace-ssl-setup --file DOMAIN CERTIFICATE [PRIVATEKEY]"
+  echo "  apps-ssl-setup --file DOMAIN CERTIFICATE [PRIVATEKEY]"
   echo "    DOMAIN        Main domain name to apply."
   echo "    CERTIFICATE   Path to the certificate file for the domain (PEM, PFX, DER, CER, PKCS#7)."
   echo "    PRIVATEKEY    (Optional) Path to private key (required unless PFX)."
   echo "                  Required for PEM, DER, and CER formats."
   echo "    Example:"
-  echo "      docspace-ssl-setup --file example.com /etc/ssl/example.crt /etc/ssl/example.key"
-  echo "      docspace-ssl-setup --file example.com /etc/ssl/example.pfx"
+  echo "      apps-ssl-setup --file example.com /etc/ssl/example.crt /etc/ssl/example.key"
+  echo "      apps-ssl-setup --file example.com /etc/ssl/example.pfx"
   echo 
   echo "Return to the default proxy configuration using the -d or --default parameter:"
-  echo "  docspace-ssl-setup --default"
+  echo "  apps-ssl-setup --default"
   echo ""
   exit 0
 }
 
 create_renew_script() {
   [[ -f "${DIR}/${PRODUCT}-renew-letsencrypt" ]] && rm -rf "${DIR}/${PRODUCT}-renew-letsencrypt"
+  [[ -f "${LEGACY_CRON_FILE}" ]] && rm -f "${LEGACY_CRON_FILE}"
   CRON_PATH=$(command -v crond || command -v cron) && CRON_SVC=${CRON_PATH##*/} || { echo "Error: neither crond nor cron is installed." >&2; }
   if [[ -n "${CRON_SVC}" ]]; then
     command -v systemctl &>/dev/null && systemctl enable --now "$CRON_SVC" || { command -v service &>/dev/null && service "${CRON_SVC%.service}" start; }
@@ -169,15 +176,15 @@ case $1 in
       db -e "UPDATE tenants_tenants SET mappeddomain='NULL' WHERE alias='localhost';"
     fi
 
-    if grep -q '^[[:space:]]*-[[:space:]]*.*${CERTIFICATE_PATH}' ${DOCKERCOMPOSE}/docspace.yml; then
+    if grep -q '^[[:space:]]*-[[:space:]]*.*${CERTIFICATE_PATH}' ${DOCKERCOMPOSE}/apps.yml; then
       sed -i '/USE_UNAUTHORIZED_STORAGE/d' ${DOCKERCOMPOSE}/ds.yml
-      sed -i 's/^\([[:space:]]*\)-\(.*${CERTIFICATE_PATH}.*\)/\1#-\2/' ${DOCKERCOMPOSE}/docspace.yml ${DOCKERCOMPOSE}/ds.yml
-      ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-doceditor onlyoffice-sdk onlyoffice-login onlyoffice-socket onlyoffice-ssoauth
+      sed -i 's/^\([[:space:]]*\)-\(.*${CERTIFICATE_PATH}.*\)/\1#-\2/' ${DOCKERCOMPOSE}/apps.yml ${DOCKERCOMPOSE}/ds.yml
+      ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/apps.yml up --force-recreate -d onlyoffice-doceditor onlyoffice-sdk onlyoffice-login onlyoffice-socket onlyoffice-ssoauth
       ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/ds.yml up --force-recreate -d
     fi
 
     ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/proxy.yml up --force-recreate -d
-    ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/docspace.yml up --force-recreate -d onlyoffice-files
+    ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/apps.yml up --force-recreate -d onlyoffice-files
     
     echo "OK"
     exit 0
@@ -216,21 +223,21 @@ case $1 in
         ${DOCKER_CMD} \
           certbot/certbot certonly \
           --manual --preferred-challenges dns --key-type rsa \
-          --cert-name "$PRODUCT" --agree-tos --email "$MAIL" \
+          --cert-name "$CERT_NAME" --agree-tos --email "$MAIL" \
           -d "${DOMAINS[@]}"
       else
         if docker port onlyoffice-proxy 80/tcp 2>/dev/null | grep -q ':80$'; then
           ${DOCKER_CMD} -v onlyoffice_webroot_path:$WEBROOT_PATH \
             certbot/certbot certonly \
             --expand --webroot -w "$WEBROOT_PATH" --key-type rsa \
-            --cert-name "$PRODUCT" --non-interactive --agree-tos --email "$MAIL" \
+            --cert-name "$CERT_NAME" --non-interactive --agree-tos --email "$MAIL" \
             -d "${DOMAINS[@]}"
         else
           ss -lnt sport = :80 | grep -q LISTEN && { echo "Error: port 80 is in use. Let's Encrypt requires it for verification, so free it and retry." >&2; exit 1; }
           ${DOCKER_CMD} --network host \
             certbot/certbot certonly \
             --expand --standalone --http-01-port 80 --key-type rsa \
-            --cert-name "$PRODUCT" --non-interactive --agree-tos --email "$MAIL" \
+            --cert-name "$CERT_NAME" --non-interactive --agree-tos --email "$MAIL" \
             -d "${DOMAINS[@]}"
         fi
       fi
@@ -241,8 +248,8 @@ case $1 in
 esac
 
 [[ ! -f "${DHPARAM_PATH}" ]] && openssl dhparam -out ${DHPARAM_PATH} 2048
-CERTIFICATE_FILE="${CERTIFICATE_FILE:-"${LETSENCRYPT}/${PRODUCT}/fullchain.pem"}"
-PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${PRODUCT}/privkey.pem"}"
+CERTIFICATE_FILE="${CERTIFICATE_FILE:-"${LETSENCRYPT}/${CERT_NAME}/fullchain.pem"}"
+PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${CERT_NAME}/privkey.pem"}"
 [[ "$CERTIFICATE_FILE" != /* ]] && CERTIFICATE_FILE="$(cd "$(dirname "$CERTIFICATE_FILE")" && pwd)/$(basename "$CERTIFICATE_FILE")"
 [[ "$PRIVATEKEY_FILE" != /* ]] && PRIVATEKEY_FILE="$(cd "$(dirname "$PRIVATEKEY_FILE")" && pwd)/$(basename "$PRIVATEKEY_FILE")"
 
@@ -258,7 +265,7 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
     if [[ "${LETSENCRYPT_ENABLE}" = "true" ]]; then
       create_renew_script
     else
-      CONTAINER_NAME=$(docker ps --format '{{.Image}} {{.Names}}' | grep "docspace-api:" | awk '{print $2}')
+      CONTAINER_NAME=$(docker ps --format '{{.Image}} {{.Names}}' | grep -E "(${PRODUCT}|${LEGACY_PRODUCT})-api:" | awk '{print $2}')
       CONTAINER_STATUS=$([ -n "$CONTAINER_NAME" ] && docker inspect -f '{{.State.Health.Status}}' "$CONTAINER_NAME" 2>/dev/null)
       TEMP_PATH="/tmp/$(basename "${CERTIFICATE_FILE}")"
 
@@ -276,7 +283,7 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
       fi
 
       if [ "$CERT_TRUST_REQUIRED" = true ]; then
-        sed -i 's/^\([[:space:]]*\)#-\(.*${CERTIFICATE_PATH}.*\)/\1-\2/' ${DOCKERCOMPOSE}/docspace.yml ${DOCKERCOMPOSE}/ds.yml
+        sed -i 's/^\([[:space:]]*\)#-\(.*${CERTIFICATE_PATH}.*\)/\1-\2/' ${DOCKERCOMPOSE}/apps.yml ${DOCKERCOMPOSE}/ds.yml
         ${DOCKER_COMPOSE} -f "${DOCKERCOMPOSE}/ds.yml" up --force-recreate -d
       fi
     fi
@@ -287,7 +294,7 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
     fi
     
     ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/proxy-ssl.yml up --force-recreate -d
-    ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/docspace.yml -f ${DOCKERCOMPOSE}/notify.yml up --force-recreate -d
+    ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/apps.yml -f ${DOCKERCOMPOSE}/notify.yml up --force-recreate -d
 
     echo "OK"
   else

@@ -44,8 +44,8 @@ jobs:
       - id: modes
         name: Configure matrix modes
         run: |
-          STACK=$(jq -cn '{name:"stack", services:"docspace-stack dashboards db ds fluent opensearch proxy rabbitmq redis ", args:"-dm stack"}')
-          STANDARD=$(jq -cn '{name:"standard", services:"docspace healthchecks identity notify dashboards db ds fluent opensearch proxy rabbitmq redis", args:""}')
+          STACK=$(jq -cn '{name:"stack", services:"apps-stack dashboards db ds fluent opensearch proxy rabbitmq redis ", args:"-dm stack"}')
+          STANDARD=$(jq -cn '{name:"standard", services:"apps healthchecks identity notify dashboards db ds fluent opensearch proxy rabbitmq redis", args:""}')
           COMMUNITY=$(jq -cn '{name:"community", services:"docker-compose", args:"-dm community"}')
 
           VALUE=$([ "${{ github.event.inputs.offline }}" = "true" ] \

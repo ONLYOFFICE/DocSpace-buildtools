@@ -5,6 +5,8 @@ PACKAGE_TYPE=$1
 BUILD_PATH=$2
 PRODUCT=$3
 VERSION=$4
+PACKAGE_SYSNAME=onlyoffice
+PRODUCT_DIR=/var/www/${PACKAGE_SYSNAME}/${PRODUCT}
 CLIENT_PATH=${BUILD_PATH}/client
 SERVER_PATH=${BUILD_PATH}/server
 BUILDTOOLS_PATH=${BUILD_PATH}/buildtools
@@ -15,12 +17,12 @@ export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=4096}"
 echo "== Frontend build =="; FRONTEND_START_TIMER=$(date +%s)
 cd ${CLIENT_PATH}; pnpm install
 if [ -z "${NX_PARALLEL}" ]; then
-  pnpm build
+  GITHUB_STEP_SUMMARY='' pnpm build
 else
   NX_PACKAGES=$(node -p "require('./package.json').scripts.build.match(/-p ([^-]+)/)[1].trim()")
-  pnpm nx run-many -t build -p ${NX_PACKAGES} --parallel=${NX_PARALLEL}
+  GITHUB_STEP_SUMMARY='' pnpm nx run-many -t build -p ${NX_PACKAGES} --parallel=${NX_PARALLEL}
 fi
-pnpm run deploy; FRONTEND_END_TIMER=$(date +%s)
+GITHUB_STEP_SUMMARY='' pnpm run deploy; FRONTEND_END_TIMER=$(date +%s)
 echo "::notice::Frontend build completed in $((FRONTEND_END_TIMER - FRONTEND_START_TIMER)) seconds"
 
 # Backend build
@@ -64,9 +66,9 @@ find ${BUILDTOOLS_PATH}/install/common -type f -exec rename -f -v "s/product([^\
 rename -f -v 's/(.*\.(community|enterprise|developer))\.json$/$1.json.template/' ${BUILDTOOLS_PATH}/config/*.json
 
 # Change directories
-if ! grep -q 'var/www/${PRODUCT}' ${BUILDTOOLS_PATH}/config/nginx/*.conf; then find ${BUILDTOOLS_PATH}/config/nginx/ -name "*.conf" -exec sed -i "s@\(var/www/\)@\1${PRODUCT}/@" {} +; fi
-sed -i "s#\$public_root#/var/www/${PRODUCT}/public/#g" ${BUILDTOOLS_PATH}/config/nginx/onlyoffice.conf
-sed "s_\(.*root\).*;_\1 \"/var/www/${PRODUCT}\";_g" -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/proxy/letsencrypt.conf
+if ! grep -q "${PRODUCT_DIR#/}" ${BUILDTOOLS_PATH}/config/nginx/*.conf; then find ${BUILDTOOLS_PATH}/config/nginx/ -name "*.conf" -exec sed -i "s@\(var/www/\)@\1${PACKAGE_SYSNAME}/${PRODUCT}/@" {} +; fi
+sed -i "s#\$public_root#${PRODUCT_DIR}/public/#g" ${BUILDTOOLS_PATH}/config/nginx/onlyoffice.conf
+sed "s_\(.*root\).*;_\1 \"${PRODUCT_DIR}\";_g" -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/proxy/letsencrypt.conf
 sed -i 's_app/onlyoffice/data_var/www/onlyoffice/Data_g' ${BUILDTOOLS_PATH}/config/*.json.template
 
 # Configuring ${PRODUCT} services  
@@ -75,7 +77,7 @@ json -I -f "${BUILDTOOLS_PATH}/config/appsettings.services.json" \
      -e "this.socket={ 'path': '../ASC.Socket.IO/' }" \
      -e "this.ssoauth={ 'path': '../ASC.SsoAuth/' }" \
      -e "this.logLevel=\"warning\"" \
-     -e "this.core={ 'products': { 'folder': '/var/www/${PRODUCT}/products', 'subfolder': 'server'} }"
+     -e "this.core={ 'products': { 'folder': '${PRODUCT_DIR}/products', 'subfolder': 'server'} }"
 json -I -f "${BUILDTOOLS_PATH}/config/appsettings.json" \
      -e "this.core.notify.postman=\"services\"" \
      -e "this['debug-info'].enabled=\"false\"" \

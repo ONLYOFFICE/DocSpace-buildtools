@@ -671,8 +671,8 @@ COPY --from=javarun /opt/java/openjdk /opt/java
 COPY --from=build-java --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.minified/app.jar ${SRC_PATH}/publish/services/ASC.Identity.minified/app.jar
 
 # mcp
-COPY --from=mcp --chown=onlyoffice:onlyoffice  /srv/onlyoffice-docspace-mcp/bin ${SRC_PATH}/publish/services/onlyoffice-docspace-mcp/bin
-COPY --from=mcp --chown=onlyoffice:onlyoffice  /srv/onlyoffice-docspace-mcp/LICENSE ${SRC_PATH}/publish/services/onlyoffice-docspace-mcp/LICENSE
+COPY --from=mcp --chown=onlyoffice:onlyoffice  /srv/onlyoffice-docspace-mcp/bin ${SRC_PATH}/publish/services/onlyoffice-apps-mcp/bin
+COPY --from=mcp --chown=onlyoffice:onlyoffice  /srv/onlyoffice-docspace-mcp/LICENSE ${SRC_PATH}/publish/services/onlyoffice-apps-mcp/LICENSE
 
 RUN set -eux; \
     sed -i -e 's#$public_root#/var/www/public/#' -e "/map \$scheme \$document_server {/,/}/ s|default \"http://[^\"]*\";|default \$document_server_vs_path;|" /etc/nginx/conf.d/onlyoffice.conf; \
