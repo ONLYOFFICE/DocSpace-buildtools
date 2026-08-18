@@ -1,7 +1,7 @@
 <service>
-	<id>DocSpace.Identity.Registration</id>
-	<name>ONLYOFFICE DocSpace Identity.Registration</name>
-	<description>ONLYOFFICE DocSpace Identity.Registration</description>
+	<id>Apps.Identity.Registration</id>
+	<name>ONLYOFFICE Apps Identity.Registration</name>
+	<description>ONLYOFFICE Apps Identity.Registration</description>
 	<priority>RealTime</priority>
 	<startmode>Automatic</startmode>
 	<autoRefresh>false</autoRefresh>

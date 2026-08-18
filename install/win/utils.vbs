@@ -568,7 +568,7 @@ Function MoveConfigs
     nginxFolder =  Session.Property("APPDIR") & "nginx"
     configSslFile = targetFolder & "\onlyoffice-proxy-ssl.conf.tmpl"
     configFile = targetFolder & "\onlyoffice-proxy.conf"
-    sslScriptPath = Session.Property("APPDIR") & "sbin\docspace-ssl-setup.ps1"
+    sslScriptPath = Session.Property("APPDIR") & "sbin\apps-ssl-setup.ps1"
     FluentBitSourceFile = Session.Property("APPDIR") & "config\fluent-bit.conf"
     FluentBitDstFolder = "C:\OpenSearchStack\fluent-bit-2.2.2-win64\conf\"
 
@@ -668,7 +668,7 @@ Function EnterpriseConfigure
 
     Dim strKeyPath, strValueName, strNewDisplayName
 
-    strKeyPath = "SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocSpace Community " & Session.Property("ProductVersion") 
+    strKeyPath = "SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE Apps Community " & Session.Property("ProductVersion") 
     strValueName = "DisplayName"
     strNewDisplayName = Session.Property("ProductName")
 

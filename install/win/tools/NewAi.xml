@@ -1,7 +1,7 @@
 <service>
-	<id>DocSpace.NewAi</id>
-	<name>ONLYOFFICE DocSpace NewAi</name>
-	<description>ONLYOFFICE DocSpace NewAi</description>
+	<id>Apps.NewAi</id>
+	<name>ONLYOFFICE Apps NewAi</name>
+	<description>ONLYOFFICE Apps NewAi</description>
 	<priority>RealTime</priority>
 	<startmode>Automatic</startmode>
 	<autoRefresh>false</autoRefresh>

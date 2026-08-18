@@ -1,7 +1,7 @@
 <service>
-	<id>DocSpace.Identity.Authorization</id>
-	<name>ONLYOFFICE DocSpace Identity.Authorization</name>
-	<description>ONLYOFFICE DocSpace Identity.Authorization</description>
+	<id>Apps.Identity.Authorization</id>
+	<name>ONLYOFFICE Apps Identity.Authorization</name>
+	<description>ONLYOFFICE Apps Identity.Authorization</description>
 	<priority>RealTime</priority>
 	<startmode>Automatic</startmode>
 	<autoRefresh>false</autoRefresh>
