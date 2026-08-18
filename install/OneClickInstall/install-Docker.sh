@@ -711,10 +711,18 @@ chown_app_volumes () {
 		mkdir -p "${VOLUMES_DIR}/app_data" "${VOLUMES_DIR}/log_data"
 		chown -R "${VOLUME_OWNER}" "${VOLUMES_DIR}/app_data" "${VOLUMES_DIR}/log_data"
 	else
-		# only app_data/log_data of this Compose project — never touch other stacks on the host
 		local PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$PACKAGE_SYSNAME}"
 		local PROJECT_FILTER=(--filter "label=com.docker.compose.project=${PROJECT_NAME}" --filter name=app_data --filter name=log_data)
-		for VOLUME_NAME in $(docker volume ls -q "${PROJECT_FILTER[@]}"); do
+		local VOLUME_NAMES
+		mapfile -t VOLUME_NAMES < <(docker volume ls -q "${PROJECT_FILTER[@]}")
+		
+		local DEFAULT_VOLUME_NAME
+		for DEFAULT_VOLUME_NAME in "${PROJECT_NAME}_app_data" "${PROJECT_NAME}_log_data"; do
+			docker volume inspect "${DEFAULT_VOLUME_NAME}" &>/dev/null && VOLUME_NAMES+=("${DEFAULT_VOLUME_NAME}")
+		done
+
+		mapfile -t VOLUME_NAMES < <(printf "%s\n" "${VOLUME_NAMES[@]}" | sort -u)
+		for VOLUME_NAME in "${VOLUME_NAMES[@]}"; do
 			chown -R "${VOLUME_OWNER}" "$(docker volume inspect --format '{{.Mountpoint}}' "${VOLUME_NAME}")"
 		done
 	fi
