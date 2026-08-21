@@ -225,7 +225,7 @@ Docker-based migrations are handled by `migration-runner.yml` Compose service.
 
 ## The lightweight installation option
 
-The lightweight build of ONLYOFFICE DocSpace Community is intended for quick evaluation and testing. Unlike the standard multi-container deployment, it combines all DocSpace services into a single container. [Check the instructions ➡️](https://github.com/ONLYOFFICE/DocSpace-buildtools/tree/master/install/docker/community)
+The lightweight build of ONLYOFFICE Apps Community is intended for quick evaluation and testing. Unlike the standard multi-container deployment, it combines all ONLYOFFICE Apps services into a single container. [Check the instructions ➡️](https://github.com/ONLYOFFICE/DocSpace-buildtools/tree/master/install/docker/community)
 
 ## Licensing
 
