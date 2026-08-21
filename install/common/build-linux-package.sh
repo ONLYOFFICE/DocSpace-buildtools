@@ -8,6 +8,8 @@ set -xeo pipefail
 # and either GITHUB_RUN_NUMBER or BUILD_NUMBER.
 # PACKAGE_SYSNAME/PRODUCT/LEGACY_PRODUCT/SOURCE_REPO/NODE_VERSION/JAVA_VERSION/
 # DOTNET_VERSION/OPENSEARCH_VERSION can be overridden via env; otherwise the defaults below apply.
+# Set SKIP_DEB_BUILDDEPS_CHECK=true where nodejs/dotnet/java aren't installed as
+# system packages (e.g. nvm-based agents), so dpkg-checkbuilddeps doesn't false-positive.
 # Must be run with the working directory at the repository root.
 
 PACKAGE_TYPE=${1:?Usage: $0 deb|rpm}
@@ -67,7 +69,9 @@ if [[ "$PACKAGE_TYPE" == "deb" ]]; then
   yq -r '.files[] | .name as $n | "cat <<EOF > debian/\($n)\n" + .content + "\nEOF"' debian/files-bundle.yaml | bash
 
   export DEB_BUILD_OPTIONS="parallel=$(nproc)"
-  dpkg-buildpackage -uc -us
+  DPKG_BUILDPACKAGE_ARGS=(-uc -us)
+  [[ "${SKIP_DEB_BUILDDEPS_CHECK:-false}" == "true" ]] && DPKG_BUILDPACKAGE_ARGS+=(-d)
+  dpkg-buildpackage "${DPKG_BUILDPACKAGE_ARGS[@]}"
 
 elif [[ "$PACKAGE_TYPE" == "rpm" ]]; then
   cd install/rpm/SPECS/
