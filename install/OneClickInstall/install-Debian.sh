@@ -119,9 +119,30 @@ validate_bool --installfluentbit "$INSTALL_FLUENT_BIT"
 systemctl stop apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service unattended-upgrades.service >/dev/null 2>&1 || true
 trap 'systemctl start apt-daily.timer apt-daily-upgrade.timer >/dev/null 2>&1 || true' EXIT
 
+log_dpkg_lock_holders() {
+  local lock_pid
+  local -a lock_pids=()
+
+  echo "Processes holding /var/lib/dpkg/lock-frontend:"
+  fuser -v /var/lib/dpkg/lock-frontend || true
+  read -ra lock_pids <<< "$(fuser /var/lib/dpkg/lock-frontend 2>/dev/null || true)"
+  for lock_pid in "${lock_pids[@]}"; do
+    ps -o pid,ppid,user,stat,lstart,etime,cmd -p "$lock_pid" || true
+    echo "cgroup for PID $lock_pid:"
+    cat "/proc/$lock_pid/cgroup" 2>/dev/null || true
+    systemctl status "$lock_pid" --no-pager --full || true
+  done
+}
+
 if fuser /var/lib/dpkg/lock-frontend &>/dev/null; then
   echo "Waiting for /var/lib/dpkg/lock-frontend to be released (up to 60 seconds)..."
-   timeout 60 bash -c 'while fuser /var/lib/dpkg/lock-frontend &>/dev/null; do sleep 1; done'
+  log_dpkg_lock_holders
+  timeout 60 bash -c 'while fuser /var/lib/dpkg/lock-frontend &>/dev/null; do sleep 1; done' || {
+    lock_status=$?
+    echo "Timed out waiting for /var/lib/dpkg/lock-frontend."
+    log_dpkg_lock_holders
+    exit "$lock_status"
+  }
 fi
 
 # Suppress interactive apt/needrestart prompts during automated installs
