@@ -8,16 +8,16 @@ root_dir = os.path.abspath(os.path.join(rd, ".."))
 docker_dir = os.path.join(root_dir, "buildtools", "install", "docker")
 
 containers = subprocess.check_output(["docker", "ps", "-aq", "-f", "name=^onlyoffice"], encoding='utf-8').strip().split()
-images = subprocess.check_output(["docker", "images", "onlyoffice/4testing-docspace*", "-q"], encoding='utf-8').strip().split()
+images = subprocess.check_output(["docker", "images", "onlyoffice/4testing-apps*", "-q"], encoding='utf-8').strip().split()
 
 if containers or images:
     print("Clean up containers, volumes or networks")
 
     print("Remove all backend containers")
 
-    os.environ["Baseimage_Dotnet_Run"] = "onlyoffice/4testing-docspace-dotnet-runtime:dev"
-    os.environ["Baseimage_Nodejs_Run"] = "onlyoffice/4testing-docspace-nodejs-runtime:dev"
-    os.environ["Baseimage_Proxy_Run"] = "onlyoffice/4testing-docspace-proxy-runtime:dev"
+    os.environ["Baseimage_Dotnet_Run"] = "onlyoffice/4testing-apps-dotnet-runtime:dev"
+    os.environ["Baseimage_Nodejs_Run"] = "onlyoffice/4testing-apps-nodejs-runtime:dev"
+    os.environ["Baseimage_Proxy_Run"] = "onlyoffice/4testing-apps-proxy-runtime:dev"
     os.environ["DOCUMENT_SERVER_IMAGE_NAME"] = "onlyoffice/documentserver-de:latest"
     os.environ["SERVICE_CLIENT"] = "localhost:5001"
     os.environ["SERVICE_MANAGEMENT"] = "localhost:5015"
@@ -25,7 +25,7 @@ if containers or images:
     os.environ["BUILD_PATH"] = "/var/www"
     os.environ["SRC_PATH"] = os.path.join(root_dir, "publish/services")
     os.environ["DATA_DIR"] = os.path.join(root_dir, "data")
-    subprocess.run(["docker-compose", "--env-file", os.path.join(docker_dir, ".env"), "-f", os.path.join(docker_dir, "build", "dev", "docspace.profiles.yml"), "-f", os.path.join(docker_dir, "build", "dev", "docspace.overcome.yml"), "--profile", "migration-runner", "--profile", "backend-local", "down", "--volumes"])
+    subprocess.run(["docker-compose", "--env-file", os.path.join(docker_dir, ".env"), "-f", os.path.join(docker_dir, "build", "dev", "apps.profiles.yml"), "-f", os.path.join(docker_dir, "build", "dev", "apps.overcome.yml"), "--profile", "migration-runner", "--profile", "backend-local", "down", "--volumes"])
 
     print("Remove docker contatiners 'mysql'")
     db_command = f"docker compose -f {os.path.join(docker_dir, 'db.yml')} down --volumes"
@@ -39,7 +39,7 @@ if containers or images:
     volumes_command = f"docker volume prune -fa"
     subprocess.run(volumes_command, shell=True)
 
-    print("Remove docker base images (onlyoffice/4testing-docspace)")
+    print("Remove docker base images (onlyoffice/4testing-apps)")
     subprocess.run(['docker', 'rmi', '-f'] + images, check=True)
 
     print("Remove docker networks")

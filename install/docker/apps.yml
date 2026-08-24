@@ -185,7 +185,7 @@ services:
       test: curl --fail http://${SERVICE_AI_WORKER}/health/ || exit 1  
 
   onlyoffice-mcp:
-    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-mcp:latest"
+    image: "${REGISTRY}${MCP_IMAGE_NAME}"
     container_name: ${MCP_HOST}
     restart: always
     environment:

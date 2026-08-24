@@ -2,11 +2,15 @@
 %define         _build_id_links none
 %define         __os_install_post /usr/lib/rpm/brp-compress %{nil}
 
-%global         product docspace
-%global         product_name DocSpace
-%global         buildpath %{_var}/www/%{product}
 
-Name:           %{product}
+%global         product apps
+%global         package_sysname onlyoffice
+%global         product_name ONLYOFFICE Apps
+%global         package_name %{package_sysname}-%{product}
+%global         buildpath %{_var}/www/%{package_sysname}/%{product}
+%global         legacy_product docspace
+
+Name:           %{package_name}
 Summary:        Business productivity tools
 Group:          Applications/Internet
 Version:        %{version}
@@ -21,15 +25,15 @@ Packager:       %{packager}
 License:        AGPL-3.0-only AND CC-BY-SA-4.0
 
 Source0:        %{product}.rpmlintrc
-Source1:        https://codeload.github.com/ONLYOFFICE/%{product}-buildtools/tar.gz/master#/buildtools.tar.gz
-Source2:        https://codeload.github.com/ONLYOFFICE/%{product}-client/tar.gz/master#/client.tar.gz
-Source3:        https://codeload.github.com/ONLYOFFICE/%{product}-server/tar.gz/master#/server.tar.gz
+Source1:        https://codeload.github.com/ONLYOFFICE/%{legacy_product}-buildtools/tar.gz/master#/buildtools.tar.gz
+Source2:        https://codeload.github.com/ONLYOFFICE/%{legacy_product}-client/tar.gz/master#/client.tar.gz
+Source3:        https://codeload.github.com/ONLYOFFICE/%{legacy_product}-server/tar.gz/master#/server.tar.gz
 Source4:        https://codeload.github.com/ONLYOFFICE/document-templates/tar.gz/main/community-server#/DocStore.tar.gz
 Source5:        https://codeload.github.com/ONLYOFFICE/ASC.Web.Campaigns/tar.gz/master#/campaigns.tar.gz
-Source6:        https://codeload.github.com/ONLYOFFICE/%{product}-plugins/tar.gz/master#/plugins.tar.gz
+Source6:        https://codeload.github.com/ONLYOFFICE/%{legacy_product}-plugins/tar.gz/master#/plugins.tar.gz
 Source7:        https://codeload.github.com/ONLYOFFICE/document-formats/tar.gz/master#/document-formats.tar.gz
-Source8:        https://codeload.github.com/ONLYOFFICE/%{product}-mcp/tar.gz/main#/mcp.tar.gz
-Source9:        https://codeload.github.com/ONLYOFFICE/%{product}-ui-kit-react/tar.gz/master#/ui-kit.tar.gz
+Source8:        https://codeload.github.com/ONLYOFFICE/%{legacy_product}-mcp/tar.gz/main#/mcp.tar.gz
+Source9:        https://codeload.github.com/ONLYOFFICE/%{legacy_product}-ui-kit-react/tar.gz/master#/ui-kit.tar.gz
 
 BuildRequires:  nodejs >= %{node_version}.0
 BuildRequires:  yarn
@@ -70,10 +74,13 @@ Requires:       openssl
 
 Conflicts:      %name-radicale
 
+Provides:       %{legacy_product} = %{version}-%{release}
+Obsoletes:      %{legacy_product} < %{version}-%{release}
+
 %description
-ONLYOFFICE DocSpace is a new way to collaborate on documents with teams, 
-clients, partners, etc., based on the concept of rooms - special spaces with 
-predefined permissions. 
+%{product_name} is a new way to collaborate on documents with teams,
+clients, partners, etc., based on the concept of rooms - special spaces with
+predefined permissions.
 
 %include package.spec
 
@@ -87,7 +94,7 @@ tar -xf %{SOURCE4} --transform='s,^[^/]\+,DocStore,'         -C %{_builddir} &
 tar -xf %{SOURCE5} --transform='s,^[^/]\+,campaigns,'        -C %{_builddir} &
 tar -xf %{SOURCE6} --transform='s,^[^/]\+,plugins,'          -C %{_builddir} &
 wait
-tar -xf %{SOURCE7} --transform='s,^[^/]\+,document-formats,' -C %{_builddir}/buildtools/config
+tar -xf %{SOURCE7} --wildcards --strip-components=1 -C %{_builddir}/buildtools/config/document-formats '*/onlyoffice-docs-formats.json'
 tar -xf %{SOURCE8} --transform='s,^[^/]\+,mcp,'              -C %{_builddir}
 tar -xf %{SOURCE9} --transform='s,^[^/]\+,ui-kit,'          -C %{_builddir}/client/libs
 cp -rf %{SOURCE0} .
@@ -107,13 +114,19 @@ if [ "$1" -eq 2 ]; then
     systemctl daemon-reload >/dev/null 2>&1 || true
 fi
 
-getent group onlyoffice >/dev/null || groupadd -r onlyoffice
-getent passwd onlyoffice >/dev/null || useradd -r -g onlyoffice -s /usr/sbin/nologin -d %{_sysconfdir}/onlyoffice/%{product} onlyoffice
+# (DS v4.0.0) take over an installation made before the rename to ONLYOFFICE Apps
+if [ -d %{_sysconfdir}/%{package_sysname}/%{legacy_product} ]; then
+    systemctl stop '%{legacy_product}-*.service' >/dev/null 2>&1 || true
+    [ -d %{_sysconfdir}/%{package_sysname}/%{product} ] || cp -a %{_sysconfdir}/%{package_sysname}/%{legacy_product} %{_sysconfdir}/%{package_sysname}/%{product}
+fi
+
+getent group %{package_sysname} >/dev/null || groupadd -r %{package_sysname}
+getent passwd %{package_sysname} >/dev/null || useradd -r -g %{package_sysname} -s /usr/sbin/nologin -d %{_sysconfdir}/%{package_sysname}/%{product} %{package_sysname}
 
 %pre identity-api
 
 # (DS v3.1.0) fix encryption key generation issue
-ENCRYPTION_PATH=%{_sysconfdir}/onlyoffice/%{product}/.private/encryption
+ENCRYPTION_PATH=%{_sysconfdir}/%{package_sysname}/%{product}/.private/encryption
 if [ "$1" -eq 2 ] && [ ! -f "${ENCRYPTION_PATH}" ]; then
   echo 'secret' > "${ENCRYPTION_PATH}" && chmod 600 "${ENCRYPTION_PATH}"
 fi
@@ -138,7 +151,7 @@ fi
 %preun
 
 if [ "$1" -eq 0 ]; then
-    systemctl list-unit-files | awk '/^%{product}.*\.service/{print $1}' \
+    systemctl list-unit-files | awk '/^%{product}-.*\.service/{print $1}' \
     | xargs -r -I{} sh -c 'systemctl stop "{}" >/dev/null 2>&1 || true; systemctl disable "{}" >/dev/null 2>&1 || true'
     systemctl daemon-reload >/dev/null 2>&1 || true
 fi

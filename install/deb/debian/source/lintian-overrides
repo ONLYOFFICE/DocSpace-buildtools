@@ -1,15 +1,8 @@
 # Ignoring node_modules errors due to lack of ability to influence them
 embedded-javascript-library var/www/{{product}}/*/node_modules/*
-# Ignoring node_modules errors due to lack of ability to influence them
-executable-not-elf-or-script var/www/{{product}}/*/node_modules/*
-# Ignoring node_modules errors due to lack of ability to influence them
-privacy-breach-generic var/www/{{product}}/*/node_modules/*
-# Ignoring node_modules errors due to lack of ability to influence them
-script-not-executable var/www/{{product}}/*/node_modules/*
-# Ignoring node_modules errors due to lack of ability to influence them
 unusual-interpreter */node_modules/*
 # Ignoring node_modules errors due to lack of ability to influence them
-statically-linked-binary var/www/{{product}}/*/node_modules/*
+statically-linked-binary var/www/{{package_sysname}}/{{product}}/*/node_modules/*
 
 # The use of the /var/www directory is caused by its past history as the default document root
 dir-or-file-in-var-www
@@ -78,7 +71,4 @@ non-standard-dir-perm
 
 # Suppressing warnings about class version due to Java version mismatch
 unknown-java-class-version
-
-# Suppressing misplaced extra member warnings for _gpgbuilder
-misplaced-extra-member-in-deb _gpgbuilder (unexpected _member at position 3)
 

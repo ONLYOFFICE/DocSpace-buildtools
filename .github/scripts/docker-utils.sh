@@ -93,7 +93,7 @@ smoke_test() {
     export SELENIUM_REMOTE_URL=http://localhost:4444
   fi
 
-  python3 -m pytest tests/smoke/test_docspace_smoke.py -v -s
+  python3 -m pytest tests/smoke/smoke_test.py -v -s
 }
 
 case "$COMMAND" in

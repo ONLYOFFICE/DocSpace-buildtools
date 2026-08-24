@@ -71,7 +71,7 @@ copy "buildtools\install\docker\config\nginx\proxy\onlyoffice-proxy.conf" "build
 copy "buildtools\install\docker\config\nginx\proxy\onlyoffice-proxy.conf" "buildtools\install\win\Files\nginx\conf\onlyoffice-proxy.conf.tmpl" /y
 copy "buildtools\install\docker\config\nginx\proxy\onlyoffice-proxy-ssl.conf" "buildtools\install\win\Files\nginx\conf\onlyoffice-proxy-ssl.conf.tmpl" /y
 copy "buildtools\install\docker\config\nginx\proxy\letsencrypt.conf" "buildtools\install\win\Files\nginx\conf\includes\letsencrypt.conf" /y
-copy "buildtools\install\win\sbin\docspace-ssl-setup.ps1" "buildtools\install\win\Files\sbin\docspace-ssl-setup.ps1" /y
+copy "buildtools\install\win\sbin\apps-ssl-setup.ps1" "buildtools\install\win\Files\sbin\apps-ssl-setup.ps1" /y
 copy "buildtools\install\docker\config\fluent-bit.conf" "buildtools\install\win\Files\config\fluent-bit.conf" /y
 rmdir buildtools\install\win\publish /s /q
 
@@ -167,29 +167,29 @@ IF "%SignBuild%"=="true" (
 )
 %AdvancedInstaller% /rebuild buildtools\install\win\OpenSearchStack.aip
 
-REM echo ######## Build DocSpace package ########
-%AdvancedInstaller% /edit buildtools\install\win\DocSpace.aip /SetVersion %BUILD_VERSION%.%BUILD_NUMBER%
-%AdvancedInstaller% /edit buildtools\install\win\DocSpace.Prerequisites.aip /SetVersion %BUILD_VERSION%.%BUILD_NUMBER%
+REM echo ######## Build Apps package ########
+%AdvancedInstaller% /edit buildtools\install\win\Apps.aip /SetVersion %BUILD_VERSION%.%BUILD_NUMBER%
+%AdvancedInstaller% /edit buildtools\install\win\Apps.Prerequisites.aip /SetVersion %BUILD_VERSION%.%BUILD_NUMBER%
 
 IF "%SignBuild%"=="true" (
-%AdvancedInstaller% /edit buildtools\install\win\DocSpace.aip /SetSig
-%AdvancedInstaller% /edit buildtools\install\win\DocSpace.Prerequisites.aip /SetSig
+%AdvancedInstaller% /edit buildtools\install\win\Apps.aip /SetSig
+%AdvancedInstaller% /edit buildtools\install\win\Apps.Prerequisites.aip /SetSig
 )
 
-:: Build DocSpace Community
-%AdvancedInstaller% /rebuild buildtools\install\win\DocSpace.aip -buildslist DOCSPACE_COMMUNITY
+:: Build Apps Community
+%AdvancedInstaller% /rebuild buildtools\install\win\Apps.aip -buildslist APPS_COMMUNITY
 
-:: Build DocSpace Enterprise
+:: Build Apps Enterprise
 copy "buildtools\install\win\Resources\License_Enterprise.rtf" "buildtools\install\win\Resources\License.rtf" /y
 copy "buildtools\install\win\Resources\License_Enterprise_Redist.rtf" "buildtools\install\win\Resources\License_Redist.rtf" /y
 
-%AdvancedInstaller% /rebuild buildtools\install\win\DocSpace.aip -buildslist DOCSPACE_ENTERPRISE
+%AdvancedInstaller% /rebuild buildtools\install\win\Apps.aip -buildslist APPS_ENTERPRISE
 
-:: Build DocSpace Developer
+:: Build Apps Developer
 copy "buildtools\install\win\Resources\License_Developer.rtf" "buildtools\install\win\Resources\License.rtf" /y
 copy "buildtools\install\win\Resources\License_Developer_Redist.rtf" "buildtools\install\win\Resources\License_Redist.rtf" /y
 
-%AdvancedInstaller% /rebuild buildtools\install\win\DocSpace.aip -buildslist DOCSPACE_DEVELOPER
+%AdvancedInstaller% /rebuild buildtools\install\win\Apps.aip -buildslist APPS_DEVELOPER
 
-:: Build DocSpace Prerequisites
-%AdvancedInstaller% /rebuild buildtools\install\win\DocSpace.Prerequisites.aip -buildslist DefaultBuild
+:: Build Apps Prerequisites
+%AdvancedInstaller% /rebuild buildtools\install\win\Apps.Prerequisites.aip -buildslist DefaultBuild

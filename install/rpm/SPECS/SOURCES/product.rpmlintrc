@@ -28,7 +28,7 @@ addFilter(r'W: only-non-binary-in-usr-lib')
 # Rpmbuild does not support different architectures for child packages
 addFilter(r'E: no-binary')
 
-# There is no manual page for docspace-configuration.sh
+# There is no manual page for apps-configuration.sh
 addFilter(r'W: no-manual-page-for-binary')
 
 # Dependency on a non-existent package
@@ -37,7 +37,7 @@ addFilter(r'E: no-dependency-on locales-api')
 # Scripts are not designed to be run manually
 addFilter(r'E: non-executable-script')
 
-# docspace-configuration.sh has a permission of 744, so that users do not have the opportunity to run the script
+# apps-configuration.sh has a permission of 744, so that users do not have the opportunity to run the script
 addFilter(r'non-standard-executable-perm')
 
 # We use this to protect sensitive information (ie passwords) in the config file
@@ -63,7 +63,7 @@ addFilter(r'arch-independent-package-contains-binary-or-object')
 
 # File is a static library that is used when building our application. 
 # The presence of an executable bit on it is justified, since the object files that are used for linking when building the program are included.
-# /var/www/docspace/services/ASC.Web.HealthChecks.UI/runtimes/browser-wasm/nativeassets/net7.0/e_sqlite3.a
+# /var/www/onlyoffice/apps/services/ASC.Web.HealthChecks.UI/runtimes/browser-wasm/nativeassets/net7.0/e_sqlite3.a
 addFilter(r'spurious-executable-perm')
 addFilter(r'devel-file-in-non-devel-package')
 

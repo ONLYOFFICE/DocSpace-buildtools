@@ -1,7 +1,7 @@
 <service>
-	<id>DocSpace.Management</id>
-	<name>ONLYOFFICE DocSpace Management</name>
-	<description>ONLYOFFICE DocSpace Management</description>
+	<id>Apps.Management</id>
+	<name>ONLYOFFICE Apps Management</name>
+	<description>ONLYOFFICE Apps Management</description>
 	<priority>RealTime</priority>
 	<startmode>Automatic</startmode>
 	<autoRefresh>false</autoRefresh>

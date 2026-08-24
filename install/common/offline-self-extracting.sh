@@ -1,7 +1,9 @@
 #!/bin/bash
 set -e
 
-DOCSPACE_VERSION=""
+PACKAGE_SYSNAME="onlyoffice"
+PRODUCT_NAME="${PACKAGE_SYSNAME^^} Apps"
+APPS_VERSION=""
 REQUIRED_TEMP_SPACE_MB=""
 REQUIRED_DOCKER_SPACE_MB=""
 
@@ -14,14 +16,14 @@ for arg in "$@"; do
   case "$arg" in
     -h|-\?|--help)
       echo "Usage: $(basename "$0") [OPTIONS]"
-      echo "Offline DocSpace installer. Docker images are bundled in this archive."
+      echo "Offline ${PRODUCT_NAME} installer. Docker images are bundled in this archive."
       echo "All options are passed to install-Docker.sh. Available options:"
       echo
       echo "$ARGS_SCRIPT" | bash /dev/stdin --help
       exit 0
     ;;
     -v|-V|--version)
-      echo "DocSpace Stack v${DOCSPACE_VERSION:-unknown}"
+      echo "${PRODUCT_NAME} (Stack) v${APPS_VERSION:-unknown}"
       exit 0
     ;;
   esac
@@ -157,7 +159,7 @@ _load_images_parallel() {
 if [ "$OFFLINE_IMAGE_LOAD" != "true" ]; then
   echo "Loading docker images (this may take a few minutes)..."
   _load_images_parallel \
-    "${TEMP_DIR}/docspace_images.tar.xz" \
+    "${TEMP_DIR}/apps_images.tar.xz" \
     "${TEMP_DIR}/docs_images.tar.xz"
 fi
 

@@ -37,7 +37,7 @@ if ( -not $openssl_path )
   exit
 }
 
-$product = "docspace"
+$product = "apps"
 $letsencrypt_root_dir = "$env:SystemDrive\Certbot\live"
 $letsencrypt_domain_dir = "$env:SystemDrive\Certbot\archive\${product}"
 $app = Resolve-Path -Path ".\..\"
@@ -49,13 +49,13 @@ $nginx_conf_tmpl = "onlyoffice-proxy.conf.tmpl"
 $nginx_ssl_tmpl = "onlyoffice-proxy-ssl.conf.tmpl"
 $user_conf = "${app}\config\appsettings.$environment.json"
 $mysql = "$env:SystemDrive\Program Files\MySQL\MySQL Server 8.4\bin\mysql.exe"
-$docspace_service = "DocSpace.StudioNotifyService"
+$apps_service = "Apps.StudioNotifyService"
 $proxy_service = "OpenResty"
 $node_services = @(
-    "DocSpace.DocEditor",
-    "DocSpace.Login",
-    "DocSpace.Socket.IO",
-    "DocSpace.SsoAuth.Svc",
+    "Apps.DocEditor",
+    "Apps.Login",
+    "Apps.Socket.IO",
+    "Apps.SsoAuth.Svc",
     "DsDocServiceSvc",
     "DsConverterSvc"
 )
@@ -220,7 +220,7 @@ if ( $args.Count -ge 2 ) {
     if ($domain_name -ne "localhost:80") {
       ((Get-Content -Path $user_conf -Raw) -replace '"portal":\s*"[^"]*"', "`"portal`": `"https://$domain_name`"") | Set-Content -Path $user_conf
       (Get-Content $user_conf -Raw) -replace '"core"\s*:\s*\{(?![^}]*"server-root")', "`"core`": {`r`n    `"server-root`": `"https://*/`"," | Set-Content -Path $user_conf
-      Set-ItemProperty -Path "HKLM:\SOFTWARE\Wow6432Node\Ascensio System SIA\ONLYOFFICE DocSpace" -Name "DOMAIN_NAME" -Value $domain_name
+      Set-ItemProperty -Path "HKLM:\SOFTWARE\Wow6432Node\Ascensio System SIA\ONLYOFFICE Apps" -Name "DOMAIN_NAME" -Value $domain_name
     }
     ((Get-Content -Path "${nginx_conf_dir}\${nginx_conf}" -Raw) -replace '/usr/local/share/ca-certificates/tls.crt', "`"$ssl_cert`"") | Set-Content -Path "${nginx_conf_dir}\${nginx_conf}"
     ((Get-Content -Path "${nginx_conf_dir}\${nginx_conf}" -Raw) -replace '/etc/ssl/private/tls.key', "`"$ssl_key`"") | Set-Content -Path "${nginx_conf_dir}\${nginx_conf}"
@@ -246,7 +246,7 @@ if ( $args.Count -ge 2 ) {
     }
   }
 
-  Restart-Service -Name $proxy_service, $docspace_service
+  Restart-Service -Name $proxy_service, $apps_service
 }
 
 elseif ($args[0] -eq "-d" -or $args[0] -eq "--default") {
@@ -261,16 +261,16 @@ elseif ($args[0] -eq "-d" -or $args[0] -eq "--default") {
     }
 
     foreach ($service in $node_services) { Restart-Service -Name $service }
-    Restart-Service -Name $proxy_service, $docspace_service
+    Restart-Service -Name $proxy_service, $apps_service
     if (Test-Path "${app}\letsencrypt\letsencrypt_cron.bat") { Remove-Item -Path "${app}\letsencrypt\letsencrypt_cron.bat" -Force }
     Write-Host "Returned to the default proxy configuration."
 }
 
 else
 {
-  Write-Output " This script provided to automatically get Let's Encrypt SSL Certificates for DocSpace "
+  Write-Output " This script provided to automatically get Let's Encrypt SSL Certificates for Apps "
   Write-Output " usage: "
-  Write-Output "   docspace-ssl-setup.ps1 EMAIL DOMAIN "
+  Write-Output "   apps-ssl-setup.ps1 EMAIL DOMAIN "
   Write-Output "      EMAIL       Email used for registration and recovery contact. Use "
   Write-Output "                  comma to register multiple emails, ex: "
   Write-Output "                  u1@example.com,u2@example.com. "
@@ -280,11 +280,11 @@ else
   Write-Output " "
   Write-Output " Using your own certificates via the -f parameter: "
   Write-Output " usage: "
-  Write-Output "  docspace-ssl-setup.ps1 -f DOMAIN CERTIFICATE PRIVATEKEY "
+  Write-Output "  apps-ssl-setup.ps1 -f DOMAIN CERTIFICATE PRIVATEKEY "
   Write-Output "    DOMAIN        Domain name to apply."
   Write-Output "    CERTIFICATE   Path to the certificate file for the domain (PEM, PFX, DER, CER, PKCS#7)."
   Write-Output "    PRIVATEKEY    (Optional) Path to private key (required unless PFX)."
   Write-Output "                                                                   "
   Write-Output " Return to the default proxy configuration using the -d or --default parameter: "
-  Write-Output "  docspace-ssl-setup.ps1 -d | docspace-ssl-setup.ps1 --default  "
+  Write-Output "  apps-ssl-setup.ps1 -d | apps-ssl-setup.ps1 --default  "
 }

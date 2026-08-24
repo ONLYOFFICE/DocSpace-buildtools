@@ -6,9 +6,11 @@ export DH_VERBOSE=1
 export DH_OPTIONS=-v
 
 %:
-	dh $@ --with=systemd
+	dh $@
 
 PRODUCT={{product}}
+PACKAGE_NAME={{package_name}}
+PACKAGE_SYSNAME={{package_sysname}}
 SOURCE_PATH=${CURDIR}/debian/source
 BUILD_PATH=${CURDIR}/debian/build
 BUILDTOOLS_PATH=${BUILD_PATH}/buildtools
@@ -21,7 +23,7 @@ override_dh_auto_clean:
 	rm -rf ${BUILD_PATH}
 	rm -rf ${CURDIR}/debian/*.service
 	rm -rf ${CURDIR}/debian/*.lintian-overrides
-	find "${CURDIR}/../" -type f -regex ".\/${PRODUCT}.*\.\(deb\|tar\.gz\|dsc\|changes\|buildinfo\)" -delete
+	find "${CURDIR}/../" -type f -regex ".\/${PACKAGE_NAME}.*\.\(deb\|tar\.gz\|dsc\|changes\|buildinfo\)" -delete
 
 override_dh_auto_configure:
 	@echo "RULES.$@"
@@ -44,13 +46,14 @@ check_archives:
 	$(call extract_archive,${SOURCE_PATH}/plugins.tar.gz,plugins,-C ${BUILD_PATH}) & \
 	$(call extract_archive,${SOURCE_PATH}/mcp.tar.gz,mcp,-C ${BUILD_PATH}) & \
 	wait; \
-	$(call extract_archive,${SOURCE_PATH}/document-formats.tar.gz,document-formats,-C ${BUILDTOOLS_PATH}/config); \
+	tar -xf ${SOURCE_PATH}/document-formats.tar.gz --wildcards --strip-components=1 -C ${BUILDTOOLS_PATH}/config/document-formats '*/onlyoffice-docs-formats.json' \
+		|| { echo "Error: failed to extract onlyoffice-docs-formats.json from document-formats.tar.gz"; exit 1; }; \
 	$(call extract_archive,${SOURCE_PATH}/ui-kit.tar.gz,ui-kit,-C ${CLIENT_PATH}/libs); \
 	echo "Source archives check passed."
 
 override_dh_auto_build: check_archives
 	cd ${BUILDTOOLS_PATH}/install/common; \
-	bash systemd/build.sh -bp "${CURDIR}/debian/"; \
+	bash systemd/build.sh -bp "${CURDIR}/debian/" -pm deb; \
 	bash plugins-build.sh ${BUILD_PATH}/plugins; \
 	bash packages-build.sh deb ${BUILD_PATH} ${PRODUCT} "{{package_header_tag_version}}"
 	grep -q "GNU AFFERO GENERAL PUBLIC LICENSE" ${CURDIR}/debian/copyright || \
@@ -58,18 +61,19 @@ override_dh_auto_build: check_archives
 	grep -q "Attribution-ShareAlike 4.0" ${CURDIR}/debian/copyright || \
 		awk 'NF==0{print " ."} NF>0{print " " $$0}' ${BUILDTOOLS_PATH}/install/common/LICENSE-CC-BY-SA >> ${CURDIR}/debian/copyright
 
-	for i in ${PRODUCT} $$(ls ${CURDIR}/debian/*.install | grep -oP 'debian/\K.*' | grep -o '^[^.]*'); do \
+	for i in ${PACKAGE_NAME} $$(ls ${CURDIR}/debian/*.install | grep -oP 'debian/\K.*' | grep -o '^[^.]*'); do \
 		cp ${CURDIR}/debian/source/lintian-overrides ${CURDIR}/debian/$$i.lintian-overrides; \
 	done
 
 execute_after_dh_fixperms:
-	chmod o-rwx ${CURDIR}/debian/${PRODUCT}-common/etc/onlyoffice/${PRODUCT}/*
+	chmod o-rwx ${CURDIR}/debian/${PACKAGE_NAME}-common/etc/${PACKAGE_SYSNAME}/${PRODUCT}/*
 
-override_dh_systemd_enable:
-	dh_systemd_enable --no-enable
-
-override_dh_systemd_start:
-	dh_systemd_start --no-start --no-restart-after-upgrade --no-stop-on-upgrade
+override_dh_installsystemd:
+	for f in debian/*.*.service; do \
+		PKG=$$(basename "$$f" | sed -E 's/\.[^.]+\.service$$//'); \
+		NAME=$$(basename "$$f" .service | sed -E 's/^[^.]+\.//'); \
+		dh_installsystemd -p"$$PKG" --name="$$NAME" --no-enable --no-start --no-restart-after-upgrade --no-stop-on-upgrade; \
+	done
 
 override_dh_auto_install:
 

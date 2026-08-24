@@ -1,12 +1,12 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the {{product}} package.
+# This file is distributed under the same license as the {{package_name}} package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: {{product}}\n"
+"Project-Id-Version: {{package_name}}\n"
 "Report-Msgid-Bugs-To: support@onlyoffice.com\n"
 "POT-Creation-Date: 2023-01-24 18:26+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
@@ -19,6 +19,6 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../{{product}}.templates:1001
+#: ../{{package_name}}.templates:1001
 msgid "Select environment for {{product}} configuration:"
 msgstr ""

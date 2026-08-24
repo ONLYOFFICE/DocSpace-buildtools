@@ -1,23 +1,23 @@
-## Running ONLYOFFICE DocSpace in Docker
+## Running ONLYOFFICE Apps in Docker
 
 > **Note:** Not for production use.
-> This guide deploys a development/testing build of ONLYOFFICE DocSpace.
-> For production deployments, use the: [Production Version of ONLYOFFICE DocSpace](https://www.onlyoffice.com/download.aspx#docspace-enterprise)
+> This guide deploys a development/testing build of ONLYOFFICE Apps.
+> For production deployments, use the: [Production Version of ONLYOFFICE Apps](https://www.onlyoffice.com/download.aspx#docspace-enterprise)
 
 ### Overview
 
-This community ships ONLYOFFICE DocSpace as a monolithic build: all ONLYOFFICE DocSpace services run in a single container rather than as separate per-service containers. The full stack consists of four containers:
+This community ships ONLYOFFICE Apps as a monolithic build: all ONLYOFFICE Apps services run in a single container rather than as separate per-service containers. The full stack consists of four containers:
 
 | Container | Role |
 | :---- | :---- |
-| **onlyoffice-docspace** | All ONLYOFFICE DocSpace services (consolidated) |
+| **onlyoffice-apps** | All ONLYOFFICE Apps services (consolidated) |
 | **onlyoffice-document-server** | Document Server (editors) |
 | **onlyoffice-mysql-server** | MySQL database |
 | **onlyoffice-opensearch** | OpenSearch |
 
 Differences from the standard multi-container deployment:
 
-- All ONLYOFFICE DocSpace services are consolidated into a single container.
+- All ONLYOFFICE Apps services are consolidated into a single container.
 - No thumbnail generation.
 
 **Prerequisites:** Docker Engine with the Compose plugin (docker compose).
@@ -49,12 +49,12 @@ docker network create onlyoffice 2>/dev/null || true
 docker compose up -d
 ```
 
-5.	Access ONLYOFFICE DocSpace at http://localhost or http://your-ip-address.
+5.	Access ONLYOFFICE Apps at http://localhost or http://your-ip-address.
 ---
 
 ### Option 2. Build Images from Source
 
-Use this option if you want to build DocSpace images yourself or test changes from a specific branch.
+Use this option if you want to build ONLYOFFICE Apps images yourself or test changes from a specific branch.
 
 1. Clone the repository:
 
@@ -83,12 +83,12 @@ docker compose up -d --build
 > **Note:** By default, the images are built from the `master` branch.
 > To build from another branch, specify the build argument `GIT_BRANCH`: `GIT_BRANCH=your-branch docker compose up -d --build`
 
-5.	Access ONLYOFFICE DocSpace at http://localhost or http://your-ip-address.
+5.	Access ONLYOFFICE Apps at http://localhost or http://your-ip-address.
 ---
 
 ### Option 3. Running with SSL
 
-DocSpace supports both Let's Encrypt and custom SSL certificates.
+ONLYOFFICE Apps supports both Let's Encrypt and custom SSL certificates.
 
 > Requires the shared network to exist (see step 3 in Option 1/2): `docker network create onlyoffice 2>/dev/null || true`
 
@@ -145,4 +145,4 @@ docker compose \
 > **Note:** By default, the ssl.yml configuration mounts the local ./config/nginx/certs directory to /etc/nginx/certs inside the container.
 
 
-Access ONLYOFFICE DocSpace at https://example.com/.
+Access ONLYOFFICE Apps at https://example.com/.

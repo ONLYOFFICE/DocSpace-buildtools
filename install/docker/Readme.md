@@ -1,7 +1,7 @@
-# ONLYOFFICE DocSpace - Docker
+# ONLYOFFICE Apps - Docker
 
 Docker Compose definitions, image-build files and runtime configuration for
-running **ONLYOFFICE DocSpace** in containers.
+running **ONLYOFFICE Apps** in containers.
 
 ## Contents
 
@@ -43,8 +43,8 @@ install/docker/
 │   │   └── prepare-nginx-router.sh
 │   ├── dev/                  #   local-dev-only Compose overlays (build.backend.docker.py)
 │   │   ├── db.dev.yml            #   MySQL dev overrides (exposed ports)
-│   │   ├── docspace.profiles.yml #   local-dev application stack
-│   │   ├── docspace.overcome.yml #   local-dev overrides
+│   │   ├── apps.profiles.yml     #   local-dev application stack
+│   │   ├── apps.overcome.yml     #   local-dev overrides
 │   │   ├── dnsmasq.yml           #   local DNS for development
 │   │   └── build-identity.yml    #   ASC.Identity (Java) build
 │   └── stack/supervisor/     #   supervisor configs baked into the image
@@ -55,8 +55,8 @@ install/docker/
 
 | File | Service |
 |------|---------|
-| `docspace.yml` | All DocSpace application services (modular) |
-| `docspace-stack.yml` | Same application services bundled as one stack |
+| `apps.yml` | All ONLYOFFICE Apps application services (modular) |
+| `apps-stack.yml` | Same application services bundled as one stack |
 | `db.yml` | MySQL |
 | `ds.yml` | ONLYOFFICE Document Server |
 | `redis.yml` · `rabbitmq.yml` | Redis · RabbitMQ |
@@ -86,7 +86,7 @@ bash install/OneClickInstall/install-Docker.sh -dm stack
 
 ## Community edition
 
-A lightweight, single-container DocSpace solution you bring up with a single
+A lightweight, single-container ONLYOFFICE Apps solution you bring up with a single
 `docker compose` command — no extra infrastructure to wire up. See
 [`community/`](community/README.md).
 
@@ -119,7 +119,7 @@ Compose is **modular** - files are combined with `-f`. Run all commands from
 
 ```bash
 docker compose \
-  -f docspace.yml -f healthchecks.yml -f identity.yml -f notify.yml \
+  -f apps.yml -f healthchecks.yml -f identity.yml -f notify.yml \
   -f dashboards.yml -f db.yml -f ds.yml -f fluent.yml -f opensearch.yml \
   -f proxy.yml -f rabbitmq.yml -f redis.yml \
   up -d
@@ -129,7 +129,7 @@ docker compose \
 
 ```bash
 docker compose \
-  -f docspace-stack.yml -f dashboards.yml -f db.yml -f ds.yml -f fluent.yml \
+  -f apps-stack.yml -f dashboards.yml -f db.yml -f ds.yml -f fluent.yml \
   -f opensearch.yml -f proxy.yml -f rabbitmq.yml -f redis.yml \
   up -d
 ```
@@ -137,30 +137,30 @@ docker compose \
 ### HTTPS / SSL
 
 Once the stack is running, enable HTTPS with the
-[`config/docspace-ssl-setup`](config/docspace-ssl-setup) helper. It switches the
+[`config/apps-ssl-setup`](config/apps-ssl-setup) helper. It switches the
 proxy to `proxy-ssl.yml`, installs the certificate and sets up automatic
 renewal - run it from `install/docker/`:
 
 ```bash
 # Let's Encrypt (auto-renew); EMAIL and DOMAIN(s), comma-separated
-config/docspace-ssl-setup support@example.com example.com,s1.example.com
+config/apps-ssl-setup support@example.com example.com,s1.example.com
 
 # bring your own certificate (PEM/PFX/DER/CER; key required unless PFX)
-config/docspace-ssl-setup --file example.com /etc/ssl/example.crt /etc/ssl/example.key
+config/apps-ssl-setup --file example.com /etc/ssl/example.crt /etc/ssl/example.key
 
 # revert to the default (HTTP) proxy configuration
-config/docspace-ssl-setup --default
+config/apps-ssl-setup --default
 ```
 
 > [!NOTE]
 > The script must run next to `.env`, `proxy.yml` and `proxy-ssl.yml` (i.e. from
-> `install/docker/`). Run `config/docspace-ssl-setup` without arguments for full
+> `install/docker/`). Run `config/apps-ssl-setup` without arguments for full
 > usage, including wildcard-domain (DNS-01) certificates.
 
 > [!TIP]
 > To avoid repeating long `-f` chains, export the file list once:
 > ```bash
-> export COMPOSE_FILE=docspace.yml:healthchecks.yml:identity.yml:notify.yml:dashboards.yml:db.yml:ds.yml:fluent.yml:opensearch.yml:proxy.yml:rabbitmq.yml:redis.yml
+> export COMPOSE_FILE=apps.yml:healthchecks.yml:identity.yml:notify.yml:dashboards.yml:db.yml:ds.yml:fluent.yml:opensearch.yml:proxy.yml:rabbitmq.yml:redis.yml
 > docker compose up -d        # then just use plain compose commands
 > ```
 

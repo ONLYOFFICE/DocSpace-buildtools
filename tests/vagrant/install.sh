@@ -107,16 +107,16 @@ esac
 
   # Clean up home folder
   rm -rf /home/vagrant/*
-  [ -d /tmp/docspace ] && mv /tmp/docspace/* /home/vagrant
+  [ -d /tmp/apps ] && mv /tmp/apps/* /home/vagrant
 
   echo '127.0.0.1 host4test' | sudo tee -a /etc/hosts
   echo "${COLOR_GREEN}[OK] PREPARE_VM: Hostname was setting up${COLOR_RESET}"
 }
 
-install_docspace() {
+install_apps() {
   INSTALL_START_TIME=$(date +%s)
-  [[ "${DOWNLOAD_SCRIPTS}" == 'true' ]] && curl -fsSLO https://download.onlyoffice.com/docspace/docspace-install.sh || sed 's/set -e/set -xe/' -i *.sh
-  bash docspace-install.sh package ${ARGUMENTS} -log false || { echo "Exit code non-zero. Exit with 1."; exit 1; }
+  [[ "${DOWNLOAD_SCRIPTS}" == 'true' ]] && curl -fsSLO https://download.onlyoffice.com/apps/apps-install.sh || sed 's/set -e/set -xe/' -i *.sh
+  bash apps-install.sh package ${ARGUMENTS} -log false || { echo "Exit code non-zero. Exit with 1."; exit 1; }
   echo "::notice::Installation on "${ID:-unknown} ${VERSION_ID:-}" took $((($(date +%s) - INSTALL_START_TIME) / 60))m"
 }
 
@@ -136,7 +136,7 @@ main() {
   echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
   echo "${COLOR_BLUE}STEP 3: Installing${COLOR_RESET}"
   echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
-  install_docspace
+  install_apps
 }
 
 main
