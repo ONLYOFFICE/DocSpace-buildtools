@@ -64,7 +64,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-backup
 Replaces: {{legacy_product}}-backup
 Breaks: {{legacy_product}}-backup (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), dotnet-sdk-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
 Description: {{package_name}}-backup
 	The service which handles API requests related to backup.
 
@@ -74,7 +74,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-files
 Replaces: {{legacy_product}}-files
 Breaks: {{legacy_product}}-files (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), dotnet-sdk-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
 Recommends: opensearch (= {{opensearch_version}})
 Description: {{package_name}}-files
 	The REST API server for working with documents. The service which handles
@@ -86,7 +86,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-files-worker
 Replaces: {{legacy_product}}-files-worker
 Breaks: {{legacy_product}}-files-worker (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), dotnet-sdk-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
 Recommends: ffmpeg, opensearch (= {{opensearch_version}})
 Description: {{package_name}}-files-worker
 	The service which launches additional services related to file management:
@@ -103,7 +103,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-notify
 Replaces: {{legacy_product}}-notify
 Breaks: {{legacy_product}}-notify (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), dotnet-sdk-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
 Recommends: ffmpeg, opensearch (= {{opensearch_version}})
 Description: {{package_name}}-notify
 	The service which launches additional services related to notifications
@@ -116,7 +116,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-people-server
 Replaces: {{legacy_product}}-people-server
 Breaks: {{legacy_product}}-people-server (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), dotnet-sdk-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
 Description: {{package_name}}-people-server
 	The service which handles API requests related to the People module.
 
@@ -148,7 +148,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-studio-notify
 Replaces: {{legacy_product}}-studio-notify
 Breaks: {{legacy_product}}-studio-notify (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), dotnet-sdk-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
 Description: {{package_name}}-studio-notify
 	The service responsible for creating notifications and 
 	sending them to other services, for example, TelegramService and NotifyService.
@@ -159,7 +159,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-api
 Replaces: {{legacy_product}}-api
 Breaks: {{legacy_product}}-api (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), dotnet-sdk-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
 Recommends: rabbitmq-server, apache-activemq, redis-server
 Description: {{package_name}}-api
 	The service which is used for working with a certain portal. This service
@@ -172,7 +172,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-api-system
 Replaces: {{legacy_product}}-api-system
 Breaks: {{legacy_product}}-api-system (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), dotnet-sdk-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
 Description: {{package_name}}-api-system
 	The service which is used for working with portals (creating, removing
 	portals, etc.)
@@ -183,7 +183,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-studio
 Replaces: {{legacy_product}}-studio
 Breaks: {{legacy_product}}-studio (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), dotnet-sdk-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
 Description: {{package_name}}-studio
 	The service which processes storage handlers.
 
@@ -241,7 +241,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-backup-worker
 Replaces: {{legacy_product}}-backup-worker
 Breaks: {{legacy_product}}-backup-worker (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), dotnet-sdk-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
 Description: {{package_name}}-backup-worker
 	The service which launches additional services related to backup creation:
 	 - BackupWorkerService - launches WorkerService which runs backup/restore, etc;
@@ -256,7 +256,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-clear-events
 Replaces: {{legacy_product}}-clear-events
 Breaks: {{legacy_product}}-clear-events (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), dotnet-sdk-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
 Description: {{package_name}}-clear-events
 	The service responsible for clearing the login_events and audit_events
 	tables by LoginHistoryLifeTime and AuditTrailLifeTime to log out users
@@ -268,7 +268,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-migration-runner
 Replaces: {{legacy_product}}-migration-runner
 Breaks: {{legacy_product}}-migration-runner (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), dotnet-sdk-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
 Description: {{package_name}}-migration-runner
 	The service responsible for the database creation.
 	A database connection is transferred to the service and
@@ -300,7 +300,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-healthchecks
 Replaces: {{legacy_product}}-healthchecks
 Breaks: {{legacy_product}}-healthchecks (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), dotnet-sdk-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
 Description: {{package_name}}-healthchecks
 	The service which displays launched services.
 
@@ -341,7 +341,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-telegram
 Replaces: {{legacy_product}}-telegram
 Breaks: {{legacy_product}}-telegram (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), dotnet-sdk-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
 Description: {{package_name}}-telegram
 	The service which is used for receiving {{product_name}} notifications via Telegram.
 
@@ -351,7 +351,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-ai
 Replaces: {{legacy_product}}-ai
 Breaks: {{legacy_product}}-ai (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), dotnet-sdk-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
 Description: {{package_name}}-ai
 	The REST API server for working with AI features. The service which
 	handles API requests related to AI.
@@ -362,7 +362,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-ai-worker
 Replaces: {{legacy_product}}-ai-worker
 Breaks: {{legacy_product}}-ai-worker (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), dotnet-sdk-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
 Description: {{package_name}}-ai-worker
 	The service for background tasks related with AI. It vectorizes documents
 	from the knowledge base for subsequent semantic search and performs

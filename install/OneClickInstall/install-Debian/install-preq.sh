@@ -162,15 +162,18 @@ if [ "$INSTALLATION_TYPE" != "community" ]; then
 	apt-get install -yq postgresql
 fi
 
-# Temporary fallback dotnet-sdk-10.0 on Debian 11 and Ubuntu 24.04
-DOTNET_VERSION="10.0.100"; DOTNET_PKG="dotnet-sdk-${DOTNET_VERSION%.*}"
+# Temporary fallback aspnetcore-runtime-10.0 on Debian 11 and Ubuntu 24.04
+DOTNET_VERSION="10.0"; DOTNET_PKG="aspnetcore-runtime-${DOTNET_VERSION}"
 if ! apt-get install -yq "${DOTNET_PKG}"; then
-  curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --version "${DOTNET_VERSION}" --install-dir /usr/share/dotnet
+  curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel "${DOTNET_VERSION}" --runtime aspnetcore --install-dir /usr/share/dotnet
   ln -sf /usr/share/dotnet/dotnet /usr/bin/dotnet
 
+  DOTNET_RUNTIME_VERSION=$(dotnet --list-runtimes | awk '$1 == "Microsoft.AspNetCore.App" {print $2}' | sort -V | tail -1)
+  [ -n "${DOTNET_RUNTIME_VERSION}" ] || { echo "ASP.NET Core runtime installation failed" >&2; exit 1; }
+
   DOTNET_PKGDIR="/tmp/${DOTNET_PKG}"; mkdir -p "${DOTNET_PKGDIR}/DEBIAN"
-  printf "Package: %s\nVersion: %s\nArchitecture: amd64\nMaintainer: local\nDescription: Provides .NET %s SDK\n" \
-	"${DOTNET_PKG}" "${DOTNET_VERSION}" "${DOTNET_VERSION%%.*}" > "${DOTNET_PKGDIR}/DEBIAN/control"
+  printf "Package: %s\nVersion: %s\nArchitecture: %s\nMaintainer: local\nDescription: Provides ASP.NET Core %s Runtime\n" \
+	"${DOTNET_PKG}" "${DOTNET_RUNTIME_VERSION}" "$(dpkg --print-architecture)" "${DOTNET_VERSION}" > "${DOTNET_PKGDIR}/DEBIAN/control"
 
   dpkg-deb --build "${DOTNET_PKGDIR}" "/tmp/${DOTNET_PKG}.deb" && dpkg -i "/tmp/${DOTNET_PKG}.deb"
   rm -rf "${DOTNET_PKGDIR}" "/tmp/${DOTNET_PKG}.deb"

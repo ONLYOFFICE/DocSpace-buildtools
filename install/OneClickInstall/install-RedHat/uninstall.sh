@@ -56,7 +56,7 @@ fi
 mapfile -t PACKAGES_TO_UNINSTALL < <(rpm -qa | grep -E "^(${package_sysname}|${legacy_product})" || true)
 
 DEPENDENCIES=(
-    nodejs dotnet-sdk-10.0 mysql-community-server postgresql
+    nodejs aspnetcore-runtime-10.0 mysql-community-server postgresql
     postgresql-server redis rabbitmq-server ffmpeg opensearch
     opensearch-dashboards fluent-bit openresty
 )
