@@ -297,17 +297,36 @@ setup_openresty(){
 	sed -i "s!\(^worker_processes\).*;!\1 ${NGINX_WORKER_PROCESSES:-$(grep -c '^processor' /proc/cpuinfo)};!" "${OPENRESTY_CONF}"
 	sed -i "s!\(worker_connections\).*;!\1 ${NGINX_WORKER_CONNECTIONS:-$(ulimit -n)};!" "${OPENRESTY_CONF}"
 
+	NGINX_DEFAULT_SITE_WARNED=false
+	warn_default_site(){
+		# break out of the unterminated "Configuring openresty... " progress line before the first warning
+		[ "$NGINX_DEFAULT_SITE_WARNED" = false ] && { echo; NGINX_DEFAULT_SITE_WARNED=true; }
+		echo "Warning: $1" >&2
+	}
+
 	if [ "$DIST" = "RedHat" ]; then
+		NGINX_NEEDS_RELOAD=false
 		# Remove default nginx settings [error] port 80 is already in use
-		if [ -f /etc/nginx/nginx.conf ]; then
-			if grep -q "server {"  /etc/nginx/nginx.conf ; then
-				# fix Bug 81918 - Remove default server block without dropping conf.d includes
-				awk '/^[[:space:]]*server[[:space:]]*\{/&&!done{done=1;d=1;next}d{d+=gsub(/\{/,"{")-gsub(/\}/,"}");if(d<=0)d=0;next}1' \
-					/etc/nginx/nginx.conf > /etc/nginx/nginx.conf.tmp && mv -f /etc/nginx/nginx.conf.tmp /etc/nginx/nginx.conf
-				systemctl reload nginx
-			fi
+		if [ -f /etc/nginx/nginx.conf ] && grep -q "server {" /etc/nginx/nginx.conf; then
+			# fix Bug 81918 - Remove default server block without dropping conf.d includes
+			[ -f /etc/nginx/nginx.conf.bak ] || cp -f /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
+			warn_default_site "removed default server block from /etc/nginx/nginx.conf to free port 80 for openresty (backup: /etc/nginx/nginx.conf.bak)"
+			awk '/^[[:space:]]*server[[:space:]]*\{/&&!done{done=1;d=1;next}d{d+=gsub(/\{/,"{")-gsub(/\}/,"}");if(d<=0)d=0;next}1' \
+				/etc/nginx/nginx.conf > /etc/nginx/nginx.conf.tmp && mv -f /etc/nginx/nginx.conf.tmp /etc/nginx/nginx.conf
+			NGINX_NEEDS_RELOAD=true
 		fi
-		
+
+		# nginx.org RPM packages ship conf.d/default.conf, which also listens on port 80 and conflicts with openresty
+		if [ -f /etc/nginx/conf.d/default.conf ]; then
+			warn_default_site "disabled /etc/nginx/conf.d/default.conf to free port 80 for openresty (renamed to default.conf.disabled)"
+			[ -f /etc/nginx/conf.d/default.conf.disabled ] && rm -f /etc/nginx/conf.d/default.conf || mv -f /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf.disabled
+			NGINX_NEEDS_RELOAD=true
+		fi
+
+		if [ "$NGINX_NEEDS_RELOAD" = true ] && systemctl is-active --quiet nginx; then
+			systemctl reload nginx
+		fi
+
 		shopt -s nocasematch
 		if command -v getenforce >/dev/null 2>&1; then
 			case "$(getenforce)" in
@@ -336,6 +355,13 @@ setup_openresty(){
 		if ! id "nginx" >/dev/null 2>&1; then
 			rm -rf /var/log/nginx/* /var/cache/nginx/*
 			useradd -s /bin/false nginx
+		fi
+
+		# Debian nginx package enables sites-enabled/default, which also listens on port 80 and conflicts with openresty
+		if [ -e /etc/nginx/sites-enabled/default ]; then
+			warn_default_site "disabled /etc/nginx/sites-enabled/default to free port 80 for openresty (was -> $(readlink -f /etc/nginx/sites-enabled/default))"
+			rm -f /etc/nginx/sites-enabled/default
+			systemctl is-active --quiet nginx && systemctl reload nginx
 		fi
 	fi
 

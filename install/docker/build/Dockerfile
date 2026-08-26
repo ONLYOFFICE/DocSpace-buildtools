@@ -191,7 +191,7 @@ ENV APP_STORAGE_ROOT=/app/onlyoffice/data/ \
     PATH_TO_CONF=/app/onlyoffice/config
 
 RUN apt-get -y update && \
-    apt-get install --no-install-recommends -yq sudo adduser nano curl libgdiplus iproute2 python3-requests python3-netaddr python3-jsonpath-ng && \
+    apt-get install --no-install-recommends -yq adduser nano curl libgdiplus iproute2 python3-requests python3-netaddr python3-jsonpath-ng && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     mkdir -p /var/log/onlyoffice /app/onlyoffice/data && \
@@ -215,7 +215,7 @@ ENV APP_STORAGE_ROOT=/app/onlyoffice/data/ \
     PATH_TO_CONF=/app/onlyoffice/config
 
 RUN apt-get -y update && \
-    apt-get install --no-install-recommends -yq sudo adduser nano curl iproute2 python3-requests python3-netaddr python3-jsonpath-ng && \
+    apt-get install --no-install-recommends -yq adduser nano curl iproute2 python3-requests python3-netaddr python3-jsonpath-ng && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     mkdir -p /var/log/onlyoffice /app/onlyoffice/data /var/www /run && \
@@ -235,7 +235,7 @@ ENV BUILD_PATH=${BUILD_PATH}
 ENV LOG_DIR=/var/log/onlyoffice
 
 RUN apt-get -y update && \
-    apt-get install --no-install-recommends -yq sudo adduser nano curl && \
+    apt-get install --no-install-recommends -yq adduser nano curl && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     mkdir -p /var/log/onlyoffice /var/www/onlyoffice && \
@@ -293,7 +293,7 @@ RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.
     sed -i 's/127.0.0.1:8080/$service_identity/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5015/$service_management/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5033/$service_healthchecks/' /etc/nginx/conf.d/onlyoffice.conf && \
-    sed -i 's/127.0.0.1:5601/$dashboards_host:5601/' /etc/nginx/includes/server-dashboards.conf && \
+    sed -i 's/127.0.0.1:5601/$dashboards_host:5601/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/$public_root/\/var\/www\/public\//' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/http:\/\/172.*/$document_server;/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i '/client_body_temp_path/ i \ \ \ \ $MAP_HASH_BUCKET_SIZE' /etc/nginx/nginx.conf.template && \
