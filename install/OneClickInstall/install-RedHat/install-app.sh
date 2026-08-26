@@ -115,6 +115,7 @@ fi
 
 if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
     declare -x DS_PORT=${DS_PORT:-8083}
+    declare -x LISTEN_ADDRESS=127.0.0.1
     declare -x JWT_ENABLED=${JWT_ENABLED:-true}
     declare -x JWT_SECRET=${JWT_SECRET:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)}
     declare -x JWT_HEADER=${JWT_HEADER:-AuthorizationJwt}

@@ -88,6 +88,7 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
 	DS_JWT_HEADER=${DS_JWT_HEADER:-AuthorizationJwt}
 
 	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/ds-port select "$DS_PORT" | debconf-set-selections
+	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/listenaddress select "127.0.0.1" | debconf-set-selections
 	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/jwt-enabled select "${DS_JWT_ENABLED}" | debconf-set-selections
 	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/jwt-secret select "${DS_JWT_SECRET}" | debconf-set-selections
 	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/jwt-header select "${DS_JWT_HEADER}" | debconf-set-selections
