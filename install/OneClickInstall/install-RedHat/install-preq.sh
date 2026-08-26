@@ -159,7 +159,7 @@ DOTNET_VERSION="10.0"
 ${package_manager} ${WEAK_OPT} -y install $([ "$DIST" != "fedora" ] && echo "epel-release") \
 			python3 \
 			nodejs \
-			dotnet-sdk-${DOTNET_VERSION} \
+			aspnetcore-runtime-${DOTNET_VERSION} \
 			opensearch-${OPENSEARCH_VERSION} \
 			mysql-community-server \
 			rabbitmq-server \

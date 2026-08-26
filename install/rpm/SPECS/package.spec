@@ -3,7 +3,7 @@ Provides:       %{legacy_product}-backup = %{version}-%{release}
 Obsoletes:      %{legacy_product}-backup < %{version}-%{release}
 Summary:        Backup
 Requires:       %name-common  = %version-%release 
-Requires:       dotnet-sdk-%{dotnet_version}
+Requires:       aspnetcore-runtime-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    backup
@@ -22,7 +22,7 @@ Provides:       %{legacy_product}-files-worker = %{version}-%{release}
 Obsoletes:      %{legacy_product}-files-worker < %{version}-%{release}
 Summary:        Files-worker
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-%{dotnet_version}
+Requires:       aspnetcore-runtime-%{dotnet_version}
 Requires:       /usr/bin/ffmpeg
 AutoReqProv:    no
 BuildArch:      noarch
@@ -40,7 +40,7 @@ Provides:       %{legacy_product}-notify = %{version}-%{release}
 Obsoletes:      %{legacy_product}-notify < %{version}-%{release}
 Summary:        Notify
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-%{dotnet_version}
+Requires:       aspnetcore-runtime-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    notify
@@ -53,7 +53,7 @@ Provides:       %{legacy_product}-files = %{version}-%{release}
 Obsoletes:      %{legacy_product}-files < %{version}-%{release}
 Summary:        Files
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-%{dotnet_version}
+Requires:       aspnetcore-runtime-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    files
@@ -79,7 +79,7 @@ Provides:       %{legacy_product}-studio-notify = %{version}-%{release}
 Obsoletes:      %{legacy_product}-studio-notify < %{version}-%{release}
 Summary:        Studio-notify
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-%{dotnet_version}
+Requires:       aspnetcore-runtime-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    studio-notify
@@ -91,7 +91,7 @@ Provides:       %{legacy_product}-people-server = %{version}-%{release}
 Obsoletes:      %{legacy_product}-people-server < %{version}-%{release}
 Summary:        People-server
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-%{dotnet_version}
+Requires:       aspnetcore-runtime-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    people-server
@@ -125,7 +125,7 @@ Provides:       %{legacy_product}-studio = %{version}-%{release}
 Obsoletes:      %{legacy_product}-studio < %{version}-%{release}
 Summary:        Studio
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-%{dotnet_version}
+Requires:       aspnetcore-runtime-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    studio
@@ -136,7 +136,7 @@ Provides:       %{legacy_product}-api = %{version}-%{release}
 Obsoletes:      %{legacy_product}-api < %{version}-%{release}
 Summary:        Api
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-%{dotnet_version}
+Requires:       aspnetcore-runtime-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    api
@@ -149,7 +149,7 @@ Provides:       %{legacy_product}-api-system = %{version}-%{release}
 Obsoletes:      %{legacy_product}-api-system < %{version}-%{release}
 Summary:        Api-system
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-%{dotnet_version}
+Requires:       aspnetcore-runtime-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    api-system
@@ -198,7 +198,7 @@ Provides:       %{legacy_product}-clear-events = %{version}-%{release}
 Obsoletes:      %{legacy_product}-clear-events < %{version}-%{release}
 Summary:        Clear-events
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-%{dotnet_version}
+Requires:       aspnetcore-runtime-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    clear-events
@@ -211,7 +211,7 @@ Provides:       %{legacy_product}-backup-worker = %{version}-%{release}
 Obsoletes:      %{legacy_product}-backup-worker < %{version}-%{release}
 Summary:        Backup-worker
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-%{dotnet_version}
+Requires:       aspnetcore-runtime-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    backup-worker
@@ -238,7 +238,7 @@ Provides:       %{legacy_product}-migration-runner = %{version}-%{release}
 Obsoletes:      %{legacy_product}-migration-runner < %{version}-%{release}
 Summary:        Migration-runner
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-%{dotnet_version}
+Requires:       aspnetcore-runtime-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    migration-runner
@@ -262,7 +262,7 @@ Provides:       %{legacy_product}-healthchecks = %{version}-%{release}
 Obsoletes:      %{legacy_product}-healthchecks < %{version}-%{release}
 Summary:        Healthchecks
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-%{dotnet_version}
+Requires:       aspnetcore-runtime-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    healthchecks
@@ -306,7 +306,7 @@ Provides:       %{legacy_product}-telegram = %{version}-%{release}
 Obsoletes:      %{legacy_product}-telegram < %{version}-%{release}
 Summary:        Telegram
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-%{dotnet_version}
+Requires:       aspnetcore-runtime-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    telegram
@@ -317,7 +317,7 @@ Provides:       %{legacy_product}-ai = %{version}-%{release}
 Obsoletes:      %{legacy_product}-ai < %{version}-%{release}
 Summary:        AI
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-%{dotnet_version}
+Requires:       aspnetcore-runtime-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    ai
@@ -329,7 +329,7 @@ Provides:       %{legacy_product}-ai-worker = %{version}-%{release}
 Obsoletes:      %{legacy_product}-ai-worker < %{version}-%{release}
 Summary:        AI-Worker
 Requires:       %name-common  = %version-%release
-Requires:       dotnet-sdk-%{dotnet_version}
+Requires:       aspnetcore-runtime-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    ai-worker

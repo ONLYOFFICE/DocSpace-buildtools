@@ -115,8 +115,8 @@ validate_bool --installfluentbit "$INSTALL_FLUENT_BIT"
 [ -n "$UNINSTALL" ] && validate_bool --uninstall "$UNINSTALL"
 [ -n "$DS_JWT_ENABLED" ] && validate_bool --jwtenabled "$DS_JWT_ENABLED"
 
-# Pause apt's auto-update timers so they don't grab the dpkg lock mid-install; EXIT trap restarts them regardless of how this script exits.
-systemctl stop apt-daily.timer apt-daily-upgrade.timer unattended-upgrades.service >/dev/null 2>&1 || true
+# Pause apt auto-updates and running jobs to avoid dpkg lock contention; timers are restarted by the EXIT trap.
+systemctl stop apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service unattended-upgrades.service >/dev/null 2>&1 || true
 trap 'systemctl start apt-daily.timer apt-daily-upgrade.timer >/dev/null 2>&1 || true' EXIT
 
 if fuser /var/lib/dpkg/lock-frontend &>/dev/null; then

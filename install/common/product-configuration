@@ -577,13 +577,13 @@ setup_rabbitmq() {
 		touch /etc/rabbitmq/rabbitmq.conf /etc/rabbitmq/rabbitmq-env.conf
 		sed -i '/^[[:space:]]*listeners\.tcp\([.][^=]*\)\?[[:space:]]*=/d; /^[[:space:]]*distribution\.listener\.interface[[:space:]]*=/d' /etc/rabbitmq/rabbitmq.conf
 		printf '\nlisteners.tcp.1 = 127.0.0.1:%s\n' "${RABBITMQ_PORT}" >> /etc/rabbitmq/rabbitmq.conf
-		printf '{host, {127,0,0,1}, ["%s"]}.\n{lookup, [file,native]}.\n' "$(hostname -s)" > /etc/rabbitmq/docspace_erl_inetrc
+		printf '{host, {127,0,0,1}, ["%s"]}.\n{lookup, [file,native]}.\n' "$(hostname -s)" > /etc/rabbitmq/apps_erl_inetrc
 		sed -i '/^[[:space:]]*\(export[[:space:]]\+\)\?ERL_\(EPMD_ADDRESS\|INETRC\)=/d; /inet_dist_use_interface/d' /etc/rabbitmq/rabbitmq-env.conf
-		printf 'export ERL_EPMD_ADDRESS=127.0.0.1\nexport ERL_INETRC=/etc/rabbitmq/docspace_erl_inetrc\nSERVER_ADDITIONAL_ERL_ARGS="${SERVER_ADDITIONAL_ERL_ARGS:-} -kernel inet_dist_use_interface {127,0,0,1}"\n' >> /etc/rabbitmq/rabbitmq-env.conf
+		printf 'export ERL_EPMD_ADDRESS=127.0.0.1\nexport ERL_INETRC=/etc/rabbitmq/apps_erl_inetrc\nSERVER_ADDITIONAL_ERL_ARGS="${SERVER_ADDITIONAL_ERL_ARGS:-} -kernel inet_dist_use_interface {127,0,0,1}"\n' >> /etc/rabbitmq/rabbitmq-env.conf
 		systemctl stop rabbitmq-server
 		if systemctl list-unit-files epmd.socket --no-legend 2>/dev/null | grep -q epmd.socket; then
 			mkdir -p /etc/systemd/system/epmd.socket.d
-			printf '[Socket]\nListenStream=\nListenStream=127.0.0.1:4369\n' > /etc/systemd/system/epmd.socket.d/docspace.conf
+			printf '[Socket]\nListenStream=\nListenStream=127.0.0.1:4369\n' > /etc/systemd/system/epmd.socket.d/apps.conf
 			systemctl stop epmd.service epmd.socket >/dev/null 2>&1 || true
 			systemctl daemon-reload
 			systemctl start epmd.socket

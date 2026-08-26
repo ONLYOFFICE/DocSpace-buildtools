@@ -48,6 +48,7 @@ create() {
     "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
   APPS_VERSION=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "apps-" \
     | sed -E "s/.*:([0-9]+\.[0-9]+\.[0-9]+).*/\1/" | head -n1)
+  [ -n "$APPS_VERSION" ] || { echo "::error::Failed to determine APPS_VERSION"; exit 1; }
   sed -i "s~\(APPS_VERSION=\)\"[^\"]*\"~\1\"${APPS_VERSION}\"~g" \
     "${INSTALL_PATH}/common/offline-self-extracting.sh"
 
@@ -121,14 +122,14 @@ build() {
 
 upload() {
   aws s3 cp "${INSTALL_PATH}/${ARTIFACT_NAME}" \
-    "${AWS_BUCKET_URL_OCI}/${ARTIFACT_NAME}" \
+    "${AWS_BUCKET_URL_OCI}/offline/${ARTIFACT_NAME}" \
     --acl public-read --content-type application/x-xz --metadata-directive REPLACE
 
   local API_STATUS
   API_STATUS=$(aws apigateway test-invoke-method \
     --rest-api-id "$AWS_REST_API_ID" --resource-id "$AWS_RESOURCE_ID" \
     --http-method PUT --path-with-query-string "/prod/download-oo-com" \
-    --body "$(jq -c -n '.paths = $ARGS.positional' --args "/apps/${ARTIFACT_NAME}")" \
+    --body "$(jq -c -n '.paths = $ARGS.positional' --args "/apps/offline/${ARTIFACT_NAME}")" \
     --region us-east-1 --query 'status' --output text || :)
   echo "API Gateway test-invoke status: ${API_STATUS:-<failed>}"
 }

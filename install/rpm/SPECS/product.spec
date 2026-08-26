@@ -1,6 +1,7 @@
 %define         _binaries_in_noarch_packages_terminate_build   0
 %define         _build_id_links none
 %define         __os_install_post /usr/lib/rpm/brp-compress %{nil}
+%define         _binary_payload w6T0.xzdio
 
 
 %global         product apps

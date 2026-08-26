@@ -16,12 +16,6 @@ PUBLISH_DIR=${BUILD_PATH}/publish
 export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=4096}"
 echo "== Frontend build =="; FRONTEND_START_TIMER=$(date +%s)
 cd ${CLIENT_PATH}; pnpm install
-if [ -z "${NX_PARALLEL}" ]; then
-  GITHUB_STEP_SUMMARY='' pnpm build
-else
-  NX_PACKAGES=$(node -p "require('./package.json').scripts.build.match(/-p ([^-]+)/)[1].trim()")
-  GITHUB_STEP_SUMMARY='' pnpm nx run-many -t build -p ${NX_PACKAGES} --parallel=${NX_PARALLEL}
-fi
 GITHUB_STEP_SUMMARY='' pnpm run deploy; FRONTEND_END_TIMER=$(date +%s)
 echo "::notice::Frontend build completed in $((FRONTEND_END_TIMER - FRONTEND_START_TIMER)) seconds"
 
@@ -52,6 +46,9 @@ mkdir -p "${PUBLISH_DIR}/services/ASC.AI.MCP/service"
 cp -a bin "${PUBLISH_DIR}/services/ASC.AI.MCP/service/"
 
 # Deleting unused files
+rm -rf ${PUBLISH_DIR}/services/{ASC.Socket.IO,ASC.NewAi,ASC.SsoAuth}/.yarn
+rm -f ${PUBLISH_DIR}/services/{ASC.Socket.IO,ASC.NewAi,ASC.SsoAuth}/{.yarnrc.yml,yarn.lock}
+rm -f ${PUBLISH_DIR}/services/ASC.NewAi/onlyoffice-ai-chat-*.tgz
 find ${PUBLISH_DIR} -type d -name "runtimes" | \
 while IFS= read -r RUNTIMES_DIR; do \
      find "$RUNTIMES_DIR" -mindepth 1 -maxdepth 1 -type d ! -name "linux-x64" ! -name "linux-arm64" -exec rm -rf {} \; ; \

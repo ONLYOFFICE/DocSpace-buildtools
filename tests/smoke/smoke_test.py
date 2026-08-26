@@ -205,7 +205,7 @@ def password_hash():
                                hash_params['iterations'], hash_params['size'] // 8).hex()
 
 def test_settings():
-    """The portal API must respond and identify itself as DocSpace."""
+    """The portal API must respond and identify itself as Apps."""
     step(f"GET {SERVER_URL}/api/2.0/settings")
     deadline = time.time() + 300
     status, body = None, {}
@@ -220,7 +220,7 @@ def test_settings():
         time.sleep(10)
     assert status == 200, f"settings API failed: HTTP {status}"
     state['settings'] = body['response']
-    assert state['settings'].get('docSpace'), 'portal does not identify itself as DocSpace'
+    assert state['settings'].get('docSpace'), 'portal does not identify itself as Apps'
 
     version = state['settings'].get('version') or ''
     expected_version = os.environ.get('EXPECTED_VERSION')
