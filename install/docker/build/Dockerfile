@@ -191,7 +191,7 @@ ENV APP_STORAGE_ROOT=/app/onlyoffice/data/ \
     PATH_TO_CONF=/app/onlyoffice/config
 
 RUN apt-get -y update && \
-    apt-get install --no-install-recommends -yq sudo adduser nano curl libgdiplus iproute2 python3-requests python3-netaddr python3-jsonpath-ng && \
+    apt-get install --no-install-recommends -yq adduser nano curl libgdiplus iproute2 python3-requests python3-netaddr python3-jsonpath-ng && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     mkdir -p /var/log/onlyoffice /app/onlyoffice/data && \
@@ -215,7 +215,7 @@ ENV APP_STORAGE_ROOT=/app/onlyoffice/data/ \
     PATH_TO_CONF=/app/onlyoffice/config
 
 RUN apt-get -y update && \
-    apt-get install --no-install-recommends -yq sudo adduser nano curl iproute2 python3-requests python3-netaddr python3-jsonpath-ng && \
+    apt-get install --no-install-recommends -yq adduser nano curl iproute2 python3-requests python3-netaddr python3-jsonpath-ng && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     mkdir -p /var/log/onlyoffice /app/onlyoffice/data /var/www /run && \
@@ -235,7 +235,7 @@ ENV BUILD_PATH=${BUILD_PATH}
 ENV LOG_DIR=/var/log/onlyoffice
 
 RUN apt-get -y update && \
-    apt-get install --no-install-recommends -yq sudo adduser nano curl && \
+    apt-get install --no-install-recommends -yq adduser nano curl && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     mkdir -p /var/log/onlyoffice /var/www/onlyoffice && \
