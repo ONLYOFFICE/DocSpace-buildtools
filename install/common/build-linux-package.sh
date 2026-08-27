@@ -76,11 +76,13 @@ if [[ "$PACKAGE_TYPE" == "deb" ]]; then
 elif [[ "$PACKAGE_TYPE" == "rpm" ]]; then
   cd install/rpm/SPECS/
 
+  RPM_PACKAGER="Ascensio System SIA <support@onlyoffice.com>"
+
   if ! grep -qF "${PRODUCT_VERSION}" changelog.spec; then
     TMP=$(mktemp)
-    awk -v DATE="$(date '+%a %b %d %Y')" -v VERSION="${PRODUCT_VERSION}" ' /^%changelog$/ {
+    awk -v DATE="$(date '+%a %b %d %Y')" -v VERSION="${PRODUCT_VERSION}" -v RELEASE="${RUN_NUMBER}" -v PACKAGER="${RPM_PACKAGER}" ' /^%changelog$/ {
         print
-        print "* " DATE " %{packager} - %{version}"
+        print "* " DATE " " PACKAGER " - " VERSION "-" RELEASE
         print "  - Upstream has been updated to version "VERSION".\n"
         next
       } { print } ' changelog.spec > ${TMP} && mv ${TMP} changelog.spec
@@ -88,7 +90,7 @@ elif [[ "$PACKAGE_TYPE" == "rpm" ]]; then
 
   mv ./SOURCES/product.rpmlintrc ./SOURCES/${PRODUCT,,}.rpmlintrc
   sed -i -e '/BuildRequires/d' product.spec
-  rpmbuild -D "packager Ascensio System SIA <support@onlyoffice.com>" \
+  rpmbuild -D "packager ${RPM_PACKAGER}" \
            -D "_topdir $(pwd)" \
            -D "version ${PRODUCT_VERSION}" \
            -D "release ${RUN_NUMBER}" \
