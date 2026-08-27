@@ -100,7 +100,7 @@ jobs:
 
       - name: Warn if arm64 was skipped
         if: steps.build.outputs.arch_fallback == 'true'
-        run: echo "::warning::${{ matrix.service }} (${{ matrix.branch }}) was pushed as amd64-only this run — arm64 temporarily unavailable under this tag"`
+        run: echo "::warning::${{ matrix.service }} (${{ matrix.branch }}) was pushed as amd64-only this run — arm64 temporarily unavailable under this tag"
 
   trigger-oci-docker:
     name: OCI (${{ matrix.branch }})
