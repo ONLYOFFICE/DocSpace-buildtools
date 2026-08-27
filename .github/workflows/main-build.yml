@@ -63,7 +63,7 @@ jobs:
         run: |
           PRODUCT_VERSION=$(echo "${{ matrix.branch }}" | sed '/^release\b\|^hotfix\b\|^feature\b\|^bugfix\b/s/release.*\/\|hotfix.*\/\|feature.*\/\|bugfix.*\///; s/-git-action$//; s/^v//')
           [ "${PRODUCT_VERSION}" = "develop" ] && PRODUCT_VERSION="develop"
-          echo "DOCKER_TAG=${PRODUCT_VERSION}.${{ github.run_number }}.test" >> $GITHUB_ENV
+          echo "DOCKER_TAG=${PRODUCT_VERSION}.${{ github.run_number }}" >> $GITHUB_ENV
           echo "PRODUCT_VERSION=${PRODUCT_VERSION}" >> $GITHUB_ENV
         shell: bash
 
@@ -86,7 +86,7 @@ jobs:
           }
 
           echo "Attempting multi-arch build (linux/amd64,linux/arm64)"
-          if build_bake "linux/amd64,linux/riscv64"; then
+          if build_bake "linux/amd64,linux/arm64"; then
             echo "Multi-arch build succeeded!!!"
             echo "arch_fallback=false" >> "$GITHUB_OUTPUT"
           else
@@ -98,7 +98,7 @@ jobs:
           printf '%.0s=' {1..80}; echo -e "\nDISK SPACE AFTER BUILD $(echo ${{ matrix.service }} | tr '[:lower:]' '[:upper:]')"; df -h; docker system df; printf '%.0s=' {1..80}; echo
           docker buildx prune -a -f; docker system prune -a -f --volumes
 
-      - name: Warn if arm64 was skipped
+      - name: Attention!!! arm64 was skipped
         if: steps.build.outputs.arch_fallback == 'true'
         run: echo "::warning::${{ matrix.service }} (${{ matrix.branch }}) was pushed as amd64-only this run — arm64 temporarily unavailable under this tag"
 
