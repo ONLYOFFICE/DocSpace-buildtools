@@ -48,7 +48,7 @@ cp -a bin "${PUBLISH_DIR}/services/ASC.AI.MCP/service/"
 # Deleting unused files
 rm -rf ${PUBLISH_DIR}/services/{ASC.Socket.IO,ASC.NewAi,ASC.SsoAuth}/.yarn
 rm -f ${PUBLISH_DIR}/services/{ASC.Socket.IO,ASC.NewAi,ASC.SsoAuth}/{.yarnrc.yml,yarn.lock}
-rm -f ${PUBLISH_DIR}/services/ASC.NewAi/onlyoffice-ai-chat-*.tgz
+rm -f ${PUBLISH_DIR}/services/ASC.NewAi/{onlyoffice-ai-chat-*.tgz,.prettierrc.json,.prettierignore,README.md,Dockerfile,Procfile}
 find ${PUBLISH_DIR} -type d -name "runtimes" | \
 while IFS= read -r RUNTIMES_DIR; do \
      find "$RUNTIMES_DIR" -mindepth 1 -maxdepth 1 -type d ! -name "linux-x64" ! -name "linux-arm64" -exec rm -rf {} \; ; \
