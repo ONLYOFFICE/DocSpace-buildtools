@@ -61,7 +61,7 @@ override_dh_auto_build: check_archives
 	grep -q "Attribution-ShareAlike 4.0" ${CURDIR}/debian/copyright || \
 		awk 'NF==0{print " ."} NF>0{print " " $$0}' ${BUILDTOOLS_PATH}/install/common/LICENSE-CC-BY-SA >> ${CURDIR}/debian/copyright
 
-	for i in ${PACKAGE_NAME} $$(ls ${CURDIR}/debian/*.install | grep -oP 'debian/\K.*' | grep -o '^[^.]*'); do \
+	for i in ${PACKAGE_NAME} {{legacy_product}} $$(ls ${CURDIR}/debian/*.install | grep -oP 'debian/\K.*' | grep -o '^[^.]*'); do \
 		cp ${CURDIR}/debian/source/lintian-overrides ${CURDIR}/debian/$$i.lintian-overrides; \
 	done
 

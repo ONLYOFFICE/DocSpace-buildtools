@@ -343,7 +343,8 @@ Replaces: {{legacy_product}}-telegram
 Breaks: {{legacy_product}}-telegram (<< {{package_header_tag_version}})
 Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
 Description: {{package_name}}-telegram
-	The service which is used for receiving {{product_name}} notifications via Telegram.
+	The service which is used for receiving {{product_name}}
+	notifications via Telegram.
 
 Package: {{package_name}}-ai
 Architecture: all
@@ -385,5 +386,5 @@ Multi-Arch: foreign
 Section: oldlibs
 Depends: {{package_name}} (= {{package_header_tag_version}}), ${misc:Depends}
 Description: transitional package
-	This is a transitional package left after the rename to {{package_name}}. It can be
-	safely removed once it no longer has any reverse dependencies.
+	This is a transitional package left after the rename to {{package_name}}.
+	It can be safely removed once it no longer has any reverse dependencies.
