@@ -63,27 +63,44 @@ jobs:
         run: |
           PRODUCT_VERSION=$(echo "${{ matrix.branch }}" | sed '/^release\b\|^hotfix\b\|^feature\b\|^bugfix\b/s/release.*\/\|hotfix.*\/\|feature.*\/\|bugfix.*\///; s/-git-action$//; s/^v//')
           [ "${PRODUCT_VERSION}" = "develop" ] && PRODUCT_VERSION="develop"
-          echo "DOCKER_TAG=${PRODUCT_VERSION}.${{ github.run_number }}" >> $GITHUB_ENV
+          echo "DOCKER_TAG=${PRODUCT_VERSION}.${{ github.run_number }}.test" >> $GITHUB_ENV
           echo "PRODUCT_VERSION=${PRODUCT_VERSION}" >> $GITHUB_ENV
         shell: bash
 
       - name: Build ${{ matrix.service }}
-        timeout-minutes: 90
+        id: build
+        timeout-minutes: 150
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           cd .${DOCKER_PATH}
-          docker buildx bake -f build/build.hcl ${{ matrix.service }}-services \
-            --set "*.args.GIT_BRANCH=${{ matrix.branch }}" \
-            --set "*.args.PRODUCT_VERSION=${{ env.PRODUCT_VERSION }}" \
-            --set "*.args.BUILD_NUMBER=${{ github.run_number }}" \
-            --set "*.platform=linux/amd64,linux/arm64" \
-            --set "*.secrets=id=github_token,env=GITHUB_TOKEN" \
-            --sbom=true --provenance=mode=max --push
-          
-          # Clean up disk space after build
+
+          build_bake() {
+            docker buildx bake -f build/build.hcl ${{ matrix.service }}-services \
+              --set "*.args.GIT_BRANCH=${{ matrix.branch }}" \
+              --set "*.args.PRODUCT_VERSION=${{ env.PRODUCT_VERSION }}" \
+              --set "*.args.BUILD_NUMBER=${{ github.run_number }}" \
+              --set "*.platform=$1" \
+              --set "*.secrets=id=github_token,env=GITHUB_TOKEN" \
+              --sbom=true --provenance=mode=max --push
+          }
+
+          echo "Attempting multi-arch build (linux/amd64,linux/arm64)"
+          if build_bake "linux/amd64,linux/riscv64"; then
+            echo "Multi-arch build succeeded!!!"
+            echo "arch_fallback=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Multi-arch build failed for ${{ matrix.service }} (${{ matrix.branch }}) — falling back to linux/amd64 only. This tag will NOT include ::arm64::"
+            build_bake "linux/amd64"
+            echo "arch_fallback=true" >> "$GITHUB_OUTPUT"
+          fi
+
           printf '%.0s=' {1..80}; echo -e "\nDISK SPACE AFTER BUILD $(echo ${{ matrix.service }} | tr '[:lower:]' '[:upper:]')"; df -h; docker system df; printf '%.0s=' {1..80}; echo
           docker buildx prune -a -f; docker system prune -a -f --volumes
+
+      - name: Warn if arm64 was skipped
+        if: steps.build.outputs.arch_fallback == 'true'
+        run: echo "::warning::${{ matrix.service }} (${{ matrix.branch }}) was pushed as amd64-only this run — arm64 temporarily unavailable under this tag"`
 
   trigger-oci-docker:
     name: OCI (${{ matrix.branch }})
