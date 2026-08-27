@@ -1,97 +1,97 @@
 Template: {{package_name}}/host
 Type: string
-Description: Apps host address:
+_Description: Apps host address:
 
 Template: {{package_name}}/port
 Type: string
-Description: Apps port number:
+_Description: Apps port number:
 
 Template: {{package_name}}/db-host
 Type: string
-Description: Database host address:
+_Description: Database host address:
 
 Template: {{package_name}}/db-port
 Type: string
-Description: Database port number:
+_Description: Database port number:
 
 Template: {{package_name}}/db-user
 Type: string
-Description: Database username:
+_Description: Database username:
 
 Template: {{package_name}}/db-pwd
 Type: password
-Description: Database user password:
+_Description: Database user password:
 
 Template: {{package_name}}/db-name
 Type: string
-Description: Database name:
+_Description: Database name:
 
 Template: {{package_name}}/ds-url
 Type: string
-Description: External Docs server URL (e.g., http://docs.example.com:8083):
+_Description: External Docs server URL (e.g., http://docs.example.com:8083):
 
 Template: {{package_name}}/elasticsearch-scheme
 Type: select
-Choices: http, https
-Description: OpenSearch protocol:
+_Choices: http, https
+_Description: OpenSearch protocol:
 
 Template: {{package_name}}/elasticsearch-host
 Type: string
-Description: OpenSearch host address:
+_Description: OpenSearch host address:
 
 Template: {{package_name}}/elasticsearch-port
 Type: string
-Description: OpenSearch port number:
+_Description: OpenSearch port number:
 
 Template: {{package_name}}/redis-host
 Type: string
-Description: Redis host address:
+_Description: Redis host address:
 
 Template: {{package_name}}/redis-port
 Type: string
-Description: Redis port number:
+_Description: Redis port number:
 
 Template: {{package_name}}/redis-username
 Type: string
-Description: Redis username (optional):
+_Description: Redis username (optional):
 
 Template: {{package_name}}/redis-password
 Type: password
-Description: Redis password (optional):
+_Description: Redis password (optional):
 
 Template: {{package_name}}/redis-db
 Type: string
-Description: Redis database index:
+_Description: Redis database index:
 
 Template: {{package_name}}/rabbitmq-protocol
 Type: select
-Choices: amqp, amqps
-Description: RabbitMQ protocol:
+_Choices: amqp, amqps
+_Description: RabbitMQ protocol:
 
 Template: {{package_name}}/rabbitmq-host
 Type: string
-Description: RabbitMQ host address:
+_Description: RabbitMQ host address:
 
 Template: {{package_name}}/rabbitmq-port
 Type: string
-Description: RabbitMQ port number:
+_Description: RabbitMQ port number:
 
 Template: {{package_name}}/rabbitmq-user
 Type: string
-Description: RabbitMQ username:
+_Description: RabbitMQ username:
 
 Template: {{package_name}}/rabbitmq-password
 Type: string
-Description: RabbitMQ user password:
+_Description: RabbitMQ user password:
 
 Template: {{package_name}}/machinekey
 Type: string
-Description: Machine key for encryption:
+_Description: Machine key for encryption:
 
 Template: {{package_name}}/jwt-header
 Type: string
-Description: JWT header name:
+_Description: JWT header name:
 
 Template: {{package_name}}/jwt-secret
 Type: string
-Description: JWT secret key:
+_Description: JWT secret key:

@@ -1,69 +1,63 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the {{package_name}} package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
-#
-#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: {{package_name}}\n"
 "Report-Msgid-Bugs-To: support@onlyoffice.com\n"
 "POT-Creation-Date: 2026-08-27 00:49+0000\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: \n"
+"PO-Revision-Date: 2026-08-27 00:00+0300\n"
+"Last-Translator: Ascensio System SIA <support@onlyoffice.com>\n"
+"Language-Team: Ascensio System SIA <support@onlyoffice.com>\n"
+"Language: de\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
 #. Type: string
 #. Description
 #: ../{{package_name}}.templates:1002
 msgid "Apps host address:"
-msgstr ""
+msgstr "Apps-Hostadresse:"
 
 #. Type: string
 #. Description
 #: ../{{package_name}}.templates:2002
 msgid "Apps port number:"
-msgstr ""
+msgstr "Apps-Portnummer:"
 
 #. Type: string
 #. Description
 #: ../{{package_name}}.templates:3002
 msgid "Database host address:"
-msgstr ""
+msgstr "Hostadresse der Datenbank:"
 
 #. Type: string
 #. Description
 #: ../{{package_name}}.templates:4002
 msgid "Database port number:"
-msgstr ""
+msgstr "Portnummer der Datenbank:"
 
 #. Type: string
 #. Description
 #: ../{{package_name}}.templates:5002
 msgid "Database username:"
-msgstr ""
+msgstr "Benutzername der Datenbank:"
 
 #. Type: password
 #. Description
 #: ../{{package_name}}.templates:6002
 msgid "Database user password:"
-msgstr ""
+msgstr "Passwort des Datenbankbenutzers:"
 
 #. Type: string
 #. Description
 #: ../{{package_name}}.templates:7002
 msgid "Database name:"
-msgstr ""
+msgstr "Datenbankname:"
 
 #. Type: string
 #. Description
 #: ../{{package_name}}.templates:8002
 msgid "External Docs server URL (e.g., http://docs.example.com:8083):"
-msgstr ""
+msgstr "URL des externen Docs-Servers (z. B. http://docs.example.com:8083):"
 
 #. Type: select
 #. Choices
@@ -75,49 +69,49 @@ msgstr ""
 #. Description
 #: ../{{package_name}}.templates:9003
 msgid "OpenSearch protocol:"
-msgstr ""
+msgstr "OpenSearch-Protokoll:"
 
 #. Type: string
 #. Description
 #: ../{{package_name}}.templates:10002
 msgid "OpenSearch host address:"
-msgstr ""
+msgstr "OpenSearch-Hostadresse:"
 
 #. Type: string
 #. Description
 #: ../{{package_name}}.templates:11002
 msgid "OpenSearch port number:"
-msgstr ""
+msgstr "OpenSearch-Portnummer:"
 
 #. Type: string
 #. Description
 #: ../{{package_name}}.templates:12002
 msgid "Redis host address:"
-msgstr ""
+msgstr "Redis-Hostadresse:"
 
 #. Type: string
 #. Description
 #: ../{{package_name}}.templates:13002
 msgid "Redis port number:"
-msgstr ""
+msgstr "Redis-Portnummer:"
 
 #. Type: string
 #. Description
 #: ../{{package_name}}.templates:14002
 msgid "Redis username (optional):"
-msgstr ""
+msgstr "Redis-Benutzername (optional):"
 
 #. Type: password
 #. Description
 #: ../{{package_name}}.templates:15002
 msgid "Redis password (optional):"
-msgstr ""
+msgstr "Redis-Passwort (optional):"
 
 #. Type: string
 #. Description
 #: ../{{package_name}}.templates:16002
 msgid "Redis database index:"
-msgstr ""
+msgstr "Redis-Datenbankindex:"
 
 #. Type: select
 #. Choices
@@ -129,46 +123,46 @@ msgstr ""
 #. Description
 #: ../{{package_name}}.templates:17003
 msgid "RabbitMQ protocol:"
-msgstr ""
+msgstr "RabbitMQ-Protokoll:"
 
 #. Type: string
 #. Description
 #: ../{{package_name}}.templates:18002
 msgid "RabbitMQ host address:"
-msgstr ""
+msgstr "RabbitMQ-Hostadresse:"
 
 #. Type: string
 #. Description
 #: ../{{package_name}}.templates:19002
 msgid "RabbitMQ port number:"
-msgstr ""
+msgstr "RabbitMQ-Portnummer:"
 
 #. Type: string
 #. Description
 #: ../{{package_name}}.templates:20002
 msgid "RabbitMQ username:"
-msgstr ""
+msgstr "RabbitMQ-Benutzername:"
 
 #. Type: string
 #. Description
 #: ../{{package_name}}.templates:21002
 msgid "RabbitMQ user password:"
-msgstr ""
+msgstr "Passwort des RabbitMQ-Benutzers:"
 
 #. Type: string
 #. Description
 #: ../{{package_name}}.templates:22002
 msgid "Machine key for encryption:"
-msgstr ""
+msgstr "Machine Key für die Verschlüsselung:"
 
 #. Type: string
 #. Description
 #: ../{{package_name}}.templates:23002
 msgid "JWT header name:"
-msgstr ""
+msgstr "JWT-Headername:"
 
 #. Type: string
 #. Description
 #: ../{{package_name}}.templates:24002
 msgid "JWT secret key:"
-msgstr ""
+msgstr "JWT-Geheimschlüssel:"
