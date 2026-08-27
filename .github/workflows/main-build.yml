@@ -85,18 +85,21 @@ jobs:
               --sbom=true --provenance=mode=max --push
           }
 
-          echo "Attempting multi-arch build (linux/amd64,linux/arm64)"
-          if build_bake "linux/amd64,linux/arm64"; then
-            echo "Multi-arch build succeeded!!!"
-            echo "arch_fallback=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "::warning::Multi-arch build failed for ${{ matrix.service }} (${{ matrix.branch }}) — falling back to linux/amd64 only. This tag will NOT include ::arm64::"
-            build_bake "linux/amd64"
-            echo "arch_fallback=true" >> "$GITHUB_OUTPUT"
-          fi
+          log=$(build_bake "linux/amd64,linux/arm64" 2>&1) && { echo "$log"; echo "arch_fallback=false" >> "$GITHUB_OUTPUT"; } || {
+            echo "$log"
+            if echo "$log" | grep -qiE 'arm64|no match for platform|multiple platforms feature'; then
+              echo "::warning::Multi-arch build failed for ${{ matrix.service }} (${{ matrix.branch }}) — falling back to linux/amd64 only."
+              build_bake "linux/amd64" || FALLBACK_FAILED=1
+              echo "arch_fallback=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "::error::Build failed for a reason unrelated to arm64 availability"
+              exit 1
+            fi
+          }
 
           printf '%.0s=' {1..80}; echo -e "\nDISK SPACE AFTER BUILD $(echo ${{ matrix.service }} | tr '[:lower:]' '[:upper:]')"; df -h; docker system df; printf '%.0s=' {1..80}; echo
           docker buildx prune -a -f; docker system prune -a -f --volumes
+          [ "${FALLBACK_FAILED:-0}" = 1 ] && exit 1
 
       - name: Attention!!! arm64 was skipped
         if: steps.build.outputs.arch_fallback == 'true'
