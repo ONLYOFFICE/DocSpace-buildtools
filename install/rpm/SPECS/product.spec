@@ -106,8 +106,6 @@ cp -rf %{SOURCE0} .
 
 %include files.spec
 
-%pre
-
 %pre common
 
 if [ "$1" -eq 2 ]; then
@@ -139,8 +137,6 @@ PROXY_CONF="/etc/openresty/conf.d/onlyoffice-proxy.conf"
 if [ -f ${PROXY_CONF} ]; then
     cp -rf ${PROXY_CONF} ${PROXY_CONF}.save
 fi
-
-%post 
 
 %posttrans
 

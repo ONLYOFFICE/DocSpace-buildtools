@@ -310,7 +310,8 @@ Requires:       aspnetcore-runtime-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    telegram
-The service which is used for receiving %{product_name} notifications via Telegram.
+The service which is used for receiving %{product_name}
+notifications via Telegram.
 
 %package        ai
 Provides:       %{legacy_product}-ai = %{version}-%{release}
