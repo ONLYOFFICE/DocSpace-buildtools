@@ -99,7 +99,6 @@ sed -E 's_(http://)[^:]+(:5601)_\1localhost\2_g' -i ${BUILDTOOLS_PATH}/config/ng
 sed -e 's/\$router_host/127.0.0.1/g' \
     -e 's/this_host/http_host/g' \
     -e 's_includes_/etc/openresty/includes_g' \
-    -e '/quic\|alt-svc/Id' \
     -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/proxy/onlyoffice-proxy*.conf
 sed -e '/.pid/d' \
     -e '/temp_path/d' \
