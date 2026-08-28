@@ -41,6 +41,7 @@ PRODUCT="apps"
 PRODUCT_NAME="${PACKAGE_SYSNAME^^} Apps"
 HELP_TARGET="install-Docker.sh"
 OFFLINE_IMAGE_LOAD="false"
+INSTALLATION_TYPE="enterprise"
 
 while [ "$1" != "" ]; do
     case "$1" in
