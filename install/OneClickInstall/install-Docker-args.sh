@@ -260,6 +260,7 @@ fi
 
 if [ -n "$CONFIG_OVERRIDE" ]; then
     [[ "$CONFIG_OVERRIDE" != /* ]] && CONFIG_OVERRIDE="$PWD/${CONFIG_OVERRIDE#./}"
+    CONFIG_OVERRIDE_NORMALIZED="$(realpath -m "$CONFIG_OVERRIDE" 2>/dev/null)" && CONFIG_OVERRIDE="$CONFIG_OVERRIDE_NORMALIZED"
     [[ "$CONFIG_OVERRIDE" == "$BASE_DIR"* ]] && { echo "Warning: Please change the config override path, as $BASE_DIR will be removed during an update."; exit 1; }
 fi
 
