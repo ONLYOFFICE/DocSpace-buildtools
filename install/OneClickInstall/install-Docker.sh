@@ -737,7 +737,7 @@ chown_app_volumes () {
 setup_custom_config () {
 	[ -n "${CONFIG_OVERRIDE}" ] || return 0
 	[ -d "${CONFIG_OVERRIDE}" ] && CONFIG_OVERRIDE="${CONFIG_OVERRIDE%/}/appsettings.${INSTALLATION_TYPE}.json"
-	mkdir -p "$(dirname "${CONFIG_OVERRIDE}")"
+	mkdir -p "$(dirname "${CONFIG_OVERRIDE}")" || { echo "Error: Failed to create the config override directory: $(dirname "${CONFIG_OVERRIDE}")" >&2; exit 1; }
 	if [ ! -f "${CONFIG_OVERRIDE}" ]; then
 		if [ "${INSTALLATION_TYPE}" = "community" ]; then
 			echo '{}' > "${CONFIG_OVERRIDE}"

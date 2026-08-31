@@ -259,7 +259,7 @@ if [ -n "$VOLUMES_DIR" ]; then
 fi
 
 if [ -n "$CONFIG_OVERRIDE" ]; then
-    [[ "$CONFIG_OVERRIDE" != /* ]] && CONFIG_OVERRIDE="$(cd "$(dirname "$CONFIG_OVERRIDE")" && pwd)/$(basename "$CONFIG_OVERRIDE")"
+    [[ "$CONFIG_OVERRIDE" != /* ]] && CONFIG_OVERRIDE="$PWD/${CONFIG_OVERRIDE#./}"
     [[ "$CONFIG_OVERRIDE" == "$BASE_DIR"* ]] && { echo "Warning: Please change the config override path, as $BASE_DIR will be removed during an update."; exit 1; }
 fi
 
