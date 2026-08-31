@@ -2,7 +2,7 @@
 set -e
 
 # (DS v3.1.0) fix encryption key generation issue
-ENCRYPTION_PATH="/etc/onlyoffice/{{product}}/.private/encryption"
+ENCRYPTION_PATH="/etc/{{package_sysname}}/{{product}}/.private/encryption"
 if [ "$1" = "upgrade" ] && [ ! -f "${ENCRYPTION_PATH}" ]; then
     echo secret > "${ENCRYPTION_PATH}" && chmod 600 "${ENCRYPTION_PATH}"
 fi

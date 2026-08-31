@@ -20,7 +20,7 @@
             "ConnectionStrings": {
                 "default": {
                     "name": "default",
-                    "connectionString": "Server=localhost;Database=docspace;User ID=dev;Password=dev;Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;AllowPublicKeyRetrieval=True;ConnectionReset=false",
+                    "connectionString": "Server=localhost;Database=onlyoffice_apps;User ID=dev;Password=dev;Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;AllowPublicKeyRetrieval=True;ConnectionReset=false",
                     "providerName": "MySql.Data.MySqlClient"
                 }
             }
@@ -29,7 +29,7 @@
             "ConnectionStrings": {
                 "default": {
                     "name": "default",
-                    "connectionString": "Server=localhost;Database=docspace;User ID=dev;Password=dev;Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;AllowPublicKeyRetrieval=True;ConnectionReset=false",
+                    "connectionString": "Server=localhost;Database=onlyoffice_apps;User ID=dev;Password=dev;Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;AllowPublicKeyRetrieval=True;ConnectionReset=false",
                     "providerName": "MySql.Data.MySqlClient"
                 }
             }

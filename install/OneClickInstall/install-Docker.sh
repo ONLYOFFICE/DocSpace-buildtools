@@ -36,8 +36,9 @@
  #
 
 PACKAGE_SYSNAME="onlyoffice"
-PRODUCT_NAME="DocSpace"
-PRODUCT=$(tr '[:upper:]' '[:lower:]' <<< ${PRODUCT_NAME})
+PRODUCT="apps"
+LEGACY_PRODUCT="docspace"
+PRODUCT_NAME="${PACKAGE_SYSNAME^^} Apps"
 BASE_DIR="/app/$PACKAGE_SYSNAME"
 STATUS=""
 DOCKER_TAG=""
@@ -107,7 +108,6 @@ LETS_ENCRYPT_MAIL=""
 IDENTITY_ENCRYPTION_SECRET=""
 
 DEPLOYMENT_MODE=""
-OFFLINE_INSTALLATION="false"
 NON_INTERACTIVE="false"
 SKIP_HARDWARE_CHECK="false"
 CONFIG_OVERRIDE=${CONFIG_OVERRIDE:-""}
@@ -117,17 +117,20 @@ EXTERNAL_PORT_HTTPS="443"
 ARGS_SCRIPT="install-Docker-args.sh"
 DOWNLOAD_URL_PREFIX="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}"
 GIT_BRANCH=$(echo "$@" | grep -oP '(?<=-gb )\S+' | tail -n 1)
+LOCAL_SCRIPTS=$(echo "$@" | grep -oP '(?<=-ls |--localscripts )\S+' | tail -n 1)
+OFFLINE_INSTALLATION="$(echo "$@" | grep -oP '(?<=-off |--offline )\S+' | tail -n 1)"
+OFFLINE_INSTALLATION="${OFFLINE_INSTALLATION:-false}"
 
 if [[ -n "${GIT_BRANCH:-}" ]]; then
-  DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${PACKAGE_SYSNAME^^}/${PRODUCT}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
+  DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${PACKAGE_SYSNAME^^}/${LEGACY_PRODUCT}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
 fi
 
-[[ "$LOCAL_SCRIPTS" = "true" ]] || [[ "$OFFLINE_INSTALLATION" = "true" ]] && source "./${ARGS_SCRIPT}" || source <(curl "${DOWNLOAD_URL_PREFIX}/${ARGS_SCRIPT}")
+if [[ "$LOCAL_SCRIPTS" = "true" ]] || [[ "$OFFLINE_INSTALLATION" = "true" ]]; then source "./${ARGS_SCRIPT}"; else source <(curl "${DOWNLOAD_URL_PREFIX}/${ARGS_SCRIPT}"); fi
 
 select_deployment_mode () {
   case "${DEPLOYMENT_MODE}" in
     community)
-      CONTAINER_NAME="${PACKAGE_SYSNAME}-docspace"
+      CONTAINER_NAME="${PACKAGE_SYSNAME}-${PRODUCT}"
       IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}"
       SERVICES=("${PRODUCT}")
       COMPOSE_FILES=(-f "${BASE_DIR}/docker-compose.yml")
@@ -155,7 +158,7 @@ select_deployment_mode () {
 detect_current_deployment_mode () {
 	is_command_exists docker || return 0
 
-	if [ -n "$(docker ps -a -q -f "name=^${PACKAGE_SYSNAME}-docspace$")" ]; then
+	if [ -n "$(docker ps -a -q -f "name=^${PACKAGE_SYSNAME}-${PRODUCT}$")" ]; then
 		CURRENT_DEPLOYMENT_MODE="community"
 	elif [ -n "$(docker ps -a -q -f "name=^${PACKAGE_SYSNAME}-dotnet-services$")" ]; then
 		CURRENT_DEPLOYMENT_MODE="stack"
@@ -598,7 +601,7 @@ set_mysql_params () {
 	MYSQL_PORT="${MYSQL_PORT:-$(get_env_parameter "MYSQL_PORT" "${CONTAINER_NAME}")}"
 }
 
-set_docspace_params() {
+set_apps_params() {
 	REGISTRY=${REGISTRY:-$(get_env_parameter "REGISTRY")}
 
 	ENV_EXTENSION=${ENV_EXTENSION:-$(get_env_parameter "ENV_EXTENSION" "${CONTAINER_NAME}")}
@@ -663,7 +666,7 @@ download_files () {
 		if [ -z "${GIT_BRANCH}" ]; then
 			DOWNLOAD_URL="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/${DOCKER_TARBALL}"
 		else
-			DOWNLOAD_URL="https://codeload.github.com/${PACKAGE_SYSNAME}/${PRODUCT}-buildtools/tar.gz/${GIT_BRANCH}"
+			DOWNLOAD_URL="https://codeload.github.com/${PACKAGE_SYSNAME}/${LEGACY_PRODUCT}-buildtools/tar.gz/${GIT_BRANCH}"
 			if [ "${DEPLOYMENT_MODE}" = "community" ]; then
 				STRIP_COMPONENTS="--strip-components=4 --wildcards */install/docker/community/*"
 			else
@@ -714,10 +717,18 @@ chown_app_volumes () {
 		mkdir -p "${VOLUMES_DIR}/app_data" "${VOLUMES_DIR}/log_data"
 		chown -R "${VOLUME_OWNER}" "${VOLUMES_DIR}/app_data" "${VOLUMES_DIR}/log_data"
 	else
-		# only app_data/log_data of this Compose project — never touch other stacks on the host
 		local PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$PACKAGE_SYSNAME}"
 		local PROJECT_FILTER=(--filter "label=com.docker.compose.project=${PROJECT_NAME}" --filter name=app_data --filter name=log_data)
-		for VOLUME_NAME in $(docker volume ls -q "${PROJECT_FILTER[@]}"); do
+		local VOLUME_NAMES
+		mapfile -t VOLUME_NAMES < <(docker volume ls -q "${PROJECT_FILTER[@]}")
+		
+		local DEFAULT_VOLUME_NAME
+		for DEFAULT_VOLUME_NAME in "${PROJECT_NAME}_app_data" "${PROJECT_NAME}_log_data"; do
+			docker volume inspect "${DEFAULT_VOLUME_NAME}" &>/dev/null && VOLUME_NAMES+=("${DEFAULT_VOLUME_NAME}")
+		done
+
+		mapfile -t VOLUME_NAMES < <(printf "%s\n" "${VOLUME_NAMES[@]}" | sort -u)
+		for VOLUME_NAME in "${VOLUME_NAMES[@]}"; do
 			chown -R "${VOLUME_OWNER}" "$(docker volume inspect --format '{{.Mountpoint}}' "${VOLUME_NAME}")"
 		done
 	fi
@@ -839,7 +850,7 @@ install_product () {
 				done
 
 				if [ "${DEPLOYMENT_MODE}" = "stack" ]; then
-					${DOCKER_COMPOSE} -f ${BASE_DIR}/docspace-stack.yml -f ${BASE_DIR}/proxy.yml down
+					${DOCKER_COMPOSE} -f ${BASE_DIR}/apps-stack.yml -f ${BASE_DIR}/proxy.yml down
 					if [ "${ACTUAL_CONTAINER}" = "${PACKAGE_SYSNAME}-api" ]; then
 						docker ps -a --format '{{.ID}} {{.Image}}' | grep ":${LOCAL_CONTAINER_TAG}$" | awk '{print $1}' | xargs -r docker rm -f
 					fi
@@ -866,7 +877,7 @@ install_product () {
 		chown_app_volumes
 
 		if [ "${DEPLOYMENT_MODE}" = "stack" ]; then
-			${DOCKER_COMPOSE} -f "${BASE_DIR}/docspace-stack.yml" up -d
+			${DOCKER_COMPOSE} -f "${BASE_DIR}/apps-stack.yml" up -d
 			${DOCKER_COMPOSE} -f "${BASE_DIR}/proxy.yml" up -d
 		else
 			${DOCKER_COMPOSE} -f "${BASE_DIR}/migration-runner.yml" up -d
@@ -915,8 +926,16 @@ teardown_previous_deployment_mode () {
 	DEPLOYMENT_MODE="${CURRENT_DEPLOYMENT_MODE}"
 	select_deployment_mode
 
+	# (DS v4.0.0) take over an installation made before the rename to ONLYOFFICE Apps
+	local INDEX LEGACY_FILE
+	for INDEX in "${!COMPOSE_FILES[@]}"; do
+		[ "${COMPOSE_FILES[$INDEX]}" = "-f" ] || [ -f "${COMPOSE_FILES[$INDEX]}" ] && continue
+		LEGACY_FILE="${BASE_DIR}/$(basename "${COMPOSE_FILES[$INDEX]}" | sed "s/^${PRODUCT}/${LEGACY_PRODUCT}/")"
+		[ -f "${LEGACY_FILE}" ] && COMPOSE_FILES[INDEX]="${LEGACY_FILE}"
+	done
+
 	if [ "${CURRENT_DEPLOYMENT_MODE}" = "community" ]; then
-		${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" rm -sf onlyoffice-docspace
+		${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" rm -sf "${PACKAGE_SYSNAME}-${PRODUCT}"
 	else
 		${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" down
 	fi
@@ -932,7 +951,7 @@ install_community () {
 			echo "Updating images from tag ${LOCAL_CONTAINER_TAG} to ${DOCKER_TAG}..."
 
 			if [ "$LOCAL_CONTAINER_TAG" != "$DOCKER_TAG" ]; then
-				${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" rm -sf onlyoffice-docspace
+				${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" rm -sf "${PACKAGE_SYSNAME}-${PRODUCT}"
 				docker images --format "{{.Repository}}:{{.Tag}}" | grep ":${LOCAL_CONTAINER_TAG}$" | xargs -r docker rmi
 			fi
 		fi
@@ -1075,7 +1094,7 @@ check_docker_image () {
 		if [ "${DEPLOYMENT_MODE}" = "community" ]; then
 			[ "$INSTALL_PRODUCT" == "true" ] && offline_check_docker_image "${BASE_DIR}/docker-compose.yml"
 		else
-			[ "$INSTALL_RABBITMQ" == "true" ]           && offline_check_docker_image ${BASE_DIR}/db.yml
+			[ "$INSTALL_MYSQL_SERVER" == "true" ]       && offline_check_docker_image ${BASE_DIR}/db.yml
 			[ "$INSTALL_RABBITMQ" == "true" ]           && offline_check_docker_image ${BASE_DIR}/rabbitmq.yml
 			[ "$INSTALL_REDIS" == "true" ]              && offline_check_docker_image ${BASE_DIR}/redis.yml
 			[ "$INSTALL_FLUENT_BIT" == "true" ]         && offline_check_docker_image ${BASE_DIR}/fluent.yml
@@ -1164,7 +1183,7 @@ start_installation () {
 	domain_check
 
 	if [ "$UPDATE" = "true" ]; then
-		set_docspace_params
+		set_apps_params
 	fi
 
 	set_docs_url_external
@@ -1206,7 +1225,7 @@ start_installation () {
 	fi
 
 	echo ""
-	echo "Thank you for installing ${PACKAGE_SYSNAME^^} ${PRODUCT_NAME}."
+	echo "Thank you for installing ${PRODUCT_NAME}."
 	echo "In case you have any questions contact us via http://support.${PACKAGE_SYSNAME}.com or visit our forum at http://community.${PACKAGE_SYSNAME}.com"
 	echo ""
 

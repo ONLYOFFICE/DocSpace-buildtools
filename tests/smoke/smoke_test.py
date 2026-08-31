@@ -13,6 +13,8 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import WebDriverException
 
 SERVER_URL = os.environ.get('SERVER_URL', 'http://localhost').rstrip('/')
@@ -20,6 +22,7 @@ PORTAL_EMAIL = os.environ.get('PORTAL_EMAIL', 'smoke@example.com')
 PORTAL_PASSWORD = os.environ.get('PORTAL_PASSWORD', 'Smoke-Test-2026')
 LICENSE_CONTENT = os.environ.get('LICENSE')
 LICENSE_FILE = os.environ.get('LICENSE_FILE')
+AMI_ID = os.environ.get('AMI_ID')
 
 # Values produced by earlier tests and consumed by later ones (tests run in file order)
 state = {}
@@ -32,6 +35,13 @@ LOAD_COMPLETE_JS = ("var api = window.editor || (window.Asc && window.Asc.editor
                     " && !!(sdk && sdk.children.length)"
                     " && (api.isDocumentLoadComplete === undefined"
                     "     || api.isDocumentLoadComplete === true)")
+
+# asc_isDocumentModified is not exported in EE builds — degrade to a no-op there
+NOT_MODIFIED_JS = ("var api = window.editor || (window.Asc && window.Asc.editor);"
+                   " return api && api.asc_isDocumentModified"
+                   " ? !api.asc_isDocumentModified() : true")
+
+TEST_TEXT = "Test text for editor verification"
 
 # ANSI color codes
 GREEN = '\033[92m'
@@ -60,7 +70,7 @@ def _start_progress_block():
     yield
 
 def api(path, method='GET', data=None, headers=None, raw_body=None, timeout=60):
-    """Call the DocSpace REST API; returns (status, parsed json)."""
+    """Call the ONLYOFFICE Apps REST API; returns (status, parsed json)."""
     all_headers = {'Content-Type': 'application/json', **(headers or {})}
     body = raw_body if raw_body is not None else (json.dumps(data).encode() if data else None)
     request = urllib.request.Request(SERVER_URL + '/api/2.0' + path, method=method, headers=all_headers, data=body)
@@ -105,6 +115,62 @@ def multipart_body(field_name, filename, content):
            + content + f'\r\n--{boundary}--\r\n'.encode()
     return body, f'multipart/form-data; boundary={boundary}'
 
+def dismiss_dialogs(driver):
+    """Close modal dialogs that may cover the editor (e.g. notices on first open)."""
+    for _ in range(5):
+        buttons = [b for b in driver.find_elements(By.CSS_SELECTOR, "button.dlg-btn[result='ok']")
+                   if b.is_displayed()]
+        if not buttons:
+            return
+        # dialogs may stack — the last one is on top and intercepts clicks
+        button = buttons[-1]
+        text = driver.execute_script(
+            "var w = arguments[0].closest('.asc-window'); return w ? w.innerText : '';", button)
+        step(f"Dismissing dialog: {' '.join(text.split())[:120]!r}")
+        driver.execute_script("arguments[0].click();", button)
+        time.sleep(1)
+        done('closed')
+
+def dump_page_state(driver):
+    """Print debug info that explains a stuck or missing editor."""
+    print(f"Current URL: {driver.current_url}")
+    try:
+        page_state = driver.execute_script(
+            "var api = window.editor || (window.Asc && window.Asc.editor);"
+            " var sdk = document.getElementById('editor_sdk');"
+            " return {readyState: document.readyState, hasApi: !!api,"
+            " loadComplete: api ? api.isDocumentLoadComplete : null,"
+            " loadmask: !!document.querySelector('.loadmask, .asc-loadmask'),"
+            " sdkChildren: sdk ? sdk.children.length : null,"
+            " iframes: document.getElementsByTagName('iframe').length,"
+            " scripts: [].map.call(document.scripts, function(s){return s.src;}).filter(Boolean).slice(0, 5)}")
+        print(f"Page state: {page_state}")
+    except WebDriverException as script_error:
+        print(f"Could not collect page state: {script_error}")
+    try:
+        print('Browser console (last 30 entries):')
+        for entry in driver.get_log('browser')[-30:]:
+            print(f"  [{entry.get('level')}] {entry.get('message')}")
+    except WebDriverException as log_error:
+        print(f"Could not collect browser console: {log_error}")
+    print('Current page source:')
+    print(driver.page_source[:1000])
+
+def wait_for_js(driver, script, timeout, description):
+    """Poll a JS condition inside the current frame until it returns true."""
+    step(description)
+    start = time.time()
+    while time.time() - start < timeout:
+        try:
+            if driver.execute_script(script):
+                done(f"done in {time.time() - start:.1f}s")
+                return
+        except WebDriverException:
+            pass
+        time.sleep(1)
+    fail(f"timeout after {timeout}s")
+    raise AssertionError(f"Timed out waiting for {description}")
+
 def wait_editor_loaded(driver, web_url):
     """Open an editor page with the auth cookie and wait until the document renders."""
     driver.get(SERVER_URL)
@@ -130,21 +196,7 @@ def wait_editor_loaded(driver, web_url):
                 pass
             time.sleep(1)
         fail(f"not loaded within {editor_timeout}s" + (", reloading" if attempt < attempts else ""))
-    print(driver.execute_script(
-        "var api = window.editor || (window.Asc && window.Asc.editor);"
-        " var sdk = document.getElementById('editor_sdk');"
-        " return {readyState: document.readyState, hasApi: !!api,"
-        " loadComplete: api ? api.isDocumentLoadComplete : null,"
-        " loadmask: !!document.querySelector('.loadmask, .asc-loadmask'),"
-        " sdkChildren: sdk ? sdk.children.length : null,"
-        " iframes: document.getElementsByTagName('iframe').length,"
-        " scripts: [].map.call(document.scripts, function(s){return s.src;}).filter(Boolean).slice(0, 5)}"))
-    try:
-        print('Browser console (last 30 entries):')
-        for entry in driver.get_log('browser')[-30:]:
-            print(f"  [{entry.get('level')}] {entry.get('message')}")
-    except WebDriverException as log_error:
-        print(f"Could not collect browser console: {log_error}")
+    dump_page_state(driver)
     raise AssertionError(f"Editor did not load in {attempts} attempts of {editor_timeout}s")
 
 def password_hash():
@@ -153,7 +205,7 @@ def password_hash():
                                hash_params['iterations'], hash_params['size'] // 8).hex()
 
 def test_settings():
-    """The portal API must respond and identify itself as DocSpace."""
+    """The portal API must respond and identify itself as Apps."""
     step(f"GET {SERVER_URL}/api/2.0/settings")
     deadline = time.time() + 300
     status, body = None, {}
@@ -168,7 +220,7 @@ def test_settings():
         time.sleep(10)
     assert status == 200, f"settings API failed: HTTP {status}"
     state['settings'] = body['response']
-    assert state['settings'].get('docSpace'), 'portal does not identify itself as DocSpace'
+    assert state['settings'].get('docSpace'), 'portal does not identify itself as Apps'
 
     version = state['settings'].get('version') or ''
     expected_version = os.environ.get('EXPECTED_VERSION')
@@ -201,10 +253,11 @@ def test_wizard():
         assert status == 200, f"license upload failed: HTTP {status}, {json.dumps(body)[:200]}"
         done(str(body.get('response')))
 
-    step('Completing wizard')
-    status, body = api('/settings/wizard/complete', 'PUT',
-                       {'email': PORTAL_EMAIL, 'PasswordHash': password_hash(), 'lng': 'en', 'timeZone': 'UTC'},
-                       confirm)
+    step('Completing wizard' + (f" (amiId={AMI_ID})" if AMI_ID else ''))
+    wizard_body = {'email': PORTAL_EMAIL, 'PasswordHash': password_hash(), 'lng': 'en', 'timeZone': 'UTC'}
+    if AMI_ID:
+        wizard_body['amiId'] = AMI_ID
+    status, body = api('/settings/wizard/complete', 'PUT', wizard_body, confirm)
     if status != 200:
         fail(f"HTTP {status}: {json.dumps(body)[:200]}")
     assert status == 200 and body.get('response', {}).get('completed'), \
@@ -243,7 +296,7 @@ def test_people_self():
     done(profile.get('displayName') or profile['email'])
 
 def test_create_room():
-    """A custom room must be created — the core DocSpace collaboration entity."""
+    """A custom room must be created — the core ONLYOFFICE Apps collaboration entity."""
     step('Creating a custom room')
     status, body = api('/files/rooms', 'POST', {'title': 'smoke room', 'roomType': 5}, auth_headers())
     room = body.get('response', {})
@@ -254,7 +307,7 @@ def test_create_room():
 
 def test_upload_download():
     """An uploaded file must come back byte-identical — storage round-trip."""
-    content = b'DocSpace smoke upload check'
+    content = b'ONLYOFFICE Apps smoke upload check'
 
     step('Uploading smoke-upload.txt to My Documents')
     multipart, content_type = multipart_body('file', 'smoke-upload.txt', content)
@@ -274,10 +327,49 @@ def test_upload_download():
     done(f"{len(downloaded)} bytes, content matches")
 
 def test_editor():
-    """The created document must open and render in the editor."""
+    """The created document must open, accept edits, save, and the save must persist."""
     driver = make_driver()
     try:
         wait_editor_loaded(driver, state['file']['webUrl'])
+        dismiss_dialogs(driver)
+
+        step('Typing test text')
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, 'editor_sdk'))).click()
+        ActionChains(driver).send_keys(TEST_TEXT).perform()
+        time.sleep(2)
+        done()
+
+        step('Verifying the text reached the document')
+        ActionChains(driver).key_down(Keys.CONTROL).send_keys('a').key_up(Keys.CONTROL).perform()
+        time.sleep(1)
+        selected = driver.execute_script(
+            "var api = window.editor || (window.Asc && window.Asc.editor);"
+            " return api && api.asc_GetSelectedText ? api.asc_GetSelectedText() : null")
+        if not (selected and TEST_TEXT in selected):
+            fail(f"not found (selection: {selected!r})")
+        assert selected and TEST_TEXT in selected, \
+            f"Typed text not found in the document (selection: {selected!r})"
+        done('found')
+
+        ActionChains(driver).key_down(Keys.CONTROL).send_keys('s').key_up(Keys.CONTROL).perform()
+        wait_for_js(driver, NOT_MODIFIED_JS, 30, 'Saving document (Ctrl+S)')
+
+        step('Downloading the saved file back')
+        status, body = api(f"/files/file/{state['file']['id']}", headers=auth_headers())
+        view_url = body.get('response', {}).get('viewUrl')
+        assert status == 200 and view_url, f"could not fetch file info: HTTP {status}, {json.dumps(body)[:200]}"
+        request = urllib.request.Request(view_url, headers=auth_headers())
+        with urllib.request.urlopen(request, timeout=60) as response:
+            downloaded = response.read()
+        if not downloaded.startswith(b'PK'):
+            fail(f"unexpected signature: {downloaded[:4]!r}")
+        assert downloaded.startswith(b'PK'), f"Downloaded file is not a valid OOXML file (starts with {downloaded[:4]!r})"
+        done(f"{len(downloaded)} bytes")
+    except Exception as error:
+        print(flush=True)
+        fail(f"Test failed: {error}")
+        dump_page_state(driver)
+        raise
     finally:
         driver.quit()
 
@@ -293,5 +385,11 @@ def test_editor_types(extension):
     driver = make_driver()
     try:
         wait_editor_loaded(driver, created['webUrl'])
+        dismiss_dialogs(driver)
+    except Exception as error:
+        print(flush=True)
+        fail(f"{extension} editor failed: {error}")
+        dump_page_state(driver)
+        raise
     finally:
         driver.quit()

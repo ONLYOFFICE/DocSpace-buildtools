@@ -1,6 +1,6 @@
 ## Project Overview
 
-ONLYOFFICE DocSpace Build Tools — build scripts, Docker configurations, installation packages, CI/CD pipelines, and application configuration for [DocSpace-server](../DocSpace-server) and [DocSpace-client](../DocSpace-client).
+ONLYOFFICE Apps Build Tools — build scripts, Docker configurations, installation packages, CI/CD pipelines, and application configuration for [DocSpace-server](../DocSpace-server) and [DocSpace-client](../DocSpace-client).
 
 ## Tech Stack
 
@@ -26,11 +26,11 @@ runMigrations.standalone.bat        # Windows (standalone mode)
 ./start/restart.sh                  # Restart all services
 
 # Docker Compose (from install/docker/)
-docker compose -f docspace.yml -f db.yml -f redis.yml -f rabbitmq.yml up -d
-docker compose -f docspace-stack.yml up -d  # Full stack shortcut
+docker compose -f apps.yml -f db.yml -f redis.yml -f rabbitmq.yml up -d
+docker compose -f apps-stack.yml up -d  # Full stack shortcut
 
 # OneClickInstall
-bash install/OneClickInstall/docspace-install.sh      # Universal installer
+bash install/OneClickInstall/apps-install.sh          # Universal installer
 bash install/OneClickInstall/install-Docker.sh        # Docker only
 bash install/OneClickInstall/install-Debian.sh        # Debian/Ubuntu
 bash install/OneClickInstall/install-RedHat.sh        # RHEL/CentOS
@@ -58,7 +58,7 @@ config/                     — Application configuration (~30 JSON + nginx)
 install/
   docker/                   — Production Compose files (shipped in OCI tarballs)
     build/                  — Build + local-dev assets (NOT shipped to end users):
-      Dockerfile            — Main multi-stage DocSpace image
+      Dockerfile            — Main multi-stage ONLYOFFICE Apps image
       Dockerfile.runtime    — Runtime dependencies
       Dockerfile.ffvideo    — FFmpeg video processing
       build.hcl             — BuildX multi-arch config
@@ -73,14 +73,14 @@ install/
         prepare-nginx-router.sh
       dev/                  — Local-dev-only Compose overlays (build.backend.docker.py):
         db.dev.yml            — MySQL dev overrides (exposed ports)
-        docspace.profiles.yml — Profile-based configs (local dev)
-        docspace.overcome.yml — Local dev overrides
+        apps.profiles.yml     — Profile-based configs (local dev)
+        apps.overcome.yml     — Local dev overrides
         dnsmasq.yml           — DNS for local dev
         build-identity.yml    — ASC.Identity (Java) build
       stack/supervisor/     — Supervisor service configs baked into the image
     community/              — Single-container community edition stack
-    docspace.yml            — All DocSpace app services
-    docspace-stack.yml      — Full stack (app + all dependencies)
+    apps.yml                — All ONLYOFFICE Apps services
+    apps-stack.yml          — Full stack (app + all dependencies)
     db.yml                  — MySQL
     redis.yml               — Redis
     rabbitmq.yml            — RabbitMQ
@@ -118,13 +118,13 @@ Compose is **modular** — compose files are combined with `-f`. The `install/do
 Key compose combinations:
 ```bash
 # Minimal (app only, external deps assumed)
-docker compose -f docspace.yml up -d
+docker compose -f apps.yml up -d
 
 # Full local stack
-docker compose -f docspace-stack.yml up -d
+docker compose -f apps-stack.yml up -d
 
 # With local dev overrides
-docker compose --env-file .env -f docspace.yml -f build/dev/docspace.overcome.yml up -d
+docker compose --env-file .env -f apps.yml -f build/dev/apps.overcome.yml up -d
 ```
 
 ## CI/CD Workflows
@@ -137,8 +137,7 @@ docker compose --env-file .env -f docspace.yml -f build/dev/docspace.overcome.ym
 | `build_packages.yml` | DEB/RPM packages |
 | `config-build.yml` | Config-triggered builds |
 | `cron-build.yml` | Nightly scheduled builds |
-| `windows-build.yml` | Windows installer |
-| `release-docspace.yaml` | Production release |
+| `release-docker.yaml` | Production release |
 | `offline-release.yml` | Offline package build |
 | `oci-release.yml` | Container registry release |
 | `readme-update.yml` | Update OS support list in README |
@@ -150,7 +149,6 @@ docker compose --env-file .env -f docspace.yml -f build/dev/docspace.overcome.ym
 | `ci-oci-docker-install.yml` | OneClickInstall Docker tests |
 | `ci-oci-install.yml` | Linux package install tests |
 | `ci-oci-update.yml` | Update mechanism tests |
-| `zap-scanner.yaml` | OWASP ZAP security scan |
 | `rebuild-boxes.yml` | Rebuild Vagrant boxes for install tests |
 
 ## Key Patterns

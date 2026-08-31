@@ -5,6 +5,8 @@ PACKAGE_TYPE=$1
 BUILD_PATH=$2
 PRODUCT=$3
 VERSION=$4
+PACKAGE_SYSNAME=onlyoffice
+PRODUCT_DIR=/var/www/${PACKAGE_SYSNAME}/${PRODUCT}
 CLIENT_PATH=${BUILD_PATH}/client
 SERVER_PATH=${BUILD_PATH}/server
 BUILDTOOLS_PATH=${BUILD_PATH}/buildtools
@@ -14,13 +16,7 @@ PUBLISH_DIR=${BUILD_PATH}/publish
 export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=4096}"
 echo "== Frontend build =="; FRONTEND_START_TIMER=$(date +%s)
 cd ${CLIENT_PATH}; pnpm install
-if [ -z "${NX_PARALLEL}" ]; then
-  pnpm build
-else
-  NX_PACKAGES=$(node -p "require('./package.json').scripts.build.match(/-p ([^-]+)/)[1].trim()")
-  pnpm nx run-many -t build -p ${NX_PACKAGES} --parallel=${NX_PARALLEL}
-fi
-pnpm run deploy; FRONTEND_END_TIMER=$(date +%s)
+GITHUB_STEP_SUMMARY='' pnpm run deploy; FRONTEND_END_TIMER=$(date +%s)
 echo "::notice::Frontend build completed in $((FRONTEND_END_TIMER - FRONTEND_START_TIMER)) seconds"
 
 # Backend build
@@ -31,6 +27,7 @@ PUBLISH_ARGS='-c Release --self-contained false -p:DebugType=None -p:DebugSymbol
 dotnet publish common/Tools/ASC.Migration.Runner/ASC.Migration.Runner.csproj $PUBLISH_ARGS -o ${PUBLISH_DIR}/services/ASC.Migration.Runner/service/ && \
 dotnet publish ASC.Web.slnx $PUBLISH_ARGS -p:PublishProfile=ReleaseProfile && \
 cd "${SERVER_PATH}/common/ASC.Socket.IO" && yarn install --immutable && mv -f ${SERVER_PATH}/common/ASC.Socket.IO ${PUBLISH_DIR}/services/
+cd "${SERVER_PATH}/common/ASC.NewAi" && yarn install --immutable && mv -f ${SERVER_PATH}/common/ASC.NewAi ${PUBLISH_DIR}/services/
 cd "${SERVER_PATH}/common/ASC.SsoAuth" && yarn install --immutable && mv -f ${SERVER_PATH}/common/ASC.SsoAuth ${PUBLISH_DIR}/services/
 cd "${SERVER_PATH}/common/ASC.Identity" && mkdir -p ${PUBLISH_DIR}/services/{ASC.Identity.Registration,ASC.Identity.Authorization}
 mvn -B dependency:go-offline -Dorg.slf4j.simpleLogger.defaultLogLevel=warn
@@ -49,6 +46,9 @@ mkdir -p "${PUBLISH_DIR}/services/ASC.AI.MCP/service"
 cp -a bin "${PUBLISH_DIR}/services/ASC.AI.MCP/service/"
 
 # Deleting unused files
+rm -rf ${PUBLISH_DIR}/services/{ASC.Socket.IO,ASC.NewAi,ASC.SsoAuth}/.yarn
+rm -f ${PUBLISH_DIR}/services/{ASC.Socket.IO,ASC.NewAi,ASC.SsoAuth}/{.yarnrc.yml,yarn.lock}
+rm -f ${PUBLISH_DIR}/services/ASC.NewAi/{onlyoffice-ai-chat-*.tgz,.prettierrc.json,.prettierignore,README.md,Dockerfile,Procfile}
 find ${PUBLISH_DIR} -type d -name "runtimes" | \
 while IFS= read -r RUNTIMES_DIR; do \
      find "$RUNTIMES_DIR" -mindepth 1 -maxdepth 1 -type d ! -name "linux-x64" ! -name "linux-arm64" -exec rm -rf {} \; ; \
@@ -56,16 +56,16 @@ done
 find ${PUBLISH_DIR} -depth -type f -regex '.*\(eslintrc.*\|npmignore\|gitignore\|gitattributes\|gitmodules\|un~\|DS_Store\)' -exec rm -f {} \;
 find ${BUILDTOOLS_PATH}/config -type f -regex '.*\.\(test\|dev\)\..*' -delete
 rm -f ${BUILDTOOLS_PATH}/config/nginx/onlyoffice-{login,management}.conf
-find ${PUBLISH_DIR}/web ${PUBLISH_DIR}/services/{ASC.SsoAuth,ASC.Socket.IO} -type f \( -name "*.js.map" -o -name "*.css.map" \) -delete
+find ${PUBLISH_DIR}/web ${PUBLISH_DIR}/services/{ASC.SsoAuth,ASC.Socket.IO,ASC.NewAi} -type f \( -name "*.js.map" -o -name "*.css.map" \) -delete
 
 # Renaming files
 find ${BUILDTOOLS_PATH}/install/common -type f -exec rename -f -v "s/product([^\/]*)$/${PRODUCT}\$1/g" {} ';'
 rename -f -v 's/(.*\.(community|enterprise|developer))\.json$/$1.json.template/' ${BUILDTOOLS_PATH}/config/*.json
 
 # Change directories
-if ! grep -q 'var/www/${PRODUCT}' ${BUILDTOOLS_PATH}/config/nginx/*.conf; then find ${BUILDTOOLS_PATH}/config/nginx/ -name "*.conf" -exec sed -i "s@\(var/www/\)@\1${PRODUCT}/@" {} +; fi
-sed -i "s#\$public_root#/var/www/${PRODUCT}/public/#g" ${BUILDTOOLS_PATH}/config/nginx/onlyoffice.conf
-sed "s_\(.*root\).*;_\1 \"/var/www/${PRODUCT}\";_g" -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/proxy/letsencrypt.conf
+if ! grep -q "${PRODUCT_DIR#/}" ${BUILDTOOLS_PATH}/config/nginx/*.conf; then find ${BUILDTOOLS_PATH}/config/nginx/ -name "*.conf" -exec sed -i "s@\(var/www/\)@\1${PACKAGE_SYSNAME}/${PRODUCT}/@" {} +; fi
+sed -i "s#\$public_root#${PRODUCT_DIR}/public/#g" ${BUILDTOOLS_PATH}/config/nginx/onlyoffice.conf
+sed "s_\(.*root\).*;_\1 \"${PRODUCT_DIR}\";_g" -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/proxy/letsencrypt.conf
 sed -i 's_app/onlyoffice/data_var/www/onlyoffice/Data_g' ${BUILDTOOLS_PATH}/config/*.json.template
 
 # Configuring ${PRODUCT} services  
@@ -74,7 +74,7 @@ json -I -f "${BUILDTOOLS_PATH}/config/appsettings.services.json" \
      -e "this.socket={ 'path': '../ASC.Socket.IO/' }" \
      -e "this.ssoauth={ 'path': '../ASC.SsoAuth/' }" \
      -e "this.logLevel=\"warning\"" \
-     -e "this.core={ 'products': { 'folder': '/var/www/${PRODUCT}/products', 'subfolder': 'server'} }"
+     -e "this.core={ 'products': { 'folder': '${PRODUCT_DIR}/products', 'subfolder': 'server'} }"
 json -I -f "${BUILDTOOLS_PATH}/config/appsettings.json" \
      -e "this.core.notify.postman=\"services\"" \
      -e "this['debug-info'].enabled=\"false\"" \
@@ -99,7 +99,6 @@ sed -E 's_(http://)[^:]+(:5601)_\1localhost\2_g' -i ${BUILDTOOLS_PATH}/config/ng
 sed -e 's/\$router_host/127.0.0.1/g' \
     -e 's/this_host/http_host/g' \
     -e 's_includes_/etc/openresty/includes_g' \
-    -e '/quic\|alt-svc/Id' \
     -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/proxy/onlyoffice-proxy*.conf
 sed -e '/.pid/d' \
     -e '/temp_path/d' \

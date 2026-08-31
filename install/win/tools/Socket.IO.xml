@@ -1,7 +1,7 @@
 <service>
-	<id>DocSpace.Socket.IO</id>
-	<name>ONLYOFFICE DocSpace Socket.IO</name>
-	<description>ONLYOFFICE DocSpace Socket.IO</description>
+	<id>Apps.Socket.IO</id>
+	<name>ONLYOFFICE Apps Socket.IO</name>
+	<description>ONLYOFFICE Apps Socket.IO</description>
 	<priority>RealTime</priority>
 	<startmode>Automatic</startmode>
 	<autoRefresh>false</autoRefresh>

@@ -36,7 +36,7 @@ x-service: &x-service-base
     SPRING_PROFILES_ACTIVE: minified,stage
 
 services:
-  onlyoffice-docspace:
+  onlyoffice-apps:
     <<: [*x-service-base]
     restart: always
     volumes:
@@ -60,7 +60,7 @@ services:
         - DEPLOY_ARGS=deploy:preview
       dockerfile: Dockerfile
       target: community
-    container_name: onlyoffice-docspace  
+    container_name: onlyoffice-apps
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}:${DOCKER_TAG}"
   
   onlyoffice-mysql-server:

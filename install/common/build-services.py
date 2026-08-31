@@ -12,7 +12,7 @@ BUILD_PATH = os.path.join(SRC_PATH, "publish")
 print(f"SRC_PATH = {SRC_PATH}")
 print(f"BUILD_PATH = {BUILD_PATH}")
 
-BACKEND_NODEJS_SERVICES = ["ASC.Socket.IO", "ASC.SsoAuth"]
+BACKEND_NODEJS_SERVICES = ["ASC.Socket.IO", "ASC.SsoAuth", "ASC.NewAi"]
 BACKEND_DOTNETCORE_SERVICES = ["ASC.Files", "ASC.People", "ASC.Data.Backup", "ASC.Files.Worker", "ASC.Notify", "ASC.Studio.Notify", "ASC.Web.Api", "ASC.Web.Studio", "ASC.Data.Backup.Worker", "ASC.ClearEvents", "ASC.ApiSystem", "ASC.Web.HealthChecks.UI"]
 
 DOCKER_ENTRYPOINT="docker-entrypoint.py"

@@ -11,10 +11,10 @@
     <ROW Property="ARPNOREPAIR" MultiBuildValue="DefaultBuild:1"/>
     <ROW Property="Manufacturer" Value="Ascensio System SIA"/>
     <ROW Property="PACKAGE_NAME" Value="[|ProductName]-[|ProductVersion]"/>
-    <ROW Property="ProductCode" Value="1033:{6F938414-BBEF-4D4E-A1C1-DDB92F971590} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{53999028-11C6-42D5-BEF3-380B42DB0782} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="OpenSearch"/>
-    <ROW Property="ProductVersion" Value="2.18.1" Options="32"/>
+    <ROW Property="ProductVersion" Value="3.5.0" Options="32"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND;AI_SETUPEXEPATH;SETUPEXEDIR"/>
     <ROW Property="ServiceName_OpenSearch" Value="OpenSearch"/>
     <ROW Property="UpgradeCode" Value="{F8561DF7-6238-4927-8DAC-AD0EBC117F6C}"/>

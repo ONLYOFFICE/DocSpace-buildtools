@@ -7,10 +7,10 @@
     <ROW Property="MSIFASTINSTALL" MultiBuildValue="DefaultBuild:3"/>
     <ROW Property="Manufacturer" Value="Ascensio System SIA"/>
     <ROW Property="MsiLogging" MultiBuildValue="DefaultBuild:vp"/>
-    <ROW Property="ProductCode" Value="1033:{9FDBF15A-6E59-436E-A09F-2AC5DFE97471} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{DCFB89DB-D6BE-4221-836B-1E22F0A55DCE} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="OpenSearchStack"/>
-    <ROW Property="ProductVersion" Value="1.5.0" Options="32"/>
+    <ROW Property="ProductVersion" Value="2.0.0" Options="32"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND"/>
     <ROW Property="UpgradeCode" Value="{93CD82F0-18A5-4803-AC50-9A0021E92A56}"/>
     <ROW Property="WindowsType9X" MultiBuildValue="DefaultBuild:Windows 9x/ME" ValueLocId="-"/>
@@ -57,7 +57,7 @@
     <ROW SignOptions="0" SignTool="0" UseSha256="1" Store="User\MY" CustomToolPath="C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" CustomToolCmdLine="-ExecutionPolicy Bypass -File &quot;[|AI_AIP_FOLDER]signing-tool.ps1&quot; -File"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.ExpandArchiveComponent">
-    <ROW ExpandArchive="ExpandArchive" DestFolder="APPDIR" SourcePath="[APPDIR]opensearch-dashboards-2.18.0-windows-x64.zip" Flags="57"/>
+    <ROW ExpandArchive="ExpandArchive" DestFolder="APPDIR" SourcePath="[APPDIR]opensearch-dashboards-3.5.0-windows-x64.zip" Flags="57"/>
     <ROW ExpandArchive="ExpandArchive_1" DestFolder="APPDIR" SourcePath="[APPDIR]fluent-bit-3.2.4-win64.zip" Flags="57"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.FragmentComponent">

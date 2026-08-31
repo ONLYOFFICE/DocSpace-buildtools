@@ -6,7 +6,7 @@ x-common-environment: &x-common-environment
   JDBC_PASSWORD: my-secret-pw
   JDBC_URL: onlyoffice-mysql-server
   JDBC_USER_NAME: root
-  JDBC_DATABASE: docspace
+  JDBC_DATABASE: onlyoffice_apps
   REDIS_HOST: onlyoffice-redis
   RABBIT_URI: amqp://guest:guest@onlyoffice-rabbitmq
 

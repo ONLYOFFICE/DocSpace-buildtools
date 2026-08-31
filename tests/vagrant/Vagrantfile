@@ -14,14 +14,14 @@ Vagrant.configure("2") do |config|
 
     config.vm.hostname = "host4test"
 
-    # Expose DocSpace to the host so smoke tests can reach it
+    # Expose ONLYOFFICE Apps to the host so smoke tests can reach it
     config.vm.network "forwarded_port", guest: 80, host: 8080, host_ip: "127.0.0.1"
 
     if ENV['DOWNLOAD_SCRIPT'] == '-ds false'
-       config.vm.provision "file", source: "../../../DocSpace-buildtools/install/OneClickInstall/.", destination: "/tmp/docspace/"
+       config.vm.provision "file", source: "../../../DocSpace-buildtools/install/OneClickInstall/.", destination: "/tmp/apps/"
     end
 
-    config.vm.provision "file", source: "../../../DocSpace-buildtools/install/common/systemd/build.sh", destination: "/tmp/docspace/build.sh"
+    config.vm.provision "file", source: "../../../DocSpace-buildtools/install/common/systemd/build.sh", destination: "/tmp/apps/build.sh"
     config.vm.provision "shell", path: './install.sh', :args => "#{ENV['DOWNLOAD_SCRIPT']} #{ENV['TEST_REPO']} #{ENV['ARGUMENTS']}"
 
     # Enable synced folder for log collection

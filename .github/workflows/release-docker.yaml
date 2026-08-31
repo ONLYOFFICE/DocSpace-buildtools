@@ -31,7 +31,7 @@ on:
 
 jobs:
   docker-release:
-    name: "Release Docker DocSpace"
+    name: "Release Docker"
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v5
@@ -44,19 +44,19 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: "Release Docker-DocSpace"
+    - name: "Release Docker images"
       shell: bash
       env:
         REPO: ${{ github.event.inputs.repo }}
         DOCKER_TAG: ${{ github.event.inputs.source_version }}
         RELEASE_VERSION: ${{ github.event.inputs.release_version }}
-        DOCKER_IMAGE_PREFIX: "4testing-docspace"
+        DOCKER_IMAGE_PREFIX: "4testing-apps"
         DOCKER_USERNAME_PAT: ${{ secrets.DOCKERHUB_USERNAME_PAT }}
         DOCKER_TOKEN_PAT: ${{ secrets.DOCKERHUB_TOKEN_PAT }}
         SERVICES_FILTER: ${{ github.event.inputs.services_filter }}
       run: |
-        chmod +x ${GITHUB_WORKSPACE}/.github/scripts/release-docspace.sh
-        ${GITHUB_WORKSPACE}/.github/scripts/release-docspace.sh
+        chmod +x ${GITHUB_WORKSPACE}/.github/scripts/release-docker.sh
+        ${GITHUB_WORKSPACE}/.github/scripts/release-docker.sh
 
   trigger-offline-release:
     needs: docker-release
@@ -72,7 +72,7 @@ jobs:
         run: |
           echo "Waiting for images with tag ${{ env.DOCKER_TAG }} to appear on Docker Hub..."
           curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/docker-images-availability.sh \
-            | sudo GITHUB_REPOSITORY=${{ github.repository }} BRANCH=${{ github.ref_name }} DOCKER_REPOSITORY=${{ github.event.inputs.repo }} DOCKER_PREFIX=docspace DOCKER_TAG=${{ env.DOCKER_TAG }} DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME} DOCKERHUB_TOKEN=${DOCKERHUB_TOKEN} bash
+            | sudo GITHUB_REPOSITORY=${{ github.repository }} BRANCH=${{ github.ref_name }} DOCKER_REPOSITORY=${{ github.event.inputs.repo }} DOCKER_PREFIX=apps DOCKER_TAG=${{ env.DOCKER_TAG }} DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME} DOCKERHUB_TOKEN=${DOCKERHUB_TOKEN} bash
 
       - name: Trigger offline release
         env:

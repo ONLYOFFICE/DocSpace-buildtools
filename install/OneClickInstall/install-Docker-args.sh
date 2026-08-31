@@ -37,10 +37,11 @@
 
 
 PACKAGE_SYSNAME="onlyoffice"
-PRODUCT_NAME="DocSpace"
-PRODUCT=$(tr '[:upper:]' '[:lower:]' <<< ${PRODUCT_NAME})
+PRODUCT="apps"
+PRODUCT_NAME="${PACKAGE_SYSNAME^^} Apps"
 HELP_TARGET="install-Docker.sh"
 OFFLINE_IMAGE_LOAD="false"
+INSTALLATION_TYPE="enterprise"
 
 while [ "$1" != "" ]; do
     case "$1" in
@@ -48,7 +49,7 @@ while [ "$1" != "" ]; do
         -reg     | --registry            ) [ -n "$2" ] && REGISTRY_URL=$2                                                         && shift ;;
         -un      | --username            ) [ -n "$2" ] && USERNAME=$2                                                             && shift ;;
         -p       | --password            ) [ -n "$2" ] && PASSWORD=$2                                                             && shift ;;
-        -ids     | --installdocspace     ) [ -n "$2" ] && INSTALL_PRODUCT=$2                                                      && shift ;;
+        -ia      | --installapps         | -ids | --installdocspace ) [ -n "$2" ] && INSTALL_PRODUCT=$2                           && shift ;;
         -idocs   | --installdocs         ) [ -n "$2" ] && INSTALL_DOCUMENT_SERVER=$2                                              && shift ;;
         -imysql  | --installmysql        ) [ -n "$2" ] && INSTALL_MYSQL_SERVER=$2                                                 && shift ;;
         -irbt    | --installrabbitmq     ) [ -n "$2" ] && INSTALL_RABBITMQ=$2                                                     && shift ;;
@@ -67,11 +68,11 @@ while [ "$1" != "" ]; do
         -dm      | --deployment-mode     ) [ -n "$2" ] && DEPLOYMENT_MODE="${2,,}" && DEPLOYMENT_MODE_SET="true"                  && shift ;;
         -ep      | --externalport        ) [ -n "$2" ] && EXTERNAL_PORT=$2                                                        && shift ;;
         -eph     | --externalporthttps   ) [ -n "$2" ] && EXTERNAL_PORT_HTTPS=$2                                                  && shift ;;
-        -dsh     | --docspacehost        ) [ -n "$2" ] && APP_URL_PORTAL=$2                                                       && shift ;;
+        -ah      | --appshost            | -dsh | --docspacehost    ) [ -n "$2" ] && APP_URL_PORTAL=$2                            && shift ;;
         -mk      | --machinekey          ) [ -n "$2" ] && APP_CORE_MACHINEKEY=$2                                                  && shift ;;
         -env     | --environment         ) [ -n "$2" ] && ENV_EXTENSION=$2                                                        && shift ;;
         -s       | --status              ) [ -n "$2" ] && STATUS=$2                                                               && shift ;;
-        -dsv     | --docspaceversion     ) [ -n "$2" ] && DOCKER_TAG=$2                                                           && shift ;;
+        -av      | --appsversion         | -dsv | --docspaceversion ) [ -n "$2" ] && DOCKER_TAG=$2                                && shift ;;
         -gb      | --gitbranch           ) [ -n "$2" ] && PARAMETERS="$PARAMETERS $1" && GIT_BRANCH=$2                            && shift ;;
         -docsi   | --docsimage           ) [ -n "$2" ] && DOCUMENT_SERVER_IMAGE_NAME=$2                                           && shift ;;
         -docsv   | --docsversion         ) [ -n "$2" ] && DOCUMENT_SERVER_VERSION=$2                                              && shift ;;
@@ -101,34 +102,11 @@ while [ "$1" != "" ]; do
         -uni     | --uninstall           ) [ -n "$2" ] && UNINSTALL=$2 && [ "$UNINSTALL" = "true" ] && OFFLINE_IMAGE_LOAD="true"  && shift ;;
         -off     | --offline             ) [ -n "$2" ] && OFFLINE_INSTALLATION=$2                                                 && shift ;;
         -eh      | --extrahosts          ) [ -n "$2" ] && EXTRA_HOSTS=$2                                                          && shift ;;
-        -ls      | --localscripts        )                                                                                           shift ;;
-        -vd      | --volumesdir          )
-            [ -n "$2" ] && VOLUMES_DIR="$2"
-            [[ "$VOLUMES_DIR" != /* ]] && VOLUMES_DIR="$(cd "$(dirname "$VOLUMES_DIR")" && pwd)/$(basename "$VOLUMES_DIR")"
-            [ -d "$VOLUMES_DIR" ] || { echo "Error: Volumes directory not found: ${VOLUMES_DIR}" >&2; exit 1; }
-            [[ "$VOLUMES_DIR" == "$BASE_DIR"* ]] && { echo "Warning: Please change the volumes directory, as $BASE_DIR will be removed during an update."; exit 1; }
-            shift
-        ;;
-        -co      | --configoverride      )
-            [ -n "$2" ] || { echo "Error: --configoverride requires a path argument" >&2; exit 1; }
-            CONFIG_OVERRIDE="$2"
-            mkdir -p "$(dirname "$CONFIG_OVERRIDE")"
-            [[ "$CONFIG_OVERRIDE" != /* ]] && CONFIG_OVERRIDE="$(cd "$(dirname "$CONFIG_OVERRIDE")" && pwd)/$(basename "$CONFIG_OVERRIDE")"
-            [[ "$CONFIG_OVERRIDE" == "$BASE_DIR"* ]] && { echo "Warning: Please change the config override path, as $BASE_DIR will be removed during an update."; exit 1; }
-            shift
-        ;;
-        -cf      | --certfile            )
-            [ -n "$2" ] && CERTIFICATE_PATH="$2"
-            [[ "$CERTIFICATE_PATH" != /* ]] && CERTIFICATE_PATH="$(cd "$(dirname "$CERTIFICATE_PATH")" && pwd)/$(basename "$CERTIFICATE_PATH")"
-            [ -f "$CERTIFICATE_PATH" ] || { echo "Error: Certificate file not found: ${CERTIFICATE_PATH}" >&2; exit 1; }
-            shift
-        ;;
-        -ckf     | --certkeyfile         )
-            [ -n "$2" ] && CERTIFICATE_KEY_PATH="$2"
-            [[ "$CERTIFICATE_KEY_PATH" != /* ]] && CERTIFICATE_KEY_PATH="$(cd "$(dirname "$CERTIFICATE_KEY_PATH")" && pwd)/$(basename "$CERTIFICATE_KEY_PATH")"
-            [ -f "$CERTIFICATE_KEY_PATH" ] || { echo "Error: Certificate key file not found: ${CERTIFICATE_KEY_PATH}" >&2; exit 1; }
-            shift
-        ;;
+        -ls      | --localscripts        ) [ -n "$2" ] && LOCAL_SCRIPTS=$2                                                        && shift ;;
+        -vd      | --volumesdir          ) [ -n "$2" ] && VOLUMES_DIR="$2"                                                        && shift ;;
+        -cf      | --certfile            ) [ -n "$2" ] && CERTIFICATE_PATH="$2"                                                   && shift ;;
+        -ckf     | --certkeyfile         ) [ -n "$2" ] && CERTIFICATE_KEY_PATH="$2"                                               && shift ;;
+        -co      | --configoverride      ) [ -n "$2" ] && CONFIG_OVERRIDE="$2"                                                    && shift ;;
         -h | -? | --help )
             echo 
             echo "PRELIMINARY PARAMETERS (Docker registry auth):"
@@ -140,7 +118,7 @@ while [ "$1" != "" ]; do
             echo "INSTALL/UPGRADE MODE:"
             echo "  --installationtype  <edition>           Edition to install: community, developer, enterprise"
             echo "  --update            <true|false>        true to upgrade existing components"
-            echo "  --uninstall         <true|false>        true to remove existing ${PRODUCT} (containers, volumes, configs)"
+            echo "  --uninstall         <true|false>        true to remove existing ${PRODUCT_NAME} (containers, volumes, configs)"
             echo "  --noninteractive    <true|false>        true to auto-confirm prompts (default: false)"
 
             echo 
@@ -154,10 +132,10 @@ while [ "$1" != "" ]; do
 
             echo 
             echo "${PRODUCT_NAME^^} OPTIONS:"
-            echo "  --installdocspace   <true|false>        Install/update ${PRODUCT_NAME} (true to install/update)"
+            echo "  --installapps       <true|false>        Install/update ${PRODUCT_NAME} (true to install/update)"
             echo "  --deployment-mode   <standard|stack|community>  Deployment topology (default: standard)"
-            echo "  --docspaceversion   <version>           ${PRODUCT_NAME} version tag (e.g., 3.2.0)"
-            echo "  --docspacehost      <hostname>          Hostname or IP for ${PRODUCT_NAME} (default: localhost)"
+            echo "  --appsversion       <version>           ${PRODUCT_NAME} version tag (e.g., 4.0.0)"
+            echo "  --appshost          <hostname>          Hostname or IP for ${PRODUCT_NAME} (default: localhost)"
             echo "  --externalport      <port>              External port for ${PRODUCT_NAME} HTTP (default: 80)"
             echo "  --externalporthttps <port>              External port for ${PRODUCT_NAME} HTTPS (default: 443)"
             echo "  --machinekey        <key>               core.machinekey for encryption (default: random key)"
@@ -219,6 +197,9 @@ while [ "$1" != "" ]; do
             echo "  --certdomain     <domain>             Domain for existing SSL cert (example.com / *.example.com / s1.example.com, s2.example.com)"
             echo "  --certfile       <path>               Path to SSL cert (.pem, .pfx, .der, .cer, PKCS#7)"
             echo "  --certkeyfile    <path>               Path to SSL key (used with --certfile)"
+            echo
+            echo "DEPRECATED (still accepted, use the ${PRODUCT_NAME} options above instead):"
+            echo "  --installdocspace, --docspaceversion, --docspacehost"
             exit 0
         ;;
         * ) echo "Unknown parameter $1" 1>&2; exit 1 ;;
@@ -232,3 +213,62 @@ case "${DEPLOYMENT_MODE}" in
     standard | stack | community ) ;;
     * ) echo "Error: Invalid --deployment-mode '${DEPLOYMENT_MODE}'. Valid values: standard, stack, community." >&2; exit 1 ;;
 esac
+
+case "${INSTALLATION_TYPE}" in
+    community | developer | enterprise ) ;;
+    * ) echo "Error: Invalid --installationtype '${INSTALLATION_TYPE}'. Valid values: community, developer, enterprise." >&2; exit 1 ;;
+esac
+
+validate_bool() {
+    [ -z "$2" ] && return 0
+    case "$2" in
+        true | false ) ;;
+        * ) echo "Error: Invalid ${1} '${2}'. Valid values: true, false." >&2; exit 1 ;;
+    esac
+}
+
+validate_bool_or_pull() {
+    [ -z "$2" ] && return 0
+    case "$2" in
+        true | false | pull ) ;;
+        * ) echo "Error: Invalid ${1} '${2}'. Valid values: true, false, pull." >&2; exit 1 ;;
+    esac
+}
+
+validate_bool --update "$UPDATE"
+validate_bool --uninstall "$UNINSTALL"
+validate_bool --noninteractive "$NON_INTERACTIVE"
+validate_bool --skiphardwarecheck "$SKIP_HARDWARE_CHECK"
+validate_bool --offline "$OFFLINE_INSTALLATION"
+validate_bool --makeswap "$MAKESWAP"
+validate_bool --localscripts "$LOCAL_SCRIPTS"
+validate_bool --databasemigration "$DATABASE_MIGRATION"
+
+validate_bool_or_pull --installdocspace "$INSTALL_PRODUCT"
+validate_bool_or_pull --installdocs "$INSTALL_DOCUMENT_SERVER"
+validate_bool_or_pull --installmysql "$INSTALL_MYSQL_SERVER"
+validate_bool_or_pull --installrabbitmq "$INSTALL_RABBITMQ"
+validate_bool_or_pull --installredis "$INSTALL_REDIS"
+validate_bool_or_pull --installelastic "$INSTALL_ELASTICSEARCH"
+validate_bool_or_pull --installfluentbit "$INSTALL_FLUENT_BIT"
+
+if [ -n "$VOLUMES_DIR" ]; then
+    [[ "$VOLUMES_DIR" != /* ]] && VOLUMES_DIR="$(cd "$(dirname "$VOLUMES_DIR")" && pwd)/$(basename "$VOLUMES_DIR")"
+    [ -d "$VOLUMES_DIR" ] || { echo "Error: Volumes directory not found: ${VOLUMES_DIR}" >&2; exit 1; }
+    [[ "$VOLUMES_DIR" == "$BASE_DIR"* ]] && { echo "Warning: Please change the volumes directory, as $BASE_DIR will be removed during an update."; exit 1; }
+fi
+
+if [ -n "$CONFIG_OVERRIDE" ]; then
+    [[ "$CONFIG_OVERRIDE" != /* ]] && CONFIG_OVERRIDE="$(cd "$(dirname "$CONFIG_OVERRIDE")" && pwd)/$(basename "$CONFIG_OVERRIDE")"
+    [[ "$CONFIG_OVERRIDE" == "$BASE_DIR"* ]] && { echo "Warning: Please change the config override path, as $BASE_DIR will be removed during an update."; exit 1; }
+fi
+
+if [ -n "$CERTIFICATE_PATH" ]; then
+    [[ "$CERTIFICATE_PATH" != /* ]] && CERTIFICATE_PATH="$(cd "$(dirname "$CERTIFICATE_PATH")" && pwd)/$(basename "$CERTIFICATE_PATH")"
+    [ -f "$CERTIFICATE_PATH" ] || { echo "Error: Certificate file not found: ${CERTIFICATE_PATH}" >&2; exit 1; }
+fi
+
+if [ -n "$CERTIFICATE_KEY_PATH" ]; then
+    [[ "$CERTIFICATE_KEY_PATH" != /* ]] && CERTIFICATE_KEY_PATH="$(cd "$(dirname "$CERTIFICATE_KEY_PATH")" && pwd)/$(basename "$CERTIFICATE_KEY_PATH")"
+    [ -f "$CERTIFICATE_KEY_PATH" ] || { echo "Error: Certificate key file not found: ${CERTIFICATE_KEY_PATH}" >&2; exit 1; }
+fi

@@ -1,4 +1,4 @@
-resolver $DNS_NAMESERVER valid=30s;
+resolver $DNS_NAMESERVER valid=30s ipv6=off;
 
 # Mapping document service
 map "$DOCUMENT_SERVER_URL_EXTERNAL" "$document_server" {
@@ -210,13 +210,24 @@ map $SERVICE_HELTHCHECKS $health_checks_url {
 
 map $SERVICE_AI $ai_service_url {
     volatile;
-    
+
     ""          "http://127.0.0.1:5157";
     "null"      "http://127.0.0.1:5157";
     "~^\\s*$"   "http://127.0.0.1:5157";
     "undefined" "http://127.0.0.1:5157";
-    
+
     default $SERVICE_AI;
+}
+
+map $SERVICE_NEW_AI $new_ai_service_url {
+    volatile;
+
+    ""          "http://127.0.0.1:9837";
+    "null"      "http://127.0.0.1:9837";
+    "~^\\s*$"   "http://127.0.0.1:9837";
+    "undefined" "http://127.0.0.1:9837";
+
+    default $SERVICE_NEW_AI;
 }
 
 map $SERVICE_PLUGINS $plugins_service_url {
@@ -261,4 +272,15 @@ map $DASHBOARDS_CONTAINER_NAME $dashboards_service_url {
     "undefined" "http://127.0.0.1:5601";
 
     default $DASHBOARDS_CONTAINER_NAME;
+}
+
+map $STORYBOOK_CONTAINER_NAME $storybook_service_url {
+    volatile;
+
+    ""          "http://127.0.0.1:6006";
+    "null"      "http://127.0.0.1:6006";
+    "~^\\s*$"   "http://127.0.0.1:6006";
+    "undefined" "http://127.0.0.1:6006";
+
+    default $STORYBOOK_CONTAINER_NAME;
 }

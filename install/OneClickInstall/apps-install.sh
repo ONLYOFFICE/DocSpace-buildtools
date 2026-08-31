@@ -38,8 +38,10 @@
 PARAMETERS="$PARAMETERS -it COMMUNITY"
 DOCKER=""
 LOCAL_SCRIPTS="false"
-product="docspace"
-product_sysname="onlyoffice"
+PRODUCT="apps"
+LEGACY_PRODUCT="docspace"
+PRODUCT_SYSNAME="onlyoffice"
+PRODUCT_NAME="${PRODUCT_SYSNAME^^} Apps"
 FILE_NAME="$(basename "$0")"
 ENABLE_LOGGING="true"
 
@@ -48,7 +50,7 @@ while [ "$1" != "" ]; do
         -ls | --localscripts )     [[ "$2" == "true" || "$2" == "false" ]] && PARAMETERS="$PARAMETERS ${1}" && LOCAL_SCRIPTS=$2 && shift ;;
         -log | --logging )         [[ "$2" == "true" || "$2" == "false" ]] && ENABLE_LOGGING=$2 && shift 2 && continue ;;
         -gb | --gitbranch )        [ -n "$2" ] && PARAMETERS="$PARAMETERS ${1}" && GIT_BRANCH=$2 && shift ;;
-        -dsv | --docspaceversion ) [ -n "$2" ] && PARAMETERS="$PARAMETERS ${1}" && DOCKER_TAG=$2 && PRODUCT_VERSION=$2 && shift ;;
+        -av | --appsversion | -dsv | --docspaceversion ) [ -n "$2" ] && PARAMETERS="$PARAMETERS ${1}" && DOCKER_TAG=$2 && PRODUCT_VERSION=$2 && shift ;;
         docker ) DOCKER="true"; shift ; continue ;;
         package ) DOCKER="false"; shift ; continue ;;
         -h | -? | --help )
@@ -86,7 +88,7 @@ install_curl () {
 }
 
 read_installation_method() {
-    echo "Select 'Y' to install ${product_sysname^^} $product using Docker (recommended)."
+    echo "Select 'Y' to install ${PRODUCT_NAME} using Docker (recommended)."
     echo "Select 'N' to install it using RPM/DEB packages."
     while true; do
         read -p "Install with Docker [Y/N/C]? " choice
@@ -103,10 +105,13 @@ root_checking
 
 is_command_exists curl || install_curl
 
-if is_command_exists docker && docker ps -a --format '{{.Names}}' | grep -qE "${product_sysname}-api|${product_sysname}-dotnet-services|${product_sysname}-docspace"; then
+if is_command_exists docker && docker ps -a --format '{{.Names}}' | grep -qE "${PRODUCT_SYSNAME}-api|${PRODUCT_SYSNAME}-dotnet-services|${PRODUCT_SYSNAME}-apps"; then
     DOCKER="true"
     PARAMETERS="-u true $PARAMETERS"
-elif (is_command_exists dpkg && dpkg -s ${product}-api >/dev/null 2>&1) || (is_command_exists rpm && rpm -q ${product}-api >/dev/null 2>&1); then
+elif (is_command_exists dpkg && dpkg -s "${PRODUCT_SYSNAME}-${PRODUCT}-api" >/dev/null 2>&1) \
+  || (is_command_exists rpm && rpm -q "${PRODUCT_SYSNAME}-${PRODUCT}-api" >/dev/null 2>&1) \
+  || (is_command_exists dpkg && dpkg -s "${LEGACY_PRODUCT}-api" >/dev/null 2>&1) \
+  || (is_command_exists rpm && rpm -q "${LEGACY_PRODUCT}-api" >/dev/null 2>&1); then
     DOCKER="false"
 	PARAMETERS="-u true $PARAMETERS"
 fi
@@ -115,15 +120,15 @@ fi
 
 # Auto-detect legacy installs
 if [[ "${DOCKER}" == "true" ]] && [[ ${DOCKER_TAG} =~ ^([0-9]+\.[0-9]+\.[0-9]+)(\.[0-9]+)?$ ]]; then
-  TAG="v${BASH_REMATCH[1]}"; LATEST_TAG=$(curl -s "https://api.github.com/repos/${product_sysname^^}/${product}/releases/latest" | grep -Po '"tag_name":\s*"\K[^"]+')
-  if [[ "${TAG}" != "${LATEST_TAG}" ]] && curl -sfI "https://github.com/${product_sysname^^}/${product}-buildtools/releases/tag/${TAG}-server" >/dev/null; then
+  TAG="v${BASH_REMATCH[1]}"; LATEST_TAG=$(curl -s "https://api.github.com/repos/${PRODUCT_SYSNAME^^}/${LEGACY_PRODUCT}/releases/latest" | grep -Po '"tag_name":\s*"\K[^"]+')
+  if [[ "${TAG}" != "${LATEST_TAG}" ]] && curl -sfI "https://github.com/${PRODUCT_SYSNAME^^}/${LEGACY_PRODUCT}-buildtools/releases/tag/${TAG}-server" >/dev/null; then
 	>&2 echo "Warning: legacy install detected (v${BASH_REMATCH[1]}) — compatibility issues or unforeseen errors may occur."
     PARAMETERS="${PARAMETERS} -gb ${TAG}-server"; GIT_BRANCH="${TAG}-server"
   fi
 fi
 
-DOWNLOAD_URL_PREFIX="https://download.${product_sysname}.com/${product}"
-[ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${product_sysname^^}/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
+DOWNLOAD_URL_PREFIX="https://download.${PRODUCT_SYSNAME}.com/${PRODUCT}"
+[ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${PRODUCT_SYSNAME^^}/${LEGACY_PRODUCT}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
 
 if [ "$DOCKER" == "true" ]; then
     SCRIPT_NAME="install-Docker.sh"

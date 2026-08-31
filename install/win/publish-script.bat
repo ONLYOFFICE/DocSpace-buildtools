@@ -39,6 +39,9 @@ rem backend services (Nodejs) in directory 'services'
 mkdir "%PathToAppFolder%\services\ASC.Socket.IO\service"
 xcopy "%PathToRepository%\common\ASC.Socket.IO" "%PathToAppFolder%\services\ASC.Socket.IO\service" /s /y /b /i
 
+mkdir "%PathToAppFolder%\services\ASC.NewAi\service"
+xcopy "%PathToRepository%\common\ASC.NewAi" "%PathToAppFolder%\services\ASC.NewAi\service" /s /y /b /i
+
 mkdir "%PathToAppFolder%\services\ASC.Files.Worker\service"
 xcopy "%PathToRepository%\publish\services\ASC.Files.Worker\service" "%PathToAppFolder%\services\ASC.Files.Worker\service" /s /y /b /i
 

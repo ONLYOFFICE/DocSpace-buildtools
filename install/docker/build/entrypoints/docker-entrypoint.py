@@ -53,6 +53,7 @@ DOCUMENT_SERVER_URL_INTERNAL = os.environ.get("DOCUMENT_SERVER_URL_INTERNAL") or
 DOCUMENT_SERVER_URL_EXTERNAL = os.environ.get("DOCUMENT_SERVER_URL_EXTERNAL") or None
 DOCUMENT_SERVER_URL_PUBLIC = DOCUMENT_SERVER_URL_EXTERNAL if DOCUMENT_SERVER_URL_EXTERNAL else os.environ.get("DOCUMENT_SERVER_URL_PUBLIC") or "/ds-vpath/"
 DOCUMENT_SERVER_CONNECTION_HOST = DOCUMENT_SERVER_URL_EXTERNAL if DOCUMENT_SERVER_URL_EXTERNAL else DOCUMENT_SERVER_URL_INTERNAL
+DOCUMENT_SERVER_REQUIRED = {"true": True, "false": False}.get(os.environ.get("DOCUMENT_SERVER_REQUIRED", "").lower())
 
 ELK_CONTAINER_NAME = os.environ.get("ELK_CONTAINER_NAME") or "onlyoffice-opensearch"
 ELK_SCHEME = os.environ.get("ELK_SCHEME") or "http"
@@ -72,6 +73,7 @@ REDIS_USER_NAME = {"User": os.environ["REDIS_USER_NAME"]} if os.environ.get("RED
 REDIS_PASSWORD = {"Password": os.environ["REDIS_PASSWORD"]} if os.environ.get("REDIS_PASSWORD") else None
 REDIS_CONNECTION_HOST = REDIS_HOST if REDIS_HOST else REDIS_CONTAINER_NAME
 REDIS_DB = os.environ.get("REDIS_DB") or 0
+REDIS_SSL = {"true": True, "false": False}.get(os.environ.get("REDIS_SSL", "").lower())
 
 RABBIT_CONTAINER_NAME = os.environ.get("RABBIT_CONTAINER_NAME") or "onlyoffice-rabbitmq"
 RABBIT_PROTOCOL = os.environ.get("RABBIT_PROTOCOL") or "amqp"
@@ -86,6 +88,13 @@ RABBIT_URI = (
     else {"Uri": f"{RABBIT_PROTOCOL}://{RABBIT_USER_NAME}:{RABBIT_PASSWORD}@{RABBIT_HOST}:{RABBIT_PORT}{RABBIT_VIRTUAL_HOST}"}
     if RABBIT_PROTOCOL == "amqps" and RABBIT_HOST else None
 )
+
+LOG_PRIORITY = dict(CRITICAL=0, ERROR=1, WARNING=2, INFORMATION=3, DEBUG=4, TRACE=5)
+CURRENT_PRIORITY = LOG_PRIORITY.get((os.getenv("LOG_LEVEL") or "INFORMATION").upper(), 3)
+
+def LOG(LEVEL, MESSAGE):
+    if LOG_PRIORITY.get(LEVEL, 3) <= CURRENT_PRIORITY:
+        print(f"[{LEVEL}] {MESSAGE}", flush=True)
 
 class RunServices:
     def __init__(self, SERVICE_PORT, PATH_TO_CONF):
@@ -166,13 +175,6 @@ def waitForHostAvailable(HOST_URL, TIMEOUT=10, INTERVAL=3, MAX_RETRIES=5, RETRY_
         bool: True if host becomes available, otherwise False.
     """
 
-    LOG_PRIORITY = dict(CRITICAL=0, ERROR=1, WARNING=2, INFORMATION=3, DEBUG=4, TRACE=5)
-    CURRENT_PRIORITY = LOG_PRIORITY.get((os.getenv("LOG_LEVEL") or "INFORMATION").upper(), 3)
-
-    def LOG(LEVEL, MESSAGE):
-        if LOG_PRIORITY.get(LEVEL, 3) <= CURRENT_PRIORITY:
-            print(f"[{LEVEL}] {MESSAGE}", flush=True)
-
     ATTEMPT = 0
     while True:
         ATTEMPT += 1
@@ -219,13 +221,6 @@ def waitForHostAvailable(HOST_URL, TIMEOUT=10, INTERVAL=3, MAX_RETRIES=5, RETRY_
             return False
 
 def maintain_plugins():
-    LOG_PRIORITY = dict(CRITICAL=0, ERROR=1, WARNING=2, INFORMATION=3, DEBUG=4, TRACE=5)
-    CURRENT_PRIORITY = LOG_PRIORITY.get((os.getenv("LOG_LEVEL") or "INFORMATION").upper(), 3)
-
-    def LOG(LEVEL, MESSAGE):
-        if LOG_PRIORITY.get(LEVEL, 3) <= CURRENT_PRIORITY:
-            print(f"[{LEVEL}] {MESSAGE}", flush=True)
-
     LOG("INFORMATION", "Plugins maintenance started...")
 
     os.makedirs(USER_PLUGINS_DIR, exist_ok=True)
@@ -317,8 +312,13 @@ def check_docs_connection(wait=True):
     updateJsonData(jsonData, "$.files.docservice.secret.value", DOCUMENT_SERVER_JWT_SECRET)
     updateJsonData(jsonData, "$.files.docservice.secret.header", DOCUMENT_SERVER_JWT_HEADER)
 
-    if wait and not waitForHostAvailable(DOCUMENT_SERVER_CONNECTION_HOST, TIMEOUT=10, INTERVAL=3, MAX_RETRIES=5, RETRY_INTERVAL=15):
+    if DOCUMENT_SERVER_REQUIRED is False:
         deleteJsonPath(jsonData, "$.files.docservice")
+    elif wait and not waitForHostAvailable(DOCUMENT_SERVER_CONNECTION_HOST, TIMEOUT=10, INTERVAL=3, MAX_RETRIES=5, RETRY_INTERVAL=15):
+        if DOCUMENT_SERVER_REQUIRED is None:
+            deleteJsonPath(jsonData, "$.files.docservice")
+        else:
+            LOG("WARNING", f"{DOCUMENT_SERVER_CONNECTION_HOST} did not become available within the timeout; keeping $.files.docservice in config (DOCUMENT_SERVER_REQUIRED=true)")
 
     writeJsonFile(filePath, jsonData)
 
@@ -417,6 +417,7 @@ updateJsonData(jsonData,"$.Redis.Hosts.[0].Port", REDIS_PORT)
 updateJsonData(jsonData,"$.Redis.Database", REDIS_DB)
 jsonData["Redis"].update(REDIS_USER_NAME) if REDIS_USER_NAME is not None else None
 jsonData["Redis"].update(REDIS_PASSWORD) if REDIS_PASSWORD is not None else None
+updateJsonData(jsonData, "$.Redis.Ssl", REDIS_SSL) if REDIS_SSL is not None else None
 writeJsonFile(filePath, jsonData)
 
 filePath = os.path.join(BUILD_PATH, "services", "ASC.Migration.Runner", "service", "appsettings.runner.json")
@@ -447,7 +448,7 @@ if LOG_LEVEL:
             NLOG = re.sub(r'^(?!.*ZiggyCreatures)(.*minlevel=")\w+(")', rf'\1{LOG_LEVEL}\2', NLOG, flags=re.M)
             with open(NLOG_PATH, "w") as f: f.write(NLOG)
         except OSError:
-            print(f"[WARNING] {NLOG_PATH} is read-only, skipping LOG_LEVEL patch", flush=True)
+            LOG("WARNING", f"{NLOG_PATH} is read-only, skipping LOG_LEVEL patch")
 
 RELEASE_PLUGINS_DIR = "/var/www/studio/plugins/"
 USER_PLUGINS_DIR = "/app/onlyoffice/data/Studio/webplugins/"

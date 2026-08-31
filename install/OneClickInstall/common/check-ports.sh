@@ -55,10 +55,17 @@ elif command -v rpm >/dev/null 2>&1; then
 	PKG_LIST="$(rpm -qa)"
 fi
 
-if grep -q "${product}" <<< "$PKG_LIST"; then
-	echo "${product} $RES_APP_INSTALLED"
+for PACKAGE_NAME in "${package}" "${legacy_product}"; do
+	if command -v dpkg-query >/dev/null 2>&1; then
+		[ "$(dpkg-query -W -f='${db:Status-Status}' "${PACKAGE_NAME}" 2>/dev/null)" = "installed" ] || continue
+	elif command -v rpm >/dev/null 2>&1; then
+		rpm -q "${PACKAGE_NAME}" >/dev/null 2>&1 || continue
+	else
+		continue
+	fi
+	echo "${PACKAGE_NAME} $RES_APP_INSTALLED"
 	PRODUCT_INSTALLED="true"
-fi
+done
 
 if grep -q "${package_sysname}-documentserver" <<< "$PKG_LIST"; then
 	echo "${package_sysname}-documentserver $RES_APP_INSTALLED"
@@ -66,7 +73,7 @@ if grep -q "${package_sysname}-documentserver" <<< "$PKG_LIST"; then
 fi
 
 if [ "$PRODUCT_INSTALLED" = "true" ] && [ "$UPDATE" != "true" ]; then
-	echo "${product} is already installed. Use --update true to update."
+	echo "${product_name} is already installed. Use --update true to update."
 	exit 0
 fi
 

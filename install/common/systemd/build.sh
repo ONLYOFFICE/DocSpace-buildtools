@@ -41,8 +41,9 @@ while [ "$1" != "" ]; do
 done
 
 PACKAGE_SYSNAME="onlyoffice"
-PRODUCT="docspace"
-BASE_DIR="/var/www/${PRODUCT}"
+PRODUCT="apps"
+PACKAGE_NAME="${PACKAGE_SYSNAME}-${PRODUCT}"
+PRODUCT_DIR="/var/www/${PACKAGE_SYSNAME}/${PRODUCT}"
 PATH_TO_CONF="/etc/${PACKAGE_SYSNAME}/${PRODUCT}"
 STORAGE_ROOT="/var/www/${PACKAGE_SYSNAME}/Data"
 LOG_DIR="/var/log/${PACKAGE_SYSNAME}/${PRODUCT}"
@@ -51,12 +52,13 @@ NODE_RUN="/usr/bin/node"
 JAVA_RUN="/usr/bin/java -jar"
 APP_URLS="http://127.0.0.1"
 SYSTEMD_ENVIRONMENT_FILE="${PATH_TO_CONF}/systemd.env"
-CORE=" --core:products:folder=${BASE_DIR}/products --core:products:subfolder=server"
+CORE=" --core:products:folder=${PRODUCT_DIR}/products --core:products:subfolder=server"
 
 SERVICE_NAME=(
 	api
 	api-system
 	socket
+	newai
 	studio-notify
 	notify 
 	people-server
@@ -90,144 +92,151 @@ reassign_values (){
   case $1 in
 	api )
 		SERVICE_PORT="5000"
-		WORK_DIR="${BASE_DIR}/studio/ASC.Web.Api/"
+		WORK_DIR="${PRODUCT_DIR}/studio/ASC.Web.Api/"
 		EXEC_FILE="ASC.Web.Api.dll"
 	;;
 	api-system )
 		SERVICE_PORT="5010"
-		WORK_DIR="${BASE_DIR}/services/ASC.ApiSystem/"
+		WORK_DIR="${PRODUCT_DIR}/services/ASC.ApiSystem/"
 		EXEC_FILE="ASC.ApiSystem.dll"
 	;;
 	socket )
 		SERVICE_PORT="9899"
-		WORK_DIR="${BASE_DIR}/services/ASC.Socket.IO/"
+		WORK_DIR="${PRODUCT_DIR}/services/ASC.Socket.IO/"
+		EXEC_FILE="server.js"
+		DEPENDENCY_LIST=""
+	;;
+	newai )
+		SERVICE_PORT="9837"
+		WORK_DIR="${PRODUCT_DIR}/services/ASC.NewAi/"
 		EXEC_FILE="server.js"
 		DEPENDENCY_LIST=""
 	;;
 	studio-notify )
 		SERVICE_PORT="5006"
-		WORK_DIR="${BASE_DIR}/services/ASC.Studio.Notify/"
+		WORK_DIR="${PRODUCT_DIR}/services/ASC.Studio.Notify/"
 		EXEC_FILE="ASC.Studio.Notify.dll"
 		CORE_EVENT_BUS=" --core:eventBus:subscriptionClientName=asc_event_bus_studio_notify_queue"
 	;;
 	notify )
 		SERVICE_PORT="5005"
-		WORK_DIR="${BASE_DIR}/services/ASC.Notify/"
+		WORK_DIR="${PRODUCT_DIR}/services/ASC.Notify/"
 		EXEC_FILE="ASC.Notify.dll"
 		CORE_EVENT_BUS=" --core:eventBus:subscriptionClientName=asc_event_bus_notify_queue"
 	;;
 	people-server )
 		SERVICE_PORT="5004"
-		WORK_DIR="${BASE_DIR}/products/ASC.People/server/"
+		WORK_DIR="${PRODUCT_DIR}/products/ASC.People/server/"
 		EXEC_FILE="ASC.People.dll"
 	;;
 	files )
 		SERVICE_PORT="5007"
-		WORK_DIR="${BASE_DIR}/products/ASC.Files/server/"
+		WORK_DIR="${PRODUCT_DIR}/products/ASC.Files/server/"
 		EXEC_FILE="ASC.Files.dll"
 	;;
 	files-worker )
 		SERVICE_PORT="5009"
-		WORK_DIR="${BASE_DIR}/products/ASC.Files/service/"
+		WORK_DIR="${PRODUCT_DIR}/products/ASC.Files/service/"
 		EXEC_FILE="ASC.Files.Worker.dll"
 		CORE_EVENT_BUS=" --core:eventBus:subscriptionClientName=asc_event_bus_files_service_queue"
 		DEPENDENCY_LIST="${DEPENDENCY_LIST} opensearch.service"
 	;;
 	studio )
 		SERVICE_PORT="5003"
-		WORK_DIR="${BASE_DIR}/studio/ASC.Web.Studio/"
+		WORK_DIR="${PRODUCT_DIR}/studio/ASC.Web.Studio/"
 		EXEC_FILE="ASC.Web.Studio.dll"
 		CORE_EVENT_BUS=" --core:eventBus:subscriptionClientName=asc_event_bus_webstudio_queue"
 	;;
 	backup )
 		SERVICE_PORT="5012"
-		WORK_DIR="${BASE_DIR}/services/ASC.Data.Backup/"
+		WORK_DIR="${PRODUCT_DIR}/services/ASC.Data.Backup/"
 		EXEC_FILE="ASC.Data.Backup.dll"
 	;;
 	ssoauth )
 		SERVICE_PORT="9834"
-		WORK_DIR="${BASE_DIR}/services/ASC.SsoAuth/"
+		WORK_DIR="${PRODUCT_DIR}/services/ASC.SsoAuth/"
 		EXEC_FILE="app.js"
 		DEPENDENCY_LIST=""
 	;;
 	identity-api )
 		SERVICE_PORT="9090"
 		SPRING_APPLICATION_NAME="ASC.Identity.Registration"
-		WORK_DIR="${BASE_DIR}/services/${SPRING_APPLICATION_NAME}/"
+		WORK_DIR="${PRODUCT_DIR}/services/${SPRING_APPLICATION_NAME}/"
 		EXEC_FILE="app.jar"
 	;;
 	identity-authorization )
 		SERVICE_PORT="8080"
 		SPRING_APPLICATION_NAME="ASC.Identity.Authorization"
-		WORK_DIR="${BASE_DIR}/services/${SPRING_APPLICATION_NAME}/"
+		WORK_DIR="${PRODUCT_DIR}/services/${SPRING_APPLICATION_NAME}/"
 		EXEC_FILE="app.jar"
 	;;
 	clear-events )
 		SERVICE_PORT="5027"
-		WORK_DIR="${BASE_DIR}/services/ASC.ClearEvents/"
+		WORK_DIR="${PRODUCT_DIR}/services/ASC.ClearEvents/"
 		EXEC_FILE="ASC.ClearEvents.dll"
 	;;
 	backup-worker )
 		SERVICE_PORT="5032"
-		WORK_DIR="${BASE_DIR}/services/ASC.Data.Backup.Worker/"
+		WORK_DIR="${PRODUCT_DIR}/services/ASC.Data.Backup.Worker/"
 		EXEC_FILE="ASC.Data.Backup.Worker.dll"
 		CORE_EVENT_BUS=" --core:eventBus:subscriptionClientName=asc_event_bus_backup_queue"
 	;;
 	doceditor )
 		SERVICE_PORT="5013"
-		WORK_DIR="${BASE_DIR}/products/ASC.Files/editor/"
+		WORK_DIR="${PRODUCT_DIR}/products/ASC.Files/editor/"
 		EXEC_FILE="server.js"
 		DEPENDENCY_LIST=""
 	;;
 	migration-runner )
-		WORK_DIR="${BASE_DIR}/services/ASC.Migration.Runner/"
+		WORK_DIR="${PRODUCT_DIR}/services/ASC.Migration.Runner/"
 		EXEC_FILE="ASC.Migration.Runner.dll"
 	;;
 	login )
 		SERVICE_PORT="5011"
-		WORK_DIR="${BASE_DIR}/products/ASC.Login/login/"
+		WORK_DIR="${PRODUCT_DIR}/products/ASC.Login/login/"
 		EXEC_FILE="server.js"
 		DEPENDENCY_LIST="openresty.service"
 	;;
 	healthchecks )
 		SERVICE_PORT="5033"
-		WORK_DIR="${BASE_DIR}/services/ASC.Web.HealthChecks.UI/"
+		WORK_DIR="${PRODUCT_DIR}/services/ASC.Web.HealthChecks.UI/"
 		EXEC_FILE="ASC.Web.HealthChecks.UI.dll"
 		DEPENDENCY_LIST=""
 	;;
 	sdk )
         SERVICE_PORT="5099"
-        WORK_DIR="${BASE_DIR}/products/ASC.Sdk/sdk/"
+        WORK_DIR="${PRODUCT_DIR}/products/ASC.Sdk/sdk/"
         EXEC_FILE="server.js"
         DEPENDENCY_LIST=""
     ;;
 	management )
 		SERVICE_PORT="5015"
-		WORK_DIR="${BASE_DIR}/products/ASC.Management/management/"
+		WORK_DIR="${PRODUCT_DIR}/products/ASC.Management/management/"
 		EXEC_FILE="server.js"
 		DEPENDENCY_LIST=""
 	;;
 	telegram )
 		SERVICE_PORT="5075"
-		WORK_DIR="${BASE_DIR}/services/ASC.TelegramService/"
+		WORK_DIR="${PRODUCT_DIR}/services/ASC.TelegramService/"
 		EXEC_FILE="ASC.TelegramService.dll"
 		CORE_EVENT_BUS=" --core:eventBus:subscriptionClientName=asc_event_bus_telegram_queue"
 	;;
 	ai )
 		SERVICE_PORT="5157"
-		WORK_DIR="${BASE_DIR}/products/ASC.AI/server/"
+		WORK_DIR="${PRODUCT_DIR}/products/ASC.AI/server/"
 		EXEC_FILE="ASC.AI.dll"
 	;;
 	ai-worker )
 		SERVICE_PORT="5124"
-		WORK_DIR="${BASE_DIR}/products/ASC.AI/service/"
+		WORK_DIR="${PRODUCT_DIR}/products/ASC.AI/service/"
 		EXEC_FILE="ASC.AI.Worker.dll"
 		CORE_EVENT_BUS=" --core:eventBus:subscriptionClientName=asc_event_bus_ai_service_queue"
 	;;
 	mcp )
 		SERVICE_PORT="5158"
-		WORK_DIR="${BASE_DIR}/products/ASC.AI/mcp/"
-		EXEC_FILE="bin/${PACKAGE_SYSNAME}-${PRODUCT}-mcp"
+		WORK_DIR="${PRODUCT_DIR}/products/ASC.AI/mcp/"
+		# The executable comes from the upstream docspace-mcp repository and keeps its own name.
+		EXEC_FILE="bin/${PACKAGE_SYSNAME}-docspace-mcp"
 	;;
   esac
   SERVICE_NAME="$1"
@@ -235,9 +244,9 @@ reassign_values (){
   unset SYSTEMD_ENVIRONMENT
   if [[ "${EXEC_FILE}" == *".js" ]]; then
 	SERVICE_TYPE="simple"
-	EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE} --app.port=${SERVICE_PORT} --app.appsettings=${PATH_TO_CONF} --app.environment=\${ENVIRONMENT}"
+	EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE} --app.hostname=127.0.0.1 --app.port=${SERVICE_PORT} --app.appsettings=${PATH_TO_CONF} --app.environment=\${ENVIRONMENT}"
   elif [[ "${EXEC_FILE}" == *".jar" ]]; then
-	SYSTEMD_ENVIRONMENT="SPRING_APPLICATION_NAME=${SPRING_APPLICATION_NAME} SERVER_PORT=${SERVICE_PORT} LOG_FILE_PATH=${LOG_DIR}/${SERVICE_NAME}.log"
+	SYSTEMD_ENVIRONMENT="SPRING_APPLICATION_NAME=${SPRING_APPLICATION_NAME} SERVER_ADDRESS=127.0.0.1 SERVER_PORT=${SERVICE_PORT} GRPC_SERVER_ADDRESS=127.0.0.1 LOG_FILE_PATH=${LOG_DIR}/${SERVICE_NAME}.log"
 	SERVICE_TYPE="notify"
 	EXEC_START="${JAVA_RUN} ${WORK_DIR}${EXEC_FILE}"
   elif [[ "${SERVICE_NAME}" = "migration-runner" ]]; then
@@ -257,16 +266,22 @@ reassign_values (){
 }
 
 write_to_file () {
-  [[ -n ${SYSTEMD_ENVIRONMENT} ]] && sed "/^ExecStart=/a Environment=${SYSTEMD_ENVIRONMENT}" -i $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
-  [[ -n ${DEPENDENCY_LIST} ]] && sed -e "s_\(After=.*\)_\1 ${DEPENDENCY_LIST}_" -e "/After=/a Wants=${DEPENDENCY_LIST}" -i $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
+  [[ -n ${SYSTEMD_ENVIRONMENT} ]] && sed "/^ExecStart=/a Environment=${SYSTEMD_ENVIRONMENT}" -i $BUILD_PATH/${UNIT_FILE}
+  [[ -n ${DEPENDENCY_LIST} ]] && sed -e "s_\(After=.*\)_\1 ${DEPENDENCY_LIST}_" -e "/After=/a Wants=${DEPENDENCY_LIST}" -i $BUILD_PATH/${UNIT_FILE}
   sed -i -e 's#${SERVICE_NAME}#'$SERVICE_NAME'#g' -e 's#${WORK_DIR}#'$WORK_DIR'#g' -e "s#\${RESTART}#$RESTART#g" -e "s#\${SYSTEMD_ENVIRONMENT_FILE}#$SYSTEMD_ENVIRONMENT_FILE#g" \
-  -e "s#\${EXEC_START}#$EXEC_START#g" -e "s#\${SERVICE_TYPE}#$SERVICE_TYPE#g"  $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
+  -e "s#\${EXEC_START}#$EXEC_START#g" -e "s#\${SERVICE_TYPE}#$SERVICE_TYPE#g" -e "s#\${PACKAGE_NAME}#$PRODUCT#g"  $BUILD_PATH/${UNIT_FILE}
 }
 
 mkdir -p $BUILD_PATH
 
 for i in ${!SERVICE_NAME[@]}; do
-  cp $BASEDIR/service $BUILD_PATH/${PRODUCT}-${SERVICE_NAME[$i]}.service
+  UNIT_NAME="${PRODUCT}-${SERVICE_NAME[$i]}"
+  if [[ "${PACKAGE_MANAGER}" = "deb" ]]; then
+    UNIT_FILE="${PACKAGE_NAME}-${SERVICE_NAME[$i]}.${UNIT_NAME}.service"
+  else
+    UNIT_FILE="${UNIT_NAME}.service"
+  fi
+  cp $BASEDIR/service $BUILD_PATH/${UNIT_FILE}
   reassign_values "${SERVICE_NAME[$i]}"
   write_to_file $i
 done

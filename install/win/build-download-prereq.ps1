@@ -63,9 +63,9 @@ $path_prereq = "${pwd}\buildtools\install\win\"
 
 $opensearchstack_path = "${pwd}\buildtools\install\win\OpenSearchStack\"
 
-$opensearch_version = '2.18.0'
+$opensearch_version = '3.5.0'
 
-$opensearchdashboards_version = '2.18.0'
+$opensearchdashboards_version = '3.5.0'
 
 $openresty_version = '1.27.1.1'
 
@@ -119,21 +119,21 @@ $prerequisites = @(
   }
 
    @{  
-    # Downloading onlyoffice-documentserver-ee for DocSpace Enterprise
+    # Downloading onlyoffice-documentserver-ee for Apps Enterprise
     download_allways = $true; 
     name = "onlyoffice-documentserver-ee.exe"; 
     link = $DOCUMENT_SERVER_EE_LINK
   }
 
   @{
-    # Downloading onlyoffice-documentserver for DocSpace Community
+    # Downloading onlyoffice-documentserver for Apps Community
     download_allways = $true; 
     name = "onlyoffice-documentserver.exe"; 
     link = $DOCUMENT_SERVER_CE_LINK
   }
    
    @{  
-    # Downloading onlyoffice-documentserver-de for DocSpace Developer
+    # Downloading onlyoffice-documentserver-de for Apps Developer
     download_allways = $true; 
     name = "onlyoffice-documentserver-de.exe"; 
     link = $DOCUMENT_SERVER_DE_LINK
@@ -141,7 +141,7 @@ $prerequisites = @(
 )
 
 $path_enterprise_prereq = "${pwd}\buildtools\install\win\redist\"
-$aip_path = "${pwd}\buildtools\install\win\DocSpace.aip"
+$aip_path = "${pwd}\buildtools\install\win\Apps.aip"
 
 if (Test-Path $aip_path) {
     [xml]$xml = Get-Content -LiteralPath $aip_path -Encoding UTF8

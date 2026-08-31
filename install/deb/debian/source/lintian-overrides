@@ -1,15 +1,10 @@
-# Ignoring node_modules errors due to lack of ability to influence them
-embedded-javascript-library var/www/{{product}}/*/node_modules/*
-# Ignoring node_modules errors due to lack of ability to influence them
-executable-not-elf-or-script var/www/{{product}}/*/node_modules/*
-# Ignoring node_modules errors due to lack of ability to influence them
-privacy-breach-generic var/www/{{product}}/*/node_modules/*
-# Ignoring node_modules errors due to lack of ability to influence them
-script-not-executable var/www/{{product}}/*/node_modules/*
-# Ignoring node_modules errors due to lack of ability to influence them
+# Ignoring node_modules errors due to lack of ability to influence them.
+# A single "*" spans multiple path segments here (confirmed on the real CI lintian
+# version with a reproduction of pnpm's nested node_modules/.pnpm/.../node_modules/*
+# layout), so this stays scoped instead of matching package-wide.
+embedded-javascript-library var/www/{{package_sysname}}/{{product}}/*/node_modules/*
 unusual-interpreter */node_modules/*
-# Ignoring node_modules errors due to lack of ability to influence them
-statically-linked-binary var/www/{{product}}/*/node_modules/*
+statically-linked-binary var/www/{{package_sysname}}/{{product}}/*/node_modules/*
 
 # The use of the /var/www directory is caused by its past history as the default document root
 dir-or-file-in-var-www
@@ -27,13 +22,9 @@ package-has-unnecessary-activation-of-ldconfig-trigger
 description-is-pkg-name
 description-starts-with-package-name
 description-too-short
-description-synopsis-is-duplicated
 
-# There is no manual page for {{product}}-configuration
+# There is no manual page for {{product}}-configuration or {{product}}-ssl-setup
 binary-without-manpage
-
-# Chown is used for the directories of our project, the user and group are created before that
-maintainer-script-should-not-use-recursive-chown-or-chmod
 
 # Scripts are not designed to be run manually
 script-not-executable
@@ -47,13 +38,10 @@ untranslatable-debconf-templates
 # We use this to protect sensitive information (ie passwords) in the config file
 non-standard-file-perm
 
-# There are instances where temporary or future code sections need to be retained for documentation or future development purposes
+# A third-party static lib bundled via node_modules (node-xmllint's libz.a) was built with LTO and dh_strip left it without a usable code section; not our code to fix
 no-code-sections
 
-# Ignoring errors due to lack of ability to influence them
-library-not-linked-against-libc
-
-# Some file triggers a privacy concern, specifically references an image files .png 
+# Some file triggers a privacy concern, specifically references an image files .png
 privacy-breach-generic
 
 # Building a cross-platform project, so those files are arch-independent
@@ -67,7 +55,7 @@ missing-dependency-on-libc
 # Including debug symbols in these files makes no sense and increases the size of the package.
 unstripped-binary-or-object
 
-# The systemctl call is used to manage MySQL and ensure that it is configured correctly
+# preinst stops our own legacy service units (common) / reloads openresty after a config change (proxy) before the new package files land
 maintainer-script-calls-systemctl
 
 # JAR files are standalone executables
@@ -79,6 +67,9 @@ non-standard-dir-perm
 # Suppressing warnings about class version due to Java version mismatch
 unknown-java-class-version
 
-# Suppressing misplaced extra member warnings for _gpgbuilder
-misplaced-extra-member-in-deb _gpgbuilder (unexpected _member at position 3)
+# dpkg-sig appends a _gpgorigin member when signing the .deb; lintian flags this as an unexpected/misplaced ar member, but it's how our packages are signed in CI
+misplaced-extra-member-in-deb
+
+# Ignoring errors due to lack of ability to influence them (alpine-librdkafka.so is the musl/Alpine-targeted build bundled by the same NuGet package as the glibc one; confirmed still an active check on the lintian version the CI runner actually installs, unlike a newer lintian we mistakenly tested against)
+library-not-linked-against-libc
 

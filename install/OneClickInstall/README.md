@@ -1,16 +1,16 @@
 [![License](https://img.shields.io/badge/License-GNU%20AGPL%20V3-green.svg?style=flat)](https://www.gnu.org/licenses/agpl-3.0.en.html)
-[![Docker Pulls](https://img.shields.io/docker/pulls/onlyoffice/docspace-files?logo=docker)](https://hub.docker.com/r/onlyoffice/docspace-files)
-[![Docker Image Version](https://img.shields.io/docker/v/onlyoffice/docspace-files?sort=semver&logo=docker)](https://hub.docker.com/r/onlyoffice/docspace-files/tags)
+[![Docker Pulls](https://img.shields.io/docker/pulls/onlyoffice/apps-files?logo=docker)](https://hub.docker.com/r/onlyoffice/apps-files)
+[![Docker Image Version](https://img.shields.io/docker/v/onlyoffice/apps-files?sort=semver&logo=docker)](https://hub.docker.com/r/onlyoffice/apps-files/tags)
 [![GitHub Stars](https://img.shields.io/github/stars/ONLYOFFICE/DocSpace-buildtools?style=flat&logo=github)](https://github.com/ONLYOFFICE/DocSpace-buildtools/stargazers)
 
-# ONLYOFFICE DocSpace - OneClickInstall
+# ONLYOFFICE Apps - OneClickInstall
 
-A simple self-hosted installer for **ONLYOFFICE DocSpace** using Docker or Linux packages.
+A simple self-hosted installer for **ONLYOFFICE Apps** using Docker or Linux packages.
 
 | 🚀 [Start](#-quick-start) | 🛠 [Flags](#-flags) | 💡 [Examples](#-examples) | 🖥️ [Reqs](#-system-requirements) | ✅ [OS](#-supported-operating-systems) | 📚 [Resources](#-additional-resources) | 📝 [License](#-license) |
 |--------------------------|--------------------------------------------|---------------------------|----------------------------------------|----------------------------------------|----------------------------------------|----------------------|
 
-**ONLYOFFICE DocSpace** is a room-based collaborative platform which allows organizing a clear file structure depending on users' needs or project goals. Flexible access  permissions and user roles allow fine-tuning the access to the whole space or separate rooms.
+**ONLYOFFICE Apps** is a room-based collaborative platform which allows organizing a clear file structure depending on users' needs or project goals. Flexible access  permissions and user roles allow fine-tuning the access to the whole space or separate rooms.
 
 ## 🚀 Quick Start
 
@@ -19,23 +19,23 @@ A simple self-hosted installer for **ONLYOFFICE DocSpace** using Docker or Linux
 Community Edition (default):
 
 ```bash
-curl -O https://download.onlyoffice.com/docspace/docspace-install.sh
+curl -O https://download.onlyoffice.com/apps/apps-install.sh
 ```
 
 If you want to install a different edition, choose one of the following:
 
 > **Enterprise Edition:**
 > ```bash
-> curl -O https://download.onlyoffice.com/docspace/docspace-enterprise-install.sh
+> curl -O https://download.onlyoffice.com/apps/apps-enterprise-install.sh
 > ```
 
 > **Developer Edition:**
 > ```bash
-> curl -O https://download.onlyoffice.com/docspace/docspace-developer-install.sh
+> curl -O https://download.onlyoffice.com/apps/apps-developer-install.sh
 > ```
 
 ### 2. Run the script
-Use the downloaded script to install ONLYOFFICE DocSpace with either the RPM/DEB package or Docker.  
+Use the downloaded script to install ONLYOFFICE Apps with either the RPM/DEB package or Docker.  
 
 **Install as RPM/DEB Package**:
 ```bash
@@ -47,7 +47,7 @@ sudo bash <script-name> package
 sudo bash <script-name> docker
 ```
 
-Replace `<script-name>` with the name of the downloaded script (e.g., `docspace-enterprise-install.sh`).
+Replace `<script-name>` with the name of the downloaded script (e.g., `apps-enterprise-install.sh`).
 
 ## 🛠 Flags
 
@@ -90,20 +90,20 @@ sudo bash <script-name> package -h
 | `--password`            | `<PASS>`                                  | -                         | Registry password              |
 | `--volumesdir`          | `<DIR>`                                   | `/var/lib/docker/volumes` | Host dir for Docker volumes    |
 
-#### DocSpace Core
+#### ONLYOFFICE Apps Core
 | Flag                    | Value placeholder                         | Default value             | Description                    |
 |-------------------------|-------------------------------------------|---------------------------|--------------------------------|
-| `--installdocspace`     | `true` \| `false`                         | `true`                    | Install / update DocSpace      |
+| `--installapps`     | `true` \| `false`                         | `true`                    | Install / update ONLYOFFICE Apps      |
 | `--deployment-mode`     | `standard` \| `stack` \| `community`      | `standard`                | Deployment topology (see below)|
-| `--docspaceversion`     | `<VERSION>`                               | *(latest stable)*         | DocSpace version               |
-| `--docspacehost`        | `<HOST>`                                  | `localhost`               | Hostname / IP                  |
+| `--appsversion`     | `<VERSION>`                               | *(latest stable)*         | ONLYOFFICE Apps version               |
+| `--appshost`        | `<HOST>`                                  | `localhost`               | Hostname / IP                  |
 | `--externalport`        | `<PORT>`                                  | `80`                      | External HTTP port             |
 | `--machinekey`          | `<KEY>`                                   | *(auto-generated)*        | `core.machinekey` value        |
 
-`--deployment-mode` selects how DocSpace is deployed via Docker:
+`--deployment-mode` selects how ONLYOFFICE Apps is deployed via Docker:
 - `standard` — modular multi-container deployment (default), one container per service.
 - `stack` — services grouped into fewer containers sharing a common runtime.
-- `community` — a single all-in-one `onlyoffice-docspace` container (plus MySQL, OpenSearch and
+- `community` — a single all-in-one `onlyoffice-apps` container (plus MySQL, OpenSearch and
   Document Server), intended for quick evaluation/testing rather than production.
 
 You can switch topology on an existing install with `--update true --deployment-mode <mode>`:
@@ -124,7 +124,7 @@ are ignored, since that topology has no separate Redis/RabbitMQ containers).
 |-------------------------|-----------------------------|----------------------|------------------------------|
 | `--installmysql`        | `true` \| `false`           | `true`               | Deploy MySQL container       |
 | `--mysqlrootpassword`   | `<PASS>`                    | *(auto-generated)*   | Root password                |
-| `--mysqldatabase`       | `<DB_NAME>`                 | onlyoffice           | DocSpace DB name             |
+| `--mysqldatabase`       | `<DB_NAME>`                 | onlyoffice_apps      | ONLYOFFICE Apps DB name             |
 | `--mysqluser`           | `<USER>`                    | -                    | DB user                      |
 | `--mysqlpassword`       | `<PASS>`                    | *(auto-generated)*   | DB user password             |
 | `--mysqlhost`           | `<HOST>`                    | `localhost`          | Host/IP                      |
@@ -189,38 +189,38 @@ Typical usage scenarios with different combinations of flags.
 
 1. Quick install on port 8080
 ```bash
-sudo bash docspace-install.sh docker --externalport 8080
+sudo bash apps-install.sh docker --externalport 8080
 ```
 
 2. Update all components, skip hardware check
 ```bash
-sudo bash docspace-install.sh \
+sudo bash apps-install.sh \
   --update true \
   --skiphardwarecheck true
 ```
 
-3. Install DocSpace without ONLYOFFICE Docs
+3. Install ONLYOFFICE Apps without ONLYOFFICE Docs
 ```bash
-sudo bash docspace-install.sh --installdocs false
+sudo bash apps-install.sh --installdocs false
 ```
 
 4. Update ONLYOFFICE Docs only to version 9.0.2
 ```bash
-sudo bash docspace-install.sh \
+sudo bash apps-install.sh \
   --update true \
   --docsimage onlyoffice/documentserver-ee \
   --docsversion 9.0.2 \
   --installdocs true \
-  --installdocspace false \
+  --installapps false \
   --installrabbitmq false \
   --installredis false
 ```
 
-5. Update DocSpace to a specific version 3.2.0 and skip all other components
+5. Update ONLYOFFICE Apps to a specific version 4.0.0 and skip all other components
 ```bash
-sudo bash docspace-install.sh \
+sudo bash apps-install.sh \
   --update true \
-  --docspaceversion 3.2.0 \
+  --appsversion 4.0.0 \
   --installdocs false \
   --installrabbitmq false \
   --installredis false
@@ -228,7 +228,7 @@ sudo bash docspace-install.sh \
 
 6. Pull images from a private registry
 ```bash
-sudo bash docspace-install.sh \
+sudo bash apps-install.sh \
   --registry https://reg.example.com:5000 \
   --username USER \
   --password PASS
@@ -236,63 +236,63 @@ sudo bash docspace-install.sh \
 
 7. Set JWT header & secret
 ```bash
-sudo bash docspace-install.sh \
+sudo bash apps-install.sh \
   --jwtheader Authorization \
   --jwtsecret super-secret-key
 ```
 
 8. Custom MySQL root password
 ```bash
-sudo bash docspace-install.sh --mysqlrootpassword new-secret-pw
+sudo bash apps-install.sh --mysqlrootpassword new-secret-pw
 ```
 
 9. Automatic Let's Encrypt
 ```bash
-sudo bash docspace-install.sh \
+sudo bash apps-install.sh \
   --letsencryptdomain yourdomain.com \
   --letsencryptmail admin@yourdomain.com
 ```
 
 10. Bring your own certificate
 ```bash
-sudo bash docspace-install.sh \
+sudo bash apps-install.sh \
   --certfile /path/fullchain.pem \
   --certkeyfile /path/privkey.pem
 ```
 
 11. Connect external ONLYOFFICE Docs
 ```bash
-sudo bash docspace-install.sh \
+sudo bash apps-install.sh \
   --installdocs false \
   --docsurl http://docs.example.com:8080
 ```
 
 12. Use external MySQL
 ```bash
-sudo bash docspace-install.sh \
+sudo bash apps-install.sh \
   --installmysql false \
   --mysqlhost mysql.example.com \
   --mysqlport 3306 \
-  --mysqldatabase docspace \
-  --mysqluser docspace \
+  --mysqldatabase onlyoffice_apps \
+  --mysqluser apps \
   --mysqlpassword super-secret
 ```
 
 13. Use external RabbitMQ
 ```bash
-sudo bash docspace-install.sh \
+sudo bash apps-install.sh \
   --installrabbitmq false \
   --rabbitmqprotocol amqp \
   --rabbitmqhost mq.example.com \
   --rabbitmqport 5672 \
-  --rabbitmqusername docspace \
+  --rabbitmqusername apps \
   --rabbitmqpassword mq-pass \
   --rabbitmqvirtualhost /
 ```
 
 14. Use external Redis
 ```bash
-sudo bash docspace-install.sh \
+sudo bash apps-install.sh \
   --installredis false \
   --redishost redis.example.com \
   --redisport 6379 \
@@ -301,18 +301,18 @@ sudo bash docspace-install.sh \
 
 15. Use external OpenSearch
 ```bash
-sudo bash docspace-install.sh \
+sudo bash apps-install.sh \
   --installelastic false \
   --elasticprotocol https \
   --elastichost search.example.com \
   --elasticport 9200
 ```
-16. Combined example: all external services, update only DocSpace
+16. Combined example: all external services, update only ONLYOFFICE Apps
 ```bash
-sudo bash docspace-install.sh \
+sudo bash apps-install.sh \
   --update true \
-  --installdocspace true \
-  --docspaceversion 3.2.0 \
+  --installapps true \
+  --appsversion 4.0.0 \
   --installdocs false \
   --installmysql false \
   --installrabbitmq false \
@@ -320,10 +320,10 @@ sudo bash docspace-install.sh \
   --installelastic false \
   --docsurl https://docs.example.com \
   --mysqlhost mysql.example.com \
-  --mysqluser docspace \
+  --mysqluser apps \
   --mysqlpassword super-secret \
   --rabbitmqhost mq.example.com \
-  --rabbitmqusername docspace \
+  --rabbitmqusername apps \
   --rabbitmqpassword mq-pass \
   --redishost redis.example.com \
   --redispassword redis-pass \
@@ -334,9 +334,9 @@ sudo bash docspace-install.sh \
 17. Install the single-container community stack, then switch to the standard topology
     (MySQL/OpenSearch/Document Server data is preserved)
 ```bash
-sudo bash docspace-install.sh docker --deployment-mode community
+sudo bash apps-install.sh docker --deployment-mode community
 
-sudo bash docspace-install.sh docker \
+sudo bash apps-install.sh docker \
   --update true \
   --deployment-mode standard
 ```
@@ -361,8 +361,8 @@ The installation scripts support the following operating systems, which are **re
 - RHEL 9
 - CentOS 9S
 - CentOS 10S
-- Fedora 42
 - Fedora 43
+- Fedora 44
 - Debian 11
 - Debian 12
 - Debian 13
@@ -384,6 +384,6 @@ The installation scripts support the following operating systems, which are **re
 
 ## 📝 License
 
-ONLYOFFICE DocSpace is distributed under the [**GNU AGPL v3**](https://onlyo.co/38YZGJh) license for the Community Edition.  
+ONLYOFFICE Apps is distributed under the [**GNU AGPL v3**](https://onlyo.co/38YZGJh) license for the Community Edition.  
 **Enterprise** and **Developer** editions require a valid commercial license. For more details, please contact [sales@onlyoffice.com](mailto:sales@onlyoffice.com).
 

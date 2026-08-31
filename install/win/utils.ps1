@@ -305,9 +305,9 @@ function SetIdentityEncryptionSecret {
 # Function to set up OpenSearch.
 function OpenSearchSetup {
     $AppDir = AI_GetMsiProperty APPDIR
-    $AppIndexDir = Join-Path $AppDir "Data\Index\v2.18.0\"
+    $AppIndexDir = Join-Path $AppDir "Data\Index\v3.5.0\"
     $LogsDir     = Join-Path $AppDir "Logs\"
-    $OpenSearchDashboardsYml = "C:\OpenSearchStack\opensearch-dashboards-2.18.0\config\opensearch_dashboards.yml"
+    $OpenSearchDashboardsYml = "C:\OpenSearchStack\opensearch-dashboards-3.5.0\config\opensearch_dashboards.yml"
 
     # Check if the index directory exists and set NEED_REINDEX_OPENSEARCH property if it doesn't.
     if (-not (Test-Path $AppIndexDir)) {
@@ -381,6 +381,41 @@ function SetAppDirWithForwardSlash {
     AI_SetMsiProperty APPDIR_FORWARD_SLASH $AppDirForwardSlash
 }
 
+function MigrateProductRegistry {
+    $LegacyKey = "HKLM\Software\Ascensio System SIA\ONLYOFFICE DocSpace"
+    $AppsKey = "HKLM\Software\Ascensio System SIA\ONLYOFFICE Apps"
+    $LegacyPath = "Registry::$LegacyKey"
+    $AppsPath = "Registry::$AppsKey"
+
+    if (-not (Test-Path -LiteralPath $LegacyPath)) {
+        return
+    }
+
+    if (Test-Path -LiteralPath $AppsPath) {
+        return
+    }
+
+    try {
+        Rename-Item -LiteralPath $LegacyPath -NewName "ONLYOFFICE Apps" -ErrorAction Stop
+        Write-Output "The product registry key was renamed to ONLYOFFICE Apps."
+        return
+    }
+    catch {
+        Write-Output "Unable to rename the product registry key. Falling back to a recursive copy."
+    }
+
+    try {
+        & "$env:SystemRoot\System32\reg.exe" copy $LegacyKey $AppsKey /s /f | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            throw "reg.exe exited with code $LASTEXITCODE"
+        }
+        Write-Output "The legacy product registry tree was copied to ONLYOFFICE Apps."
+    }
+    catch {
+        Write-Warning "Unable to migrate the product registry key: $($_.Exception.Message)"
+    }
+}
+
 # Function to move configurations and manage files.
 function MoveConfigs {
     # Define source and target paths.
@@ -391,7 +426,7 @@ function MoveConfigs {
     $ConfigSslFile = Join-Path $TargetFolder "onlyoffice-proxy-ssl.conf.tmpl"
     $ConfigFile = Join-Path $TargetFolder "onlyoffice-proxy.conf"
     $SslScriptDir = Join-Path $AppDir "sbin\"
-    $SslScriptPath = Join-Path $AppDir "sbin\docspace-ssl-setup.ps1"
+    $SslScriptPath = Join-Path $AppDir "sbin\apps-ssl-setup.ps1"
     $FluentBitSourceFile = Join-Path $AppDir "config\fluent-bit.conf"
     $FluentBitDstFolder = "C:\OpenSearchStack\fluent-bit-3.2.4-win64\conf\"
 

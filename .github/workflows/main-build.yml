@@ -25,7 +25,7 @@ on:
 env:
   DOCKER_PATH: "/install/docker"
   REPO: "onlyoffice"
-  DOCKER_IMAGE_PREFIX: "4testing-docspace"
+  DOCKER_IMAGE_PREFIX: "4testing-apps"
   DOCKERFILE: "Dockerfile"
 
 jobs:

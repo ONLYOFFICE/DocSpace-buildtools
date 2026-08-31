@@ -9,7 +9,7 @@ ARG BUSYBOX_VERSION="1.37"
 ARG PYTHON_VERSION="3.12-slim"
 ARG NODE_VERSION="24.16-trixie-slim"
 ARG PLUGIN_NODE_TYPES_VERSION="18.19.0"
-ARG JAVA_VERSION="21"
+ARG JAVA_VERSION="25"
 ARG JAVA_RUN_VERSION="${JAVA_VERSION}-jre"
 ARG MAVEN_VERSION="3.9-eclipse-temurin-${JAVA_VERSION}"
 
@@ -39,6 +39,7 @@ RUN --mount=type=secret,id=github_token,env=GITHUB_TOKEN sh -ec '\
       ${GITHUB_TOKEN:+-H "Authorization: Bearer ${GITHUB_TOKEN}"} \
       "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/git/refs/heads/${GIT_BRANCH}" -o version.json'
 
+# BEGIN_SOURCE
 RUN <<'EOF'
 #!/bin/bash
     set -e
@@ -59,6 +60,7 @@ RUN <<'EOF'
 
     for PID in "${PIDS[@]}"; do wait "${PID}" || exit 1; done
 EOF
+# END_SOURCE
 
 WORKDIR ${SRC_PATH}/buildtools/config
 RUN <<EOF
@@ -102,24 +104,25 @@ RUN PUBLISH_ARGS='-c Release --self-contained false -p:DebugType=None -p:DebugSy
     rm -rf ${SRC_PATH}/server
 
 # node build
+FROM node:${NODE_VERSION} AS build-node-services
+ARG SRC_PATH
+WORKDIR ${SRC_PATH}/server
+COPY --from=src ${SRC_PATH}/server/common/ASC.Socket.IO ./common/ASC.Socket.IO
+COPY --from=src ${SRC_PATH}/server/common/ASC.SsoAuth ./common/ASC.SsoAuth
+COPY --from=src ${SRC_PATH}/server/common/ASC.NewAi ./common/ASC.NewAi
+
+RUN for svc in ASC.Socket.IO ASC.SsoAuth ASC.NewAi; do \
+    (cd ${SRC_PATH}/server/common/$svc && yarn install --immutable); \
+    done && \
+    yarn cache clean --all && \
+    find ${SRC_PATH}/server/common -type f \( -name "*.js.map" -o -name "*.css.map" \) -delete
+
+# build frondend from client
 FROM --platform=$BUILDPLATFORM node:${NODE_VERSION} AS build-node
 ARG SRC_PATH
 ARG BUILD_ARGS="build"
 ARG DEPLOY_ARGS="deploy"
 
-# build services Socket, SsoAuth from DocSpace-server 
-WORKDIR ${SRC_PATH}/server
-COPY --from=src ${SRC_PATH}/server/common/ASC.Socket.IO ./common/ASC.Socket.IO
-COPY --from=src ${SRC_PATH}/server/common/ASC.SsoAuth ./common/ASC.SsoAuth
-
-RUN cd ${SRC_PATH}/server/common/ASC.Socket.IO && \
-    yarn install --immutable && \
-    cd ${SRC_PATH}/server/common/ASC.SsoAuth && \
-    yarn install --immutable && \
-    yarn cache clean --all && \
-    find ${SRC_PATH}/server/common -type f \( -name "*.js.map" -o -name "*.css.map" \) -delete
-
-# build frondend from DocSpace-client
 WORKDIR ${SRC_PATH}
 COPY --from=src ${SRC_PATH}/buildtools/config ./buildtools/config
 COPY --from=src ${SRC_PATH}/client/ ./client
@@ -131,8 +134,6 @@ RUN corepack enable && corepack prepare pnpm@latest --activate && \
     pnpm install && \
     pnpm ${BUILD_ARGS} && \
     pnpm run ${DEPLOY_ARGS} && \
-    rm -rf node_modules && \
-    pnpm install --prod && \
     find ${SRC_PATH}/publish/web -type f \( -name "*.js.map" -o -name "*.css.map" \) -delete && \
     rm -rf "$(pnpm store path)" /root/.cache ${SRC_PATH}/client ${SRC_PATH}/buildtools
 
@@ -190,7 +191,7 @@ ENV APP_STORAGE_ROOT=/app/onlyoffice/data/ \
     PATH_TO_CONF=/app/onlyoffice/config
 
 RUN apt-get -y update && \
-    apt-get install --no-install-recommends -yq sudo adduser nano curl libgdiplus iproute2 python3-requests python3-netaddr python3-jsonpath-ng && \
+    apt-get install --no-install-recommends -yq adduser nano curl libgdiplus iproute2 python3-requests python3-netaddr python3-jsonpath-ng && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     mkdir -p /var/log/onlyoffice /app/onlyoffice/data && \
@@ -214,7 +215,7 @@ ENV APP_STORAGE_ROOT=/app/onlyoffice/data/ \
     PATH_TO_CONF=/app/onlyoffice/config
 
 RUN apt-get -y update && \
-    apt-get install --no-install-recommends -yq sudo adduser nano curl iproute2 python3-requests python3-netaddr python3-jsonpath-ng && \
+    apt-get install --no-install-recommends -yq adduser nano curl iproute2 python3-requests python3-netaddr python3-jsonpath-ng && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     mkdir -p /var/log/onlyoffice /app/onlyoffice/data /var/www /run && \
@@ -234,7 +235,7 @@ ENV BUILD_PATH=${BUILD_PATH}
 ENV LOG_DIR=/var/log/onlyoffice
 
 RUN apt-get -y update && \
-    apt-get install --no-install-recommends -yq sudo adduser nano curl && \
+    apt-get install --no-install-recommends -yq adduser nano curl && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
     mkdir -p /var/log/onlyoffice /var/www/onlyoffice && \
@@ -283,6 +284,7 @@ RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.
     sed -i 's/127.0.0.1:5003/$service_studio/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5157/$service_ai/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:9899/$service_socket/' /etc/nginx/conf.d/onlyoffice.conf && \
+    sed -i 's/127.0.0.1:9837/$service_new_ai/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:9834/$service_sso/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5013/$service_doceditor/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5099/$service_sdk/' /etc/nginx/conf.d/onlyoffice.conf && \
@@ -291,7 +293,7 @@ RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.
     sed -i 's/127.0.0.1:8080/$service_identity/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5015/$service_management/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5033/$service_healthchecks/' /etc/nginx/conf.d/onlyoffice.conf && \
-    sed -i 's/127.0.0.1:5601/$dashboards_host:5601/' /etc/nginx/includes/server-dashboards.conf && \
+    sed -i 's/127.0.0.1:5601/$dashboards_host:5601/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/$public_root/\/var\/www\/public\//' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/http:\/\/172.*/$document_server;/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i '/client_body_temp_path/ i \ \ \ \ $MAP_HASH_BUCKET_SIZE' /etc/nginx/nginx.conf.template && \
@@ -417,14 +419,21 @@ CMD ["ASC.AI.Worker.dll", "ASC.AI.Worker", "core:eventBus:subscriptionClientName
 ## ASC.Socket.IO ##
 FROM noderun AS socket
 WORKDIR ${BUILD_PATH}/services/ASC.Socket.IO/
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Socket.IO .
+COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Socket.IO .
 
 CMD  ["server.js", "ASC.Socket.IO"]
+
+## ASC.NewAi ##
+FROM noderun AS newai
+WORKDIR ${BUILD_PATH}/services/ASC.NewAi/
+COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.NewAi .
+
+CMD  ["server.js", "ASC.NewAi"]
 
 ## ASC.SsoAuth ##
 FROM noderun AS ssoauth
 WORKDIR ${BUILD_PATH}/services/ASC.SsoAuth/
-COPY --from=build-node --chown=onlyoffice:onlyoffice  ${SRC_PATH}/server/common/ASC.SsoAuth .
+COPY --from=build-node-services --chown=onlyoffice:onlyoffice  ${SRC_PATH}/server/common/ASC.SsoAuth .
 
 CMD ["app.js", "ASC.SsoAuth"]
 
@@ -568,8 +577,9 @@ COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/edi
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/login/ ${BUILD_PATH}/products/ASC.Login/login/
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management/ ${BUILD_PATH}/products/ASC.Management/management/
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/ ${BUILD_PATH}/products/ASC.Sdk/sdk/
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Socket.IO ${BUILD_PATH}/services/ASC.Socket.IO/
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.SsoAuth ${BUILD_PATH}/services/ASC.SsoAuth/
+COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Socket.IO ${BUILD_PATH}/services/ASC.Socket.IO/
+COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.NewAi ${BUILD_PATH}/services/ASC.NewAi/
+COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.SsoAuth ${BUILD_PATH}/services/ASC.SsoAuth/
 
 CMD ["supervisord", "-n"]
 
@@ -641,8 +651,9 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
 COPY --from=node:24-bookworm-slim /usr/local/bin/node /usr/local/bin/node
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/ ${BUILD_PATH}/
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/static ${BUILD_PATH}/build
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Socket.IO ${SRC_PATH}/publish/services/ASC.Socket.IO
-COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.SsoAuth ${SRC_PATH}/publish/services/ASC.SsoAuth
+COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Socket.IO ${SRC_PATH}/publish/services/ASC.Socket.IO
+COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.SsoAuth ${SRC_PATH}/publish/services/ASC.SsoAuth
+COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.NewAi ${SRC_PATH}/publish/services/ASC.NewAi
 COPY --from=build-plugins --chown=onlyoffice:onlyoffice ${SRC_PATH}/plugins/publish/ ${APP_STORAGE_ROOT}/Studio/webplugins
 
 # .NET Monolith and Migration Runner, plugins
@@ -658,8 +669,8 @@ COPY --from=javarun /opt/java/openjdk /opt/java
 COPY --from=build-java --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.minified/app.jar ${SRC_PATH}/publish/services/ASC.Identity.minified/app.jar
 
 # mcp
-COPY --from=mcp --chown=onlyoffice:onlyoffice  /srv/onlyoffice-docspace-mcp/bin ${SRC_PATH}/publish/services/onlyoffice-docspace-mcp/bin
-COPY --from=mcp --chown=onlyoffice:onlyoffice  /srv/onlyoffice-docspace-mcp/LICENSE ${SRC_PATH}/publish/services/onlyoffice-docspace-mcp/LICENSE
+COPY --from=mcp --chown=onlyoffice:onlyoffice  /srv/onlyoffice-docspace-mcp/bin ${SRC_PATH}/publish/services/onlyoffice-apps-mcp/bin
+COPY --from=mcp --chown=onlyoffice:onlyoffice  /srv/onlyoffice-docspace-mcp/LICENSE ${SRC_PATH}/publish/services/onlyoffice-apps-mcp/LICENSE
 
 RUN set -eux; \
     sed -i -e 's#$public_root#/var/www/public/#' -e "/map \$scheme \$document_server {/,/}/ s|default \"http://[^\"]*\";|default \$document_server_vs_path;|" /etc/nginx/conf.d/onlyoffice.conf; \

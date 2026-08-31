@@ -2,11 +2,11 @@
 
 set -e
 
-PRODUCT="docspace"
+PRODUCT="apps"
 PACKAGE_SYSNAME="onlyoffice"
 
 APP_DIR="/etc/${PACKAGE_SYSNAME}/${PRODUCT}"
-PRODUCT_DIR="/var/www/${PRODUCT}"
+PRODUCT_DIR="/var/www/${PACKAGE_SYSNAME}/${PRODUCT}"
 LOG_DIR="/var/log/${PACKAGE_SYSNAME}/${PRODUCT}"
 OPENRESTY_DIR="/etc/openresty"
 
@@ -297,22 +297,41 @@ setup_openresty(){
 	sed -i "s!\(^worker_processes\).*;!\1 ${NGINX_WORKER_PROCESSES:-$(grep -c '^processor' /proc/cpuinfo)};!" "${OPENRESTY_CONF}"
 	sed -i "s!\(worker_connections\).*;!\1 ${NGINX_WORKER_CONNECTIONS:-$(ulimit -n)};!" "${OPENRESTY_CONF}"
 
+	NGINX_DEFAULT_SITE_WARNED=false
+	warn_default_site(){
+		# break out of the unterminated "Configuring openresty... " progress line before the first warning
+		[ "$NGINX_DEFAULT_SITE_WARNED" = false ] && { echo; NGINX_DEFAULT_SITE_WARNED=true; }
+		echo "Warning: $1" >&2
+	}
+
 	if [ "$DIST" = "RedHat" ]; then
+		NGINX_NEEDS_RELOAD=false
 		# Remove default nginx settings [error] port 80 is already in use
-		if [ -f /etc/nginx/nginx.conf ]; then
-			if grep -q "server {"  /etc/nginx/nginx.conf ; then
-				# fix Bug 81918 - Remove default server block without dropping conf.d includes
-				awk '/^[[:space:]]*server[[:space:]]*\{/&&!done{done=1;d=1;next}d{d+=gsub(/\{/,"{")-gsub(/\}/,"}");if(d<=0)d=0;next}1' \
-					/etc/nginx/nginx.conf > /etc/nginx/nginx.conf.tmp && mv -f /etc/nginx/nginx.conf.tmp /etc/nginx/nginx.conf
-				systemctl reload nginx
-			fi
+		if [ -f /etc/nginx/nginx.conf ] && grep -q "server {" /etc/nginx/nginx.conf; then
+			# fix Bug 81918 - Remove default server block without dropping conf.d includes
+			[ -f /etc/nginx/nginx.conf.bak ] || cp -f /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
+			warn_default_site "removed default server block from /etc/nginx/nginx.conf to free port 80 for openresty (backup: /etc/nginx/nginx.conf.bak)"
+			awk '/^[[:space:]]*server[[:space:]]*\{/&&!done{done=1;d=1;next}d{d+=gsub(/\{/,"{")-gsub(/\}/,"}");if(d<=0)d=0;next}1' \
+				/etc/nginx/nginx.conf > /etc/nginx/nginx.conf.tmp && mv -f /etc/nginx/nginx.conf.tmp /etc/nginx/nginx.conf
+			NGINX_NEEDS_RELOAD=true
 		fi
-		
+
+		# nginx.org RPM packages ship conf.d/default.conf, which also listens on port 80 and conflicts with openresty
+		if [ -f /etc/nginx/conf.d/default.conf ]; then
+			warn_default_site "disabled /etc/nginx/conf.d/default.conf to free port 80 for openresty (renamed to default.conf.disabled)"
+			[ -f /etc/nginx/conf.d/default.conf.disabled ] && rm -f /etc/nginx/conf.d/default.conf || mv -f /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf.disabled
+			NGINX_NEEDS_RELOAD=true
+		fi
+
+		if [ "$NGINX_NEEDS_RELOAD" = true ] && systemctl is-active --quiet nginx; then
+			systemctl reload nginx
+		fi
+
 		shopt -s nocasematch
 		if command -v getenforce >/dev/null 2>&1; then
 			case "$(getenforce)" in
 				enforcing|permissive)
-					PORTS=(5000 5001 5003 5004 5005 5006 5007 5009 5010 5011 5012 5013 5014 5015 5027 5032 5033 5034 5075 5099 5100 5124 5157 5158 8080 9090 9834 9899)
+					PORTS=(5000 5001 5003 5004 5005 5006 5007 5009 5010 5011 5012 5013 5014 5015 5027 5032 5033 5034 5075 5099 5100 5124 5157 5158 8080 9090 9834 9837 9899)
 					setsebool -P httpd_can_network_connect on
 					EXISTING_PORTS="$(semanage port -l | awk '$1=="http_port_t" && $2=="tcp"{for(i=3;i<=NF;i++)print $i}' | tr ',' '\n' | tr -d ' ')"
 					for PORT in "${PORTS[@]}"; do
@@ -336,6 +355,13 @@ setup_openresty(){
 		if ! id "nginx" >/dev/null 2>&1; then
 			rm -rf /var/log/nginx/* /var/cache/nginx/*
 			useradd -s /bin/false nginx
+		fi
+
+		# Debian nginx package enables sites-enabled/default, which also listens on port 80 and conflicts with openresty
+		if [ -e /etc/nginx/sites-enabled/default ]; then
+			warn_default_site "disabled /etc/nginx/sites-enabled/default to free port 80 for openresty (was -> $(readlink -f /etc/nginx/sites-enabled/default))"
+			rm -f /etc/nginx/sites-enabled/default
+			systemctl is-active --quiet nginx && systemctl reload nginx
 		fi
 	fi
 
@@ -413,13 +439,15 @@ change_elasticsearch_config(){
 	ELASTIC_SEARCH_JAVA_CONF_PATH="/etc/opensearch/jvm.options"
 
 	sed -i '/^plugins\.security\./,/^[^ ]/d' /etc/opensearch/opensearch.yml
-	/usr/share/opensearch/bin/opensearch-plugin list | grep -qx "opensearch-security" && \
+	/usr/share/opensearch/bin/opensearch-plugin list 2>/dev/null | grep -qx "opensearch-security" && \
 		/usr/share/opensearch/bin/opensearch-plugin remove opensearch-security >/dev/null 2>&1
 
 	if [[ ! -f "$APP_DIR/.private/opensearch-version" || $(cat "$APP_DIR/.private/opensearch-version") != *"${ELASTIC_VERSION}"* ]]; then
-		/usr/share/opensearch/bin/opensearch-plugin list | grep -q "ingest-attachment" && \
-			/usr/share/opensearch/bin/opensearch-plugin remove -s ingest-attachment
-		/usr/share/opensearch/bin/opensearch-plugin install -s -b ingest-attachment
+		/usr/share/opensearch/bin/opensearch-plugin list 2>/dev/null | grep -q "ingest-attachment" && \
+			/usr/share/opensearch/bin/opensearch-plugin remove -s ingest-attachment >/dev/null 2>&1
+		if ! INGEST_ATTACHMENT_ERROR=$(/usr/share/opensearch/bin/opensearch-plugin install -s -b ingest-attachment 2>&1); then
+			echo "${INGEST_ATTACHMENT_ERROR}" >&2
+		fi
 	fi
 
 	[ -f "${ELASTIC_SEARCH_CONF_PATH}.rpmnew" ] && cp -f "${ELASTIC_SEARCH_CONF_PATH}.rpmnew" "${ELASTIC_SEARCH_CONF_PATH}"
@@ -572,6 +600,22 @@ setup_rabbitmq() {
 	env_configuration "$APP_DIR/systemd.env" RABBIT_URI "${RABBITMQ_URI}"
 
 	if [ $1 == "LOCAL_RABBITMQ_SERVER" ]; then
+		touch /etc/rabbitmq/rabbitmq.conf /etc/rabbitmq/rabbitmq-env.conf
+		sed -i '/^[[:space:]]*listeners\.tcp\([.][^=]*\)\?[[:space:]]*=/d; /^[[:space:]]*distribution\.listener\.interface[[:space:]]*=/d' /etc/rabbitmq/rabbitmq.conf
+		printf '\nlisteners.tcp.1 = 127.0.0.1:%s\n' "${RABBITMQ_PORT}" >> /etc/rabbitmq/rabbitmq.conf
+		printf '{host, {127,0,0,1}, ["%s"]}.\n{lookup, [file,native]}.\n' "$(hostname -s)" > /etc/rabbitmq/apps_erl_inetrc
+		sed -i '/^[[:space:]]*\(export[[:space:]]\+\)\?ERL_\(EPMD_ADDRESS\|INETRC\)=/d; /inet_dist_use_interface/d' /etc/rabbitmq/rabbitmq-env.conf
+		printf 'export ERL_EPMD_ADDRESS=127.0.0.1\nexport ERL_INETRC=/etc/rabbitmq/apps_erl_inetrc\nSERVER_ADDITIONAL_ERL_ARGS="${SERVER_ADDITIONAL_ERL_ARGS:-} -kernel inet_dist_use_interface {127,0,0,1}"\n' >> /etc/rabbitmq/rabbitmq-env.conf
+		systemctl stop rabbitmq-server
+		if systemctl list-unit-files epmd.socket --no-legend 2>/dev/null | grep -q epmd.socket; then
+			mkdir -p /etc/systemd/system/epmd.socket.d
+			printf '[Socket]\nListenStream=\nListenStream=127.0.0.1:4369\n' > /etc/systemd/system/epmd.socket.d/apps.conf
+			systemctl stop epmd.service epmd.socket >/dev/null 2>&1 || true
+			systemctl daemon-reload
+			systemctl start epmd.socket
+		else
+			epmd -kill >/dev/null 2>&1 || true
+		fi
 		systemctl enable rabbitmq-server >/dev/null 2>&1
 		systemctl restart rabbitmq-server
 	fi
@@ -582,6 +626,10 @@ setup_rabbitmq() {
 generate_key() {
 	local FILE_NAME=$1
 	local KEY_LENGTH=${2:-12}
+	LEGACY_APP_DIR="/etc/${PACKAGE_SYSNAME}/docspace"
+	if [[ ! -f ${APP_DIR}/.private/$FILE_NAME && -f ${LEGACY_APP_DIR}/.private/$FILE_NAME ]]; then
+		mkdir -p "${APP_DIR}/.private" && cp -a "${LEGACY_APP_DIR}/.private/$FILE_NAME" "${APP_DIR}/.private/$FILE_NAME"
+	fi
 	local KEY=${3:-$( [[ -f ${APP_DIR}/.private/$FILE_NAME ]] && cat ${APP_DIR}/.private/$FILE_NAME || tr -dc A-Za-z0-9 </dev/urandom | head -c $KEY_LENGTH )}
 	echo "${KEY}" | tee "${APP_DIR}/.private/$FILE_NAME"
 	chmod -R 600 ${APP_DIR}/.private
@@ -612,9 +660,10 @@ product_configuration(){
 	env_configuration "$APP_DIR/systemd.env" ENVIRONMENT "${ENVIRONMENT}"
 	env_configuration "$APP_DIR/systemd.env" SPRING_PROFILES_ACTIVE "prod,server"
 	env_configuration "$APP_DIR/systemd.env" API_HOST "http://127.0.0.1:8092"
+	env_configuration "$APP_DIR/systemd.env" AI_SERVICE_URL "http://127.0.0.1:5157"
 	env_configuration "$APP_DIR/systemd.env" DOCSPACE_INTERNAL "true"
 	env_configuration "$APP_DIR/systemd.env" DOCSPACE_TRANSPORT "http"
-	env_configuration "$APP_DIR/systemd.env" DOCSPACE_HOST "0.0.0.0"
+	env_configuration "$APP_DIR/systemd.env" DOCSPACE_HOST "127.0.0.1"
 	env_configuration "$APP_DIR/systemd.env" DOCSPACE_PORT "5158"
 
 	: "${CORE_MACHINEKEY:=$(generate_key "machinekey")}"
@@ -646,11 +695,11 @@ check_connection_external_services() {
 stop_services() {
 	echo -n "Stopping services... "
 	systemctl daemon-reload
-	systemctl stop "${SERVICES_LIST[@]}" 'ds-*.service' 2>&1
+	systemctl stop "${SERVICES_LIST[@]}" 'ds-*.service' 2>&1 || true
 	echo "OK"
 }
 
-SERVICES=(login api socket studio-notify notify \
+SERVICES=(login api socket newai studio-notify notify \
 people-server files files-worker studio backup api-system \
 clear-events backup-worker ssoauth doceditor healthchecks \
 identity-authorization identity-api sdk management telegram ai ai-worker mcp)
@@ -661,14 +710,12 @@ if command -v yum >/dev/null 2>&1; then
 	PACKAGE_MANAGER="rpm -q"
 	MYSQL_PACKAGE="mysqld"
 	REDIS_PACKAGE="redis"
-	SYSTEMD_DIR="/usr/lib/systemd/system"
 	${PACKAGE_MANAGER} valkey &>/dev/null && REDIS_PACKAGE="valkey" || true
 elif command -v apt >/dev/null 2>&1; then
 	DIST="Debian"
 	PACKAGE_MANAGER="dpkg -s"
 	MYSQL_PACKAGE="mysql"
 	REDIS_PACKAGE="redis-server"
-	SYSTEMD_DIR="$(dirname $(dpkg-query -L ${PRODUCT}-api | grep systemd/system/))"
 fi
 
 stop_services
@@ -711,7 +758,7 @@ if [[ $EXTERNAL_ELK_FLAG ]]; then
 	check_connection_external_services "$ELK_HOST" "$ELK_PORT" "Elasticsearch"
 	setup_elasticsearch "EXTERNAL_ELASTIC_SERVER"
 elif $PACKAGE_MANAGER opensearch >/dev/null 2>&1; then
-	ELASTIC_VERSION=$(awk '/build:/{f=1} f&&/version:/{gsub(/"/,"",$2);print $2; exit}' /usr/share/opensearch/manifest.yml 2>/dev/null || echo "2.18.0")
+	ELASTIC_VERSION=$(awk '/build:/{f=1} f&&/version:/{gsub(/"/,"",$2);print $2; exit}' /usr/share/opensearch/manifest.yml 2>/dev/null || echo "3.5.0")
 	setup_elasticsearch "LOCAL_ELASTIC_SERVER"
 fi
 

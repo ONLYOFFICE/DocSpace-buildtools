@@ -1,81 +1,94 @@
-Source: {{product}}
+Source: {{package_name}}
 Section: web
 Priority: optional
 Maintainer: Ascensio System SIA <support@onlyoffice.com>
-Build-Depends: debhelper (>= 10), po-debconf, nodejs (>= {{node_version}}~), dotnet-sdk-10.0, yarn, unzip, maven, 
-	openjdk-21-jdk-headless | temurin-21-jdk | jdk-21 | jdk-21-headless | zulu21-jdk-headless | java-21-amazon-corretto-jdk
+Build-Depends: debhelper (>= 11), po-debconf, nodejs (>= {{node_version}}~), dotnet-sdk-{{dotnet_version}}, yarn, unzip, maven,
+	openjdk-{{java_version}}-jdk-headless | temurin-{{java_version}}-jdk | jdk-{{java_version}} | jdk-{{java_version}}-headless | zulu{{java_version}}-jdk-headless | java-{{java_version}}-amazon-corretto-jdk
 Standards-Version: {{package_header_tag_version}}
 Homepage: https://www.onlyoffice.com/
 Architecture: all 
 Multi-Arch: foreign
 
-Package: {{product}}
+Package: {{package_name}}
 Architecture: all
 Multi-Arch: foreign
 Depends: debconf, openssl,
          ${misc:Depends}, ${shlibs:Depends},
-         {{product}}-api (= {{package_header_tag_version}}),
-         {{product}}-api-system (= {{package_header_tag_version}}),
-         {{product}}-backup (= {{package_header_tag_version}}),
-         {{product}}-backup-worker (= {{package_header_tag_version}}),
-         {{product}}-clear-events (= {{package_header_tag_version}}),
-         {{product}}-doceditor (= {{package_header_tag_version}}),
-         {{product}}-files (= {{package_header_tag_version}}),
-         {{product}}-files-worker (= {{package_header_tag_version}}),
-         {{product}}-healthchecks (= {{package_header_tag_version}}),
-         {{product}}-login (= {{package_header_tag_version}}),
-         {{product}}-management (= {{package_header_tag_version}}),
-         {{product}}-migration-runner (= {{package_header_tag_version}}),
-         {{product}}-notify (= {{package_header_tag_version}}),
-         {{product}}-people-server (= {{package_header_tag_version}}),
-         {{product}}-proxy (= {{package_header_tag_version}}),
-         {{product}}-plugins (= {{package_header_tag_version}}),
-         {{product}}-socket (= {{package_header_tag_version}}),
-         {{product}}-ssoauth (= {{package_header_tag_version}}),
-         {{product}}-studio (= {{package_header_tag_version}}),
-         {{product}}-studio-notify (= {{package_header_tag_version}}),
-         {{product}}-identity-api (= {{package_header_tag_version}}),
-         {{product}}-identity-authorization (= {{package_header_tag_version}}),
-         {{product}}-sdk (= {{package_header_tag_version}}),
-         {{product}}-telegram (= {{package_header_tag_version}}),
-         {{product}}-ai (= {{package_header_tag_version}}),
-         {{product}}-ai-worker (= {{package_header_tag_version}}),
-         {{product}}-mcp (= {{package_header_tag_version}}),
-Description: {{product}}
-	ONLYOFFICE {{product}} is a new way to collaborate on documents with teams, 
+         {{package_name}}-api (= {{package_header_tag_version}}),
+         {{package_name}}-api-system (= {{package_header_tag_version}}),
+         {{package_name}}-backup (= {{package_header_tag_version}}),
+         {{package_name}}-backup-worker (= {{package_header_tag_version}}),
+         {{package_name}}-clear-events (= {{package_header_tag_version}}),
+         {{package_name}}-doceditor (= {{package_header_tag_version}}),
+         {{package_name}}-files (= {{package_header_tag_version}}),
+         {{package_name}}-files-worker (= {{package_header_tag_version}}),
+         {{package_name}}-healthchecks (= {{package_header_tag_version}}),
+         {{package_name}}-login (= {{package_header_tag_version}}),
+         {{package_name}}-management (= {{package_header_tag_version}}),
+         {{package_name}}-migration-runner (= {{package_header_tag_version}}),
+         {{package_name}}-notify (= {{package_header_tag_version}}),
+         {{package_name}}-people-server (= {{package_header_tag_version}}),
+         {{package_name}}-proxy (= {{package_header_tag_version}}),
+         {{package_name}}-plugins (= {{package_header_tag_version}}),
+         {{package_name}}-socket (= {{package_header_tag_version}}),
+         {{package_name}}-newai (= {{package_header_tag_version}}),
+         {{package_name}}-ssoauth (= {{package_header_tag_version}}),
+         {{package_name}}-studio (= {{package_header_tag_version}}),
+         {{package_name}}-studio-notify (= {{package_header_tag_version}}),
+         {{package_name}}-identity-api (= {{package_header_tag_version}}),
+         {{package_name}}-identity-authorization (= {{package_header_tag_version}}),
+         {{package_name}}-sdk (= {{package_header_tag_version}}),
+         {{package_name}}-telegram (= {{package_header_tag_version}}),
+         {{package_name}}-ai (= {{package_header_tag_version}}),
+         {{package_name}}-ai-worker (= {{package_header_tag_version}}),
+         {{package_name}}-mcp (= {{package_header_tag_version}}),
+Description: {{package_name}}
+	{{product_name}} is a new way to collaborate on documents with teams, 
 	clients, partners, etc., based on the concept of rooms - special spaces with 
 	predefined permissions. This is a dependency package.
 
-Package: {{product}}-common
+Package: {{package_name}}-common
 Architecture: all
 Multi-Arch: foreign
+Provides: {{legacy_product}}-common
+Replaces: {{legacy_product}}-common
+Breaks: {{legacy_product}}-common (<< {{package_header_tag_version}})
 Depends: adduser, ${misc:Depends}, ${shlibs:Depends}
 Recommends: default-mysql-client
-Description: {{product}}-common
+Description: {{package_name}}-common
 	A package containing configs and scripts.
 
-Package: {{product}}-backup
+Package: {{package_name}}-backup
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-10.0, ${misc:Depends}, ${shlibs:Depends}
-Description: {{product}}-backup
+Provides: {{legacy_product}}-backup
+Replaces: {{legacy_product}}-backup
+Breaks: {{legacy_product}}-backup (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Description: {{package_name}}-backup
 	The service which handles API requests related to backup.
 
-Package: {{product}}-files
+Package: {{package_name}}-files
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-10.0, ${misc:Depends}, ${shlibs:Depends}
-Recommends: opensearch (= 2.11.1)
-Description: {{product}}-files
+Provides: {{legacy_product}}-files
+Replaces: {{legacy_product}}-files
+Breaks: {{legacy_product}}-files (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Recommends: opensearch (= {{opensearch_version}})
+Description: {{package_name}}-files
 	The REST API server for working with documents. The service which handles
 	API requests related to documents and launches the OFormService service.
 
-Package: {{product}}-files-worker
+Package: {{package_name}}-files-worker
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-10.0, ${misc:Depends}, ${shlibs:Depends}
-Recommends: ffmpeg, opensearch (= 2.11.1)
-Description: {{product}}-files-worker
+Provides: {{legacy_product}}-files-worker
+Replaces: {{legacy_product}}-files-worker
+Breaks: {{legacy_product}}-files-worker (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Recommends: ffmpeg, opensearch (= {{opensearch_version}})
+Description: {{package_name}}-files-worker
 	The service which launches additional services related to file management:
 	 - ElasticSearchIndexService - indexes documents using elasticsearch;
 	 - FeedAggregatorService - aggregates notifications;
@@ -84,104 +97,152 @@ Description: {{product}}-files-worker
 	 - ThumbnailBuilderService - generates thumbnails for documents;
 	 - Launcher - removes outdated files from Trash;
 
-Package: {{product}}-notify
+Package: {{package_name}}-notify
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-10.0, ${misc:Depends}, ${shlibs:Depends}
-Recommends: ffmpeg, opensearch (= 2.11.1)
-Description: {{product}}-notify
+Provides: {{legacy_product}}-notify
+Replaces: {{legacy_product}}-notify
+Breaks: {{legacy_product}}-notify (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Recommends: ffmpeg, opensearch (= {{opensearch_version}})
+Description: {{package_name}}-notify
 	The service which launches additional services related to notifications
-	about DocSpace events: NotifySenderService which sends messages from the
+	about {{product_name}} events: NotifySenderService which sends messages from the
 	base, and NotifyCleanerService which removes messages.
 
-Package: {{product}}-people-server
+Package: {{package_name}}-people-server
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-10.0, ${misc:Depends}, ${shlibs:Depends}
-Description: {{product}}-people-server
+Provides: {{legacy_product}}-people-server
+Replaces: {{legacy_product}}-people-server
+Breaks: {{legacy_product}}-people-server (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Description: {{package_name}}-people-server
 	The service which handles API requests related to the People module.
 
-Package: {{product}}-socket
+Package: {{package_name}}-socket
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
+Provides: {{legacy_product}}-socket
+Replaces: {{legacy_product}}-socket
+Breaks: {{legacy_product}}-socket (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
 Recommends: redis-server
-Description: {{product}}-socket
-	The service which provides two-way communication between a web browser and the server.
+Description: {{package_name}}-socket
+	The service which provides two-way communication between a web browser
+	and the server.
 
-Package: {{product}}-studio-notify
+Package: {{package_name}}-newai
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-10.0, ${misc:Depends}, ${shlibs:Depends}
-Description: {{product}}-studio-notify
+Provides: {{legacy_product}}-newai
+Replaces: {{legacy_product}}-newai
+Breaks: {{legacy_product}}-newai (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
+Description: {{package_name}}-newai
+	The service which provides AI chat features and MCP tool integrations.
+
+Package: {{package_name}}-studio-notify
+Architecture: all
+Multi-Arch: foreign
+Provides: {{legacy_product}}-studio-notify
+Replaces: {{legacy_product}}-studio-notify
+Breaks: {{legacy_product}}-studio-notify (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Description: {{package_name}}-studio-notify
 	The service responsible for creating notifications and 
 	sending them to other services, for example, TelegramService and NotifyService.
 
-Package: {{product}}-api
+Package: {{package_name}}-api
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-10.0, ${misc:Depends}, ${shlibs:Depends}
+Provides: {{legacy_product}}-api
+Replaces: {{legacy_product}}-api
+Breaks: {{legacy_product}}-api (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
 Recommends: rabbitmq-server, apache-activemq, redis-server
-Description: {{product}}-api
+Description: {{package_name}}-api
 	The service which is used for working with a certain portal. This service
 	handles API requests not related to backup, documents, and the People
 	module, for example, requests related to settings, audit, authentication, etc.
 
-Package: {{product}}-api-system
+Package: {{package_name}}-api-system
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-10.0, ${misc:Depends}, ${shlibs:Depends}
-Description: {{product}}-api-system
-	The service which is used for working with portals (creating, removing portals, etc.)
+Provides: {{legacy_product}}-api-system
+Replaces: {{legacy_product}}-api-system
+Breaks: {{legacy_product}}-api-system (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Description: {{package_name}}-api-system
+	The service which is used for working with portals (creating, removing
+	portals, etc.)
 
-Package: {{product}}-studio
+Package: {{package_name}}-studio
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-10.0, ${misc:Depends}, ${shlibs:Depends}
-Description: {{product}}-studio
+Provides: {{legacy_product}}-studio
+Replaces: {{legacy_product}}-studio
+Breaks: {{legacy_product}}-studio (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Description: {{package_name}}-studio
 	The service which processes storage handlers.
 
-Package: {{product}}-proxy
+Package: {{package_name}}-proxy
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), openresty, ${misc:Depends}, ${shlibs:Depends}
-Description: {{product}}-proxy
+Provides: {{legacy_product}}-proxy
+Replaces: {{legacy_product}}-proxy
+Breaks: {{legacy_product}}-proxy (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), openresty, ${misc:Depends}, ${shlibs:Depends}
+Description: {{package_name}}-proxy
 	The service which is used as a web server and reverse proxy, 
 	it receives and handles requests, transmits them to other services, 
 	receives a response from them and returns it to the client.
 
-Package: {{product}}-ssoauth
+Package: {{package_name}}-ssoauth
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
-Description: {{product}}-ssoauth
+Provides: {{legacy_product}}-ssoauth
+Replaces: {{legacy_product}}-ssoauth
+Breaks: {{legacy_product}}-ssoauth (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
+Description: {{package_name}}-ssoauth
 	The service responsible for enabling and configuring 
 	SAML-based single sign-on (SSO) authentication to provide a more quick, 
-	easy and secure way to access DocSpace for users.
+	easy and secure way to access {{product_name}} for users.
 
-Package: {{product}}-identity-api
+Package: {{package_name}}-identity-api
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), ${misc:Depends}, ${shlibs:Depends},
-	openjdk-21-jre-headless | temurin-21-jre | jdk-21 | jdk-21-headless | zulu21-jre-headless | java-21-amazon-corretto-jdk
-Description: {{product}}-identity-api
+Provides: {{legacy_product}}-identity-api
+Replaces: {{legacy_product}}-identity-api
+Breaks: {{legacy_product}}-identity-api (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), ${misc:Depends}, ${shlibs:Depends},
+	openjdk-{{java_version}}-jre-headless | temurin-{{java_version}}-jre | jdk-{{java_version}} | jdk-{{java_version}}-headless | zulu{{java_version}}-jre-headless | java-{{java_version}}-amazon-corretto-jdk
+Description: {{package_name}}-identity-api
 	The service responsible for managing user identities and authentication
-	within DocSpace by using the OAuth technology.
+	within {{product_name}} by using the OAuth technology.
 
-Package: {{product}}-identity-authorization
+Package: {{package_name}}-identity-authorization
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), ${misc:Depends}, ${shlibs:Depends},
-	openjdk-21-jre-headless | temurin-21-jre | jdk-21 | jdk-21-headless | zulu21-jre-headless | java-21-amazon-corretto-jdk
-Description: {{product}}-identity-authorization
+Provides: {{legacy_product}}-identity-authorization
+Replaces: {{legacy_product}}-identity-authorization
+Breaks: {{legacy_product}}-identity-authorization (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), ${misc:Depends}, ${shlibs:Depends},
+	openjdk-{{java_version}}-jre-headless | temurin-{{java_version}}-jre | jdk-{{java_version}} | jdk-{{java_version}}-headless | zulu{{java_version}}-jre-headless | java-{{java_version}}-amazon-corretto-jdk
+Description: {{package_name}}-identity-authorization
 	The service responsible for authentication methods used to access
-	DocSpace, e.g., the OAuth technology.
+	{{product_name}}, e.g., the OAuth technology.
 
-Package: {{product}}-backup-worker
+Package: {{package_name}}-backup-worker
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-10.0, ${misc:Depends}, ${shlibs:Depends}
-Description: {{product}}-backup-worker
+Provides: {{legacy_product}}-backup-worker
+Replaces: {{legacy_product}}-backup-worker
+Breaks: {{legacy_product}}-backup-worker (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Description: {{package_name}}-backup-worker
 	The service which launches additional services related to backup creation:
 	 - BackupWorkerService - launches WorkerService which runs backup/restore, etc;
 	 - BackupListenerService - waits for a signal to delete backups;
@@ -189,95 +250,141 @@ Description: {{product}}-backup-worker
 	 - BackupCleanerService - removes outdated backup files;
 	 - BackupSchedulerService - runs backup according to a schedule;
 
-Package: {{product}}-clear-events
+Package: {{package_name}}-clear-events
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-10.0, ${misc:Depends}, ${shlibs:Depends}
-Description: {{product}}-clear-events
+Provides: {{legacy_product}}-clear-events
+Replaces: {{legacy_product}}-clear-events
+Breaks: {{legacy_product}}-clear-events (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Description: {{package_name}}-clear-events
 	The service responsible for clearing the login_events and audit_events
 	tables by LoginHistoryLifeTime and AuditTrailLifeTime to log out users
 	after a timeout.
 
-Package: {{product}}-migration-runner
+Package: {{package_name}}-migration-runner
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-10.0, ${misc:Depends}, ${shlibs:Depends}
-Description: {{product}}-migration-runner
+Provides: {{legacy_product}}-migration-runner
+Replaces: {{legacy_product}}-migration-runner
+Breaks: {{legacy_product}}-migration-runner (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Description: {{package_name}}-migration-runner
 	The service responsible for the database creation.
 	A database connection is transferred to the service and
 	the service creates tables and populates them with values.
 
-Package: {{product}}-doceditor
+Package: {{package_name}}-doceditor
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
-Description: {{product}}-doceditor
+Provides: {{legacy_product}}-doceditor
+Replaces: {{legacy_product}}-doceditor
+Breaks: {{legacy_product}}-doceditor (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
+Description: {{package_name}}-doceditor
 	The service which allows interaction with documentserver.
 
-Package: {{product}}-login
+Package: {{package_name}}-login
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
-Description: {{product}}-login
+Provides: {{legacy_product}}-login
+Replaces: {{legacy_product}}-login
+Breaks: {{legacy_product}}-login (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
+Description: {{package_name}}-login
 	The service which is used for logging users and displaying the wizard.
 
-Package: {{product}}-healthchecks
+Package: {{package_name}}-healthchecks
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-10.0, ${misc:Depends}, ${shlibs:Depends}
-Description: {{product}}-healthchecks
+Provides: {{legacy_product}}-healthchecks
+Replaces: {{legacy_product}}-healthchecks
+Breaks: {{legacy_product}}-healthchecks (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Description: {{package_name}}-healthchecks
 	The service which displays launched services.
 
-Package: {{product}}-plugins
+Package: {{package_name}}-plugins
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), ${misc:Depends}, ${shlibs:Depends}
-Description: {{product}}-plugins
-	This package includes plugins that extend DocSpace functionality.
+Provides: {{legacy_product}}-plugins
+Replaces: {{legacy_product}}-plugins
+Breaks: {{legacy_product}}-plugins (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), ${misc:Depends}, ${shlibs:Depends}
+Description: {{package_name}}-plugins
+	This package includes plugins that extend {{product_name}} functionality.
 
-Package: {{product}}-sdk
+Package: {{package_name}}-sdk
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
-Description: {{product}}-sdk
-	The service which allows integrating DocSpace into your own web
+Provides: {{legacy_product}}-sdk
+Replaces: {{legacy_product}}-sdk
+Breaks: {{legacy_product}}-sdk (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
+Description: {{package_name}}-sdk
+	The service which allows integrating {{product_name}} into your own web
 	application by using JavaScript SDK.
 
-Package: {{product}}-management
+Package: {{package_name}}-management
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
-Description: {{product}}-management
+Provides: {{legacy_product}}-management
+Replaces: {{legacy_product}}-management
+Breaks: {{legacy_product}}-management (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
+Description: {{package_name}}-management
 	The service responsible for creating and managing several spaces.
 
-Package: {{product}}-telegram
+Package: {{package_name}}-telegram
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-10.0, ${misc:Depends}, ${shlibs:Depends}
-Description: {{product}}-telegram
-	The service which is used for receiving DocSpace notifications via Telegram.
+Provides: {{legacy_product}}-telegram
+Replaces: {{legacy_product}}-telegram
+Breaks: {{legacy_product}}-telegram (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Description: {{package_name}}-telegram
+	The service which is used for receiving {{product_name}}
+	notifications via Telegram.
 
-Package: {{product}}-ai
+Package: {{package_name}}-ai
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-10.0, ${misc:Depends}, ${shlibs:Depends}
-Description: {{product}}-ai
+Provides: {{legacy_product}}-ai
+Replaces: {{legacy_product}}-ai
+Breaks: {{legacy_product}}-ai (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Description: {{package_name}}-ai
 	The REST API server for working with AI features. The service which
 	handles API requests related to AI.
 
-Package: {{product}}-ai-worker
+Package: {{package_name}}-ai-worker
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), dotnet-sdk-10.0, ${misc:Depends}, ${shlibs:Depends}
-Description: {{product}}-ai-worker
+Provides: {{legacy_product}}-ai-worker
+Replaces: {{legacy_product}}-ai-worker
+Breaks: {{legacy_product}}-ai-worker (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), aspnetcore-runtime-{{dotnet_version}}, ${misc:Depends}, ${shlibs:Depends}
+Description: {{package_name}}-ai-worker
 	The service for background tasks related with AI. It vectorizes documents
 	from the knowledge base for subsequent semantic search and performs
 	chat/message export.
 
-Package: {{product}}-mcp
+Package: {{package_name}}-mcp
 Architecture: all
 Multi-Arch: foreign
-Depends: {{product}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
-Description: {{product}}-mcp
+Provides: {{legacy_product}}-mcp
+Replaces: {{legacy_product}}-mcp
+Breaks: {{legacy_product}}-mcp (<< {{package_header_tag_version}})
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
+Description: {{package_name}}-mcp
 	The server that operates using the Model Context Protocol, which provides
-	AI with functionality for working in DocSpace.
+	AI with functionality for working in {{product_name}}.
+
+Package: {{legacy_product}}
+Architecture: all
+Multi-Arch: foreign
+Section: oldlibs
+Depends: {{package_name}} (= {{package_header_tag_version}}), ${misc:Depends}
+Description: transitional package
+	This is a transitional package left after the rename to {{package_name}}.
+	It can be safely removed once it no longer has any reverse dependencies.

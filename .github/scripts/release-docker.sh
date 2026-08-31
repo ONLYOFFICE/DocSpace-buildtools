@@ -103,13 +103,13 @@ function make_repo_public() {
   fi
 }
 function release_service() {
-   # ex. service_source_tag=onlyoffice/4testing-docspace-service-name:2.5.1.1473
+   # ex. service_source_tag=onlyoffice/4testing-apps-service-name:2.5.1.1473
    local service_source_tag="${1}"
    local result_dir="${2}"
    local service_release_tag
    local safe_name
 
-   # ex. service_release_tag=onlyoffice/docspace-service-name:2.5.1.1
+   # ex. service_release_tag=onlyoffice/apps-service-name:2.5.1.1
    # NOTE: latest tag also will be updated
    service_release_tag=$(echo "${service_source_tag%:*}" | sed 's/4testing-//')
    safe_name="${service_release_tag//\//_}"
@@ -163,7 +163,7 @@ function main() {
   # RELEASED_VERSION mean tag for stable repo 2.6.1.1
   : "${RELEASE_VERSION:?Should be set}"
 
-  # DOCKER_IMAGE_PREFIX mean tag prefix ex. 4testing-docspace
+  # DOCKER_IMAGE_PREFIX mean tag prefix ex. 4testing-apps
   : "${DOCKER_IMAGE_PREFIX:?Should be set}"
 
   # Validate version formats early to fail fast

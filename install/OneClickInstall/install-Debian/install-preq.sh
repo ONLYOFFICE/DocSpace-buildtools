@@ -60,7 +60,7 @@ fi
 
 apt-get -y update
 
-if [ -n "$PRODUCT_VERSION" ] && ! apt-cache madison "$product" | awk '{print $3}' | grep -Eq "^${PRODUCT_VERSION}([.-]|$)"; then
+if [ -n "$PRODUCT_VERSION" ] && ! apt-cache madison "$package" | awk '{print $3}' | grep -Eq "^${PRODUCT_VERSION}([.-]|$)"; then
   echo "Requested ${product_name} version ${PRODUCT_VERSION} not found in repository."; exit 1
 fi
 
@@ -69,16 +69,16 @@ command -v locale-gen &>/dev/null || apt-get install -yq locales
 locale-gen en_US.UTF-8
 
 # add opensearch repo
-curl -fsSL https://artifacts.opensearch.org/publickeys/opensearch.pgp | gpg --dearmor --batch --yes -o /usr/share/keyrings/opensearch-keyring
-echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch/2.x/apt stable main" > /etc/apt/sources.list.d/opensearch-2.x.list
-ELASTIC_VERSION="2.18.0"
+curl -fsSL https://artifacts.opensearch.org/publickeys/opensearch-release.pgp | gpg --dearmor --batch --yes -o /usr/share/keyrings/opensearch-keyring
+echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch/3.x/apt stable main" > /etc/apt/sources.list.d/opensearch-3.x.list
+OPENSEARCH_VERSION="3.5.0"
 export OPENSEARCH_INITIAL_ADMIN_PASSWORD="$(echo "${package_sysname}!A1")"
 
 #add opensearch dashboards repo
 if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then
-	curl -fsSL https://artifacts.opensearch.org/publickeys/opensearch.pgp | gpg --dearmor --batch --yes -o /usr/share/keyrings/opensearch-keyring
-	echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/2.x/apt stable main" > /etc/apt/sources.list.d/opensearch-dashboards-2.x.list
-	DASHBOARDS_VERSION="2.18.0"
+	curl -fsSL https://artifacts.opensearch.org/publickeys/opensearch-release.pgp | gpg --dearmor --batch --yes -o /usr/share/keyrings/opensearch-keyring
+	echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/3.x/apt stable main" > /etc/apt/sources.list.d/opensearch-dashboards-3.x.list
+	DASHBOARDS_VERSION="3.5.0"
 fi
 
 # add nodejs repo
@@ -138,7 +138,7 @@ echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/pac
 curl -fsSL https://packages.adoptium.net/artifactory/api/gpg/key/public | gpg --batch --yes --dearmor -o /usr/share/keyrings/adoptium.gpg
 echo "deb [signed-by=/usr/share/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb $DISTRIB_CODENAME main" | tee /etc/apt/sources.list.d/adoptium.list
 chmod 644 /usr/share/keyrings/adoptium.gpg
-JAVA_VERSION="21"
+JAVA_VERSION="25"
 
 # setup msttcorefonts
 echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
@@ -162,25 +162,28 @@ if [ "$INSTALLATION_TYPE" != "community" ]; then
 	apt-get install -yq postgresql
 fi
 
-# Temporary fallback dotnet-sdk-10.0 on Debian 11 and Ubuntu 24.04
-DOTNET_VERSION="10.0.100"; DOTNET_PKG="dotnet-sdk-${DOTNET_VERSION%.*}"
+# Temporary fallback aspnetcore-runtime-10.0 on Debian 11 and Ubuntu 24.04
+DOTNET_VERSION="10.0"; DOTNET_PKG="aspnetcore-runtime-${DOTNET_VERSION}"
 if ! apt-get install -yq "${DOTNET_PKG}"; then
-  curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --version "${DOTNET_VERSION}" --install-dir /usr/share/dotnet
+  curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel "${DOTNET_VERSION}" --runtime aspnetcore --install-dir /usr/share/dotnet
   ln -sf /usr/share/dotnet/dotnet /usr/bin/dotnet
 
+  DOTNET_RUNTIME_VERSION=$(dotnet --list-runtimes | awk '$1 == "Microsoft.AspNetCore.App" {print $2}' | sort -V | tail -1)
+  [ -n "${DOTNET_RUNTIME_VERSION}" ] || { echo "ASP.NET Core runtime installation failed" >&2; exit 1; }
+
   DOTNET_PKGDIR="/tmp/${DOTNET_PKG}"; mkdir -p "${DOTNET_PKGDIR}/DEBIAN"
-  printf "Package: %s\nVersion: %s\nArchitecture: amd64\nMaintainer: local\nDescription: Provides .NET %s SDK\n" \
-	"${DOTNET_PKG}" "${DOTNET_VERSION}" "${DOTNET_VERSION%%.*}" > "${DOTNET_PKGDIR}/DEBIAN/control"
+  printf "Package: %s\nVersion: %s\nArchitecture: %s\nMaintainer: local\nDescription: Provides ASP.NET Core %s Runtime\n" \
+	"${DOTNET_PKG}" "${DOTNET_RUNTIME_VERSION}" "$(dpkg --print-architecture)" "${DOTNET_VERSION}" > "${DOTNET_PKGDIR}/DEBIAN/control"
 
   dpkg-deb --build "${DOTNET_PKGDIR}" "/tmp/${DOTNET_PKG}.deb" && dpkg -i "/tmp/${DOTNET_PKG}.deb"
   rm -rf "${DOTNET_PKGDIR}" "/tmp/${DOTNET_PKG}.deb"
 fi
 
 if ! dpkg -l | grep -q "opensearch"; then
-	apt-get install -yq opensearch=${ELASTIC_VERSION}
+	apt-get install -yq opensearch=${OPENSEARCH_VERSION}
 else
 	ELASTIC_PLUGIN="/usr/share/opensearch/bin/opensearch-plugin"
-	if dpkg --compare-versions "$(dpkg-query -W -f='${Version}\n' opensearch 2>/dev/null || true)" ne "$ELASTIC_VERSION"; then
+	if dpkg --compare-versions "$(dpkg-query -W -f='${Version}\n' opensearch 2>/dev/null || true)" ne "$OPENSEARCH_VERSION"; then
 		"${ELASTIC_PLUGIN}" list | grep -q ingest-attachment && "${ELASTIC_PLUGIN}" remove -s ingest-attachment
 		systemctl restart opensearch || true
 	fi

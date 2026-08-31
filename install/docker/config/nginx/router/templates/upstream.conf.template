@@ -54,6 +54,12 @@ map $SERVICE_SOCKET $service_socket {
     default $SERVICE_SOCKET;
 }
 
+map $SERVICE_NEW_AI $service_new_ai {
+    volatile;
+    "" 127.0.0.1:9837;
+    default $SERVICE_NEW_AI;
+}
+
 map $SERVICE_API $service_api {
     volatile;
     "" 127.0.0.1:5000;

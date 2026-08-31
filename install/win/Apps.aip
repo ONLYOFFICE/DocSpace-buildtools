@@ -23,6 +23,7 @@
     <ROW Property="APP_PORT" Value="80"/>
     <ROW Property="APP_URLS" Value="http://0.0.0.0"/>
     <ROW Property="API_HOST" Value="http://127.0.0.1:8092"/>
+    <ROW Property="AI_SERVICE_URL" Value="http://127.0.0.1:5157"/>
     <ROW Property="ARPCOMMENTS" Value="[|PRODUCT_NAME] is a platform based on .NET Core and React engines which comprises document management features and makes it possible to implement advanced folder management." ValueLocId="*"/>
     <ROW Property="ARPCONTACT" Value="20A-6, Ernesta Birznieka-Upisha str., Riga, LV-1050"/>
     <ROW Property="ARPHELPLINK" Value="https://forum.onlyoffice.com"/>
@@ -32,7 +33,7 @@
     <ROW Property="ARPPRODUCTICON" Value="icon.exe" Type="8"/>
     <ROW Property="ARPSYSTEMCOMPONENT" Value="1"/>
     <ROW Property="ARPURLINFOABOUT" Value="https://helpdesk.onlyoffice.com"/>
-    <ROW Property="ARPURLUPDATEINFO" Value="https://www.onlyoffice.com/download-docspace.aspx"/>
+    <ROW Property="ARPURLUPDATEINFO" Value="https://www.onlyoffice.com/download-apps.aspx"/>
     <ROW Property="BASE_DOMAIN" Value="localhost"/>
     <ROW Property="COMMON_SHORTCUT_NAME" Value="ONLYOFFICE"/>
     <ROW Property="DASHBOARDS_PWD" Value=" "/>
@@ -66,8 +67,8 @@
     <ROW Property="OPENSEARCH_PORT" Value="9200" ValueLocId="-"/>
     <ROW Property="OPENSEARCH_SCHEME" Value="http" ValueLocId="-"/>
     <ROW Property="OPEN_INSTALL_CANCEL_URL" Value="1"/>
-    <ROW Property="PACKAGE_NAME" Value="ONLYOFFICE_DocSpace_Community_Win-install.v[|ProductVersion]" MultiBuildValue="ExeBuild:ONLYOFFICE_DocSpace_Enterprise_Win-install.v[|ProductVersion]#ExeBuild_1:ONLYOFFICE_DocSpace_Developer_Win-install.v[|ProductVersion]"/>
-    <ROW Property="PRODUCT_NAME" Value="ONLYOFFICE DocSpace Community" MultiBuildValue="ExeBuild:ONLYOFFICE DocSpace Enterprise#ExeBuild_1:ONLYOFFICE DocSpace Developer"/>
+    <ROW Property="PACKAGE_NAME" Value="ONLYOFFICE_Apps_Community_Win-install.v[|ProductVersion]" MultiBuildValue="ExeBuild:ONLYOFFICE_Apps_Enterprise_Win-install.v[|ProductVersion]#ExeBuild_1:ONLYOFFICE_Apps_Developer_Win-install.v[|ProductVersion]"/>
+    <ROW Property="PRODUCT_NAME" Value="ONLYOFFICE Apps Community" MultiBuildValue="ExeBuild:ONLYOFFICE Apps Enterprise#ExeBuild_1:ONLYOFFICE Apps Developer"/>
     <ROW Property="PS_DB_HOST" Value="localhost"/>
     <ROW Property="PS_DB_NAME" Value="onlyoffice"/>
     <ROW Property="PS_DB_PORT" Value="5432"/>
@@ -83,32 +84,32 @@
     <ROW Property="REDIS_PWD" Value=" " Options="1" ValueLocId="-"/>
     <ROW Property="SUBFOLDER_SERVER" Value="--core:products:subfolder=server"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND;AI_SETUPEXEPATH;SETUPEXEDIR"/>
-    <ROW Property="ServiceName_AI" Value="DocSpace.AI"/>
-    <ROW Property="ServiceName_AI_Worker" Value="DocSpace.AI.Worker"/>
-    <ROW Property="ServiceName_ApiSystemService" Value="DocSpace.ApiSystemService"/>
-    <ROW Property="ServiceName_BackupWorker" Value="DocSpace.Data.Backup.Worker"/>
-    <ROW Property="ServiceName_BackupService" Value="DocSpace.BackupService"/>
-    <ROW Property="ServiceName_ClearEvents" Value="DocSpace.ClearEvents"/>
-    <ROW Property="ServiceName_DocEditor" Value="DocSpace.DocEditor"/>
-    <ROW Property="ServiceName_FileServer" Value="DocSpace.FileServer"/>
-    <ROW Property="ServiceName_FilesWorker" Value="DocSpace.Files.Worker"/>
-    <ROW Property="ServiceName_Identity.Authorization" Value="DocSpace.Identity.Authorization"/>
-    <ROW Property="ServiceName_Identity.Registration" Value="DocSpace.Identity.Registration"/>
-    <ROW Property="ServiceName_Login" Value="DocSpace.Login"/>
-    <ROW Property="ServiceName_MCP" Value="DocSpace.MCP"/>
-    <ROW Property="ServiceName_Management" Value="DocSpace.Management"/>
-    <ROW Property="ServiceName_MigrationRunner" Value="DocSpace.MigrationRunner"/>
-    <ROW Property="ServiceName_NotifyService" Value="DocSpace.NotifyService"/>
-    <ROW Property="ServiceName_PeopleServer" Value="DocSpace.PeopleServer"/>
-    <ROW Property="ServiceName_Sdk" Value="DocSpace.Sdk"/>
-    <ROW Property="ServiceName_Socket.IO" Value="DocSpace.Socket.IO"/>
-    <ROW Property="ServiceName_SsoAuth" Value="DocSpace.SsoAuth.Svc"/>
-    <ROW Property="ServiceName_StudioNotifyService" Value="DocSpace.StudioNotifyService"/>
-    <ROW Property="ServiceName_Telegram" Value="Docspace.Telegram"/>
-    <ROW Property="ServiceName_WebApi" Value="DocSpace.WebApi"/>
-    <ROW Property="ServiceName_WebHealthChecksUI" Value="DocSpace.Web.HealthChecks.UI"/>
-    <ROW Property="ServiceName_WebStudio" Value="DocSpace.WebStudio"/>
-    <ROW Property="ShortProductName" Value="ONLYOFFICE DocSpace"/>
+    <ROW Property="ServiceName_AI" Value="Apps.AI"/>
+    <ROW Property="ServiceName_AI_Worker" Value="Apps.AI.Worker"/>
+    <ROW Property="ServiceName_ApiSystemService" Value="Apps.ApiSystemService"/>
+    <ROW Property="ServiceName_BackupWorker" Value="Apps.Data.Backup.Worker"/>
+    <ROW Property="ServiceName_BackupService" Value="Apps.BackupService"/>
+    <ROW Property="ServiceName_ClearEvents" Value="Apps.ClearEvents"/>
+    <ROW Property="ServiceName_DocEditor" Value="Apps.DocEditor"/>
+    <ROW Property="ServiceName_FileServer" Value="Apps.FileServer"/>
+    <ROW Property="ServiceName_FilesWorker" Value="Apps.Files.Worker"/>
+    <ROW Property="ServiceName_Identity.Authorization" Value="Apps.Identity.Authorization"/>
+    <ROW Property="ServiceName_Identity.Registration" Value="Apps.Identity.Registration"/>
+    <ROW Property="ServiceName_Login" Value="Apps.Login"/>
+    <ROW Property="ServiceName_MCP" Value="Apps.MCP"/>
+    <ROW Property="ServiceName_Management" Value="Apps.Management"/>
+    <ROW Property="ServiceName_MigrationRunner" Value="Apps.MigrationRunner"/>
+    <ROW Property="ServiceName_NotifyService" Value="Apps.NotifyService"/>
+    <ROW Property="ServiceName_PeopleServer" Value="Apps.PeopleServer"/>
+    <ROW Property="ServiceName_Sdk" Value="Apps.Sdk"/>
+    <ROW Property="ServiceName_Socket.IO" Value="Apps.Socket.IO"/>
+    <ROW Property="ServiceName_SsoAuth" Value="Apps.SsoAuth.Svc"/>
+    <ROW Property="ServiceName_StudioNotifyService" Value="Apps.StudioNotifyService"/>
+    <ROW Property="ServiceName_Telegram" Value="Apps.Telegram"/>
+    <ROW Property="ServiceName_WebApi" Value="Apps.WebApi"/>
+    <ROW Property="ServiceName_WebHealthChecksUI" Value="Apps.Web.HealthChecks.UI"/>
+    <ROW Property="ServiceName_WebStudio" Value="Apps.WebStudio"/>
+    <ROW Property="ShortProductName" Value="ONLYOFFICE Apps"/>
     <ROW Property="Socket.IO_Port" Value="9899"/>
     <ROW Property="SsoAuth_Port" Value="9834"/>
     <ROW Property="UpgradeCode" Value="{FFA9CD16-E087-45F3-8D34-3BBA1EF8A897}"/>
@@ -364,9 +365,9 @@
     <ROW Action="AI_DetectSoftware" Sequence="151"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.BuildComponent">
-    <ROW BuildKey="DefaultBuild" BuildName="DOCSPACE_COMMUNITY" BuildOrder="1" BuildType="0" PackageFolder="publish" PackageFileName="[|PACKAGE_NAME]" Languages="en" InstallationType="4" CabsLocation="1" PackageType="1" FilesInsideExe="true" ExeIconPath="Resources\icon.ico" ExtractionFolder="[AppDataFolder][|INSTALL_ROOT_FOLDER_NAME]\DocSpace\install" ExtUI="true" Options="8" UseLargeSchema="true" Unicode="true" ExeName="[|PACKAGE_NAME]" UACExecutionLevel="2"/>
-    <ROW BuildKey="ExeBuild" BuildName="DOCSPACE_ENTERPRISE" BuildOrder="2" BuildType="0" PackageFolder="publish" PackageFileName="[|PACKAGE_NAME]" Languages="en" InstallationType="4" CabsLocation="1" PackageType="1" FilesInsideExe="true" ExeIconPath="Resources\icon.ico" ExtractionFolder="[AppDataFolder][|INSTALL_ROOT_FOLDER_NAME]\DocSpace\install" ExtUI="true" Options="8" UseLargeSchema="true" Unicode="true" ExeName="[|PACKAGE_NAME]" UACExecutionLevel="2"/>
-    <ROW BuildKey="ExeBuild_1" BuildName="DOCSPACE_DEVELOPER" BuildOrder="3" BuildType="0" PackageFolder="publish" PackageFileName="[|PACKAGE_NAME]" Languages="en" InstallationType="4" CabsLocation="1" PackageType="1" FilesInsideExe="true" ExeIconPath="Resources\icon.ico" ExtractionFolder="[AppDataFolder][|INSTALL_ROOT_FOLDER_NAME]\DocSpace\install" Options="8" UseLargeSchema="true" Unicode="true" ExeName="[|PACKAGE_NAME]" UACExecutionLevel="2"/>
+    <ROW BuildKey="DefaultBuild" BuildName="APPS_COMMUNITY" BuildOrder="1" BuildType="0" PackageFolder="publish" PackageFileName="[|PACKAGE_NAME]" Languages="en" InstallationType="4" CabsLocation="1" PackageType="1" FilesInsideExe="true" ExeIconPath="Resources\icon.ico" ExtractionFolder="[AppDataFolder][|INSTALL_ROOT_FOLDER_NAME]\Apps\install" ExtUI="true" Options="8" UseLargeSchema="true" Unicode="true" ExeName="[|PACKAGE_NAME]" UACExecutionLevel="2"/>
+    <ROW BuildKey="ExeBuild" BuildName="APPS_ENTERPRISE" BuildOrder="2" BuildType="0" PackageFolder="publish" PackageFileName="[|PACKAGE_NAME]" Languages="en" InstallationType="4" CabsLocation="1" PackageType="1" FilesInsideExe="true" ExeIconPath="Resources\icon.ico" ExtractionFolder="[AppDataFolder][|INSTALL_ROOT_FOLDER_NAME]\Apps\install" ExtUI="true" Options="8" UseLargeSchema="true" Unicode="true" ExeName="[|PACKAGE_NAME]" UACExecutionLevel="2"/>
+    <ROW BuildKey="ExeBuild_1" BuildName="APPS_DEVELOPER" BuildOrder="3" BuildType="0" PackageFolder="publish" PackageFileName="[|PACKAGE_NAME]" Languages="en" InstallationType="4" CabsLocation="1" PackageType="1" FilesInsideExe="true" ExeIconPath="Resources\icon.ico" ExtractionFolder="[AppDataFolder][|INSTALL_ROOT_FOLDER_NAME]\Apps\install" Options="8" UseLargeSchema="true" Unicode="true" ExeName="[|PACKAGE_NAME]" UACExecutionLevel="2"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.DictionaryComponent">
     <ROW Path="&lt;AI_DICTS&gt;ui.ail"/>
@@ -480,13 +481,13 @@
     <ROW JsonProperty="environment" Parent="app" Name="environment" Condition="1" Order="2" Flags="57" Value="[ENVIRONMENT]"/>
     <ROW JsonProperty="environment_1" Parent="app_1" Name="environment" Condition="1" Order="2" Flags="57" Value="[ENVIRONMENT]"/>
     <ROW JsonProperty="environment_2" Parent="app_3" Name="environment" Condition="1" Order="1" Flags="57" Value="[ENVIRONMENT]"/>
-    <ROW JsonProperty="file" Parent="license" Name="file" Condition="ProductName = &quot;ONLYOFFICE DocSpace Enterprise&quot; OR ProductName = &quot;ONLYOFFICE DocSpace Developer&quot;" Order="0" Flags="60"/>
+    <ROW JsonProperty="file" Parent="license" Name="file" Condition="ProductName = &quot;ONLYOFFICE Apps Enterprise&quot; OR ProductName = &quot;ONLYOFFICE Apps Developer&quot;" Order="0" Flags="60"/>
     <ROW JsonProperty="files" Parent="Root_1" Name="files" Condition="1" Order="3" Flags="60"/>
     <ROW JsonProperty="folder" Parent="products" Name="folder" Condition="1" Order="0" Flags="57" Value="[APPDIR_FORWARD_SLASH]products"/>
     <ROW JsonProperty="folder_1" Parent="products_1" Name="folder" Condition="1" Order="0" Flags="57" Value="[APPDIR_FORWARD_SLASH]products"/>
     <ROW JsonProperty="header" Parent="secret" Name="header" Condition="1" Order="1" Flags="57" Value="[DOCUMENT_SERVER_JWT_HEADER]"/>
     <ROW JsonProperty="internal" Parent="url" Name="internal" Condition="1" Order="1" Flags="57" Value="http://[DOCUMENT_SERVER_HOST]:[DOCUMENT_SERVER_PORT]"/>
-    <ROW JsonProperty="license" Parent="Root_1" Name="license" Condition="ProductName = &quot;ONLYOFFICE DocSpace Enterprise&quot; OR ProductName = &quot;ONLYOFFICE DocSpace Developer&quot;" Order="4" Flags="60"/>
+    <ROW JsonProperty="license" Parent="Root_1" Name="license" Condition="ProductName = &quot;ONLYOFFICE Apps Enterprise&quot; OR ProductName = &quot;ONLYOFFICE Apps Developer&quot;" Order="4" Flags="60"/>
     <ROW JsonProperty="logPath" Parent="Root_4" Name="logPath" Condition="1" Order="1" Flags="57" Value="[APPDIR_FORWARD_SLASH]Logs"/>
     <ROW JsonProperty="machinekey" Parent="core_1" Name="machinekey" Condition="1" Order="1" Flags="57" Value="[MACHINE_KEY]"/>
     <ROW JsonProperty="machinekey_1" Parent="app_1" Name="machinekey" Condition="1" Order="3" Flags="57" Value="[MACHINE_KEY]"/>
@@ -495,7 +496,7 @@
     <ROW JsonProperty="migration" Parent="Root_1" Name="migration" Condition="1" Order="1" Flags="60"/>
     <ROW JsonProperty="notify" Parent="core_1" Name="notify" Condition="1" Order="3" Flags="60"/>
     <ROW JsonProperty="options" Parent="Root_11" Name="options" Condition="1" Order="0" Flags="60"/>
-    <ROW JsonProperty="path" Parent="file" Name="path" Condition="ProductName = &quot;ONLYOFFICE DocSpace Enterprise&quot; OR ProductName = &quot;ONLYOFFICE DocSpace Developer&quot;" Order="0" Flags="57" Value="[LICENSE_PATH]"/>
+    <ROW JsonProperty="path" Parent="file" Name="path" Condition="ProductName = &quot;ONLYOFFICE Apps Enterprise&quot; OR ProductName = &quot;ONLYOFFICE Apps Developer&quot;" Order="0" Flags="57" Value="[LICENSE_PATH]"/>
     <ROW JsonProperty="port" Parent="app" Name="port" Condition="1" Order="0" Flags="57" Value="[Socket.IO_Port]"/>
     <ROW JsonProperty="port_1" Parent="app_1" Name="port" Condition="1" Order="0" Flags="57" Value="[SsoAuth_Port]"/>
     <ROW JsonProperty="portal" Parent="url" Name="portal" Condition="1" Order="2" Flags="57" Value="http://localhost:80"/>
@@ -1041,6 +1042,7 @@
     <ROW Action="AI_DATA_SETTER_4" Type="51" Source="CustomActionData" Target="[~]"/>
     <ROW Action="AI_DATA_SETTER_40" Type="51" Source="CustomActionData" Target="AEQAaQBnAGkAdABhAGwAbAB5AFMAaQBnAG4AUwBjAHIAaQBwAHQAAgAxAAEARgBsAGEAZwBzAAIAMwABAEwAYQB1AG4AYwBoAEQAaQByAAIAAQBQAGEAcgBhAG0AcwACAE0AbwB2AGUAQwBvAG4AZgBpAGcAcwABAFMAYwByAGkAcAB0AFMAcgBjAEIAaQBuAGEAcgB5AFIAbwB3AEkAZAACAHUAdABpAGwAcwAuAHAAcwAxAF8AMQ=="/>
     <ROW Action="AI_DATA_SETTER_41" Type="51" Source="CustomActionData" Target="AEYAbABhAGcAcwACADEAAQBQAGEAcgBhAG0AcwACAFMAZQB0AEkAZABlAG4AdABpAHQAeQBFAG4AYwByAHkAcAB0AGkAbwBuAFMAZQBjAHIAZQB0AAEAUwBjAHIAaQBwAHQAUwByAGMAQgBpAG4AYQByAHkAUgBvAHcASQBkAAIAdQB0AGkAbABzAC4AcABzADEAXwAx"/>
+    <ROW Action="AI_DATA_SETTER_42" Type="51" Source="CustomActionData" Target="AEQAaQBnAGkAdABhAGwAbAB5AFMAaQBnAG4AUwBjAHIAaQBwAHQAAgAxAAEARgBsAGEAZwBzAAIAMQABAEwAYQB1AG4AYwBoAEQAaQByAAIAAQBQAGEAcgBhAG0AcwACAE0AaQBnAHIAYQB0AGUAUAByAG8AZAB1AGMAdABSAGUAZwBpAHMAdAByAHkAAQBTAGMAcgBpAHAAdABTAHIAYwBCAGkAbgBhAHIAeQBSAG8AdwBJAGQAAgB1AHQAaQBsAHMALgBwAHMAMQBfADE="/>
     <ROW Action="AI_DATA_SETTER_5" Type="51" Source="CustomActionData" Target="[SqlConnectionError] |[ProductName] Setup |MB_OK,MB_ICONWARNING,MB_DEFBUTTON1||[CLIENTPROCESSID]"/>
     <ROW Action="AI_DATA_SETTER_6" Type="51" Source="CustomActionData" Target="AEYAbABhAGcAcwACADEAAQBQAGEAcgBhAG0AcwACAFMAZQB0AEEAcABwAEQAaQByAFcAaQB0AGgARgBvAHIAdwBhAHIAZABTAGwAYQBzAGgAAQBTAGMAcgBpAHAAdABTAHIAYwBCAGkAbgBhAHIAeQBSAG8AdwBJAGQAAgB1AHQAaQBsAHMALgBwAHMAMQBfADE="/>
     <ROW Action="AI_DATA_SETTER_7" Type="51" Source="CustomActionData" Target="[~]"/>
@@ -1102,13 +1104,14 @@
     <ROW Action="AI_VerifyPrereq" Type="1" Source="Prereq.dll" Target="VerifyPrereq"/>
     <ROW Action="DetectMySQLService" Type="1" Source="aicustact.dll" Target="DetectProcess" Options="3" AdditionalSeq="AI_DATA_SETTER_9"/>
     <ROW Action="MoveConfigs" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_40"/>
+    <ROW Action="MigrateProductRegistry" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_42"/>
     <ROW Action="MySQLConfigure" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_33"/>
     <ROW Action="OpenCancelUrl" Type="194" Source="viewer.exe" Target="http://www.onlyoffice.com/install-canceled.aspx" WithoutSeq="true" Options="1"/>
     <ROW Action="OpenSearchSetup" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_38"/>
     <ROW Action="PostgreSQLConfigure" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_34"/>
     <ROW Action="RedisSetup" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_39"/>
-    <ROW Action="SET_APPDIR" Type="307" Source="APPDIR" Target="[ProgramFilesFolder][Manufacturer]\[ProductName]" MultiBuildTarget="DefaultBuild:[ProgramFilesFolder][INSTALL_ROOT_FOLDER_NAME]\DocSpace#ExeBuild:[ProgramFilesFolder][INSTALL_ROOT_FOLDER_NAME]\DocSpace#ExeBuild_1:[ProgramFilesFolder][INSTALL_ROOT_FOLDER_NAME]\DocSpace"/>
-    <ROW Action="SET_SHORTCUTDIR" Type="307" Source="SHORTCUTDIR" Target="[ProgramMenuFolder][ProductName]" MultiBuildTarget="DefaultBuild:[ProgramMenuFolder][INSTALL_ROOT_FOLDER_NAME]\DocSpace#ExeBuild:[ProgramMenuFolder][INSTALL_ROOT_FOLDER_NAME]\DocSpace#ExeBuild_1:[ProgramMenuFolder][INSTALL_ROOT_FOLDER_NAME]\DocSpace"/>
+    <ROW Action="SET_APPDIR" Type="307" Source="APPDIR" Target="[ProgramFilesFolder][Manufacturer]\[ProductName]" MultiBuildTarget="DefaultBuild:[ProgramFilesFolder][INSTALL_ROOT_FOLDER_NAME]\Apps#ExeBuild:[ProgramFilesFolder][INSTALL_ROOT_FOLDER_NAME]\Apps#ExeBuild_1:[ProgramFilesFolder][INSTALL_ROOT_FOLDER_NAME]\Apps"/>
+    <ROW Action="SET_SHORTCUTDIR" Type="307" Source="SHORTCUTDIR" Target="[ProgramMenuFolder][ProductName]" MultiBuildTarget="DefaultBuild:[ProgramMenuFolder][INSTALL_ROOT_FOLDER_NAME]\Apps#ExeBuild:[ProgramMenuFolder][INSTALL_ROOT_FOLDER_NAME]\Apps#ExeBuild_1:[ProgramMenuFolder][INSTALL_ROOT_FOLDER_NAME]\Apps"/>
     <ROW Action="SET_TARGETDIR_TO_APPDIR" Type="51" Source="TARGETDIR" Target="[APPDIR]"/>
     <ROW Action="SetDashboardsPwd" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_37"/>
     <ROW Action="SetDocumentServerJWTSecretProp" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_35"/>
@@ -1261,6 +1264,8 @@
     <ROW IniFile="WorkingDirectory" FileName="ONLYOF~1.URL|[|COMMON_SHORTCUT_NAME].url" DirProperty="DesktopFolder" Section="InternetShortcut" Key="WorkingDirectory" Value="[DesktopFolder]" Action="0" Component_="icon.ico"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstExSeqComponent">
+    <ROW Action="AI_DATA_SETTER_42" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="97"/>
+    <ROW Action="MigrateProductRegistry" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="98"/>
     <ROW Action="AI_DOWNGRADE" Condition="AI_NEWERPRODUCTFOUND AND (UILevel &lt;&gt; 5)" Sequence="210"/>
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>
     <ROW Action="AI_STORE_LOCATION" Condition="(Not Installed) OR REINSTALL" Sequence="1501"/>
@@ -1347,6 +1352,8 @@
     <ROW Action="AI_DATA_SETTER_15" Condition="(VersionNT64 &gt;= 500) AND (REMOVE=&quot;ALL&quot;)" Sequence="1701"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstallUISequenceComponent">
+    <ROW Action="AI_DATA_SETTER_42" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="97"/>
+    <ROW Action="MigrateProductRegistry" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="98"/>
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>
     <ROW Action="AI_ResolveKnownFolders" Sequence="55"/>
     <ROW Action="AI_DpiContentScale" Sequence="54"/>
@@ -1626,8 +1633,8 @@
     <ROW PrereqKey="MySQLInstallerRunn" DisplayName="MySQL Installer Community 8.4.3 x64 Runner" SetupFileUrl="MySQL Installer Runner.exe" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/VERYSILENT /DB_PWD=&quot;root&quot;" BasicUiComLine="/VERYSILENT /DB_PWD=&quot;root&quot;" NoUiComLine="/VERYSILENT /DB_PWD=&quot;root&quot;" Options="yx" TargetName="MySQL Installer Runner                                      \MySQL Installer Runner.exe" ParentPrereq="RequiredApplication_2"/>
     <ROW PrereqKey="OpenJDK_Java_Development" DisplayName="OpenJDK Java Development Kit 21" VersionMin="21.0" SetupFileUrl="https://download.oracle.com/java/21/latest/jdk-21_windows-x64_bin.msi" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/qn" BasicUiComLine="/qn" NoUiComLine="/qn" Options="ymx" TargetName="OpenJDK_Java_Development"/>
     <ROW PrereqKey="OpenResty" DisplayName="OpenResty v1.27.1.1" VersionMin="1.27.1.1" SetupFileUrl="publish\OpenResty-1.27.1.1.msi" Location="0" ExactSize="0" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="yxm" TargetName="OpenResty\OpenResty-1.27.1.1.msi"/>
-    <ROW PrereqKey="OpenSearch2.18.1" DisplayName="OpenSearch v2.18.1 x64" VersionMin="2.18.1" SetupFileUrl="publish\OpenSearch-2.18.1.exe" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/exenoui /qn" BasicUiComLine="/exenoui /qn" NoUiComLine="/exenoui /qn" Options="y" TargetName="OpenSearch 2.18.1\OpenSearch-2.18.1.exe"/>
-    <ROW PrereqKey="OpenSearchStack" DisplayName="OpenSearchStack v1.5.0 x64" VersionMin="1.5.0" SetupFileUrl="publish\OpenSearchStack.msi" Location="0" ExactSize="0" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="y" TargetName="OpenSearchStack\OpenSearchStack.msi"/>
+    <ROW PrereqKey="OpenSearch3.5.0" DisplayName="OpenSearch v3.5.0 x64" VersionMin="3.5.0" SetupFileUrl="publish\OpenSearch-3.5.0.exe" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/exenoui /qn" BasicUiComLine="/exenoui /qn" NoUiComLine="/exenoui /qn" Options="y" TargetName="OpenSearch 3.5.0\OpenSearch-3.5.0.exe"/>
+    <ROW PrereqKey="OpenSearchStack" DisplayName="OpenSearchStack v2.0.0 x64" VersionMin="2.0.0" SetupFileUrl="publish\OpenSearchStack.msi" Location="0" ExactSize="0" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="y" TargetName="OpenSearchStack\OpenSearchStack.msi"/>
     <ROW PrereqKey="PostgreSQL_ODBC" DisplayName="PostgreSQL ODBC Driver v15.0 x64" SetupFileUrl="https://download.onlyoffice.com/install/windows/redist/psqlodbc_15_x64.msi" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="myx" TargetName="PostgreSQL ODBC Driver v15.0 x64"/>
     <ROW PrereqKey="PostgresSQL" DisplayName="PostgreSQL v14.0 x64" VersionMin="14.0" SetupFileUrl="https://get.enterprisedb.com/postgresql/postgresql-14.0-1-windows-x64.exe" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="--unattendedmodeui none --install_runtimes 0 --mode unattended --superaccount &quot;postgres&quot; --superpassword &quot;postgres&quot;" BasicUiComLine="--unattendedmodeui none --install_runtimes 0 --mode unattended --superaccount &quot;postgres&quot; --superpassword &quot;postgres&quot;" NoUiComLine="--unattendedmodeui none --install_runtimes 0 --mode unattended --superaccount &quot;postgres&quot; --superpassword &quot;postgres&quot;" Options="xy" TargetName="PostgreSQL v14.0 x64"/>
     <ROW PrereqKey="RequiredApplication" DisplayName="MySQL Connector/ODBC 8.4.0 x64" VersionMin="8.4.0" SetupFileUrl="https://cdn.mysql.com/archives/mysql-connector-odbc-8.4/mysql-connector-odbc-8.4.0-winx64.msi" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="ym" TargetName="MySQL Connector ODBC 8.4.0 x64"/>
@@ -1636,7 +1643,7 @@
     <ROW PrereqKey="RequiredApplication_2" DisplayName="MySQL Community Server 8.4.3 x64" VersionMin="8.4.3" SetupFileUrl="https://cdn.mysql.com/archives/mysql-8.4/mysql-8.4.3-winx64.msi" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="y" TargetName="MySQL Community Server 8.4.3 x64"/>
     <ROW PrereqKey="RequiredApplication_5" DisplayName="RabbitMQ v3.12.1 x64" VersionMin="3.12" SetupFileUrl="https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.12.1/rabbitmq-server-3.12.1.exe" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/S" BasicUiComLine="/S" NoUiComLine="/S" Options="yx" TargetName="RabbitMQ v3.12.1 x64"/>
     <ROW PrereqKey="RequiredApplication_6" DisplayName="Redis 7.4.0 x64" VersionMin="7.4.0" SetupFileUrl="https://github.com/ONLYOFFICE/redis-windows/releases/download/7.4.0/Redis-7.4.0-Windows-x64.msi" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet ADD_INSTALLFOLDER_TO_PATH=1" BasicUiComLine="/quiet ADD_INSTALLFOLDER_TO_PATH=1" NoUiComLine="/quiet ADD_INSTALLFOLDER_TO_PATH=1" Options="yx" TargetName="Redis 7.4.0 x64"/>
-    <ATTRIBUTE name="PrereqsOrder" value="B96F93FA27E74B02866727AAE83982D0 F3520F64DA5998338D97129FAD2 EA5B60A5CAD4115A8386D017CC889B9 CA62D813A4E74FA2AAE86A7D7B7B1493 A918597FE054CCCB65ABDBA0AD8F63C C4FE6FD5B7C4D07B3A313E754A9A6A8 RequiredApplication RequiredApplication_2 MySQLInstallerRunn RequiredApplication_1 OpenJDK_Java_Development OpenSearch2.18.1 Erlangv26.0x64 RequiredApplication_5 RequiredApplication_6 FFmpegx64 Certbot PostgreSQL_ODBC PostgresSQL OpenResty OpenSearchStack RequiredApplication_3 DocumentServer DocumentServer.EE DocumentServer.DE"/>
+    <ATTRIBUTE name="PrereqsOrder" value="B96F93FA27E74B02866727AAE83982D0 F3520F64DA5998338D97129FAD2 EA5B60A5CAD4115A8386D017CC889B9 CA62D813A4E74FA2AAE86A7D7B7B1493 A918597FE054CCCB65ABDBA0AD8F63C C4FE6FD5B7C4D07B3A313E754A9A6A8 RequiredApplication RequiredApplication_2 MySQLInstallerRunn RequiredApplication_1 OpenJDK_Java_Development OpenSearch3.5.0 Erlangv26.0x64 RequiredApplication_5 RequiredApplication_6 FFmpegx64 Certbot PostgreSQL_ODBC PostgresSQL OpenResty OpenSearchStack RequiredApplication_3 DocumentServer DocumentServer.EE DocumentServer.DE"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.PreReqSearchComponent">
     <ROW SearchKey="A918597FE054CCCB65ABDBA0AD8F63CSyst" Prereq="A918597FE054CCCB65ABDBA0AD8F63C" SearchType="0" SearchString="[SystemFolder]vcruntime140.dll" VerMin="14.26.28720" Order="2" Property="PreReqSearch_A918597FE054CCCB65ABDB"/>
@@ -1659,9 +1666,9 @@
     <ROW SearchKey="SystemFolderfile.dll_5" Prereq="DocumentServer.DE" SearchType="0" SearchString="HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1" Order="1" Property="PreReqSearch_15" Platform="1"/>
     <ROW SearchKey="SystemFolderfile.dll_6" Prereq="RequiredApplication_3" SearchType="2" SearchString="HKLM\Software\FireDaemon Technologies Limited\FireDaemon OpenSSL 3\Version" VerMin="3.3.0" Order="1" Property="PreReqSearch_16"/>
     <ROW SearchKey="UpgradeCode" Prereq="PostgreSQL_ODBC" SearchType="4" SearchString="{BBD29DF5-89F6-4B8B-BDC9-C3EA3A4AFDBB}" VerMin="15.0" Order="1" Property="PreReqSearch_14"/>
-    <ROW SearchKey="UpgradeCode_1" Prereq="OpenSearchStack" SearchType="4" SearchString="{93CD82F0-18A5-4803-AC50-9A0021E92A56}" VerMin="1.5.0" Order="1" Property="PreReqSearch_7"/>
+    <ROW SearchKey="UpgradeCode_1" Prereq="OpenSearchStack" SearchType="4" SearchString="{93CD82F0-18A5-4803-AC50-9A0021E92A56}" VerMin="2.0.0" Order="1" Property="PreReqSearch_7"/>
     <ROW SearchKey="UpgradeCode_3" Prereq="RequiredApplication_6" SearchType="4" SearchString="{05410198-7212-4FC4-B7C8-AFEFC3DA0FBC}" VerMin="7.4.0" Order="2" Property="PreReqSearch_12"/>
-    <ROW SearchKey="UpgradeCode_8" Prereq="OpenSearch2.18.1" SearchType="4" SearchString="{F8561DF7-6238-4927-8DAC-AD0EBC117F6C}" VerMin="2.18.1" Order="1" Property="PreReqSearch_29"/>
+    <ROW SearchKey="UpgradeCode_8" Prereq="OpenSearch3.5.0" SearchType="4" SearchString="{F8561DF7-6238-4927-8DAC-AD0EBC117F6C}" VerMin="3.5.0" Order="1" Property="PreReqSearch_29"/>
     <ROW SearchKey="ValueName" Prereq="MySQLInstallerRunn" SearchType="2" SearchString="HKLM\SOFTWARE\MySQL AB\MySQL Server 8.4\Version" Order="5" Property="PreReqSearch_13"/>
     <ROW SearchKey="Version" Prereq="MySQLInstallerRunn" SearchType="2" SearchString="HKLM\SOFTWARE\MySQL AB\MySQL Server 5.7\Version" Order="1" Property="PreReqSearch_4"/>
     <ROW SearchKey="Version_1" Prereq="MySQLInstallerRunn" SearchType="2" SearchString="HKLM\SOFTWARE\MySQL AB\MySQL Server 8.0\Version" Order="2" Property="PreReqSearch_5"/>
@@ -1703,6 +1710,7 @@
     <ROW Name="ReplaceAmqpVhost" TxtUpdateSet="xml" FindPattern="{AMQP_VHOST}" ReplacePattern="[AMQP_VHOST]" Options="2" Order="6" FileEncoding="-1"/>
     <ROW Name="ReplaceAmqpPort" TxtUpdateSet="xml" FindPattern="{AMQP_PORT}" ReplacePattern="[AMQP_PORT]" Options="2" Order="7" FileEncoding="-1"/>
     <ROW Name="ReplaceApiHost" TxtUpdateSet="xml" FindPattern="{API_HOST}" ReplacePattern="[API_HOST]" Options="2" Order="15" FileEncoding="-1"/>
+    <ROW Name="ReplaceAiServiceUrl" TxtUpdateSet="xml" FindPattern="{AI_SERVICE_URL}" ReplacePattern="[AI_SERVICE_URL]" Options="2" Order="16" FileEncoding="-1"/>
     <ROW Name="ReplaceDbHost" TxtUpdateSet="xml" FindPattern="{DB_HOST}" ReplacePattern="[DB_HOST]" Options="2" Order="8" FileEncoding="-1"/>
     <ROW Name="ReplaceDbPwd" TxtUpdateSet="xml" FindPattern="{DB_PWD}" ReplacePattern="[DB_PWD]" Options="2" Order="9" FileEncoding="-1"/>
     <ROW Name="ReplaceDbUser" TxtUpdateSet="xml" FindPattern="{DB_USER}" ReplacePattern="[DB_USER]" Options="2" Order="10" FileEncoding="-1"/>
@@ -1718,7 +1726,7 @@
     <ROW Key="YourFile.txt_1" Component="conf" FileName="onlyoffice-client.conf" Directory="conf_Dir" Options="17"/>
     <ROW Key="YourFile.txt_2" Component="includes" FileName="onlyoffice-public.conf" Directory="includes_Dir" Options="17"/>
     <ROW Key="YourFile.txt_3" Component="conf" FileName="onlyoffice-proxy*" Directory="conf_Dir" Options="17"/>
-    <ROW Key="YourFile.txt_4" Component="APPDIR" FileName="docspace-ssl-setup.ps1" Directory="sbin_Dir" Options="17"/>
+    <ROW Key="YourFile.txt_4" Component="APPDIR" FileName="apps-ssl-setup.ps1" Directory="sbin_Dir" Options="17"/>
     <ROW Key="YourFile.txt_5" Component="includes" FileName="letsencrypt.conf" Directory="includes_Dir" Options="17"/>
     <ROW Key="fluentbit.conf" Component="config" FileName="fluent-bit.conf" Directory="config_Dir" Options="17"/>
     <ROW Key="htpasswd_dashboards" Component="conf" FileName=".htpasswd_dashboards" Directory="conf_Dir" Options="17"/>

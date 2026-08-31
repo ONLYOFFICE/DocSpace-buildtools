@@ -40,13 +40,15 @@ set -e
 
 package_sysname="onlyoffice"
 DS_COMMON_NAME="onlyoffice"
-product_name="DocSpace"
-product=$(tr '[:upper:]' '[:lower:]' <<< ${product_name})
+product="apps"
+legacy_product="docspace"
+product_name="${package_sysname^^} Apps"
+package="${package_sysname}-${product}"
 INSTALLATION_TYPE="enterprise"
 MAKESWAP="true"
 RES_APP_INSTALLED="is already installed"
 RES_CHECK_PORTS="Please make sure that the ports are free."
-RES_INSTALL_SUCCESS="Thank you for installing ONLYOFFICE ${product_name}."
+RES_INSTALL_SUCCESS="Thank you for installing ${product_name}."
 RES_QUESTIONS="In case you have any questions contact us via http://support.onlyoffice.com or visit our forum at http://community.onlyoffice.com"
 INSTALL_FLUENT_BIT="true"
 
@@ -59,7 +61,7 @@ while [ "$1" != "" ]; do
         -js | --jwtsecret )                 [ -n "$2" ] && DS_JWT_SECRET=$2 && shift ;;
         -gb | --gitbranch )                 [ -n "$2" ] && GIT_BRANCH=$2 && shift ;;
         -ifb | --installfluentbit )         [ -n "$2" ] && INSTALL_FLUENT_BIT=$2 && shift ;;
-        -dsv | --docspaceversion )          [ -n "$2" ] && PRODUCT_VERSION=$2 && shift ;;
+        -av | --appsversion | -dsv | --docspaceversion ) [ -n "$2" ] && PRODUCT_VERSION=$2 && shift ;;
         -du | --dashboardsusername )        [ -n "$2" ] && DASHBOARDS_USERNAME=$2 && shift ;;
         -dp | --dashboardspassword )        [ -n "$2" ] && DASHBOARDS_PASSWORD=$2 && shift ;;
         -ls | --localscripts )              [ -n "$2" ] && LOCAL_SCRIPTS=$2 && shift ;;
@@ -93,6 +95,30 @@ UPDATE="${UPDATE:-false}"
 LOCAL_SCRIPTS="${LOCAL_SCRIPTS:-false}"
 SKIP_HARDWARE_CHECK="${SKIP_HARDWARE_CHECK:-false}"
 
+case "${INSTALLATION_TYPE}" in
+    community | developer | enterprise ) ;;
+    * ) echo "Error: Invalid --installationtype '${INSTALLATION_TYPE}'. Valid values: community, developer, enterprise." >&2; exit 1 ;;
+esac
+
+validate_bool() {
+    case "$2" in
+        true | false ) ;;
+        * ) echo "Error: Invalid ${1} '${2}'. Valid values: true, false." >&2; exit 1 ;;
+    esac
+}
+
+validate_bool --update "$UPDATE"
+validate_bool --localscripts "$LOCAL_SCRIPTS"
+validate_bool --skiphardwarecheck "$SKIP_HARDWARE_CHECK"
+validate_bool --makeswap "$MAKESWAP"
+validate_bool --installfluentbit "$INSTALL_FLUENT_BIT"
+[ -n "$UNINSTALL" ] && validate_bool --uninstall "$UNINSTALL"
+[ -n "$DS_JWT_ENABLED" ] && validate_bool --jwtenabled "$DS_JWT_ENABLED"
+
+# Pause apt auto-updates and running jobs to avoid dpkg lock contention; timers are restarted by the EXIT trap.
+systemctl stop apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service unattended-upgrades.service >/dev/null 2>&1 || true
+trap 'systemctl start apt-daily.timer apt-daily-upgrade.timer >/dev/null 2>&1 || true' EXIT
+
 if fuser /var/lib/dpkg/lock-frontend &>/dev/null; then
   echo "Waiting for /var/lib/dpkg/lock-frontend to be released (up to 60 seconds)..."
    timeout 60 bash -c 'while fuser /var/lib/dpkg/lock-frontend &>/dev/null; do sleep 1; done'
@@ -105,7 +131,7 @@ apt-get update -y --allow-releaseinfo-change
 apt-get install -yq sudo curl dirmngr debian-archive-keyring
 
 DOWNLOAD_URL_PREFIX="https://download.onlyoffice.com/${product}"
-[ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
+[ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${legacy_product}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
 
 # Run uninstall if requested
 if [ "${UNINSTALL}" == "true" ]; then

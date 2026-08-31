@@ -16,6 +16,11 @@ pushd %~1
     call yarn install --frozen-lockfile
   popd
 
+  echo "== Build ASC.NewAi =="
+  pushd common\ASC.NewAi
+    call yarn install --frozen-lockfile
+  popd
+
   echo "== Build ASC.SsoAuth =="
   pushd common\ASC.SsoAuth
     call yarn install --frozen-lockfile

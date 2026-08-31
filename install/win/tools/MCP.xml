@@ -1,7 +1,7 @@
 <service>
-	<id>DocSpace.MCP</id>
-	<name>ONLYOFFICE DocSpace MCP</name>
-	<description>ONLYOFFICE DocSpace MCP</description>
+	<id>Apps.MCP</id>
+	<name>ONLYOFFICE Apps MCP</name>
+	<description>ONLYOFFICE Apps MCP</description>
 	<priority>RealTime</priority>
 	<startmode>Automatic</startmode>
 	<autoRefresh>false</autoRefresh>
