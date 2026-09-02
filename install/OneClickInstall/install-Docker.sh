@@ -719,7 +719,8 @@ chown_app_volumes () {
 		
 		local DEFAULT_VOLUME_NAME
 		for DEFAULT_VOLUME_NAME in "${PROJECT_NAME}_app_data" "${PROJECT_NAME}_log_data"; do
-			docker volume inspect "${DEFAULT_VOLUME_NAME}" &>/dev/null && VOLUME_NAMES+=("${DEFAULT_VOLUME_NAME}")
+			docker volume inspect "${DEFAULT_VOLUME_NAME}" &>/dev/null || docker volume create "${DEFAULT_VOLUME_NAME}" &>/dev/null
+			VOLUME_NAMES+=("${DEFAULT_VOLUME_NAME}")
 		done
 
 		mapfile -t VOLUME_NAMES < <(printf "%s\n" "${VOLUME_NAMES[@]}" | sort -u)
