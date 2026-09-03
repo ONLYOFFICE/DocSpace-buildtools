@@ -45,6 +45,13 @@ PRODUCT_NAME="${PRODUCT_SYSNAME^^} Apps"
 FILE_NAME="$(basename "$0")"
 ENABLE_LOGGING="true"
 
+USER_SET_INSTALLATION_TYPE="false"
+for ARG in "$@"; do
+    case "$ARG" in
+        -it | --installationtype | --installation_type ) USER_SET_INSTALLATION_TYPE="true" ;;
+    esac
+done
+
 while [ "$1" != "" ]; do
 	case $1 in
         -ls | --localscripts )     [[ "$2" == "true" || "$2" == "false" ]] && PARAMETERS="$PARAMETERS ${1}" && LOCAL_SCRIPTS=$2 && shift ;;
@@ -114,8 +121,23 @@ elif (is_command_exists dpkg && dpkg -s "${PRODUCT_SYSNAME}-${PRODUCT}-api" >/de
   || (is_command_exists rpm && rpm -q "${LEGACY_PRODUCT}-api" >/dev/null 2>&1); then
     DOCKER="false"
 	PARAMETERS="-u true $PARAMETERS"
+else
+    for DS_EDITION_SUFFIX in "" "-de" "-ee"; do
+        if (is_command_exists dpkg && dpkg -s "${PRODUCT_SYSNAME}-documentserver${DS_EDITION_SUFFIX}" >/dev/null 2>&1) \
+          || (is_command_exists rpm && rpm -q "${PRODUCT_SYSNAME}-documentserver${DS_EDITION_SUFFIX}" >/dev/null 2>&1); then
+            DOCKER="false"
+            if [ "$USER_SET_INSTALLATION_TYPE" != "true" ]; then
+                case "$DS_EDITION_SUFFIX" in
+                    "-de") PARAMETERS="$PARAMETERS -it developer" ;;
+                    "-ee") PARAMETERS="$PARAMETERS -it enterprise" ;;
+                    *)     PARAMETERS="$PARAMETERS -it community" ;;
+                esac
+            fi
+            break
+        fi
+    done
 fi
- 
+
 [ -z "$DOCKER" ] && read_installation_method
 
 # Auto-detect legacy installs

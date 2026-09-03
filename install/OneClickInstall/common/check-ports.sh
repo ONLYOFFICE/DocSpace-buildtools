@@ -67,8 +67,9 @@ for PACKAGE_NAME in "${package}" "${legacy_product}"; do
 	PRODUCT_INSTALLED="true"
 done
 
-if grep -q "${package_sysname}-documentserver" <<< "$PKG_LIST"; then
-	echo "${package_sysname}-documentserver $RES_APP_INSTALLED"
+DS_INSTALLED_PKG_NAME="$(grep -oE "${package_sysname}-documentserver(-de|-ee)?" <<< "$PKG_LIST" | head -1)"
+if [ -n "$DS_INSTALLED_PKG_NAME" ]; then
+	echo "${DS_INSTALLED_PKG_NAME} $RES_APP_INSTALLED"
 	DOCUMENT_SERVER_INSTALLED="true"
 fi
 
@@ -83,6 +84,25 @@ if [ "$UPDATE" != "true" ]; then
 			apt-get install -yq iproute2
 		elif command -v rpm >/dev/null 2>&1; then
 			${package_manager} -y install iproute
+		fi
+	fi
+
+	# An already-installed Document Server may be using the port ${product_name}'s own web front-end needs; move it out of the way instead of failing.
+	if [ "$DOCUMENT_SERVER_INSTALLED" = "true" ] && [ -n "$DS_INSTALLED_PKG_NAME" ]; then
+		DS_CONF_FILE="/etc/${package_sysname}/documentserver/nginx/ds.conf"
+		DS_CURRENT_PORT="$(grep -oP '^\s*listen\s+(\S*:)?\K\d+' "$DS_CONF_FILE" 2>/dev/null | head -1)"
+		if [ -n "$DS_CURRENT_PORT" ] && [ "$DS_CURRENT_PORT" = "${APP_PORT:-80}" ]; then
+			DS_NEW_PORT="${DS_PORT:-8083}"
+			if ss -H -lnt | awk '{print $4}' | grep -qE ":${DS_NEW_PORT}$"; then
+				echo "Cannot move ${DS_INSTALLED_PKG_NAME} to port ${DS_NEW_PORT}: already in use."
+				echo "$RES_CHECK_PORTS"
+				exit 1
+			fi
+			echo "${DS_INSTALLED_PKG_NAME} is using port ${DS_CURRENT_PORT}, required by ${product_name}. Switching it to port ${DS_NEW_PORT}."
+			sed -i "/^\s*listen/ s/:${DS_CURRENT_PORT}\([[:space:];]\)/:${DS_NEW_PORT}\1/" "$DS_CONF_FILE"
+			{ command -v debconf-set-selections >/dev/null 2>&1 && echo "${DS_INSTALLED_PKG_NAME}" "${DS_COMMON_NAME:-onlyoffice}"/ds-port select "$DS_NEW_PORT" | debconf-set-selections; } || true
+			systemctl restart nginx 2>/dev/null || true
+			timeout 5 bash -c "while ss -H -lnt | awk '{print \$4}' | grep -qE ':${DS_CURRENT_PORT}\$'; do sleep 0.2; done" || true
 		fi
 	fi
 
