@@ -30,6 +30,14 @@ PROXY_SSL_CONF="${DOCKERCOMPOSE}/config/nginx/proxy/onlyoffice-proxy-ssl.conf"
 EXTERNAL_PORT_HTTPS=$(awk -F= '/^[[:space:]]*EXTERNAL_PORT_HTTPS=/{gsub(/^[[:space:]]*/,"",$2); gsub(/"/,"",$2); print $2; exit}' "${DOCKERCOMPOSE}/.env")
 EXTERNAL_PORT_HTTPS="${EXTERNAL_PORT_HTTPS:-443}"
 
+# Detect which application topology is actually deployed, so the app tier is recreated
+# with the right compose file/services instead of always assuming the modular apps.yml.
+APPS_COMPOSE_FILE="apps.yml"
+if docker ps --format '{{.Image}}' | grep -qE "(${PRODUCT}|${LEGACY_PRODUCT})-dotnet:"; then
+  APPS_COMPOSE_FILE="apps-stack.yml"
+  eval "$(grep -E '^(NODE_CONTAINER_NAME|DOTNET_CONTAINER_NAME)=' "${DOCKERCOMPOSE}/.env" | tr -d '\r')"
+fi
+
 help(){
   echo 
   echo "This script provided to automatically setup SSL Certificates for ONLYOFFICE Apps"
@@ -176,15 +184,23 @@ case $1 in
       db -e "UPDATE tenants_tenants SET mappeddomain='NULL' WHERE alias='localhost';"
     fi
 
-    if grep -q '^[[:space:]]*-[[:space:]]*.*${CERTIFICATE_PATH}' ${DOCKERCOMPOSE}/apps.yml; then
+    if grep -q '^[[:space:]]*-[[:space:]]*.*${CERTIFICATE_PATH}' ${DOCKERCOMPOSE}/${APPS_COMPOSE_FILE}; then
       sed -i '/USE_UNAUTHORIZED_STORAGE/d' ${DOCKERCOMPOSE}/ds.yml
-      sed -i 's/^\([[:space:]]*\)-\(.*${CERTIFICATE_PATH}.*\)/\1#-\2/' ${DOCKERCOMPOSE}/apps.yml ${DOCKERCOMPOSE}/ds.yml
-      ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/apps.yml up --force-recreate -d onlyoffice-doceditor onlyoffice-sdk onlyoffice-login onlyoffice-socket onlyoffice-ssoauth
+      sed -i 's/^\([[:space:]]*\)-\(.*${CERTIFICATE_PATH}.*\)/\1#-\2/' ${DOCKERCOMPOSE}/${APPS_COMPOSE_FILE} ${DOCKERCOMPOSE}/ds.yml
+      if [ "$APPS_COMPOSE_FILE" = "apps-stack.yml" ]; then
+        ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/${APPS_COMPOSE_FILE} up --force-recreate -d "${NODE_CONTAINER_NAME:-onlyoffice-node-services}"
+      else
+        ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/${APPS_COMPOSE_FILE} up --force-recreate -d onlyoffice-doceditor onlyoffice-sdk onlyoffice-login onlyoffice-socket onlyoffice-ssoauth
+      fi
       ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/ds.yml up --force-recreate -d
     fi
 
     ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/proxy.yml up --force-recreate -d
-    ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/apps.yml up --force-recreate -d onlyoffice-files
+    if [ "$APPS_COMPOSE_FILE" = "apps-stack.yml" ]; then
+      ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/${APPS_COMPOSE_FILE} up --force-recreate -d "${DOTNET_CONTAINER_NAME:-onlyoffice-dotnet-services}"
+    else
+      ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/${APPS_COMPOSE_FILE} up --force-recreate -d onlyoffice-files
+    fi
     
     echo "OK"
     exit 0
@@ -275,7 +291,7 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
         echo -n "Checking certificate trust inside ${CONTAINER_NAME}... "
         docker exec "${CONTAINER_NAME}" openssl verify -untrusted "${TEMP_PATH}" "${TEMP_PATH}" >/dev/null \
           && { echo "true"; CERT_TRUST_REQUIRED=false; } || { echo "false"; CERT_TRUST_REQUIRED=true; }
-        docker exec "${CONTAINER_NAME}" rm -f "${TEMP_PATH}" >/dev/null
+        docker exec "${CONTAINER_NAME}" rm -f "${TEMP_PATH}" >/dev/null || true
       else
         echo -n "Checking certificate trust on host... "
         openssl verify -untrusted "${CERTIFICATE_FILE}" "${CERTIFICATE_FILE}" >/dev/null \
@@ -283,7 +299,7 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
       fi
 
       if [ "$CERT_TRUST_REQUIRED" = true ]; then
-        sed -i 's/^\([[:space:]]*\)#-\(.*${CERTIFICATE_PATH}.*\)/\1-\2/' ${DOCKERCOMPOSE}/apps.yml ${DOCKERCOMPOSE}/ds.yml
+        sed -i 's/^\([[:space:]]*\)#-\(.*${CERTIFICATE_PATH}.*\)/\1-\2/' ${DOCKERCOMPOSE}/${APPS_COMPOSE_FILE} ${DOCKERCOMPOSE}/ds.yml
         ${DOCKER_COMPOSE} -f "${DOCKERCOMPOSE}/ds.yml" up --force-recreate -d
       fi
     fi
@@ -294,7 +310,11 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
     fi
     
     ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/proxy-ssl.yml up --force-recreate -d
-    ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/apps.yml -f ${DOCKERCOMPOSE}/notify.yml up --force-recreate -d
+    if [ "$APPS_COMPOSE_FILE" = "apps-stack.yml" ]; then
+      ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/${APPS_COMPOSE_FILE} up --force-recreate -d
+    else
+      ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/${APPS_COMPOSE_FILE} -f ${DOCKERCOMPOSE}/notify.yml up --force-recreate -d
+    fi
 
     echo "OK"
   else
