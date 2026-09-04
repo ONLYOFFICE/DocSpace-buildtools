@@ -266,7 +266,7 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
       create_renew_script
     else
       CONTAINER_NAME=$(docker ps --format '{{.Image}} {{.Names}}' | grep -E "(${PRODUCT}|${LEGACY_PRODUCT})-api:" | awk '{print $2}')
-      CONTAINER_STATUS=$([ -n "$CONTAINER_NAME" ] && docker inspect -f '{{.State.Health.Status}}' "$CONTAINER_NAME" 2>/dev/null)
+      CONTAINER_STATUS=$([ -n "$CONTAINER_NAME" ] && docker inspect -f '{{.State.Health.Status}}' "$CONTAINER_NAME" 2>/dev/null) || true
       TEMP_PATH="/tmp/$(basename "${CERTIFICATE_FILE}")"
 
       # Checking whether the certificate chain is trusted
