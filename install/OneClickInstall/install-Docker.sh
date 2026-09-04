@@ -553,6 +553,67 @@ get_available_version () {
 	fi
 }
 
+# A running container's published ports are immutable, so freeing one up for our own
+# use means recreating the container on our network, reusing its image/env/mounts.
+recreate_document_server_container () {
+	local CONTAINER="$1"
+	local IMAGE SHM_SIZE RESTART_POLICY VAR SRC DEST LINE
+	local ENV_ARGS=() MOUNT_ARGS=() RUN_ARGS=()
+
+	IMAGE=$(docker inspect --format '{{.Config.Image}}' "${CONTAINER}")
+	SHM_SIZE=$(docker inspect --format '{{.HostConfig.ShmSize}}' "${CONTAINER}")
+	RESTART_POLICY=$(docker inspect --format '{{.HostConfig.RestartPolicy.Name}}' "${CONTAINER}")
+
+	while IFS= read -r VAR; do [ -n "${VAR}" ] && ENV_ARGS+=(-e "${VAR}"); done \
+		< <(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "${CONTAINER}")
+
+	while IFS= read -r LINE; do
+		SRC="${LINE%%$'\t'*}"; DEST="${LINE#*$'\t'}"
+		[ -n "${SRC}" ] && MOUNT_ARGS+=(-v "${SRC}:${DEST}")
+	done < <(docker inspect --format '{{range .Mounts}}{{.Source}}{{"\t"}}{{.Destination}}{{"\n"}}{{end}}' "${CONTAINER}")
+
+	echo "Recreating ${CONTAINER} on our network without its conflicting published ports..."
+	docker rm -f "${CONTAINER}" >/dev/null || return 1
+
+	RUN_ARGS=(--name "${CONTAINER}" --network "${NETWORK_NAME}" --restart="${RESTART_POLICY:-always}")
+	[[ "${SHM_SIZE}" =~ ^[0-9]+$ ]] && [ "${SHM_SIZE}" -gt 0 ] && RUN_ARGS+=(--shm-size="${SHM_SIZE}")
+
+	docker run -d "${RUN_ARGS[@]}" "${ENV_ARGS[@]}" "${MOUNT_ARGS[@]}" "${IMAGE}" >/dev/null
+}
+
+detect_existing_document_server () {
+	[ "${DEPLOYMENT_MODE}" = "community" ] && return 0
+	[ "${UPDATE}" = "true" ] && return 0
+	[ "${INSTALL_DOCUMENT_SERVER}" = "true" ] || return 0
+	is_command_exists docker || return 0
+
+	local CONTAINER
+	CONTAINER=$(docker ps --format '{{.Names}} {{.Image}}' 2>/dev/null | awk -v pkg="${PACKAGE_SYSNAME}" '$2 ~ ("(^|/)"pkg"/documentserver(-de|-ee)?(:|$)") {print $1; exit}')
+	[ -z "${CONTAINER}" ] && return 0
+
+	echo "Found an existing Document Server container (${CONTAINER}); attaching it instead of deploying a new one."
+
+	# Network membership isn't check_ports' concern and adopt_document_server_via_compose()
+	# (called later, from install_document_server) joins our network regardless, so only a
+	# real port clash needs handling this early — mirroring check_ports' own conditions.
+	local PORT_CONFLICT="false"
+	if [ "${INSTALL_PRODUCT}" == "true" ]; then
+		docker port "${CONTAINER}" 2>/dev/null | grep -qE ":${EXTERNAL_PORT}$" && PORT_CONFLICT="true"
+		if [[ -n "$CERTIFICATE_PATH" ]] || [[ -n "$LETS_ENCRYPT_DOMAIN" ]]; then
+			docker port "${CONTAINER}" 2>/dev/null | grep -qE ":${EXTERNAL_PORT_HTTPS}$" && PORT_CONFLICT="true"
+		fi
+	fi
+
+	if [ "${PORT_CONFLICT}" = "true" ]; then
+		recreate_document_server_container "${CONTAINER}" || return 0
+	fi
+
+	DOCUMENT_SERVER_HOST="${CONTAINER}"
+	DOCUMENT_SERVER_PORT="80"
+	INSTALL_DOCUMENT_SERVER="false"
+	DOCUMENT_SERVER_ATTACHED="true"
+}
+
 set_docs_url_external () {
 	DOCUMENT_SERVER_URL_EXTERNAL=${DOCUMENT_SERVER_URL_EXTERNAL:-$(get_env_parameter "DOCUMENT_SERVER_URL_EXTERNAL" "${CONTAINER_NAME}")}
 
@@ -567,12 +628,16 @@ set_docs_url_external () {
 set_jwt_secret () {
 	DOCUMENT_SERVER_JWT_SECRET="${DOCUMENT_SERVER_JWT_SECRET:-$(get_env_parameter "JWT_SECRET" "${PACKAGE_SYSNAME}-document-server")}"
 	DOCUMENT_SERVER_JWT_SECRET="${DOCUMENT_SERVER_JWT_SECRET:-$(get_env_parameter "DOCUMENT_SERVER_JWT_SECRET" "${CONTAINER_NAME}")}"
+	[ "${DOCUMENT_SERVER_ATTACHED}" = "true" ] && \
+		DOCUMENT_SERVER_JWT_SECRET="${DOCUMENT_SERVER_JWT_SECRET:-$(get_env_parameter "JWT_SECRET" "${DOCUMENT_SERVER_HOST}")}"
 	DOCUMENT_SERVER_JWT_SECRET="${DOCUMENT_SERVER_JWT_SECRET:-$(get_random_str 32)}"
 }
 
 set_jwt_header () {
 	DOCUMENT_SERVER_JWT_HEADER="${DOCUMENT_SERVER_JWT_HEADER:-$(get_env_parameter "JWT_HEADER" "${PACKAGE_SYSNAME}-document-server")}"
 	DOCUMENT_SERVER_JWT_HEADER="${DOCUMENT_SERVER_JWT_HEADER:-$(get_env_parameter "DOCUMENT_SERVER_JWT_HEADER" "${CONTAINER_NAME}")}"
+	[ "${DOCUMENT_SERVER_ATTACHED}" = "true" ] && \
+		DOCUMENT_SERVER_JWT_HEADER="${DOCUMENT_SERVER_JWT_HEADER:-$(get_env_parameter "JWT_HEADER" "${DOCUMENT_SERVER_HOST}")}"
 	DOCUMENT_SERVER_JWT_HEADER="${DOCUMENT_SERVER_JWT_HEADER:-"AuthorizationJwt"}"
 }
 
@@ -654,7 +719,7 @@ download_files () {
 
 	[ "${OFFLINE_INSTALLATION}" = "false" ] && echo -n "Downloading configuration files to ${BASE_DIR}..." || echo "Unzip ${DOCKER_TARBALL} to ${BASE_DIR}..."
 
-	rm -rf "${BASE_DIR:?}"
+	[ -d "${BASE_DIR:?}" ] && find "${BASE_DIR}" -mindepth 1 -maxdepth 1 -not -name "DocumentServer" -exec rm -rf {} +
 	mkdir -p ${BASE_DIR}
 
 	if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
@@ -749,10 +814,31 @@ install_mysql_server () {
 	fi
 }
 
+adopt_document_server_via_compose () {
+	local OVERRIDE_FILE="${BASE_DIR}/ds.attach.yml" LINE SRC DEST MOUNTS_YAML=""
+
+	while IFS= read -r LINE; do
+		SRC="${LINE%%$'\t'*}"; DEST="${LINE#*$'\t'}"
+		[ -n "${SRC}" ] && MOUNTS_YAML="${MOUNTS_YAML}      - ${SRC}:${DEST}"$'\n'
+	done < <(docker inspect --format '{{range .Mounts}}{{.Source}}{{"\t"}}{{.Destination}}{{"\n"}}{{end}}' "${DOCUMENT_SERVER_HOST}")
+
+	{
+		echo "services:"
+		echo "  onlyoffice-document-server:"
+		echo "    volumes: !override"
+		printf '%s' "${MOUNTS_YAML}"
+	} > "${OVERRIDE_FILE}"
+
+	docker rm -f "${DOCUMENT_SERVER_HOST}" >/dev/null
+	${DOCKER_COMPOSE} -f "${BASE_DIR}/ds.yml" -f "${OVERRIDE_FILE}" up -d
+}
+
 install_document_server () {
 	reconfigure DOCUMENT_SERVER_JWT_HEADER ${DOCUMENT_SERVER_JWT_HEADER}
 	reconfigure DOCUMENT_SERVER_JWT_SECRET ${DOCUMENT_SERVER_JWT_SECRET}
-	if [[ -z ${DOCUMENT_SERVER_HOST} ]] && [ "$INSTALL_DOCUMENT_SERVER" == "true" ]; then
+	if [ "${DOCUMENT_SERVER_ATTACHED}" = "true" ]; then
+		adopt_document_server_via_compose
+	elif [[ -z ${DOCUMENT_SERVER_HOST} ]] && [ "$INSTALL_DOCUMENT_SERVER" == "true" ]; then
 		${DOCKER_COMPOSE} -f ${BASE_DIR}/ds.yml up -d
 	elif [ "$INSTALL_DOCUMENT_SERVER" == "pull" ]; then
 		${DOCKER_COMPOSE} -f ${BASE_DIR}/ds.yml pull
@@ -1021,7 +1107,7 @@ check_registry_connection() {
 }
 
 check_docker_compose() {
-	local COMPOSE_REQ=2018000 v
+	local COMPOSE_REQ=2024000 v
 	for DOCKER_COMPOSE in "docker compose" docker-compose; do
 		VERSION=$(${DOCKER_COMPOSE} version --short 2>/dev/null) || continue
 		awk -F. -v R="$COMPOSE_REQ" 'NF>=3{exit !($1*1e6+$2*1e3+$3>=R)}' <<<"${VERSION%%[^0-9.]*}" && return 0
@@ -1103,7 +1189,7 @@ services_check_connection () {
 	fi
 	if [[ ! -z "$DOCUMENT_SERVER_HOST" ]]; then
 		APP_URL_PORTAL=${APP_URL_PORTAL:-"http://$(curl -s -4 ifconfig.me):${EXTERNAL_PORT}"}
-		establish_conn ${DOCUMENT_SERVER_HOST} ${DOCUMENT_SERVER_PORT} "${PACKAGE_SYSNAME^^} Docs"
+		[ "${DOCUMENT_SERVER_ATTACHED}" = "true" ] || establish_conn ${DOCUMENT_SERVER_HOST} ${DOCUMENT_SERVER_PORT} "${PACKAGE_SYSNAME^^} Docs"
 		reconfigure DOCUMENT_SERVER_URL_EXTERNAL ${DOCUMENT_SERVER_URL_EXTERNAL}
 		reconfigure DOCUMENT_SERVER_URL_PUBLIC ${DOCUMENT_SERVER_URL_EXTERNAL}
 	fi
@@ -1143,6 +1229,9 @@ start_installation () {
 
 	dependency_installation
 
+	create_network
+	detect_existing_document_server
+
 	if [ "$UPDATE" != "true" ]; then
 		check_ports
 	fi
@@ -1158,8 +1247,6 @@ start_installation () {
 	docker_login
 
 	[ "${OFFLINE_INSTALLATION}" = "false" ] && check_registry_connection
-
-	create_network
 
 	domain_check
 
