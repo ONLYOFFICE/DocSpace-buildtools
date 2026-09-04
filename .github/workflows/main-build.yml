@@ -76,7 +76,15 @@ jobs:
           set -o pipefail
           cd ".${DOCKER_PATH}"
 
-          cleanup() {
+          light_prune() {
+            echo "-- light prune --"
+            df -h . | tail -1
+            docker buildx prune -f 2>/dev/null || true
+            docker container prune -f 2>/dev/null || true
+            docker image prune -f 2>/dev/null || true
+          }
+
+          full_cleanup() {
             printf '%.0s=' {1..80}
             echo
             echo "DISK SPACE AFTER BUILD"
@@ -87,13 +95,14 @@ jobs:
             docker buildx prune -a -f
             docker system prune -a -f --volumes
           }
-          trap cleanup EXIT
+          trap full_cleanup EXIT
 
           echo "PRODUCT_VERSION=${PRODUCT_VERSION}"
 
           build_bake() {
             local platforms="$1"
             local mode="$2"
+            local tag_override="$3"   # optional; if set, pushes under this tag instead of DOCKER_TAG
             local -a options=(
               -f build/build.hcl
               "${{ matrix.service }}-services"
@@ -109,20 +118,12 @@ jobs:
             else
               options+=(--set "*.output=type=cacheonly")
             fi
-            docker buildx bake "${options[@]}"
-          }
 
-          alias_amd64_tags() {
-            echo "Aliasing fallback images under -amd64 suffix tags..."
-            mapfile -t IMAGE_TAGS < <(
-              docker buildx bake -f build/build.hcl "${{ matrix.service }}-services" --print 2>/dev/null \
-                | jq -r '.target[] | .tags[]'
-            )
-            for FULL_TAG in "${IMAGE_TAGS[@]}"; do
-              echo "  ${FULL_TAG} -> ${FULL_TAG}-amd64"
-              docker buildx imagetools create --tag "${FULL_TAG}-amd64" "${FULL_TAG}" \
-                || echo "::warning::Failed to create alias tag for ${FULL_TAG} (main tag still amd64-only and functional)"
-            done
+            if [[ -n "$tag_override" ]]; then
+              DOCKER_TAG="$tag_override" docker buildx bake "${options[@]}"
+            else
+              docker buildx bake "${options[@]}"
+            fi
           }
 
           MULTI_LOG="${RUNNER_TEMP}/${{ matrix.service }}-multiarch.log"
@@ -130,11 +131,16 @@ jobs:
           ARM64_LOG="${RUNNER_TEMP}/${{ matrix.service }}-arm64.log"
           AMD64_PUSH_LOG="${RUNNER_TEMP}/${{ matrix.service }}-amd64-push.log"
 
+          STEP_START=$SECONDS
+          RETRY_DEADLINE=$(( 150 * 60 - 20 * 60 ))  # reserve 20 min for fallback push + cleanup
+          MIN_FREE_KB=$((10 * 1024 * 1024))         # 10GB floor, tune to your images
+
           MULTI_ARCH_OK=false
           echo "Attempting multi-architecture build..."
           if build_bake "linux/amd64,linux/arm64" push 2>&1 | tee "$MULTI_LOG"; then
             MULTI_ARCH_OK=true
           fi
+          light_prune
 
           if [[ "$MULTI_ARCH_OK" == "true" ]]; then
             echo "Multi-architecture build succeeded."
@@ -144,46 +150,69 @@ jobs:
             echo "::warning::Multi-architecture build failed. Testing platforms separately."
 
             echo "Testing linux/amd64..."
-            if ! build_bake "linux/amd64" diagnostic 2>&1 | tee "$AMD64_LOG"; then
+            AMD64_DIAG_OK=false
+            build_bake "linux/amd64" diagnostic 2>&1 | tee "$AMD64_LOG" && AMD64_DIAG_OK=true
+            light_prune
+
+            if [[ "$AMD64_DIAG_OK" != "true" ]]; then
               echo "::error::AMD64 also failed. The failure is not ARM64-specific."
               exit 1
             fi
 
             echo "AMD64 succeeded. Testing linux/arm64 separately..."
-            if build_bake "linux/arm64" diagnostic 2>&1 | tee "$ARM64_LOG"; then
-              RETRY_OK=false
-              for attempt in 1 2; do
-                echo "::warning::Multi-arch push failed but both platforms build fine independently — retrying full multi-arch push (attempt ${attempt}/2)..."
-                sleep 15
-                if build_bake "linux/amd64,linux/arm64" push 2>&1 | tee "${RUNNER_TEMP}/${{ matrix.service }}-multiarch-retry${attempt}.log"; then
-                  RETRY_OK=true
-                  break
-                fi
-              done
+            ARM64_DIAG_OK=false
+            build_bake "linux/arm64" diagnostic 2>&1 | tee "$ARM64_LOG" && ARM64_DIAG_OK=true
+            light_prune
+
+            if [[ "$ARM64_DIAG_OK" == "true" ]]; then
+              AVAIL_KB=$(df --output=avail -k . | tail -1 | tr -d ' ')
+              if [[ "$AVAIL_KB" -lt "$MIN_FREE_KB" ]]; then
+                echo "::warning::Only $((AVAIL_KB / 1024 / 1024))GB free after pruning — skipping multi-arch retry, disk pressure makes it unlikely to succeed."
+                RETRY_OK=false
+              elif [[ "$SECONDS" -ge "$RETRY_DEADLINE" ]]; then
+                echo "::warning::Not enough time budget left to attempt multi-arch retries — going straight to amd64-only fallback."
+                RETRY_OK=false
+              else
+                RETRY_OK=false
+                for attempt in 1 2; do
+                  if [[ "$SECONDS" -ge "$RETRY_DEADLINE" ]]; then
+                    echo "::warning::Time budget for retries exhausted, skipping remaining attempts."
+                    break
+                  fi
+                  echo "::warning::Retrying full multi-arch push (attempt ${attempt}/2)..."
+                  sleep 15
+                  if build_bake "linux/amd64,linux/arm64" push 2>&1 | tee "${RUNNER_TEMP}/${{ matrix.service }}-multiarch-retry${attempt}.log"; then
+                    RETRY_OK=true
+                    light_prune
+                    break
+                  fi
+                  light_prune
+                done
+              fi
 
               if [[ "$RETRY_OK" == "true" ]]; then
                 echo "Multi-architecture push succeeded on retry."
                 echo "arch_fallback=false" >> "$GITHUB_OUTPUT"
                 echo "arch_fallback_reason=none" >> "$GITHUB_OUTPUT"
               else
-                echo "::warning::Multi-arch push still failing after retries despite both platforms building independently — falling back to amd64-only, this needs investigation."
-                if ! build_bake "linux/amd64" push 2>&1 | tee "$AMD64_PUSH_LOG"; then
-                  echo "::error::Failed to publish the AMD64 fallback."
+                echo "::warning::Multi-arch push still failing despite both platforms building independently — publishing under ${DOCKER_TAG}-amd64 only. Main tag stays untouched."
+                if ! build_bake "linux/amd64" push "${DOCKER_TAG}-amd64" 2>&1 | tee "$AMD64_PUSH_LOG"; then
+                  echo "::error::Failed to publish the ${DOCKER_TAG}-amd64 fallback tag."
                   exit 1
                 fi
-                alias_amd64_tags
                 echo "arch_fallback=true" >> "$GITHUB_OUTPUT"
                 echo "arch_fallback_reason=manifest_or_push_issue" >> "$GITHUB_OUTPUT"
+                echo "fallback_tag=${DOCKER_TAG}-amd64" >> "$GITHUB_OUTPUT"
               fi
             else
-              echo "::warning::AMD64 succeeded and ARM64 failed independently — confirmed ARM64-specific failure. Falling back to amd64-only push."
-              if ! build_bake "linux/amd64" push 2>&1 | tee "$AMD64_PUSH_LOG"; then
-                echo "::error::Failed to publish the AMD64 fallback."
+              echo "::warning::AMD64 succeeded and ARM64 failed independently — confirmed ARM64-specific failure. Publishing under ${DOCKER_TAG}-amd64 only. Main tag stays untouched."
+              if ! build_bake "linux/amd64" push "${DOCKER_TAG}-amd64" 2>&1 | tee "$AMD64_PUSH_LOG"; then
+                echo "::error::Failed to publish the ${DOCKER_TAG}-amd64 fallback tag."
                 exit 1
               fi
-              alias_amd64_tags
               echo "arch_fallback=true" >> "$GITHUB_OUTPUT"
               echo "arch_fallback_reason=arm64_build_failure" >> "$GITHUB_OUTPUT"
+              echo "fallback_tag=${DOCKER_TAG}-amd64" >> "$GITHUB_OUTPUT"
             fi
           fi
 
