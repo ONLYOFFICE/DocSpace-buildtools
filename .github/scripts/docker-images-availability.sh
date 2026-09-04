@@ -17,6 +17,7 @@ DOCKERHUB_JWT=$(curl -fsSL -X POST "https://hub.docker.com/v2/users/login" \
 check_image() {
   local REPO="$1" PREFIX="$2" SVC="$3" TAG="$4"
   local IMAGE="${REPO}/${PREFIX}-${SVC}"
+  local ACCEPT="application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.docker.distribution.manifest.v2+json,application/vnd.oci.image.manifest.v1+json"
 
   if ! curl -sf -o /dev/null -H "Authorization: JWT ${DOCKERHUB_JWT}" \
       "https://hub.docker.com/v2/repositories/${IMAGE}/"; then
@@ -30,15 +31,22 @@ check_image() {
   [ -n "$TOKEN" ] || { printf "::error::[FAIL]    %-22s empty token\n" "$SVC"; return 1; }
 
   local DEADLINE=$(( SECONDS + 300 ))
-  until curl -fsI \
+  local RESP
+  until RESP=$(curl -fsI \
       -H "Authorization: Bearer $TOKEN" \
-      -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
-      "https://registry-1.docker.io/v2/${IMAGE}/manifests/${TAG}" | grep -q '200'; do
+      -H "Accept: ${ACCEPT}" \
+      "https://registry-1.docker.io/v2/${IMAGE}/manifests/${TAG}") && echo "$RESP" | grep -q '200'; do
     [ "$SECONDS" -ge "$DEADLINE" ] && { printf "::error::[FAIL]    %-22s manifest not found\n" "$SVC"; return 1; }
     printf '[WAIT]       %-22s manifest not yet available...\n' "$SVC"
     sleep 10
   done
-  printf "[OK]      %-22s\n" "$SVC"
+
+  local CONTENT_TYPE
+  CONTENT_TYPE=$(echo "$RESP" | grep -i '^content-type:' | tr -d '\r' | awk '{print $2}')
+  case "$CONTENT_TYPE" in
+    *manifest.list*|*image.index*) printf "[OK]      %-22s (multi-arch)\n" "$SVC" ;;
+    *) printf "[OK]      %-22s (single-arch: %s)\n" "$SVC" "$CONTENT_TYPE" ;;
+  esac
 }
 
 mapfile -t SERVICES < <(

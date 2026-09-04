@@ -73,33 +73,86 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          cd .${DOCKER_PATH}
+          set -o pipefail
+          cd ".${DOCKER_PATH}"
+
+          echo "PRODUCT_VERSION=${PRODUCT_VERSION}"
 
           build_bake() {
-            docker buildx bake -f build/build.hcl ${{ matrix.service }}-services \
-              --set "*.args.GIT_BRANCH=${{ matrix.branch }}" \
-              --set "*.args.PRODUCT_VERSION=${{ env.PRODUCT_VERSION }}" \
-              --set "*.args.BUILD_NUMBER=${{ github.run_number }}" \
-              --set "*.platform=$1" \
-              --set "*.secrets=id=github_token,env=GITHUB_TOKEN" \
-              --sbom=true --provenance=mode=max --push
+            local platforms="$1"
+            local mode="$2"
+            local -a options=(
+              -f build/build.hcl
+              "${{ matrix.service }}-services"
+              --set "*.args.GIT_BRANCH=${{ matrix.branch }}"
+              --set "*.args.PRODUCT_VERSION=${PRODUCT_VERSION}"
+              --set "*.args.BUILD_NUMBER=${{ github.run_number }}"
+              --set "*.platform=${platforms}"
+              --set "*.secrets=id=github_token,env=GITHUB_TOKEN"
+              --progress=plain
+            )
+            if [[ "$mode" == "push" ]]; then
+              options+=(
+                --sbom=true
+                --provenance=mode=max
+                --push
+              )
+            else
+              # Build everything, but do not push or export the image.
+              options+=(
+                --set "*.output=type=cacheonly"
+              )
+            fi
+            docker buildx bake "${options[@]}"
           }
 
-          log=$(build_bake "linux/amd64,linux/arm64" 2>&1) && { echo "$log"; echo "arch_fallback=false" >> "$GITHUB_OUTPUT"; } || {
-            echo "$log"
-            if echo "$log" | grep -qiE 'arm64|no match for platform|multiple platforms feature'; then
-              echo "::warning::Multi-arch build failed for ${{ matrix.service }} (${{ matrix.branch }}) — falling back to linux/amd64 only."
-              build_bake "linux/amd64" || FALLBACK_FAILED=1
-              echo "arch_fallback=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "::error::Build failed for a reason unrelated to arm64 availability"
+          MULTI_LOG="${RUNNER_TEMP}/${{ matrix.service }}-multiarch.log"
+          AMD64_LOG="${RUNNER_TEMP}/${{ matrix.service }}-amd64.log"
+          ARM64_LOG="${RUNNER_TEMP}/${{ matrix.service }}-arm64.log"
+          AMD64_PUSH_LOG="${RUNNER_TEMP}/${{ matrix.service }}-amd64-push.log"
+
+          echo "Attempting multi-architecture build..."
+          if build_bake "linux/amd64,linux/arm64" push 2>&1 | tee "$MULTI_LOG"; then
+            echo "Multi-architecture build succeeded."
+            echo "arch_fallback=false" >> "$GITHUB_OUTPUT"
+            echo "arch_fallback_reason=none" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Multi-architecture build failed. Testing platforms separately."
+
+            echo "Testing linux/amd64..."
+            if ! build_bake "linux/amd64" diagnostic 2>&1 | tee "$AMD64_LOG"; then
+              echo "::error::AMD64 also failed. The failure is not ARM64-specific."
               exit 1
             fi
-          }
 
-          printf '%.0s=' {1..80}; echo -e "\nDISK SPACE AFTER BUILD $(echo ${{ matrix.service }} | tr '[:lower:]' '[:upper:]')"; df -h; docker system df; printf '%.0s=' {1..80}; echo
-          docker buildx prune -a -f; docker system prune -a -f --volumes
-          [ "${FALLBACK_FAILED:-0}" = 1 ] && exit 1
+            echo "AMD64 succeeded. Testing linux/arm64 separately..."
+            if build_bake "linux/arm64" diagnostic 2>&1 | tee "$ARM64_LOG"; then
+              echo "::warning::AMD64 and ARM64 succeeded separately — the original failure is likely in multi-platform export, manifest creation, attestations, or registry access, not in either platform's build. Falling back to amd64-only push so the stand still updates; this needs investigation."
+              arch_fallback_reason="manifest_or_push_issue"
+            else
+              echo "::warning::AMD64 succeeded and ARM64 failed independently — confirmed ARM64-specific failure."
+              arch_fallback_reason="arm64_build_failure"
+            fi
+
+            echo "Publishing AMD64-only fallback..."
+            if ! build_bake "linux/amd64" push 2>&1 | tee "$AMD64_PUSH_LOG"; then
+              echo "::error::Failed to publish the AMD64 fallback."
+              exit 1
+            fi
+
+            echo "arch_fallback=true" >> "$GITHUB_OUTPUT"
+            echo "arch_fallback_reason=${arch_fallback_reason}" >> "$GITHUB_OUTPUT"
+          fi
+
+          printf '%.0s=' {1..80}
+          echo
+          echo "DISK SPACE AFTER BUILD"
+          df -h
+          docker system df
+          printf '%.0s=' {1..80}
+          echo
+          docker buildx prune -a -f
+          docker system prune -a -f --volumes
 
       - name: Attention!!! arm64 was skipped
         if: steps.build.outputs.arch_fallback == 'true'
