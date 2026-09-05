@@ -710,8 +710,8 @@ chown_app_volumes () {
 	local VOLUME_OWNER="$(get_env_parameter "UID"):$(get_env_parameter "GID")"
 	if [ -n "${VOLUMES_DIR}" ]; then
 		mkdir -p "${VOLUMES_DIR}/app_data" "${VOLUMES_DIR}/log_data"
-		# Pre-create studio's plugin dir so Docs non-recursive chown of the shared root leaves it owned by the apps non-root user.
-		mkdir -p "${VOLUMES_DIR}/app_data/Studio"
+		# Pre-create studio's plugin dir and the products storage dir so Docs non-recursive chown of the shared root leaves them owned by the apps non-root user.
+		mkdir -p "${VOLUMES_DIR}/app_data/Studio" "${VOLUMES_DIR}/app_data/Products"
 		chown -R "${VOLUME_OWNER}" "${VOLUMES_DIR}/app_data" "${VOLUMES_DIR}/log_data"
 	else
 		local PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$PACKAGE_SYSNAME}"
@@ -728,8 +728,8 @@ chown_app_volumes () {
 		mapfile -t VOLUME_NAMES < <(printf "%s\n" "${VOLUME_NAMES[@]}" | sort -u)
 		for VOLUME_NAME in "${VOLUME_NAMES[@]}"; do
 			local MOUNT_POINT="$(docker volume inspect --format '{{.Mountpoint}}' "${VOLUME_NAME}")"
-			# Pre-create studio's plugin dir so Docs non-recursive chown of the shared root leaves it owned by the apps non-root user.
-			[[ "${VOLUME_NAME}" == *app_data ]] && mkdir -p "${MOUNT_POINT}/Studio"
+			# Pre-create studio's plugin dir and the products storage dir so Docs non-recursive chown of the shared root leaves them owned by the apps non-root user.
+			[[ "${VOLUME_NAME}" == *app_data ]] && mkdir -p "${MOUNT_POINT}/Studio" "${MOUNT_POINT}/Products"
 			chown -R "${VOLUME_OWNER}" "${MOUNT_POINT}"
 		done
 	fi
