@@ -236,13 +236,16 @@ reassign_values (){
 		SERVICE_PORT="5158"
 		WORK_DIR="${PRODUCT_DIR}/products/ASC.AI/mcp/"
 		# The executable comes from the upstream docspace-mcp repository and keeps its own name.
-		EXEC_FILE="bin/${PACKAGE_SYSNAME}-docspace-mcp"
+		EXEC_FILE="bin/${PACKAGE_SYSNAME}-docspace-mcp.js"
 	;;
   esac
   SERVICE_NAME="$1"
   RESTART="always"
   unset SYSTEMD_ENVIRONMENT
-  if [[ "${EXEC_FILE}" == *".js" ]]; then
+  if [[ "${SERVICE_NAME}" = "mcp" ]]; then
+	SERVICE_TYPE="simple"
+	EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE}"
+  elif [[ "${EXEC_FILE}" == *".js" ]]; then
 	SERVICE_TYPE="simple"
 	EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE} --app.hostname=127.0.0.1 --app.port=${SERVICE_PORT} --app.appsettings=${PATH_TO_CONF} --app.environment=\${ENVIRONMENT}"
   elif [[ "${EXEC_FILE}" == *".jar" ]]; then
@@ -253,10 +256,6 @@ reassign_values (){
 	SERVICE_TYPE="simple"
 	RESTART="on-failure"
 	EXEC_START="${DOTNET_RUN} ${WORK_DIR}${EXEC_FILE} standalone=true"
-  elif [[ "${SERVICE_NAME}" = "mcp" ]]; then
-	SERVICE_TYPE="simple"
-	RESTART="always"
-	EXEC_START="${NODE_RUN} ${WORK_DIR}${EXEC_FILE}"
   else
 	SERVICE_TYPE="notify"
 	EXEC_START="${DOTNET_RUN} ${WORK_DIR}${EXEC_FILE} --urls=${APP_URLS}:${SERVICE_PORT} --pathToConf=${PATH_TO_CONF} \
