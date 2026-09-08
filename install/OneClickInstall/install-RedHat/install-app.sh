@@ -125,6 +125,22 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
 
     ${package_manager} -y install ${ds_pkg_name} --nobest # --nobest for rhel 8 compatibility
 
+	# nginx (a dependency of ${ds_pkg_name}) enables a default server listening on port 80, which conflicts with openresty
+	if [ -f /etc/nginx/nginx.conf ] && grep -q "server {" /etc/nginx/nginx.conf; then
+		# fix Bug 81918 - Remove default server block without dropping conf.d includes
+		[ -f /etc/nginx/nginx.conf.bak ] || cp -f /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
+		echo "Note: removed default server block from /etc/nginx/nginx.conf to avoid conflict with openresty (backup: /etc/nginx/nginx.conf.bak)."
+		awk '/^[[:space:]]*server[[:space:]]*\{/&&!done{done=1;d=1;next}d{d+=gsub(/\{/,"{")-gsub(/\}/,"}");if(d<=0)d=0;next}1' \
+			/etc/nginx/nginx.conf > /etc/nginx/nginx.conf.tmp && mv -f /etc/nginx/nginx.conf.tmp /etc/nginx/nginx.conf
+	fi
+
+	if [ -e /etc/nginx/conf.d/default.conf ]; then
+		mv -f /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf.disabled
+		echo "Note: nginx default site disabled to avoid conflict with openresty."
+	fi
+
+	systemctl is-active --quiet nginx && systemctl reload nginx || systemctl start nginx
+
 	ds_configure_args=()
 	if [ "$INSTALLATION_TYPE" != "community" ]; then
 		ds_configure_args=(
