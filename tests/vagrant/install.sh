@@ -7,6 +7,7 @@ while [ "$1" != "" ]; do
     -ds  | --download-scripts  ) [ -n "$2" ] && DOWNLOAD_SCRIPTS="$2"      && shift ;;
     -arg | --arguments         ) [ -n "$2" ] && ARGUMENTS="$2"             && shift ;;
     -tr  | --test-repo         ) [ -n "$2" ] && TEST_REPO_ENABLE="$2"      && shift ;;
+    -v   | --version           ) [ -n "$2" ] && VER="$2"                  && shift ;;
   esac
   shift
 done
@@ -42,6 +43,15 @@ gpgkey=https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE
 END
 }
 
+add-repo-deb-docs() {
+  echo "deb [trusted=yes] https://s3.eu-west-1.amazonaws.com/repo-doc-onlyoffice-com/repo/debian stable ${VER}" | \
+  sudo tee /etc/apt/sources.list.d/onlyoffice-dev.list
+}
+
+add-repo-rpm-docs() {
+  yum-config-manager --add-repo "https://s3.eu-west-1.amazonaws.com/repo-doc-onlyoffice-com/repo/centos/onlyoffice-dev-${VER}.repo"
+}
+
 prepare_vm() {
   # Ensure curl and gpg are installed
   if ! command -v curl >/dev/null 2>&1; then
@@ -57,16 +67,20 @@ case $ID in
   ubuntu|debian)
       if [[ "${TEST_REPO_ENABLE}" == 'true' ]]; then
         add-repo-deb
+        add-repo-deb-docs
       else
         rm -f /etc/apt/sources.list.d/onlyoffice4testing.list
+        rm -f /etc/apt/sources.list.d/onlyoffice-dev.list
       fi
       ;;
 
   centos|fedora|rhel)
       if [[ "${TEST_REPO_ENABLE}" == 'true' ]]; then
         add-repo-rpm
+        add-repo-rpm-docs
       else
         rm -f /etc/yum.repos.d/onlyoffice4testing.repo
+        rm -f /etc/yum.repos.d/onlyoffice-dev-*.repo
       fi
 
       if [ "$ID" = "rhel" ] && [ "${VERSION_ID%%.*}" = "9" ]; then

@@ -44,7 +44,15 @@ jobs:
     runs-on: ubuntu-22.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      docs_version: ${{ steps.get-docs-version.outputs.version }}
     steps:
+
+      - name: Get latest Docs test repo version
+        id: get-docs-version
+        run: |
+          VERSION=$(git ls-remote --heads "https://${{ secrets.GITEA_TOKEN }}@${{ secrets.GITEA_HOST }}/ONLYOFFICE/document-server-package" \
+            'refs/heads/release/v*' 'refs/heads/hotfix/v*' | awk -F/ '{print $NF}' | sed 's/^v//' | sort -Vr | head -n1)
+          echo "version=${VERSION:-99.99.99}" >> "$GITHUB_OUTPUT"
 
       - name: Set matrix names
         id: set-matrix
@@ -163,6 +171,7 @@ jobs:
           CPU: 3
           DOWNLOAD_SCRIPT: '-ds false'
           TEST_REPO: "${{ github.ref_name == 'master' && '-tr false' || '-tr true' }}"
+          VER: "-v ${{ needs.prepare.outputs.docs_version }}"
           ARGUMENTS: "-arg '--skiphardwarecheck true --makeswap false --localscripts true --update true'"
         run: |
           set -eux
