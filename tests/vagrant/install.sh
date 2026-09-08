@@ -49,7 +49,8 @@ add-repo-deb-docs() {
 }
 
 add-repo-rpm-docs() {
-  yum-config-manager --add-repo "https://s3.eu-west-1.amazonaws.com/repo-doc-onlyoffice-com/repo/centos/onlyoffice-dev-${VER}.repo"
+  curl -fsSL "https://s3.eu-west-1.amazonaws.com/repo-doc-onlyoffice-com/repo/centos/onlyoffice-dev-${VER}.repo" \
+    -o "/etc/yum.repos.d/onlyoffice-dev-${VER}.repo"
 }
 
 prepare_vm() {
