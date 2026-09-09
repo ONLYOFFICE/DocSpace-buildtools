@@ -553,6 +553,85 @@ get_available_version () {
 	fi
 }
 
+# Ports are immutable on a running container, so recreate it on our network without them; rename+stop first so a failed docker run can be rolled back instead of destroying it.
+recreate_document_server_container () {
+	local CONTAINER="$1"
+	local BACKUP="${CONTAINER}-recreate-backup"
+	local IMAGE RESTART_POLICY VAR SRC DEST LINE
+	local ENV_ARGS=() MOUNT_ARGS=() RUN_ARGS=()
+
+	IMAGE=$(docker inspect --format '{{.Config.Image}}' "${CONTAINER}")
+	RESTART_POLICY=$(docker inspect --format '{{.HostConfig.RestartPolicy.Name}}' "${CONTAINER}")
+
+	while IFS= read -r VAR; do [ -n "${VAR}" ] && ENV_ARGS+=(-e "${VAR}"); done \
+		< <(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "${CONTAINER}")
+
+	# For a named/anonymous volume, use its name (not .Source's internal /var/lib/docker/volumes/<hash>/_data path) so it stays a real, prunable-by-name volume instead of a pinned bind mount.
+	while IFS= read -r LINE; do
+		SRC="${LINE%%$'\t'*}"; DEST="${LINE#*$'\t'}"
+		[ -n "${SRC}" ] && MOUNT_ARGS+=(-v "${SRC}:${DEST}")
+	done < <(docker inspect --format '{{range .Mounts}}{{if eq .Type "volume"}}{{.Name}}{{else}}{{.Source}}{{end}}{{"\t"}}{{.Destination}}{{"\n"}}{{end}}' "${CONTAINER}")
+
+	echo "Recreating ${CONTAINER} on our network without its conflicting published ports..."
+	docker rename "${CONTAINER}" "${BACKUP}" || return 1
+	docker stop "${BACKUP}" >/dev/null 2>&1
+
+	RUN_ARGS=(--name "${CONTAINER}" --network "${NETWORK_NAME}" --restart="${RESTART_POLICY:-always}")
+
+	if docker run -d "${RUN_ARGS[@]}" "${ENV_ARGS[@]}" "${MOUNT_ARGS[@]}" "${IMAGE}" >/dev/null; then
+		docker rm -f "${BACKUP}" >/dev/null
+	else
+		echo "Failed to recreate ${CONTAINER}; restoring the original container." >&2
+		docker rename "${BACKUP}" "${CONTAINER}"
+		docker start "${CONTAINER}" >/dev/null 2>&1
+		return 1
+	fi
+}
+
+detect_existing_document_server () {
+	[ "${DEPLOYMENT_MODE}" = "community" ] && return 0
+	[ "${UPDATE}" = "true" ] && return 0
+	[ "${INSTALL_DOCUMENT_SERVER}" = "true" ] || return 0
+
+	local CONTAINER FOUND_IMAGE CANDIDATE
+	while read -r CANDIDATE FOUND_IMAGE; do
+		# Skip anything already compose-managed (e.g. our own previously-adopted DS on a later, non-update run) - only a raw `docker run` standalone install needs adopting.
+		[ -n "$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' "${CANDIDATE}" 2>/dev/null)" ] && continue
+		CONTAINER="${CANDIDATE}"
+		break
+	done < <(docker ps -a --format '{{.Names}} {{.Image}}' 2>/dev/null | awk -v pkg="${PACKAGE_SYSNAME}" '$2 ~ ("(^|/)"pkg"/documentserver(-de|-ee)?(:|$)") {print}')
+	[ -z "${CONTAINER}" ] && return 0
+
+	echo "Found an existing Document Server container (${CONTAINER}); attaching it instead of deploying a new one."
+
+	# Reuse the detected container's own edition and tag, not DOCUMENT_SERVER_IMAGE_NAME/VERSION (from INSTALLATION_TYPE/registry), so adopting it doesn't swap editions or force an upgrade.
+	DOCUMENT_SERVER_IMAGE_NAME="${FOUND_IMAGE}"
+	if [[ "${FOUND_IMAGE}" == *:* ]] && [[ "${FOUND_IMAGE##*:}" != */* ]]; then
+		# The "/" check rules out a registry:port prefix (e.g. myregistry.com:5000/...) with no tag.
+		DOCUMENT_SERVER_IMAGE_NAME="${FOUND_IMAGE%:*}"
+		DOCUMENT_SERVER_VERSION="${FOUND_IMAGE##*:}"
+	fi
+
+	# Network membership isn't check_ports' concern and ds.yml's own `up -d` joins our network anyway, so only a real port clash needs handling here.
+	local PORT_CONFLICT="false" PUBLISHED_PORTS
+	if [ "${INSTALL_PRODUCT}" == "true" ]; then
+		PUBLISHED_PORTS="$(docker port "${CONTAINER}" 2>/dev/null)"
+		grep -qE ":${EXTERNAL_PORT}$" <<<"${PUBLISHED_PORTS}" && PORT_CONFLICT="true"
+		if [[ -n "$CERTIFICATE_PATH" ]] || [[ -n "$LETS_ENCRYPT_DOMAIN" ]]; then
+			grep -qE ":${EXTERNAL_PORT_HTTPS}$" <<<"${PUBLISHED_PORTS}" && PORT_CONFLICT="true"
+		fi
+	fi
+
+	if [ "${PORT_CONFLICT}" = "true" ]; then
+		recreate_document_server_container "${CONTAINER}" || return 0
+	fi
+
+	DOCUMENT_SERVER_HOST="${CONTAINER}"
+	DOCUMENT_SERVER_PORT="80"
+	INSTALL_DOCUMENT_SERVER="false"
+	DOCUMENT_SERVER_ATTACHED="true"
+}
+
 set_docs_url_external () {
 	DOCUMENT_SERVER_URL_EXTERNAL=${DOCUMENT_SERVER_URL_EXTERNAL:-$(get_env_parameter "DOCUMENT_SERVER_URL_EXTERNAL" "${CONTAINER_NAME}")}
 
@@ -567,12 +646,16 @@ set_docs_url_external () {
 set_jwt_secret () {
 	DOCUMENT_SERVER_JWT_SECRET="${DOCUMENT_SERVER_JWT_SECRET:-$(get_env_parameter "JWT_SECRET" "${PACKAGE_SYSNAME}-document-server")}"
 	DOCUMENT_SERVER_JWT_SECRET="${DOCUMENT_SERVER_JWT_SECRET:-$(get_env_parameter "DOCUMENT_SERVER_JWT_SECRET" "${CONTAINER_NAME}")}"
+	[ "${DOCUMENT_SERVER_ATTACHED}" = "true" ] && \
+		DOCUMENT_SERVER_JWT_SECRET="${DOCUMENT_SERVER_JWT_SECRET:-$(get_env_parameter "JWT_SECRET" "${DOCUMENT_SERVER_HOST}")}"
 	DOCUMENT_SERVER_JWT_SECRET="${DOCUMENT_SERVER_JWT_SECRET:-$(get_random_str 32)}"
 }
 
 set_jwt_header () {
 	DOCUMENT_SERVER_JWT_HEADER="${DOCUMENT_SERVER_JWT_HEADER:-$(get_env_parameter "JWT_HEADER" "${PACKAGE_SYSNAME}-document-server")}"
 	DOCUMENT_SERVER_JWT_HEADER="${DOCUMENT_SERVER_JWT_HEADER:-$(get_env_parameter "DOCUMENT_SERVER_JWT_HEADER" "${CONTAINER_NAME}")}"
+	[ "${DOCUMENT_SERVER_ATTACHED}" = "true" ] && \
+		DOCUMENT_SERVER_JWT_HEADER="${DOCUMENT_SERVER_JWT_HEADER:-$(get_env_parameter "JWT_HEADER" "${DOCUMENT_SERVER_HOST}")}"
 	DOCUMENT_SERVER_JWT_HEADER="${DOCUMENT_SERVER_JWT_HEADER:-"AuthorizationJwt"}"
 }
 
@@ -654,7 +737,7 @@ download_files () {
 
 	[ "${OFFLINE_INSTALLATION}" = "false" ] && echo -n "Downloading configuration files to ${BASE_DIR}..." || echo "Unzip ${DOCKER_TARBALL} to ${BASE_DIR}..."
 
-	rm -rf "${BASE_DIR:?}"
+	[ -d "${BASE_DIR:?}" ] && find "${BASE_DIR}" -mindepth 1 -maxdepth 1 -not -name "DocumentServer" -not -name "ds.env" -exec rm -rf {} +
 	mkdir -p ${BASE_DIR}
 
 	if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
@@ -705,20 +788,25 @@ wait_mysql_healthy () {
 	(timeout 30 bash -c "while ! docker inspect --format '{{json .State.Health.Status }}' ${PACKAGE_SYSNAME}-mysql-server | grep -q 'healthy'; do sleep 1; done") && echo "OK" || echo "FAILED"
 }
 
+# (DS v4.0.0) DS's own uid isn't fixed, so leave wopi_private.key/wopi_public.key untouched or DS may lose read access to them.
+chown_excluding_wopi_keys () {
+	find "$2" \( -name wopi_private.key -o -name wopi_public.key \) -prune -o -exec chown "$1" {} +
+}
+
 chown_app_volumes () {
-	# (DS v3.8.0) Own app_data/log_data as the container's non-root user before starting app services (fixes host binds and volumes left root-owned by older installs).
+	# (DS v3.8.0) Own app_data/log_data as the container's non-root user before starting app services; called again after `up -d` since some containers (e.g. fluent-bit) finish their own root-owned setup after reporting "Started" (fixes host binds and volumes left root-owned by older installs).
 	local VOLUME_OWNER="$(get_env_parameter "UID"):$(get_env_parameter "GID")"
 	if [ -n "${VOLUMES_DIR}" ]; then
-		mkdir -p "${VOLUMES_DIR}/app_data" "${VOLUMES_DIR}/log_data"
 		# Pre-create studio's plugin dir and the products storage dir so Docs non-recursive chown of the shared root leaves them owned by the apps non-root user.
-		mkdir -p "${VOLUMES_DIR}/app_data/Studio" "${VOLUMES_DIR}/app_data/Products"
-		chown -R "${VOLUME_OWNER}" "${VOLUMES_DIR}/app_data" "${VOLUMES_DIR}/log_data"
+		mkdir -p "${VOLUMES_DIR}/app_data/Studio" "${VOLUMES_DIR}/app_data/Products" "${VOLUMES_DIR}/log_data"
+		chown_excluding_wopi_keys "${VOLUME_OWNER}" "${VOLUMES_DIR}/app_data"
+		chown_excluding_wopi_keys "${VOLUME_OWNER}" "${VOLUMES_DIR}/log_data"
 	else
 		local PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$PACKAGE_SYSNAME}"
 		local PROJECT_FILTER=(--filter "label=com.docker.compose.project=${PROJECT_NAME}" --filter name=app_data --filter name=log_data)
 		local VOLUME_NAMES
 		mapfile -t VOLUME_NAMES < <(docker volume ls -q "${PROJECT_FILTER[@]}")
-		
+
 		local DEFAULT_VOLUME_NAME
 		for DEFAULT_VOLUME_NAME in "${PROJECT_NAME}_app_data" "${PROJECT_NAME}_log_data"; do
 			docker volume inspect "${DEFAULT_VOLUME_NAME}" &>/dev/null || docker volume create "${DEFAULT_VOLUME_NAME}" &>/dev/null
@@ -730,7 +818,7 @@ chown_app_volumes () {
 			local MOUNT_POINT="$(docker volume inspect --format '{{.Mountpoint}}' "${VOLUME_NAME}")"
 			# Pre-create studio's plugin dir and the products storage dir so Docs non-recursive chown of the shared root leaves them owned by the apps non-root user.
 			[[ "${VOLUME_NAME}" == *app_data ]] && mkdir -p "${MOUNT_POINT}/Studio" "${MOUNT_POINT}/Products"
-			chown -R "${VOLUME_OWNER}" "${MOUNT_POINT}"
+			chown_excluding_wopi_keys "${VOLUME_OWNER}" "${MOUNT_POINT}"
 		done
 	fi
 }
@@ -754,13 +842,100 @@ install_mysql_server () {
 	fi
 }
 
+# Resolves where a shared ds.yml volume actually lives on the host - a VOLUMES_DIR bind path if the install uses one (created if missing), otherwise the named Docker volume's mountpoint (volume created if missing).
+resolve_ds_volume_path () {
+	local NAME="$1"
+	if [ -n "${VOLUMES_DIR}" ]; then
+		mkdir -p "${VOLUMES_DIR}/${NAME}"
+		echo "${VOLUMES_DIR}/${NAME}"
+	else
+		local PROJECT_NAME="${COMPOSE_PROJECT_NAME:-${PACKAGE_SYSNAME}}"
+		docker volume inspect "${PROJECT_NAME}_${NAME}" >/dev/null 2>&1 || docker volume create "${PROJECT_NAME}_${NAME}" >/dev/null
+		docker volume inspect --format '{{.Mountpoint}}' "${PROJECT_NAME}_${NAME}"
+	fi
+}
+
+# Moves a standalone DS's Data/logs/internal-state/DB onto the volumes ds.yml already declares, so the adopted container needs no compose override and starts through the same `ds.yml up -d` as a fresh install.
+# Fonts are migrated separately (see migrate_document_server_fonts), only after that first start, so Docker still populates ds_fonts with the image's own default fonts before we add the custom ones on top.
+migrate_document_server_data () {
+	local APP_DATA_MOUNTPOINT LOG_DATA_MOUNTPOINT DS_STATE_MOUNTPOINT DS_POSTGRESQL_MOUNTPOINT
+	APP_DATA_MOUNTPOINT="$(resolve_ds_volume_path app_data)"
+	LOG_DATA_MOUNTPOINT="$(resolve_ds_volume_path log_data)"
+	DS_STATE_MOUNTPOINT="$(resolve_ds_volume_path ds_state)"
+	DS_POSTGRESQL_MOUNTPOINT="$(resolve_ds_volume_path ds_postgresql)"
+
+	# Stop it first so postgres/internal state files aren't copied while the source is still writing to them.
+	docker stop "${DOCUMENT_SERVER_HOST}" >/dev/null || { echo "Failed to stop ${DOCUMENT_SERVER_HOST}; leaving it as is, untouched." >&2; return 1; }
+
+	MIGRATED_FONTS_SRC=""
+	local TYPE SRC DEST MOUNTPOINT
+	while IFS=$'\t' read -r TYPE SRC DEST; do
+		[ -z "${SRC}" ] && continue
+		[ "${TYPE}" = "volume" ] && MOUNTPOINT="$(docker volume inspect --format '{{.Mountpoint}}' "${SRC}")" || MOUNTPOINT="${SRC}"
+		case "${DEST}" in
+			/var/www/onlyoffice/Data)          cp -a "${MOUNTPOINT}/." "${APP_DATA_MOUNTPOINT}/" ;;
+			/var/log/onlyoffice)               cp -a "${MOUNTPOINT}/." "${LOG_DATA_MOUNTPOINT}/" ;;
+			/var/lib/onlyoffice)               cp -a "${MOUNTPOINT}/." "${DS_STATE_MOUNTPOINT}/" ;;
+			/var/lib/postgresql)               cp -a "${MOUNTPOINT}/." "${DS_POSTGRESQL_MOUNTPOINT}/" ;;
+			/usr/share/fonts/truetype/custom)  MIGRATED_FONTS_SRC="${MOUNTPOINT}" ;;
+			*) continue ;;
+		esac || { echo "Failed to copy ${DEST} from ${DOCUMENT_SERVER_HOST}; leaving it as is, untouched." >&2; docker start "${DOCUMENT_SERVER_HOST}" >/dev/null 2>&1; return 1; }
+	done < <(docker inspect --format '{{range .Mounts}}{{.Type}}{{"\t"}}{{if eq .Type "volume"}}{{.Name}}{{else}}{{.Source}}{{end}}{{"\t"}}{{.Destination}}{{"\n"}}{{end}}' "${DOCUMENT_SERVER_HOST}")
+
+	# Carry over only Configuration Parameters that differ from the image's own defaults (not ds.yml-managed, not baked into the image itself).
+	local IMAGE_REF DEFAULT_KEY DEFAULT_VAL
+	local -A IMAGE_DEFAULT_ENV=()
+	IMAGE_REF="$(docker inspect --format '{{.Config.Image}}' "${DOCUMENT_SERVER_HOST}")"
+	while IFS='=' read -r DEFAULT_KEY DEFAULT_VAL; do
+		[ -n "${DEFAULT_KEY}" ] && IMAGE_DEFAULT_ENV["${DEFAULT_KEY}"]="${DEFAULT_VAL}"
+	done < <(docker image inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "${IMAGE_REF}" 2>/dev/null)
+
+	local ENV_LINE ENV_KEY ENV_VAL
+	: > "${BASE_DIR}/ds.env"
+	while IFS= read -r ENV_LINE; do
+		ENV_KEY="${ENV_LINE%%=*}"
+		ENV_VAL="${ENV_LINE#*=}"
+		[ -z "${ENV_KEY}" ] && continue
+		case "${ENV_KEY}" in
+			JWT_ENABLED|JWT_SECRET|JWT_HEADER|JWT_IN_BODY|AMQP_URI|REDIS_SERVER_HOST|REDIS_SERVER_PORT|REDIS_SERVER_USER|REDIS_SERVER_PASS|REDIS_SERVER_DB|PATH|HOME|HOSTNAME) continue ;;
+		esac
+		[ "${IMAGE_DEFAULT_ENV[${ENV_KEY}]-__unset__}" = "${ENV_VAL}" ] && continue
+		echo "${ENV_LINE}" >> "${BASE_DIR}/ds.env"
+	done < <(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "${DOCUMENT_SERVER_HOST}")
+
+	docker rm -f "${DOCUMENT_SERVER_HOST}" >/dev/null
+
+	# download_files() re-extracts a pristine, commented-out ds.yml on every run, so this has to be reapplied every time, after migration has (re)populated ds.env.
+	[ -s "${BASE_DIR}/ds.env" ] && sed -i -e 's/^\( *\)#env_file:$/\1env_file:/' -e 's/^ *#  - ds\.env$/      - ds.env/' "${BASE_DIR}/ds.yml"
+	return 0
+}
+
+# Adds the migrated custom fonts on top of ds_fonts's already-populated default set; DS only rescans fonts at startup, so the caller must restart the container afterward.
+migrate_document_server_fonts () {
+	local DS_FONTS_MOUNTPOINT
+	DS_FONTS_MOUNTPOINT="$(resolve_ds_volume_path ds_fonts)"
+	mkdir -p "${DS_FONTS_MOUNTPOINT}/truetype/custom"
+	cp -a "${MIGRATED_FONTS_SRC}/." "${DS_FONTS_MOUNTPOINT}/truetype/custom/" 2>/dev/null
+}
+
 install_document_server () {
 	reconfigure DOCUMENT_SERVER_JWT_HEADER ${DOCUMENT_SERVER_JWT_HEADER}
 	reconfigure DOCUMENT_SERVER_JWT_SECRET ${DOCUMENT_SERVER_JWT_SECRET}
-	if [[ -z ${DOCUMENT_SERVER_HOST} ]] && [ "$INSTALL_DOCUMENT_SERVER" == "true" ]; then
-		${DOCKER_COMPOSE} -f ${BASE_DIR}/ds.yml up -d
-	elif [ "$INSTALL_DOCUMENT_SERVER" == "pull" ]; then
+	# download_files() re-extracts a pristine, commented-out ds.yml on every run; reapply for a later update run where ds.env already has content from an earlier adoption (a no-op here on the adoption run itself, since ds.env is still empty at this point - see the second check below).
+	[ -s "${BASE_DIR}/ds.env" ] && sed -i -e 's/^\( *\)#env_file:$/\1env_file:/' -e 's/^ *#  - ds\.env$/      - ds.env/' "${BASE_DIR}/ds.yml"
+	if [ "$INSTALL_DOCUMENT_SERVER" == "pull" ]; then
 		${DOCKER_COMPOSE} -f ${BASE_DIR}/ds.yml pull
+	elif [ "${DOCUMENT_SERVER_ATTACHED}" = "true" ]; then
+		migrate_document_server_data || { echo "Aborting: failed to migrate the existing Document Server's data." >&2; exit 1; }
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/ds.yml up -d
+		if [ -n "${MIGRATED_FONTS_SRC}" ]; then
+			migrate_document_server_fonts
+			${DOCKER_COMPOSE} -f ${BASE_DIR}/ds.yml restart onlyoffice-document-server
+		fi
+		# Only now, since a bind-mounted font source lives under here too and migrate_document_server_fonts still needs to read it.
+		rm -rf "${BASE_DIR}/DocumentServer"
+	elif [[ -z ${DOCUMENT_SERVER_HOST} ]] && [ "$INSTALL_DOCUMENT_SERVER" == "true" ]; then
+		${DOCKER_COMPOSE} -f ${BASE_DIR}/ds.yml up -d
 	fi
 }
 
@@ -877,6 +1052,8 @@ install_product () {
 			${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" up -d
 		fi
 
+		chown_app_volumes
+
 		if [[ -n "${PREVIOUS_ELK_VERSION}" && "$(get_env_parameter "ELK_VERSION")" != "${PREVIOUS_ELK_VERSION}" ]]; then
 			docker ps -q -f name=${PACKAGE_SYSNAME}-elasticsearch | xargs -r docker stop
 			MYSQL_TAG=$(docker images --format "{{.Tag}}" mysql | head -n1)
@@ -985,6 +1162,8 @@ install_community () {
 		else
 			${DOCKER_COMPOSE} "${COMMUNITY_FILES[@]}" up -d
 		fi
+
+		chown_app_volumes
 	elif [ "$INSTALL_PRODUCT" == "pull" ]; then
 		${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" pull
 	fi
@@ -1026,7 +1205,7 @@ check_registry_connection() {
 }
 
 check_docker_compose() {
-	local COMPOSE_REQ=2018000 v
+	local COMPOSE_REQ=2018000 VERSION
 	for DOCKER_COMPOSE in "docker compose" docker-compose; do
 		VERSION=$(${DOCKER_COMPOSE} version --short 2>/dev/null) || continue
 		awk -F. -v R="$COMPOSE_REQ" 'NF>=3{exit !($1*1e6+$2*1e3+$3>=R)}' <<<"${VERSION%%[^0-9.]*}" && return 0
@@ -1108,7 +1287,7 @@ services_check_connection () {
 	fi
 	if [[ ! -z "$DOCUMENT_SERVER_HOST" ]]; then
 		APP_URL_PORTAL=${APP_URL_PORTAL:-"http://$(curl -s -4 ifconfig.me):${EXTERNAL_PORT}"}
-		establish_conn ${DOCUMENT_SERVER_HOST} ${DOCUMENT_SERVER_PORT} "${PACKAGE_SYSNAME^^} Docs"
+		[ "${DOCUMENT_SERVER_ATTACHED}" = "true" ] || establish_conn ${DOCUMENT_SERVER_HOST} ${DOCUMENT_SERVER_PORT} "${PACKAGE_SYSNAME^^} Docs"
 		reconfigure DOCUMENT_SERVER_URL_EXTERNAL ${DOCUMENT_SERVER_URL_EXTERNAL}
 		reconfigure DOCUMENT_SERVER_URL_PUBLIC ${DOCUMENT_SERVER_URL_EXTERNAL}
 	fi
@@ -1148,10 +1327,6 @@ start_installation () {
 
 	dependency_installation
 
-	if [ "$UPDATE" != "true" ]; then
-		check_ports
-	fi
-
 	if [ "$SKIP_HARDWARE_CHECK" != "true" ]; then
 		check_hardware
 	fi
@@ -1165,6 +1340,11 @@ start_installation () {
 	[ "${OFFLINE_INSTALLATION}" = "false" ] && check_registry_connection
 
 	create_network
+	detect_existing_document_server
+
+	if [ "$UPDATE" != "true" ]; then
+		check_ports
+	fi
 
 	domain_check
 

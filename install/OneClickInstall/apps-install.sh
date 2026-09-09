@@ -45,6 +45,13 @@ PRODUCT_NAME="${PRODUCT_SYSNAME^^} Apps"
 FILE_NAME="$(basename "$0")"
 ENABLE_LOGGING="true"
 
+USER_SET_INSTALLATION_TYPE="false"
+for ARG in "$@"; do
+    case "$ARG" in
+        -it | --installationtype | --installation_type ) USER_SET_INSTALLATION_TYPE="true" ;;
+    esac
+done
+
 while [ "$1" != "" ]; do
 	case $1 in
         -ls | --localscripts )     [[ "$2" == "true" || "$2" == "false" ]] && PARAMETERS="$PARAMETERS ${1}" && LOCAL_SCRIPTS=$2 && shift ;;
@@ -76,6 +83,10 @@ is_command_exists () {
 	type "$1" &> /dev/null
 }
 
+pkg_exists () {
+	(is_command_exists dpkg-query && [ "$(dpkg-query -W -f='${db:Status-Status}' "$1" 2>/dev/null)" = "installed" ]) || (is_command_exists rpm && rpm -q "$1" >/dev/null 2>&1)
+}
+
 install_curl () {
 	if is_command_exists apt-get; then
 		apt-get -y update
@@ -105,17 +116,34 @@ root_checking
 
 is_command_exists curl || install_curl
 
+# Infer Docker vs. package install (and, for a fresh install, the DS edition) from what's already on the host, so read_installation_method's prompt only fires when nothing gives it away.
 if is_command_exists docker && docker ps -a --format '{{.Names}}' | grep -qE "${PRODUCT_SYSNAME}-api|${PRODUCT_SYSNAME}-dotnet-services|${PRODUCT_SYSNAME}-apps"; then
     DOCKER="true"
     PARAMETERS="-u true $PARAMETERS"
-elif (is_command_exists dpkg && dpkg -s "${PRODUCT_SYSNAME}-${PRODUCT}-api" >/dev/null 2>&1) \
-  || (is_command_exists rpm && rpm -q "${PRODUCT_SYSNAME}-${PRODUCT}-api" >/dev/null 2>&1) \
-  || (is_command_exists dpkg && dpkg -s "${LEGACY_PRODUCT}-api" >/dev/null 2>&1) \
-  || (is_command_exists rpm && rpm -q "${LEGACY_PRODUCT}-api" >/dev/null 2>&1); then
+elif pkg_exists "${PRODUCT_SYSNAME}-${PRODUCT}-api" || pkg_exists "${LEGACY_PRODUCT}-api"; then
     DOCKER="false"
 	PARAMETERS="-u true $PARAMETERS"
+else
+    for DS_EDITION_SUFFIX in "" "-de" "-ee"; do
+        if pkg_exists "${PRODUCT_SYSNAME}-documentserver${DS_EDITION_SUFFIX}"; then
+            DOCKER="false"
+        elif is_command_exists docker && docker ps -a --format '{{.Image}}' 2>/dev/null | grep -qE "(^|/)${PRODUCT_SYSNAME}/documentserver${DS_EDITION_SUFFIX}(:|$)"; then
+            DOCKER="true"
+        else
+            continue
+        fi
+
+        if [ "$USER_SET_INSTALLATION_TYPE" != "true" ]; then
+            case "$DS_EDITION_SUFFIX" in
+                "-de") PARAMETERS="$PARAMETERS -it developer" ;;
+                "-ee") PARAMETERS="$PARAMETERS -it enterprise" ;;
+                *)     PARAMETERS="$PARAMETERS -it community" ;;
+            esac
+        fi
+        break
+    done
 fi
- 
+
 [ -z "$DOCKER" ] && read_installation_method
 
 # Auto-detect legacy installs
