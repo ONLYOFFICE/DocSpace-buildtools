@@ -589,7 +589,6 @@ recreate_document_server_container () {
 }
 
 detect_existing_document_server () {
-	[ "${DEPLOYMENT_MODE}" = "community" ] && return 0
 	[ "${UPDATE}" = "true" ] && return 0
 	[ "${INSTALL_DOCUMENT_SERVER}" = "true" ] || return 0
 
@@ -858,8 +857,12 @@ resolve_ds_volume_path () {
 # Moves a standalone DS's Data/logs/internal-state/DB onto the volumes ds.yml already declares, so the adopted container needs no compose override and starts through the same `ds.yml up -d` as a fresh install.
 # Fonts are migrated separately (see migrate_document_server_fonts), only after that first start, so Docker still populates ds_fonts with the image's own default fonts before we add the custom ones on top.
 migrate_document_server_data () {
+	# Community's own Data volume is named ds_data (app_data there is the portal's own data, a different mount).
+	local DATA_VOLUME_NAME="app_data"
+	[ "${DEPLOYMENT_MODE}" = "community" ] && DATA_VOLUME_NAME="ds_data"
+
 	local APP_DATA_MOUNTPOINT LOG_DATA_MOUNTPOINT DS_STATE_MOUNTPOINT DS_POSTGRESQL_MOUNTPOINT
-	APP_DATA_MOUNTPOINT="$(resolve_ds_volume_path app_data)"
+	APP_DATA_MOUNTPOINT="$(resolve_ds_volume_path "${DATA_VOLUME_NAME}")"
 	LOG_DATA_MOUNTPOINT="$(resolve_ds_volume_path log_data)"
 	DS_STATE_MOUNTPOINT="$(resolve_ds_volume_path ds_state)"
 	DS_POSTGRESQL_MOUNTPOINT="$(resolve_ds_volume_path ds_postgresql)"
@@ -905,8 +908,10 @@ migrate_document_server_data () {
 
 	docker rm -f "${DOCUMENT_SERVER_HOST}" >/dev/null
 
-	# download_files() re-extracts a pristine, commented-out ds.yml on every run, so this has to be reapplied every time, after migration has (re)populated ds.env.
-	[ -s "${BASE_DIR}/ds.env" ] && sed -i -e 's/^\( *\)#env_file:$/\1env_file:/' -e 's/^ *#  - ds\.env$/      - ds.env/' "${BASE_DIR}/ds.yml"
+	# download_files() re-extracts a pristine, commented-out compose file on every run, so this has to be reapplied every time, after migration has (re)populated ds.env.
+	local DS_COMPOSE_FILE="${BASE_DIR}/ds.yml"
+	[ "${DEPLOYMENT_MODE}" = "community" ] && DS_COMPOSE_FILE="${BASE_DIR}/docker-compose.yml"
+	[ -s "${BASE_DIR}/ds.env" ] && sed -i -e 's/^\( *\)#env_file:$/\1env_file:/' -e 's/^ *#  - ds\.env$/      - ds.env/' "${DS_COMPOSE_FILE}"
 	return 0
 }
 
@@ -1134,6 +1139,15 @@ install_community () {
 		reconfigure DOCUMENT_SERVER_JWT_HEADER ${DOCUMENT_SERVER_JWT_HEADER}
 		reconfigure DOCUMENT_SERVER_JWT_SECRET ${DOCUMENT_SERVER_JWT_SECRET}
 
+		# download_files() re-extracts a pristine, commented-out docker-compose.yml on every run; reapply for a later update run where ds.env already has content from an earlier adoption (a no-op here on the adoption run itself, since ds.env is still empty at this point - see the second check below).
+		[ -s "${BASE_DIR}/ds.env" ] && sed -i -e 's/^\( *\)#env_file:$/\1env_file:/' -e 's/^ *#  - ds\.env$/      - ds.env/' "${BASE_DIR}/docker-compose.yml"
+
+		if [ "${DOCUMENT_SERVER_ATTACHED}" = "true" ]; then
+			migrate_document_server_data || { echo "Aborting: failed to migrate the existing Document Server's data." >&2; exit 1; }
+			# download_files() re-extracts a pristine, commented-out docker-compose.yml on every run, so this has to be reapplied every time, after migration has (re)populated ds.env.
+			[ -s "${BASE_DIR}/ds.env" ] && sed -i -e 's/^\( *\)#env_file:$/\1env_file:/' -e 's/^ *#  - ds\.env$/      - ds.env/' "${BASE_DIR}/docker-compose.yml"
+		fi
+
 		opensearch_set_heap_size "${BASE_DIR}/docker-compose.yml"
 
 		chown_app_volumes
@@ -1162,6 +1176,13 @@ install_community () {
 		else
 			${DOCKER_COMPOSE} "${COMMUNITY_FILES[@]}" up -d
 		fi
+
+		if [ "${DOCUMENT_SERVER_ATTACHED}" = "true" ] && [ -n "${MIGRATED_FONTS_SRC}" ]; then
+			migrate_document_server_fonts
+			${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" restart onlyoffice-document-server
+		fi
+		# Only now, since a bind-mounted font source lives under here too and migrate_document_server_fonts still needs to read it.
+		[ "${DOCUMENT_SERVER_ATTACHED}" = "true" ] && rm -rf "${BASE_DIR}/DocumentServer"
 
 		chown_app_volumes
 	elif [ "$INSTALL_PRODUCT" == "pull" ]; then
