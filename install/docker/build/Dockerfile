@@ -130,7 +130,11 @@ COPY --from=src ${SRC_PATH}/client/ ./client
 WORKDIR ${SRC_PATH}/client
 ENV PNPM_HOME=/tmp/pnpm
 ENV NODE_OPTIONS="--max-old-space-size=4096"
-RUN corepack enable && corepack prepare pnpm@latest --activate && \
+# The pnpm version comes from client/package.json "packageManager"; the corepack
+# shim fetches exactly that. Do not `corepack prepare pnpm@latest --activate`:
+# it pins nothing, downloads a second pnpm whenever latest != the pinned version,
+# and leaves an unpinned pnpm as the image-wide default.
+RUN corepack enable && \
     pnpm install && \
     pnpm ${BUILD_ARGS} && \
     pnpm run ${DEPLOY_ARGS} && \
