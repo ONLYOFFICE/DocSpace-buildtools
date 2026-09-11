@@ -128,7 +128,7 @@ jobs:
           echo "JAVA_HOME=$(dirname $(dirname "$JAVA_PATH"))" >> $GITHUB_ENV
           sudo npm install -g json
           # pnpm version comes from client/package.json "packageManager"; do not `corepack prepare pnpm@latest --activate`, it pins nothing.
-          command -v corepack >/dev/null || sudo npm install -g corepack
+          sudo bash -c 'command -v corepack >/dev/null || npm install -g corepack'
           sudo corepack enable
           if [[ "${{ matrix.packageType }}" == "rpm" ]]; then
             sudo apt install -y python3-rpm python3-pip
