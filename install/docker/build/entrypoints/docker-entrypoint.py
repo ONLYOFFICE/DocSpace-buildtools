@@ -28,6 +28,7 @@ MYSQL_DATABASE = os.environ.get("MYSQL_DATABASE") or "onlyoffice"
 MYSQL_USER = os.environ.get("MYSQL_USER") or "onlyoffice_user"
 MYSQL_PASSWORD = require_env("MYSQL_PASSWORD")
 MYSQL_CONNECTION_HOST = MYSQL_HOST if MYSQL_HOST else MYSQL_CONTAINER_NAME
+MYSQL_VERSION = None if MYSQL_HOST else (os.environ.get("MYSQL_VERSION") or None)
 
 APP_CORE_SERVER_ROOT = os.environ.get("APP_CORE_SERVER_ROOT") or None
 APP_CORE_BASE_DOMAIN = os.environ.get("APP_CORE_BASE_DOMAIN", "localhost")
@@ -337,6 +338,8 @@ updateJsonData(jsonData,"$.core.oidc.showPII", DEBUG_INFO)
 updateJsonData(jsonData,"$.debug-info.enabled", DEBUG_INFO)
 updateJsonData(jsonData,"$.web.samesite", SAMESITE)
 
+if MYSQL_VERSION: updateJsonData(jsonData, "$.mysqlServerVersion", MYSQL_VERSION)
+
 if MCP_ENDPOINT:
     updateJsonData(jsonData, "$.ai.mcp.[0].endpoint", MCP_ENDPOINT)
 
@@ -361,12 +364,14 @@ jsonData = openJsonFile(filePath)
 updateJsonData(jsonData, "$.ConnectionStrings.default.connectionString", "Server="+ MYSQL_CONNECTION_HOST +";Port=3306;Database="+ MYSQL_DATABASE +";User ID="+ MYSQL_USER +";Password="+ MYSQL_PASSWORD +";Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;ConnectionReset=false;AllowPublicKeyRetrieval=true",)
 updateJsonData(jsonData,"$.core.base-domain", APP_CORE_BASE_DOMAIN)
 updateJsonData(jsonData,"$.core.machinekey", APP_CORE_MACHINEKEY)
+if MYSQL_VERSION: updateJsonData(jsonData, "$.mysqlServerVersion", MYSQL_VERSION)
 writeJsonFile(filePath, jsonData)
 
 filePath = "/app/onlyoffice/config/appsettings.services.json"
 jsonData = openJsonFile(filePath)
 updateJsonData(jsonData,"$.logPath", LOG_DIR)
 updateJsonData(jsonData,"$.logLevel", LOG_LEVEL)
+if MYSQL_VERSION: updateJsonData(jsonData, "$.mysqlServerVersion", MYSQL_VERSION)
 writeJsonFile(filePath, jsonData)
 
 if OAUTH_REDIRECT_URL:

@@ -130,6 +130,13 @@ function TestSqlConnection {
     try {
         $Connection.Open()
         Write-Output "Connection to MySQL is successful."
+
+        $Cmd = $Connection.CreateCommand()
+        $Cmd.CommandText = "SELECT VERSION();"
+        $MySqlServerVersion = $Cmd.ExecuteScalar()
+        if ($MySqlServerVersion) {
+            AI_SetMsiProperty MYSQL_SERVER_VERSION $MySqlServerVersion
+        }
     }
     catch {
         $ErrorMessage = $_.Exception.Message

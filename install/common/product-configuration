@@ -124,9 +124,11 @@ install_json() {
 
 json_configuration() {
 	local JSON_FILE="$1" FIELD_PATH="$2" FIELD_VALUE="$3"
+	local ESCAPED_VALUE="${FIELD_VALUE//\\/\\\\}"
+	ESCAPED_VALUE="${ESCAPED_VALUE//\'/\\\'}"
 	${JSON} "$JSON_FILE" -e \
 	"var p='$FIELD_PATH'.split('.'),k=p.pop(),o=p.reduce((a,x)=>(a[x]??={}),this);
-	o[k] = $( [[ $FIELD_VALUE =~ ^(\{.*\}|\[.*\])$ ]] && printf %s "$FIELD_VALUE" || printf "'%s'" "$FIELD_VALUE")" >/dev/null 2>&1
+	o[k] = $( [[ $FIELD_VALUE =~ ^(\{.*\}|\[.*\])$ ]] && printf %s "$FIELD_VALUE" || printf "'%s'" "$ESCAPED_VALUE")" >/dev/null 2>&1
 }
 
 env_configuration() {
@@ -197,9 +199,16 @@ establish_mysql_conn(){
 		change_mysql_config
 	fi
 
+	MYSQL_SERVER_VERSION=$($MYSQL -N -e "SELECT VERSION();" 2>/dev/null)
+
 	json_configuration "${USER_CONF}" "ConnectionStrings.default.connectionString" "${CONNECTION_STRING}"
 	json_configuration "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "ConnectionStrings.default.connectionString" "${CONNECTION_STRING}"
 	json_configuration "${USER_CONF}" "migration.enabled" "true"
+	if [[ -n "$MYSQL_SERVER_VERSION" ]]; then
+		json_configuration "${USER_CONF}" "mysqlServerVersion" "${MYSQL_SERVER_VERSION}"
+		json_configuration "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "mysqlServerVersion" "${MYSQL_SERVER_VERSION}"
+		json_configuration "${APP_DIR}/appsettings.services.json" "mysqlServerVersion" "${MYSQL_SERVER_VERSION}"
+	fi
 
 	env_configuration "$APP_DIR/systemd.env" JDBC_URL "${DB_HOST}:${DB_PORT}"
 	env_configuration "$APP_DIR/systemd.env" JDBC_DATABASE "$DB_NAME"
