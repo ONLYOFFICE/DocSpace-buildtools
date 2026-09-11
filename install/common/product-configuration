@@ -199,15 +199,15 @@ establish_mysql_conn(){
 		change_mysql_config
 	fi
 
-	MYSQL_SERVER_VERSION=$($MYSQL -N -e "SELECT VERSION();" 2>/dev/null)
+	MYSQL_VERSION=$($MYSQL -N -e "SELECT VERSION();" 2>/dev/null) || true
 
 	json_configuration "${USER_CONF}" "ConnectionStrings.default.connectionString" "${CONNECTION_STRING}"
 	json_configuration "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "ConnectionStrings.default.connectionString" "${CONNECTION_STRING}"
 	json_configuration "${USER_CONF}" "migration.enabled" "true"
-	if [[ -n "$MYSQL_SERVER_VERSION" ]]; then
-		json_configuration "${USER_CONF}" "mysqlServerVersion" "${MYSQL_SERVER_VERSION}"
-		json_configuration "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "mysqlServerVersion" "${MYSQL_SERVER_VERSION}"
-		json_configuration "${APP_DIR}/appsettings.services.json" "mysqlServerVersion" "${MYSQL_SERVER_VERSION}"
+	if [[ -n "$MYSQL_VERSION" ]]; then
+		json_configuration "${USER_CONF}" "mysqlServerVersion" "${MYSQL_VERSION}"
+		json_configuration "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "mysqlServerVersion" "${MYSQL_VERSION}"
+		json_configuration "${APP_DIR}/appsettings.services.json" "mysqlServerVersion" "${MYSQL_VERSION}"
 	fi
 
 	env_configuration "$APP_DIR/systemd.env" JDBC_URL "${DB_HOST}:${DB_PORT}"
