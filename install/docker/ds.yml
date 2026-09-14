@@ -2,7 +2,9 @@ services:
   onlyoffice-document-server:
     image: "${REGISTRY}${DOCUMENT_SERVER_IMAGE_NAME}"
     container_name: ${DOCUMENT_CONTAINER_NAME}
-    # Strings below enable the JSON Web Token validation.
+    # Uncomment to load custom Configuration Parameters migrated from an adopted install.
+    #env_file:
+    #  - ds.env
     environment:
       - JWT_ENABLED=true
       - JWT_SECRET=${DOCUMENT_SERVER_JWT_SECRET}
@@ -19,6 +21,8 @@ services:
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}app_data:/var/www/onlyoffice/Data
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}ds_fonts:/usr/share/fonts
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}ds_state:/var/lib/onlyoffice
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}ds_postgresql:/var/lib/postgresql
     expose:
       - '80'
     extra_hosts:
@@ -42,3 +46,5 @@ volumes:
   log_data:
   app_data:
   ds_fonts:
+  ds_state:
+  ds_postgresql:

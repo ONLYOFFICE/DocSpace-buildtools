@@ -115,6 +115,7 @@ fi
 
 if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
     declare -x DS_PORT=${DS_PORT:-8083}
+    declare -x LISTEN_ADDRESS=127.0.0.1:${DS_PORT}
     declare -x JWT_ENABLED=${JWT_ENABLED:-true}
     declare -x JWT_SECRET=${JWT_SECRET:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)}
     declare -x JWT_HEADER=${JWT_HEADER:-AuthorizationJwt}
@@ -123,6 +124,22 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
     [ "$INSTALLATION_TYPE" != "community" ] && setup_postgres_db
 
     ${package_manager} -y install ${ds_pkg_name} --nobest # --nobest for rhel 8 compatibility
+
+	# nginx (a dependency of ${ds_pkg_name}) enables a default server listening on port 80, which conflicts with openresty
+	if [ -f /etc/nginx/nginx.conf ] && grep -q "server {" /etc/nginx/nginx.conf; then
+		# fix Bug 81918 - Remove default server block without dropping conf.d includes
+		[ -f /etc/nginx/nginx.conf.bak ] || cp -f /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
+		echo "Note: removed default server block from /etc/nginx/nginx.conf to avoid conflict with openresty (backup: /etc/nginx/nginx.conf.bak)."
+		awk '/^[[:space:]]*server[[:space:]]*\{/&&!done{done=1;d=1;next}d{d+=gsub(/\{/,"{")-gsub(/\}/,"}");if(d<=0)d=0;next}1' \
+			/etc/nginx/nginx.conf > /etc/nginx/nginx.conf.tmp && mv -f /etc/nginx/nginx.conf.tmp /etc/nginx/nginx.conf
+	fi
+
+	if [ -e /etc/nginx/conf.d/default.conf ]; then
+		mv -f /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf.disabled
+		echo "Note: nginx default site disabled to avoid conflict with openresty."
+	fi
+
+	systemctl is-active --quiet nginx && systemctl reload nginx || systemctl start nginx
 
 	ds_configure_args=()
 	if [ "$INSTALLATION_TYPE" != "community" ]; then

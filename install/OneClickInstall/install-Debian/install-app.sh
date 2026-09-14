@@ -87,7 +87,7 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
 	DS_JWT_SECRET=${DS_JWT_SECRET:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)}
 	DS_JWT_HEADER=${DS_JWT_HEADER:-AuthorizationJwt}
 
-	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/ds-port select "$DS_PORT" | debconf-set-selections
+	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/listenaddress string "127.0.0.1:${DS_PORT}" | debconf-set-selections
 	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/jwt-enabled select "${DS_JWT_ENABLED}" | debconf-set-selections
 	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/jwt-secret select "${DS_JWT_SECRET}" | debconf-set-selections
 	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/jwt-header select "${DS_JWT_HEADER}" | debconf-set-selections
@@ -95,6 +95,14 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
 	[ "$INSTALLATION_TYPE" != "community" ] && setup_postgres_db
 
 	apt-get install -yq "${ds_pkg_name}"
+
+	# Debian nginx package (a dependency of ${ds_pkg_name}) enables a default site listening on port 80, which conflicts with openresty
+	[ -e /etc/nginx/sites-enabled/default ] && \
+		mv -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default.disabled
+	[ -e /etc/nginx/conf.d/default.conf ] && \
+		mv -f /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf.disabled
+	echo "Note: nginx default sites disabled to avoid conflict with openresty."
+	systemctl is-active --quiet nginx && systemctl reload nginx || systemctl start nginx
 fi
 
 if [ "$MAKESWAP" == "true" ]; then

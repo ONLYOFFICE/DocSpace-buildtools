@@ -39,7 +39,15 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      docs_version: ${{ steps.get-docs-version.outputs.version }}
     steps:
+      - name: Get latest Docs test repo version
+        id: get-docs-version
+        run: |
+          VERSION=$(git ls-remote --heads "https://${{ secrets.GITEA_TOKEN }}@${{ secrets.GITEA_HOST }}/ONLYOFFICE/document-server-package" \
+            'refs/heads/release/v*' 'refs/heads/hotfix/v*' | awk -F/ '{print $NF}' | sed 's/^v//' | sort -Vr | head -n1)
+          echo "version=${VERSION:-99.99.99}" >> "$GITHUB_OUTPUT"
+
       - name: Set matrix names
         id: set-matrix
         env:
@@ -93,6 +101,8 @@ jobs:
     name: "${{ matrix.name }}"
     runs-on: ubuntu-22.04
     needs: prepare
+    env:
+      VER: ${{ needs.prepare.outputs.docs_version }}
     strategy:
       fail-fast: false
       matrix: ${{fromJSON(needs.prepare.outputs.matrix)}}
@@ -201,6 +211,7 @@ jobs:
           if [[ "$USE_4TESTING" == "true" ]]; then
             export DOWNLOAD_SCRIPT='-ds false'
             export TEST_REPO='-tr true'
+            export VER="-v ${VER}"
             export ARGUMENTS="-arg '--skiphardwarecheck true --localscripts true'"
             echo -e "\e[33mUsing 4testing packages\e[0m"
           else
