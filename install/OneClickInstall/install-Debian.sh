@@ -121,14 +121,16 @@ trap 'systemctl start apt-daily.timer apt-daily-upgrade.timer >/dev/null 2>&1 ||
 
 if fuser /var/lib/dpkg/lock-frontend &>/dev/null; then
   echo "Waiting for /var/lib/dpkg/lock-frontend to be released (up to 60 seconds)..."
-   timeout 60 bash -c 'while fuser /var/lib/dpkg/lock-frontend &>/dev/null; do sleep 1; done'
+  # stopping the units above doesn't guarantee the lock is released immediately - fall through to
+  # apt-get's own DPkg::Lock::Timeout below instead of failing the whole script on a slow release
+  timeout 60 bash -c 'while fuser /var/lib/dpkg/lock-frontend &>/dev/null; do sleep 1; done' || true
 fi
 
 # Suppress interactive apt/needrestart prompts during automated installs
 export DEBIAN_FRONTEND=noninteractive
 export NEEDRESTART_MODE=a
-apt-get update -y --allow-releaseinfo-change
-apt-get install -yq sudo curl dirmngr debian-archive-keyring
+apt-get update -y --allow-releaseinfo-change -o DPkg::Lock::Timeout=60
+apt-get install -yq -o DPkg::Lock::Timeout=60 sudo curl dirmngr debian-archive-keyring
 
 DOWNLOAD_URL_PREFIX="https://download.onlyoffice.com/${product}"
 [ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${legacy_product}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
