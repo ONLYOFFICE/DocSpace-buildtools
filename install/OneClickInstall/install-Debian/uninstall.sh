@@ -70,7 +70,9 @@ fi
 systemctl stop "${product}-*.service" "${legacy_product}-*.service" >/dev/null 2>&1 || true
 
 # Uninstall packages and clean up
-apt-get purge -y "${PACKAGES_TO_UNINSTALL[@]}" && apt-get autoremove -y && apt-get clean
+apt-get purge -y -o DPkg::Lock::Timeout=60 "${PACKAGES_TO_UNINSTALL[@]}" \
+  && apt-get autoremove -y -o DPkg::Lock::Timeout=60 \
+  && apt-get clean
 
 # Uninstall swap file if it exists
 for SWAPFILE_NAME in "${product}" "${legacy_product}"; do
