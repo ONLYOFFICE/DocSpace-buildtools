@@ -58,7 +58,7 @@ SERVICE_NAME=(
 	api
 	api-system
 	socket
-	newai
+	ai-chat
 	studio-notify
 	notify 
 	people-server
@@ -106,9 +106,9 @@ reassign_values (){
 		EXEC_FILE="server.js"
 		DEPENDENCY_LIST=""
 	;;
-	newai )
+	ai-chat )
 		SERVICE_PORT="9837"
-		WORK_DIR="${PRODUCT_DIR}/services/ASC.NewAi/"
+		WORK_DIR="${PRODUCT_DIR}/services/ASC.AI.Chat/"
 		EXEC_FILE="server.js"
 		DEPENDENCY_LIST=""
 	;;

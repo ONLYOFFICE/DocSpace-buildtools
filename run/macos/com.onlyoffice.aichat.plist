@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.onlyoffice.newai</string>
+    <string>com.onlyoffice.aichat</string>
 
     <key>WorkingDirectory</key>
     <string>${APPS_ROOT}</string>
@@ -11,17 +11,17 @@
     <key>ProgramArguments</key>
     <array>
         <string>/usr/local/bin/node</string>
-        <string>server/common/ASC.NewAi/server.js</string>
+        <string>server/common/ASC.AI.Chat/server.js</string>
     </array>
 
     <key>RunAtLoad</key>
     <false/>
 
     <!--<key>StandardErrorPath</key>
-    <string>${APPS_ROOT}/Logs/com.onlyoffice.newai.err</string>-->
+    <string>${APPS_ROOT}/Logs/com.onlyoffice.aichat.err</string>-->
 
     <!--<key>StandardOutPath</key>
-    <string>${APPS_ROOT}/Logs/com.onlyoffice.newai.log</string>-->
+    <string>${APPS_ROOT}/Logs/com.onlyoffice.aichat.log</string>-->
 
     <key>KeepAlive</key>
     <true/>

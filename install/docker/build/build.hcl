@@ -60,11 +60,11 @@ target "onlyoffice-socket" {
   tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-socket:${DOCKER_TAG}"]
 }
 
-target "onlyoffice-newai" {
+target "onlyoffice-ai-chat" {
   context    = "build"
   dockerfile = "${DOCKERFILE}"
-  target     = "newai"
-  tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-newai:${DOCKER_TAG}"]
+  target     = "ai-chat"
+  tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-ai-chat:${DOCKER_TAG}"]
 }
 
 target "onlyoffice-studio-notify" {
@@ -258,7 +258,7 @@ group "default" {
     "onlyoffice-router",
     "onlyoffice-sdk",
     "onlyoffice-socket",
-    "onlyoffice-newai",
+    "onlyoffice-ai-chat",
     "onlyoffice-ssoauth",
     "onlyoffice-studio",
     "onlyoffice-studio-notify",
@@ -301,7 +301,7 @@ group "node-services" {
     "onlyoffice-login",
     "onlyoffice-router",
     "onlyoffice-socket",
-    "onlyoffice-newai",
+    "onlyoffice-ai-chat",
     "onlyoffice-ssoauth",
   ]
 }
