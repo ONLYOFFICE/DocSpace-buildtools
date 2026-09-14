@@ -528,13 +528,13 @@ setup_redis() {
 	echo -n "Configuring redis... "
 	: "${REDIS_HOST:=$(json -f "${APP_DIR}/redis.${ENVIRONMENT}.json" Redis.Hosts.0.Host 2>/dev/null)}"
 	: "${REDIS_PORT:=$(json -f "${APP_DIR}/redis.${ENVIRONMENT}.json" Redis.Hosts.0.Port 2>/dev/null)}"
-	: "${REDIS_USER:=$(json -f "${APP_DIR}/redis.${ENVIRONMENT}.json" Redis.Hosts.UserName 2>/dev/null)}"
-	: "${REDIS_PASS:=$(json -f "${APP_DIR}/redis.${ENVIRONMENT}.json" Redis.Hosts.Password 2>/dev/null)}"
-	: "${REDIS_DB:=$(json -f "${APP_DIR}/redis.${ENVIRONMENT}.json" Redis.Hosts.Database 2>/dev/null)}"
+	: "${REDIS_USER:=$(json -f "${APP_DIR}/redis.${ENVIRONMENT}.json" Redis.User 2>/dev/null)}"
+	: "${REDIS_PASS:=$(json -f "${APP_DIR}/redis.${ENVIRONMENT}.json" Redis.Password 2>/dev/null)}"
+	: "${REDIS_DB:=$(json -f "${APP_DIR}/redis.${ENVIRONMENT}.json" Redis.Database 2>/dev/null)}"
 	: "${REDIS_HOST:=127.0.0.1}" "${REDIS_PORT:=6379}" "${REDIS_DB:=0}"
 
 	json_configuration "${APP_DIR}/redis.${ENVIRONMENT}.json" "Redis.Hosts" "[{ Host: \"${REDIS_HOST}\", Port: \"${REDIS_PORT}\" }]"
-	[[ -n "${REDIS_USER}" ]] && json_configuration "${APP_DIR}/redis.${ENVIRONMENT}.json" "Redis.UserName" "${REDIS_USER}"
+	[[ -n "${REDIS_USER}" ]] && json_configuration "${APP_DIR}/redis.${ENVIRONMENT}.json" "Redis.User" "${REDIS_USER}"
 	[[ -n "${REDIS_PASS}" ]] && json_configuration "${APP_DIR}/redis.${ENVIRONMENT}.json" "Redis.Password" "${REDIS_PASS}"
 	[[ -n "${REDIS_DB}" ]] && json_configuration "${APP_DIR}/redis.${ENVIRONMENT}.json" "Redis.Database" "${REDIS_DB}"
 
