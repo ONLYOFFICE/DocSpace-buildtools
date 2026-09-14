@@ -357,7 +357,14 @@ setup_docs() {
 	if [ $1 == "LOCAL_DOCS_SERVER" ]; then
 		DS_CONF_DIR="/etc/${PACKAGE_SYSNAME}/documentserver"
 		DOCUMENT_SERVER_HOST="127.0.0.1"
-		sed -e 's/listen 0\.0\.0\.0:/listen 127.0.0.1:/' -e 's/listen \[::\]:/listen [::1]:/' -i "${DS_CONF_DIR}/nginx/ds.conf"
+		sed -e 's/listen 0\.0\.0\.0:/listen 127.0.0.1:/' -i "${DS_CONF_DIR}/nginx/ds.conf"
+		if [ -f /proc/net/if_inet6 ] && ip -6 addr show lo 2>/dev/null | grep -q '::1'; then
+			sed -e 's/listen \[::\]:/listen [::1]:/' -i "${DS_CONF_DIR}/nginx/ds.conf"
+		else
+			# IPv6 loopback isn't available on this host — an unconditional rewrite to [::1] would fail
+			# nginx's bind() and take the whole master process down, including the IPv4 listener
+			sed -e '/listen \[::\]:/d' -i "${DS_CONF_DIR}/nginx/ds.conf"
+		fi
 		DOCUMENT_SERVER_PORT=$(grep -oP '(?<=:)\d+(?=[\s;])' ${DS_CONF_DIR}/nginx/ds.conf | head -1)
 		: "${DOCUMENT_SERVER_PORT:=8083}"
 		: "${DOCUMENT_SERVER_JWT_SECRET:=$(json -f ${DS_CONF_DIR}/local.json services.CoAuthoring.secret.inbox.string 2>/dev/null)}"
