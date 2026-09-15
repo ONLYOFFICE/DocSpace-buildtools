@@ -19,11 +19,26 @@ http {
     include       /etc/nginx/mime.types;
     default_type  application/octet-stream;
 
+    map $uri $apps_access_noise {
+        default 0;
+        ~^/static/ 1;
+        ~^/storage/systemwebplugins/ 1;
+        ~^/(?:login/|doceditor/|management/|sdk/)?_next/static/ 1;
+        ~^/(?:login/|doceditor/|management/|sdk/)?_next/public/images/ 1;
+        ~^/(?:favicon\.ico|manifest\.json|sw\.js|icon\.svg)$ 1;
+        ~^/healthchecks/liveness/?$ 1;
+    }
+
+    map "$request_method:$status:$apps_access_noise" $apps_access_loggable {
+        default 1;
+        ~^(?:GET|HEAD):(?:2[0-9][0-9]|304):1$ 0;
+    }
+
     log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
                       '$status $body_bytes_sent "$http_referer" '
                       '"$http_user_agent" "$http_x_forwarded_for"';
 
-    access_log  /var/log/nginx/access.log  main;
+    access_log  /var/log/nginx/access.log  main if=$apps_access_loggable;
 
     sendfile        on;
 
