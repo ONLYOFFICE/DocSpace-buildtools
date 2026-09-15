@@ -19,6 +19,7 @@ pushd %~1
   echo "== Build ASC.AI.Chat =="
   pushd common\ASC.AI.Chat
     call yarn install --frozen-lockfile
+    call yarn workspaces focus --production
   popd
 
   echo "== Build ASC.SsoAuth =="
