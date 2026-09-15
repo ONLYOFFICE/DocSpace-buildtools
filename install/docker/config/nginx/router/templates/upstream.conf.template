@@ -54,10 +54,10 @@ map $SERVICE_SOCKET $service_socket {
     default $SERVICE_SOCKET;
 }
 
-map $SERVICE_NEW_AI $service_new_ai {
+map $SERVICE_AI_CHAT $service_ai_chat {
     volatile;
     "" 127.0.0.1:9837;
-    default $SERVICE_NEW_AI;
+    default $SERVICE_AI_CHAT;
 }
 
 map $SERVICE_API $service_api {

@@ -681,7 +681,7 @@ stop_services() {
 	echo "OK"
 }
 
-SERVICES=(login api socket newai studio-notify notify \
+SERVICES=(login api socket ai-chat studio-notify notify \
 people-server files files-worker studio backup api-system \
 clear-events backup-worker ssoauth doceditor healthchecks \
 identity-authorization identity-api sdk management telegram ai ai-worker mcp)

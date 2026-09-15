@@ -1,7 +1,7 @@
 <service>
-	<id>Apps.NewAi</id>
-	<name>ONLYOFFICE Apps NewAi</name>
-	<description>ONLYOFFICE Apps NewAi</description>
+	<id>Apps.AI.Chat</id>
+	<name>ONLYOFFICE Apps AI.Chat</name>
+	<description>ONLYOFFICE Apps AI.Chat</description>
 	<priority>RealTime</priority>
 	<startmode>Automatic</startmode>
 	<autoRefresh>false</autoRefresh>
@@ -10,7 +10,7 @@
 	<env name="API_HOST" value="{API_HOST}"/>
 	<env name="AI_SERVICE_URL" value="{AI_SERVICE_URL}"/>
 	<executable>node</executable>
-	<arguments>&quot;{APPDIR}services\ASC.NewAi\service\server.js&quot;</arguments>
+	<arguments>&quot;{APPDIR}services\ASC.AI.Chat\service\server.js&quot;</arguments>
 	<log mode="roll-by-size">
   		<sizeThreshold>10240</sizeThreshold>
   		<keepFiles>8</keepFiles>
