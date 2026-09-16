@@ -32,6 +32,9 @@ _M.traces_enabled = getenv("OTEL_TRACES_ENABLED") == "true" and endpoint ~= nil
 _M.logs_enabled = getenv("OTEL_LOGS_ENABLED") == "true" and endpoint ~= nil
 _M.endpoint = endpoint
 _M.service_name = getenv("OTEL_SERVICE_NAME") or "onlyoffice-router"
+-- off by default: static assets are the bulk of the router's traffic and the
+-- least interesting part of it (see otel.filter)
+_M.trace_static_assets = getenv("OTEL_TRACE_STATIC_ASSETS") == "true"
 _M.headers = headers
 
 return _M

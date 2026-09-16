@@ -177,6 +177,13 @@ over OTLP/HTTP (none is bundled). Disabled by default; enable via `.env`:
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP/HTTP collector base URL, e.g. `http://otel-collector:4318` |
 | `OTEL_SERVICE_NAME` | `service.name` resource attribute (default `onlyoffice-router`) |
 | `OTEL_EXPORTER_OTLP_HEADERS` | Extra export headers, `key1=value1,key2=value2` |
+| `OTEL_TRACE_STATIC_ASSETS` | `true` also reports static assets (off by default, see below) |
+
+The hooks run for every location the router serves, so static assets are
+filtered out: a single page load pulls in hundreds of chunks, fonts and images
+that would bury the API traces and overflow the log queue. A failing asset is
+still reported, since broken app chunks are a routine router problem. Set
+`OTEL_TRACE_STATIC_ASSETS=true` to report them all.
 
 Both signals are batched in the background and never block request
 processing; the `traceparent` header is propagated to the upstream DocSpace

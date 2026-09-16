@@ -13,16 +13,21 @@ if state.get() then
     return
 end
 
+local path_helper = require("otel.path")
+
+local path = path_helper.request_path()
+
+if require("otel.filter").skip(path) then
+    return
+end
+
 local attribute = require("opentelemetry.attribute")
 local global = require("opentelemetry.global")
-local path_helper = require("otel.path")
 local span_kind = require("opentelemetry.trace.span_kind")
 local context = require("opentelemetry.context").new()
 local propagator = require("opentelemetry.trace.propagation.text_map.trace_context_propagator").new()
 
 local upstream_context = propagator:extract(context, ngx.req)
-
-local path = path_helper.request_path()
 
 local new_context, span = global.tracer("onlyoffice-router"):start(upstream_context,
     ngx.var.request_method .. " " .. path_helper.route(path), {

@@ -13,7 +13,7 @@ local status = tonumber(ngx.var.status) or 0
 
 local path = require("otel.path").request_path()
 
-if conf.logs_enabled then
+if conf.logs_enabled and not require("otel.filter").skip(path, status) then
     local severity_number, severity_text = 9, "INFO"
     if status >= 500 then
         severity_number, severity_text = 17, "ERROR"
