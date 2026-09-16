@@ -6,13 +6,12 @@ if not (conf.traces_enabled or conf.logs_enabled) then
     return
 end
 
-local span = ngx.ctx.otel_span
-ngx.ctx.otel_span = nil
+-- only tracing puts anything in the registry; skip the lookup otherwise
+local span = conf.traces_enabled and require("otel.state").take() or nil
 
 local status = tonumber(ngx.var.status) or 0
 
--- path only, without the query string (it may carry tokens/session ids)
-local path = ngx.var.request_uri:match("^[^?]*") or ngx.var.request_uri
+local path = require("otel.path").request_path()
 
 if conf.logs_enabled then
     local severity_number, severity_text = 9, "INFO"

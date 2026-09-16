@@ -6,21 +6,23 @@ if not conf.traces_enabled then
     return
 end
 
+local state = require("otel.state")
+
 -- rewrite phase may run again after an internal redirect
-if ngx.ctx.otel_span then
+if state.get() then
     return
 end
 
 local attribute = require("opentelemetry.attribute")
 local global = require("opentelemetry.global")
+local path_helper = require("otel.path")
 local span_kind = require("opentelemetry.trace.span_kind")
 local context = require("opentelemetry.context").new()
 local propagator = require("opentelemetry.trace.propagation.text_map.trace_context_propagator").new()
 
 local upstream_context = propagator:extract(context, ngx.req)
 
--- path only, without the query string (it may carry tokens/session ids)
-local path = ngx.var.request_uri:match("^[^?]*") or ngx.var.request_uri
+local path = path_helper.request_path()
 
 local new_context, span = global.tracer("onlyoffice-router"):start(upstream_context,
     ngx.var.request_method .. " " .. ngx.var.uri, {
@@ -35,4 +37,4 @@ local new_context, span = global.tracer("onlyoffice-router"):start(upstream_cont
 })
 
 propagator:inject(new_context, ngx.req)
-ngx.ctx.otel_span = span
+state.set(span)
