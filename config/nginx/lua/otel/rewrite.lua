@@ -25,7 +25,7 @@ local upstream_context = propagator:extract(context, ngx.req)
 local path = path_helper.request_path()
 
 local new_context, span = global.tracer("onlyoffice-router"):start(upstream_context,
-    ngx.var.request_method .. " " .. ngx.var.uri, {
+    ngx.var.request_method .. " " .. path_helper.route(path), {
     kind = span_kind.server,
     attributes = {
         attribute.string("http.method", ngx.var.request_method),
