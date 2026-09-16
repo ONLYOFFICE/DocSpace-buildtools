@@ -128,7 +128,7 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiDirsComponent">
     <ROW Directory="ASC.Management_Dir" Directory_Parent="products_Dir" DefaultDir="ASC.Management" DirectoryOptions="15"/>
-    <ROW Directory="ASC.NewAi_Dir" Directory_Parent="services_Dir" DefaultDir="ASC.NewAi" DirectoryOptions="15"/>
+    <ROW Directory="ASC.AI.Chat_Dir" Directory_Parent="services_Dir" DefaultDir="ASC.AI.Chat" DirectoryOptions="15"/>
     <ROW Directory="ASC.Identity.Authorization_Dir" Directory_Parent="services_Dir" DefaultDir="ASC.Identity.Authorization" DirectoryOptions="15"/>
     <ROW Directory="ASC.Identity.Registration_Dir" Directory_Parent="services_Dir" DefaultDir="ASC.Identity.Registration" DirectoryOptions="15"/>
     <ROW Directory="APPDIR" Directory_Parent="TARGETDIR" DefaultDir="APPDIR:." IsPseudoRoot="1" DirectoryOptions="15"/>
@@ -331,7 +331,7 @@
     <ROW Feature="WebApi" Feature_Parent="DotnetServices" Title=".NET WebApi Service" Description="Feature contains .NET WebApi service" Display="7" Level="1" Directory_="APPDIR" Attributes="0"/>
     <ROW Feature="WebHealthChecksUI" Feature_Parent="DotnetServices" Title=".NET WebHealthChecksUI Service" Description="Feature contains .NET WebHealthChecksUI service" Display="33" Level="1" Directory_="APPDIR" Attributes="0"/>
     <ROW Feature="WebStudio" Feature_Parent="DotnetServices" Title=".NET WebStudio Service" Description="Feature contains .NET WebStudio service" Display="5" Level="1" Directory_="APPDIR" Attributes="0"/>
-    <ROW Feature="NewAi" Feature_Parent="NodeJSServices" Title="NewAi" Display="0" Level="1" Directory_="APPDIR" Attributes="0"/>
+    <ROW Feature="AI.Chat" Feature_Parent="NodeJSServices" Title="AI.Chat" Display="0" Level="1" Directory_="APPDIR" Attributes="0"/>
     <ROW Feature="IdentityAuthorization" Feature_Parent="MainFeature" Title="IdentityAuthorization" Display="0" Level="1" Directory_="APPDIR" Attributes="0"/>
     <ROW Feature="IdentityRegistration" Feature_Parent="MainFeature" Title="IdentityRegistration" Display="0" Level="1" Directory_="APPDIR" Attributes="0"/>
     <ATTRIBUTE name="CurrentFeature" value="MainFeature"/>
@@ -1708,7 +1708,7 @@
     <ROW Directory_="ASC.Identity.Authorization_Dir" SourcePath="Files\services\ASC.Identity.Authorization" Feature="IdentityAuthorization" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
     <ROW Directory_="ASC.Identity.Registration_Dir" SourcePath="Files\services\ASC.Identity.Registration" Feature="IdentityRegistration" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
     <ROW Directory_="ASC.Migration.Runner_Dir" SourcePath="Files\services\ASC.Migration.Runner" Feature="MigrationRunner" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
-    <ROW Directory_="ASC.NewAi_Dir" SourcePath="Files\services\ASC.NewAi" Feature="NewAi" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.AI.Chat_Dir" SourcePath="Files\services\ASC.AI.Chat" Feature="AI.Chat" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
     <ROW Directory_="ASC.Notify_Dir" SourcePath="Files\services\ASC.Notify" Feature="Notify" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
     <ROW Directory_="ASC.Socket.IO_Dir" SourcePath="Files\services\ASC.Socket.IO" Feature="SocketIO" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
     <ROW Directory_="ASC.SsoAuth_Dir" SourcePath="Files\services\ASC.SsoAuth" Feature="SsoAuth" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
