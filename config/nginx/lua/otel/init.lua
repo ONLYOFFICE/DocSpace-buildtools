@@ -19,6 +19,10 @@ if conf.traces_enabled then
     for key, value in pairs(conf.headers) do
         trace_headers[key] = value
     end
+    -- the collector base URL goes in as is: http_client.new appends /v1/traces
+    -- itself, and the otel-build stage asserts it still does. Unlike otel.logs,
+    -- which builds its own /v1/logs URL because opentelemetry-lua ships no logs
+    -- signal, so appending here would double the path.
     local exporter = otlp_exporter.new(http_client.new(conf.endpoint, 3, trace_headers))
     -- never block request processing when the collector is unreachable
     local processor = batch_span_processor.new(exporter, { drop_on_queue_full = true })

@@ -281,6 +281,10 @@ RUN set -eu; \
     mkdir -p /usr/local/openresty/site/lualib/resty; \
     fetch_verified https://github.com/yangxikun/opentelemetry-lua/archive/refs/tags/v${OPENTELEMETRY_LUA_VERSION}.tar.gz ${OPENTELEMETRY_LUA_SHA256}; \
     cp -r /tmp/opentelemetry-lua-${OPENTELEMETRY_LUA_VERSION}/lib/opentelemetry /usr/local/openresty/site/lualib/; \
+# otel/init.lua hands the exporter the bare collector URL because http_client.new
+# is where the /v1/traces suffix comes from. Fail the build if a version bump ever
+# changes that, rather than silently posting every span to the wrong path.
+    /usr/local/openresty/luajit/bin/luajit -e 'package.loaded["resty.http"] = {}; package.path = "/usr/local/openresty/site/lualib/?.lua;" .. package.path; local client = require("opentelemetry.trace.exporter.http_client"); local uri = client.new("http://collector:4318", 1, {}).uri; assert(uri == "http://collector:4318/v1/traces", "opentelemetry-lua http_client.new no longer appends /v1/traces, it built " .. uri)'; \
     fetch_verified https://github.com/ledgetech/lua-resty-http/archive/refs/tags/v${LUA_RESTY_HTTP_VERSION}.tar.gz ${LUA_RESTY_HTTP_SHA256}; \
     cp -r /tmp/lua-resty-http-${LUA_RESTY_HTTP_VERSION}/lib/resty/. /usr/local/openresty/site/lualib/resty/; \
     rm -rf /var/lib/apt/lists/* /tmp/*
