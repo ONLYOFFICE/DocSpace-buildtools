@@ -47,7 +47,7 @@ download  "$SOURCE_REPO-plugins"       "$PLUGINS_BRANCH"           plugins & PID
 download  "$SOURCE_REPO-mcp"           "$MCP_BRANCH"               mcp & PIDS+=($!)
 download  "$SOURCE_REPO-ui-kit-react"  "$BRANCH_CLIENT"            ui-kit & PIDS+=($!)
 download  "ASC.Web.Campaigns"          "master"                    campaigns & PIDS+=($!)
-download  "document-formats"           "master"                    document-formats & PIDS+=($!)
+download  "document-formats"           "$BRANCH_BUILDTOOLS"        document-formats & PIDS+=($!)
 DOWNLOAD_STATUS=0
 for PID in "${PIDS[@]}"; do wait "$PID" || DOWNLOAD_STATUS=1; done
 [[ $DOWNLOAD_STATUS -eq 0 ]] || exit $DOWNLOAD_STATUS
