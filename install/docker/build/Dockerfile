@@ -8,6 +8,7 @@ ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:10.0-noble"
 ARG BUSYBOX_VERSION="1.37"
 ARG PYTHON_VERSION="3.12-slim"
 ARG NODE_VERSION="24.16-trixie-slim"
+ARG OPENRESTY_VERSION="1.31.1.1-2"
 ARG PLUGIN_NODE_TYPES_VERSION="18.19.0"
 ARG JAVA_VERSION="25"
 ARG JAVA_RUN_VERSION="${JAVA_VERSION}-jre"
@@ -248,8 +249,48 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
 USER onlyoffice
 ENTRYPOINT ["/bin/bash", "/usr/bin/docker-identity-entrypoint.sh"]
 
+## Nginx router otel lua dependencies ##
+# Built on the -fat flavour of the same OpenResty release the router runs, so
+# the native pb.so is linked against the LuaJIT ABI that ships at runtime.
+FROM openresty/openresty:${OPENRESTY_VERSION}-bullseye-fat AS otel-build
+# Git tags and the luarocks registry are both mutable, so every dependency is
+# fetched as a tarball and checked against a pinned sha256 before it is used.
+# Refresh a checksum with: curl -sL <url> | sha256sum
+ARG OPENTELEMETRY_LUA_VERSION=0.2.6
+ARG OPENTELEMETRY_LUA_SHA256=645259acbc5af7f5b374fdad102c961584aa831a20a7bc392e34ec557acf6314
+ARG LUA_RESTY_HTTP_VERSION=0.16.1
+ARG LUA_RESTY_HTTP_SHA256=d2f867ea8cacb406172d258ba5c17ca530b5deff56d58583e6c11f4f190be015
+ARG LUA_PROTOBUF_VERSION=0.3.3
+ARG LUA_PROTOBUF_SHA256=5df24cbff460d40a1de770486cb0cc74e0e0dd6950d9c61ec97559d2f5c504ef
+
+RUN set -eu; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends gcc libc6-dev wget ca-certificates; \
+    fetch_verified() { \
+        wget -qO /tmp/dep.tar.gz "$1"; \
+        echo "$2  /tmp/dep.tar.gz" | sha256sum -c -; \
+        tar -xzf /tmp/dep.tar.gz -C /tmp; \
+        rm -f /tmp/dep.tar.gz; \
+    }; \
+    fetch_verified https://github.com/starwing/lua-protobuf/archive/refs/tags/${LUA_PROTOBUF_VERSION}.tar.gz ${LUA_PROTOBUF_SHA256}; \
+    cd /tmp/lua-protobuf-${LUA_PROTOBUF_VERSION}; \
+    rockspec="$(find rockspecs -name "lua-protobuf-${LUA_PROTOBUF_VERSION}-*.rockspec" | sort | tail -1)"; \
+    test -n "$rockspec" || { echo "no rockspec for lua-protobuf ${LUA_PROTOBUF_VERSION}" >&2; exit 1; }; \
+    /usr/local/openresty/luajit/bin/luarocks make "$rockspec"; \
+    cd /; \
+    mkdir -p /usr/local/openresty/site/lualib/resty; \
+    fetch_verified https://github.com/yangxikun/opentelemetry-lua/archive/refs/tags/v${OPENTELEMETRY_LUA_VERSION}.tar.gz ${OPENTELEMETRY_LUA_SHA256}; \
+    cp -r /tmp/opentelemetry-lua-${OPENTELEMETRY_LUA_VERSION}/lib/opentelemetry /usr/local/openresty/site/lualib/; \
+# otel/init.lua hands the exporter the bare collector URL because http_client.new
+# is where the /v1/traces suffix comes from. Fail the build if a version bump ever
+# changes that, rather than silently posting every span to the wrong path.
+    /usr/local/openresty/luajit/bin/luajit -e 'package.loaded["resty.http"] = {}; package.path = "/usr/local/openresty/site/lualib/?.lua;" .. package.path; local client = require("opentelemetry.trace.exporter.http_client"); local uri = client.new("http://collector:4318", 1, {}).uri; assert(uri == "http://collector:4318/v1/traces", "opentelemetry-lua http_client.new no longer appends /v1/traces, it built " .. uri)'; \
+    fetch_verified https://github.com/ledgetech/lua-resty-http/archive/refs/tags/v${LUA_RESTY_HTTP_VERSION}.tar.gz ${LUA_RESTY_HTTP_SHA256}; \
+    cp -r /tmp/lua-resty-http-${LUA_RESTY_HTTP_VERSION}/lib/resty/. /usr/local/openresty/site/lualib/resty/; \
+    rm -rf /var/lib/apt/lists/* /tmp/*
+
 ## Nginx image ##
-FROM openresty/openresty:bullseye AS router
+FROM openresty/openresty:${OPENRESTY_VERSION}-bullseye AS router
 ARG SRC_PATH
 ARG BUILD_PATH
 ARG COUNT_WORKER_CONNECTIONS=1024
@@ -276,6 +317,13 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/nginx.conf.template /etc/nginx/nginx.conf.template
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
+
+# opentelemetry tracing: lua sdk + deps and the otel nginx wiring
+COPY --from=otel-build --chown=onlyoffice:onlyoffice /usr/local/openresty/site/lualib /usr/local/openresty/site/lualib
+COPY --from=otel-build --chown=onlyoffice:onlyoffice /usr/local/openresty/luajit/lib/lua/5.1 /usr/local/openresty/luajit/lib/lua/5.1
+COPY --from=otel-build --chown=onlyoffice:onlyoffice /usr/local/openresty/luajit/share/lua/5.1 /usr/local/openresty/luajit/share/lua/5.1
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/config/nginx/lua /etc/nginx/lua
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/otel.conf /etc/nginx/conf.d/00-otel.conf
 
 # changes for upstream configure
 RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.conf && \
