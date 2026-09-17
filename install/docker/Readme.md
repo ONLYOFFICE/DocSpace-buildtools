@@ -188,8 +188,11 @@ still reported, since broken app chunks are a routine router problem. Set
 Both signals are batched in the background and never block request
 processing; the `traceparent` header is propagated to the upstream DocSpace
 services. With both flags on, each log record carries the `traceId`/`spanId`
-of the request's server span. The plain access log keeps flowing to
-`/var/log/nginx/access.log` for Fluent Bit.
+of the request's server span.
+
+The filtered nginx access log is written to `/var/log/nginx/access.log` for
+Fluent Bit regardless of OpenTelemetry settings. Successful static asset and
+liveness check requests are omitted.
 
 Collector side — a single `otlp` receiver covers both pipelines:
 
