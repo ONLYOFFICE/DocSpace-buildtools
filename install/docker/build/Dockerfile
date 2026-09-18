@@ -264,10 +264,8 @@ ARG LUA_PROTOBUF_VERSION=0.3.3
 ARG LUA_PROTOBUF_SHA256=5df24cbff460d40a1de770486cb0cc74e0e0dd6950d9c61ec97559d2f5c504ef
 
 RUN set -eu; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends gcc libc6-dev wget ca-certificates; \
     fetch_verified() { \
-        wget -qO /tmp/dep.tar.gz "$1"; \
+        curl -fsSL -o /tmp/dep.tar.gz "$1"; \
         echo "$2  /tmp/dep.tar.gz" | sha256sum -c -; \
         tar -xzf /tmp/dep.tar.gz -C /tmp; \
         rm -f /tmp/dep.tar.gz; \
@@ -287,7 +285,7 @@ RUN set -eu; \
     /usr/local/openresty/luajit/bin/luajit -e 'package.loaded["resty.http"] = {}; package.path = "/usr/local/openresty/site/lualib/?.lua;" .. package.path; local client = require("opentelemetry.trace.exporter.http_client"); local uri = client.new("http://collector:4318", 1, {}).uri; assert(uri == "http://collector:4318/v1/traces", "opentelemetry-lua http_client.new no longer appends /v1/traces, it built " .. uri)'; \
     fetch_verified https://github.com/ledgetech/lua-resty-http/archive/refs/tags/v${LUA_RESTY_HTTP_VERSION}.tar.gz ${LUA_RESTY_HTTP_SHA256}; \
     cp -r /tmp/lua-resty-http-${LUA_RESTY_HTTP_VERSION}/lib/resty/. /usr/local/openresty/site/lualib/resty/; \
-    rm -rf /var/lib/apt/lists/* /tmp/*
+    rm -rf /tmp/*
 
 ## Nginx image ##
 FROM openresty/openresty:${OPENRESTY_VERSION}-bullseye AS router
