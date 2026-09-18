@@ -46,7 +46,6 @@ download  "$SOURCE_REPO-server"        "$BRANCH_SERVER"            server & PIDS
 download  "document-templates"         "main/community-server"     DocStore & PIDS+=($!)
 download  "$SOURCE_REPO-plugins"       "$PLUGINS_BRANCH"           plugins & PIDS+=($!)
 download  "$SOURCE_REPO-mcp"           "$MCP_BRANCH"               mcp & PIDS+=($!)
-download  "$SOURCE_REPO-ui-kit-react"  "$BRANCH_CLIENT"            ui-kit & PIDS+=($!)
 download  "ASC.Web.Campaigns"          "master"                    campaigns & PIDS+=($!)
 download  "document-formats"           "$DOCUMENT_FORMATS_REF"     document-formats & PIDS+=($!)
 DOWNLOAD_STATUS=0
