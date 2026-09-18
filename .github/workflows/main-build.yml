@@ -219,10 +219,62 @@ jobs:
       - name: Attention!!! arm64 was skipped
         if: steps.build.outputs.arch_fallback == 'true'
         run: echo "::warning::${{ matrix.service }} (${{ matrix.branch }}) was pushed as amd64-only this run — arm64 temporarily unavailable under this tag"
+              
+      - name: Record build status
+        if: always() && steps.build.outcome == 'success'
+        run: |
+          mkdir -p /tmp/build-status
+          cat > /tmp/build-status/status.json <<EOF
+          {
+            "service": "${{ matrix.service }}",
+            "branch": "${{ matrix.branch }}",
+            "main_tag": "${{ env.DOCKER_TAG }}",
+            "arch_fallback": "${{ steps.build.outputs.arch_fallback }}",
+            "arch_fallback_reason": "${{ steps.build.outputs.arch_fallback_reason || 'none' }}",
+            "fallback_tag": "${{ steps.build.outputs.fallback_tag || '' }}"
+          }
+          EOF
+
+      - name: Upload build status artifact
+        if: always() && steps.build.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-status-${{ strategy.job-index }}
+          path: /tmp/build-status/status.json
+          retention-days: 1
+
+  collect-build-results:
+    name: Collect build results
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    outputs:
+      status_json: ${{ steps.merge.outputs.status_json }}
+    steps:
+      - name: Download all status artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: build-status-*
+          path: /tmp/statuses
+          merge-multiple: true
+
+      - name: Merge into single JSON array
+        id: merge
+        run: |
+          shopt -s nullglob
+          FILES=(/tmp/statuses/*.json)
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "status_json=[]" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          MERGED=$(jq -s '.' "${FILES[@]}")
+          echo "status_json<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$MERGED" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"        
 
   trigger-oci-docker:
     name: OCI (${{ matrix.branch }})
-    needs: build
+    needs: [build, collect-build-results]
     if: ${{ !cancelled() && needs.build.result == 'success' }}
     continue-on-error: true
     runs-on: ubuntu-latest
@@ -235,18 +287,57 @@ jobs:
         with:
           ref: ${{ matrix.branch }}
 
-      - name: Process branch ${{ matrix.branch }}
+      - name: Resolve per-service tags for this branch
+        id: tagmap
+        run: |
+          echo '${{ needs.collect-build-results.outputs.status_json }}' > /tmp/all_status.json
+
+          PRODUCT_VERSION=$(echo "${{ matrix.branch }}" | sed '/^release\b\|^hotfix\b\|^feature\b\|^bugfix\b/s/release.*\/\|hotfix.*\/\|feature.*\/\|bugfix.*\///; s/-git-action$//; s/^v//')
+          DOCKER_TAG="${PRODUCT_VERSION}.${{ github.run_number }}"
+          echo "DOCKER_TAG=$DOCKER_TAG" >> "$GITHUB_OUTPUT"
+
+          jq --arg branch "${{ matrix.branch }}" '[.[] | select(.branch == $branch)]' /tmp/all_status.json > /tmp/branch_status.json
+
+          if [ "$(jq 'length' /tmp/branch_status.json)" -eq 0 ]; then
+            echo "::error::No recorded build status found for branch ${{ matrix.branch }} — cannot determine which tags were actually published. Refusing to check or trigger against a guessed tag."
+            exit 1
+          fi
+
+          SERVICE_TAGS_JSON=$(jq --arg maintag "$DOCKER_TAG" '
+            map({ (.service): (if .arch_fallback == "true" then .fallback_tag else $maintag end) }) | add
+          ' /tmp/branch_status.json)
+
+          echo "Resolved per-service tags:"
+          echo "$SERVICE_TAGS_JSON" | jq .
+
+          echo "service_tags_json<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$SERVICE_TAGS_JSON" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+          DIVERGED=$(jq --arg maintag "$DOCKER_TAG" 'to_entries | map(select(.value != $maintag)) | length' <<< "$SERVICE_TAGS_JSON")
+          echo "has_divergence=$([ "$DIVERGED" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Check image availability against actual published tags
         env:
-          GH_TOKEN: ${{ secrets.TOKEN }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME_PAT }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN_PAT }}
         run: |
-          PRODUCT_VERSION=$(echo "${{ matrix.branch }}" | sed '/^release\b\|^hotfix\b\|^feature\b\|^bugfix\b/s/release.*\/\|hotfix.*\/\|feature.*\/\|bugfix.*\///; s/-git-action$//; s/^v//')
-          DOCKER_TAG="${PRODUCT_VERSION}.${{ github.run_number }}"
-
           sudo GITHUB_REPOSITORY=${{ github.repository }} BRANCH=${{ matrix.branch }} \
-            DOCKER_REPOSITORY=${{ env.REPO }} DOCKER_PREFIX=${{ env.DOCKER_IMAGE_PREFIX }} DOCKER_TAG=$DOCKER_TAG \
+            DOCKER_REPOSITORY=${{ env.REPO }} DOCKER_PREFIX=${{ env.DOCKER_IMAGE_PREFIX }} \
+            SERVICE_TAGS_JSON='${{ steps.tagmap.outputs.service_tags_json }}' \
             DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME} DOCKERHUB_TOKEN=${DOCKERHUB_TOKEN} \
             bash .github/scripts/docker-images-availability.sh
 
-          gh workflow run "ci-oci-docker-install.yml" --repo "${{ github.repository }}" --ref "${{ matrix.branch }}" --field offline=false --field testing=true --field tag=$DOCKER_TAG
+      - name: Refuse to trigger install — tags diverged
+        if: steps.tagmap.outputs.has_divergence == 'true'
+        run: |
+          echo "::error::One or more services for branch ${{ matrix.branch }} were published under a fallback tag, not '${{ steps.tagmap.outputs.DOCKER_TAG }}'. The OCI install workflow expects one uniform tag for all services, so it cannot be triggered automatically here. Affected mapping:"
+          echo '${{ steps.tagmap.outputs.service_tags_json }}' | jq .
+          exit 1
+
+      - name: Trigger OCI install
+        if: steps.tagmap.outputs.has_divergence == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.TOKEN }}
+        run: |
+          gh workflow run "ci-oci-docker-install.yml" --repo "${{ github.repository }}" --ref "${{ matrix.branch }}" --field offline=false --field testing=true --field tag=${{ steps.tagmap.outputs.DOCKER_TAG }}
