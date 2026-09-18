@@ -131,7 +131,7 @@ while [ "$1" != "" ]; do
             echo 
             echo "${PRODUCT_NAME^^} OPTIONS:"
             echo "  --installapps       <true|false>        Install/update ${PRODUCT_NAME} (true to install/update)"
-            echo "  --deployment-mode   <standard|stack|community>  Deployment topology (default: standard)"
+            echo "  --deployment-mode   <standard|stack|community>  Deployment topology (default: community for Community edition, standard otherwise)"
             echo "  --appsversion       <version>           ${PRODUCT_NAME} version tag (e.g., 4.0.0)"
             echo "  --appshost          <hostname>          Hostname or IP for ${PRODUCT_NAME} (default: localhost)"
             echo "  --externalport      <port>              External port for ${PRODUCT_NAME} HTTP (default: 80)"
@@ -205,16 +205,21 @@ while [ "$1" != "" ]; do
     shift
 done
 
-DEPLOYMENT_MODE="${DEPLOYMENT_MODE:-standard}"
+case "${INSTALLATION_TYPE}" in
+    community | developer | enterprise ) ;;
+    * ) echo "Error: Invalid --installationtype '${INSTALLATION_TYPE}'. Valid values: community, developer, enterprise." >&2; exit 1 ;;
+esac
+
+# Community edition defaults to the single-container topology
+if [ "${INSTALLATION_TYPE}" = "community" ]; then
+    DEPLOYMENT_MODE="${DEPLOYMENT_MODE:-community}"
+else
+    DEPLOYMENT_MODE="${DEPLOYMENT_MODE:-standard}"
+fi
 
 case "${DEPLOYMENT_MODE}" in
     standard | stack | community ) ;;
     * ) echo "Error: Invalid --deployment-mode '${DEPLOYMENT_MODE}'. Valid values: standard, stack, community." >&2; exit 1 ;;
-esac
-
-case "${INSTALLATION_TYPE}" in
-    community | developer | enterprise ) ;;
-    * ) echo "Error: Invalid --installationtype '${INSTALLATION_TYPE}'. Valid values: community, developer, enterprise." >&2; exit 1 ;;
 esac
 
 validate_bool() {
