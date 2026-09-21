@@ -26,6 +26,7 @@ NODE_VERSION="${NODE_VERSION:-24}"
 JAVA_VERSION="${JAVA_VERSION:-25}"
 DOTNET_VERSION="${DOTNET_VERSION:-10.0}"
 OPENSEARCH_VERSION="${OPENSEARCH_VERSION:-3.5.0}"
+DOCUMENT_FORMATS_REF=$(git rev-parse HEAD:config/document-formats)
 
 PRODUCT_VERSION=$(grep -oP '\d+\.\d+\.\d+' <<< "${BRANCH_BUILDTOOLS//\//} ${BRANCH_CLIENT//\//} ${BRANCH_SERVER//\//}" | head -n1) || true
 PRODUCT_VERSION=${PRODUCT_VERSION:-4.0.0}
@@ -47,7 +48,7 @@ download  "$SOURCE_REPO-plugins"       "$PLUGINS_BRANCH"           plugins & PID
 download  "$SOURCE_REPO-mcp"           "$MCP_BRANCH"               mcp & PIDS+=($!)
 download  "$SOURCE_REPO-ui-kit-react"  "$BRANCH_CLIENT"            ui-kit & PIDS+=($!)
 download  "ASC.Web.Campaigns"          "master"                    campaigns & PIDS+=($!)
-download  "document-formats"           "master"                    document-formats & PIDS+=($!)
+download  "document-formats"           "$DOCUMENT_FORMATS_REF"     document-formats & PIDS+=($!)
 DOWNLOAD_STATUS=0
 for PID in "${PIDS[@]}"; do wait "$PID" || DOWNLOAD_STATUS=1; done
 [[ $DOWNLOAD_STATUS -eq 0 ]] || exit $DOWNLOAD_STATUS
