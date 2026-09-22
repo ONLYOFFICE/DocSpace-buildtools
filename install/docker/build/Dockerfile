@@ -64,7 +64,9 @@ EOF
 # END_SOURCE
 
 WORKDIR ${SRC_PATH}/buildtools/config
-RUN <<EOF
+# The secret is optional: debuginfo.py falls back to unauthenticated GitHub API
+# calls, which are rate-limited per IP but enough for one repository.
+RUN --mount=type=secret,id=github_token,env=GITHUB_TOKEN <<EOF
 #!/bin/bash
     mkdir -p /app/onlyoffice/config/ && \
     ls | grep -Ev 'test|\.dev\.|nginx' | xargs cp -r -t /app/onlyoffice/config/
