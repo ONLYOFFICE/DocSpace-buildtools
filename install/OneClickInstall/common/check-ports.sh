@@ -128,8 +128,10 @@ if [ "$UPDATE" != "true" ]; then
 		NGINX_DEFAULT_SITE_DISABLED="true"
 	fi
 	if [ "$NGINX_DEFAULT_SITE_DISABLED" = "true" ]; then
-		echo "Note: nginx default site disabled to free port 80."
+		echo "Note: nginx default site disabled to free port ${APP_PORT:-80}."
 		systemctl is-active --quiet nginx 2>/dev/null && { systemctl reload nginx 2>/dev/null || echo "Warning: failed to reload nginx after disabling its default site; check its status manually." >&2; }
+		# A graceful reload keeps the old listening socket open until the outgoing worker exits, so give it a moment instead of racing the port scan below.
+		timeout 5 bash -c "while ss -H -lnt | awk '{print \$4}' | grep -qE ':${APP_PORT:-80}\$'; do sleep 0.2; done" || true
 	fi
 
 	PRODUCT_PORTS=(
