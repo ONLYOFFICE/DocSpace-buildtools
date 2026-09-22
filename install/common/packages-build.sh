@@ -97,7 +97,6 @@ sed -e 's_etc/nginx_etc/openresty_g' \
     -i ${BUILDTOOLS_PATH}/config/nginx/*.conf ${BUILDTOOLS_PATH}/config/nginx/includes/*.conf
 sed -E 's_(http://)[^:]+(:5601)_\1localhost\2_g' -i ${BUILDTOOLS_PATH}/config/nginx/onlyoffice.conf
 sed -e 's/\$router_host/127.0.0.1/g' \
-    -e 's/this_host/http_host/g' \
     -e 's_includes_/etc/openresty/includes_g' \
     -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/proxy/onlyoffice-proxy*.conf
 sed -e '/.pid/d' \

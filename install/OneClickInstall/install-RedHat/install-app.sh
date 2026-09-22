@@ -84,6 +84,23 @@ MYSQL_SERVER_DB_NAME=${MYSQL_SERVER_DB_NAME:-"${package_sysname}"}
 MYSQL_SERVER_USER=${MYSQL_SERVER_USER:-"root"}
 MYSQL_SERVER_PORT=${MYSQL_SERVER_PORT:-3306}
 
+# The product reaches MySQL over TCP, so probe the same way instead of through the local socket
+MYSQL_PROBE_HOST=$([ "${MYSQL_SERVER_HOST}" = "localhost" ] && echo "127.0.0.1" || echo "${MYSQL_SERVER_HOST}")
+
+# Empty $1 means "try connecting without a password"
+mysql_root_connects() {
+	local MYSQL_ARGS=(--connect-expired-password -h "${MYSQL_PROBE_HOST}" -P "${MYSQL_SERVER_PORT}" -u "${MYSQL_SERVER_USER}")
+	[ -n "$1" ] && MYSQL_ARGS+=("-p$1")
+	mysql "${MYSQL_ARGS[@]}" -e ";" >/dev/null 2>&1
+}
+
+# A refused password still proves the server is up, unlike a refused connection
+mysql_responds() {
+	local PING_OUTPUT
+	PING_OUTPUT=$(mysqladmin -h "${MYSQL_PROBE_HOST}" -P "${MYSQL_SERVER_PORT}" -u "${MYSQL_SERVER_USER}" ping 2>&1) || true
+	[[ "${PING_OUTPUT}" == *"alive"* || "${PING_OUTPUT}" == *"Access denied"* ]]
+}
+
 if [ "${MYSQL_FIRST_TIME_INSTALL}" = "true" ]; then
 	MYSQL_TEMPORARY_ROOT_PASS=""
 
@@ -110,6 +127,32 @@ if [ "${MYSQL_FIRST_TIME_INSTALL}" = "true" ]; then
 		$MYSQL -e "UPDATE user SET plugin='${MYSQL_AUTHENTICATION_PLUGIN}', authentication_string=PASSWORD('${MYSQL_ROOT_PASS}') WHERE user='${MYSQL_SERVER_USER}' and host='localhost';"
 
 		systemctl restart mysqld
+	fi
+elif [ "$PRODUCT_INSTALLED" = "false" ]; then
+	# MySQL predates this run (an earlier failed attempt or the user's own server), so its root password was not set here
+	MYSQL_WAIT_DEADLINE=$((SECONDS + 60))
+	until mysql_responds; do
+		if [ "${SECONDS}" -ge "${MYSQL_WAIT_DEADLINE}" ]; then
+			echo "ERROR: MySQL is already installed but does not answer on ${MYSQL_PROBE_HOST}:${MYSQL_SERVER_PORT}." >&2
+			exit 1
+		fi
+		sleep 1
+	done
+
+	if [ -z "${MYSQL_ROOT_PASS}" ] || ! mysql_root_connects "${MYSQL_ROOT_PASS}"; then
+		# An earlier run of this installer derived the root password from MySQL's own temporary one
+		MYSQL_RECOVERED_PASS=$(grep "temporary password" /var/log/mysqld.log 2>/dev/null | tail -1 | rev | cut -d " " -f 1 | rev | sed -e 's/;/%/g' -e 's/=/%/g')
+
+		if mysql_root_connects ""; then
+			MYSQL_ROOT_PASS=""
+		elif [ -n "${MYSQL_RECOVERED_PASS}" ] && mysql_root_connects "${MYSQL_RECOVERED_PASS}"; then
+			MYSQL_ROOT_PASS="${MYSQL_RECOVERED_PASS}"
+		else
+			echo "ERROR: cannot connect to MySQL at ${MYSQL_PROBE_HOST}:${MYSQL_SERVER_PORT} as '${MYSQL_SERVER_USER}'." >&2
+			echo "Pass a working password in the MYSQL_ROOT_PASS environment variable, or remove MySQL and run the installer again." >&2
+			echo "Note: a '${MYSQL_SERVER_USER}' user authenticated by unix socket cannot be used, the product connects over TCP." >&2
+			exit 1
+		fi
 	fi
 fi
 

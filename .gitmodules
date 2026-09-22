@@ -1,3 +1,4 @@
 [submodule "config/document-formats"]
 	path = config/document-formats
 	url = https://github.com/ONLYOFFICE/document-formats
+	branch = release/v10.0.0

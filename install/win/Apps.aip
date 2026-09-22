@@ -85,6 +85,7 @@
     <ROW Property="SUBFOLDER_SERVER" Value="--core:products:subfolder=server"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND;AI_SETUPEXEPATH;SETUPEXEDIR"/>
     <ROW Property="ServiceName_AI" Value="Apps.AI"/>
+    <ROW Property="ServiceName_AI.Chat" Value="Apps.AI.Chat"/>
     <ROW Property="ServiceName_AI_Worker" Value="Apps.AI.Worker"/>
     <ROW Property="ServiceName_ApiSystemService" Value="Apps.ApiSystemService"/>
     <ROW Property="ServiceName_BackupWorker" Value="Apps.Data.Backup.Worker"/>
@@ -127,6 +128,10 @@
     <ROW Property="WindowsTypeNTDisplay" MultiBuildValue="DefaultBuild:32-bit Windows versions#ExeBuild:32-bit Windows versions#ExeBuild_1:32-bit Windows versions" ValueLocId="-"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiDirsComponent">
+    <ROW Directory="ASC.Management_Dir" Directory_Parent="products_Dir" DefaultDir="ASCMAN~1|ASC.Management" DirectoryOptions="15"/>
+    <ROW Directory="ASC.AI.Chat_Dir" Directory_Parent="services_Dir" DefaultDir="ASCAI~1.CHA|ASC.AI.Chat" DirectoryOptions="15"/>
+    <ROW Directory="ASC.Identity.Authorization_Dir" Directory_Parent="services_Dir" DefaultDir="ASCIDE~1.AUT|ASC.Identity.Authorization" DirectoryOptions="15"/>
+    <ROW Directory="ASC.Identity.Registration_Dir" Directory_Parent="services_Dir" DefaultDir="ASCIDE~1.REG|ASC.Identity.Registration" DirectoryOptions="15"/>
     <ROW Directory="APPDIR" Directory_Parent="TARGETDIR" DefaultDir="APPDIR:." IsPseudoRoot="1" DirectoryOptions="15"/>
     <ROW Directory="ASC.AI_Dir" Directory_Parent="products_Dir" DefaultDir="ASC.AI" DirectoryOptions="15"/>
     <ROW Directory="ASC.ApiSystem_Dir" Directory_Parent="services_Dir" DefaultDir="ASC~1.API|ASC.ApiSystem" DirectoryOptions="15"/>
@@ -201,6 +206,7 @@
     <ROW Directory="tools_Dir" Directory_Parent="APPDIR" DefaultDir="tools" DirectoryOptions="15"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
+    <ROW Component="AI.Chat.exe" ComponentId="{80A8DED6-7D1E-45A6-9E75-766F2C7262E6}" Directory_="tools_Dir" Attributes="0" KeyPath="AI.Chat.exe"/>
     <ROW Component="AI_CustomARPName" ComponentId="{5283455D-3786-42EC-9887-FCF453E2FBF9}" Directory_="APPDIR" Attributes="4" KeyPath="DisplayName" Options="1"/>
     <ROW Component="AI_DisableModify" ComponentId="{E036B14F-E2E4-4247-B9AB-55C1F6142BF9}" Directory_="APPDIR" Attributes="4" KeyPath="NoModify" Options="1"/>
     <ROW Component="AI_ExePath" ComponentId="{EDF666FF-8C56-4EB7-8255-67DA879A090C}" Directory_="APPDIR" Attributes="4" KeyPath="AI_ExePath"/>
@@ -327,9 +333,13 @@
     <ROW Feature="WebApi" Feature_Parent="DotnetServices" Title=".NET WebApi Service" Description="Feature contains .NET WebApi service" Display="7" Level="1" Directory_="APPDIR" Attributes="0"/>
     <ROW Feature="WebHealthChecksUI" Feature_Parent="DotnetServices" Title=".NET WebHealthChecksUI Service" Description="Feature contains .NET WebHealthChecksUI service" Display="33" Level="1" Directory_="APPDIR" Attributes="0"/>
     <ROW Feature="WebStudio" Feature_Parent="DotnetServices" Title=".NET WebStudio Service" Description="Feature contains .NET WebStudio service" Display="5" Level="1" Directory_="APPDIR" Attributes="0"/>
+    <ROW Feature="AI.Chat" Feature_Parent="NodeJSServices" Title="AI.Chat" Display="0" Level="1" Directory_="APPDIR" Attributes="0"/>
+    <ROW Feature="IdentityAuthorization" Feature_Parent="MainFeature" Title="IdentityAuthorization" Display="0" Level="1" Directory_="APPDIR" Attributes="0"/>
+    <ROW Feature="IdentityRegistration" Feature_Parent="MainFeature" Title="IdentityRegistration" Display="0" Level="1" Directory_="APPDIR" Attributes="0"/>
     <ATTRIBUTE name="CurrentFeature" value="MainFeature"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiFilesComponent">
+    <ROW File="AI.Chat.exe" Component_="AI.Chat.exe" FileName="AICHAT~1.EXE|AI.Chat.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\AI.Chat.exe" SelfReg="false"/>
     <ROW File="ASC.Files.exe" Component_="ASC.Files.exe" FileName="ASCFIL~1.EXE|ASC.Files.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\products\ASC.Files\server\ASC.Files.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.People.exe" Component_="ASC.People.exe" FileName="ASCPEO~1.EXE|ASC.People.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\products\ASC.People\server\ASC.People.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.ApiSystem.exe" Component_="ASC.ApiSystem.exe" FileName="ASCAPI~1.EXE|ASC.ApiSystem.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.ApiSystem\service\ASC.ApiSystem.exe" SelfReg="false" DigSign="true"/>
@@ -353,7 +363,7 @@
     <ROW File="Identity.Authorization.exe" Component_="Identity.Authorization.exe" FileName="IDENTI~1.EXE|Identity.Authorization.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\Identity.Authorization.exe" SelfReg="false" DigSign="true"/>
     <ROW File="Identity.Registration.exe" Component_="Identity.Registration.exe" FileName="IDENTI~3.EXE|Identity.Registration.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\Identity.Registration.exe" SelfReg="false" DigSign="true"/>
     <ROW File="Management.exe" Component_="Management.exe" FileName="MANAGE~1.EXE|Management.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\Tools\Management.exe" SelfReg="false" DigSign="true"/>
-    <ROW File="ASC.TelegramService.exe" Component_="ASC.TelegramService.exe" FileName="ASCTEL~1.EXE|ASC.TelegramService.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.ASC.TelegramService\service\ASC.TelegramService.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="ASC.TelegramService.exe" Component_="ASC.TelegramService.exe" FileName="ASCTEL~1.EXE|ASC.TelegramService.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.TelegramService\service\ASC.TelegramService.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.AI.exe" Component_="ASC.AI.exe" FileName="ASCAI~1.EXE|ASC.AI.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\products\ASC.AI\server\ASC.AI.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.AI.Worker.exe" Component_="ASC.AI.Worker.exe" FileName="ASCAIS~1.EXE|ASC.AI.Worker.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\products\ASC.AI\service\ASC.AI.Worker.exe" SelfReg="false" DigSign="true"/>
     <ROW File="MCP.exe" Component_="MCP.exe" FileName="MCP.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\MCP.exe" SelfReg="false"/>
@@ -365,9 +375,9 @@
     <ROW Action="AI_DetectSoftware" Sequence="151"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.BuildComponent">
-    <ROW BuildKey="DefaultBuild" BuildName="APPS_COMMUNITY" BuildOrder="1" BuildType="0" PackageFolder="publish" PackageFileName="[|PACKAGE_NAME]" Languages="en" InstallationType="4" CabsLocation="1" PackageType="1" FilesInsideExe="true" ExeIconPath="Resources\icon.ico" ExtractionFolder="[AppDataFolder][|INSTALL_ROOT_FOLDER_NAME]\Apps\install" ExtUI="true" Options="8" UseLargeSchema="true" Unicode="true" ExeName="[|PACKAGE_NAME]" UACExecutionLevel="2"/>
-    <ROW BuildKey="ExeBuild" BuildName="APPS_ENTERPRISE" BuildOrder="2" BuildType="0" PackageFolder="publish" PackageFileName="[|PACKAGE_NAME]" Languages="en" InstallationType="4" CabsLocation="1" PackageType="1" FilesInsideExe="true" ExeIconPath="Resources\icon.ico" ExtractionFolder="[AppDataFolder][|INSTALL_ROOT_FOLDER_NAME]\Apps\install" ExtUI="true" Options="8" UseLargeSchema="true" Unicode="true" ExeName="[|PACKAGE_NAME]" UACExecutionLevel="2"/>
-    <ROW BuildKey="ExeBuild_1" BuildName="APPS_DEVELOPER" BuildOrder="3" BuildType="0" PackageFolder="publish" PackageFileName="[|PACKAGE_NAME]" Languages="en" InstallationType="4" CabsLocation="1" PackageType="1" FilesInsideExe="true" ExeIconPath="Resources\icon.ico" ExtractionFolder="[AppDataFolder][|INSTALL_ROOT_FOLDER_NAME]\Apps\install" Options="8" UseLargeSchema="true" Unicode="true" ExeName="[|PACKAGE_NAME]" UACExecutionLevel="2"/>
+    <ROW BuildKey="DefaultBuild" BuildName="APPS_COMMUNITY" BuildOrder="1" BuildType="0" PackageFolder="publish" PackageFileName="[|PACKAGE_NAME]" Languages="en" InstallationType="3" CabsLocation="1" PackageType="1" FilesInsideExe="true" ExeIconPath="Resources\icon.ico" ExtractionFolder="[AppDataFolder][|INSTALL_ROOT_FOLDER_NAME]\Apps\install" ExtUI="true" Options="8" UseLargeSchema="true" Unicode="true" ExeName="[|PACKAGE_NAME]" UACExecutionLevel="2"/>
+    <ROW BuildKey="ExeBuild" BuildName="APPS_ENTERPRISE" BuildOrder="2" BuildType="0" PackageFolder="publish" PackageFileName="[|PACKAGE_NAME]" Languages="en" InstallationType="3" CabsLocation="1" PackageType="1" FilesInsideExe="true" ExeIconPath="Resources\icon.ico" ExtractionFolder="[AppDataFolder][|INSTALL_ROOT_FOLDER_NAME]\Apps\install" ExtUI="true" Options="8" UseLargeSchema="true" Unicode="true" ExeName="[|PACKAGE_NAME]" UACExecutionLevel="2"/>
+    <ROW BuildKey="ExeBuild_1" BuildName="APPS_DEVELOPER" BuildOrder="3" BuildType="0" PackageFolder="publish" PackageFileName="[|PACKAGE_NAME]" Languages="en" InstallationType="3" CabsLocation="1" PackageType="1" FilesInsideExe="true" ExeIconPath="Resources\icon.ico" ExtractionFolder="[AppDataFolder][|INSTALL_ROOT_FOLDER_NAME]\Apps\install" Options="8" UseLargeSchema="true" Unicode="true" ExeName="[|PACKAGE_NAME]" UACExecutionLevel="2"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.DictionaryComponent">
     <ROW Path="&lt;AI_DICTS&gt;ui.ail"/>
@@ -1252,6 +1262,7 @@
     <ROW Feature_="Telegram" Component_="ASC.TelegramService.exe"/>
     <ROW Feature_="AI" Component_="ASC.AI.exe"/>
     <ROW Feature_="AI" Component_="ASC.AI.Worker.exe"/>
+    <ROW Feature_="AI.Chat" Component_="AI.Chat.exe"/>
     <ROW Feature_="MCP" Component_="MCP.exe"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
@@ -1508,6 +1519,7 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiServConfigComponent">
     <ROW MsiServiceConfig="ServiceName_AI" Name="[ServiceName_AI]" Event="1" ConfigType="3" Argument="1" Component_="ASC.AI.exe"/>
+    <ROW MsiServiceConfig="ServiceName_AI.Chat" Name="[ServiceName_AI.Chat]" Event="1" ConfigType="3" Argument="1" Component_="AI.Chat.exe"/>
     <ROW MsiServiceConfig="ServiceName_AI_Worker" Name="[ServiceName_AI_Worker]" Event="1" ConfigType="3" Argument="1" Component_="ASC.AI.Worker.exe"/>
     <ROW MsiServiceConfig="ServiceName_ApiSystemService" Name="[ServiceName_ApiSystemService]" Event="1" ConfigType="3" Argument="1" Component_="ASC.ApiSystem.exe"/>
     <ROW MsiServiceConfig="ServiceName_BackupWorker" Name="[ServiceName_BackupWorker]" Event="1" ConfigType="3" Argument="1" Component_="ASC.Data.Backup.Worker.exe"/>
@@ -1534,6 +1546,7 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiServConfigFailureActionsComponent">
     <ROW MsiServiceConfigFailureActions="ServiceName_AI" Name="[ServiceName_AI]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.AI.exe"/>
+    <ROW MsiServiceConfigFailureActions="ServiceName_AI.Chat" Name="[ServiceName_AI.Chat]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="AI.Chat.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_AI_Worker" Name="[ServiceName_AI_Worker]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.AI.Worker.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_ApiSystemService" Name="[ServiceName_ApiSystemService]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.ApiSystem.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_BackupWorker" Name="[ServiceName_BackupWorker]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.Data.Backup.Worker.exe"/>
@@ -1560,6 +1573,7 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiServCtrlComponent">
     <ROW ServiceControl="ServiceName_AI" Name="[ServiceName_AI]" Event="161" Wait="0" Component_="ASC.AI.exe"/>
+    <ROW ServiceControl="ServiceName_AI.Chat" Name="[ServiceName_AI.Chat]" Event="161" Wait="0" Component_="AI.Chat.exe"/>
     <ROW ServiceControl="ServiceName_AI_Worker" Name="[ServiceName_AI_Worker]" Event="161" Wait="0" Component_="ASC.AI.Worker.exe"/>
     <ROW ServiceControl="ServiceName_ApiSystemService" Name="[ServiceName_ApiSystemService]" Event="161" Wait="0" Component_="ASC.ApiSystem.exe"/>
     <ROW ServiceControl="ServiceName_BackupWorker" Name="[ServiceName_BackupWorker]" Event="161" Wait="0" Component_="ASC.Data.Backup.Worker.exe"/>
@@ -1586,6 +1600,7 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiServInstComponent">
     <ROW ServiceInstall="ServiceName_AI" Name="[ServiceName_AI]" DisplayName="[ShortProductName] AI" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5157 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_AI] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER]" Component_="ASC.AI.exe" Description="[ShortProductName] AI"/>
+    <ROW ServiceInstall="ServiceName_AI.Chat" Name="[ServiceName_AI.Chat]" DisplayName="[ShortProductName] AI.Chat" ServiceType="16" StartType="2" ErrorControl="1" Component_="AI.Chat.exe" Description="[ShortProductName] AI.Chat"/>
     <ROW ServiceInstall="ServiceName_AI_Worker" Name="[ServiceName_AI_Worker]" DisplayName="[ShortProductName] AI.Worker" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5124 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_AI_Worker] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER] --core:eventBus:subscriptionClientName=asc_event_bus_ai_service_queue" Component_="ASC.AI.Worker.exe" Description="[ShortProductName] AI.Worker"/>
     <ROW ServiceInstall="ServiceName_ApiSystemService" Name="[ServiceName_ApiSystemService]" DisplayName="[ShortProductName] ApiSystem" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5010 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_ApiSystemService] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER]" Component_="ASC.ApiSystem.exe" Description="[ShortProductName] ApiSystem"/>
     <ROW ServiceInstall="ServiceName_BackupWorker" Name="[ServiceName_BackupWorker]" DisplayName="[ShortProductName] Data.Backup.Worker" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5032 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_BackupWorker] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER] --core:eventBus:subscriptionClientName=asc_event_bus_backup_queue" Component_="ASC.Data.Backup.Worker.exe" Description="[ShortProductName] Data.Backup.Worker"/>
@@ -1685,7 +1700,31 @@
     <ATTRIBUTE name="ImpersonateUser" value="true"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.SynchronizedFolderComponent">
-    <ROW Directory_="APPDIR" SourcePath="Files" Feature="MainFeature" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="APPDIR" SourcePath="Files" Feature="MainFeature" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store|products|services" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="editor_Dir" SourcePath="Files\products\ASC.Files\editor" Feature="DocEditor" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="server_2_Dir" SourcePath="Files\products\ASC.Files\server" Feature="File" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.AI_Dir" SourcePath="Files\products\ASC.AI" Feature="AI" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Login_Dir" SourcePath="Files\products\ASC.Login" Feature="Login" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Management_Dir" SourcePath="Files\products\ASC.Management" Feature="Management" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.People_Dir" SourcePath="Files\products\ASC.People" Feature="People" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Sdk_Dir" SourcePath="Files\products\ASC.Sdk" Feature="Sdk" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.ApiSystem_Dir" SourcePath="Files\services\ASC.ApiSystem" Feature="ApiSystem" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.ClearEvents_Dir" SourcePath="Files\services\ASC.ClearEvents" Feature="ClearEvents" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Data.Backup_Dir" SourcePath="Files\services\ASC.Data.Backup" Feature="DataBackup" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Data.Backup.Worker_Dir" SourcePath="Files\services\ASC.Data.Backup.Worker" Feature="BackupWorker" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Files.Worker_Dir" SourcePath="Files\services\ASC.Files.Worker" Feature="Files" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Identity.Authorization_Dir" SourcePath="Files\services\ASC.Identity.Authorization" Feature="IdentityAuthorization" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Identity.Registration_Dir" SourcePath="Files\services\ASC.Identity.Registration" Feature="IdentityRegistration" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Migration.Runner_Dir" SourcePath="Files\services\ASC.Migration.Runner" Feature="MigrationRunner" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.AI.Chat_Dir" SourcePath="Files\services\ASC.AI.Chat" Feature="AI.Chat" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Notify_Dir" SourcePath="Files\services\ASC.Notify" Feature="Notify" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Socket.IO_Dir" SourcePath="Files\services\ASC.Socket.IO" Feature="SocketIO" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.SsoAuth_Dir" SourcePath="Files\services\ASC.SsoAuth" Feature="SsoAuth" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Studio.Notify_Dir" SourcePath="Files\services\ASC.Studio.Notify" Feature="StudioNotify" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.TelegramService" SourcePath="Files\services\ASC.TelegramService" Feature="Telegram" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Web.Api_Dir" SourcePath="Files\services\ASC.Web.Api" Feature="WebApi" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Web.HealthChecks.UI_Dir" SourcePath="Files\services\ASC.Web.HealthChecks.UI" Feature="WebHealthChecksUI" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Web.Studio_Dir" SourcePath="Files\services\ASC.Web.Studio" Feature="WebStudio" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.TxtUpdateComponent">
     <ROW Name="ReplaceAppDir" TxtUpdateSet="xml" FindPattern="{APPDIR}" ReplacePattern="[APPDIR]" Options="2" Order="0" FileEncoding="-1"/>

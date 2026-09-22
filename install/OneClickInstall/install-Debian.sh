@@ -115,9 +115,14 @@ validate_bool --installfluentbit "$INSTALL_FLUENT_BIT"
 [ -n "$UNINSTALL" ] && validate_bool --uninstall "$UNINSTALL"
 [ -n "$DS_JWT_ENABLED" ] && validate_bool --jwtenabled "$DS_JWT_ENABLED"
 
-# Pause apt auto-updates and running jobs to avoid dpkg lock contention; timers are restarted by the EXIT trap.
+# Pause apt auto-updates and running jobs to avoid dpkg lock contention; only timers that were
+# actually active get restarted by the EXIT trap, so a host with auto-updates disabled stays that way.
+APT_TIMERS_TO_RESTORE=()
+for _apt_timer in apt-daily.timer apt-daily-upgrade.timer; do
+    systemctl is-active --quiet "${_apt_timer}" && APT_TIMERS_TO_RESTORE+=("${_apt_timer}")
+done
 systemctl stop apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service unattended-upgrades.service >/dev/null 2>&1 || true
-trap 'systemctl start apt-daily.timer apt-daily-upgrade.timer >/dev/null 2>&1 || true' EXIT
+trap '[ ${#APT_TIMERS_TO_RESTORE[@]} -eq 0 ] || systemctl start "${APT_TIMERS_TO_RESTORE[@]}" >/dev/null 2>&1 || true' EXIT
 
 if fuser /var/lib/dpkg/lock-frontend &>/dev/null; then
   echo "Waiting for /var/lib/dpkg/lock-frontend to be released (up to 60 seconds)..."

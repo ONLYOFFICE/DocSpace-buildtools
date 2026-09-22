@@ -49,27 +49,25 @@ EOF
 PRODUCT_INSTALLED="false"
 DOCUMENT_SERVER_INSTALLED="false"
 
-for PACKAGE_NAME in "${package}" "${legacy_product}"; do
+package_installed() {
 	if command -v dpkg-query >/dev/null 2>&1; then
-		[ "$(dpkg-query -W -f='${db:Status-Status}' "${PACKAGE_NAME}" 2>/dev/null)" = "installed" ] || continue
+		[ "$(dpkg-query -W -f='${db:Status-Status}' "$1" 2>/dev/null)" = "installed" ]
 	elif command -v rpm >/dev/null 2>&1; then
-		rpm -q "${PACKAGE_NAME}" >/dev/null 2>&1 || continue
+		rpm -q "$1" >/dev/null 2>&1
 	else
-		continue
+		return 1
 	fi
+}
+
+for PACKAGE_NAME in "${package}" "${legacy_product}"; do
+	package_installed "${PACKAGE_NAME}" || continue
 	echo "${PACKAGE_NAME} $RES_APP_INSTALLED"
 	PRODUCT_INSTALLED="true"
 done
 
 for DS_SUFFIX in "" "-de" "-ee"; do
 	PACKAGE_NAME="${package_sysname}-documentserver${DS_SUFFIX}"
-	if command -v dpkg-query >/dev/null 2>&1; then
-		[ "$(dpkg-query -W -f='${db:Status-Status}' "${PACKAGE_NAME}" 2>/dev/null)" = "installed" ] || continue
-	elif command -v rpm >/dev/null 2>&1; then
-		rpm -q "${PACKAGE_NAME}" >/dev/null 2>&1 || continue
-	else
-		continue
-	fi
+	package_installed "${PACKAGE_NAME}" || continue
 	DS_INSTALLED_PKG_NAME="${PACKAGE_NAME}"
 	echo "${DS_INSTALLED_PKG_NAME} $RES_APP_INSTALLED"
 	DOCUMENT_SERVER_INSTALLED="true"
@@ -113,25 +111,63 @@ if [ "$UPDATE" != "true" ]; then
 		fi
 	fi
 
+	# A previous interrupted run may have left nginx's stock default site enabled on port 80, before install-app.sh's own cleanup for it ever ran.
+	NGINX_DEFAULT_SITE_DISABLED="false"
+	if [ -e /etc/nginx/sites-enabled/default ]; then
+		mv -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default.disabled
+		NGINX_DEFAULT_SITE_DISABLED="true"
+	fi
+	if [ -f /etc/nginx/nginx.conf ] && grep -q "server {" /etc/nginx/nginx.conf; then
+		[ -f /etc/nginx/nginx.conf.bak ] || cp -f /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
+		awk '/^[[:space:]]*server[[:space:]]*\{/&&!done{done=1;d=1;next}d{d+=gsub(/\{/,"{")-gsub(/\}/,"}");if(d<=0)d=0;next}1' \
+			/etc/nginx/nginx.conf > /etc/nginx/nginx.conf.tmp && mv -f /etc/nginx/nginx.conf.tmp /etc/nginx/nginx.conf
+		NGINX_DEFAULT_SITE_DISABLED="true"
+	fi
+	if [ -e /etc/nginx/conf.d/default.conf ]; then
+		mv -f /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf.disabled
+		NGINX_DEFAULT_SITE_DISABLED="true"
+	fi
+	if [ "$NGINX_DEFAULT_SITE_DISABLED" = "true" ]; then
+		echo "Note: nginx default site disabled to free port ${APP_PORT:-80}."
+		systemctl is-active --quiet nginx 2>/dev/null && { systemctl reload nginx 2>/dev/null || echo "Warning: failed to reload nginx after disabling its default site; check its status manually." >&2; }
+		# A graceful reload keeps the old listening socket open until the outgoing worker exits, so give it a moment instead of racing the port scan below.
+		timeout 5 bash -c "while ss -H -lnt | awk '{print \$4}' | grep -qE ':${APP_PORT:-80}\$'; do sleep 0.2; done" || true
+	fi
+
 	PRODUCT_PORTS=(
 		"${APP_PORT:-80}" 5000 5001 5003 5004 5005 5006 5007 5009 5010 5011 5012 5013 5014 5015
 		5027 5032 5033 5034 5075 5099 5100 5124 5157 5158
 		8080 8081 8092 9090 9834 9899
 	)
 
-	DEPENDENCY_PORTS=(
-		"${MYSQL_SERVER_PORT:-3306}"
-		"${ELK_PORT:-9200}"
-	)
+	# A dependency that is already installed gets reused instead of installed anew, so its port is expected to be busy.
+	DEPENDENCY_PORTS=()
+	add_dependency_port() {
+		local PORT="$1" PACKAGE_NAME
+		shift
+		for PACKAGE_NAME in "$@"; do
+			if package_installed "${PACKAGE_NAME}"; then
+				echo "${PACKAGE_NAME} $RES_APP_INSTALLED"
+				return 0
+			fi
+		done
+		DEPENDENCY_PORTS+=("${PORT}")
+	}
+
+	add_dependency_port "${MYSQL_SERVER_PORT:-3306}" mysql-server mysql-community-server
+	add_dependency_port "${ELK_PORT:-9200}" opensearch
 
 	if [ "$DOCUMENT_SERVER_INSTALLED" != "true" ]; then
-		DEPENDENCY_PORTS+=(
-			"${DS_PORT:-8083}" 8000 5432
-			"${RABBITMQ_PORT:-5672}" "${REDIS_PORT:-6379}"
-		)
+		DEPENDENCY_PORTS+=("${DS_PORT:-8083}" 8000)
+		# On Debian the server metapackage is postgresql, on RPM distros postgresql is the client alone
+		add_dependency_port 5432 "$(command -v dpkg-query >/dev/null 2>&1 && echo postgresql || echo postgresql-server)"
+		add_dependency_port "${RABBITMQ_PORT:-5672}" rabbitmq-server
+		add_dependency_port "${REDIS_PORT:-6379}" redis-server "${REDIS_PACKAGE:-redis}"
 	fi
 
-	[ "${INSTALL_FLUENT_BIT}" = "true" ] && DEPENDENCY_PORTS+=(5601)
+	if [ "${INSTALL_FLUENT_BIT}" = "true" ]; then
+		add_dependency_port 5601 opensearch-dashboards
+	fi
 
 	USED_PORTS=""
 	for PORT in $(printf "%s\n" "${PRODUCT_PORTS[@]}" "${DEPENDENCY_PORTS[@]}" | sort -n -u); do
