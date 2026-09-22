@@ -85,6 +85,7 @@
     <ROW Property="SUBFOLDER_SERVER" Value="--core:products:subfolder=server"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND;AI_SETUPEXEPATH;SETUPEXEDIR"/>
     <ROW Property="ServiceName_AI" Value="Apps.AI"/>
+    <ROW Property="ServiceName_AI.Chat" Value="Apps.AI.Chat"/>
     <ROW Property="ServiceName_AI_Worker" Value="Apps.AI.Worker"/>
     <ROW Property="ServiceName_ApiSystemService" Value="Apps.ApiSystemService"/>
     <ROW Property="ServiceName_BackupWorker" Value="Apps.Data.Backup.Worker"/>
@@ -205,6 +206,7 @@
     <ROW Directory="tools_Dir" Directory_Parent="APPDIR" DefaultDir="tools" DirectoryOptions="15"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
+    <ROW Component="AI.Chat.exe" ComponentId="{80A8DED6-7D1E-45A6-9E75-766F2C7262E6}" Directory_="tools_Dir" Attributes="0" KeyPath="AI.Chat.exe"/>
     <ROW Component="AI_CustomARPName" ComponentId="{5283455D-3786-42EC-9887-FCF453E2FBF9}" Directory_="APPDIR" Attributes="4" KeyPath="DisplayName" Options="1"/>
     <ROW Component="AI_DisableModify" ComponentId="{E036B14F-E2E4-4247-B9AB-55C1F6142BF9}" Directory_="APPDIR" Attributes="4" KeyPath="NoModify" Options="1"/>
     <ROW Component="AI_ExePath" ComponentId="{EDF666FF-8C56-4EB7-8255-67DA879A090C}" Directory_="APPDIR" Attributes="4" KeyPath="AI_ExePath"/>
@@ -337,6 +339,7 @@
     <ATTRIBUTE name="CurrentFeature" value="MainFeature"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiFilesComponent">
+    <ROW File="AI.Chat.exe" Component_="AI.Chat.exe" FileName="AICHAT~1.EXE|AI.Chat.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\AI.Chat.exe" SelfReg="false"/>
     <ROW File="ASC.Files.exe" Component_="ASC.Files.exe" FileName="ASCFIL~1.EXE|ASC.Files.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\products\ASC.Files\server\ASC.Files.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.People.exe" Component_="ASC.People.exe" FileName="ASCPEO~1.EXE|ASC.People.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\products\ASC.People\server\ASC.People.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.ApiSystem.exe" Component_="ASC.ApiSystem.exe" FileName="ASCAPI~1.EXE|ASC.ApiSystem.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.ApiSystem\service\ASC.ApiSystem.exe" SelfReg="false" DigSign="true"/>
@@ -1259,6 +1262,7 @@
     <ROW Feature_="Telegram" Component_="ASC.TelegramService.exe"/>
     <ROW Feature_="AI" Component_="ASC.AI.exe"/>
     <ROW Feature_="AI" Component_="ASC.AI.Worker.exe"/>
+    <ROW Feature_="AI.Chat" Component_="AI.Chat.exe"/>
     <ROW Feature_="MCP" Component_="MCP.exe"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
@@ -1515,6 +1519,7 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiServConfigComponent">
     <ROW MsiServiceConfig="ServiceName_AI" Name="[ServiceName_AI]" Event="1" ConfigType="3" Argument="1" Component_="ASC.AI.exe"/>
+    <ROW MsiServiceConfig="ServiceName_AI.Chat" Name="[ServiceName_AI.Chat]" Event="1" ConfigType="3" Argument="1" Component_="AI.Chat.exe"/>
     <ROW MsiServiceConfig="ServiceName_AI_Worker" Name="[ServiceName_AI_Worker]" Event="1" ConfigType="3" Argument="1" Component_="ASC.AI.Worker.exe"/>
     <ROW MsiServiceConfig="ServiceName_ApiSystemService" Name="[ServiceName_ApiSystemService]" Event="1" ConfigType="3" Argument="1" Component_="ASC.ApiSystem.exe"/>
     <ROW MsiServiceConfig="ServiceName_BackupWorker" Name="[ServiceName_BackupWorker]" Event="1" ConfigType="3" Argument="1" Component_="ASC.Data.Backup.Worker.exe"/>
@@ -1541,6 +1546,7 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiServConfigFailureActionsComponent">
     <ROW MsiServiceConfigFailureActions="ServiceName_AI" Name="[ServiceName_AI]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.AI.exe"/>
+    <ROW MsiServiceConfigFailureActions="ServiceName_AI.Chat" Name="[ServiceName_AI.Chat]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="AI.Chat.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_AI_Worker" Name="[ServiceName_AI_Worker]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.AI.Worker.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_ApiSystemService" Name="[ServiceName_ApiSystemService]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.ApiSystem.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_BackupWorker" Name="[ServiceName_BackupWorker]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.Data.Backup.Worker.exe"/>
@@ -1567,6 +1573,7 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiServCtrlComponent">
     <ROW ServiceControl="ServiceName_AI" Name="[ServiceName_AI]" Event="161" Wait="0" Component_="ASC.AI.exe"/>
+    <ROW ServiceControl="ServiceName_AI.Chat" Name="[ServiceName_AI.Chat]" Event="161" Wait="0" Component_="AI.Chat.exe"/>
     <ROW ServiceControl="ServiceName_AI_Worker" Name="[ServiceName_AI_Worker]" Event="161" Wait="0" Component_="ASC.AI.Worker.exe"/>
     <ROW ServiceControl="ServiceName_ApiSystemService" Name="[ServiceName_ApiSystemService]" Event="161" Wait="0" Component_="ASC.ApiSystem.exe"/>
     <ROW ServiceControl="ServiceName_BackupWorker" Name="[ServiceName_BackupWorker]" Event="161" Wait="0" Component_="ASC.Data.Backup.Worker.exe"/>
@@ -1593,6 +1600,7 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiServInstComponent">
     <ROW ServiceInstall="ServiceName_AI" Name="[ServiceName_AI]" DisplayName="[ShortProductName] AI" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5157 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_AI] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER]" Component_="ASC.AI.exe" Description="[ShortProductName] AI"/>
+    <ROW ServiceInstall="ServiceName_AI.Chat" Name="[ServiceName_AI.Chat]" DisplayName="[ShortProductName] AI.Chat" ServiceType="16" StartType="2" ErrorControl="1" Component_="AI.Chat.exe" Description="[ShortProductName] AI.Chat"/>
     <ROW ServiceInstall="ServiceName_AI_Worker" Name="[ServiceName_AI_Worker]" DisplayName="[ShortProductName] AI.Worker" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5124 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_AI_Worker] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER] --core:eventBus:subscriptionClientName=asc_event_bus_ai_service_queue" Component_="ASC.AI.Worker.exe" Description="[ShortProductName] AI.Worker"/>
     <ROW ServiceInstall="ServiceName_ApiSystemService" Name="[ServiceName_ApiSystemService]" DisplayName="[ShortProductName] ApiSystem" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5010 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_ApiSystemService] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER]" Component_="ASC.ApiSystem.exe" Description="[ShortProductName] ApiSystem"/>
     <ROW ServiceInstall="ServiceName_BackupWorker" Name="[ServiceName_BackupWorker]" DisplayName="[ShortProductName] Data.Backup.Worker" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5032 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_BackupWorker] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER] --core:eventBus:subscriptionClientName=asc_event_bus_backup_queue" Component_="ASC.Data.Backup.Worker.exe" Description="[ShortProductName] Data.Backup.Worker"/>
