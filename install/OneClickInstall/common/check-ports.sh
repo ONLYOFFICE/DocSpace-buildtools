@@ -111,6 +111,27 @@ if [ "$UPDATE" != "true" ]; then
 		fi
 	fi
 
+	# A previous interrupted run may have left nginx's stock default site enabled on port 80, before install-app.sh's own cleanup for it ever ran.
+	NGINX_DEFAULT_SITE_DISABLED="false"
+	if [ -e /etc/nginx/sites-enabled/default ]; then
+		mv -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default.disabled
+		NGINX_DEFAULT_SITE_DISABLED="true"
+	fi
+	if [ -f /etc/nginx/nginx.conf ] && grep -q "server {" /etc/nginx/nginx.conf; then
+		[ -f /etc/nginx/nginx.conf.bak ] || cp -f /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
+		awk '/^[[:space:]]*server[[:space:]]*\{/&&!done{done=1;d=1;next}d{d+=gsub(/\{/,"{")-gsub(/\}/,"}");if(d<=0)d=0;next}1' \
+			/etc/nginx/nginx.conf > /etc/nginx/nginx.conf.tmp && mv -f /etc/nginx/nginx.conf.tmp /etc/nginx/nginx.conf
+		NGINX_DEFAULT_SITE_DISABLED="true"
+	fi
+	if [ -e /etc/nginx/conf.d/default.conf ]; then
+		mv -f /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf.disabled
+		NGINX_DEFAULT_SITE_DISABLED="true"
+	fi
+	if [ "$NGINX_DEFAULT_SITE_DISABLED" = "true" ]; then
+		echo "Note: nginx default site disabled to free port 80."
+		systemctl is-active --quiet nginx 2>/dev/null && { systemctl reload nginx 2>/dev/null || echo "Warning: failed to reload nginx after disabling its default site; check its status manually." >&2; }
+	fi
+
 	PRODUCT_PORTS=(
 		"${APP_PORT:-80}" 5000 5001 5003 5004 5005 5006 5007 5009 5010 5011 5012 5013 5014 5015
 		5027 5032 5033 5034 5075 5099 5100 5124 5157 5158
