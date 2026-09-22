@@ -49,27 +49,25 @@ EOF
 PRODUCT_INSTALLED="false"
 DOCUMENT_SERVER_INSTALLED="false"
 
-for PACKAGE_NAME in "${package}" "${legacy_product}"; do
+package_installed() {
 	if command -v dpkg-query >/dev/null 2>&1; then
-		[ "$(dpkg-query -W -f='${db:Status-Status}' "${PACKAGE_NAME}" 2>/dev/null)" = "installed" ] || continue
+		[ "$(dpkg-query -W -f='${db:Status-Status}' "$1" 2>/dev/null)" = "installed" ]
 	elif command -v rpm >/dev/null 2>&1; then
-		rpm -q "${PACKAGE_NAME}" >/dev/null 2>&1 || continue
+		rpm -q "$1" >/dev/null 2>&1
 	else
-		continue
+		return 1
 	fi
+}
+
+for PACKAGE_NAME in "${package}" "${legacy_product}"; do
+	package_installed "${PACKAGE_NAME}" || continue
 	echo "${PACKAGE_NAME} $RES_APP_INSTALLED"
 	PRODUCT_INSTALLED="true"
 done
 
 for DS_SUFFIX in "" "-de" "-ee"; do
 	PACKAGE_NAME="${package_sysname}-documentserver${DS_SUFFIX}"
-	if command -v dpkg-query >/dev/null 2>&1; then
-		[ "$(dpkg-query -W -f='${db:Status-Status}' "${PACKAGE_NAME}" 2>/dev/null)" = "installed" ] || continue
-	elif command -v rpm >/dev/null 2>&1; then
-		rpm -q "${PACKAGE_NAME}" >/dev/null 2>&1 || continue
-	else
-		continue
-	fi
+	package_installed "${PACKAGE_NAME}" || continue
 	DS_INSTALLED_PKG_NAME="${PACKAGE_NAME}"
 	echo "${DS_INSTALLED_PKG_NAME} $RES_APP_INSTALLED"
 	DOCUMENT_SERVER_INSTALLED="true"
@@ -119,19 +117,34 @@ if [ "$UPDATE" != "true" ]; then
 		8080 8081 8092 9090 9834 9899
 	)
 
-	DEPENDENCY_PORTS=(
-		"${MYSQL_SERVER_PORT:-3306}"
-		"${ELK_PORT:-9200}"
-	)
+	# A dependency that is already installed gets reused instead of installed anew, so its port is expected to be busy.
+	DEPENDENCY_PORTS=()
+	add_dependency_port() {
+		local PORT="$1" PACKAGE_NAME
+		shift
+		for PACKAGE_NAME in "$@"; do
+			if package_installed "${PACKAGE_NAME}"; then
+				echo "${PACKAGE_NAME} $RES_APP_INSTALLED"
+				return 0
+			fi
+		done
+		DEPENDENCY_PORTS+=("${PORT}")
+	}
+
+	add_dependency_port "${MYSQL_SERVER_PORT:-3306}" mysql-server mysql-community-server
+	add_dependency_port "${ELK_PORT:-9200}" opensearch
 
 	if [ "$DOCUMENT_SERVER_INSTALLED" != "true" ]; then
-		DEPENDENCY_PORTS+=(
-			"${DS_PORT:-8083}" 8000 5432
-			"${RABBITMQ_PORT:-5672}" "${REDIS_PORT:-6379}"
-		)
+		DEPENDENCY_PORTS+=("${DS_PORT:-8083}" 8000)
+		# On Debian the server metapackage is postgresql, on RPM distros postgresql is the client alone
+		add_dependency_port 5432 "$(command -v dpkg-query >/dev/null 2>&1 && echo postgresql || echo postgresql-server)"
+		add_dependency_port "${RABBITMQ_PORT:-5672}" rabbitmq-server
+		add_dependency_port "${REDIS_PORT:-6379}" redis-server "${REDIS_PACKAGE:-redis}"
 	fi
 
-	[ "${INSTALL_FLUENT_BIT}" = "true" ] && DEPENDENCY_PORTS+=(5601)
+	if [ "${INSTALL_FLUENT_BIT}" = "true" ]; then
+		add_dependency_port 5601 opensearch-dashboards
+	fi
 
 	USED_PORTS=""
 	for PORT in $(printf "%s\n" "${PRODUCT_PORTS[@]}" "${DEPENDENCY_PORTS[@]}" | sort -n -u); do
