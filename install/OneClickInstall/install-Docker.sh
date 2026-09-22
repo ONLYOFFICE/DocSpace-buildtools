@@ -604,7 +604,7 @@ detect_existing_document_server () {
 		[ -n "$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' "${CANDIDATE}" 2>/dev/null)" ] && continue
 		CONTAINER="${CANDIDATE}"
 		break
-	done < <(docker ps -a --format '{{.Names}} {{.Image}}' 2>/dev/null | awk -v pkg="${PACKAGE_SYSNAME}" '$2 ~ ("(^|/)"pkg"/documentserver(-de|-ee)?(:|$)") {print}')
+	done < <(docker ps -a --format '{{.Names}} {{.Image}}' 2>/dev/null | awk -v pkg="${PACKAGE_SYSNAME}" -v status="${STATUS}" '$2 ~ ("(^|/)"pkg"/"status"documentserver(-de|-ee)?(:|$)") {print}')
 	[ -z "${CONTAINER}" ] && return 0
 
 	echo "Found an existing Document Server container (${CONTAINER}); attaching it instead of deploying a new one."
