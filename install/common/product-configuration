@@ -695,7 +695,12 @@ if command -v yum >/dev/null 2>&1; then
 	${PACKAGE_MANAGER} valkey &>/dev/null && REDIS_PACKAGE="valkey" || true
 elif command -v apt >/dev/null 2>&1; then
 	DIST="Debian"
-	PACKAGE_MANAGER="dpkg -s"
+	# plain `dpkg -s` still succeeds for a package that was removed but not purged (its config
+	# files remain), so every ${PACKAGE_MANAGER} check needs the actual package status instead
+	pkg_installed() {
+		dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q "^install ok installed"
+	}
+	PACKAGE_MANAGER="pkg_installed"
 	MYSQL_PACKAGE="mysql"
 	REDIS_PACKAGE="redis-server"
 fi
