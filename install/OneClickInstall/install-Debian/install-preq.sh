@@ -96,12 +96,13 @@ fi
 
 MYSQL_REPO_VERSION="$(curl -fsSL https://dev.mysql.com/downloads/repo/apt/ | grep -oP '(?<=mysql-apt-config_)[0-9.]+-[0-9]+(?=_all\.deb)' | head -n1)"
 MYSQL_PACKAGE_NAME="mysql-apt-config_${MYSQL_REPO_VERSION}_all.deb"
-if ! dpkg -l | grep -q "mysql-server"; then
+MYSQL_SERVER_HOST=${MYSQL_SERVER_HOST:-"localhost"}
+MYSQL_SERVER_PORT=${MYSQL_SERVER_PORT:-"3306"}
+MYSQL_SERVER_DB_NAME=${MYSQL_SERVER_DB_NAME:-"${package_sysname}"}
+MYSQL_SERVER_USER=${MYSQL_SERVER_USER:-"root"}
 
-	MYSQL_SERVER_HOST=${MYSQL_SERVER_HOST:-"localhost"}
-	MYSQL_SERVER_PORT=${MYSQL_SERVER_PORT:-"3306"}
-	MYSQL_SERVER_DB_NAME=${MYSQL_SERVER_DB_NAME:-"${package_sysname}"}
-	MYSQL_SERVER_USER=${MYSQL_SERVER_USER:-"root"}
+if ! dpkg -l | grep -q "mysql-server"; then
+	MYSQL_FIRST_TIME_INSTALL="true"
 	MYSQL_SERVER_PASS=${MYSQL_SERVER_PASS:-"$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)"}
 
 	# setup mysql 8.4 package
