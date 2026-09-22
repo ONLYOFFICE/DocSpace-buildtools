@@ -94,17 +94,20 @@ sudo bash <script-name> package -h
 | Flag                    | Value placeholder                         | Default value             | Description                    |
 |-------------------------|-------------------------------------------|---------------------------|--------------------------------|
 | `--installapps`     | `true` \| `false`                         | `true`                    | Install / update ONLYOFFICE Apps      |
-| `--deployment-mode`     | `standard` \| `stack` \| `community`      | `standard`                | Deployment topology (see below)|
+| `--deployment-mode`     | `standard` \| `stack` \| `community`      | *(edition-dependent)*     | Deployment topology (see below)|
 | `--appsversion`     | `<VERSION>`                               | *(latest stable)*         | ONLYOFFICE Apps version               |
 | `--appshost`        | `<HOST>`                                  | `localhost`               | Hostname / IP                  |
 | `--externalport`        | `<PORT>`                                  | `80`                      | External HTTP port             |
 | `--machinekey`          | `<KEY>`                                   | *(auto-generated)*        | `core.machinekey` value        |
 
 `--deployment-mode` selects how ONLYOFFICE Apps is deployed via Docker:
-- `standard` — modular multi-container deployment (default), one container per service.
+- `standard` — modular multi-container deployment, one container per service.
 - `stack` — services grouped into fewer containers sharing a common runtime.
 - `community` — a single all-in-one `onlyoffice-apps` container (plus MySQL, OpenSearch and
   Document Server), intended for quick evaluation/testing rather than production.
+
+The default depends on the edition: `--installationtype community` deploys the `community`
+topology, every other edition deploys `standard`. An explicit `--deployment-mode` always wins.
 
 You can switch topology on an existing install with `--update true --deployment-mode <mode>`:
 MySQL/OpenSearch/Document Server are reused as-is (no data loss), only the app layer is replaced.

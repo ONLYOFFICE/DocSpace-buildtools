@@ -140,13 +140,19 @@ select_deployment_mode () {
       CONTAINER_NAME="${PACKAGE_SYSNAME}-dotnet-services"
       IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-dotnet"
       SERVICES=("${PRODUCT}-stack" proxy)
-      COMPOSE_FILES=($(printf '%s\n' "${SERVICES[@]}" | sed "s|^|-f ${BASE_DIR}/|; s|\$|.yml|"));
+      COMPOSE_FILES=()
+      for SERVICE in "${SERVICES[@]}"; do
+        COMPOSE_FILES+=(-f "${BASE_DIR}/${SERVICE}.yml")
+      done
       ;;
     *)
       CONTAINER_NAME="${PACKAGE_SYSNAME}-api"
       IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}-api"
       SERVICES=(migration-runner identity notify "${PRODUCT}" healthchecks proxy)
-      COMPOSE_FILES=($(printf '%s\n' "${SERVICES[@]}" | sed "s|^|-f ${BASE_DIR}/|; s|\$|.yml|"));
+      COMPOSE_FILES=()
+      for SERVICE in "${SERVICES[@]}"; do
+        COMPOSE_FILES+=(-f "${BASE_DIR}/${SERVICE}.yml")
+      done
       ;;
   esac
 }

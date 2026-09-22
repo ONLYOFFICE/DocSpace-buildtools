@@ -54,6 +54,17 @@ add-repo-rpm-docs() {
 }
 
 prepare_vm() {
+  # Debian 11 reached EOL on 2026-08-31 - repoint apt to the archive and security snapshot mirrors
+  if grep -q '^VERSION_CODENAME=bullseye$' /etc/os-release 2>/dev/null; then
+    sed -Ei \
+      -e 's#https?://(security|deb)\.debian\.org/debian-security#https://snapshot.debian.org/archive/debian-security/20260901T000000Z#g' \
+      -e 's#https?://deb\.debian\.org/debian#https://archive.debian.org/debian#g' \
+      -e '/archive\.debian\.org\/debian/ { / contrib/! s/$/ contrib/; }' \
+      -e '/(archive\.debian\.org\/debian|snapshot\.debian\.org\/archive\/debian-security)/ { /check-valid-until=no/! s|^(deb(-src)?) \[|\1 [check-valid-until=no |; }' \
+      -e '/(archive\.debian\.org\/debian|snapshot\.debian\.org\/archive\/debian-security)/ { /check-valid-until=no/! s|^(deb(-src)?) |\1 [check-valid-until=no] |; }' \
+      /etc/apt/sources.list
+  fi
+
   # Ensure curl and gpg are installed
   if ! command -v curl >/dev/null 2>&1; then
     (command -v apt-get >/dev/null 2>&1 && apt-get update -y && apt-get install -y curl) || (command -v dnf >/dev/null 2>&1 && dnf install -y curl)
