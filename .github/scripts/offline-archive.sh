@@ -16,10 +16,13 @@ prepare() {
   docker volume ls -q | xargs -r docker volume rm 2>/dev/null || true
   sudo CLEAN_DOCKER=0 bash "${GITHUB_WORKSPACE}/.github/scripts/free-disk-space-linux.sh"
 
+  local ARCH; ARCH="$(uname -m | sed -E 's/^(x86_64|amd64)$/amd64/; s/^(aarch64|arm64)$/arm64/')"
+
   for repo in onlyoffice/$( [ "${IS_4TESTING:-true}" != "false" ] && echo 4testing- )documentserver{,-de}; do
     tag=$(curl -s "https://registry.hub.docker.com/v2/repositories/${repo}/tags?page_size=100" \
-          | jq -r '.results[].name' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -Vr | head -n1)
-    [ -z "$tag" ] && { echo "Failed to get tag for $repo"; exit 1; }
+          | jq -r --arg arch "$ARCH" '.results[] | select(.images[]?.architecture==$arch) | .name' \
+          | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -Vr | head -n1)
+    [ -z "$tag" ] && { echo "Failed to get ${ARCH} tag for $repo"; exit 1; }
     docker pull "${repo}:${tag}"
   done
 
