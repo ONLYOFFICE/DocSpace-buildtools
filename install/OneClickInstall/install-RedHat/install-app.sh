@@ -223,9 +223,10 @@ if [ "$PRODUCT_INSTALLED" = "false" ]; then
 	configure_product_mysql "${MYSQL_SERVER_HOST}" "${MYSQL_SERVER_PORT}" "${MYSQL_SERVER_DB_NAME}" "${MYSQL_SERVER_USER}" "${MYSQL_ROOT_PASS}"
 elif ! rpm -q "${package}" >/dev/null 2>&1; then # (DS v4.0.0) take over an installation made before the rename to ONLYOFFICE Apps
 	[[ ${PRODUCT_VERSION} =~ ^[0-9]+(\.[0-9]+){3}$ ]] && PRODUCT_VERSION="${PRODUCT_VERSION%.*}-${PRODUCT_VERSION##*.}"
+	${package_manager} install -y "${package}${PRODUCT_VERSION:+-${PRODUCT_VERSION}}" --best --allowerasing $TESTING_REPO
+	# The install above just took over ${product}'s config dir via a plain copy, still under the pre-rename environment name
 	ENVIRONMENT=$(grep -oP 'ENVIRONMENT=\K.*' /etc/"${package_sysname}"/"${product}"/systemd.env 2>/dev/null || grep -oP 'ENVIRONMENT=\K.*' /usr/lib/systemd/system/"${product}"-api.service 2>/dev/null)
 	CONNECTION_STRING=$(json -f /etc/"${package_sysname}"/"${product}"/appsettings."${ENVIRONMENT}".json ConnectionStrings.default.connectionString 2>/dev/null)
-	${package_manager} install -y "${package}${PRODUCT_VERSION:+-${PRODUCT_VERSION}}" --best --allowerasing $TESTING_REPO
 	configure_product_mysql_from_connection_string "${CONNECTION_STRING}"
 elif [[ "${PRODUCT_CHECK_UPDATE}" -eq "${UPDATE_AVAILABLE_CODE}" || "${RECONFIGURE_PRODUCT}" = "true" ]]; then
 	${package_manager} -y update "${package}" --best --allowerasing $TESTING_REPO
