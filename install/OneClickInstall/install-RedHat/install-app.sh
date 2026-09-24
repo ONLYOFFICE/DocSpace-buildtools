@@ -204,31 +204,35 @@ if [ "$MAKESWAP" == "true" ]; then
 	make_swap
 fi
 
+configure_product_mysql() {
+	"${product}"-configuration -mysqlh "$1" -mysqlport "$2" -mysqld "$3" -mysqlu "$4" -mysqlp "$5"
+}
+
+configure_product_mysql_from_connection_string() {
+	local connection_string=$1 field values=()
+	for field in Server Port Database "User ID" Password; do
+		values+=("$(grep -oP "${field}=\K[^;]*" <<< "$connection_string")")
+	done
+	configure_product_mysql "${values[@]}"
+}
+
 { ${package_manager} check-update ${package}; PRODUCT_CHECK_UPDATE=$?; } || true
 if [ "$PRODUCT_INSTALLED" = "false" ]; then
 	[[ ${PRODUCT_VERSION} =~ ^[0-9]+(\.[0-9]+){3}$ ]] && PRODUCT_VERSION="${PRODUCT_VERSION%.*}-${PRODUCT_VERSION##*.}"
 	${package_manager} install -y "${package}${PRODUCT_VERSION:+-${PRODUCT_VERSION}}" --best --allowerasing $TESTING_REPO
-	"${product}"-configuration \
-		-mysqlh "${MYSQL_SERVER_HOST}" \
-		-mysqlport "${MYSQL_SERVER_PORT}" \
-		-mysqld "${MYSQL_SERVER_DB_NAME}" \
-		-mysqlu "${MYSQL_SERVER_USER}" \
-		-mysqlp "${MYSQL_ROOT_PASS}"
+	configure_product_mysql "${MYSQL_SERVER_HOST}" "${MYSQL_SERVER_PORT}" "${MYSQL_SERVER_DB_NAME}" "${MYSQL_SERVER_USER}" "${MYSQL_ROOT_PASS}"
 elif ! rpm -q "${package}" >/dev/null 2>&1; then # (DS v4.0.0) take over an installation made before the rename to ONLYOFFICE Apps
 	[[ ${PRODUCT_VERSION} =~ ^[0-9]+(\.[0-9]+){3}$ ]] && PRODUCT_VERSION="${PRODUCT_VERSION%.*}-${PRODUCT_VERSION##*.}"
+	ENVIRONMENT=$(grep -oP 'ENVIRONMENT=\K.*' /etc/"${package_sysname}"/"${product}"/systemd.env 2>/dev/null || grep -oP 'ENVIRONMENT=\K.*' /usr/lib/systemd/system/"${product}"-api.service 2>/dev/null)
+	CONNECTION_STRING=$(json -f /etc/"${package_sysname}"/"${product}"/appsettings."${ENVIRONMENT}".json ConnectionStrings.default.connectionString 2>/dev/null)
 	${package_manager} install -y "${package}${PRODUCT_VERSION:+-${PRODUCT_VERSION}}" --best --allowerasing $TESTING_REPO
-	"${product}"-configuration
+	configure_product_mysql_from_connection_string "${CONNECTION_STRING}"
 elif [[ "${PRODUCT_CHECK_UPDATE}" -eq "${UPDATE_AVAILABLE_CODE}" || "${RECONFIGURE_PRODUCT}" = "true" ]]; then
 	${package_manager} -y update "${package}" --best --allowerasing $TESTING_REPO
 	if [[ "${RECONFIGURE_PRODUCT}" = "true" ]]; then
 		ENVIRONMENT=$(grep -oP 'ENVIRONMENT=\K.*' /etc/"${package_sysname}"/"${product}"/systemd.env || grep -oP 'ENVIRONMENT=\K.*' /usr/lib/systemd/system/"${product}"-api.service)
-		CONNECTION_STRING=$(json -f /etc/"${package_sysname}"/"${product}"/appsettings."$ENVIRONMENT".json ConnectionStrings.default.connectionString)
-		"${product}"-configuration \
-			-mysqlh "$(grep -oP 'Server=\K[^;]*' <<< "${CONNECTION_STRING}")" \
-			-mysqlport "$(grep -oP 'Port=\K[^;]*' <<< "${CONNECTION_STRING}")" \
-			-mysqld "$(grep -oP 'Database=\K[^;]*' <<< "${CONNECTION_STRING}")" \
-			-mysqlu "$(grep -oP 'User ID=\K[^;]*' <<< "${CONNECTION_STRING}")" \
-			-mysqlp "$(grep -oP 'Password=\K[^;]*' <<< "${CONNECTION_STRING}")"
+		CONNECTION_STRING=$(json -f /etc/"${package_sysname}"/"${product}"/appsettings."${ENVIRONMENT}".json ConnectionStrings.default.connectionString)
+		configure_product_mysql_from_connection_string "${CONNECTION_STRING}"
 	else
 		"${product}"-configuration
 	fi
