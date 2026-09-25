@@ -47,7 +47,6 @@ export ENV_EXTENSION="${ENV_EXTENSION:-none}"
 APP_CORE_SERVER_ROOT=${APP_CORE_SERVER_ROOT:-""}
 APP_KNOWN_PROXIES=${APP_KNOWN_PROXIES:-""}
 APP_KNOWN_NETWORKS=${APP_KNOWN_NETWORKS:-""}
-EXTERNAL_PORT_HTTPS=${EXTERNAL_PORT_HTTPS:-"443"}
 CERTBOT_DIRS=(--config-dir /etc/letsencrypt --work-dir /tmp/letsencrypt --logs-dir /var/log/onlyoffice/letsencrypt)
 
 export MYSQL_PWD="$MYSQL_PASSWORD"
@@ -123,23 +122,21 @@ ensure_secret() {
 # NGINX SSL SETUP
 # ============================================
 setup_nginx_ssl() {
-    mkdir -p /var/www/certbot /etc/letsencrypt
+    mkdir -p /letsencrypt /etc/letsencrypt
 
     write_http_nginx_conf() {
-        cp /app/onlyoffice/template/nginx/onlyoffice-proxy.http.conf \
+        cp /app/onlyoffice/template/nginx/onlyoffice-proxy.conf \
             /etc/nginx/conf.d/onlyoffice-proxy.conf
     }
 
     write_ssl_nginx_conf() {
-        # The :80 -> https redirect must carry a non-default published HTTPS port, or it points clients at 443.
-        local redirect_port=""
-        [[ "$EXTERNAL_PORT_HTTPS" != "443" ]] && redirect_port=":${EXTERNAL_PORT_HTTPS}"
-        SERVER_NAME="$1" \
-        SSL_CERTIFICATE="$2" \
-        SSL_CERTIFICATE_KEY="$3" \
-        REDIRECT_PORT="$redirect_port" \
-        envsubst '${SERVER_NAME} ${SSL_CERTIFICATE} ${SSL_CERTIFICATE_KEY} ${REDIRECT_PORT}' \
-            < /app/onlyoffice/template/nginx/onlyoffice-proxy.ssl.conf.template \
+        # Not on a volume, so a container recreate loses it - cheap enough to regenerate, and it isn't a secret.
+        [ -f /etc/ssl/certs/dhparam.pem ] || openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
+        # server_name isn't templated: the shared config matches any host (it's the sole HTTPS front end), same as the other deployment modes.
+        SSL_CERTIFICATE="$1" \
+        SSL_CERTIFICATE_KEY="$2" \
+        envsubst '${SSL_CERTIFICATE} ${SSL_CERTIFICATE_KEY}' \
+            < /app/onlyoffice/template/nginx/onlyoffice-proxy-ssl.conf \
             > /etc/nginx/conf.d/onlyoffice-proxy.conf
     }
 
@@ -182,7 +179,7 @@ setup_nginx_ssl() {
 
         parse_ssl_domains
 
-        write_ssl_nginx_conf "$NGINX_SERVER_NAMES" "$SSL_CERT_PATH" "$SSL_KEY_PATH"
+        write_ssl_nginx_conf "$SSL_CERT_PATH" "$SSL_KEY_PATH"
         log "Using custom SSL certificate for: $NGINX_SERVER_NAMES"
         return 0
     fi
@@ -244,7 +241,7 @@ setup_nginx_ssl() {
             log "Existing Let's Encrypt certificate found for $PRIMARY_SSL_DOMAIN"
         fi
 
-        write_ssl_nginx_conf "$NGINX_SERVER_NAMES" "$cert_file" "$key_file"
+        write_ssl_nginx_conf "$cert_file" "$key_file"
         log "Using Let's Encrypt certificate for: $NGINX_SERVER_NAMES"
         return 0
     fi
@@ -516,6 +513,15 @@ main() {
     replace_csp_lua
     setup_nginx_ssl
     log "🌐 Initializing nginx..." && /nginx/docker-entrypoint.sh
+
+    # The Dockerfile already strips quic/http3 at build time when this openresty build lacks it; this is a second check in case that detection was wrong - better HTTPS without HTTP/3 than openresty crash-looping.
+    if ! /usr/local/openresty/bin/openresty -t >/tmp/nginx-t.log 2>&1 && grep -qi 'quic\|http/3\|http3' /tmp/nginx-t.log; then
+        log "openresty -t failed on HTTP/3, retrying without it:"
+        cat /tmp/nginx-t.log
+        sed -i -e '/quic/d' -e '/alt-svc/d' /etc/nginx/conf.d/onlyoffice-proxy.conf
+        /usr/local/openresty/bin/openresty -t
+    fi
+
     log "✅ Initialization complete - starting supervisord"
     log "=================================="
     exec supervisord -n

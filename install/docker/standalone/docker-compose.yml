@@ -47,7 +47,7 @@ services:
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}app_data:/app/onlyoffice/data
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
       # Same volume the microservices/stack proxy serves ACME challenges from, so a certificate issued in either mode keeps renewing after a switch.
-      - webroot_path:/var/www/certbot
+      - webroot_path:/letsencrypt
     ports:
       - "${EXTERNAL_PORT:-80}:80"
     user: "${UID}:${GID}"

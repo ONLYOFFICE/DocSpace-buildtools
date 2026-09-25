@@ -669,8 +669,8 @@ RUN set -eux; \
     apt-get update && apt-get install -y --no-install-recommends openresty; \
     # let the unprivileged onlyoffice user bind :80, then prepare nginx dirs
     setcap 'cap_net_bind_service=+ep' /usr/local/openresty/nginx/sbin/nginx; \
-    mkdir -p /var/log/nginx /var/log/openresty /var/log/supervisor /etc/nginx/conf.d /etc/nginx/includes /etc/nginx/templates /etc/letsencrypt /var/www/certbot; \
-    chown -R onlyoffice:onlyoffice /etc/nginx /var/log/nginx /var/log/openresty /var/log/supervisor /usr/local/openresty /etc/letsencrypt /var/www/certbot; \
+    mkdir -p /var/log/nginx /var/log/openresty /var/log/supervisor /etc/nginx/conf.d /etc/nginx/includes /etc/nginx/templates /etc/letsencrypt /letsencrypt; \
+    chown -R onlyoffice:onlyoffice /etc/nginx /var/log/nginx /var/log/openresty /var/log/supervisor /usr/local/openresty /etc/letsencrypt /letsencrypt; \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb /tmp/*
 
 # Services config + entrypoint + supervisor config
@@ -688,12 +688,11 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/docker-entrypoint.sh /nginx/docker-entrypoint.sh
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/nginx.conf.template /etc/nginx/nginx.conf.template
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
-#COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/standalone/config/nginx/conf.d/onlyoffice-proxy.conf /etc/nginx/conf.d/
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/standalone/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
-
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/standalone/config/nginx/templates/onlyoffice-proxy.ssl.conf.template /app/onlyoffice/template/nginx/onlyoffice-proxy.ssl.conf.template
-# COPY --chown=onlyoffice:onlyoffice standalone/config/nginx/templates/onlyoffice-proxy.ssl.conf.template /app/onlyoffice/template/nginx/onlyoffice-proxy.ssl.conf.template
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/standalone/config/nginx/templates/onlyoffice-proxy.http.conf /app/onlyoffice/template/nginx/onlyoffice-proxy.http.conf
+# Same front-proxy configs the microservices proxy container and the DEB/RPM packages use; the RUN below adapts them the way packages-build.sh does.
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/proxy/onlyoffice-proxy.conf /app/onlyoffice/template/nginx/onlyoffice-proxy.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/proxy/onlyoffice-proxy-ssl.conf /app/onlyoffice/template/nginx/onlyoffice-proxy-ssl.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/proxy/letsencrypt.conf /etc/nginx/includes/letsencrypt.conf
 
 # nodejs static and dynamic files
 COPY --from=node:24-bookworm-slim /usr/local/bin/node /usr/local/bin/node
@@ -725,6 +724,11 @@ RUN set -eux; \
     # route every .NET backend upstream to the single monolith port
     sed -i -E "s#default \"(http://127.0.0.1):(5000|5003|5004|5007|5010|5012|5157)\";#default \"\1:5051\";#g" "/etc/nginx/conf.d/onlyoffice.conf"; \
     sed -i 's#http://127.0.0.1:9090#http://127.0.0.1:8080#g' /etc/nginx/conf.d/onlyoffice.conf && \
+    # The router runs in this same openresty, as in the DEB/RPM packages, and the main config sits under /usr/local/openresty, so relative includes would miss /etc/nginx.
+    sed -i -e 's/\$router_host/127.0.0.1/g' -e 's#include includes/#include /etc/nginx/includes/#' /app/onlyoffice/template/nginx/onlyoffice-proxy.conf /app/onlyoffice/template/nginx/onlyoffice-proxy-ssl.conf && \
+    # Paths are fixed in the shared config (proxy-ssl.yml bind-mounts a host cert there); the entrypoint envsubst's them per SSL_CERT_PATH/SSL_KEY_PATH instead, since standalone takes its certificate from a mounted directory, not a fixed host path.
+    sed -i -e 's#ssl_certificate /usr/local/share/ca-certificates/tls.crt;#ssl_certificate ${SSL_CERTIFICATE};#' -e 's#ssl_certificate_key /etc/ssl/private/tls.key;#ssl_certificate_key ${SSL_CERTIFICATE_KEY};#' /app/onlyoffice/template/nginx/onlyoffice-proxy-ssl.conf && \
+    { /usr/local/openresty/bin/openresty -V 2>&1 | grep -q http_v3_module || sed -i -e '/quic/d' -e "/alt-svc/d" /app/onlyoffice/template/nginx/onlyoffice-proxy-ssl.conf; } && \
     sed -i '/client_body_temp_path/ i \ \ \ \ $MAP_HASH_BUCKET_SIZE' /etc/nginx/nginx.conf.template && \
     sed -i 's/\(worker_connections\).*;/\1 $COUNT_WORKER_CONNECTIONS;/' /etc/nginx/nginx.conf.template && \
     sed -i -e '/^user/s/^/#/' -e 's#/tmp/nginx.pid#nginx.pid#' -e 's#/etc/nginx/mime.types#mime.types#' /etc/nginx/nginx.conf.template && \
