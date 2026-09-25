@@ -180,13 +180,11 @@ uninstall() {
 
     if [ "${DEPLOYMENT_MODE}" = "standalone" ]; then
         echo "Uninstallation of ${PRODUCT_NAME} (standalone)..."
-        STANDALONE_FILES=("${COMPOSE_FILES[@]}")
-        [ -f "${BASE_DIR}/ssl.yml" ] && STANDALONE_FILES+=(-f "${BASE_DIR}/ssl.yml")
 
         read -p "Also remove data volumes (mysql, opensearch, documents)? (Y/n): " REMOVE_DATA_SERVICES
         DOWN_ARGS=(down)
         [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]] && DOWN_ARGS+=(-v)
-        ${DOCKER_COMPOSE} "${STANDALONE_FILES[@]}" "${DOWN_ARGS[@]}" || echo "Failed to remove ${PRODUCT_NAME}."
+        ${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" "${DOWN_ARGS[@]}" || echo "Failed to remove ${PRODUCT_NAME}."
     else
         read -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " REMOVE_DATA_SERVICES
 
@@ -389,7 +387,8 @@ check_ports () {
 
 	if [ "$INSTALL_PRODUCT" == "true" ]; then
 		ARRAY_PORTS+=("$EXTERNAL_PORT")
-		if [[ -n "$CERTIFICATE_PATH" ]] || [[ -n "$LETS_ENCRYPT_DOMAIN" ]]; then
+		# Standalone's docker-compose.yml always publishes EXTERNAL_PORT_HTTPS, even without a certificate configured yet.
+		if [[ -n "$CERTIFICATE_PATH" ]] || [[ -n "$LETS_ENCRYPT_DOMAIN" ]] || [ "${DEPLOYMENT_MODE}" = "standalone" ]; then
 			ARRAY_PORTS+=("$EXTERNAL_PORT_HTTPS")
 		fi
 	fi
@@ -478,7 +477,7 @@ domain_check () {
 	# Respect a value detect_existing_document_server() already set - don't let this overwrite it with an empty one.
 	APP_DOMAIN_PORTAL=${APP_DOMAIN_PORTAL:-$(cut -d ',' -f 1 <<< "$LETS_ENCRYPT_DOMAIN")}
 	APP_DOMAIN_PORTAL=${APP_DOMAIN_PORTAL:-${APP_URL_PORTAL:-$(get_env_parameter "APP_URL_PORTAL" "${PACKAGE_SYSNAME}-files" | awk -F[/:] '{if ($1 == "https") print $4; else print ""}')}}
-	# Standalone keeps APP_URL_PORTAL on the internal router, so its HTTPS domain is only recoverable from the SSL_DOMAIN ssl.yml passed in.
+	# Standalone keeps APP_URL_PORTAL on the internal router, so its HTTPS domain is only recoverable from the SSL_DOMAIN env var docker-compose.yml passes into the container.
 	APP_DOMAIN_PORTAL=${APP_DOMAIN_PORTAL:-$(get_env_parameter "SSL_DOMAIN" "${PACKAGE_SYSNAME}-${PRODUCT}" | cut -d ',' -f 1)}
 	APP_URL_PORTAL=${APP_DOMAIN_PORTAL:+http://${APP_DOMAIN_PORTAL}:${EXTERNAL_PORT}}
 }
@@ -1315,14 +1314,11 @@ install_standalone () {
 
 		chown_app_volumes
 
-		local STANDALONE_FILES=("${COMPOSE_FILES[@]}")
-
-		# ssl.yml contract (standalone-only): SSL_MODE/SSL_DOMAIN/SSL_EMAIL/SSL_CERT_PATH/SSL_KEY_PATH,
-		# different from the microservices/stack modes' config/${PRODUCT}-ssl-setup script.
+		# SSL_MODE/SSL_DOMAIN/SSL_EMAIL/SSL_CERT_PATH/SSL_KEY_PATH are env vars baked into docker-compose.yml itself (unset means the entrypoint's own SSL_MODE=none), different from the microservices/stack modes' config/${PRODUCT}-ssl-setup script.
 		local STACK_STARTED="false"
 		if [ -z "${CERTIFICATE_PATH}" ] && [ -n "${LETS_ENCRYPT_DOMAIN}" ] && [ -n "${LETS_ENCRYPT_MAIL}" ]; then
 			# The webroot challenge needs openresty already answering on :80, so come up over plain HTTP first; the certificate is then served as a custom one.
-			${DOCKER_COMPOSE} "${STANDALONE_FILES[@]}" up -d
+			${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" up -d
 			STACK_STARTED="true"
 			if ! standalone_issue_letsencrypt; then
 				echo "Warning: failed to obtain a Let's Encrypt certificate for ${LETS_ENCRYPT_DOMAIN}; ${PRODUCT_NAME} stays on http://." >&2
@@ -1340,18 +1336,17 @@ install_standalone () {
 			cp "${CERTIFICATE_KEY_PATH}" "${BASE_DIR}/config/nginx/certs/"
 			# onlyoffice-apps always runs as UID:GID ${UID}:${GID} here, never root (see docker-compose.yml) - a source file that kept owner-only permissions (a root-owned docker-cp'd inherited key, or a tightly-permissioned one the user supplied) would otherwise leave openresty unable to read it at all.
 			chmod 644 "${BASE_DIR}/config/nginx/certs/$(basename "${CERTIFICATE_PATH}")" "${BASE_DIR}/config/nginx/certs/$(basename "${CERTIFICATE_KEY_PATH}")"
-			STANDALONE_FILES+=(-f "${BASE_DIR}/ssl.yml")
 			SSL_MODE="custom" SSL_DOMAIN="${LETS_ENCRYPT_DOMAIN:-${APP_DOMAIN_PORTAL}}" \
 				SSL_CERT_PATH="/etc/nginx/certs/$(basename "${CERTIFICATE_PATH}")" \
 				SSL_KEY_PATH="/etc/nginx/certs/$(basename "${CERTIFICATE_KEY_PATH}")" \
-				${DOCKER_COMPOSE} "${STANDALONE_FILES[@]}" up -d
+				${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" up -d
 			finish_https_takeover $?
 			[[ "${CERTIFICATE_PATH}" == /etc/letsencrypt/live/*/fullchain.pem ]] && create_standalone_renew_script
 		elif [[ -n "${CERTIFICATE_KEY_PATH}${CERTIFICATE_PATH}" ]] || { [ "${STACK_STARTED}" = "false" ] && [[ -n "${LETS_ENCRYPT_DOMAIN}${LETS_ENCRYPT_MAIL}" ]]; }; then
 			echo -e "\e[31mERROR:\e[0m Missing required parameters for SSL setup"
 			exit 1
 		elif [ "${STACK_STARTED}" = "false" ]; then
-			${DOCKER_COMPOSE} "${STANDALONE_FILES[@]}" up -d
+			${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" up -d
 		fi
 
 		if [ "${DOCUMENT_SERVER_ATTACHED}" = "true" ] && [ -n "${MIGRATED_FONTS_SRC}" ]; then

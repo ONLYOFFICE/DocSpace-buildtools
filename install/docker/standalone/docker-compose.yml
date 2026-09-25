@@ -38,6 +38,15 @@ x-service: &x-service-base
     ELK_PORT: ${ELK_PORT}
     SPRING_PROFILES_ACTIVE: minified,stage
     SPRING_APPLICATION_ENCRYPTION_SECRET: ${IDENTITY_ENCRYPTION_SECRET}
+    # Unset (the default) leaves the entrypoint's own SSL_MODE=none fallback in place, so plain HTTP installs are unaffected by these being always present.
+    SSL_MODE: ${SSL_MODE:-}
+    SSL_DOMAIN: ${SSL_DOMAIN:-}
+    SSL_CERT_PATH: ${SSL_CERT_PATH:-}
+    SSL_KEY_PATH: ${SSL_KEY_PATH:-}
+    SSL_EMAIL: ${SSL_EMAIL:-}
+    LETSENCRYPT_STAGING: ${LETSENCRYPT_STAGING:-false}
+    LETSENCRYPT_FORCE_RENEW: ${LETSENCRYPT_FORCE_RENEW:-false}
+    LETSENCRYPT_FAIL_OPEN: ${LETSENCRYPT_FAIL_OPEN:-false}
 
 services:
   onlyoffice-apps:
@@ -48,8 +57,12 @@ services:
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
       # Same volume the microservices/stack proxy serves ACME challenges from, so a certificate issued in either mode keeps renewing after a switch.
       - webroot_path:/letsencrypt
+      # Only SSL_MODE=letsencrypt (a manual docker compose run) uses this; install-Docker.sh keeps its certificates in the host's /etc/letsencrypt and passes them as SSL_MODE=custom.
+      - ./config/nginx/ssl/letsencrypt:/etc/letsencrypt
+      - ./config/nginx/certs:/etc/nginx/certs:ro
     ports:
       - "${EXTERNAL_PORT:-80}:80"
+      - "${EXTERNAL_PORT_HTTPS:-443}:443"
     user: "${UID}:${GID}"
     cap_add:
       - SYS_NICE

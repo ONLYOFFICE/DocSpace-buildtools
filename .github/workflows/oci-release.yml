@@ -56,7 +56,7 @@ jobs:
 
           cd ${{ env.STANDALONE_DIR }}
           tar -czvf ${{ env.SCRIPT_DIR }}/docker-standalone.tar.gz \
-            docker-compose.yml ssl.yml .env
+            docker-compose.yml .env
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6.0.0

@@ -97,10 +97,7 @@ SSL_MODE="letsencrypt" \
 SSL_DOMAIN="example.com,portal.example.com,api.example.com" \
 SSL_EMAIL="admin@example.com" \
 APP_URL_PORTAL="https://example.com/" \
-docker compose \
-  -f docker-compose.yml \
-  -f ssl.yml \
-  up -d
+docker compose -f docker-compose.yml up -d
 ```
 > SSL_MODE – SSL certificate mode.
 > SSL_DOMAIN – One or more domains separated by commas.
@@ -128,10 +125,7 @@ SSL_CERT_PATH="/etc/nginx/certs/fullchain.crt" \
 SSL_KEY_PATH="/etc/nginx/certs/private.key" \
 CERTIFICATE_PATH="./config/nginx/certs/fullchain.crt" \
 APP_URL_PORTAL="https://example.com/" \
-docker compose \
-  -f docker-compose.yml \
-  -f ssl.yml \
-  up -d
+docker compose -f docker-compose.yml up -d
 ```
 
 > **Note:** `CERTIFICATE_PATH` must point to the certificate file **on the Docker host**, not the path inside the container. This option is typically required only for self-signed certificates or certificates issued by a private CA. Certificates issued by public CAs (for example, Let's Encrypt, DigiCert, or GoDaddy) usually do not require this additional configuration.
@@ -142,7 +136,7 @@ docker compose \
 > SSL_KEY_PATH – Path to the private key.
 > APP_URL_PORTAL – Public HTTPS URL of your portal.
 
-> **Note:** By default, the ssl.yml configuration mounts the local ./config/nginx/certs directory to /etc/nginx/certs inside the container.
+> **Note:** By default, docker-compose.yml mounts the local ./config/nginx/certs directory to /etc/nginx/certs inside the container.
 
 
 Access ONLYOFFICE Apps at https://example.com/.
