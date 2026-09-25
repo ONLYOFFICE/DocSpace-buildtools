@@ -109,7 +109,7 @@ See the [Windows installation guide](https://guides.onlyoffice.com/installation/
 ONLYOFFICE Apps runs from Docker images built out of `install/docker/`. The Compose stack is **modular** — each component (`apps.yml`, `db.yml`, `redis.yml`, `rabbitmq.yml`, `opensearch.yml`, `ds.yml`, …) is a separate file combined with `-f`, while `apps-stack.yml` bundles the application services into a single container. Images are built with Buildx Bake from `install/docker/build/` (`Dockerfile`, `Dockerfile.runtime`, `build.hcl`), and `.env` (~200 variables) drives all settings.
 
 For the full Compose reference, `.env` variables, image-building, HTTPS/SSL, nginx, MySQL, and Supervisor details, see the **[Docker README](install/docker/Readme.md)**.
-For a lightweight single-container (standalone) setup, see the **[Docker standalone README](install/docker/standalone/README.md)**.
+For the single-container (standalone) topology - the default for every edition - see the **[Docker standalone README](install/docker/standalone/README.md)**.
 
 ## Configuration
 
@@ -223,9 +223,9 @@ Docker-based migrations are handled by `migration-runner.yml` Compose service.
 - Automated testing
 - Telegram notifications
 
-## The lightweight installation option
+## The standalone (single-container) topology
 
-The lightweight build of ONLYOFFICE Apps Community is intended for quick evaluation and testing. Unlike the microservices multi-container deployment, it combines all ONLYOFFICE Apps services into a single container. [Check the instructions ➡️](https://github.com/ONLYOFFICE/DocSpace-buildtools/tree/master/install/docker/standalone)
+ONLYOFFICE Apps also ships as a single-node, single-container build - the default topology for every edition, not just Community. Unlike the microservices/stack deployment, it doesn't scale out horizontally. [Check the instructions ➡️](https://github.com/ONLYOFFICE/DocSpace-buildtools/tree/master/install/docker/standalone)
 
 ## Licensing
 

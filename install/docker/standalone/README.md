@@ -1,12 +1,8 @@
 ## Running ONLYOFFICE Apps in Docker
 
-> **Note:** Not for production use.
-> This guide deploys a development/testing build of ONLYOFFICE Apps.
-> For production deployments, use the: [Production Version of ONLYOFFICE Apps](https://www.onlyoffice.com/download.aspx#docspace-enterprise)
-
 ### Overview
 
-The standalone deployment ships ONLYOFFICE Apps as a monolithic build: all ONLYOFFICE Apps services run in a single container rather than as separate per-service containers. The full stack consists of four containers:
+The standalone deployment ships ONLYOFFICE Apps as a single-node, monolithic build: all ONLYOFFICE Apps services run in one container instead of separate per-service containers. It's the default topology `apps-install.sh` uses for every edition (Community, Enterprise, Developer), not just for evaluation.
 
 | Container | Role |
 | :---- | :---- |
@@ -15,10 +11,9 @@ The standalone deployment ships ONLYOFFICE Apps as a monolithic build: all ONLYO
 | **onlyoffice-mysql-server** | MySQL database |
 | **onlyoffice-opensearch** | OpenSearch |
 
-Differences from the microservices multi-container deployment:
+MySQL, OpenSearch and Document Server are each optional here (an external instance can replace the bundled one).
 
-- All ONLYOFFICE Apps services are consolidated into a single container.
-- No thumbnail generation.
+Because everything runs as a single process, this topology does not scale out horizontally (no multiple `onlyoffice-apps` replicas behind a load balancer). If you need that, use the [microservices or stack topology](../Readme.md) instead - the database and its data carry over if you switch later.
 
 **Prerequisites:** Docker Engine with the Compose plugin (docker compose).
 
