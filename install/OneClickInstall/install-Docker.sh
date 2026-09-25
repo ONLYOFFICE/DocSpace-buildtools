@@ -1259,6 +1259,8 @@ install_community () {
 			mkdir -p "${BASE_DIR}/config/nginx/certs"
 			cp "${CERTIFICATE_PATH}" "${BASE_DIR}/config/nginx/certs/"
 			cp "${CERTIFICATE_KEY_PATH}" "${BASE_DIR}/config/nginx/certs/"
+			# onlyoffice-apps always runs as UID:GID ${UID}:${GID} here, never root (see docker-compose.yml) - a source file that kept owner-only permissions (a root-owned docker-cp'd inherited key, or a tightly-permissioned one the user supplied) would otherwise leave openresty unable to read it at all.
+			chmod 644 "${BASE_DIR}/config/nginx/certs/$(basename "${CERTIFICATE_PATH}")" "${BASE_DIR}/config/nginx/certs/$(basename "${CERTIFICATE_KEY_PATH}")"
 			COMMUNITY_FILES+=(-f "${BASE_DIR}/ssl.yml")
 			SSL_MODE="custom" SSL_DOMAIN="${APP_DOMAIN_PORTAL}" \
 				SSL_CERT_PATH="/etc/nginx/certs/$(basename "${CERTIFICATE_PATH}")" \
