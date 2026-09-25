@@ -394,6 +394,10 @@ update_configs() {
         -e "this.core.notify.postman='services'" \
         -e "this.ai.mcp[0].endpoint=process.env.MCP_ENDPOINT"
 
+    # Docs Admin Panel link
+    ${JSON} "${PATH_TO_CONF}/externalresources.json" \
+        -e "this.externalresources.adminpanel.default.domain=\"${DOCUMENT_SERVER_URL_PUBLIC%/}/admin\""
+
     # API system (connection + core)
     ${JSON} "${PATH_TO_CONF}/apisystem.json" \
         -e "this.ConnectionStrings.default.connectionString=process.env.CONNECTION_STRING+';Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;ConnectionReset=false;AllowPublicKeyRetrieval=true'" \
