@@ -107,94 +107,104 @@ while [ "$1" != "" ]; do
         -cf      | --certfile            ) [ -n "$2" ] && CERTIFICATE_PATH="$2"                                                   && shift ;;
         -ckf     | --certkeyfile         ) [ -n "$2" ] && CERTIFICATE_KEY_PATH="$2"                                               && shift ;;
         -h | -? | --help )
-            echo 
-            echo "PRELIMINARY PARAMETERS (Docker registry auth):"
-            echo "  --registry          <URL>               Docker registry URL (e.g., https://myregistry.com:5000)"
-            echo "  --username          <username>          Username for Docker registry login"
-            echo "  --password          <password>          Password for Docker registry"
+            help_opt() { printf "    %-22s %-14s %s\n" "$@"; }
+            help_note() { printf "%42s%s\n" "" "$1"; }
 
-            echo 
-            echo "INSTALL/UPGRADE MODE:"
-            echo "  --installationtype  <edition>           Edition to install: community, developer, enterprise"
-            echo "  --update            <true|false>        true to upgrade existing components"
-            echo "  --uninstall         <true|false>        true to remove existing ${PRODUCT_NAME} (containers, volumes, configs)"
-            echo "  --noninteractive    <true|false>        true to auto-confirm prompts (default: false)"
-
-            echo 
-            echo "GENERAL OPTIONS:"
-            echo "  --skiphardwarecheck <true|false>        Skip hardware checks (RAM, disk, CPU; default: false)"
-            echo "  --offline           <true|false>        Offline mode: use local images only (requires pre-pulled images)"
-            echo "  --makeswap          <true|false>        Create swap file (default: true)"
-            echo "  --extrahosts        <DOMAIN:IP>         Specify extra hostname resolution"
-            echo "  --volumesdir        <path>              Host dir for Docker volumes (default: /var/lib/docker/volumes)"
-
-            echo 
-            echo "${PRODUCT_NAME^^} OPTIONS:"
-            echo "  --deployment-mode   <standalone|microservices|stack>  Deployment topology (default: standalone for Community edition, microservices otherwise)"
-            echo "  --installapps       <true|false>        Install/update ${PRODUCT_NAME} (true to install/update)"
-            echo "  --appsversion       <version>           ${PRODUCT_NAME} version tag (e.g., 4.0.0)"
-            echo "  --appshost          <hostname>          Hostname or IP for ${PRODUCT_NAME} (default: localhost)"
-            echo "  --externalport      <port>              External port for ${PRODUCT_NAME} HTTP (default: 80)"
-            echo "  --externalporthttps <port>              External port for ${PRODUCT_NAME} HTTPS (default: 443)"
-            echo "  --machinekey        <key>               core.machinekey for encryption (default: random key)"
-
-            echo 
-            echo "DOCUMENT SERVER OPTIONS:"
-            echo "  --installdocs       <true|false>        Install/update Document Server (true to install/update)"
-            echo "  --docsimage         <image_name>        Docker image for Document Server (e.g., onlyoffice/documentserver)"
-            echo "  --docsversion       <version>           Document Server version tag (e.g., 8.2.3.1)"
-            echo "  --docsurl           <URL>               URL for Document Server (e.g., http://docs.example.com:8083)"
-            echo "  --jwtheader         <header_name>       HTTP header for JWT tokens (e.g., AuthorizationJwt)"
-            echo "  --jwtsecret         <secret>            JWT secret key (default: random key)"
-
-            echo 
-            echo "MICROSERVICES OPTIONS:"
-            echo "  RabbitMQ:"
-            echo "    --installrabbitmq       <true|false>         true to deploy RabbitMQ container"
-            echo "    --rabbitmqprotocol      <protocol>           Protocol for RabbitMQ (default: amqp)"
-            echo "    --rabbitmqhost          <host>               Host/IP of RabbitMQ (default: localhost)"
-            echo "    --rabbitmqport          <port>               RabbitMQ port (default: 5672)"
-            echo "    --rabbitmqusername      <username>           RabbitMQ username"
-            echo "    --rabbitmqpassword      <password>           RabbitMQ password"
-            echo "    --rabbitmqvirtualhost   <vhost>              RabbitMQ virtual host (default \"/\")"
-            echo 
-            echo "  Redis:"
-            echo "    --installredis          <true|false>         true to deploy Redis container"
-            echo "    --redishost             <host>               Host/IP of Redis (default: localhost)"
-            echo "    --redisport             <port>               Redis port (default: 6379)"
-            echo "    --redisusername         <username>           Redis username (if required)"
-            echo "    --redispassword         <password>           Redis password (if required)"
-            echo 
-            echo "  MySQL:"
-            echo "    --installmysql          <true|false>         true to deploy MySQL container"
-            echo "    --mysqlrootpassword     <password>           Root password for MySQL"
-            echo "    --mysqldatabase         <db_name>            Database name for ${PRODUCT_NAME} (e.g., ${PRODUCT})"
-            echo "    --mysqluser             <username>           DB user for ${PRODUCT_NAME}"
-            echo "    --mysqlpassword         <password>           Password for ${PRODUCT_NAME} DB user"
-            echo "    --mysqlhost             <host>               Host/IP of MySQL (default: localhost)"
-            echo "    --mysqlport             <port>               MySQL port (default: 3306)"
-            echo 
-            echo "  OpenSearch:"
-            echo "    --installelastic        <true|false>         true to deploy OpenSearch container"
-            echo "    --elasticprotocol       <http|https>         Protocol for OpenSearch (default: http)"
-            echo "    --elastichost           <host>               Host/IP of OpenSearch (default: localhost)"
-            echo "    --elasticport           <port>               OpenSearch port (default: 9200)"
-            echo 
-            echo "  Fluent-Bit:"
-            echo "    --installfluentbit      <true|false>         true to deploy Fluent-Bit for log aggregation"
-            echo 
-            echo "  OpenSearch Dashboards:"
-            echo "    --dashboardsusername    <username>           Username for OpenSearch Dashboards UI"
-            echo "    --dashboardspassword    <password>           Password for Dashboards UI"
             echo
-            echo "Let's Encrypt:"
-            echo "  --letsencryptdomain <domain>          Domain for Let's Encrypt (example.com / *.example.com / s1.example.com, s2.example.com)"
-            echo "  --letsencryptmail   <email>           Admin email for Let's Encrypt (e.g., admin@example.com)"
-            echo 
+            echo "DOCKER REGISTRY AUTH:"
+            help_opt "--registry"            "<URL>"          "Docker registry URL (e.g., https://myregistry.com:5000)"
+            help_opt "--username"            "<username>"     "Username for Docker registry login"
+            help_opt "--password"            "<password>"     "Password for Docker registry"
+
+            echo
+            echo "INSTALL / UPGRADE MODE:"
+            help_opt "--installationtype"    "<edition>"      "Edition to install: community, developer, enterprise (default: enterprise)"
+            help_opt "--update"              "<true|false>"   "true to upgrade existing components"
+            help_opt "--uninstall"           "<true|false>"   "true to remove existing ${PRODUCT_NAME} (containers, volumes, configs)"
+            help_opt "--noninteractive"      "<true|false>"   "true to auto-confirm prompts (default: false)"
+
+            echo
+            echo "GENERAL OPTIONS:"
+            help_opt "--skiphardwarecheck"   "<true|false>"   "Skip hardware checks (RAM, disk, CPU; default: false)"
+            help_opt "--offline"             "<true|false>"   "Offline mode: use local images only (requires pre-pulled images)"
+            help_opt "--makeswap"            "<true|false>"   "Create swap file (default: true)"
+            help_opt "--extrahosts"          "<DOMAIN:IP>"    "Specify extra hostname resolution"
+            help_opt "--volumesdir"          "<path>"         "Host dir for Docker volumes (default: /var/lib/docker/volumes)"
+
+            echo
+            echo "${PRODUCT_NAME^^} OPTIONS:"
+            help_opt "--deployment-mode"     "<mode>"         "Deployment topology (default: standalone for Community, microservices otherwise)"
+            help_note "  standalone     single all-in-one container, for evaluation/testing"
+            help_note "  stack          services grouped by runtime (dotnet, node, java)"
+            help_note "  microservices  one container per service"
+            help_note "Switch an existing install: --update true --deployment-mode <mode>"
+            help_opt "--installapps"         "<true|false>"   "Install/update ${PRODUCT_NAME} (default: true)"
+            help_opt "--appsversion"         "<version>"      "${PRODUCT_NAME} version tag (e.g., 4.0.0)"
+            help_opt "--appshost"            "<hostname>"     "Hostname or IP for ${PRODUCT_NAME} (default: localhost)"
+            help_opt "--externalport"        "<port>"         "External port for ${PRODUCT_NAME} HTTP (default: 80)"
+            help_opt "--externalporthttps"   "<port>"         "External port for ${PRODUCT_NAME} HTTPS (default: 443)"
+            help_opt "--machinekey"          "<key>"          "core.machinekey for encryption (default: random key)"
+
+            echo
+            echo "DOCUMENT SERVER OPTIONS:"
+            help_opt "--installdocs"         "<true|false>"   "Install/update Document Server (default: true)"
+            help_opt "--docsimage"           "<image_name>"   "Docker image for Document Server (e.g., onlyoffice/documentserver)"
+            help_opt "--docsversion"         "<version>"      "Document Server version tag (e.g., 8.2.3.1)"
+            help_opt "--docsurl"             "<URL>"          "URL for Document Server (e.g., http://docs.example.com:8083)"
+            help_opt "--jwtheader"           "<header_name>"  "HTTP header for JWT tokens (e.g., AuthorizationJwt)"
+            help_opt "--jwtsecret"           "<secret>"       "JWT secret key (default: random key)"
+
+            echo
+            echo "DEPENDENCY SERVICES:"
+            echo "  RabbitMQ (not used in standalone mode):"
+            help_opt "--installrabbitmq"     "<true|false>"   "true to deploy RabbitMQ container (default: true)"
+            help_opt "--rabbitmqprotocol"    "<protocol>"     "Protocol for RabbitMQ (default: amqp)"
+            help_opt "--rabbitmqhost"        "<host>"         "Host/IP of RabbitMQ (default: localhost)"
+            help_opt "--rabbitmqport"        "<port>"         "RabbitMQ port (default: 5672)"
+            help_opt "--rabbitmqusername"    "<username>"     "RabbitMQ username"
+            help_opt "--rabbitmqpassword"    "<password>"     "RabbitMQ password"
+            help_opt "--rabbitmqvirtualhost" "<vhost>"        "RabbitMQ virtual host (default \"/\")"
+            echo
+            echo "  Redis (not used in standalone mode):"
+            help_opt "--installredis"        "<true|false>"   "true to deploy Redis container (default: true)"
+            help_opt "--redishost"           "<host>"         "Host/IP of Redis (default: localhost)"
+            help_opt "--redisport"           "<port>"         "Redis port (default: 6379)"
+            help_opt "--redisusername"       "<username>"     "Redis username (if required)"
+            help_opt "--redispassword"       "<password>"     "Redis password (if required)"
+            echo
+            echo "  MySQL:"
+            help_opt "--installmysql"        "<true|false>"   "true to deploy MySQL container (default: true)"
+            help_opt "--mysqlrootpassword"   "<password>"     "Root password for MySQL"
+            help_opt "--mysqldatabase"       "<db_name>"      "Database name for ${PRODUCT_NAME} (e.g., ${PRODUCT})"
+            help_opt "--mysqluser"           "<username>"     "DB user for ${PRODUCT_NAME}"
+            help_opt "--mysqlpassword"       "<password>"     "Password for ${PRODUCT_NAME} DB user"
+            help_opt "--mysqlhost"           "<host>"         "Host/IP of MySQL (default: localhost)"
+            help_opt "--mysqlport"           "<port>"         "MySQL port (default: 3306)"
+            echo
+            echo "  OpenSearch:"
+            help_opt "--installelastic"      "<true|false>"   "true to deploy OpenSearch container (default: true)"
+            help_opt "--elasticprotocol"     "<http|https>"   "Protocol for OpenSearch (default: http)"
+            help_opt "--elastichost"         "<host>"         "Host/IP of OpenSearch (default: localhost)"
+            help_opt "--elasticport"         "<port>"         "OpenSearch port (default: 9200)"
+            echo
+            echo "  Fluent-Bit:"
+            help_opt "--installfluentbit"    "<true|false>"   "true to deploy Fluent-Bit for log aggregation (default: true)"
+            echo
+            echo "  OpenSearch Dashboards:"
+            help_opt "--dashboardsusername"  "<username>"     "Username for OpenSearch Dashboards UI"
+            help_opt "--dashboardspassword"  "<password>"     "Password for Dashboards UI"
+
+            echo
+            echo "LET'S ENCRYPT:"
+            help_opt "--letsencryptdomain"   "<domain>"       "Domain(s) for Let's Encrypt (example.com / *.example.com / s1.example.com,s2.example.com)"
+            help_opt "--letsencryptmail"     "<email>"        "Admin email for Let's Encrypt (e.g., admin@example.com)"
+
+            echo
             echo "SSL / HTTPS:"
-            echo "  --certdomain     <domain>             Domain for existing SSL cert (example.com / *.example.com / s1.example.com, s2.example.com)"
-            echo "  --certfile       <path>               Path to SSL cert (.pem, .pfx, .der, .cer, PKCS#7)"
-            echo "  --certkeyfile    <path>               Path to SSL key (used with --certfile)"
+            help_opt "--certdomain"          "<domain>"       "Domain for the certificate below (same setting as --letsencryptdomain)"
+            help_opt "--certfile"            "<path>"         "Path to SSL cert (.pem, .pfx, .der, .cer, PKCS#7)"
+            help_opt "--certkeyfile"         "<path>"         "Path to SSL key (used with --certfile)"
+
             echo
             echo "DEPRECATED (still accepted, use the ${PRODUCT_NAME} options above instead):"
             echo "  --installdocspace, --docspaceversion, --docspacehost"
@@ -218,8 +228,8 @@ else
 fi
 
 case "${DEPLOYMENT_MODE}" in
-    microservices | stack | standalone ) ;;
-    * ) echo "Error: Invalid --deployment-mode '${DEPLOYMENT_MODE}'. Valid values: microservices, stack, standalone." >&2; exit 1 ;;
+    standalone | stack | microservices ) ;;
+    * ) echo "Error: Invalid --deployment-mode '${DEPLOYMENT_MODE}'. Valid values: standalone, stack, microservices." >&2; exit 1 ;;
 esac
 
 validate_bool() {
