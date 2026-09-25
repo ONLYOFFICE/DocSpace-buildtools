@@ -47,7 +47,7 @@
         }
     },
 	"quota": {
-		"id": -3
+		"id": -19
 	},
 	"max-attempts-count" : 10,
 	"openApi": {
