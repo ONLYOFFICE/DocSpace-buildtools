@@ -94,7 +94,7 @@ sudo bash <script-name> package -h
 | Flag                    | Value placeholder                         | Default value             | Description                    |
 |-------------------------|-------------------------------------------|---------------------------|--------------------------------|
 | `--installapps`     | `true` \| `false`                         | `true`                    | Install / update ONLYOFFICE Apps      |
-| `--deployment-mode`     | `standalone` \| `stack` \| `microservices` | *(edition-dependent)*     | Deployment topology (see below)|
+| `--deployment-mode`     | `standalone` \| `stack` \| `microservices` | `standalone`              | Deployment topology (see below)|
 | `--appsversion`     | `<VERSION>`                               | *(latest stable)*         | ONLYOFFICE Apps version               |
 | `--appshost`        | `<HOST>`                                  | `localhost`               | Hostname / IP                  |
 | `--externalport`        | `<PORT>`                                  | `80`                      | External HTTP port             |
@@ -104,10 +104,11 @@ sudo bash <script-name> package -h
 - `microservices` — modular multi-container deployment, one container per service.
 - `stack` — services grouped into fewer containers sharing a common runtime.
 - `standalone` — a single all-in-one `onlyoffice-apps` container (plus MySQL, OpenSearch and
-  Document Server), intended for quick evaluation/testing rather than production.
+  Document Server, each replaceable by an external one). Runs as a single node: cache and queues
+  are in-process, so it cannot be scaled out horizontally.
 
-The default depends on the edition: `--installationtype community` deploys the `standalone`
-topology, every other edition deploys `microservices`. An explicit `--deployment-mode` always wins.
+Every edition deploys `standalone` by default; an explicit `--deployment-mode` always wins. An
+existing install keeps its current topology on `--update` unless `--deployment-mode` is passed.
 
 You can switch topology on an existing install with `--update true --deployment-mode <mode>`:
 MySQL/OpenSearch/Document Server are reused as-is (no data loss), only the app layer is replaced.

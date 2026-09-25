@@ -133,7 +133,7 @@ while [ "$1" != "" ]; do
 
             echo
             echo "${PRODUCT_NAME^^} OPTIONS:"
-            help_opt "--deployment-mode"     "<mode>"         "Deployment topology (default: standalone for Community, microservices otherwise)"
+            help_opt "--deployment-mode"     "<mode>"         "Deployment topology (default: standalone)"
             help_note "  standalone     single all-in-one container, for evaluation/testing"
             help_note "  stack          services grouped by runtime (dotnet, node, java)"
             help_note "  microservices  one container per service"
@@ -220,12 +220,7 @@ case "${INSTALLATION_TYPE}" in
     * ) echo "Error: Invalid --installationtype '${INSTALLATION_TYPE}'. Valid values: community, developer, enterprise." >&2; exit 1 ;;
 esac
 
-# Community edition defaults to the single-container topology
-if [ "${INSTALLATION_TYPE}" = "community" ]; then
-    DEPLOYMENT_MODE="${DEPLOYMENT_MODE:-standalone}"
-else
-    DEPLOYMENT_MODE="${DEPLOYMENT_MODE:-microservices}"
-fi
+DEPLOYMENT_MODE="${DEPLOYMENT_MODE:-standalone}"
 
 case "${DEPLOYMENT_MODE}" in
     standalone | stack | microservices ) ;;
