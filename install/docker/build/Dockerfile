@@ -674,9 +674,9 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb /tmp/*
 
 # Services config + entrypoint + supervisor config
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/standalone/docker-entrypoint.sh /docker-entrypoint.sh
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/standalone/docker-entrypoint.sh /docker-entrypoint.sh
 # COPY --chown=onlyoffice:onlyoffice standalone/docker-entrypoint.sh /docker-entrypoint.sh
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/standalone/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/standalone/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # COPY --chown=onlyoffice:onlyoffice standalone/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # nginx config, static files, router scripts
