@@ -94,7 +94,7 @@ case $1 in
       DOMAIN=$2
       CERTIFICATE_FILE=$3
 
-      [[ $DOMAIN =~ ^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,6}$ ]] || { echo "Error: domain name '$DOMAIN' is incorrect." >&2; exit 1; }
+      [[ $DOMAIN =~ ^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$ ]] || { echo "Error: domain name '$DOMAIN' is incorrect." >&2; exit 1; }
       if [[ "$CERTIFICATE_FILE" =~ \.(p12|pfx)$ ]]; then
         echo "Using PKCS#12 file for SSL configuration..."
         openssl pkcs12 -in "$CERTIFICATE_FILE" -info -noout -passin pass: >/dev/null 2>&1 || read -rsp "Enter password: " PFX_PASSWORD
@@ -196,6 +196,30 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
     sed -i "s~\(ssl_certificate_key \).*;~\1${PRIVATEKEY_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
     sed -i "s~\(ssl_dhparam \).*;~\1${DHPARAM_PATH};~g" ${OPENRESTY}/onlyoffice-proxy.conf
     chown onlyoffice:onlyoffice ${USER_CONF}
+
+    # A cert handed to us via -f may still renew through Docs' own --nginx authenticator - re-point it at our webroot instead.
+    INHERITED_CERT_NAME=""
+    [[ "${CERTIFICATE_FILE}" == "${LETSENCRYPT}/"*/fullchain.pem ]] && INHERITED_CERT_NAME="$(basename "$(dirname "${CERTIFICATE_FILE}")")"
+    if [ -n "${INHERITED_CERT_NAME}" ] && [ "${INHERITED_CERT_NAME}" != "${CERT_NAME}" ] && command -v certbot >/dev/null 2>&1; then
+      INHERITED_RENEWAL_CONF="/etc/letsencrypt/renewal/${INHERITED_CERT_NAME}.conf"
+      if grep -q '^authenticator = manual' "${INHERITED_RENEWAL_CONF}" 2>/dev/null; then
+        echo "${INHERITED_CERT_NAME} renews via DNS-01 (wildcard); its renewal stays manual." >&2
+      else
+        # "reconfigure" switches the authenticator for the next renewal without forcing one now.
+        mkdir -p "${WEBROOT_PATH}/.well-known/acme-challenge"
+        if certbot reconfigure --cert-name "${INHERITED_CERT_NAME}" --webroot -w "${WEBROOT_PATH}" >/var/log/le-takeover.log 2>&1; then
+          mkdir -p /etc/letsencrypt/renewal-hooks/deploy
+          printf '#!/bin/sh\nsystemctl reload openresty\n' > /etc/letsencrypt/renewal-hooks/deploy/onlyoffice-apps-openresty
+          chmod 0755 /etc/letsencrypt/renewal-hooks/deploy/onlyoffice-apps-openresty
+          # documentserver-letsencrypt.m4 always overwrites (not appends) these paths, but verify their content before removing them anyway - the filenames aren't namespaced to our cert.
+          grep -q 'letsencrypt_cron\.sh' /etc/cron.d/letsencrypt 2>/dev/null && rm -f /etc/cron.d/letsencrypt
+          grep -q 'certbot renew' /usr/bin/letsencrypt_cron.sh 2>/dev/null && rm -f /usr/bin/letsencrypt_cron.sh
+          LETSENCRYPT_ENABLE="true"
+        else
+          echo "Warning: could not switch ${INHERITED_CERT_NAME}'s renewal to webroot; see /var/log/le-takeover.log. It may keep failing via --nginx now that ${PRODUCT} holds ports 80/443." >&2
+        fi
+      fi
+    fi
 
     if [[ "${LETSENCRYPT_ENABLE}" = "true" ]]; then
       CRON_PATH=$(command -v crond || command -v cron) && CRON_SVC=${CRON_PATH##*/} || { echo "Error: neither crond nor cron is installed." >&2; }

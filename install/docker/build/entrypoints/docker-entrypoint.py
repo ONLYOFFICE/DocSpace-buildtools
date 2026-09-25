@@ -54,6 +54,7 @@ DOCUMENT_SERVER_URL_EXTERNAL = os.environ.get("DOCUMENT_SERVER_URL_EXTERNAL") or
 DOCUMENT_SERVER_URL_PUBLIC = DOCUMENT_SERVER_URL_EXTERNAL if DOCUMENT_SERVER_URL_EXTERNAL else os.environ.get("DOCUMENT_SERVER_URL_PUBLIC") or "/ds-vpath/"
 DOCUMENT_SERVER_CONNECTION_HOST = DOCUMENT_SERVER_URL_EXTERNAL if DOCUMENT_SERVER_URL_EXTERNAL else DOCUMENT_SERVER_URL_INTERNAL
 DOCUMENT_SERVER_REQUIRED = {"true": True, "false": False}.get(os.environ.get("DOCUMENT_SERVER_REQUIRED", "").lower())
+DOCUMENT_SERVER_URL_ADMINPANEL = DOCUMENT_SERVER_URL_PUBLIC.rstrip("/") + "/admin"
 
 ELK_CONTAINER_NAME = os.environ.get("ELK_CONTAINER_NAME") or "onlyoffice-opensearch"
 ELK_SCHEME = os.environ.get("ELK_SCHEME") or "http"
@@ -355,6 +356,12 @@ updateJsonData(jsonData,"$.core.hosting.forwardedHeadersOptions.knownNetworks", 
 updateJsonData(jsonData,"$.core.hosting.forwardedHeadersOptions.knownProxies", knownProxies)
 
 writeJsonFile(filePath, jsonData)
+
+filePath = "/app/onlyoffice/config/externalresources.json"
+jsonData = openJsonFile(filePath)
+if jsonData:
+    updateJsonData(jsonData, "$.externalresources.adminpanel.default.domain", DOCUMENT_SERVER_URL_ADMINPANEL)
+    writeJsonFile(filePath, jsonData)
 
 filePath = "/app/onlyoffice/config/apisystem.json"
 jsonData = openJsonFile(filePath)

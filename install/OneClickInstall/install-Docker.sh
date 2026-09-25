@@ -477,7 +477,8 @@ create_network () {
 }
 
 domain_check () {
-	APP_DOMAIN_PORTAL=$(cut -d ',' -f 1 <<< "$LETS_ENCRYPT_DOMAIN")
+	# Respect a value detect_existing_document_server() already set - don't let this overwrite it with an empty one.
+	APP_DOMAIN_PORTAL=${APP_DOMAIN_PORTAL:-$(cut -d ',' -f 1 <<< "$LETS_ENCRYPT_DOMAIN")}
 	APP_DOMAIN_PORTAL=${APP_DOMAIN_PORTAL:-${APP_URL_PORTAL:-$(get_env_parameter "APP_URL_PORTAL" "${PACKAGE_SYSNAME}-files" | awk -F[/:] '{if ($1 == "https") print $4; else print ""}')}}
 	APP_URL_PORTAL=${APP_DOMAIN_PORTAL:+http://${APP_DOMAIN_PORTAL}:${EXTERNAL_PORT}}
 }
@@ -569,8 +570,10 @@ recreate_document_server_container () {
 	IMAGE=$(docker inspect --format '{{.Config.Image}}' "${CONTAINER}")
 	RESTART_POLICY=$(docker inspect --format '{{.HostConfig.RestartPolicy.Name}}' "${CONTAINER}")
 
-	while IFS= read -r VAR; do [ -n "${VAR}" ] && ENV_ARGS+=(-e "${VAR}"); done \
-		< <(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "${CONTAINER}")
+	# This is only an intermediate step to free up published ports before migrate_document_server_data() takes over - HTTPS itself is stripped later, by strip_inherited_https_from_document_server(), once ssl-setup confirms the cert landed on the new front end.
+	while IFS= read -r VAR; do
+		[ -n "${VAR}" ] && ENV_ARGS+=(-e "${VAR}")
+	done < <(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "${CONTAINER}")
 
 	# For a named/anonymous volume, use its name (not .Source's internal /var/lib/docker/volumes/<hash>/_data path) so it stays a real, prunable-by-name volume instead of a pinned bind mount.
 	while IFS= read -r LINE; do
@@ -617,6 +620,38 @@ detect_existing_document_server () {
 		DOCUMENT_SERVER_VERSION="${FOUND_IMAGE##*:}"
 	fi
 
+	# If the adopted container already serves HTTPS, inherit its cert and disable HTTPS in it below - ds.yml only exposes port 80, so otherwise its :80 vhost would just redirect to :443 forever.
+	local DS_HTTPS_INHERITED="false"
+	local DS_SSL_CERT DS_SSL_KEY DS_SSL_DOMAIN DS_CONF_CONTENT
+	if [ "${INSTALL_PRODUCT}" == "true" ] && [ -z "${CERTIFICATE_PATH}" ] && [ -z "${LETS_ENCRYPT_DOMAIN}" ]; then
+		# A non-running container or a symlinked ds.conf (plain HTTP) both make this print nothing - one round trip covers the existence/symlink/content checks that used to be three.
+		DS_CONF_CONTENT="$(docker exec "${CONTAINER}" sh -c '[ -f /etc/onlyoffice/documentserver/nginx/ds.conf ] && [ ! -L /etc/onlyoffice/documentserver/nginx/ds.conf ] && cat /etc/onlyoffice/documentserver/nginx/ds.conf' 2>/dev/null)"
+	fi
+	if [ -n "${DS_CONF_CONTENT}" ]; then
+		DS_SSL_CERT="$(grep -oP '^\s*ssl_certificate\s+\K[^;]+' <<< "$DS_CONF_CONTENT" | head -1)"
+		DS_SSL_KEY="$(grep -oP '^\s*ssl_certificate_key\s+\K[^;]+' <<< "$DS_CONF_CONTENT" | head -1)"
+		DS_SSL_DOMAIN="$(grep -oP '^\s*server_name\s+\K\S+' <<< "$DS_CONF_CONTENT" | grep -vE '^(_|localhost);?$' | head -1 | sed 's/^\*\.//')"
+		DS_SSL_DOMAIN="${DS_SSL_DOMAIN%;}"
+		# A file-supplied (non-LE) certificate leaves ds.conf's HTTPS server without a server_name - fall back to the cert's own SAN/CN, in one round trip.
+		[ -z "${DS_SSL_DOMAIN}" ] && [ -n "${DS_SSL_CERT}" ] && \
+			DS_SSL_DOMAIN="$(docker exec "${CONTAINER}" openssl x509 -noout -ext subjectAltName -subject -in "${DS_SSL_CERT}" 2>/dev/null | grep -oP 'DNS:\K[^, ]+|CN\s*=\s*\K[^,/]+' | head -1 | sed 's/^\*\.//')"
+
+		if [ -n "${DS_SSL_CERT}" ] && [ -n "${DS_SSL_KEY}" ] && [ -n "${DS_SSL_DOMAIN}" ]; then
+			mkdir -p "${BASE_DIR}/certs"
+			# -L: a Let's Encrypt cert is symlinked from live/ into archive/, and docker cp otherwise copies the symlink itself.
+			if docker cp -L "${CONTAINER}:${DS_SSL_CERT}" "${BASE_DIR}/certs/ds-inherited.crt" >/dev/null 2>&1 \
+				&& docker cp -L "${CONTAINER}:${DS_SSL_KEY}" "${BASE_DIR}/certs/ds-inherited.key" >/dev/null 2>&1; then
+				echo "${CONTAINER} is serving HTTPS for ${DS_SSL_DOMAIN}; ${PRODUCT_NAME} will take over as the HTTPS front end with the same certificate."
+				CERTIFICATE_PATH="${BASE_DIR}/certs/ds-inherited.crt"
+				CERTIFICATE_KEY_PATH="${BASE_DIR}/certs/ds-inherited.key"
+				APP_DOMAIN_PORTAL="${APP_DOMAIN_PORTAL:-${DS_SSL_DOMAIN}}"
+				DS_HTTPS_INHERITED="true"
+			else
+				echo "Warning: ${CONTAINER} looks HTTPS-configured but its certificate could not be extracted; installing ${PRODUCT_NAME} on http://${EXTERNAL_PORT}." >&2
+			fi
+		fi
+	fi
+
 	# Network membership isn't check_ports' concern and ds.yml's own `up -d` joins our network anyway, so only a real port clash needs handling here.
 	local PORT_CONFLICT="false" PUBLISHED_PORTS
 	if [ "${INSTALL_PRODUCT}" == "true" ]; then
@@ -628,7 +663,13 @@ detect_existing_document_server () {
 	fi
 
 	if [ "${PORT_CONFLICT}" = "true" ]; then
-		recreate_document_server_container "${CONTAINER}" || return 0
+		if ! recreate_document_server_container "${CONTAINER}"; then
+			# Adoption is abandoned below - don't feed an inherited cert into install_product()'s SSL setup for a DS we never took over.
+			if [ "${DS_HTTPS_INHERITED}" = "true" ]; then
+				CERTIFICATE_PATH=""; CERTIFICATE_KEY_PATH=""; APP_DOMAIN_PORTAL=""
+			fi
+			return 0
+		fi
 	fi
 
 	DOCUMENT_SERVER_HOST="${CONTAINER}"
@@ -742,7 +783,8 @@ download_files () {
 
 	[ "${OFFLINE_INSTALLATION}" = "false" ] && echo -n "Downloading configuration files to ${BASE_DIR}..." || echo "Unzip ${DOCKER_TARBALL} to ${BASE_DIR}..."
 
-	[ -d "${BASE_DIR:?}" ] && find "${BASE_DIR}" -mindepth 1 -maxdepth 1 -not -name "DocumentServer" -not -name "ds.env" -exec rm -rf {} +
+	# "certs" holds the certificate detect_existing_document_server() already extracted - don't wipe it here.
+	[ -d "${BASE_DIR:?}" ] && find "${BASE_DIR}" -mindepth 1 -maxdepth 1 -not -name "DocumentServer" -not -name "ds.env" -not -name "certs" -exec rm -rf {} +
 	mkdir -p ${BASE_DIR}
 
 	if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
@@ -882,6 +924,7 @@ migrate_document_server_data () {
 		[ -z "${SRC}" ] && continue
 		[ "${TYPE}" = "volume" ] && MOUNTPOINT="$(docker volume inspect --format '{{.Mountpoint}}' "${SRC}")" || MOUNTPOINT="${SRC}"
 		case "${DEST}" in
+			# HTTPS is stripped later, in strip_inherited_https_from_document_server(), only once ssl-setup confirms the inherited cert landed on the new front end - not here.
 			/var/www/onlyoffice/Data)          cp -a "${MOUNTPOINT}/." "${APP_DATA_MOUNTPOINT}/" ;;
 			/var/log/onlyoffice)               cp -a "${MOUNTPOINT}/." "${LOG_DATA_MOUNTPOINT}/" ;;
 			/var/lib/onlyoffice)               cp -a "${MOUNTPOINT}/." "${DS_STATE_MOUNTPOINT}/" ;;
@@ -919,6 +962,31 @@ migrate_document_server_data () {
 	[ "${DEPLOYMENT_MODE}" = "community" ] && DS_COMPOSE_FILE="${BASE_DIR}/docker-compose.yml"
 	[ -s "${BASE_DIR}/ds.env" ] && sed -i -e 's/^\( *\)#env_file:$/\1env_file:/' -e 's/^ *#  - ds\.env$/      - ds.env/' "${DS_COMPOSE_FILE}"
 	return 0
+}
+
+# Called via finish_https_takeover(), shared by install_product() and install_community(), once the cert-apply command confirms the inherited cert now lives on the new front end - until then the migrated Document Server keeps serving HTTPS itself, so nothing is lost if that command fails.
+strip_inherited_https_from_document_server () {
+	local DATA_VOLUME_NAME="app_data"
+	[ "${DEPLOYMENT_MODE}" = "community" ] && DATA_VOLUME_NAME="ds_data"
+	rm -rf "$(resolve_ds_volume_path "${DATA_VOLUME_NAME}")/certs"
+
+	local DS_COMPOSE_FILE="${BASE_DIR}/ds.yml"
+	[ "${DEPLOYMENT_MODE}" = "community" ] && DS_COMPOSE_FILE="${BASE_DIR}/docker-compose.yml"
+	[ -f "${BASE_DIR}/ds.env" ] && sed -i -E '/^(SSL_CERTIFICATE_PATH|SSL_KEY_PATH|SSL_DHPARAM_PATH|CA_CERTIFICATES_PATH|SSL_VERIFY_CLIENT|LETS_ENCRYPT_DOMAIN|LETS_ENCRYPT_MAIL)=/d' "${BASE_DIR}/ds.env"
+	${DOCKER_COMPOSE} -f "${DS_COMPOSE_FILE}" restart onlyoffice-document-server || {
+		echo "Warning: failed to restart the Document Server after stripping its HTTPS config; it may still be running with the old certificate/env vars until restarted manually." >&2
+		return 1
+	}
+}
+
+# Shared by install_product()/install_community(): call with the cert-apply command's own exit status ($?, captured immediately after it runs).
+# Strips the migrated Document Server's own HTTPS once that command succeeded; otherwise warns when the failed cert was one this run itself inherited from it.
+finish_https_takeover () {
+	if [ "$1" -eq 0 ]; then
+		[ "${CERTIFICATE_PATH}" = "${BASE_DIR}/certs/ds-inherited.crt" ] && strip_inherited_https_from_document_server
+	elif [ "${CERTIFICATE_PATH}" = "${BASE_DIR}/certs/ds-inherited.crt" ]; then
+		echo "Warning: failed to apply the inherited HTTPS certificate to ${PRODUCT_NAME}; the migrated Document Server keeps serving HTTPS itself, though it no longer publishes ports externally." >&2
+	fi
 }
 
 # Adds the migrated custom fonts on top of ds_fonts's already-populated default set; DS only rescans fonts at startup, so the caller must restart the container afterward.
@@ -1075,6 +1143,7 @@ install_product () {
 		if [ ! -z "${CERTIFICATE_PATH}" ] && [[ ! -z "${APP_DOMAIN_PORTAL}" ]]; then
 		    env ${DHPARAM_PATH:+DHPARAM_PATH="$DHPARAM_PATH"} \
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -f "${APP_DOMAIN_PORTAL}" "${CERTIFICATE_PATH}" "${CERTIFICATE_KEY_PATH}"
+		    finish_https_takeover $?
 		elif [ ! -z "${LETS_ENCRYPT_DOMAIN}" ] && [ ! -z "${LETS_ENCRYPT_MAIL}" ]; then
 		    env ${DHPARAM_PATH:+DHPARAM_PATH="$DHPARAM_PATH"} \
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup "${LETS_ENCRYPT_MAIL}" "${LETS_ENCRYPT_DOMAIN}"
@@ -1171,6 +1240,7 @@ install_community () {
 				SSL_CERT_PATH="/etc/nginx/certs/$(basename "${CERTIFICATE_PATH}")" \
 				SSL_KEY_PATH="/etc/nginx/certs/$(basename "${CERTIFICATE_KEY_PATH}")" \
 				${DOCKER_COMPOSE} "${COMMUNITY_FILES[@]}" up -d
+			finish_https_takeover $?
 		elif [ -n "${LETS_ENCRYPT_DOMAIN}" ] && [ -n "${LETS_ENCRYPT_MAIL}" ]; then
 			mkdir -p "${BASE_DIR}/config/nginx/ssl/letsencrypt"
 			COMMUNITY_FILES+=(-f "${BASE_DIR}/ssl.yml")
