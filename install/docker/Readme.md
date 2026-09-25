@@ -248,8 +248,7 @@ Supervisor configs baked into the images, under `build/supervisor/`:
 
 | File | Purpose |
 |------|---------|
-| `stack/supervisord.conf` | Supervisor daemon settings (apps-stack.yml services) |
-| `stack/dotnet_services.conf` | .NET service management |
+| `stack/dotnet_services.conf` | Supervisor daemon settings + .NET service management |
 | `stack/node_services.conf` | Node.js service management |
 | `stack/java_services.conf` | Java service management |
 | `standalone.conf` | Supervisor daemon + all services, for the single-container standalone image |
