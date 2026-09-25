@@ -46,6 +46,7 @@
     <ROW Property="DOCUMENT_SERVER_HOST" Value="localhost"/>
     <ROW Property="DOCUMENT_SERVER_JWT_SECRET" Value=" "/>
     <ROW Property="DOCUMENT_SERVER_PORT" Value="8083"/>
+    <ROW Property="DS_VERSION" Value="0.0.0.0"/>
     <ROW Property="DOMAIN_NAME" Value="localhost:80"/>
     <ROW Property="ENVIRONMENT" Value="community" MultiBuildValue="ExeBuild:enterprise#ExeBuild_1:developer"/>
     <ROW Property="Editor_Port" Value="5013"/>
@@ -585,6 +586,21 @@
     <ROW Property="DASHBOARDS_PWD" Signature_="AppSearchSign_26"/>
     <ROW Property="IDENTITY_ENCRYPTION_SECRET" Signature_="AppSearchSign_27"/>
     <ROW Property="DOMAIN_NAME" Signature_="AppSearchSign_28"/>
+    <ROW Property="DOCS_DBHOST" Signature_="DocsRegistrySearch_DbHost"/>
+    <ROW Property="DOCS_DBNAME" Signature_="DocsRegistrySearch_DbName"/>
+    <ROW Property="DOCS_DBPORT" Signature_="DocsRegistrySearch_DbPort"/>
+    <ROW Property="DOCS_DBPWD" Signature_="DocsRegistrySearch_DbPwd"/>
+    <ROW Property="DOCS_DBUSER" Signature_="DocsRegistrySearch_DbUser"/>
+    <ROW Property="DOCS_JWTENABLED" Signature_="DocsRegistrySearch_JwtEnabled"/>
+    <ROW Property="DOCS_JWTHEADER" Signature_="DocsRegistrySearch_JwtHeader"/>
+    <ROW Property="DOCS_JWTSECRET" Signature_="DocsRegistrySearch_JwtSecret"/>
+    <ROW Property="DOCS_RABBITMQHOST" Signature_="DocsRegistrySearch_RabbitMqHost"/>
+    <ROW Property="DOCS_RABBITMQPROTO" Signature_="DocsRegistrySearch_RabbitMqProto"/>
+    <ROW Property="DOCS_RABBITMQPWD" Signature_="DocsRegistrySearch_RabbitMqPwd"/>
+    <ROW Property="DOCS_RABBITMQUSER" Signature_="DocsRegistrySearch_RabbitMqUser"/>
+    <ROW Property="DOCS_REDISHOST" Signature_="DocsRegistrySearch_RedisHost"/>
+    <ROW Property="DOCS_DISPLAY_NAME" Signature_="DocsInstalledDisplayName"/>
+    <ROW Property="DOCS_INSTALLED_VERSION" Signature_="DocsInstalledDisplayVersion"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiBinaryComponent">
     <ROW Name="NetFirewall.dll" SourcePath="&lt;AI_CUSTACTS&gt;NetFirewall.dll"/>
@@ -993,11 +1009,17 @@
     <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="[PostgreSQLConnectionDlg_Cond]" Argument="{}" Condition="1" Ordering="1"/>
     <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="PostgreSQLConnectionDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="9"/>
     <ROW Dialog_="OpenSearchConnectionDlg" Control_="Back" Event="NewDialog" Argument="PostgreSQLConnectionDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="6"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;False&quot; )" Ordering="6"/>
     <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Back" Event="NewDialog" Argument="SQLConnectionDlg" Condition="PostgreSQLConnectionDlg_Cond AND AI_INSTALL AND ( SqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="3"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="7"/>
     <ROW Dialog_="LicenseAgreementDlg" Control_="Next" Event="NewDialog" Argument="FolderDlg" Condition="AI_INSTALL" Ordering="1"/>
     <ROW Dialog_="LicenseAgreementDlg" Control_="Back" Event="NewDialog" Argument="WelcomeDlg" Condition="AI_INSTALL" Ordering="1"/>
+    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_1" Condition="AI_INSTALL AND ( SqlConnectionError=&quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; )" Ordering="5"/>
+    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="DoAction" Argument="TestOpenSearchConnection" Condition="AI_INSTALL AND ( SqlConnectionError=&quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; )" Ordering="6"/>
+    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="DoAction" Argument="TestRabbitMQServerConnection" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="7"/>
+    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="DoAction" Argument="TestRedisServerConnection" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="8"/>
+    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;False&quot; )" Ordering="9"/>
+    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="RabbitMQConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="10"/>
+    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="11"/>
+    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="12"/>
     <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_31" Condition="AI_INSTALL" Ordering="1"/>
     <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_31" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; )" Ordering="211"/>
     <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_31" Condition="AI_INSTALL" Ordering="15"/>
@@ -1124,6 +1146,8 @@
     <ROW Action="SET_SHORTCUTDIR" Type="307" Source="SHORTCUTDIR" Target="[ProgramMenuFolder][ProductName]" MultiBuildTarget="DefaultBuild:[ProgramMenuFolder][INSTALL_ROOT_FOLDER_NAME]\Apps#ExeBuild:[ProgramMenuFolder][INSTALL_ROOT_FOLDER_NAME]\Apps#ExeBuild_1:[ProgramMenuFolder][INSTALL_ROOT_FOLDER_NAME]\Apps"/>
     <ROW Action="SET_TARGETDIR_TO_APPDIR" Type="51" Source="TARGETDIR" Target="[APPDIR]"/>
     <ROW Action="SetDashboardsPwd" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_37"/>
+    <ROW Action="AI_DATA_SETTER_43" Type="51" Source="CustomActionData" Target="AEYAbABhAGcAcwACADEAAQBQAGEAcgBhAG0AcwACAEEAcABwAGwAeQBJAG4AcwB0AGEAbABsAGUAZABEAG8AYwB1AG0AZQBuAHQAUwBlAHIAdgBlAHIAUwBlAHQAdABpAG4AZwBzAAEAUwBjAHIAaQBwAHQAUwByAGMAQgBpAG4AYQByAHkAUgBvAHcASQBkAAIAdQB0AGkAbABzAC4AcABzADEAXwAx"/>
+    <ROW Action="ApplyInstalledDocumentServerSettings" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_43"/>
     <ROW Action="SetDocumentServerJWTSecretProp" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_35"/>
     <ROW Action="SetIdentityEncryptionSecret" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_41"/>
     <ROW Action="SetMachineKey" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_36"/>
@@ -1277,6 +1301,8 @@
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstExSeqComponent">
     <ROW Action="AI_DATA_SETTER_42" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="97"/>
     <ROW Action="MigrateProductRegistry" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="98"/>
+    <ROW Action="AI_DATA_SETTER_43" Condition="NOT Installed AND ENVIRONMENT = &quot;community&quot; AND DOCS_INSTALLED_VERSION" Sequence="949"/>
+    <ROW Action="ApplyInstalledDocumentServerSettings" Condition="NOT Installed AND ENVIRONMENT = &quot;community&quot; AND DOCS_INSTALLED_VERSION" Sequence="950"/>
     <ROW Action="AI_DOWNGRADE" Condition="AI_NEWERPRODUCTFOUND AND (UILevel &lt;&gt; 5)" Sequence="210"/>
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>
     <ROW Action="AI_STORE_LOCATION" Condition="(Not Installed) OR REINSTALL" Sequence="1501"/>
@@ -1365,6 +1391,8 @@
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstallUISequenceComponent">
     <ROW Action="AI_DATA_SETTER_42" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="97"/>
     <ROW Action="MigrateProductRegistry" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="98"/>
+    <ROW Action="AI_DATA_SETTER_43" Condition="NOT Installed AND ENVIRONMENT = &quot;community&quot; AND DOCS_INSTALLED_VERSION" Sequence="949"/>
+    <ROW Action="ApplyInstalledDocumentServerSettings" Condition="NOT Installed AND ENVIRONMENT = &quot;community&quot; AND DOCS_INSTALLED_VERSION" Sequence="950"/>
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>
     <ROW Action="AI_ResolveKnownFolders" Sequence="55"/>
     <ROW Action="AI_DpiContentScale" Sequence="54"/>
@@ -1392,8 +1420,8 @@
     <ROW Action="AI_DATA_SETTER_36" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( MACHINE_KEY = &quot; &quot; )" Sequence="1110"/>
     <ROW Action="SetDashboardsPwd" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( DASHBOARDS_PWD = &quot; &quot; )" Sequence="1113"/>
     <ROW Action="AI_DATA_SETTER_37" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( DASHBOARDS_PWD = &quot; &quot; )" Sequence="1112"/>
-    <ROW Action="SetDocumentServerJWTSecretProp" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( JWT_ENABLED = &quot;true&quot; )" Sequence="1106"/>
-    <ROW Action="AI_DATA_SETTER_35" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( JWT_ENABLED = &quot;true&quot; )" Sequence="1105"/>
+    <ROW Action="SetDocumentServerJWTSecretProp" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( JWT_ENABLED = &quot;true&quot; AND DOCUMENT_SERVER_JWT_SECRET = &quot; &quot; )" Sequence="1106"/>
+    <ROW Action="AI_DATA_SETTER_35" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( JWT_ENABLED = &quot;true&quot; AND DOCUMENT_SERVER_JWT_SECRET = &quot; &quot; )" Sequence="1105"/>
     <ROW Action="SetIdentityEncryptionSecret" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( IDENTITY_ENCRYPTION_SECRET = &quot; &quot; )" Sequence="1115"/>
     <ROW Action="AI_DATA_SETTER_41" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( IDENTITY_ENCRYPTION_SECRET = &quot; &quot; )" Sequence="1114"/>
   </COMPONENT>
@@ -1436,6 +1464,21 @@
     <ROW Signature_="AppSearchSign_26" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="DASHBOARDS_PWD" Type="2"/>
     <ROW Signature_="AppSearchSign_27" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="IDENTITY_ENCRYPTION_SECRET" Type="2"/>
     <ROW Signature_="AppSearchSign_28" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="DOMAIN_NAME" Type="2"/>
+    <ROW Signature_="DocsRegistrySearch_DbHost" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="DbHost" Type="18"/>
+    <ROW Signature_="DocsRegistrySearch_DbName" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="DbName" Type="18"/>
+    <ROW Signature_="DocsRegistrySearch_DbPort" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="DbPort" Type="18"/>
+    <ROW Signature_="DocsRegistrySearch_DbPwd" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="DbPwd" Type="18"/>
+    <ROW Signature_="DocsRegistrySearch_DbUser" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="DbUser" Type="18"/>
+    <ROW Signature_="DocsRegistrySearch_JwtEnabled" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="JwtEnabled" Type="18"/>
+    <ROW Signature_="DocsRegistrySearch_JwtHeader" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="JwtHeader" Type="18"/>
+    <ROW Signature_="DocsRegistrySearch_JwtSecret" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="JwtSecret" Type="18"/>
+    <ROW Signature_="DocsRegistrySearch_RabbitMqHost" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="RabbitMqHost" Type="18"/>
+    <ROW Signature_="DocsRegistrySearch_RabbitMqProto" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="RabbitMqProto" Type="18"/>
+    <ROW Signature_="DocsRegistrySearch_RabbitMqPwd" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="RabbitMqPwd" Type="18"/>
+    <ROW Signature_="DocsRegistrySearch_RabbitMqUser" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="RabbitMqUser" Type="18"/>
+    <ROW Signature_="DocsRegistrySearch_RedisHost" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="RedisHost" Type="18"/>
+    <ROW Signature_="DocsInstalledDisplayName" Root="2" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1" Name="DisplayName" Type="18"/>
+    <ROW Signature_="DocsInstalledDisplayVersion" Root="2" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1" Name="DisplayVersion" Type="18"/>
     <ROW Signature_="AppSearchSign_3" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_USER" Type="2"/>
     <ROW Signature_="AppSearchSign_4" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_PWD" Type="2"/>
     <ROW Signature_="AppSearchSign_5" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_PORT" Type="2"/>
@@ -1669,7 +1712,7 @@
     <ROW SearchKey="EA5B60A5CAD4115A8386D017CC889B9ASP.N" Prereq="EA5B60A5CAD4115A8386D017CC889B9" SearchType="12" SearchString="HKLM\SOFTWARE\Wow6432Node\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.AspNetCore.App" VerMin="10.0.0" Order="1" Property="PreReqSearch_EA5B60A5CAD4115A8386D0"/>
     <ROW SearchKey="F3520F64DA5998338D97129FAD2Mic" Prereq="F3520F64DA5998338D97129FAD2" SearchType="12" SearchString="HKLM\SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.NETCore.App" VerMin="10.0.0" Order="1" Property="PreReqSearch_F3520F64DA5998338D9712"/>
     <ROW SearchKey="FFmpeg" Prereq="FFmpegx64" SearchType="4" SearchString="{384A74EC-865A-4907-8561-9DE765EE6E14}" Order="1" Property="PreReqSearch_3"/>
-    <ROW SearchKey="ONLYOFFICEDocumentServer_is1" Prereq="DocumentServer" SearchType="5" SearchString="HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1" Order="1" Property="PreReqSearch_1_1" Platform="1"/>
+    <ROW SearchKey="ONLYOFFICEDocumentServer_is1" Prereq="DocumentServer" SearchType="2" SearchString="HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1\DisplayVersion" VerMin="0.0.0.0" Order="1" Property="PreReqSearch_1_1" Platform="1"/>
     <ROW SearchKey="RabbitMQ_1" Prereq="RequiredApplication_5" SearchType="2" SearchString="HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\RabbitMQ\DisplayVersion" VerMin="3.12.1" Order="2" Property="PreReqSearch_9"/>
     <ROW SearchKey="SystemFolderfile.dll" Prereq="RequiredApplication" SearchType="4" SearchString="{FF073FBB-32E2-4052-B6B2-830C5ED4A809}" VerMin="8.4.0" Order="1" Property="PreReqSearch"/>
     <ROW SearchKey="SystemFolderfile.dll_1" Prereq="RequiredApplication_1" SearchType="4" SearchString="{47C07A3A-42EF-4213-A85D-8F5A59077C28}" VerMin="24.21.0" Order="1" Property="PreReqSearch_1"/>

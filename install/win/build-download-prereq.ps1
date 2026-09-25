@@ -35,6 +35,9 @@ function DownloadComponents {
       }
     } catch {
       Write-Host "[ERROR] Can not download" $item.name "by link" $url
+      if ($item.name -like 'onlyoffice-documentserver*.exe') {
+        throw
+      }
     }
   }
 }
@@ -158,6 +161,25 @@ if (Test-Path $aip_path) {
 }
 
 DownloadComponents $prerequisites $path_prereq
+
+$DocsInstaller = Join-Path $path_prereq 'onlyoffice-documentserver.exe'
+$DocsVersion = (Get-Item -LiteralPath $DocsInstaller).VersionInfo.ProductVersion.Trim()
+if ($DocsVersion -notmatch '^\d+\.\d+\.\d+\.\d+$') {
+  throw "Invalid Docs Community version '$DocsVersion' in $DocsInstaller"
+}
+
+$AppsProject = [IO.File]::ReadAllText($aip_path)
+$VersionProperty = '(<ROW Property="DS_VERSION" Value=")[^"]*'
+$CommunitySearch = '(<ROW SearchKey="ONLYOFFICEDocumentServer_is1"[^\r\n]*? VerMin=")[^"]*'
+if ([regex]::Matches($AppsProject, $VersionProperty).Count -ne 1 -or [regex]::Matches($AppsProject, $CommunitySearch).Count -ne 1) {
+  throw 'Unable to find the Docs Community version fields in Apps.aip'
+}
+$AppsProject = [regex]::Replace($AppsProject, $VersionProperty, '${1}' + $DocsVersion)
+$AppsProject = [regex]::Replace($AppsProject, $CommunitySearch, '${1}' + $DocsVersion)
+$AppsXml = New-Object Xml.XmlDocument
+$AppsXml.LoadXml($AppsProject)
+[IO.File]::WriteAllText($aip_path, $AppsProject, (New-Object Text.UTF8Encoding($false)))
+Write-Host "Docs Community version in Apps.aip: $DocsVersion"
 
 DownloadComponents $enterprise_prerequisites $path_enterprise_prereq
 

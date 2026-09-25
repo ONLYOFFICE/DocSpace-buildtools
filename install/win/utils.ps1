@@ -66,8 +66,51 @@ function ExtractPath {
     }
 }
 
+# Applies Docs registry search results to Apps properties.
+function ApplyInstalledDocumentServerSettings {
+    $InstalledVersion = AI_GetMsiProperty DOCS_INSTALLED_VERSION
+    if (-not $InstalledVersion) { return }
+
+    $BundledVersion = [version](AI_GetMsiProperty DS_VERSION)
+    $DisplayName = AI_GetMsiProperty DOCS_DISPLAY_NAME
+    $SkipDocsInstall = $true
+    if ($DisplayName -match '^ONLYOFFICE Document Server(?:\s|$)' -and
+        $DisplayName -notmatch '\b(DE|EE)\b|Developer|Enterprise') {
+        try { $SkipDocsInstall = [version]$InstalledVersion -ge $BundledVersion }
+        catch { Write-Warning "Invalid installed DocumentServer version: $InstalledVersion" }
+    }
+    AI_SetMsiProperty DOCUMENT_SERVER_INSTALL_NONE ([string][int]$SkipDocsInstall)
+
+    $PropertyMap = @{
+        DOCS_DBHOST = 'PS_DB_HOST'
+        DOCS_DBNAME = 'PS_DB_NAME'
+        DOCS_DBPORT = 'PS_DB_PORT'
+        DOCS_DBPWD = 'PS_DB_PWD'
+        DOCS_DBUSER = 'PS_DB_USER'
+        DOCS_JWTENABLED = @('DOCUMENT_SERVER_JWT_ENABLED', 'JWT_ENABLED')
+        DOCS_JWTHEADER = @('DOCUMENT_SERVER_JWT_HEADER', 'JWT_HEADER')
+        DOCS_JWTSECRET = @('DOCUMENT_SERVER_JWT_SECRET', 'JWT_SECRET')
+        DOCS_RABBITMQHOST = 'AMQP_HOST'
+        DOCS_RABBITMQPROTO = 'AMQP_PROTOCOL'
+        DOCS_RABBITMQPWD = 'AMQP_PWD'
+        DOCS_RABBITMQUSER = 'AMQP_USER'
+        DOCS_REDISHOST = 'REDIS_HOST'
+    }
+
+    foreach ($Source in $PropertyMap.Keys) {
+        $Value = AI_GetMsiProperty $Source
+        if ([string]::IsNullOrEmpty($Value)) { continue }
+        foreach ($Target in @($PropertyMap[$Source])) {
+            AI_SetMsiProperty $Target $Value
+        }
+    }
+    Write-Output 'Existing DocumentServer settings applied.'
+}
+
 # Tests the connection to PostgreSQL using ODBC.
 function TestPostgreSqlConnection {
+    AI_SetMsiProperty PostgreSqlConnectionError ""
+
     $Server   = AI_GetMsiProperty PS_DB_HOST
     $Port     = AI_GetMsiProperty PS_DB_PORT
     $Database = AI_GetMsiProperty PS_DB_NAME
@@ -485,6 +528,27 @@ function MoveConfigs {
     }
     if (Test-Path $FluentBitSourceFile) {
         Move-Item -Path $FluentBitSourceFile -Destination $FluentBitDstFolder
+    }
+
+    if ((AI_GetMsiProperty DOCUMENT_SERVER_INSTALL_NONE) -eq '1') {
+        $Registry = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry64').OpenSubKey(
+            'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1')
+        if (-not $Registry) { throw 'DocumentServer uninstall registry key not found.' }
+        $DocsDir = $Registry.GetValue('InstallLocation')
+        $Registry.Close()
+        if (-not $DocsDir) { throw 'DocumentServer InstallLocation not found.' }
+
+        $DocsConfig = Join-Path $DocsDir 'nginx\conf\ds.conf'
+        if (-not (Test-Path -LiteralPath $DocsConfig)) { throw "DocumentServer config not found: $DocsConfig" }
+        $Content = [IO.File]::ReadAllText($DocsConfig)
+        $ListenPattern = '(?m)^([ \t]*listen[ \t]+(?:0\.0\.0\.0|\[::\]):)\d+'
+        if ($Content -notmatch $ListenPattern) { throw "DocumentServer listen directive not found: $DocsConfig" }
+        $UpdatedContent = $Content -replace $ListenPattern, '${1}8083'
+        if ($UpdatedContent -cne $Content) {
+            [IO.File]::WriteAllText($DocsConfig, $UpdatedContent, (New-Object Text.UTF8Encoding($false)))
+        }
+        Restart-Service -Name DsProxySvc -Force -ErrorAction Stop
+        Write-Output "DocumentServer port set to 8083 and DsProxySvc restarted."
     }
 
     Write-Output "Script execution completed."
