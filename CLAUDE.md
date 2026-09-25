@@ -69,6 +69,7 @@ install/
         docker-identity-entrypoint.sh
         docker-migration-entrypoint.sh
         docker-healthchecks-entrypoint.sh
+        docker-standalone-entrypoint.sh
         bin-share-docker-entrypoint.sh / wait-bin-share-docker-entrypoint.sh
         prepare-nginx-router.sh
       dev/                  — Local-dev-only Compose overlays (build.backend.docker.py):
@@ -80,7 +81,6 @@ install/
       supervisor/           — Supervisor configs baked into images:
         stack/                — apps-stack.yml services (dotnet/node/java)
         standalone.conf       — standalone image
-      standalone/           — Entrypoint baked into the standalone image
     standalone/             — Single-container (standalone) stack
     apps.yml                — All ONLYOFFICE Apps services
     apps-stack.yml          — Full stack (app + all dependencies)

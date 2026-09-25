@@ -39,6 +39,7 @@ install/docker/
 │   │   ├── docker-identity-entrypoint.sh
 │   │   ├── docker-migration-entrypoint.sh
 │   │   ├── docker-healthchecks-entrypoint.sh
+│   │   ├── docker-standalone-entrypoint.sh
 │   │   ├── bin-share-docker-entrypoint.sh / wait-bin-share-docker-entrypoint.sh
 │   │   └── prepare-nginx-router.sh
 │   ├── dev/                  #   local-dev-only Compose overlays (build.backend.docker.py)
@@ -47,11 +48,9 @@ install/docker/
 │   │   ├── apps.overcome.yml     #   local-dev overrides
 │   │   ├── dnsmasq.yml           #   local DNS for development
 │   │   └── build-identity.yml    #   ASC.Identity (Java) build
-│   ├── supervisor/            #   supervisor configs baked into images
-│   │   ├── stack/                 #   apps-stack.yml services (dotnet/node/java)
-│   │   └── standalone.conf        #   standalone image
-│   └── standalone/            #   entrypoint baked into the standalone image
-│       └── docker-entrypoint.sh
+│   └── supervisor/            #   supervisor configs baked into images
+│       ├── stack/                 #   apps-stack.yml services (dotnet/node/java)
+│       └── standalone.conf        #   standalone image
 └── standalone/               # single-container (standalone) stack
 ```
 
