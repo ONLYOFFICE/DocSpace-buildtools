@@ -78,7 +78,7 @@ install/
         dnsmasq.yml           — DNS for local dev
         build-identity.yml    — ASC.Identity (Java) build
       stack/supervisor/     — Supervisor service configs baked into the image
-    community/              — Single-container community edition stack
+    standalone/             — Single-container (standalone) stack
     apps.yml                — All ONLYOFFICE Apps services
     apps-stack.yml          — Full stack (app + all dependencies)
     db.yml                  — MySQL

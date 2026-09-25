@@ -48,7 +48,7 @@ install/docker/
 │   │   ├── dnsmasq.yml           #   local DNS for development
 │   │   └── build-identity.yml    #   ASC.Identity (Java) build
 │   └── stack/supervisor/     #   supervisor configs baked into the image
-└── community/                # single-container community edition stack
+└── standalone/               # single-container (standalone) stack
 ```
 
 ### Production Compose files
@@ -84,11 +84,11 @@ bash install/OneClickInstall/install-Docker.sh -dm stack
 > Prefer the installer for production. The manual Compose commands below are for
 > custom setups and for understanding how the pieces fit together.
 
-## Community edition
+## Standalone deployment
 
 A lightweight, single-container ONLYOFFICE Apps solution you bring up with a single
 `docker compose` command — no extra infrastructure to wire up. See
-[`community/`](community/README.md).
+[`standalone/`](standalone/README.md).
 
 ## Configuration
 

@@ -6,7 +6,7 @@
 
 ### Overview
 
-This community ships ONLYOFFICE Apps as a monolithic build: all ONLYOFFICE Apps services run in a single container rather than as separate per-service containers. The full stack consists of four containers:
+The standalone deployment ships ONLYOFFICE Apps as a monolithic build: all ONLYOFFICE Apps services run in a single container rather than as separate per-service containers. The full stack consists of four containers:
 
 | Container | Role |
 | :---- | :---- |
@@ -15,7 +15,7 @@ This community ships ONLYOFFICE Apps as a monolithic build: all ONLYOFFICE Apps 
 | **onlyoffice-mysql-server** | MySQL database |
 | **onlyoffice-opensearch** | OpenSearch |
 
-Differences from the standard multi-container deployment:
+Differences from the microservices multi-container deployment:
 
 - All ONLYOFFICE Apps services are consolidated into a single container.
 - No thumbnail generation.
@@ -34,7 +34,7 @@ git clone https://github.com/ONLYOFFICE/DocSpace-buildtools.git
 2.	Change into the Compose directory:
 
 ```bash
-cd DocSpace-buildtools/install/docker/community
+cd DocSpace-buildtools/install/docker/standalone
 ```
 
 3.	Create the shared Docker network (the stack expects it to already exist; this is a no-op if it's already there):
@@ -65,7 +65,7 @@ git clone https://github.com/ONLYOFFICE/DocSpace-buildtools.git
 2. Change into the Compose directory:
 
 ```bash
-cd DocSpace-buildtools/install/docker/community
+cd DocSpace-buildtools/install/docker/standalone
 ```
 
 3. Create the shared Docker network (the stack expects it to already exist; this is a no-op if it's already there):
