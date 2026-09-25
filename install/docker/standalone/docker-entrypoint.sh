@@ -39,6 +39,17 @@ export AI_SERVICE_URL=${AI_SERVICE_URL:-"http://127.0.0.1:5051"}
 
 MIGRATION_TYPE=${MIGRATION_TYPE:-"STANDALONE"}  # STANDALONE or SAAS
 
+# Same rule as docker-entrypoint.py: the edition picks the appsettings.<edition>.json overlay (license type/path) unless ENV_EXTENSION names another one.
+[[ -z "${ENV_EXTENSION:-}" || "${ENV_EXTENSION}" == "none" ]] && ENV_EXTENSION="${INSTALLATION_TYPE:-}"
+ENV_EXTENSION="${ENV_EXTENSION,,}"
+export ENV_EXTENSION="${ENV_EXTENSION:-none}"
+
+APP_CORE_SERVER_ROOT=${APP_CORE_SERVER_ROOT:-""}
+APP_KNOWN_PROXIES=${APP_KNOWN_PROXIES:-""}
+APP_KNOWN_NETWORKS=${APP_KNOWN_NETWORKS:-""}
+EXTERNAL_PORT_HTTPS=${EXTERNAL_PORT_HTTPS:-"443"}
+CERTBOT_DIRS=(--config-dir /etc/letsencrypt --work-dir /tmp/letsencrypt --logs-dir /var/log/onlyoffice/letsencrypt)
+
 export MYSQL_PWD="$MYSQL_PASSWORD"
 MYSQL_ARGS=(-h "$MYSQL_HOST" -P "$MYSQL_PORT" -u "$MYSQL_USER")
 export CONNECTION_STRING="Server=${MYSQL_HOST};Port=${MYSQL_PORT};Database=${MYSQL_DATABASE};User ID=${MYSQL_USER};Password=${MYSQL_PASSWORD}"
@@ -120,10 +131,14 @@ setup_nginx_ssl() {
     }
 
     write_ssl_nginx_conf() {
+        # The :80 -> https redirect must carry a non-default published HTTPS port, or it points clients at 443.
+        local redirect_port=""
+        [[ "$EXTERNAL_PORT_HTTPS" != "443" ]] && redirect_port=":${EXTERNAL_PORT_HTTPS}"
         SERVER_NAME="$1" \
         SSL_CERTIFICATE="$2" \
         SSL_CERTIFICATE_KEY="$3" \
-        envsubst '${SERVER_NAME} ${SSL_CERTIFICATE} ${SSL_CERTIFICATE_KEY}' \
+        REDIRECT_PORT="$redirect_port" \
+        envsubst '${SERVER_NAME} ${SSL_CERTIFICATE} ${SSL_CERTIFICATE_KEY} ${REDIRECT_PORT}' \
             < /app/onlyoffice/template/nginx/onlyoffice-proxy.ssl.conf.template \
             > /etc/nginx/conf.d/onlyoffice-proxy.conf
     }
@@ -204,7 +219,8 @@ setup_nginx_ssl() {
             [[ "$LETSENCRYPT_STAGING" == "true" ]] && staging_arg=(--staging)
             [[ "$LETSENCRYPT_FORCE_RENEW" == "true" ]] && renew_arg=(--force-renewal)
 
-            if certbot certonly \
+            # CERTBOT_DIRS: the default work/log dirs under /var are root-only, and this container never runs as root.
+            if certbot certonly "${CERTBOT_DIRS[@]}" \
                 --standalone \
                 --preferred-challenges http \
                 --http-01-port 80 \
@@ -393,6 +409,33 @@ update_configs() {
         -e "this.files.docservice.url.portal=process.env.APP_URL_PORTAL" \
         -e "this.core.notify.postman='services'" \
         -e "this.ai.mcp[0].endpoint=process.env.MCP_ENDPOINT"
+
+    # Same forwarded-headers trust as docker-entrypoint.py: this container's own network and loopback, plus APP_KNOWN_NETWORKS/APP_KNOWN_PROXIES.
+    export KNOWN_NETWORKS_JSON KNOWN_PROXIES_JSON
+    KNOWN_NETWORKS_JSON="$(node -e '
+        const os = require("os");
+        const toInt = (ip) => ip.split(".").reduce((acc, octet) => ((acc << 8) + Number(octet)) >>> 0, 0);
+        const toIp = (num) => [24, 16, 8, 0].map((shift) => (num >>> shift) & 255).join(".");
+        const networks = [];
+        const address = Object.values(os.networkInterfaces()).flat().find((iface) => iface && iface.family === "IPv4" && !iface.internal);
+        if (address) {
+            const [ip, bits] = address.cidr.split("/");
+            const mask = Number(bits) === 0 ? 0 : (~0 << (32 - Number(bits))) >>> 0;
+            networks.push(`${toIp(toInt(ip) & mask)}/${bits}`);
+        } else {
+            networks.push("127.0.0.1/8");
+        }
+        const extra = (process.env.APP_KNOWN_NETWORKS || "").split(",").map((item) => item.trim()).filter(Boolean);
+        console.log(JSON.stringify(networks.concat(extra)));
+    ')"
+    KNOWN_PROXIES_JSON="$(node -e '
+        const extra = (process.env.APP_KNOWN_PROXIES || "").split(",").map((item) => item.trim()).filter(Boolean);
+        console.log(JSON.stringify(["127.0.0.1"].concat(extra)));
+    ')"
+    ${JSON} "${PATH_TO_CONF}/appsettings.json" \
+        -e "this.core.hosting.forwardedHeadersOptions.knownNetworks=JSON.parse(process.env.KNOWN_NETWORKS_JSON)" \
+        -e "this.core.hosting.forwardedHeadersOptions.knownProxies=JSON.parse(process.env.KNOWN_PROXIES_JSON)"
+    [ -n "${APP_CORE_SERVER_ROOT}" ] && ${JSON} "${PATH_TO_CONF}/appsettings.json" -e "this.core['server-root']=process.env.APP_CORE_SERVER_ROOT"
 
     # Docs Admin Panel link
     ${JSON} "${PATH_TO_CONF}/externalresources.json" \

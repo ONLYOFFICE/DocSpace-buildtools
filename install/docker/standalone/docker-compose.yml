@@ -3,7 +3,8 @@ x-service: &x-service-base
   environment:
     APP_DOTNET_ENV: ${APP_DOTNET_ENV}
     APP_CORE_BASE_DOMAIN: ${APP_CORE_BASE_DOMAIN}
-    APP_CORE_MACHINEKEY: "" 
+    APP_CORE_MACHINEKEY: ${APP_CORE_MACHINEKEY}
+    APP_CORE_SERVER_ROOT: ${APP_CORE_SERVER_ROOT}
     APP_URL_PORTAL: ${APP_URL_PORTAL}
     APP_KNOWN_NETWORKS: ${APP_KNOWN_NETWORKS}
     APP_KNOWN_PROXIES: ${APP_KNOWN_PROXIES}
@@ -15,12 +16,14 @@ x-service: &x-service-base
     DEBUG_INFO: ${DEBUG_INFO}
     NODE_OPTIONS: ${NODE_OPTIONS}
     CERTIFICATE_PATH: ${CERTIFICATE_PATH}
+    MYSQL_CONTAINER_NAME: ${MYSQL_CONTAINER_NAME}
+    MYSQL_HOST: ${MYSQL_HOST}
     MYSQL_PORT: ${MYSQL_PORT}
     MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     MYSQL_DATABASE: ${MYSQL_DATABASE}
     MYSQL_USER: ${MYSQL_USER}
     MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-    JDBC_URL: ${MYSQL_CONTAINER_NAME}
+    JDBC_URL: ${MYSQL_HOST:-${MYSQL_CONTAINER_NAME}}:${MYSQL_PORT:-3306}
     JDBC_DATABASE: ${MYSQL_DATABASE}
     JDBC_USER_NAME: ${MYSQL_USER}
     JDBC_PASSWORD: ${MYSQL_PASSWORD}
@@ -34,6 +37,7 @@ x-service: &x-service-base
     ELK_HOST: ${ELK_HOST}
     ELK_PORT: ${ELK_PORT}
     SPRING_PROFILES_ACTIVE: minified,stage
+    SPRING_APPLICATION_ENCRYPTION_SECRET: ${IDENTITY_ENCRYPTION_SECRET}
 
 services:
   onlyoffice-apps:
@@ -42,6 +46,8 @@ services:
     volumes:
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}app_data:/app/onlyoffice/data
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
+      # Same volume the microservices/stack proxy serves ACME challenges from, so a certificate issued in either mode keeps renewing after a switch.
+      - webroot_path:/var/www/certbot
     ports:
       - "${EXTERNAL_PORT:-80}:80"
     user: "${UID}:${GID}"
@@ -52,6 +58,7 @@ services:
     extra_hosts:
       - "localhost:host-gateway"
       - "host.docker.internal:host-gateway"
+      - "${EXTRA_HOSTS:-placeholder.local:127.0.0.1}"
     build:
       context: ../build
       args:
@@ -63,6 +70,8 @@ services:
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}:${DOCKER_TAG}"
   
   onlyoffice-mysql-server:
+    # Dependencies are opt-in via COMPOSE_PROFILES (.env), so an external MySQL/OpenSearch/Docs can replace the bundled one.
+    profiles: ["mysql"]
     image: ${REGISTRY}${MYSQL_IMAGE}
     cap_add:
       - SYS_NICE
@@ -92,7 +101,8 @@ services:
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}mysql_data:/var/lib/mysql
 
   onlyoffice-opensearch:
-    image: ${REGISTRY}${ELK_IMAGE_NAME} 
+    profiles: ["opensearch"]
+    image: ${REGISTRY}${ELK_IMAGE_NAME}
     container_name: ${ELK_CONTAINER_NAME}
     restart: always
     environment:
@@ -125,6 +135,7 @@ services:
       timeout: 10s
 
   onlyoffice-document-server:
+    profiles: ["docs"]
     image: "${REGISTRY}${DOCUMENT_SERVER_IMAGE_NAME}"
     container_name: ${DOCUMENT_CONTAINER_NAME}
     # Uncomment to load custom Configuration Parameters migrated from an adopted install.
@@ -144,7 +155,8 @@ services:
         #- REDIS_SERVER_DB=${REDIS_DB}
     volumes:
       #- ${CERTIFICATE_PATH}:/var/www/onlyoffice/Data/certs/extra-ca-certs.pem
-      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}ds_data:/var/www/onlyoffice/Data
+      # app_data, as in ds.yml - Docs' Data must stay on the same volume in every deployment mode, or switching modes loses it.
+      - ${VOLUMES_DIR:+${VOLUMES_DIR}/}app_data:/var/www/onlyoffice/Data
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}ds_fonts:/usr/share/fonts
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}ds_state:/var/lib/onlyoffice
@@ -152,9 +164,8 @@ services:
     expose:
       - '80'
     extra_hosts:
-      #- "${EXTRA_HOSTS:-placeholder.local:127.0.0.1}"
-      #- "localhost:host-gateway"
-       - "host.docker.internal:host-gateway"
+      - "host.docker.internal:host-gateway"
+      - "${EXTRA_HOSTS:-placeholder.local:127.0.0.1}"
     stdin_open: true
     restart: always
     stop_grace_period: 60s
@@ -168,11 +179,10 @@ services:
 volumes:
   log_data:
   app_data:
-  ds_data:
   ds_fonts:
   ds_state:
   ds_postgresql:
-  certbot:
+  webroot_path:
   mysql_data:
   os_data:
 

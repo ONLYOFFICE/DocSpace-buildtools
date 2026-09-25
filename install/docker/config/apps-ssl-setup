@@ -160,6 +160,8 @@ case $1 in
       else
         echo "Error: PRIVATEKEY_FILE is required unless using a .p12/.pfx file." && exit 1
       fi
+      # A Let's Encrypt certificate handed over as a file (e.g. carried over from the standalone deployment mode) still needs the renewal job.
+      [[ "$CERTIFICATE_FILE" == "${LETSENCRYPT}/"*/fullchain.pem ]] && LETSENCRYPT_ENABLE="true"
     else
       help
     fi

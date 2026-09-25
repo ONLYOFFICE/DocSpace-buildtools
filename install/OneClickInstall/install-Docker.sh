@@ -478,6 +478,8 @@ domain_check () {
 	# Respect a value detect_existing_document_server() already set - don't let this overwrite it with an empty one.
 	APP_DOMAIN_PORTAL=${APP_DOMAIN_PORTAL:-$(cut -d ',' -f 1 <<< "$LETS_ENCRYPT_DOMAIN")}
 	APP_DOMAIN_PORTAL=${APP_DOMAIN_PORTAL:-${APP_URL_PORTAL:-$(get_env_parameter "APP_URL_PORTAL" "${PACKAGE_SYSNAME}-files" | awk -F[/:] '{if ($1 == "https") print $4; else print ""}')}}
+	# Standalone keeps APP_URL_PORTAL on the internal router, so its HTTPS domain is only recoverable from the SSL_DOMAIN ssl.yml passed in.
+	APP_DOMAIN_PORTAL=${APP_DOMAIN_PORTAL:-$(get_env_parameter "SSL_DOMAIN" "${PACKAGE_SYSNAME}-${PRODUCT}" | cut -d ',' -f 1)}
 	APP_URL_PORTAL=${APP_DOMAIN_PORTAL:+http://${APP_DOMAIN_PORTAL}:${EXTERNAL_PORT}}
 }
 
@@ -922,12 +924,8 @@ resolve_ds_volume_path () {
 # Moves a standalone DS's Data/logs/internal-state/DB onto the volumes ds.yml already declares, so the adopted container needs no compose override and starts through the same `ds.yml up -d` as a fresh install.
 # Fonts are migrated separately (see migrate_document_server_fonts), only after that first start, so Docker still populates ds_fonts with the image's own default fonts before we add the custom ones on top.
 migrate_document_server_data () {
-	# Standalone's own Data volume is named ds_data (app_data there is the portal's own data, a different mount).
-	local DATA_VOLUME_NAME="app_data"
-	[ "${DEPLOYMENT_MODE}" = "standalone" ] && DATA_VOLUME_NAME="ds_data"
-
 	local APP_DATA_MOUNTPOINT LOG_DATA_MOUNTPOINT DS_STATE_MOUNTPOINT DS_POSTGRESQL_MOUNTPOINT
-	APP_DATA_MOUNTPOINT="$(resolve_ds_volume_path "${DATA_VOLUME_NAME}")"
+	APP_DATA_MOUNTPOINT="$(resolve_ds_volume_path app_data)"
 	LOG_DATA_MOUNTPOINT="$(resolve_ds_volume_path log_data)"
 	DS_STATE_MOUNTPOINT="$(resolve_ds_volume_path ds_state)"
 	DS_POSTGRESQL_MOUNTPOINT="$(resolve_ds_volume_path ds_postgresql)"
@@ -985,9 +983,7 @@ migrate_document_server_data () {
 
 # Called via finish_https_takeover(), shared by install_product() and install_standalone(), once the cert-apply command confirms the inherited cert now lives on the new front end - until then the migrated Document Server keeps serving HTTPS itself, so nothing is lost if that command fails.
 strip_inherited_https_from_document_server () {
-	local DATA_VOLUME_NAME="app_data"
-	[ "${DEPLOYMENT_MODE}" = "standalone" ] && DATA_VOLUME_NAME="ds_data"
-	rm -rf "$(resolve_ds_volume_path "${DATA_VOLUME_NAME}")/certs"
+	rm -rf "$(resolve_ds_volume_path app_data)/certs"
 
 	local DS_COMPOSE_FILE="${BASE_DIR}/ds.yml"
 	[ "${DEPLOYMENT_MODE}" = "standalone" ] && DS_COMPOSE_FILE="${BASE_DIR}/docker-compose.yml"
@@ -1206,11 +1202,78 @@ teardown_previous_deployment_mode () {
 		${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" down
 	fi
 
+	# The renewal job restarts the previous mode's own front end (proxy-ssl.yml or onlyoffice-apps); the target mode writes its own again if its certificate is Let's Encrypt-managed.
+	rm -f "/etc/cron.weekly/${PRODUCT}-renew-letsencrypt"
+
 	DEPLOYMENT_MODE="${TARGET_DEPLOYMENT_MODE}"
 	select_deployment_mode
 }
 
+# Bundled dependencies to start with onlyoffice-apps - the same conditions under which the other modes start db.yml, opensearch.yml and ds.yml.
+standalone_compose_profiles () {
+	local PROFILES=()
+	[[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" != "false" ] && PROFILES+=(mysql)
+	[[ -z ${ELK_HOST} ]] && [ "$INSTALL_ELASTICSEARCH" != "false" ] && PROFILES+=(opensearch)
+	{ [ "${DOCUMENT_SERVER_ATTACHED}" = "true" ] || { [[ -z ${DOCUMENT_SERVER_HOST} ]] && [ "$INSTALL_DOCUMENT_SERVER" != "false" ]; }; } && PROFILES+=(docs)
+	(IFS=,; echo "${PROFILES[*]}")
+}
+
+# Issues into the host's /etc/letsencrypt under the cert name apps-ssl-setup uses, so the certificate keeps renewing after a deployment-mode switch.
+standalone_issue_letsencrypt () {
+	local CERT_NAME="${PRODUCT}"
+	[ ! -d "/etc/letsencrypt/live/${PRODUCT}" ] && [ -d "/etc/letsencrypt/live/${LEGACY_PRODUCT}" ] && CERT_NAME="${LEGACY_PRODUCT}"
+	local CERTBOT_RUN=(docker run --rm -v /etc/letsencrypt:/etc/letsencrypt -v /var/lib/letsencrypt:/var/lib/letsencrypt -v /var/log:/var/log)
+
+	echo "Generating Let's Encrypt SSL Certificates..."
+	if [[ "${LETS_ENCRYPT_DOMAIN}" =~ \*\.[^,]* ]]; then
+		"${CERTBOT_RUN[@]}" certbot/certbot certonly --manual --preferred-challenges dns --key-type rsa \
+			--cert-name "${CERT_NAME}" --agree-tos --email "${LETS_ENCRYPT_MAIL}" -d "${LETS_ENCRYPT_DOMAIN}" || return 1
+	elif [ "${EXTERNAL_PORT}" = "80" ]; then
+		# openresty only starts serving the webroot challenge once the container has finished its database migrations.
+		echo -n "Waiting for ${PRODUCT_NAME} to answer on port 80..."
+		timeout 600 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1/.well-known/acme-challenge/probe)" = "404" ]; do sleep 5; done' \
+			&& echo "OK" || { echo "FAILED"; return 1; }
+		"${CERTBOT_RUN[@]}" -v "${COMPOSE_PROJECT_NAME:-${PACKAGE_SYSNAME}}_webroot_path:/letsencrypt" certbot/certbot certonly \
+			--expand --webroot -w /letsencrypt --key-type rsa \
+			--cert-name "${CERT_NAME}" --non-interactive --agree-tos --email "${LETS_ENCRYPT_MAIL}" -d "${LETS_ENCRYPT_DOMAIN}" || return 1
+	else
+		"${CERTBOT_RUN[@]}" --network host certbot/certbot certonly \
+			--expand --standalone --http-01-port 80 --key-type rsa \
+			--cert-name "${CERT_NAME}" --non-interactive --agree-tos --email "${LETS_ENCRYPT_MAIL}" -d "${LETS_ENCRYPT_DOMAIN}" || return 1
+	fi
+
+	CERTIFICATE_PATH="/etc/letsencrypt/live/${CERT_NAME}/fullchain.pem"
+	CERTIFICATE_KEY_PATH="/etc/letsencrypt/live/${CERT_NAME}/privkey.pem"
+}
+
+# Same job file apps-ssl-setup's create_renew_script() writes, so a deployment-mode switch replaces it rather than leaving two renewals running.
+create_standalone_renew_script () {
+	local CRON_FILE="/etc/cron.weekly/${PRODUCT}-renew-letsencrypt"
+	local LOG_FILE="/var/log/${PRODUCT}-renew-letsencrypt.log"
+	local CERTS_DIR="${BASE_DIR}/config/nginx/certs"
+	local CRON_PATH
+
+	[ -d /etc/cron.weekly ] || { echo "Warning: /etc/cron.weekly does not exist; the Let's Encrypt certificate will not renew automatically." >&2; return 1; }
+	CRON_PATH=$(command -v crond || command -v cron) || { echo "Warning: neither crond nor cron is installed; the Let's Encrypt certificate will not renew automatically." >&2; return 1; }
+	systemctl enable --now "${CRON_PATH##*/}" >/dev/null 2>&1 || service "${CRON_PATH##*/}" start >/dev/null 2>&1
+
+	# --network host plus the webroot volume covers both authenticators standalone_issue_letsencrypt() may have issued with.
+	cat > "${CRON_FILE}" <<END
+#!/bin/bash
+# ${PRODUCT} Renew Let's Encrypt SSL Certificates (standalone deployment mode)
+echo "[\$(date '+%F %T')] START ${CRON_FILE}" >> "${LOG_FILE}"
+$(command -v docker) run --rm --network host -v /etc/letsencrypt:/etc/letsencrypt -v /var/lib/letsencrypt:/var/lib/letsencrypt -v /var/log:/var/log \\
+    -v ${COMPOSE_PROJECT_NAME:-${PACKAGE_SYSNAME}}_webroot_path:/letsencrypt certbot/certbot renew 2>&1 | tee -a "${LOG_FILE}"
+install -m 644 "${CERTIFICATE_PATH}" "${CERTS_DIR}/$(basename "${CERTIFICATE_PATH}")"
+install -m 644 "${CERTIFICATE_KEY_PATH}" "${CERTS_DIR}/$(basename "${CERTIFICATE_KEY_PATH}")"
+$(command -v docker) exec ${CONTAINER_NAME} /usr/local/openresty/bin/openresty -s reload
+END
+	chmod a+x "${CRON_FILE}"
+}
+
 install_standalone () {
+	sed -i "s~^\(\s*COMPOSE_PROFILES=\).*~\1$(standalone_compose_profiles)~" "${BASE_DIR}/.env"
+
 	if [ "$INSTALL_PRODUCT" == "true" ]; then
 		if [ "${UPDATE}" = "true" ]; then
 			LOCAL_CONTAINER_TAG="$(docker inspect --format='{{index .Config.Image}}' "${CONTAINER_NAME}" 2>/dev/null | awk -F':' '{print $2}';)"
@@ -1225,7 +1288,10 @@ install_standalone () {
 		reconfigure ENV_EXTENSION ${ENV_EXTENSION}
 		reconfigure GIT_BRANCH ${GIT_BRANCH}
 		reconfigure APP_CORE_BASE_DOMAIN ${APP_CORE_BASE_DOMAIN}
-		reconfigure APP_URL_PORTAL ${APP_URL_PORTAL}
+		# Both must be the ones the other modes use: data in MySQL is encrypted with them, and a mode switch keeps the database.
+		reconfigure APP_CORE_MACHINEKEY ${APP_CORE_MACHINEKEY}
+		reconfigure IDENTITY_ENCRYPTION_SECRET ${IDENTITY_ENCRYPTION_SECRET}
+		# APP_URL_PORTAL (Docs -> portal callbacks) stays on the .env default, the internal router: going through the published port breaks on a custom --externalport or an HTTP->HTTPS redirect.
 		reconfigure EXTERNAL_PORT ${EXTERNAL_PORT}
 		reconfigure EXTERNAL_PORT_HTTPS ${EXTERNAL_PORT_HTTPS}
 		reconfigure DATABASE_MIGRATION ${DATABASE_MIGRATION}
@@ -1253,28 +1319,38 @@ install_standalone () {
 
 		# ssl.yml contract (standalone-only): SSL_MODE/SSL_DOMAIN/SSL_EMAIL/SSL_CERT_PATH/SSL_KEY_PATH,
 		# different from the microservices/stack modes' config/${PRODUCT}-ssl-setup script.
+		local STACK_STARTED="false"
+		if [ -z "${CERTIFICATE_PATH}" ] && [ -n "${LETS_ENCRYPT_DOMAIN}" ] && [ -n "${LETS_ENCRYPT_MAIL}" ]; then
+			# The webroot challenge needs openresty already answering on :80, so come up over plain HTTP first; the certificate is then served as a custom one.
+			${DOCKER_COMPOSE} "${STANDALONE_FILES[@]}" up -d
+			STACK_STARTED="true"
+			if ! standalone_issue_letsencrypt; then
+				echo "Warning: failed to obtain a Let's Encrypt certificate for ${LETS_ENCRYPT_DOMAIN}; ${PRODUCT_NAME} stays on http://." >&2
+				finish_https_takeover 1
+			fi
+		fi
+
 		if [ -n "${CERTIFICATE_PATH}" ] && [ -n "${APP_DOMAIN_PORTAL}" ]; then
+			# Persisted so --update and a later deployment-mode switch find the same certificate again.
+			reconfigure CERTIFICATE_PATH "${CERTIFICATE_PATH}"
+			reconfigure CERTIFICATE_KEY_PATH "${CERTIFICATE_KEY_PATH}"
+			reconfigure APP_CORE_SERVER_ROOT "https://*$([ "${EXTERNAL_PORT_HTTPS}" = "443" ] || echo ":${EXTERNAL_PORT_HTTPS}")/"
 			mkdir -p "${BASE_DIR}/config/nginx/certs"
 			cp "${CERTIFICATE_PATH}" "${BASE_DIR}/config/nginx/certs/"
 			cp "${CERTIFICATE_KEY_PATH}" "${BASE_DIR}/config/nginx/certs/"
 			# onlyoffice-apps always runs as UID:GID ${UID}:${GID} here, never root (see docker-compose.yml) - a source file that kept owner-only permissions (a root-owned docker-cp'd inherited key, or a tightly-permissioned one the user supplied) would otherwise leave openresty unable to read it at all.
 			chmod 644 "${BASE_DIR}/config/nginx/certs/$(basename "${CERTIFICATE_PATH}")" "${BASE_DIR}/config/nginx/certs/$(basename "${CERTIFICATE_KEY_PATH}")"
 			STANDALONE_FILES+=(-f "${BASE_DIR}/ssl.yml")
-			SSL_MODE="custom" SSL_DOMAIN="${APP_DOMAIN_PORTAL}" \
+			SSL_MODE="custom" SSL_DOMAIN="${LETS_ENCRYPT_DOMAIN:-${APP_DOMAIN_PORTAL}}" \
 				SSL_CERT_PATH="/etc/nginx/certs/$(basename "${CERTIFICATE_PATH}")" \
 				SSL_KEY_PATH="/etc/nginx/certs/$(basename "${CERTIFICATE_KEY_PATH}")" \
 				${DOCKER_COMPOSE} "${STANDALONE_FILES[@]}" up -d
 			finish_https_takeover $?
-		elif [ -n "${LETS_ENCRYPT_DOMAIN}" ] && [ -n "${LETS_ENCRYPT_MAIL}" ]; then
-			mkdir -p "${BASE_DIR}/config/nginx/ssl/letsencrypt"
-			STANDALONE_FILES+=(-f "${BASE_DIR}/ssl.yml")
-			SSL_MODE="letsencrypt" SSL_DOMAIN="${LETS_ENCRYPT_DOMAIN}" SSL_EMAIL="${LETS_ENCRYPT_MAIL}" \
-				${DOCKER_COMPOSE} "${STANDALONE_FILES[@]}" up -d
-			finish_https_takeover $?
-		elif [[ -n "${CERTIFICATE_KEY_PATH}${CERTIFICATE_PATH}${LETS_ENCRYPT_DOMAIN}${LETS_ENCRYPT_MAIL}" ]]; then
+			[[ "${CERTIFICATE_PATH}" == /etc/letsencrypt/live/*/fullchain.pem ]] && create_standalone_renew_script
+		elif [[ -n "${CERTIFICATE_KEY_PATH}${CERTIFICATE_PATH}" ]] || { [ "${STACK_STARTED}" = "false" ] && [[ -n "${LETS_ENCRYPT_DOMAIN}${LETS_ENCRYPT_MAIL}" ]]; }; then
 			echo -e "\e[31mERROR:\e[0m Missing required parameters for SSL setup"
 			exit 1
-		else
+		elif [ "${STACK_STARTED}" = "false" ]; then
 			${DOCKER_COMPOSE} "${STANDALONE_FILES[@]}" up -d
 		fi
 
