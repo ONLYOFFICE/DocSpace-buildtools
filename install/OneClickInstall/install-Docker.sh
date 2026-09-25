@@ -572,6 +572,10 @@ recreate_document_server_container () {
 
 	# This is only an intermediate step to free up published ports before migrate_document_server_data() takes over - HTTPS itself is stripped later, by strip_inherited_https_from_document_server(), once ssl-setup confirms the cert landed on the new front end.
 	while IFS= read -r VAR; do
+		# Unlike the SSL_*/cert files, /etc/letsencrypt never survives a recreate (it's not a declared volume) - keeping these would only make the recreated container retry a doomed certbot request on its own.
+		case "${VAR%%=*}" in
+			LETS_ENCRYPT_DOMAIN|LETS_ENCRYPT_MAIL) continue ;;
+		esac
 		[ -n "${VAR}" ] && ENV_ARGS+=(-e "${VAR}")
 	done < <(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "${CONTAINER}")
 
@@ -621,7 +625,8 @@ detect_existing_document_server () {
 	fi
 
 	# If the adopted container already serves HTTPS, inherit its cert and disable HTTPS in it below - ds.yml only exposes port 80, so otherwise its :80 vhost would just redirect to :443 forever.
-	local DS_HTTPS_INHERITED="false"
+	# Not local: read later by migrate_document_server_data()/finish_https_takeover(), which run from other functions after this one has returned.
+	DS_HTTPS_INHERITED="false"
 	local DS_SSL_CERT DS_SSL_KEY DS_SSL_DOMAIN DS_CONF_CONTENT
 	if [ "${INSTALL_PRODUCT}" == "true" ] && [ -z "${CERTIFICATE_PATH}" ] && [ -z "${LETS_ENCRYPT_DOMAIN}" ]; then
 		# A non-running container or a symlinked ds.conf (plain HTTP) both make this print nothing - one round trip covers the existence/symlink/content checks that used to be three.
@@ -637,17 +642,30 @@ detect_existing_document_server () {
 			DS_SSL_DOMAIN="$(docker exec "${CONTAINER}" openssl x509 -noout -ext subjectAltName -subject -in "${DS_SSL_CERT}" 2>/dev/null | grep -oP 'DNS:\K[^, ]+|CN\s*=\s*\K[^,/]+' | head -1 | sed 's/^\*\.//')"
 
 		if [ -n "${DS_SSL_CERT}" ] && [ -n "${DS_SSL_KEY}" ] && [ -n "${DS_SSL_DOMAIN}" ]; then
-			mkdir -p "${BASE_DIR}/certs"
-			# -L: a Let's Encrypt cert is symlinked from live/ into archive/, and docker cp otherwise copies the symlink itself.
-			if docker cp -L "${CONTAINER}:${DS_SSL_CERT}" "${BASE_DIR}/certs/ds-inherited.crt" >/dev/null 2>&1 \
-				&& docker cp -L "${CONTAINER}:${DS_SSL_KEY}" "${BASE_DIR}/certs/ds-inherited.key" >/dev/null 2>&1; then
-				echo "${CONTAINER} is serving HTTPS for ${DS_SSL_DOMAIN}; ${PRODUCT_NAME} will take over as the HTTPS front end with the same certificate."
-				CERTIFICATE_PATH="${BASE_DIR}/certs/ds-inherited.crt"
-				CERTIFICATE_KEY_PATH="${BASE_DIR}/certs/ds-inherited.key"
+			# /etc/letsencrypt is never a declared volume (see the Dockerfile) - it dies with this container either way, so extracting its cert as a static file would leave nothing to renew it. Request our own instead, via the same LETS_ENCRYPT_DOMAIN/MAIL path a direct install already uses, reusing its email so it's the same registration.
+			local DS_LETS_ENCRYPT_MAIL=""
+			if [[ "${DS_SSL_CERT}" == /etc/letsencrypt/live/*/fullchain.pem ]]; then
+				DS_LETS_ENCRYPT_MAIL="$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "${CONTAINER}" 2>/dev/null | sed -n 's/^LETS_ENCRYPT_MAIL=//p' | head -1)"
+			fi
+			if [ -n "${DS_LETS_ENCRYPT_MAIL}" ]; then
+				echo "${CONTAINER} is serving HTTPS for ${DS_SSL_DOMAIN} via Let's Encrypt; ${PRODUCT_NAME} will request and manage its own certificate for the same domain."
+				LETS_ENCRYPT_DOMAIN="${LETS_ENCRYPT_DOMAIN:-${DS_SSL_DOMAIN}}"
+				LETS_ENCRYPT_MAIL="${LETS_ENCRYPT_MAIL:-${DS_LETS_ENCRYPT_MAIL}}"
 				APP_DOMAIN_PORTAL="${APP_DOMAIN_PORTAL:-${DS_SSL_DOMAIN}}"
 				DS_HTTPS_INHERITED="true"
 			else
-				echo "Warning: ${CONTAINER} looks HTTPS-configured but its certificate could not be extracted; installing ${PRODUCT_NAME} on http://${EXTERNAL_PORT}." >&2
+				mkdir -p "${BASE_DIR}/certs"
+				# -L: a Let's Encrypt cert is symlinked from live/ into archive/, and docker cp otherwise copies the symlink itself.
+				if docker cp -L "${CONTAINER}:${DS_SSL_CERT}" "${BASE_DIR}/certs/ds-inherited.crt" >/dev/null 2>&1 \
+					&& docker cp -L "${CONTAINER}:${DS_SSL_KEY}" "${BASE_DIR}/certs/ds-inherited.key" >/dev/null 2>&1; then
+					echo "${CONTAINER} is serving HTTPS for ${DS_SSL_DOMAIN}; ${PRODUCT_NAME} will take over as the HTTPS front end with the same certificate."
+					CERTIFICATE_PATH="${BASE_DIR}/certs/ds-inherited.crt"
+					CERTIFICATE_KEY_PATH="${BASE_DIR}/certs/ds-inherited.key"
+					APP_DOMAIN_PORTAL="${APP_DOMAIN_PORTAL:-${DS_SSL_DOMAIN}}"
+					DS_HTTPS_INHERITED="true"
+				else
+					echo "Warning: ${CONTAINER} looks HTTPS-configured but its certificate could not be extracted; installing ${PRODUCT_NAME} on http://${EXTERNAL_PORT}." >&2
+				fi
 			fi
 		fi
 	fi
@@ -664,9 +682,10 @@ detect_existing_document_server () {
 
 	if [ "${PORT_CONFLICT}" = "true" ]; then
 		if ! recreate_document_server_container "${CONTAINER}"; then
-			# Adoption is abandoned below - don't feed an inherited cert into install_product()'s SSL setup for a DS we never took over.
+			# Adoption is abandoned below - don't feed an inherited cert/domain into install_product()'s SSL setup for a DS we never took over.
 			if [ "${DS_HTTPS_INHERITED}" = "true" ]; then
-				CERTIFICATE_PATH=""; CERTIFICATE_KEY_PATH=""; APP_DOMAIN_PORTAL=""
+				CERTIFICATE_PATH=""; CERTIFICATE_KEY_PATH=""; LETS_ENCRYPT_DOMAIN=""; LETS_ENCRYPT_MAIL=""; APP_DOMAIN_PORTAL=""
+				DS_HTTPS_INHERITED="false"
 			fi
 			return 0
 		fi
@@ -950,6 +969,8 @@ migrate_document_server_data () {
 		[ -z "${ENV_KEY}" ] && continue
 		case "${ENV_KEY}" in
 			JWT_ENABLED|JWT_SECRET|JWT_HEADER|JWT_IN_BODY|AMQP_URI|REDIS_SERVER_HOST|REDIS_SERVER_PORT|REDIS_SERVER_USER|REDIS_SERVER_PASS|REDIS_SERVER_DB|PATH|HOME|HOSTNAME) continue ;;
+			# Unlike the SSL_*/cert files, /etc/letsencrypt never survives a migration (it's not a declared volume) - keeping these would only make the migrated container retry a doomed certbot request on its own.
+			LETS_ENCRYPT_DOMAIN|LETS_ENCRYPT_MAIL) continue ;;
 		esac
 		[ "${IMAGE_DEFAULT_ENV[${ENV_KEY}]-__unset__}" = "${ENV_VAL}" ] && continue
 		echo "${ENV_LINE}" >> "${BASE_DIR}/ds.env"
@@ -972,7 +993,8 @@ strip_inherited_https_from_document_server () {
 
 	local DS_COMPOSE_FILE="${BASE_DIR}/ds.yml"
 	[ "${DEPLOYMENT_MODE}" = "community" ] && DS_COMPOSE_FILE="${BASE_DIR}/docker-compose.yml"
-	[ -f "${BASE_DIR}/ds.env" ] && sed -i -E '/^(SSL_CERTIFICATE_PATH|SSL_KEY_PATH|SSL_DHPARAM_PATH|CA_CERTIFICATES_PATH|SSL_VERIFY_CLIENT|LETS_ENCRYPT_DOMAIN|LETS_ENCRYPT_MAIL)=/d' "${BASE_DIR}/ds.env"
+	# LETS_ENCRYPT_DOMAIN/MAIL never make it into ds.env in the first place - migrate_document_server_data() already drops those unconditionally.
+	[ -f "${BASE_DIR}/ds.env" ] && sed -i -E '/^(SSL_CERTIFICATE_PATH|SSL_KEY_PATH|SSL_DHPARAM_PATH|CA_CERTIFICATES_PATH|SSL_VERIFY_CLIENT)=/d' "${BASE_DIR}/ds.env"
 	${DOCKER_COMPOSE} -f "${DS_COMPOSE_FILE}" restart onlyoffice-document-server || {
 		echo "Warning: failed to restart the Document Server after stripping its HTTPS config; it may still be running with the old certificate/env vars until restarted manually." >&2
 		return 1
@@ -983,9 +1005,10 @@ strip_inherited_https_from_document_server () {
 # Strips the migrated Document Server's own HTTPS once that command succeeded; otherwise warns when the failed cert was one this run itself inherited from it.
 finish_https_takeover () {
 	if [ "$1" -eq 0 ]; then
-		[ "${CERTIFICATE_PATH}" = "${BASE_DIR}/certs/ds-inherited.crt" ] && strip_inherited_https_from_document_server
-	elif [ "${CERTIFICATE_PATH}" = "${BASE_DIR}/certs/ds-inherited.crt" ]; then
-		echo "Warning: failed to apply the inherited HTTPS certificate to ${PRODUCT_NAME}; the migrated Document Server keeps serving HTTPS itself, though it no longer publishes ports externally." >&2
+		[ "${DS_HTTPS_INHERITED}" = "true" ] && strip_inherited_https_from_document_server
+	elif [ "${DS_HTTPS_INHERITED}" = "true" ]; then
+		# The migrated Document Server no longer publishes ports externally either way (see ds.yml), so this is true whether it kept its own HTTPS config (static-cert case) or already lost it (LE case, stripped unconditionally at migration time).
+		echo "Warning: failed to set up HTTPS for ${PRODUCT_NAME} for ${APP_DOMAIN_PORTAL}, inherited from the migrated Document Server; HTTPS is not reachable until this is resolved manually." >&2
 	fi
 }
 
@@ -1147,6 +1170,7 @@ install_product () {
 		elif [ ! -z "${LETS_ENCRYPT_DOMAIN}" ] && [ ! -z "${LETS_ENCRYPT_MAIL}" ]; then
 		    env ${DHPARAM_PATH:+DHPARAM_PATH="$DHPARAM_PATH"} \
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup "${LETS_ENCRYPT_MAIL}" "${LETS_ENCRYPT_DOMAIN}"
+		    finish_https_takeover $?
 		elif [[ -n "${CERTIFICATE_KEY_PATH}${CERTIFICATE_PATH}${LETS_ENCRYPT_DOMAIN}${LETS_ENCRYPT_MAIL}" ]]; then
 			echo -e "\e[31mERROR:\e[0m Missing required parameters for SSL setup"
 			echo "Run 'bash $BASE_DIR/config/${PRODUCT}-ssl-setup --help' for usage information."
@@ -1235,6 +1259,8 @@ install_community () {
 			mkdir -p "${BASE_DIR}/config/nginx/certs"
 			cp "${CERTIFICATE_PATH}" "${BASE_DIR}/config/nginx/certs/"
 			cp "${CERTIFICATE_KEY_PATH}" "${BASE_DIR}/config/nginx/certs/"
+			# onlyoffice-apps always runs as UID:GID ${UID}:${GID} here, never root (see docker-compose.yml) - a source file that kept owner-only permissions (a root-owned docker-cp'd inherited key, or a tightly-permissioned one the user supplied) would otherwise leave openresty unable to read it at all.
+			chmod 644 "${BASE_DIR}/config/nginx/certs/$(basename "${CERTIFICATE_PATH}")" "${BASE_DIR}/config/nginx/certs/$(basename "${CERTIFICATE_KEY_PATH}")"
 			COMMUNITY_FILES+=(-f "${BASE_DIR}/ssl.yml")
 			SSL_MODE="custom" SSL_DOMAIN="${APP_DOMAIN_PORTAL}" \
 				SSL_CERT_PATH="/etc/nginx/certs/$(basename "${CERTIFICATE_PATH}")" \
@@ -1246,6 +1272,7 @@ install_community () {
 			COMMUNITY_FILES+=(-f "${BASE_DIR}/ssl.yml")
 			SSL_MODE="letsencrypt" SSL_DOMAIN="${LETS_ENCRYPT_DOMAIN}" SSL_EMAIL="${LETS_ENCRYPT_MAIL}" \
 				${DOCKER_COMPOSE} "${COMMUNITY_FILES[@]}" up -d
+			finish_https_takeover $?
 		elif [[ -n "${CERTIFICATE_KEY_PATH}${CERTIFICATE_PATH}${LETS_ENCRYPT_DOMAIN}${LETS_ENCRYPT_MAIL}" ]]; then
 			echo -e "\e[31mERROR:\e[0m Missing required parameters for SSL setup"
 			exit 1
