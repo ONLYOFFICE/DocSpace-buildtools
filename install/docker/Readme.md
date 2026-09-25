@@ -47,7 +47,11 @@ install/docker/
 │   │   ├── apps.overcome.yml     #   local-dev overrides
 │   │   ├── dnsmasq.yml           #   local DNS for development
 │   │   └── build-identity.yml    #   ASC.Identity (Java) build
-│   └── stack/supervisor/     #   supervisor configs baked into the image
+│   ├── supervisor/            #   supervisor configs baked into images
+│   │   ├── stack/                 #   apps-stack.yml services (dotnet/node/java)
+│   │   └── standalone.conf        #   standalone image
+│   └── standalone/            #   entrypoint baked into the standalone image
+│       └── docker-entrypoint.sh
 └── standalone/               # single-container (standalone) stack
 ```
 
@@ -241,11 +245,12 @@ Build groups: `default` (all), `dotnet-services`, `node-services`, `java-service
 
 ## Process management
 
-Supervisor configs baked into the image, under `build/stack/supervisor/`:
+Supervisor configs baked into the images, under `build/supervisor/`:
 
 | File | Purpose |
 |------|---------|
-| `supervisord.conf` | Supervisor daemon settings |
-| `dotnet_services.conf` | .NET service management |
-| `node_services.conf` | Node.js service management |
-| `java_services.conf` | Java service management |
+| `stack/supervisord.conf` | Supervisor daemon settings (apps-stack.yml services) |
+| `stack/dotnet_services.conf` | .NET service management |
+| `stack/node_services.conf` | Node.js service management |
+| `stack/java_services.conf` | Java service management |
+| `standalone.conf` | Supervisor daemon + all services, for the single-container standalone image |

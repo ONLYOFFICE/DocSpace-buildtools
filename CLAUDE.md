@@ -77,7 +77,10 @@ install/
         apps.overcome.yml     — Local dev overrides
         dnsmasq.yml           — DNS for local dev
         build-identity.yml    — ASC.Identity (Java) build
-      stack/supervisor/     — Supervisor service configs baked into the image
+      supervisor/           — Supervisor configs baked into images:
+        stack/                — apps-stack.yml services (dotnet/node/java)
+        standalone.conf       — standalone image
+      standalone/           — Entrypoint baked into the standalone image
     standalone/             — Single-container (standalone) stack
     apps.yml                — All ONLYOFFICE Apps services
     apps-stack.yml          — Full stack (app + all dependencies)

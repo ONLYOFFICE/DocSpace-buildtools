@@ -590,8 +590,8 @@ RUN set -eux; \
 
 USER onlyoffice
 
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/stack/supervisor/dotnet_services.conf /etc/supervisor/conf.d/supervisord.conf
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/stack/supervisor/start-after-migration.py /usr/local/bin/start-after-migration.py
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/supervisor/stack/dotnet_services.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/supervisor/stack/start-after-migration.py /usr/local/bin/start-after-migration.py
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.AI/service/ ${BUILD_PATH}/products/ASC.AI/server/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.AI.Worker/service/ ${BUILD_PATH}/products/ASC.AI/service/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.ApiSystem/service/  ${BUILD_PATH}/services/ASC.ApiSystem/service/
@@ -620,7 +620,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 USER onlyoffice
 
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/stack/supervisor/node_services.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/supervisor/stack/node_services.conf /etc/supervisor/conf.d/supervisord.conf
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/editor/ ${BUILD_PATH}/products/ASC.Editors/editor/
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/login/ ${BUILD_PATH}/products/ASC.Login/login/
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management/ ${BUILD_PATH}/products/ASC.Management/management/
@@ -640,7 +640,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 USER onlyoffice
 
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/stack/supervisor/java_services.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/supervisor/stack/java_services.conf /etc/supervisor/conf.d/supervisord.conf
 COPY --from=build-java --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.Authorization/app.jar ${BUILD_PATH}/services/ASC.Identity.Authorization/app.jar
 COPY --from=build-java --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.Registration/app.jar ${BUILD_PATH}/services/ASC.Identity.Registration/app.jar
 
@@ -676,8 +676,8 @@ RUN set -eux; \
 # Services config + entrypoint + supervisor config
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/standalone/docker-entrypoint.sh /docker-entrypoint.sh
 # COPY --chown=onlyoffice:onlyoffice standalone/docker-entrypoint.sh /docker-entrypoint.sh
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/standalone/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-# COPY --chown=onlyoffice:onlyoffice standalone/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/supervisor/standalone.conf /etc/supervisor/conf.d/supervisord.conf
+# COPY --chown=onlyoffice:onlyoffice supervisor/standalone.conf /etc/supervisor/conf.d/supervisord.conf
 
 # nginx config, static files, router scripts
 COPY --from=src --exclude=onlyoffice-login.conf --exclude=onlyoffice-management.conf --chown=onlyoffice:onlyoffice /etc/nginx/conf.d /etc/nginx/conf.d
