@@ -670,7 +670,8 @@ RUN set -eux; \
     # let the unprivileged onlyoffice user bind :80, then prepare nginx dirs
     setcap 'cap_net_bind_service=+ep' /usr/local/openresty/nginx/sbin/nginx; \
     mkdir -p /var/log/nginx /var/log/openresty /var/log/supervisor /etc/nginx/conf.d /etc/nginx/includes /etc/nginx/templates /etc/letsencrypt /letsencrypt; \
-    chown -R onlyoffice:onlyoffice /etc/nginx /var/log/nginx /var/log/openresty /var/log/supervisor /usr/local/openresty /etc/letsencrypt /letsencrypt; \
+    # /etc/ssl/certs (created by ca-certificates, owned by root) needs to be writable by onlyoffice too: the entrypoint generates dhparam.pem there at runtime, and onlyoffice-proxy-ssl.conf requires it.
+    chown -R onlyoffice:onlyoffice /etc/nginx /var/log/nginx /var/log/openresty /var/log/supervisor /usr/local/openresty /etc/letsencrypt /letsencrypt /etc/ssl/certs; \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb /tmp/*
 
 # Services config + entrypoint + supervisor config
