@@ -130,8 +130,8 @@ while [ "$1" != "" ]; do
 
             echo 
             echo "${PRODUCT_NAME^^} OPTIONS:"
+            echo "  --deployment-mode   <standalone|microservices|stack>  Deployment topology (default: standalone for Community edition, microservices otherwise)"
             echo "  --installapps       <true|false>        Install/update ${PRODUCT_NAME} (true to install/update)"
-            echo "  --deployment-mode   <standard|stack|community>  Deployment topology (default: community for Community edition, standard otherwise)"
             echo "  --appsversion       <version>           ${PRODUCT_NAME} version tag (e.g., 4.0.0)"
             echo "  --appshost          <hostname>          Hostname or IP for ${PRODUCT_NAME} (default: localhost)"
             echo "  --externalport      <port>              External port for ${PRODUCT_NAME} HTTP (default: 80)"
@@ -212,14 +212,14 @@ esac
 
 # Community edition defaults to the single-container topology
 if [ "${INSTALLATION_TYPE}" = "community" ]; then
-    DEPLOYMENT_MODE="${DEPLOYMENT_MODE:-community}"
+    DEPLOYMENT_MODE="${DEPLOYMENT_MODE:-standalone}"
 else
-    DEPLOYMENT_MODE="${DEPLOYMENT_MODE:-standard}"
+    DEPLOYMENT_MODE="${DEPLOYMENT_MODE:-microservices}"
 fi
 
 case "${DEPLOYMENT_MODE}" in
-    standard | stack | community ) ;;
-    * ) echo "Error: Invalid --deployment-mode '${DEPLOYMENT_MODE}'. Valid values: standard, stack, community." >&2; exit 1 ;;
+    microservices | stack | standalone ) ;;
+    * ) echo "Error: Invalid --deployment-mode '${DEPLOYMENT_MODE}'. Valid values: microservices, stack, standalone." >&2; exit 1 ;;
 esac
 
 validate_bool() {

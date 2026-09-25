@@ -20,7 +20,7 @@ on:
         required: true
       services_filter:
         type: string
-        description: 'Targets to release (ex. onlyoffice-community onlyoffice-api). Empty = all.'
+        description: 'Targets to release (ex. onlyoffice-node onlyoffice-api). Empty = all.'
         required: false
         default: ''
       trigger_offline_release:

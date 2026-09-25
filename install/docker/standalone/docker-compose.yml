@@ -58,7 +58,7 @@ services:
         - GIT_BRANCH=${GIT_BRANCH}
         - DEPLOY_ARGS=deploy:preview
       dockerfile: Dockerfile
-      target: community
+      target: standalone
     container_name: onlyoffice-apps
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}:${DOCKER_TAG}"
   

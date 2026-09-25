@@ -128,13 +128,11 @@ if [[ "$LOCAL_SCRIPTS" = "true" ]] || [[ "$OFFLINE_INSTALLATION" = "true" ]]; th
 
 select_deployment_mode () {
   case "${DEPLOYMENT_MODE}" in
-    community)
+    standalone)
       CONTAINER_NAME="${PACKAGE_SYSNAME}-${PRODUCT}"
       IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}"
       SERVICES=("${PRODUCT}")
       COMPOSE_FILES=(-f "${BASE_DIR}/docker-compose.yml")
-      { [ "$INSTALL_RABBITMQ" = "true" ] || [ "$INSTALL_REDIS" = "true" ]; } && \
-        echo "Note: --installrabbitmq/--installredis are ignored in --deployment-mode community (no separate Redis/RabbitMQ containers)."
       ;;
     stack)
       CONTAINER_NAME="${PACKAGE_SYSNAME}-dotnet-services"
@@ -161,11 +159,11 @@ detect_current_deployment_mode () {
 	is_command_exists docker || return 0
 
 	if [ -n "$(docker ps -a -q -f "name=^${PACKAGE_SYSNAME}-${PRODUCT}$")" ]; then
-		CURRENT_DEPLOYMENT_MODE="community"
+		CURRENT_DEPLOYMENT_MODE="standalone"
 	elif [ -n "$(docker ps -a -q -f "name=^${PACKAGE_SYSNAME}-dotnet-services$")" ]; then
 		CURRENT_DEPLOYMENT_MODE="stack"
 	elif [ -n "$(docker ps -a -q -f "name=^${PACKAGE_SYSNAME}-api$")" ]; then
-		CURRENT_DEPLOYMENT_MODE="standard"
+		CURRENT_DEPLOYMENT_MODE="microservices"
 	fi
 
 	if [ -n "${CURRENT_DEPLOYMENT_MODE}" ] && [ "${DEPLOYMENT_MODE_SET}" != "true" ] && [ "${DEPLOYMENT_MODE}" != "${CURRENT_DEPLOYMENT_MODE}" ]; then
@@ -180,15 +178,15 @@ uninstall() {
 
     DOCKER_COMPOSE="$(docker compose version >/dev/null 2>&1 && echo 'docker compose' || echo 'docker-compose')"
 
-    if [ "${DEPLOYMENT_MODE}" = "community" ]; then
-        echo "Uninstallation of ${PRODUCT_NAME} (community)..."
-        COMMUNITY_FILES=("${COMPOSE_FILES[@]}")
-        [ -f "${BASE_DIR}/ssl.yml" ] && COMMUNITY_FILES+=(-f "${BASE_DIR}/ssl.yml")
+    if [ "${DEPLOYMENT_MODE}" = "standalone" ]; then
+        echo "Uninstallation of ${PRODUCT_NAME} (standalone)..."
+        STANDALONE_FILES=("${COMPOSE_FILES[@]}")
+        [ -f "${BASE_DIR}/ssl.yml" ] && STANDALONE_FILES+=(-f "${BASE_DIR}/ssl.yml")
 
         read -p "Also remove data volumes (mysql, opensearch, documents)? (Y/n): " REMOVE_DATA_SERVICES
         DOWN_ARGS=(down)
         [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]] && DOWN_ARGS+=(-v)
-        ${DOCKER_COMPOSE} "${COMMUNITY_FILES[@]}" "${DOWN_ARGS[@]}" || echo "Failed to remove ${PRODUCT_NAME}."
+        ${DOCKER_COMPOSE} "${STANDALONE_FILES[@]}" "${DOWN_ARGS[@]}" || echo "Failed to remove ${PRODUCT_NAME}."
     else
         read -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " REMOVE_DATA_SERVICES
 
@@ -795,9 +793,9 @@ set_installation_type_data () {
 
 download_files () {
 	case "${DEPLOYMENT_MODE}" in
-		community) DOCKER_TARBALL="docker-community.tar.gz" ;;
-		stack)     DOCKER_TARBALL="docker-stack.tar.gz" ;;
-		*)         DOCKER_TARBALL="docker.tar.gz" ;;
+		standalone) DOCKER_TARBALL="docker-standalone.tar.gz" ;;
+		stack)      DOCKER_TARBALL="docker-stack.tar.gz" ;;
+		*)          DOCKER_TARBALL="docker.tar.gz" ;;
 	esac
 
 	[ "${OFFLINE_INSTALLATION}" = "false" ] && echo -n "Downloading configuration files to ${BASE_DIR}..." || echo "Unzip ${DOCKER_TARBALL} to ${BASE_DIR}..."
@@ -811,8 +809,8 @@ download_files () {
 			DOWNLOAD_URL="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/${DOCKER_TARBALL}"
 		else
 			DOWNLOAD_URL="https://codeload.github.com/${PACKAGE_SYSNAME}/${LEGACY_PRODUCT}-buildtools/tar.gz/${GIT_BRANCH}"
-			if [ "${DEPLOYMENT_MODE}" = "community" ]; then
-				STRIP_COMPONENTS="--strip-components=4 --wildcards */install/docker/community/*"
+			if [ "${DEPLOYMENT_MODE}" = "standalone" ]; then
+				STRIP_COMPONENTS="--strip-components=4 --wildcards */install/docker/standalone/*"
 			else
 				STRIP_COMPONENTS="--strip-components=3 --wildcards */install/docker/*"
 			fi
@@ -924,9 +922,9 @@ resolve_ds_volume_path () {
 # Moves a standalone DS's Data/logs/internal-state/DB onto the volumes ds.yml already declares, so the adopted container needs no compose override and starts through the same `ds.yml up -d` as a fresh install.
 # Fonts are migrated separately (see migrate_document_server_fonts), only after that first start, so Docker still populates ds_fonts with the image's own default fonts before we add the custom ones on top.
 migrate_document_server_data () {
-	# Community's own Data volume is named ds_data (app_data there is the portal's own data, a different mount).
+	# Standalone's own Data volume is named ds_data (app_data there is the portal's own data, a different mount).
 	local DATA_VOLUME_NAME="app_data"
-	[ "${DEPLOYMENT_MODE}" = "community" ] && DATA_VOLUME_NAME="ds_data"
+	[ "${DEPLOYMENT_MODE}" = "standalone" ] && DATA_VOLUME_NAME="ds_data"
 
 	local APP_DATA_MOUNTPOINT LOG_DATA_MOUNTPOINT DS_STATE_MOUNTPOINT DS_POSTGRESQL_MOUNTPOINT
 	APP_DATA_MOUNTPOINT="$(resolve_ds_volume_path "${DATA_VOLUME_NAME}")"
@@ -980,19 +978,19 @@ migrate_document_server_data () {
 
 	# download_files() re-extracts a pristine, commented-out compose file on every run, so this has to be reapplied every time, after migration has (re)populated ds.env.
 	local DS_COMPOSE_FILE="${BASE_DIR}/ds.yml"
-	[ "${DEPLOYMENT_MODE}" = "community" ] && DS_COMPOSE_FILE="${BASE_DIR}/docker-compose.yml"
+	[ "${DEPLOYMENT_MODE}" = "standalone" ] && DS_COMPOSE_FILE="${BASE_DIR}/docker-compose.yml"
 	[ -s "${BASE_DIR}/ds.env" ] && sed -i -e 's/^\( *\)#env_file:$/\1env_file:/' -e 's/^ *#  - ds\.env$/      - ds.env/' "${DS_COMPOSE_FILE}"
 	return 0
 }
 
-# Called via finish_https_takeover(), shared by install_product() and install_community(), once the cert-apply command confirms the inherited cert now lives on the new front end - until then the migrated Document Server keeps serving HTTPS itself, so nothing is lost if that command fails.
+# Called via finish_https_takeover(), shared by install_product() and install_standalone(), once the cert-apply command confirms the inherited cert now lives on the new front end - until then the migrated Document Server keeps serving HTTPS itself, so nothing is lost if that command fails.
 strip_inherited_https_from_document_server () {
 	local DATA_VOLUME_NAME="app_data"
-	[ "${DEPLOYMENT_MODE}" = "community" ] && DATA_VOLUME_NAME="ds_data"
+	[ "${DEPLOYMENT_MODE}" = "standalone" ] && DATA_VOLUME_NAME="ds_data"
 	rm -rf "$(resolve_ds_volume_path "${DATA_VOLUME_NAME}")/certs"
 
 	local DS_COMPOSE_FILE="${BASE_DIR}/ds.yml"
-	[ "${DEPLOYMENT_MODE}" = "community" ] && DS_COMPOSE_FILE="${BASE_DIR}/docker-compose.yml"
+	[ "${DEPLOYMENT_MODE}" = "standalone" ] && DS_COMPOSE_FILE="${BASE_DIR}/docker-compose.yml"
 	# LETS_ENCRYPT_DOMAIN/MAIL never make it into ds.env in the first place - migrate_document_server_data() already drops those unconditionally.
 	[ -f "${BASE_DIR}/ds.env" ] && sed -i -E '/^(SSL_CERTIFICATE_PATH|SSL_KEY_PATH|SSL_DHPARAM_PATH|CA_CERTIFICATES_PATH|SSL_VERIFY_CLIENT)=/d' "${BASE_DIR}/ds.env"
 	${DOCKER_COMPOSE} -f "${DS_COMPOSE_FILE}" restart onlyoffice-document-server || {
@@ -1001,7 +999,7 @@ strip_inherited_https_from_document_server () {
 	}
 }
 
-# Shared by install_product()/install_community(): call with the cert-apply command's own exit status ($?, captured immediately after it runs).
+# Shared by install_product()/install_standalone(): call with the cert-apply command's own exit status ($?, captured immediately after it runs).
 # Strips the migrated Document Server's own HTTPS once that command succeeded; otherwise warns when the failed cert was one this run itself inherited from it.
 finish_https_takeover () {
 	if [ "$1" -eq 0 ]; then
@@ -1202,7 +1200,7 @@ teardown_previous_deployment_mode () {
 		[ -f "${LEGACY_FILE}" ] && COMPOSE_FILES[INDEX]="${LEGACY_FILE}"
 	done
 
-	if [ "${CURRENT_DEPLOYMENT_MODE}" = "community" ]; then
+	if [ "${CURRENT_DEPLOYMENT_MODE}" = "standalone" ]; then
 		${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" rm -sf "${PACKAGE_SYSNAME}-${PRODUCT}"
 	else
 		${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" down
@@ -1212,7 +1210,7 @@ teardown_previous_deployment_mode () {
 	select_deployment_mode
 }
 
-install_community () {
+install_standalone () {
 	if [ "$INSTALL_PRODUCT" == "true" ]; then
 		if [ "${UPDATE}" = "true" ]; then
 			LOCAL_CONTAINER_TAG="$(docker inspect --format='{{index .Config.Image}}' "${CONTAINER_NAME}" 2>/dev/null | awk -F':' '{print $2}';)"
@@ -1251,33 +1249,33 @@ install_community () {
 
 		chown_app_volumes
 
-		local COMMUNITY_FILES=("${COMPOSE_FILES[@]}")
+		local STANDALONE_FILES=("${COMPOSE_FILES[@]}")
 
-		# ssl.yml contract (community-only): SSL_MODE/SSL_DOMAIN/SSL_EMAIL/SSL_CERT_PATH/SSL_KEY_PATH,
-		# different from the standard mode's config/${PRODUCT}-ssl-setup script.
+		# ssl.yml contract (standalone-only): SSL_MODE/SSL_DOMAIN/SSL_EMAIL/SSL_CERT_PATH/SSL_KEY_PATH,
+		# different from the microservices/stack modes' config/${PRODUCT}-ssl-setup script.
 		if [ -n "${CERTIFICATE_PATH}" ] && [ -n "${APP_DOMAIN_PORTAL}" ]; then
 			mkdir -p "${BASE_DIR}/config/nginx/certs"
 			cp "${CERTIFICATE_PATH}" "${BASE_DIR}/config/nginx/certs/"
 			cp "${CERTIFICATE_KEY_PATH}" "${BASE_DIR}/config/nginx/certs/"
 			# onlyoffice-apps always runs as UID:GID ${UID}:${GID} here, never root (see docker-compose.yml) - a source file that kept owner-only permissions (a root-owned docker-cp'd inherited key, or a tightly-permissioned one the user supplied) would otherwise leave openresty unable to read it at all.
 			chmod 644 "${BASE_DIR}/config/nginx/certs/$(basename "${CERTIFICATE_PATH}")" "${BASE_DIR}/config/nginx/certs/$(basename "${CERTIFICATE_KEY_PATH}")"
-			COMMUNITY_FILES+=(-f "${BASE_DIR}/ssl.yml")
+			STANDALONE_FILES+=(-f "${BASE_DIR}/ssl.yml")
 			SSL_MODE="custom" SSL_DOMAIN="${APP_DOMAIN_PORTAL}" \
 				SSL_CERT_PATH="/etc/nginx/certs/$(basename "${CERTIFICATE_PATH}")" \
 				SSL_KEY_PATH="/etc/nginx/certs/$(basename "${CERTIFICATE_KEY_PATH}")" \
-				${DOCKER_COMPOSE} "${COMMUNITY_FILES[@]}" up -d
+				${DOCKER_COMPOSE} "${STANDALONE_FILES[@]}" up -d
 			finish_https_takeover $?
 		elif [ -n "${LETS_ENCRYPT_DOMAIN}" ] && [ -n "${LETS_ENCRYPT_MAIL}" ]; then
 			mkdir -p "${BASE_DIR}/config/nginx/ssl/letsencrypt"
-			COMMUNITY_FILES+=(-f "${BASE_DIR}/ssl.yml")
+			STANDALONE_FILES+=(-f "${BASE_DIR}/ssl.yml")
 			SSL_MODE="letsencrypt" SSL_DOMAIN="${LETS_ENCRYPT_DOMAIN}" SSL_EMAIL="${LETS_ENCRYPT_MAIL}" \
-				${DOCKER_COMPOSE} "${COMMUNITY_FILES[@]}" up -d
+				${DOCKER_COMPOSE} "${STANDALONE_FILES[@]}" up -d
 			finish_https_takeover $?
 		elif [[ -n "${CERTIFICATE_KEY_PATH}${CERTIFICATE_PATH}${LETS_ENCRYPT_DOMAIN}${LETS_ENCRYPT_MAIL}" ]]; then
 			echo -e "\e[31mERROR:\e[0m Missing required parameters for SSL setup"
 			exit 1
 		else
-			${DOCKER_COMPOSE} "${COMMUNITY_FILES[@]}" up -d
+			${DOCKER_COMPOSE} "${STANDALONE_FILES[@]}" up -d
 		fi
 
 		if [ "${DOCUMENT_SERVER_ATTACHED}" = "true" ] && [ -n "${MIGRATED_FONTS_SRC}" ]; then
@@ -1380,7 +1378,7 @@ check_docker_image () {
 	DOCKER_TAG="${DOCKER_TAG:-$(get_available_version ${IMAGE_NAME})}"
 	reconfigure DOCKER_TAG ${DOCKER_TAG}
 	if [ "${OFFLINE_INSTALLATION}" != "false" ]; then
-		if [ "${DEPLOYMENT_MODE}" = "community" ]; then
+		if [ "${DEPLOYMENT_MODE}" = "standalone" ]; then
 			[ "$INSTALL_PRODUCT" == "true" ] && offline_check_docker_image "${BASE_DIR}/docker-compose.yml"
 		else
 			[ "$INSTALL_MYSQL_SERVER" == "true" ]       && offline_check_docker_image ${BASE_DIR}/db.yml
@@ -1494,8 +1492,8 @@ start_installation () {
 
 	services_check_connection
 
-	if [ "${DEPLOYMENT_MODE}" = "community" ]; then
-		install_community
+	if [ "${DEPLOYMENT_MODE}" = "standalone" ]; then
+		install_standalone
 	else
 		install_elasticsearch
 
