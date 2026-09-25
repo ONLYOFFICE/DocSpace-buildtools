@@ -555,7 +555,7 @@ RUN mkdir -p /app/ASC.Files/server && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -u 104 onlyoffice --home /var/www/onlyoffice --system -G onlyoffice
 USER onlyoffice
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/bin-share-docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-bin-share-entrypoint.sh /usr/bin/docker-entrypoint.sh
 COPY --from=files --chown=onlyoffice:onlyoffice ${BUILD_PATH}/products/ASC.Files/server/ /app/ASC.Files/server/
 COPY --from=people_server --chown=onlyoffice:onlyoffice ${BUILD_PATH}/products/ASC.People/server/ /app/ASC.People/server/
 COPY --from=ai --chown=onlyoffice:onlyoffice ${BUILD_PATH}/products/ASC.AI/server/ /app/ASC.AI/server/
@@ -568,7 +568,7 @@ RUN addgroup --system --gid 107 onlyoffice && \
     adduser -u 104 onlyoffice --home /var/www/onlyoffice --system -G onlyoffice && \
     mkdir /app
 USER onlyoffice
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/wait-bin-share-docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-wait-bin-share-entrypoint.sh /usr/bin/docker-entrypoint.sh
 ENTRYPOINT ["/bin/sh", "/usr/bin/docker-entrypoint.sh"]
 
 ## Dotnet Services ##

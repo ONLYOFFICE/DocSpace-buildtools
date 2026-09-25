@@ -70,7 +70,7 @@ install/
         docker-migration-entrypoint.sh
         docker-healthchecks-entrypoint.sh
         docker-standalone-entrypoint.sh
-        bin-share-docker-entrypoint.sh / wait-bin-share-docker-entrypoint.sh
+        docker-bin-share-entrypoint.sh / docker-wait-bin-share-entrypoint.sh
         prepare-nginx-router.sh
       dev/                  — Local-dev-only Compose overlays (build.backend.docker.py):
         db.dev.yml            — MySQL dev overrides (exposed ports)
