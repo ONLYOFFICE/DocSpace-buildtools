@@ -18,6 +18,9 @@ ARG MAVEN_VERSION="3.9-eclipse-temurin-${JAVA_VERSION}"
 FROM --platform=$BUILDPLATFORM python:${PYTHON_VERSION} AS src
 ARG GIT_BRANCH="master"
 ARG FALLBACK_BRANCH="develop"
+ARG BUILDTOOLS_BRANCH=""
+ARG SERVER_BRANCH=""
+ARG CLIENT_BRANCH=""
 ARG SRC_PATH="/app/onlyoffice/src"
 ARG BUILD_PATH="/var/www"
 ARG PRODUCT_VERSION=0.0.0
@@ -38,7 +41,7 @@ RUN --mount=type=secret,id=github_token,env=GITHUB_TOKEN sh -ec '\
     curl --retry 3 --retry-delay 2 --retry-connrefused -fsSL \
       -H "Accept: application/vnd.github+json" \
       ${GITHUB_TOKEN:+-H "Authorization: Bearer ${GITHUB_TOKEN}"} \
-      "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/git/refs/heads/${GIT_BRANCH}" -o version.json'
+      "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/git/refs/heads/${BUILDTOOLS_BRANCH:-$GIT_BRANCH}" -o version.json'
 
 # BEGIN_SOURCE
 RUN <<'EOF'
@@ -47,15 +50,19 @@ RUN <<'EOF'
 
     git_clone() {
         local REPO=$1 DEST=$2 EXTRA_OPTS=$3 FALLBACK=${4:-$FALLBACK_BRANCH}
-        local BRANCH=$(git ls-remote --exit-code --heads "${REPO}" "${GIT_BRANCH}" > /dev/null 2>&1 && echo "${GIT_BRANCH}" || echo "${FALLBACK}")
+        local BRANCH=${5:-}
+        # Explicit overrides must exist; only implicit branches may fall back.
+        if [ -z "$BRANCH" ]; then
+            BRANCH=$(git ls-remote --exit-code --heads "${REPO}" "${GIT_BRANCH}" > /dev/null 2>&1 && echo "${GIT_BRANCH}" || echo "${FALLBACK}")
+        fi
         git clone ${EXTRA_OPTS} -b "${BRANCH}" "${REPO}" "${DEST}"
     }
 
     PIDS=()
     DEPTH=$([[ "${DEBUG_INFO,,}" =~ ^(true|1|yes)$ ]] && echo 30 || echo 1)
-    git_clone "${BUILDTOOLS_REPO}" "${SRC_PATH}/buildtools" "--recurse-submodules --depth ${DEPTH}" & PIDS+=($!)
-    git_clone "${SERVER_REPO}"     "${SRC_PATH}/server"     "--recurse-submodules --depth ${DEPTH}" & PIDS+=($!)
-    git_clone "${CLIENT_REPO}"     "${SRC_PATH}/client"     "--recurse-submodules --depth ${DEPTH}" & PIDS+=($!)
+    git_clone "${BUILDTOOLS_REPO}" "${SRC_PATH}/buildtools" "--recurse-submodules --depth ${DEPTH}" "$FALLBACK_BRANCH" "$BUILDTOOLS_BRANCH" & PIDS+=($!)
+    git_clone "${SERVER_REPO}"     "${SRC_PATH}/server"     "--recurse-submodules --depth ${DEPTH}" "$FALLBACK_BRANCH" "$SERVER_BRANCH" & PIDS+=($!)
+    git_clone "${CLIENT_REPO}"     "${SRC_PATH}/client"     "--recurse-submodules --depth ${DEPTH}" "$FALLBACK_BRANCH" "$CLIENT_BRANCH" & PIDS+=($!)
     git_clone https://github.com/ONLYOFFICE/docspace-plugins.git "${SRC_PATH}/plugins" "--depth 1" master & PIDS+=($!)
     git_clone https://github.com/ONLYOFFICE/ASC.Web.Campaigns.git "${SRC_PATH}/campaigns" "--depth 1" master & PIDS+=($!)
 
