@@ -49,7 +49,7 @@ create() {
 
   sed -i -e 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\|NON_INTERACTIVE="\).*"$~\1true"~g' -e 's~^\(DEPLOYMENT_MODE="\).*"$~\1standalone"~g' \
     "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
-  APPS_VERSION=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "apps-" \
+  APPS_VERSION=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "apps:" \
     | sed -E "s/.*:([0-9]+\.[0-9]+\.[0-9]+).*/\1/" | head -n1)
   [ -n "$APPS_VERSION" ] || { echo "::error::Failed to determine APPS_VERSION"; exit 1; }
   sed -i "s~\(APPS_VERSION=\)\"[^\"]*\"~\1\"${APPS_VERSION}\"~g" \
