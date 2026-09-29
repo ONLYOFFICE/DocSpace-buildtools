@@ -1007,6 +1007,17 @@ teardown_previous_deployment_mode () {
 		compose_with_document_server_mounts "${COMPOSE_FILES[@]}" down
 	fi
 
+	# standalone bundles Redis/RabbitMQ/Fluent Bit/Dashboards into the single
+	# container; the other modes run them as separate containers via their own
+	# compose files, which COMPOSE_FILES above never references, so they'd
+	# otherwise keep running as unmanaged leftovers under the project.
+	if [ "${TARGET_DEPLOYMENT_MODE}" = "standalone" ] && [ "${CURRENT_DEPLOYMENT_MODE}" != "standalone" ]; then
+		[ -f "${BASE_DIR}/redis.yml" ] && ${DOCKER_COMPOSE} -f "${BASE_DIR}/redis.yml" down
+		[ -f "${BASE_DIR}/rabbitmq.yml" ] && ${DOCKER_COMPOSE} -f "${BASE_DIR}/rabbitmq.yml" down
+		[ -f "${BASE_DIR}/fluent.yml" ] && [ -f "${BASE_DIR}/dashboards.yml" ] && \
+			${DOCKER_COMPOSE} -f "${BASE_DIR}/fluent.yml" -f "${BASE_DIR}/dashboards.yml" down
+	fi
+
 	# The target mode writes its own renewal job if needed.
 	rm -f "/etc/cron.weekly/${PRODUCT}-renew-letsencrypt"
 
