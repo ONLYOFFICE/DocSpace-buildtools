@@ -111,19 +111,19 @@ jobs:
         run: bash .github/scripts/docker-utils.sh shellcheck
 
       - name: Prepare offline environment
-        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'stack'
+        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'standalone'
         run: bash .github/scripts/offline-archive.sh prepare
 
       - name: Create compressed archives
-        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'stack'
+        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'standalone'
         run: bash .github/scripts/offline-archive.sh create ${{ matrix.arch }}
 
       - name: Build self-extracting archive
-        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'stack'
+        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'standalone'
         run: bash .github/scripts/offline-archive.sh build ${{ matrix.arch }}
 
       - name: Configure AWS Credentials
-        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'stack'
+        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'standalone'
         uses: aws-actions/configure-aws-credentials@v6.0.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_OCI }}
@@ -131,7 +131,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Upload 4testing offline self-extracting archive
-        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'stack'
+        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'standalone'
         env:
           AWS_BUCKET_URL_OCI: ${{ secrets.AWS_BUCKET_URL_OCI }}
           AWS_REST_API_ID: ${{ secrets.AWS_REST_API_ID }}
