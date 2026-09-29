@@ -164,7 +164,7 @@ if [ "$OFFLINE_IMAGE_LOAD" != "true" ]; then
 fi
 
 echo "Extracting OneClickInstall files to the current directory..."
-mv -f "${TEMP_DIR}/docker-standalone.tar.gz" "${TEMP_DIR}/install-Docker.sh" "${TEMP_DIR}/install-Docker-args.sh" "${SCRIPT_DIR}"
+mv -f "${TEMP_DIR}/docker-standalone.tar.gz" "${TEMP_DIR}/install-Docker.sh" "${TEMP_DIR}/install-Docker-args.sh" "${TEMP_DIR}/install-Docker-docs.sh" "${SCRIPT_DIR}"
 
 echo "Running the install-Docker.sh script..."
 chmod +x "${SCRIPT_DIR}/install-Docker.sh"
