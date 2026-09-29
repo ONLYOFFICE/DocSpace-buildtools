@@ -22,6 +22,8 @@ HIDE_SETTINGS=[\n\"Monitoring\",\n\"LdapSettings\",\n\"DocService\",\n\"MailServ
 MYSQL_CONTAINER_NAME=${MYSQL_CONTAINER_NAME:-"localhost"}
 MYSQL_HOST=${MYSQL_HOST:-${MYSQL_CONTAINER_NAME}}
 MYSQL_PORT=${MYSQL_PORT:-"3306"}
+# ASC.Identity (Java) reads this; computed here rather than left to docker-compose.yml's own interpolation, which doesn't nest ${} inside a default anywhere else in the codebase.
+export JDBC_URL="${MYSQL_HOST}:${MYSQL_PORT}"
 MYSQL_DATABASE=${MYSQL_DATABASE:-"onlyoffice_apps"}
 MYSQL_USER=${MYSQL_USER:-"onlyoffice_user"}
 MYSQL_PASSWORD=${MYSQL_PASSWORD:-"onlyoffice_pass"}
@@ -38,6 +40,16 @@ export MCP_ENDPOINT=${MCP_ENDPOINT:-"http://127.0.0.1:5158/mcp"}
 export AI_SERVICE_URL=${AI_SERVICE_URL:-"http://127.0.0.1:5051"}
 
 MIGRATION_TYPE=${MIGRATION_TYPE:-"STANDALONE"}  # STANDALONE or SAAS
+
+# Same rule as docker-entrypoint.py: the edition picks the appsettings.<edition>.json overlay (license type/path) unless ENV_EXTENSION names another one.
+[[ -z "${ENV_EXTENSION:-}" || "${ENV_EXTENSION}" == "none" ]] && ENV_EXTENSION="${INSTALLATION_TYPE:-}"
+ENV_EXTENSION="${ENV_EXTENSION,,}"
+export ENV_EXTENSION="${ENV_EXTENSION:-none}"
+
+APP_CORE_SERVER_ROOT=${APP_CORE_SERVER_ROOT:-""}
+APP_KNOWN_PROXIES=${APP_KNOWN_PROXIES:-""}
+APP_KNOWN_NETWORKS=${APP_KNOWN_NETWORKS:-""}
+CERTBOT_DIRS=(--config-dir /etc/letsencrypt --work-dir /tmp/letsencrypt --logs-dir /var/log/onlyoffice/letsencrypt)
 
 export MYSQL_PWD="$MYSQL_PASSWORD"
 MYSQL_ARGS=(-h "$MYSQL_HOST" -P "$MYSQL_PORT" -u "$MYSQL_USER")
@@ -112,20 +124,30 @@ ensure_secret() {
 # NGINX SSL SETUP
 # ============================================
 setup_nginx_ssl() {
-    mkdir -p /var/www/certbot /etc/letsencrypt
+    mkdir -p /letsencrypt /etc/letsencrypt
 
     write_http_nginx_conf() {
-        cp /app/onlyoffice/template/nginx/onlyoffice-proxy.http.conf \
+        cp /app/onlyoffice/template/nginx/onlyoffice-proxy.conf \
             /etc/nginx/conf.d/onlyoffice-proxy.conf
     }
 
     write_ssl_nginx_conf() {
-        SERVER_NAME="$1" \
-        SSL_CERTIFICATE="$2" \
-        SSL_CERTIFICATE_KEY="$3" \
-        envsubst '${SERVER_NAME} ${SSL_CERTIFICATE} ${SSL_CERTIFICATE_KEY}' \
-            < /app/onlyoffice/template/nginx/onlyoffice-proxy.ssl.conf.template \
-            > /etc/nginx/conf.d/onlyoffice-proxy.conf
+        local https_port="${EXTERNAL_PORT_HTTPS:-443}"
+        local redirect_port=""
+        if [[ ! "$https_port" =~ ^[0-9]+$ ]] || (( 10#$https_port < 1 || 10#$https_port > 65535 )); then
+            log "Invalid EXTERNAL_PORT_HTTPS: $https_port"
+            return 1
+        fi
+        (( 10#$https_port == 443 )) || redirect_port=":$((10#$https_port))"
+        # Not on a volume, so a container recreate loses it - cheap enough to regenerate, and it isn't a secret.
+        [ -f /etc/ssl/certs/dhparam.pem ] || openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048 || return 1
+        # server_name isn't templated: the shared config matches any host (it's the sole HTTPS front end), same as the other deployment modes.
+        SSL_CERTIFICATE="$1" \
+        SSL_CERTIFICATE_KEY="$2" \
+        SSL_REDIRECT_PORT="$redirect_port" \
+        envsubst '${SSL_CERTIFICATE} ${SSL_CERTIFICATE_KEY} ${SSL_REDIRECT_PORT}' \
+            < <(sed 's#https://$host$request_uri#https://$host${SSL_REDIRECT_PORT}$request_uri#' /app/onlyoffice/template/nginx/onlyoffice-proxy-ssl.conf) \
+            > /etc/nginx/conf.d/onlyoffice-proxy.conf || return 1
     }
 
     parse_ssl_domains() {
@@ -167,8 +189,12 @@ setup_nginx_ssl() {
 
         parse_ssl_domains
 
-        write_ssl_nginx_conf "$NGINX_SERVER_NAMES" "$SSL_CERT_PATH" "$SSL_KEY_PATH"
-        log "Using custom SSL certificate for: $NGINX_SERVER_NAMES"
+        if write_ssl_nginx_conf "$SSL_CERT_PATH" "$SSL_KEY_PATH"; then
+            log "Using custom SSL certificate for: $NGINX_SERVER_NAMES"
+        else
+            log "Warning: failed to configure HTTPS for $NGINX_SERVER_NAMES; starting with HTTP only"
+            write_http_nginx_conf
+        fi
         return 0
     fi
 
@@ -204,7 +230,8 @@ setup_nginx_ssl() {
             [[ "$LETSENCRYPT_STAGING" == "true" ]] && staging_arg=(--staging)
             [[ "$LETSENCRYPT_FORCE_RENEW" == "true" ]] && renew_arg=(--force-renewal)
 
-            if certbot certonly \
+            # CERTBOT_DIRS: the default work/log dirs under /var are root-only, and this container never runs as root.
+            if certbot certonly "${CERTBOT_DIRS[@]}" \
                 --standalone \
                 --preferred-challenges http \
                 --http-01-port 80 \
@@ -228,8 +255,12 @@ setup_nginx_ssl() {
             log "Existing Let's Encrypt certificate found for $PRIMARY_SSL_DOMAIN"
         fi
 
-        write_ssl_nginx_conf "$NGINX_SERVER_NAMES" "$cert_file" "$key_file"
-        log "Using Let's Encrypt certificate for: $NGINX_SERVER_NAMES"
+        if write_ssl_nginx_conf "$cert_file" "$key_file"; then
+            log "Using Let's Encrypt certificate for: $NGINX_SERVER_NAMES"
+        else
+            log "Warning: failed to configure HTTPS for $NGINX_SERVER_NAMES; starting with HTTP only"
+            write_http_nginx_conf
+        fi
         return 0
     fi
 
@@ -394,6 +425,33 @@ update_configs() {
         -e "this.core.notify.postman='services'" \
         -e "this.ai.mcp[0].endpoint=process.env.MCP_ENDPOINT"
 
+    # Same forwarded-headers trust as docker-entrypoint.py: this container's own network and loopback, plus APP_KNOWN_NETWORKS/APP_KNOWN_PROXIES.
+    export KNOWN_NETWORKS_JSON KNOWN_PROXIES_JSON
+    KNOWN_NETWORKS_JSON="$(node -e '
+        const os = require("os");
+        const toInt = (ip) => ip.split(".").reduce((acc, octet) => ((acc << 8) + Number(octet)) >>> 0, 0);
+        const toIp = (num) => [24, 16, 8, 0].map((shift) => (num >>> shift) & 255).join(".");
+        const networks = [];
+        const address = Object.values(os.networkInterfaces()).flat().find((iface) => iface && iface.family === "IPv4" && !iface.internal);
+        if (address) {
+            const [ip, bits] = address.cidr.split("/");
+            const mask = Number(bits) === 0 ? 0 : (~0 << (32 - Number(bits))) >>> 0;
+            networks.push(`${toIp(toInt(ip) & mask)}/${bits}`);
+        } else {
+            networks.push("127.0.0.1/8");
+        }
+        const extra = (process.env.APP_KNOWN_NETWORKS || "").split(",").map((item) => item.trim()).filter(Boolean);
+        console.log(JSON.stringify(networks.concat(extra)));
+    ')"
+    KNOWN_PROXIES_JSON="$(node -e '
+        const extra = (process.env.APP_KNOWN_PROXIES || "").split(",").map((item) => item.trim()).filter(Boolean);
+        console.log(JSON.stringify(["127.0.0.1"].concat(extra)));
+    ')"
+    ${JSON} "${PATH_TO_CONF}/appsettings.json" \
+        -e "this.core.hosting.forwardedHeadersOptions.knownNetworks=JSON.parse(process.env.KNOWN_NETWORKS_JSON)" \
+        -e "this.core.hosting.forwardedHeadersOptions.knownProxies=JSON.parse(process.env.KNOWN_PROXIES_JSON)"
+    [ -n "${APP_CORE_SERVER_ROOT}" ] && ${JSON} "${PATH_TO_CONF}/appsettings.json" -e "this.core['server-root']=process.env.APP_CORE_SERVER_ROOT"
+
     # Docs Admin Panel link
     ${JSON} "${PATH_TO_CONF}/externalresources.json" \
         -e "this.externalresources.adminpanel.default.domain=\"${DOCUMENT_SERVER_URL_PUBLIC%/}/admin\""
@@ -463,6 +521,11 @@ main() {
     echo "🚀 Starting Docker entrypoint..."
     echo "=================================="
     log "=== Starting initialization ==="
+    # app_data/log_data are shared with onlyoffice-document-server, which re-chowns its own Data dir's inode to its "ds" user on every one of its own restarts (confirmed live, not recursive - only this one entry). onlyoffice is in Docs' group (Dockerfile), so chmod g+w here survives that indefinitely; skips Docs' own wopi keys, its private signing material.
+    find /app/onlyoffice/data \( -name wopi_private.key -o -name wopi_public.key \) -prune -o -exec chown onlyoffice:onlyoffice {} +
+    chmod g+w /app/onlyoffice/data
+    chown onlyoffice:onlyoffice /var/log/onlyoffice
+    chmod g+w /var/log/onlyoffice
     update_nlog_level
     ensure_secret APP_CORE_MACHINEKEY 32
     export SPRING_APPLICATION_SIGNATURE_SECRET="$APP_CORE_MACHINEKEY"
@@ -473,6 +536,18 @@ main() {
     replace_csp_lua
     setup_nginx_ssl
     log "🌐 Initializing nginx..." && /nginx/docker-entrypoint.sh
+
+    # The Dockerfile already strips quic/http3 at build time when this openresty build lacks it; this is a second check in case that detection was wrong - better HTTPS without HTTP/3 than openresty crash-looping.
+    if ! /usr/local/openresty/bin/openresty -t >/tmp/nginx-t.log 2>&1 && grep -qi 'quic\|http/3\|http3' /tmp/nginx-t.log; then
+        log "openresty -t failed on HTTP/3, retrying without it:"
+        cat /tmp/nginx-t.log
+        sed -i -e '/quic/d' -e '/alt-svc/d' /etc/nginx/conf.d/onlyoffice-proxy.conf
+        /usr/local/openresty/bin/openresty -t
+    fi
+
+    # Everything above ran as root and can leave nginx/openresty's own files root-owned: the router's init scripts (prepare-nginx-router.sh's sed -i) rewrite conf.d files, and openresty -t itself creates its configured error_log if missing - confirmed live, both broke openresty (runs as onlyoffice below) with "Permission denied" until fixed here, right before it starts. /etc/nginx/certs is excluded: it's the read-only certs bind mount (docker-compose.yml), chown there fails the whole command (EROFS) - the certs are already world-readable (644), so onlyoffice doesn't need to own them anyway.
+    find /etc/nginx /var/log/nginx /var/log/openresty /usr/local/openresty -path /etc/nginx/certs -prune -o -exec chown onlyoffice:onlyoffice {} +
+
     log "✅ Initialization complete - starting supervisord"
     log "=================================="
     exec supervisord -n

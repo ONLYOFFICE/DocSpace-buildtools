@@ -7,7 +7,11 @@ def require_env(name):
 
 PRODUCT = os.environ.get("PRODUCT") or "onlyoffice"
 BASE_DIR =  os.environ.get("BASE_DIR") or  "/app/" + PRODUCT
-ENV_EXTENSION = (os.environ.get("ENV_EXTENSION") or os.environ.get("INSTALLATION_TYPE")).lower() or "none"
+# .env ships ENV_EXTENSION=none as its literal, un-reconfigured default (install-Docker.sh's reconfigure() is a no-op when nothing overrides it) - treat that the same as unset, or INSTALLATION_TYPE (the actual edition) never gets a chance to apply.
+_env_extension = os.environ.get("ENV_EXTENSION")
+if not _env_extension or _env_extension.lower() == "none":
+    _env_extension = os.environ.get("INSTALLATION_TYPE")
+ENV_EXTENSION = (_env_extension or "none").lower()
 PROXY_HOST = os.environ.get("PROXY_HOST") or "onlyoffice-proxy"
 SERVICE_PORT = os.environ.get("SERVICE_PORT") or "5050"
 URLS = os.environ.get("URLS") or "http://0.0.0.0:"

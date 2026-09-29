@@ -56,7 +56,7 @@ jobs:
     strategy:
       matrix:
         branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches || format('[{0}]', toJSON(github.ref_name))) }}
-        service: [dotnet, node, java, community]
+        service: [dotnet, node, java, standalone]
     steps:
       - name: Checkout
         uses: actions/checkout@v6

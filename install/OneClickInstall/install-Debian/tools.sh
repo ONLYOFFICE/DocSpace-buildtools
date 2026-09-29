@@ -54,7 +54,7 @@ make_swap () {
 		chmod 600 "${SWAPFILE}"
 		mkswap "${SWAPFILE}"
 		swapon "${SWAPFILE}"
-		echo "$SWAPFILE none swap sw 0 0" >> /etc/fstab
+		awk -v swapfile="${SWAPFILE}" '$1 == swapfile && $3 == "swap" { found = 1 } END { exit !found }' /etc/fstab || echo "$SWAPFILE none swap sw 0 0" >> /etc/fstab
 	fi
 }
 
@@ -62,7 +62,7 @@ command_exists () {
 	type "$1" &> /dev/null;
 }
 
-# Function to prevent package auto-update
+# Prevent package auto-updates.
 hold_package_version() {
 	local pkg pkgs=("dotnet-*" "aspnetcore-*" opensearch redis-server rabbitmq-server opensearch-dashboards fluent-bit)
 	for pkg in "${pkgs[@]}"; do

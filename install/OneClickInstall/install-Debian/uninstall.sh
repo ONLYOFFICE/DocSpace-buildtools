@@ -66,7 +66,7 @@ if [ "$UNINSTALL_DEPENDENCIES" = true ]; then
     mapfile -t -O "${#PACKAGES_TO_UNINSTALL[@]}" PACKAGES_TO_UNINSTALL < <(dpkg-query -W -f='${Package}\n' | grep -E "^postgresql(-[0-9]+)?(-.*)?$")
 fi
 
-# Stop app services first - some hang on SIGTERM once their dependencies are gone, eating the full TimeoutStopSec.
+# Stop app services before their dependencies disappear.
 systemctl stop "${product}-*.service" "${legacy_product}-*.service" >/dev/null 2>&1 || true
 
 # Uninstall packages and clean up
@@ -84,4 +84,3 @@ done
 
 echo -e "Uninstallation of ${product_name}" \
          "$( [ "$UNINSTALL_DEPENDENCIES" = true ] && echo "and all dependencies" ) \e[32mcompleted.\e[0m"
-

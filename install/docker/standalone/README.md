@@ -1,12 +1,8 @@
 ## Running ONLYOFFICE Apps in Docker
 
-> **Note:** Not for production use.
-> This guide deploys a development/testing build of ONLYOFFICE Apps.
-> For production deployments, use the: [Production Version of ONLYOFFICE Apps](https://www.onlyoffice.com/download.aspx#docspace-enterprise)
-
 ### Overview
 
-This community ships ONLYOFFICE Apps as a monolithic build: all ONLYOFFICE Apps services run in a single container rather than as separate per-service containers. The full stack consists of four containers:
+The standalone deployment ships ONLYOFFICE Apps as a single-node, monolithic build: all ONLYOFFICE Apps services run in one container instead of separate per-service containers. It's the default topology `apps-install.sh` uses for every edition (Community, Enterprise, Developer), not just for evaluation.
 
 | Container | Role |
 | :---- | :---- |
@@ -15,10 +11,9 @@ This community ships ONLYOFFICE Apps as a monolithic build: all ONLYOFFICE Apps 
 | **onlyoffice-mysql-server** | MySQL database |
 | **onlyoffice-opensearch** | OpenSearch |
 
-Differences from the standard multi-container deployment:
+MySQL, OpenSearch and Document Server are each optional here (an external instance can replace the bundled one).
 
-- All ONLYOFFICE Apps services are consolidated into a single container.
-- No thumbnail generation.
+Because everything runs as a single process, this topology does not scale out horizontally (no multiple `onlyoffice-apps` replicas behind a load balancer). If you need that, use the [microservices or stack topology](../Readme.md) instead - the database and its data carry over if you switch later.
 
 **Prerequisites:** Docker Engine with the Compose plugin (docker compose).
 
@@ -34,8 +29,13 @@ git clone https://github.com/ONLYOFFICE/DocSpace-buildtools.git
 2.	Change into the Compose directory:
 
 ```bash
-cd DocSpace-buildtools/install/docker/community
+cd DocSpace-buildtools/install/docker/standalone
 ```
+
+Set the blank secrets in `.env` before starting the stack:
+`MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`, `RABBIT_PASSWORD`, and
+`DOCUMENT_SERVER_JWT_SECRET`. The OneClickInstall Docker installer generates
+them automatically, but plain `docker compose` uses `.env` as-is.
 
 3.	Create the shared Docker network (the stack expects it to already exist; this is a no-op if it's already there):
 
@@ -65,16 +65,19 @@ git clone https://github.com/ONLYOFFICE/DocSpace-buildtools.git
 2. Change into the Compose directory:
 
 ```bash
-cd DocSpace-buildtools/install/docker/community
+cd DocSpace-buildtools/install/docker/standalone
 ```
 
-3. Create the shared Docker network (the stack expects it to already exist; this is a no-op if it's already there):
+3. Set `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`, `RABBIT_PASSWORD`, and
+   `DOCUMENT_SERVER_JWT_SECRET` in `.env`, as in Option 1.
+
+4. Create the shared Docker network (the stack expects it to already exist; this is a no-op if it's already there):
 
 ```bash
 docker network create onlyoffice 2>/dev/null || true
 ```
 
-4. Build and start the containers:
+5. Build and start the containers:
 
 ```bash
 docker compose up -d --build
@@ -83,24 +86,21 @@ docker compose up -d --build
 > **Note:** By default, the images are built from the `master` branch.
 > To build from another branch, specify the build argument `GIT_BRANCH`: `GIT_BRANCH=your-branch docker compose up -d --build`
 
-5.	Access ONLYOFFICE Apps at http://localhost or http://your-ip-address.
+6.	Access ONLYOFFICE Apps at http://localhost or http://your-ip-address.
 ---
 
 ### Option 3. Running with SSL
 
 ONLYOFFICE Apps supports both Let's Encrypt and custom SSL certificates.
 
-> Requires the shared network to exist (see step 3 in Option 1/2): `docker network create onlyoffice 2>/dev/null || true`
+> Create the shared network before starting Compose: `docker network create onlyoffice 2>/dev/null || true`
 
 ```bash
 SSL_MODE="letsencrypt" \
 SSL_DOMAIN="example.com,portal.example.com,api.example.com" \
 SSL_EMAIL="admin@example.com" \
 APP_URL_PORTAL="https://example.com/" \
-docker compose \
-  -f docker-compose.yml \
-  -f ssl.yml \
-  up -d
+docker compose up -d
 ```
 > SSL_MODE – SSL certificate mode.
 > SSL_DOMAIN – One or more domains separated by commas.
@@ -128,10 +128,7 @@ SSL_CERT_PATH="/etc/nginx/certs/fullchain.crt" \
 SSL_KEY_PATH="/etc/nginx/certs/private.key" \
 CERTIFICATE_PATH="./config/nginx/certs/fullchain.crt" \
 APP_URL_PORTAL="https://example.com/" \
-docker compose \
-  -f docker-compose.yml \
-  -f ssl.yml \
-  up -d
+docker compose up -d
 ```
 
 > **Note:** `CERTIFICATE_PATH` must point to the certificate file **on the Docker host**, not the path inside the container. This option is typically required only for self-signed certificates or certificates issued by a private CA. Certificates issued by public CAs (for example, Let's Encrypt, DigiCert, or GoDaddy) usually do not require this additional configuration.
@@ -142,7 +139,7 @@ docker compose \
 > SSL_KEY_PATH – Path to the private key.
 > APP_URL_PORTAL – Public HTTPS URL of your portal.
 
-> **Note:** By default, the ssl.yml configuration mounts the local ./config/nginx/certs directory to /etc/nginx/certs inside the container.
+> **Note:** By default, docker-compose.yml mounts the local ./config/nginx/certs directory to /etc/nginx/certs inside the container.
 
 
 Access ONLYOFFICE Apps at https://example.com/.

@@ -10,9 +10,11 @@ on:
       - "develop"
     paths:
       - ".github/workflows/ci-oci-docker-install.yml"
-      - "install/OneClickInstall/install-Docker.sh"
-      - "install/docker/*.yml"
-      - "install/docker/community/docker-compose.yml"
+      - ".github/scripts/docker-utils.sh"
+      - "tests/smoke/**"
+      - "install/OneClickInstall/install-Docker*.sh"
+      - "install/OneClickInstall/common/check-ports.sh"
+      - "install/docker/**"
   workflow_dispatch:
     inputs:
       testing:
@@ -45,12 +47,10 @@ jobs:
         name: Configure matrix modes
         run: |
           STACK=$(jq -cn '{name:"stack", services:"apps-stack dashboards db ds fluent opensearch proxy rabbitmq redis ", args:"-dm stack"}')
-          STANDARD=$(jq -cn '{name:"standard", services:"apps healthchecks identity notify dashboards db ds fluent opensearch proxy rabbitmq redis", args:""}')
-          COMMUNITY=$(jq -cn '{name:"community", services:"docker-compose", args:"-dm community"}')
+          MICROSERVICES=$(jq -cn '{name:"microservices", services:"apps healthchecks identity notify dashboards db ds fluent opensearch proxy rabbitmq redis", args:"-dm microservices"}')
+          STANDALONE=$(jq -cn '{name:"standalone", services:"docker-compose", args:"-dm standalone"}')
 
-          VALUE=$([ "${{ github.event.inputs.offline }}" = "true" ] \
-            && echo "[$STACK]" \
-            || jq -cn --argjson a "$STANDARD" --argjson b "$STACK" --argjson c "$COMMUNITY" '[$a,$b,$c]')
+          VALUE=$(jq -cn --argjson a "$MICROSERVICES" --argjson b "$STACK" --argjson c "$STANDALONE" '[$a,$b,$c]')
           echo "value=$VALUE" >> "$GITHUB_OUTPUT"
 
   Install-OCI-Docker:
@@ -103,6 +103,7 @@ jobs:
         run: bash .github/scripts/docker-utils.sh smoke-test
 
       - name: Print logs for crashed containers
+        if: ${{ !cancelled() }}
         run: bash .github/scripts/docker-utils.sh logs 30
 
       - name: Check Docker scripts for errors
@@ -110,19 +111,19 @@ jobs:
         run: bash .github/scripts/docker-utils.sh shellcheck
 
       - name: Prepare offline environment
-        if: success() && github.event.inputs.offline == 'true'
+        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'stack'
         run: bash .github/scripts/offline-archive.sh prepare
 
       - name: Create compressed archives
-        if: success() && github.event.inputs.offline == 'true'
+        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'stack'
         run: bash .github/scripts/offline-archive.sh create ${{ matrix.arch }}
 
       - name: Build self-extracting archive
-        if: success() && github.event.inputs.offline == 'true'
+        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'stack'
         run: bash .github/scripts/offline-archive.sh build ${{ matrix.arch }}
 
       - name: Configure AWS Credentials
-        if: success() && github.event.inputs.offline == 'true'
+        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'stack'
         uses: aws-actions/configure-aws-credentials@v6.0.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_OCI }}
@@ -130,7 +131,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Upload 4testing offline self-extracting archive
-        if: success() && github.event.inputs.offline == 'true'
+        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'stack'
         env:
           AWS_BUCKET_URL_OCI: ${{ secrets.AWS_BUCKET_URL_OCI }}
           AWS_REST_API_ID: ${{ secrets.AWS_REST_API_ID }}

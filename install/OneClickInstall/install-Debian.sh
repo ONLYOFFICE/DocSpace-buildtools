@@ -52,7 +52,16 @@ RES_INSTALL_SUCCESS="Thank you for installing ${product_name}."
 RES_QUESTIONS="In case you have any questions contact us via http://support.onlyoffice.com or visit our forum at http://community.onlyoffice.com"
 INSTALL_FLUENT_BIT="true"
 
+require_value() {
+    [ -n "${2-}" ] || { echo "Error: Missing value for ${1}" >&2; exit 1; }
+}
+
 while [ "$1" != "" ]; do
+    case "$1" in
+        -h | -? | --help ) ;;
+        -* ) require_value "$1" "$2" ;;
+    esac
+
 	case $1 in
         -u | --update )                     [ -n "$2" ] && UPDATE=$2 && shift ;;
         -uni | --uninstall )                [ -n "$2" ] && UNINSTALL=$2 && shift ;;
@@ -115,8 +124,7 @@ validate_bool --installfluentbit "$INSTALL_FLUENT_BIT"
 [ -n "$UNINSTALL" ] && validate_bool --uninstall "$UNINSTALL"
 [ -n "$DS_JWT_ENABLED" ] && validate_bool --jwtenabled "$DS_JWT_ENABLED"
 
-# Pause apt auto-updates and running jobs to avoid dpkg lock contention; only timers that were
-# actually active get restarted by the EXIT trap, so a host with auto-updates disabled stays that way.
+# Pause apt auto-updates to avoid dpkg lock contention.
 APT_TIMERS_TO_RESTORE=()
 for _apt_timer in apt-daily.timer apt-daily-upgrade.timer; do
     systemctl is-active --quiet "${_apt_timer}" && APT_TIMERS_TO_RESTORE+=("${_apt_timer}")
@@ -126,12 +134,11 @@ trap '[ ${#APT_TIMERS_TO_RESTORE[@]} -eq 0 ] || systemctl start "${APT_TIMERS_TO
 
 if fuser /var/lib/dpkg/lock-frontend &>/dev/null; then
   echo "Waiting for /var/lib/dpkg/lock-frontend to be released (up to 60 seconds)..."
-  # stopping the units above doesn't guarantee the lock is released immediately - fall through to
-  # apt-get's own DPkg::Lock::Timeout below instead of failing the whole script on a slow release
+  # apt-get's DPkg::Lock::Timeout below handles slow lock release.
   timeout 60 bash -c 'while fuser /var/lib/dpkg/lock-frontend &>/dev/null; do sleep 1; done' || true
 fi
 
-# Suppress interactive apt/needrestart prompts during automated installs
+# Suppress interactive apt/needrestart prompts.
 export DEBIAN_FRONTEND=noninteractive
 export NEEDRESTART_MODE=a
 apt-get update -y --allow-releaseinfo-change -o DPkg::Lock::Timeout=60
@@ -140,17 +147,27 @@ apt-get install -yq -o DPkg::Lock::Timeout=60 sudo curl dirmngr debian-archive-k
 DOWNLOAD_URL_PREFIX="https://download.onlyoffice.com/${product}"
 [ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${legacy_product}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
 
-# Run uninstall if requested
+source_remote_script() {
+    local SCRIPT_PATH="$1"
+    local SCRIPT_TMP
+
+    SCRIPT_TMP="$(mktemp)"
+    curl -fsSL --retry 3 --retry-delay 2 "${DOWNLOAD_URL_PREFIX}/${SCRIPT_PATH}" -o "${SCRIPT_TMP}" || { rm -f "${SCRIPT_TMP}"; return 1; }
+    bash -n "${SCRIPT_TMP}" || { rm -f "${SCRIPT_TMP}"; return 1; }
+    source "${SCRIPT_TMP}"
+    rm -f "${SCRIPT_TMP}"
+}
+
 if [ "${UNINSTALL}" == "true" ]; then
     if [ "${LOCAL_SCRIPTS}" == "true" ]; then
         source install-Debian/uninstall.sh
     else
-        source <(curl -fsSL "${DOWNLOAD_URL_PREFIX}"/install-Debian/uninstall.sh)
+        source_remote_script install-Debian/uninstall.sh
     fi
     exit 0
 fi
 
-# add onlyoffice repo
+# Add ONLYOFFICE repo.
 echo "deb [signed-by=/usr/share/keyrings/onlyoffice.gpg] http://download.onlyoffice.com/repo/debian squeeze main" | tee /etc/apt/sources.list.d/onlyoffice.list
 curl -fsSL https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE | gpg --batch --yes --dearmor -o /usr/share/keyrings/onlyoffice.gpg
 
@@ -164,8 +181,8 @@ if [ "${LOCAL_SCRIPTS}" == "true" ]; then
 	source install-Debian/install-preq.sh
 	source install-Debian/install-app.sh
 else
-	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/install-Debian/tools.sh)
-	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/common/check-ports.sh)
-	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/install-Debian/install-preq.sh)
-	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/install-Debian/install-app.sh)
+	source_remote_script install-Debian/tools.sh
+	source_remote_script common/check-ports.sh
+	source_remote_script install-Debian/install-preq.sh
+	source_remote_script install-Debian/install-app.sh
 fi
