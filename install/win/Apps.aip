@@ -1307,8 +1307,8 @@
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstExSeqComponent">
     <ROW Action="AI_DATA_SETTER_42" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="97"/>
     <ROW Action="MigrateProductRegistry" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="98"/>
-    <ROW Action="AI_DATA_SETTER_43" Condition="NOT Installed AND ENVIRONMENT = &quot;community&quot; AND DOCS_INSTALLED_VERSION" Sequence="949"/>
-    <ROW Action="ApplyInstalledDocumentServerSettings" Condition="NOT Installed AND ENVIRONMENT = &quot;community&quot; AND DOCS_INSTALLED_VERSION" Sequence="950"/>
+    <ROW Action="AI_DATA_SETTER_43" Condition="NOT Installed" Sequence="949"/>
+    <ROW Action="ApplyInstalledDocumentServerSettings" Condition="NOT Installed" Sequence="950"/>
     <ROW Action="AI_DOWNGRADE" Condition="AI_NEWERPRODUCTFOUND AND (UILevel &lt;&gt; 5)" Sequence="210"/>
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>
     <ROW Action="AI_STORE_LOCATION" Condition="(Not Installed) OR REINSTALL" Sequence="1501"/>
@@ -1397,8 +1397,8 @@
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstallUISequenceComponent">
     <ROW Action="AI_DATA_SETTER_42" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="97"/>
     <ROW Action="MigrateProductRegistry" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="98"/>
-    <ROW Action="AI_DATA_SETTER_43" Condition="NOT Installed AND ENVIRONMENT = &quot;community&quot; AND DOCS_INSTALLED_VERSION" Sequence="949"/>
-    <ROW Action="ApplyInstalledDocumentServerSettings" Condition="NOT Installed AND ENVIRONMENT = &quot;community&quot; AND DOCS_INSTALLED_VERSION" Sequence="950"/>
+    <ROW Action="AI_DATA_SETTER_43" Condition="NOT Installed" Sequence="949"/>
+    <ROW Action="ApplyInstalledDocumentServerSettings" Condition="NOT Installed" Sequence="950"/>
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>
     <ROW Action="AI_ResolveKnownFolders" Sequence="55"/>
     <ROW Action="AI_DpiContentScale" Sequence="54"/>
@@ -1737,7 +1737,7 @@
     <ROW SearchKey="Version_1" Prereq="MySQLInstallerRunn" SearchType="2" SearchString="HKLM\SOFTWARE\MySQL AB\MySQL Server 8.0\Version" Order="2" Property="PreReqSearch_5"/>
     <ROW SearchKey="Version_2" Prereq="MySQLInstallerRunn" SearchType="2" SearchString="HKLM\SOFTWARE\MySQL AB\MySQL Server 5.5\Version" VerMin="5.5" Order="0" Property="PreReqSearch_6"/>
     <ROW SearchKey="Version_3" Prereq="MySQLInstallerRunn" SearchType="2" SearchString="HKLM\SOFTWARE\Wow6432Node\MySQL AB\MySQL Server 8.0\Version" Order="4" Property="PreReqSearch_31"/>
-    <ROW SearchKey="__1" Prereq="Erlangv26.0x64" SearchType="5" SearchString="HKLM\SOFTWARE\Wow6432Node\Ericsson\Erlang\14.0.2" Order="2" Property="PreReqSearch_11"/>
+    <ROW SearchKey="__1" Prereq="Erlangv26.0x64" SearchType="1" SearchString="HKLM\SOFTWARE\Wow6432Node\Ericsson\Erlang\" VerMin="14.0.2" Order="2" Property="PreReqSearch_11"/>
     <ROW SearchKey="postgresqlx649.5" Prereq="PostgresSQL" SearchType="5" SearchString="HKLM\SOFTWARE\PostgreSQL\Installations\postgresql-x64-14" Order="1" Property="PreReqSearch_2_1"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.SqlConnectionComponent">

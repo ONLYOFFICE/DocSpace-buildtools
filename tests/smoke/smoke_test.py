@@ -155,7 +155,7 @@ def dump_page_state(driver):
         print('Browser console (last 30 entries):')
         for entry in driver.get_log('browser')[-30:]:
             print(f"  [{entry.get('level')}] {entry.get('message')}")
-    except WebDriverException as log_error:
+    except (AttributeError, WebDriverException) as log_error:
         print(f"Could not collect browser console: {log_error}")
     print('Current page source:')
     print(driver.page_source[:1000])

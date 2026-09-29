@@ -81,12 +81,12 @@ if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ]; then
 	fi
 fi
 
-# MySQL predates this run (an earlier failed attempt or the user's own server), so its root password was not set here
+# MySQL predates this run, so its root password was not set here.
 if [ "${MYSQL_FIRST_TIME_INSTALL}" != "true" ] && [ "$PRODUCT_INSTALLED" = "false" ]; then
-	# The product reaches MySQL over TCP, so probe the same way instead of through the local socket
+	# Probe MySQL over TCP, like the product does.
 	MYSQL_PROBE_HOST=$([ "${MYSQL_SERVER_HOST}" = "localhost" ] && echo "127.0.0.1" || echo "${MYSQL_SERVER_HOST}")
 
-	# A refused password still proves the server is up, unlike a refused connection
+	# A refused password still proves the server is up.
 	mysql_responds() {
 		local PING_OUTPUT
 		PING_OUTPUT=$(mysqladmin -h "${MYSQL_PROBE_HOST}" -P "${MYSQL_SERVER_PORT}" -u "${MYSQL_SERVER_USER}" ping 2>&1) || true
@@ -127,7 +127,7 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
 
 	apt-get install -yq "${ds_pkg_name}"
 
-	# Debian nginx package (a dependency of ${ds_pkg_name}) enables a default site listening on port 80, which conflicts with openresty
+	# Debian nginx enables a default site on port 80.
 	[ -e /etc/nginx/sites-enabled/default ] && \
 		mv -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default.disabled
 	[ -e /etc/nginx/conf.d/default.conf ] && \

@@ -88,7 +88,41 @@ if [ "$UPDATE" != "true" ]; then
 		fi
 	fi
 
-	# An installed Document Server may hold the port ${product_name} needs; move it aside - or, if it's HTTPS, inherit its cert and demote it instead of leaving :443 dangling.
+	# Use the same port sets when relocating Docs and checking for conflicts.
+	PRODUCT_PORTS=(
+		"${APP_PORT:-80}" 5000 5001 5003 5004 5005 5006 5007 5009 5010 5011 5012 5013 5014 5015
+		5027 5032 5033 5034 5075 5099 5100 5124 5157 5158
+		8080 8081 8092 9090 9834 9899
+	)
+	DEPENDENCY_PORTS=()
+	add_dependency_port() {
+		local PORT="$1" PACKAGE_NAME
+		shift
+		for PACKAGE_NAME in "$@"; do
+			if package_installed "${PACKAGE_NAME}"; then
+				echo "${PACKAGE_NAME} $RES_APP_INSTALLED"
+				return 0
+			fi
+		done
+		DEPENDENCY_PORTS+=("${PORT}")
+	}
+
+	add_dependency_port "${MYSQL_SERVER_PORT:-3306}" mysql-server mysql-community-server
+	add_dependency_port "${ELK_PORT:-9200}" opensearch
+
+	if [ "$DOCUMENT_SERVER_INSTALLED" != "true" ]; then
+		DEPENDENCY_PORTS+=("${DS_PORT:-8083}" 8000)
+		# Debian and RPM distros use different PostgreSQL server package names.
+		add_dependency_port 5432 "$(command -v dpkg-query >/dev/null 2>&1 && echo postgresql || echo postgresql-server)"
+		add_dependency_port "${RABBITMQ_PORT:-5672}" rabbitmq-server
+		add_dependency_port "${REDIS_PORT:-6379}" redis-server "${REDIS_PACKAGE:-redis}"
+	fi
+
+	if [ "${INSTALL_FLUENT_BIT}" = "true" ]; then
+		add_dependency_port 5601 opensearch-dashboards
+	fi
+
+	# Move installed Docs off ports needed by Apps, inheriting HTTPS when possible.
 	declare -x INHERIT_SSL_DOMAIN="" INHERIT_SSL_CERT="" INHERIT_SSL_KEY=""
 	if [ -n "$DS_INSTALLED_PKG_NAME" ]; then
 		DS_CONF_FILE="/etc/${package_sysname}/documentserver/nginx/ds.conf"
@@ -103,7 +137,7 @@ if [ "$UPDATE" != "true" ]; then
 			[ -z "$CANDIDATE_SSL_DOMAIN" ] && [ -n "$CANDIDATE_SSL_CERT" ] && \
 				CANDIDATE_SSL_DOMAIN="$(openssl x509 -noout -subject -in "$CANDIDATE_SSL_CERT" 2>/dev/null | grep -oP 'CN\s*=\s*\K[^,/]+' | sed 's/^\*\.//')"
 
-			# Compared as public keys, not moduli - a modern (e.g. ECDSA) cert has no modulus for "openssl rsa" to read.
+			# Compare public keys so ECDSA certs work too.
 			if [ -n "$CANDIDATE_SSL_CERT" ] && [ -n "$CANDIDATE_SSL_KEY" ] && [ -n "$CANDIDATE_SSL_DOMAIN" ] \
 				&& [[ "$CANDIDATE_SSL_DOMAIN" =~ ^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$ ]] \
 				&& openssl x509 -noout -in "$CANDIDATE_SSL_CERT" >/dev/null 2>&1 \
@@ -124,7 +158,7 @@ if [ "$UPDATE" != "true" ]; then
 				echo "$RES_CHECK_PORTS"
 				exit 1
 			fi
-			# A confirmed different owner is a real conflict; ss simply failing to resolve a name (older iproute2, a restricted namespace) isn't - nginx being active is enough to proceed there, since the cert/key already matched above.
+			# Older ss may omit process names; active nginx is enough after cert/key validation.
 			PORT_443_OWNER="$(ss -H -lntp 2>/dev/null | grep -E ':443\s' | grep -oP 'users:\(\("\K[^"]+' | head -1)"
 			if { [ -n "$PORT_443_OWNER" ] && [ "$PORT_443_OWNER" != "nginx" ]; } || { [ -z "$PORT_443_OWNER" ] && ! systemctl is-active --quiet nginx 2>/dev/null; }; then
 				echo "Warning: cannot confirm port 443 is held by ${DS_INSTALLED_PKG_NAME}'s nginx; leaving its HTTPS configuration untouched." >&2
@@ -141,10 +175,10 @@ if [ "$UPDATE" != "true" ]; then
 				sed -e "s|^[[:space:]]*set[[:space:]]\+\$secure_link_secret[[:space:]]\+.*;|  set \$secure_link_secret \"${SECURE_LINK_SECRET_ESC}\";|" \
 					-e "s|listen 0\.0\.0\.0:80;|listen 127.0.0.1:${DS_NEW_PORT};|" \
 					-e "s|listen \[::\]:80 default_server;|listen [::1]:${DS_NEW_PORT};|" -i "$DS_CONF_FILE"
-				# An IPv6-less host would fail nginx's bind() on the [::1] line above and take the whole master process down, including the IPv4 listener
+				# Avoid IPv6 binds on hosts without ::1.
 				{ [ -f /proc/net/if_inet6 ] && ip -6 addr show lo 2>/dev/null | grep -q '::1'; } || sed -i '/listen \[::1\]:/d' "$DS_CONF_FILE"
 
-				# nginx -t alone can't catch this: an untouched template is syntactically valid on its own, so a silent sed no-op (e.g. ds.conf.tmpl's format changed) would otherwise pass as a false success.
+				# Guard against template format drift that sed would silently miss.
 				if grep -qE '^\s*listen\s+(0\.0\.0\.0|\[::\]):80\b' "$DS_CONF_FILE"; then
 					echo "Error: ${DS_CONF_TMPL} didn't match the expected format; restoring ${DS_INSTALLED_PKG_NAME}'s HTTPS configuration." >&2
 					cp -f -- "${DS_CONF_FILE}.ssl.bak" "$DS_CONF_FILE"
@@ -164,7 +198,9 @@ if [ "$UPDATE" != "true" ]; then
 			fi
 		fi
 
-		if [ -z "$INHERIT_SSL_DOMAIN" ] && [ -n "$DS_CURRENT_PORT" ] && [ "$DS_CURRENT_PORT" = "${APP_PORT:-80}" ]; then
+		# Match only ports the final scan would otherwise flag as conflicts.
+		DS_CONFLICT_PORTS=("${PRODUCT_PORTS[@]}" "${DEPENDENCY_PORTS[@]}")
+		if [ -z "$INHERIT_SSL_DOMAIN" ] && [ -n "$DS_CURRENT_PORT" ] && printf '%s\n' "${DS_CONFLICT_PORTS[@]}" | grep -qxF "$DS_CURRENT_PORT"; then
 			DS_NEW_PORT="${DS_PORT:-8083}"
 			if [ "$DS_NEW_PORT" = "$DS_CURRENT_PORT" ]; then
 				echo "Cannot move ${DS_INSTALLED_PKG_NAME} off port ${DS_CURRENT_PORT}: --dsport also resolves to it. Pass a different --dsport."
@@ -184,7 +220,7 @@ if [ "$UPDATE" != "true" ]; then
 		fi
 	fi
 
-	# A previous interrupted run may have left nginx's stock default site enabled on port 80, before install-app.sh's own cleanup for it ever ran.
+	# Clear nginx defaults left by interrupted installs before scanning ports.
 	NGINX_DEFAULT_SITE_DISABLED="false"
 	if [ -e /etc/nginx/sites-enabled/default ]; then
 		mv -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default.disabled
@@ -203,46 +239,12 @@ if [ "$UPDATE" != "true" ]; then
 	if [ "$NGINX_DEFAULT_SITE_DISABLED" = "true" ]; then
 		echo "Note: nginx default site disabled to free port ${APP_PORT:-80}."
 		systemctl is-active --quiet nginx 2>/dev/null && { systemctl reload nginx 2>/dev/null || echo "Warning: failed to reload nginx after disabling its default site; check its status manually." >&2; }
-		# A graceful reload keeps the old listening socket open until the outgoing worker exits, so give it a moment instead of racing the port scan below.
+		# Let old nginx workers release the socket before the port scan.
 		timeout 5 bash -c "while ss -H -lnt | awk '{print \$4}' | grep -qE ':${APP_PORT:-80}\$'; do sleep 0.2; done" || true
 	fi
 
-	PRODUCT_PORTS=(
-		"${APP_PORT:-80}" 5000 5001 5003 5004 5005 5006 5007 5009 5010 5011 5012 5013 5014 5015
-		5027 5032 5033 5034 5075 5099 5100 5124 5157 5158
-		8080 8081 8092 9090 9834 9899
-	)
-	# Only claim 443 when taking over an inherited certificate - a plain HTTP install has no business with it.
+	# Claim 443 only when taking over an inherited certificate.
 	[ -n "$INHERIT_SSL_DOMAIN" ] && PRODUCT_PORTS+=(443)
-
-	# A dependency that is already installed gets reused instead of installed anew, so its port is expected to be busy.
-	DEPENDENCY_PORTS=()
-	add_dependency_port() {
-		local PORT="$1" PACKAGE_NAME
-		shift
-		for PACKAGE_NAME in "$@"; do
-			if package_installed "${PACKAGE_NAME}"; then
-				echo "${PACKAGE_NAME} $RES_APP_INSTALLED"
-				return 0
-			fi
-		done
-		DEPENDENCY_PORTS+=("${PORT}")
-	}
-
-	add_dependency_port "${MYSQL_SERVER_PORT:-3306}" mysql-server mysql-community-server
-	add_dependency_port "${ELK_PORT:-9200}" opensearch
-
-	if [ "$DOCUMENT_SERVER_INSTALLED" != "true" ]; then
-		DEPENDENCY_PORTS+=("${DS_PORT:-8083}" 8000)
-		# On Debian the server metapackage is postgresql, on RPM distros postgresql is the client alone
-		add_dependency_port 5432 "$(command -v dpkg-query >/dev/null 2>&1 && echo postgresql || echo postgresql-server)"
-		add_dependency_port "${RABBITMQ_PORT:-5672}" rabbitmq-server
-		add_dependency_port "${REDIS_PORT:-6379}" redis-server "${REDIS_PACKAGE:-redis}"
-	fi
-
-	if [ "${INSTALL_FLUENT_BIT}" = "true" ]; then
-		add_dependency_port 5601 opensearch-dashboards
-	fi
 
 	USED_PORTS=""
 	for PORT in $(printf "%s\n" "${PRODUCT_PORTS[@]}" "${DEPENDENCY_PORTS[@]}" | sort -n -u); do

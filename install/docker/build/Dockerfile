@@ -564,7 +564,7 @@ RUN mkdir -p /app/ASC.Files/server && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -u 104 onlyoffice --home /var/www/onlyoffice --system -G onlyoffice
 USER onlyoffice
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/bin-share-docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-bin-share-entrypoint.sh /usr/bin/docker-entrypoint.sh
 COPY --from=files --chown=onlyoffice:onlyoffice ${BUILD_PATH}/products/ASC.Files/server/ /app/ASC.Files/server/
 COPY --from=people_server --chown=onlyoffice:onlyoffice ${BUILD_PATH}/products/ASC.People/server/ /app/ASC.People/server/
 COPY --from=ai --chown=onlyoffice:onlyoffice ${BUILD_PATH}/products/ASC.AI/server/ /app/ASC.AI/server/
@@ -577,7 +577,7 @@ RUN addgroup --system --gid 107 onlyoffice && \
     adduser -u 104 onlyoffice --home /var/www/onlyoffice --system -G onlyoffice && \
     mkdir /app
 USER onlyoffice
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/wait-bin-share-docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-wait-bin-share-entrypoint.sh /usr/bin/docker-entrypoint.sh
 ENTRYPOINT ["/bin/sh", "/usr/bin/docker-entrypoint.sh"]
 
 ## Dotnet Services ##
@@ -599,8 +599,8 @@ RUN set -eux; \
 
 USER onlyoffice
 
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/stack/supervisor/dotnet_services.conf /etc/supervisor/conf.d/supervisord.conf
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/stack/supervisor/start-after-migration.py /usr/local/bin/start-after-migration.py
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/supervisor/stack/dotnet_services.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/supervisor/stack/start-after-migration.py /usr/local/bin/start-after-migration.py
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.AI/service/ ${BUILD_PATH}/products/ASC.AI/server/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.AI.Worker/service/ ${BUILD_PATH}/products/ASC.AI/service/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.ApiSystem/service/  ${BUILD_PATH}/services/ASC.ApiSystem/service/
@@ -629,7 +629,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 USER onlyoffice
 
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/stack/supervisor/node_services.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/supervisor/stack/node_services.conf /etc/supervisor/conf.d/supervisord.conf
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/editor/ ${BUILD_PATH}/products/ASC.Editors/editor/
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/login/ ${BUILD_PATH}/products/ASC.Login/login/
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management/ ${BUILD_PATH}/products/ASC.Management/management/
@@ -649,7 +649,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 USER onlyoffice
 
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/stack/supervisor/java_services.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/supervisor/stack/java_services.conf /etc/supervisor/conf.d/supervisord.conf
 COPY --from=build-java --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.Authorization/app.jar ${BUILD_PATH}/services/ASC.Identity.Authorization/app.jar
 COPY --from=build-java --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.Registration/app.jar ${BUILD_PATH}/services/ASC.Identity.Registration/app.jar
 
@@ -657,8 +657,8 @@ CMD ["supervisord", "-n"]
 
 FROM onlyoffice/4testing-docspace-mcp:latest AS mcp
 
-## Image community ##
-FROM dotnetrun AS community
+## Image standalone ##
+FROM dotnetrun AS standalone
 USER root
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -678,15 +678,18 @@ RUN set -eux; \
     apt-get update && apt-get install -y --no-install-recommends openresty; \
     # let the unprivileged onlyoffice user bind :80, then prepare nginx dirs
     setcap 'cap_net_bind_service=+ep' /usr/local/openresty/nginx/sbin/nginx; \
-    mkdir -p /var/log/nginx /var/log/openresty /var/log/supervisor /etc/nginx/conf.d /etc/nginx/includes /etc/nginx/templates /etc/letsencrypt /var/www/certbot; \
-    chown -R onlyoffice:onlyoffice /etc/nginx /var/log/nginx /var/log/openresty /var/log/supervisor /usr/local/openresty /etc/letsencrypt /var/www/certbot; \
+    mkdir -p /var/log/nginx /var/log/openresty /var/log/supervisor /etc/nginx/conf.d /etc/nginx/includes /etc/nginx/templates /etc/letsencrypt /letsencrypt; \
+    # /etc/ssl/certs (created by ca-certificates, owned by root) needs to be writable by onlyoffice too: the entrypoint generates dhparam.pem there at runtime, and onlyoffice-proxy-ssl.conf requires it.
+    chown -R onlyoffice:onlyoffice /etc/nginx /var/log/nginx /var/log/openresty /var/log/supervisor /usr/local/openresty /etc/letsencrypt /letsencrypt /etc/ssl/certs; \
+    # onlyoffice-document-server shares app_data/log_data with this container (docker-compose.yml) and owns its own Data dir as "ds", gid 102 in its own image - confirmed live. It only chowns that directory's own inode (not recursively), never its mode, so membership here plus the entrypoint's one-time chmod g+w survives any number of its restarts, no ongoing fixup needed. Keep gid 102 in sync if onlyoffice/documentserver's own "ds" group ever changes.
+    groupadd -g 102 dsdata && usermod -aG 102 onlyoffice; \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb /tmp/*
 
 # Services config + entrypoint + supervisor config
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/community/docker-entrypoint.sh /docker-entrypoint.sh
-# COPY --chown=onlyoffice:onlyoffice community/docker-entrypoint.sh /docker-entrypoint.sh
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/community/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-# COPY --chown=onlyoffice:onlyoffice community/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-standalone-entrypoint.sh /docker-entrypoint.sh
+# COPY --chown=onlyoffice:onlyoffice entrypoints/docker-standalone-entrypoint.sh /docker-entrypoint.sh
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/supervisor/standalone.conf /etc/supervisor/conf.d/supervisord.conf
+# COPY --chown=onlyoffice:onlyoffice supervisor/standalone.conf /etc/supervisor/conf.d/supervisord.conf
 
 # nginx config, static files, router scripts
 COPY --from=src --exclude=onlyoffice-login.conf --exclude=onlyoffice-management.conf --chown=onlyoffice:onlyoffice /etc/nginx/conf.d /etc/nginx/conf.d
@@ -697,12 +700,11 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/docker-entrypoint.sh /nginx/docker-entrypoint.sh
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/nginx.conf.template /etc/nginx/nginx.conf.template
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
-#COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/community/config/nginx/conf.d/onlyoffice-proxy.conf /etc/nginx/conf.d/
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/community/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
-
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/community/config/nginx/templates/onlyoffice-proxy.ssl.conf.template /app/onlyoffice/template/nginx/onlyoffice-proxy.ssl.conf.template
-# COPY --chown=onlyoffice:onlyoffice community/config/nginx/templates/onlyoffice-proxy.ssl.conf.template /app/onlyoffice/template/nginx/onlyoffice-proxy.ssl.conf.template
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/community/config/nginx/templates/onlyoffice-proxy.http.conf /app/onlyoffice/template/nginx/onlyoffice-proxy.http.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/templates/standalone-upstream.conf.template /etc/nginx/templates/upstream.conf.template
+# Same front-proxy configs the microservices proxy container and the DEB/RPM packages use; the RUN below adapts them the way packages-build.sh does.
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/proxy/onlyoffice-proxy.conf /app/onlyoffice/template/nginx/onlyoffice-proxy.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/proxy/onlyoffice-proxy-ssl.conf /app/onlyoffice/template/nginx/onlyoffice-proxy-ssl.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/proxy/letsencrypt.conf /etc/nginx/includes/letsencrypt.conf
 
 # nodejs static and dynamic files
 COPY --from=node:24-bookworm-slim /usr/local/bin/node /usr/local/bin/node
@@ -734,15 +736,19 @@ RUN set -eux; \
     # route every .NET backend upstream to the single monolith port
     sed -i -E "s#default \"(http://127.0.0.1):(5000|5003|5004|5007|5010|5012|5157)\";#default \"\1:5051\";#g" "/etc/nginx/conf.d/onlyoffice.conf"; \
     sed -i 's#http://127.0.0.1:9090#http://127.0.0.1:8080#g' /etc/nginx/conf.d/onlyoffice.conf && \
+    # The router runs in this same openresty, as in the DEB/RPM packages, and the main config sits under /usr/local/openresty, so relative includes would miss /etc/nginx.
+    sed -i -e 's/\$router_host/127.0.0.1/g' -e 's#include includes/#include /etc/nginx/includes/#' /app/onlyoffice/template/nginx/onlyoffice-proxy.conf /app/onlyoffice/template/nginx/onlyoffice-proxy-ssl.conf && \
+    # Paths are fixed in the shared config (proxy-ssl.yml bind-mounts a host cert there); the entrypoint envsubst's them per SSL_CERT_PATH/SSL_KEY_PATH instead, since standalone takes its certificate from a mounted directory, not a fixed host path.
+    sed -i -e 's#ssl_certificate /usr/local/share/ca-certificates/tls.crt;#ssl_certificate ${SSL_CERTIFICATE};#' -e 's#ssl_certificate_key /etc/ssl/private/tls.key;#ssl_certificate_key ${SSL_CERTIFICATE_KEY};#' /app/onlyoffice/template/nginx/onlyoffice-proxy-ssl.conf && \
+    { /usr/local/openresty/bin/openresty -V 2>&1 | grep -q http_v3_module || sed -i -e '/quic/d' -e "/alt-svc/d" /app/onlyoffice/template/nginx/onlyoffice-proxy-ssl.conf; } && \
     sed -i '/client_body_temp_path/ i \ \ \ \ $MAP_HASH_BUCKET_SIZE' /etc/nginx/nginx.conf.template && \
     sed -i 's/\(worker_connections\).*;/\1 $COUNT_WORKER_CONNECTIONS;/' /etc/nginx/nginx.conf.template && \
     sed -i -e '/^user/s/^/#/' -e 's#/tmp/nginx.pid#nginx.pid#' -e 's#/etc/nginx/mime.types#mime.types#' /etc/nginx/nginx.conf.template && \
     echo '{ "Redis": {} }' > /app/onlyoffice/config/redis.json && \
     echo '{ "RabbitMQ": {} }' > /app/onlyoffice/config/rabbitmq.json
     # Note: redis.json / rabbitmq.json are baked as empty objects in the image
-    # (no Redis/RabbitMQ container in the community stack), so they are left as-is.
+    # (no Redis/RabbitMQ container in the standalone stack), so they are left as-is.
 
-USER onlyoffice
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=300s --retries=5 \
