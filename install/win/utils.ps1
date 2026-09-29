@@ -76,29 +76,28 @@ function ApplyInstalledDocumentServerSettings {
     catch { Write-Warning "Invalid DocumentServer version: installed=$InstalledVersion" }
     AI_SetMsiProperty DOCUMENT_SERVER_INSTALL_NONE ([string][int]$SkipDocsInstall)
 
-    $PropertyMap = @{
-        DOCS_DBHOST = 'PS_DB_HOST'
-        DOCS_DBNAME = 'PS_DB_NAME'
-        DOCS_DBPORT = 'PS_DB_PORT'
-        DOCS_DBPWD = 'PS_DB_PWD'
-        DOCS_DBUSER = 'PS_DB_USER'
-        DOCS_JWTENABLED = @('DOCUMENT_SERVER_JWT_ENABLED', 'JWT_ENABLED')
-        DOCS_JWTHEADER = @('DOCUMENT_SERVER_JWT_HEADER', 'JWT_HEADER')
-        DOCS_JWTSECRET = @('DOCUMENT_SERVER_JWT_SECRET', 'JWT_SECRET')
-        DOCS_RABBITMQHOST = 'AMQP_HOST'
-        DOCS_RABBITMQPROTO = 'AMQP_PROTOCOL'
-        DOCS_RABBITMQPWD = 'AMQP_PWD'
-        DOCS_RABBITMQUSER = 'AMQP_USER'
-        DOCS_REDISHOST = 'REDIS_HOST'
+    if ($Value = AI_GetMsiProperty DOCS_DBHOST) { AI_SetMsiProperty PS_DB_HOST $Value }
+    if ($Value = AI_GetMsiProperty DOCS_DBNAME) { AI_SetMsiProperty PS_DB_NAME $Value }
+    if ($Value = AI_GetMsiProperty DOCS_DBPORT) { AI_SetMsiProperty PS_DB_PORT $Value }
+    if ($Value = AI_GetMsiProperty DOCS_DBPWD) { AI_SetMsiProperty PS_DB_PWD $Value }
+    if ($Value = AI_GetMsiProperty DOCS_DBUSER) { AI_SetMsiProperty PS_DB_USER $Value }
+    if ($Value = AI_GetMsiProperty DOCS_JWTENABLED) {
+        AI_SetMsiProperty DOCUMENT_SERVER_JWT_ENABLED $Value
+        AI_SetMsiProperty JWT_ENABLED $Value
     }
-
-    foreach ($Source in $PropertyMap.Keys) {
-        $Value = AI_GetMsiProperty $Source
-        if ([string]::IsNullOrEmpty($Value)) { continue }
-        foreach ($Target in @($PropertyMap[$Source])) {
-            AI_SetMsiProperty $Target $Value
-        }
+    if ($Value = AI_GetMsiProperty DOCS_JWTHEADER) {
+        AI_SetMsiProperty DOCUMENT_SERVER_JWT_HEADER $Value
+        AI_SetMsiProperty JWT_HEADER $Value
     }
+    if ($Value = AI_GetMsiProperty DOCS_JWTSECRET) {
+        AI_SetMsiProperty DOCUMENT_SERVER_JWT_SECRET $Value
+        AI_SetMsiProperty JWT_SECRET $Value
+    }
+    if ($Value = AI_GetMsiProperty DOCS_RABBITMQHOST) { AI_SetMsiProperty AMQP_HOST $Value }
+    if ($Value = AI_GetMsiProperty DOCS_RABBITMQPROTO) { AI_SetMsiProperty AMQP_PROTOCOL $Value }
+    if ($Value = AI_GetMsiProperty DOCS_RABBITMQPWD) { AI_SetMsiProperty AMQP_PWD $Value }
+    if ($Value = AI_GetMsiProperty DOCS_RABBITMQUSER) { AI_SetMsiProperty AMQP_USER $Value }
+    if ($Value = AI_GetMsiProperty DOCS_REDISHOST) { AI_SetMsiProperty REDIS_HOST $Value }
     Write-Output 'Existing DocumentServer settings applied.'
 }
 
