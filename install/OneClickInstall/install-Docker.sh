@@ -1109,24 +1109,15 @@ check_standalone_letsencrypt_renewal () {
 	local LE_CONFIG_DIR="${CERTIFICATE_PATH%/live/*}"
 	standalone_certbot_docker_args "${LE_CONFIG_DIR}"
 
-	echo -n "Checking Let's Encrypt renewal on the host... "
-	if docker run "${CERTBOT_DOCKER_ARGS[@]}" --network host certbot/certbot renew --dry-run >/dev/null; then
-		echo "OK"
-	else
-		echo "FAILED"
-		echo "Warning: host-side Let's Encrypt renewal dry-run failed; check /etc/cron.weekly/${PRODUCT}-renew-letsencrypt and /var/log/${PRODUCT}-renew-letsencrypt.log." >&2
-	fi
-
-	# The standalone authenticator used with a custom external HTTP port needs host port 80.
-	if [ "${EXTERNAL_PORT}" = "80" ]; then
-		echo -n "Checking Let's Encrypt renewal in ${PRODUCT_NAME}... "
-		if docker exec "${CONTAINER_NAME}" certbot renew --dry-run >/dev/null; then
-			echo "OK"
+	echo "Checking Let's Encrypt renewal on the host in the background (certbot may pause for a few minutes to avoid overloading the CA; the install continues without waiting for it)..."
+	(
+		if docker run "${CERTBOT_DOCKER_ARGS[@]}" --network host certbot/certbot renew --dry-run >/dev/null; then
+			echo "Let's Encrypt host renewal check: OK"
 		else
-			echo "FAILED"
-			echo "Warning: Let's Encrypt renewal dry-run failed in ${CONTAINER_NAME}; check the LETSENCRYPT_CONFIG_DIR mount and Certbot logs." >&2
+			echo "Warning: host-side Let's Encrypt renewal dry-run failed; check /etc/cron.weekly/${PRODUCT}-renew-letsencrypt and /var/log/${PRODUCT}-renew-letsencrypt.log." >&2
 		fi
-	fi
+	) &
+	disown
 }
 
 install_standalone () {
