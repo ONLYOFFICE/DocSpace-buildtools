@@ -1738,7 +1738,7 @@
     <ROW SearchKey="Version_2" Prereq="MySQLInstallerRunn" SearchType="2" SearchString="HKLM\SOFTWARE\MySQL AB\MySQL Server 5.5\Version" VerMin="5.5" Order="0" Property="PreReqSearch_6"/>
     <ROW SearchKey="Version_3" Prereq="MySQLInstallerRunn" SearchType="2" SearchString="HKLM\SOFTWARE\Wow6432Node\MySQL AB\MySQL Server 8.0\Version" Order="4" Property="PreReqSearch_31"/>
     <ROW SearchKey="__1" Prereq="Erlangv26.0x64" SearchType="1" SearchString="HKLM\SOFTWARE\Wow6432Node\Ericsson\Erlang\" VerMin="14.0.2" Order="2" Property="PreReqSearch_11"/>
-    <ROW SearchKey="postgresqlx649.5" Prereq="PostgresSQL" SearchType="5" SearchString="HKLM\SOFTWARE\PostgreSQL\Installations\postgresql-x64-14" Order="1" Property="PreReqSearch_2_1"/>
+    <ROW SearchKey="postgresqlx649.5" Prereq="PostgresSQL" SearchType="2" SearchString="HKLM\SOFTWARE\PostgreSQL Global Development Group\PostgreSQL\Version" VerMin="14" Order="1" Property="PreReqSearch_2_1"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.SqlConnectionComponent">
     <ROW ConnectionName="MySql.Conection" Condition="1" Dbms="1" Flags="36" Order="0" LoginTimeout="60" ConnectionString="Driver={[MYSQLODBCDRIVER]};Server=[DB_HOST];Port=[DB_PORT];Database=[DB_NAME];User=[DB_USER];Password=[DB_PWD];charset=UTF8;GET_SERVER_PUBLIC_KEY=1;"/>
