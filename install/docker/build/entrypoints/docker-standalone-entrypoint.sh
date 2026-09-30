@@ -514,6 +514,72 @@ run_migrations() {
     return 1
 }
 
+install_plugin() {
+    local source_dir="$1" target_dir="$2" staging_dir="$(dirname "$2")/.$(basename "$2").tmp"
+
+    rm -rf "${staging_dir}"
+    cp -a "${source_dir}" "${staging_dir}" && rm -rf "${target_dir}" && mv "${staging_dir}" "${target_dir}" || { rm -rf "${staging_dir}"; return 1; }
+}
+
+maintain_plugins() {
+    local release_dir="${BUILD_PATH:-/var/www}/studio/plugins"
+    local user_dir="/app/onlyoffice/data/Studio/webplugins"
+    local state_file="${user_dir}/.plugins.state"
+    local -A installed_versions=()
+    local plugin version release_path release_version
+
+    [ -d "${release_dir}" ] || return 0
+    log "Plugins maintenance started..."
+    mkdir -p "${user_dir}"
+
+    if [ -f "${state_file}" ]; then
+        while read -r plugin version || [ -n "${plugin}" ]; do
+            if [ -n "${plugin}" ] && [ -n "${version}" ]; then
+                installed_versions["${plugin}"]="${version}"
+            elif [ -n "${plugin}" ]; then
+                log "Invalid line in ${state_file}: '${plugin}'"
+            fi
+        done < "${state_file}"
+    fi
+
+    for release_path in "${release_dir}"/*/; do
+        release_path="${release_path%/}"
+        plugin="$(basename "${release_path}")"
+        [ -f "${release_path}/config.json" ] || continue
+        release_version="$(node /usr/local/bin/json -f "${release_path}/config.json" version || true)"
+        if [ -z "${release_version}" ]; then
+            log "Skipping ${plugin}: no version in config.json"
+            continue
+        fi
+
+        if [ -n "${installed_versions[${plugin}]+set}" ]; then
+            if [ ! -d "${user_dir}/${plugin}" ]; then
+                log "Removed by user: ${plugin}"
+            elif [ "${installed_versions[${plugin}]}" != "${release_version}" ]; then
+                log "Updating ${plugin}: ${installed_versions[${plugin}]} -> ${release_version}"
+                if install_plugin "${release_path}" "${user_dir}/${plugin}"; then
+                    installed_versions["${plugin}"]="${release_version}"
+                else
+                    log "Failed to update ${plugin}"
+                fi
+            fi
+        else
+            log "Installing new plugin: ${plugin}"
+            if install_plugin "${release_path}" "${user_dir}/${plugin}"; then
+                installed_versions["${plugin}"]="${release_version}"
+            else
+                log "Failed to install ${plugin}"
+            fi
+        fi
+    done
+
+    for plugin in "${!installed_versions[@]}"; do
+        echo "${plugin} ${installed_versions[${plugin}]}"
+    done > "${state_file}.tmp"
+    mv "${state_file}.tmp" "${state_file}"
+    log "Plugins maintenance finished."
+}
+
 # ============================================
 # MAIN
 # ============================================
@@ -521,6 +587,8 @@ main() {
     echo "🚀 Starting Docker entrypoint..."
     echo "=================================="
     log "=== Starting initialization ==="
+    # Runs before the chown below, so the Studio tree it creates ends up owned by onlyoffice
+    maintain_plugins
     # app_data/log_data are shared with onlyoffice-document-server, which re-chowns its own Data dir's inode to its "ds" user on every one of its own restarts (confirmed live, not recursive - only this one entry). onlyoffice is in Docs' group (Dockerfile), so chmod g+w here survives that indefinitely; skips Docs' own wopi keys, its private signing material.
     find /app/onlyoffice/data \( -name wopi_private.key -o -name wopi_public.key \) -prune -o -exec chown onlyoffice:onlyoffice {} +
     chmod g+w /app/onlyoffice/data
