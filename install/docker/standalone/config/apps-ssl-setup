@@ -1,0 +1,363 @@
+#!/bin/bash
+
+set -e
+
+PRODUCT="apps"
+LEGACY_PRODUCT="docspace"
+CONTAINER_NAME="onlyoffice-apps"
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+DOCKERCOMPOSE=$(dirname "$DIR")
+ENV_FILE="${DOCKERCOMPOSE}/.env"
+COMPOSE_FILE="${DOCKERCOMPOSE}/docker-compose.yml"
+DS_MOUNTS_FILE="${DOCKERCOMPOSE}/config/ds-mounts.json"
+CERTS_DIR="${DOCKERCOMPOSE}/config/nginx/certs"
+CONTAINER_CERTS_DIR="/etc/nginx/certs"
+LETSENCRYPT="${DOCKERCOMPOSE}/certs/letsencrypt"
+DEFAULT_LETSENCRYPT="./config/nginx/ssl/letsencrypt"
+CRON_FILE="/etc/cron.weekly/${PRODUCT}-renew-letsencrypt"
+LOG_FILE="/var/log/${PRODUCT}-renew-letsencrypt.log"
+LETSENCRYPT_ENABLE="false"
+NO_START="false"
+WORK_DIR=""
+
+trap 'rm -rf "${WORK_DIR}"' EXIT
+
+# Check if configuration files are present
+if [ ! -f "${ENV_FILE}" ] || [ ! -f "${COMPOSE_FILE}" ]; then
+  echo "Error: configuration files not found." && exit 1
+fi
+
+# Keep the Docs mounts adopted by the installer, otherwise recreating the stack would drop them.
+COMPOSE_FILES="-f ${COMPOSE_FILE}"
+[ -f "${DS_MOUNTS_FILE}" ] && COMPOSE_FILES+=" -f ${DS_MOUNTS_FILE}"
+
+help(){
+  echo
+  echo "This script provided to automatically setup SSL Certificates for ONLYOFFICE Apps (standalone deployment mode)"
+  echo "Automatically get Let's Encrypt SSL Certificates:"
+  echo "  apps-ssl-setup EMAIL DOMAIN"
+  echo "    EMAIL         Email used for registration and recovery contact."
+  echo "                  Use commas to specify multiple emails."
+  echo "    DOMAIN        Domain name(s) to apply the certificate to."
+  echo "                  Multiple domains: use commas to specify several domains."
+  echo "                  Wildcard domains (no auto-renew): require DNS-01 challenge and ability to create DNS TXT records."
+  echo
+  echo "    Example:"
+  echo "      apps-ssl-setup u1@example.com,u2@example.com example.com,s1.example.com,s2.example.com"
+  echo "      apps-ssl-setup support@example.com example.com,*.example.com"
+  echo
+  echo "Using your own certificates via the -f or --file parameter:"
+  echo "  apps-ssl-setup --file DOMAIN CERTIFICATE [PRIVATEKEY]"
+  echo "    DOMAIN        Main domain name to apply."
+  echo "    CERTIFICATE   Path to the certificate file for the domain (PEM, PFX, DER, CER, PKCS#7)."
+  echo "    PRIVATEKEY    (Optional) Path to private key (required unless PFX)."
+  echo "                  Required for PEM, DER, and CER formats."
+  echo "    Example:"
+  echo "      apps-ssl-setup --file example.com /etc/ssl/example.crt /etc/ssl/example.key"
+  echo "      apps-ssl-setup --file example.com /etc/ssl/example.pfx"
+  echo
+  echo "Return to the default (HTTP) configuration using the -d or --default parameter:"
+  echo "  apps-ssl-setup --default"
+  echo
+  echo "Only write the configuration and leave (re)creating the containers to the caller (used by the installer):"
+  echo "  apps-ssl-setup --no-start EMAIL DOMAIN"
+  echo "  apps-ssl-setup --no-start --file DOMAIN CERTIFICATE [PRIVATEKEY]"
+  echo
+  exit "${1:-0}"
+}
+
+get_env_parameter() {
+  awk -v KEY="$1" '{ eq=index($0,"="); name=substr($0,1,eq-1); gsub(/^[ \t]+|[ \t]+$/,"",name); if (eq && name == KEY) { value=substr($0,eq+1); gsub(/\r$/,"",value); gsub(/^"|"$/,"",value); print value; exit } }' "${ENV_FILE}"
+}
+
+set_env_parameter() {
+  ENV_TMP=$(mktemp "${DOCKERCOMPOSE}/.env.XXXXXX")
+  awk -v KEY="$1" -v VALUE="$2" '{ eq=index($0,"="); name=substr($0,1,eq-1); indent=name; sub(/[^ \t].*$/,"",indent); gsub(/^[ \t]+|[ \t]+$/,"",name); if (!updated && eq && name == KEY) { print indent KEY "=\"" VALUE "\""; updated=1; next } print } END { if (!updated) print KEY "=\"" VALUE "\"" }' "${ENV_FILE}" > "${ENV_TMP}" \
+    && chmod --reference="${ENV_FILE}" "${ENV_TMP}" \
+    && mv -f "${ENV_TMP}" "${ENV_FILE}"
+}
+
+# Use the same Certbot storage and ACME webroot for issuance and renewal.
+create_certbot_args() {
+  WEBROOT_VOLUME=$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/letsencrypt"}}{{.Name}}{{end}}{{end}}' "${CONTAINER_NAME}" 2>/dev/null || true)
+  WEBROOT_VOLUME="${WEBROOT_VOLUME:-$(basename "${DOCKERCOMPOSE}")_webroot_path}"
+
+  CERTBOT_DOCKER_ARGS=(--rm
+    -v "${LETSENCRYPT}:/etc/letsencrypt"
+    -v /var/lib/letsencrypt:/var/lib/letsencrypt
+    -v /var/log:/var/log
+    -v "${WEBROOT_VOLUME}:/letsencrypt")
+}
+
+create_renew_script() {
+  [ -d /etc/cron.weekly ] || { echo "Warning: directory /etc/cron.weekly does not exist; the Let's Encrypt certificate will not renew automatically." >&2; return 1; }
+  CRON_PATH=$(command -v crond || command -v cron) || { echo "Warning: neither crond nor cron is installed; the Let's Encrypt certificate will not renew automatically." >&2; return 1; }
+  CRON_SVC=${CRON_PATH##*/}
+  systemctl enable --now "${CRON_SVC}" >/dev/null 2>&1 || service "${CRON_SVC}" start >/dev/null 2>&1 || true
+
+  create_certbot_args
+  # Serialize the shared mount arguments with Bash's own quoting; --network host covers both the webroot and the standalone authenticators.
+  cat > "${CRON_FILE}" <<END
+#!/bin/bash
+# ${PRODUCT} Renew Let's Encrypt SSL Certificates (standalone deployment mode)
+echo "[\$(date '+%F %T')] START ${CRON_FILE}" >> "${LOG_FILE}"
+$(declare -p CERTBOT_DOCKER_ARGS)
+$(command -v docker) run "\${CERTBOT_DOCKER_ARGS[@]}" --network host certbot/certbot renew 2>&1 | tee -a "${LOG_FILE}"
+install -m 644 "${LETSENCRYPT}/live/${CERT_NAME}/fullchain.pem" "${CERTS_DIR}/fullchain.pem"
+install -m 640 -o 0 -g "${APP_GID}" "${LETSENCRYPT}/live/${CERT_NAME}/privkey.pem" "${CERTS_DIR}/privkey.pem"
+$(command -v docker) exec ${CONTAINER_NAME} /usr/local/openresty/bin/openresty -s reload
+END
+  chmod a+x "${CRON_FILE}"
+}
+
+# Convert the certificate or the private key to PEM; the certificate may be PKCS#12, DER/CER, PKCS#7 or PEM. ROLE is certificate or key.
+check_file_format() {
+  FILE=$1
+  ROLE=$2
+  [ -f "$FILE" ] || { echo "Error: file at path ${FILE} not found." && exit 1; }
+
+  if [[ "${FILE,,}" =~ \.(p12|pfx)$ ]]; then
+    echo "$FILE is a PKCS#12 file. Converting to PEM..."
+    export PFX_PASSWORD="${PFX_PASSWORD:-}"
+    if [ -z "$PFX_PASSWORD" ] && ! openssl pkcs12 -in "$FILE" -noout -passin pass: >/dev/null 2>&1; then
+      [ -t 0 ] || { echo "Error: $FILE is password protected; export PFX_PASSWORD to run non-interactively." && exit 1; }
+      read -r -s -p "Enter the PFX password: " PFX_PASSWORD
+      echo
+    fi
+    openssl pkcs12 -in "$FILE" -nokeys -passin env:PFX_PASSWORD -out "$CERTIFICATE_PEM" || { echo "Error: unable to read $FILE." && exit 1; }
+    openssl pkcs12 -in "$FILE" -nocerts -nodes -passin env:PFX_PASSWORD -out "$PRIVATEKEY_PEM" || { echo "Error: unable to read the private key from $FILE." && exit 1; }
+    KIND="certificate"
+
+  elif grep -q -- '-----BEGIN CERTIFICATE-----' "$FILE"; then
+    echo "$FILE is a valid PEM certificate."
+    # Keep only the certificate blocks (the whole chain), so a combined PEM never leaks its key into the world-readable file.
+    awk '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/' "$FILE" > "$CERTIFICATE_PEM"
+    KIND="certificate"
+
+  elif openssl x509 -in "$FILE" -inform DER -noout >/dev/null 2>&1; then
+    echo "$FILE is a valid DER/CER certificate. Converting to PEM..."
+    openssl x509 -in "$FILE" -inform DER -out "$CERTIFICATE_PEM"
+    KIND="certificate"
+
+  elif openssl pkcs7 -in "$FILE" -print_certs -noout >/dev/null 2>&1; then
+    echo "$FILE is a valid PKCS#7 certificate. Converting to PEM..."
+    openssl pkcs7 -in "$FILE" -print_certs -out "$CERTIFICATE_PEM"
+    KIND="certificate"
+
+  elif openssl pkey -in "$FILE" -passin pass: -out "$PRIVATEKEY_PEM" >/dev/null 2>&1; then
+    echo "$FILE is a valid private key."
+    KIND="key"
+
+  else
+    echo "Unsupported, encrypted or invalid file format: $FILE" && exit 1
+  fi
+
+  [ "$KIND" = "$ROLE" ] || { echo "Error: $FILE is a $KIND, but a $ROLE is expected (are the arguments swapped?)." && exit 1; }
+}
+
+# openresty serves the webroot challenges only after the migrations have finished.
+wait_for_webroot() {
+  timeout 600 bash -c 'until [ "$(curl -s --max-time 5 -o /dev/null -w "%{http_code}" http://127.0.0.1/.well-known/acme-challenge/probe)" = "404" ]; do sleep 5; done'
+}
+
+# Document Server has to trust a certificate that is not publicly trusted; the copy in config/ is always PEM.
+set_docs_trust() {
+  if [ "$1" = "true" ]; then
+    sed -i -E 's|^([[:space:]]*)#?-[[:space:]]*[^[:space:]]*:/var/www/onlyoffice/Data/certs/extra-ca-certs\.pem|\1- ./config/nginx/certs/fullchain.pem:/var/www/onlyoffice/Data/certs/extra-ca-certs.pem|' "${COMPOSE_FILE}"
+  else
+    sed -i -E 's|^([[:space:]]*)-([[:space:]]*[^[:space:]]*:/var/www/onlyoffice/Data/certs/extra-ca-certs\.pem)|\1#-\2|' "${COMPOSE_FILE}"
+  fi
+}
+
+apply_configuration() {
+  [ "${NO_START}" = "true" ] && return 0
+  ${DOCKER_COMPOSE} ${COMPOSE_FILES} up -d
+}
+
+check_docker_compose() {
+  COMPOSE_REQ=2018000
+  for DOCKER_COMPOSE in "docker compose" docker-compose; do
+    VERSION=$(${DOCKER_COMPOSE} version --short 2>/dev/null) || continue
+    VERSION=$(sed 's/[^0-9.].*//' <<<"${VERSION#v}")
+    awk -F. -v REQUIRED="$COMPOSE_REQ" '{exit !(NF>=3 && $1*1e6+$2*1e3+$3>=REQUIRED)}' <<<"$VERSION" && return 0
+  done
+  return 1
+}
+
+if [ "$1" = "--no-start" ]; then
+  NO_START="true"
+  shift
+fi
+
+[[ -z "$1" || "$1" == "-h" || "$1" == "--help" ]] && help
+
+[ "$(id -u)" -eq 0 ] || { echo "Error: run this script as root." && exit 1; }
+command -v docker >/dev/null 2>&1 || { echo "Error: docker is not installed." && exit 1; }
+command -v openssl >/dev/null 2>&1 || { echo "Error: openssl is not installed." && exit 1; }
+check_docker_compose || { echo "docker compose not installed or outdated version" && exit 1; }
+
+APP_GID=$(get_env_parameter GID)
+[ -n "${APP_GID}" ] || { echo "Error: GID is not set in ${ENV_FILE}." && exit 1; }
+EXTERNAL_PORT=$(get_env_parameter EXTERNAL_PORT)
+EXTERNAL_PORT_HTTPS=$(get_env_parameter EXTERNAL_PORT_HTTPS)
+WORK_DIR=$(mktemp -d)
+CERTIFICATE_PEM="${WORK_DIR}/fullchain.pem"
+PRIVATEKEY_PEM="${WORK_DIR}/privkey.pem"
+
+case $1 in
+  -f | --file )
+    if [ -n "$2" ] && [ -n "$3" ]; then
+      DOMAINS=$2
+      # -s keeps the symlinks, a Certbot live/ path must stay recognizable.
+      CERTIFICATE_FILE=$(realpath -s "$3")
+      [ -z "$4" ] || PRIVATEKEY_FILE=$(realpath -s "$4")
+      check_file_format "$CERTIFICATE_FILE" certificate
+
+      # A certificate from a Certbot lineage keeps renewing through the weekly job; its key is next to it.
+      LINEAGE=${CERTIFICATE_FILE%/fullchain.pem}
+      if [[ "$CERTIFICATE_FILE" == */live/*/fullchain.pem ]]; then
+        PRIVATEKEY_FILE=${PRIVATEKEY_FILE:-${LINEAGE}/privkey.pem}
+        if [ -f "${LINEAGE%/live/*}/renewal/${LINEAGE##*/}.conf" ]; then
+          LETSENCRYPT_ENABLE="true"
+          LETSENCRYPT=${LINEAGE%/live/*}
+          CERT_NAME=${LINEAGE##*/}
+        fi
+      fi
+
+      [ -z "$PRIVATEKEY_FILE" ] || check_file_format "$PRIVATEKEY_FILE" key
+      [ -f "$CERTIFICATE_PEM" ] || { echo "Error: ${CERTIFICATE_FILE} does not contain a certificate." && exit 1; }
+      [ -f "$PRIVATEKEY_PEM" ] || { echo "Error: PRIVATEKEY_FILE is required unless using a .p12/.pfx file." && exit 1; }
+    else
+      help 1
+    fi
+  ;;
+  -d | --default )
+    echo "Return to the default proxy configuration..."
+    rm -f "${CRON_FILE}" "${CERTS_DIR}/fullchain.pem" "${CERTS_DIR}/privkey.pem"
+
+    for PARAMETER in CERTIFICATE_PATH CERTIFICATE_KEY_PATH APP_CORE_SERVER_ROOT SSL_MODE SSL_DOMAIN SSL_CERT_PATH SSL_KEY_PATH; do
+      set_env_parameter "$PARAMETER" ""
+    done
+    set_env_parameter LETSENCRYPT_CONFIG_DIR "${DEFAULT_LETSENCRYPT}"
+    set_docs_trust false
+    apply_configuration
+
+    echo "OK"
+    exit 0
+  ;;
+  * )
+    if [ "$#" -ge "2" ]; then
+      MAIL=$1
+      DOMAINS=$2
+      DOMAIN=${DOMAINS%%,*}; DOMAIN=${DOMAIN#\*.}
+      [[ ,$DOMAINS, == *,$DOMAIN,* ]] || DOMAINS+=",${DOMAIN}"
+      LETSENCRYPT_ENABLE="true"
+
+      DOMAIN_ARGS=()
+      IFS=',' read -ra DOMAIN_LIST <<< "${DOMAINS}"
+      for DOMAIN in "${DOMAIN_LIST[@]}"; do
+        DOMAIN_ARGS+=(-d "$DOMAIN")
+      done
+
+      mkdir -p "${LETSENCRYPT}"
+      # Reuse the certificate issued under the former product name, so an existing installation is not re-issued a new one.
+      CERT_NAME="${PRODUCT}"
+      [ ! -d "${LETSENCRYPT}/live/${PRODUCT}" ] && [ -d "${LETSENCRYPT}/live/${LEGACY_PRODUCT}" ] && CERT_NAME="${LEGACY_PRODUCT}"
+      create_certbot_args
+
+      echo "Generating Let's Encrypt SSL Certificates..."
+      if [[ "${DOMAINS}" == *"*"* ]]; then
+        # The DNS challenge waits for the operator to create the TXT records.
+        [ -t 0 ] && INTERACTIVE_ARGS=(-it) || INTERACTIVE_ARGS=()
+        docker run "${INTERACTIVE_ARGS[@]}" "${CERTBOT_DOCKER_ARGS[@]}" \
+          certbot/certbot certonly \
+          --manual --preferred-challenges dns --key-type rsa \
+          --cert-name "$CERT_NAME" --agree-tos --email "$MAIL" \
+          "${DOMAIN_ARGS[@]}"
+      elif [ "${EXTERNAL_PORT:-80}" = "80" ]; then
+        # Standalone validation would leave a renewal job that cannot bind port 80 once Apps owns it.
+        [ -n "$(docker ps -q -f "name=^${CONTAINER_NAME}$")" ] || { echo "Error: ${CONTAINER_NAME} is not running; start it first, Let's Encrypt is validated through it on port 80." && exit 1; }
+        echo -n "Waiting for ${CONTAINER_NAME} to answer on port 80..."
+        wait_for_webroot && echo "OK" || { echo "FAILED" && echo "Error: ${CONTAINER_NAME} does not answer on port 80." && exit 1; }
+        docker run "${CERTBOT_DOCKER_ARGS[@]}" \
+          certbot/certbot certonly \
+          --expand --webroot -w /letsencrypt --key-type rsa \
+          --cert-name "$CERT_NAME" --non-interactive --agree-tos --email "$MAIL" \
+          "${DOMAIN_ARGS[@]}"
+      else
+        ss -lnt sport = :80 2>/dev/null | grep -q LISTEN && { echo "Error: port 80 is in use. Let's Encrypt requires it for verification, so free it and retry." >&2; exit 1; }
+        docker run "${CERTBOT_DOCKER_ARGS[@]}" --network host \
+          certbot/certbot certonly \
+          --expand --standalone --http-01-port 80 --key-type rsa \
+          --cert-name "$CERT_NAME" --non-interactive --agree-tos --email "$MAIL" \
+          "${DOMAIN_ARGS[@]}"
+      fi
+
+      CERTIFICATE_FILE="${LETSENCRYPT}/live/${CERT_NAME}/fullchain.pem"
+      PRIVATEKEY_FILE="${LETSENCRYPT}/live/${CERT_NAME}/privkey.pem"
+      CERTIFICATE_PEM="$CERTIFICATE_FILE"
+      PRIVATEKEY_PEM="$PRIVATEKEY_FILE"
+    else
+      help 1
+    fi
+  ;;
+esac
+
+[ "$(openssl x509 -in "$CERTIFICATE_PEM" -noout -pubkey | openssl sha256)" = "$(openssl pkey -in "$PRIVATEKEY_PEM" -pubout | openssl sha256)" ] \
+  || { echo "Error: the private key does not match the certificate." && exit 1; }
+
+install -d -m 755 "${CERTS_DIR}"
+install -m 644 "$CERTIFICATE_PEM" "${CERTS_DIR}/fullchain.pem"
+# Keep the private key group-readable, not world-readable.
+install -m 640 -o 0 -g "${APP_GID}" "$PRIVATEKEY_PEM" "${CERTS_DIR}/privkey.pem"
+
+# The original files are stored: they outlive a configuration refresh, the copies in config/ do not.
+set_env_parameter CERTIFICATE_PATH "$CERTIFICATE_FILE"
+set_env_parameter CERTIFICATE_KEY_PATH "$PRIVATEKEY_FILE"
+set_env_parameter LETSENCRYPT_CONFIG_DIR "$([ "${LETSENCRYPT_ENABLE}" = "true" ] && echo "${LETSENCRYPT}" || echo "${DEFAULT_LETSENCRYPT}")"
+set_env_parameter APP_CORE_SERVER_ROOT "https://*$( [ "${EXTERNAL_PORT_HTTPS:-443}" = "443" ] || echo ":${EXTERNAL_PORT_HTTPS}" )/"
+set_env_parameter SSL_MODE "custom"
+set_env_parameter SSL_DOMAIN "$DOMAINS"
+set_env_parameter SSL_CERT_PATH "${CONTAINER_CERTS_DIR}/fullchain.pem"
+set_env_parameter SSL_KEY_PATH "${CONTAINER_CERTS_DIR}/privkey.pem"
+
+if [[ "${LETSENCRYPT_ENABLE}" = "true" ]]; then
+  set_docs_trust false
+  apply_configuration
+
+  RENEWAL_CONF="${LETSENCRYPT}/renewal/${CERT_NAME}.conf"
+  # Manual (DNS-01) certificates cannot be renewed unattended.
+  if grep -qE '^authenticator[[:space:]]*=[[:space:]]*manual' "${RENEWAL_CONF}" 2>/dev/null; then
+    rm -f "${CRON_FILE}"
+    echo "Note: wildcard certificates are not renewed automatically; rerun this script before the certificate expires."
+  elif create_renew_script; then
+    # Run the dry-run in the background: certbot may pause for minutes to avoid overloading the CA.
+    echo "Checking Let's Encrypt renewal on the host in the background (certbot may pause for a few minutes to avoid overloading the CA; the result is written to ${LOG_FILE})..."
+    (
+      if grep -qE '^authenticator[[:space:]]*=[[:space:]]*webroot' "${RENEWAL_CONF}" 2>/dev/null; then
+        # With --no-start the caller recreates the container right after this script, give it time to go down first.
+        [ "${NO_START}" = "true" ] && sleep 15
+        wait_for_webroot || { echo "Warning: ${CONTAINER_NAME} does not answer on port 80; the renewal check is skipped."; exit 0; }
+      fi
+      if docker run "${CERTBOT_DOCKER_ARGS[@]}" --network host certbot/certbot renew --dry-run >/dev/null; then
+        echo "Let's Encrypt host renewal check: OK"
+      else
+        echo "Warning: host-side Let's Encrypt renewal dry-run failed; check ${CRON_FILE}."
+      fi
+    ) >> "${LOG_FILE}" 2>&1 &
+    disown
+  fi
+else
+  # A leftover renewal job would overwrite the provided certificate with the Let's Encrypt one.
+  rm -f "${CRON_FILE}"
+
+  if openssl verify -untrusted "$CERTIFICATE_PEM" "$CERTIFICATE_PEM" >/dev/null 2>&1; then
+    set_docs_trust false
+  else
+    echo "Note: the certificate chain is not trusted by this host (self-signed certificate or private CA); it is mounted into Document Server as a trusted CA."
+    set_docs_trust true
+  fi
+  apply_configuration
+fi
+
+echo "OK"

@@ -86,7 +86,7 @@ create() {
   docker save "${ALL_IMAGES[@]}" | xz --verbose -T0 -z -9e > "${INSTALL_PATH}/apps_images.tar.xz"
 
   echo "Creating docker configuration archive..."
-  ( cd "${INSTALL_PATH}/docker/standalone" && tar -czvf "${INSTALL_PATH}/docker-standalone.tar.gz" .env docker-compose.yml )
+  ( cd "${INSTALL_PATH}/docker/standalone" && tar -czvf "${INSTALL_PATH}/docker-standalone.tar.gz" .env docker-compose.yml config )
 }
 
 build() {

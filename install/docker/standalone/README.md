@@ -141,5 +141,22 @@ docker compose up -d
 
 > **Note:** By default, docker-compose.yml mounts the local ./config/nginx/certs directory to /etc/nginx/certs inside the container.
 
+#### Setting up SSL on a running installation
+
+Instead of passing the variables above by hand, use the [`config/apps-ssl-setup`](config/apps-ssl-setup) helper. It works with the standalone stack (`docker-compose.yml` next to `.env`, `/app/onlyoffice` when installed with `apps-install.sh`), keeps the `SSL_*` settings in `.env` so they survive a container recreate, sets up weekly Let's Encrypt renewal, and mounts a self-signed or private-CA certificate into Document Server as a trusted CA. Run it as root:
+
+```bash
+# Let's Encrypt (auto-renew); EMAIL and DOMAIN(s), comma-separated
+bash /app/onlyoffice/config/apps-ssl-setup support@example.com example.com,s1.example.com
+
+# bring your own certificate (PEM/PFX/DER/CER/PKCS#7; key required unless PFX)
+bash /app/onlyoffice/config/apps-ssl-setup --file example.com /etc/ssl/example.crt /etc/ssl/example.key
+
+# go back to plain HTTP
+bash /app/onlyoffice/config/apps-ssl-setup --default
+```
+
+> **Note:** Let's Encrypt certificates are kept in `certs/letsencrypt` next to `.env`; wildcard domains (DNS-01) are not renewed automatically. Run the script without arguments for full usage.
+
 
 Access ONLYOFFICE Apps at https://example.com/.
