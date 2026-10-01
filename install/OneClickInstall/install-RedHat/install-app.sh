@@ -57,6 +57,9 @@ case "${INSTALLATION_TYPE}" in
 	"enterprise") ds_pkg_name+="-ee" ;;
 esac
 
+# Apps installed over an already present Docs is always Community, instead of following the edition of the Docs package.
+[ "$PRODUCT_INSTALLED" = "false" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ] && [ -z "${ENVIRONMENT:-}" ] && export ENVIRONMENT=community
+
 DS_COMMON_NAME=${DS_COMMON_NAME:-ds}
 setup_postgres_db() {
 	DS_DB_NAME=${DS_DB_NAME:-$DS_COMMON_NAME}
@@ -162,7 +165,7 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
     declare -x JWT_ENABLED=${JWT_ENABLED:-true}
     declare -x JWT_SECRET=${JWT_SECRET:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)}
     declare -x JWT_HEADER=${JWT_HEADER:-AuthorizationJwt}
-    [ -n "${WOPI_ENABLED}" ] && declare -x WOPI_ENABLED
+    [ -n "${WOPI_ENABLED}" ] && export WOPI_ENABLED
 
     [ "$INSTALLATION_TYPE" != "community" ] && setup_postgres_db
 

@@ -673,6 +673,11 @@ set_apps_params() {
 set_installation_type_data () {
 	detect_current_deployment_mode
 	is_command_exists docker && UPDATE=${UPDATE:-$(test -n "${CURRENT_DEPLOYMENT_MODE}" && echo true)}
+	# An explicit --update without an installed product is a fresh install: otherwise Docs adoption, port checks and secret generation are skipped.
+	if [ "${UPDATE}" = "true" ] && [ -z "${CURRENT_DEPLOYMENT_MODE}" ]; then
+		echo "Warning: no existing ${PRODUCT_NAME} installation found; ignoring --update and performing a fresh install." >&2
+		UPDATE="false"
+	fi
 	if [ -z "${DOCUMENT_SERVER_IMAGE_NAME}" ]; then
 		DOCUMENT_SERVER_IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}documentserver"
 		case "${INSTALLATION_TYPE}" in
@@ -1034,92 +1039,6 @@ standalone_compose_profiles () {
 	(IFS=,; echo "${PROFILES[*]}")
 }
 
-# Use the same Certbot storage and ACME webroot for issuance, renewal and checks.
-standalone_certbot_docker_args () {
-	local LE_CONFIG_DIR="$1"
-	CERTBOT_DOCKER_ARGS=(--rm
-		-v "${LE_CONFIG_DIR}:/etc/letsencrypt"
-		-v /var/lib/letsencrypt:/var/lib/letsencrypt
-		-v /var/log:/var/log
-		-v "${COMPOSE_PROJECT_NAME:-${PACKAGE_SYSNAME}}_webroot_path:/letsencrypt")
-}
-
-# Keep standalone Let's Encrypt certs in host storage for renewals.
-standalone_issue_letsencrypt () {
-	local CERT_NAME="${PRODUCT}"
-	local LE_CONFIG_DIR="${BASE_DIR}/certs/letsencrypt"
-	mkdir -p "${LE_CONFIG_DIR}"
-	[ ! -d "${LE_CONFIG_DIR}/live/${PRODUCT}" ] && [ -d "${LE_CONFIG_DIR}/live/${LEGACY_PRODUCT}" ] && CERT_NAME="${LEGACY_PRODUCT}"
-	standalone_certbot_docker_args "${LE_CONFIG_DIR}"
-
-	echo "Generating Let's Encrypt SSL Certificates..."
-	if [[ "${LETS_ENCRYPT_DOMAIN}" =~ \*\.[^,]* ]]; then
-		docker run "${CERTBOT_DOCKER_ARGS[@]}" certbot/certbot certonly --manual --preferred-challenges dns --key-type rsa \
-			--cert-name "${CERT_NAME}" --agree-tos --email "${LETS_ENCRYPT_MAIL}" -d "${LETS_ENCRYPT_DOMAIN}" || return 1
-	elif [ "${EXTERNAL_PORT}" = "80" ]; then
-		# openresty serves webroot challenges after migrations finish.
-		echo -n "Waiting for ${PRODUCT_NAME} to answer on port 80..."
-		timeout 600 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1/.well-known/acme-challenge/probe)" = "404" ]; do sleep 5; done' \
-			&& echo "OK" || { echo "FAILED"; return 1; }
-		docker run "${CERTBOT_DOCKER_ARGS[@]}" certbot/certbot certonly \
-			--expand --webroot -w /letsencrypt --key-type rsa \
-			--cert-name "${CERT_NAME}" --non-interactive --agree-tos --email "${LETS_ENCRYPT_MAIL}" -d "${LETS_ENCRYPT_DOMAIN}" || return 1
-	else
-		docker run "${CERTBOT_DOCKER_ARGS[@]}" --network host certbot/certbot certonly \
-			--expand --standalone --http-01-port 80 --key-type rsa \
-			--cert-name "${CERT_NAME}" --non-interactive --agree-tos --email "${LETS_ENCRYPT_MAIL}" -d "${LETS_ENCRYPT_DOMAIN}" || return 1
-	fi
-
-	CERTIFICATE_PATH="${LE_CONFIG_DIR}/live/${CERT_NAME}/fullchain.pem"
-	CERTIFICATE_KEY_PATH="${LE_CONFIG_DIR}/live/${CERT_NAME}/privkey.pem"
-}
-
-# Reuse the standard renewal path so mode switches replace the job.
-create_standalone_renew_script () {
-	local CRON_FILE="/etc/cron.weekly/${PRODUCT}-renew-letsencrypt"
-	local LOG_FILE="/var/log/${PRODUCT}-renew-letsencrypt.log"
-	local CERTS_DIR="${BASE_DIR}/config/nginx/certs"
-	local CRON_PATH
-	local APP_GID
-	local LE_CONFIG_DIR="${CERTIFICATE_PATH%/live/*}"
-
-	[ -d /etc/cron.weekly ] || { echo "Warning: /etc/cron.weekly does not exist; the Let's Encrypt certificate will not renew automatically." >&2; return 1; }
-	CRON_PATH=$(command -v crond || command -v cron) || { echo "Warning: neither crond nor cron is installed; the Let's Encrypt certificate will not renew automatically." >&2; return 1; }
-	systemctl enable --now "${CRON_PATH##*/}" >/dev/null 2>&1 || service "${CRON_PATH##*/}" start >/dev/null 2>&1
-	APP_GID="$(get_env_parameter "GID")"
-	standalone_certbot_docker_args "${LE_CONFIG_DIR}"
-
-	# Covers both standalone_issue_letsencrypt authenticators.
-	# Serialize the shared mount arguments with Bash's own quoting.
-	cat > "${CRON_FILE}" <<END
-#!/bin/bash
-# ${PRODUCT} Renew Let's Encrypt SSL Certificates (standalone deployment mode)
-echo "[\$(date '+%F %T')] START ${CRON_FILE}" >> "${LOG_FILE}"
-$(declare -p CERTBOT_DOCKER_ARGS)
-$(command -v docker) run "\${CERTBOT_DOCKER_ARGS[@]}" --network host certbot/certbot renew 2>&1 | tee -a "${LOG_FILE}"
-install -m 644 "${CERTIFICATE_PATH}" "${CERTS_DIR}/$(basename "${CERTIFICATE_PATH}")"
-install -m 640 -g "${APP_GID}" "${CERTIFICATE_KEY_PATH}" "${CERTS_DIR}/$(basename "${CERTIFICATE_KEY_PATH}")"
-$(command -v docker) exec ${CONTAINER_NAME} /usr/local/openresty/bin/openresty -s reload
-END
-	chmod a+x "${CRON_FILE}"
-}
-
-check_standalone_letsencrypt_renewal () {
-	[[ "${LETS_ENCRYPT_DOMAIN}" =~ \*\.[^,]* ]] && return 0
-	local LE_CONFIG_DIR="${CERTIFICATE_PATH%/live/*}"
-	standalone_certbot_docker_args "${LE_CONFIG_DIR}"
-
-	echo "Checking Let's Encrypt renewal on the host in the background (certbot may pause for a few minutes to avoid overloading the CA; the install continues without waiting for it)..."
-	(
-		if docker run "${CERTBOT_DOCKER_ARGS[@]}" --network host certbot/certbot renew --dry-run >/dev/null; then
-			echo "Let's Encrypt host renewal check: OK"
-		else
-			echo "Warning: host-side Let's Encrypt renewal dry-run failed; check /etc/cron.weekly/${PRODUCT}-renew-letsencrypt and /var/log/${PRODUCT}-renew-letsencrypt.log." >&2
-		fi
-	) &
-	disown
-}
-
 install_standalone () {
 	sed -i "s~^\(\s*COMPOSE_PROFILES=\).*~\1$(standalone_compose_profiles)~" "${BASE_DIR}/.env"
 
@@ -1162,49 +1081,27 @@ install_standalone () {
 
 		chown_app_volumes || exit 1
 
-		# Standalone SSL is controlled by docker-compose env vars.
-		local STACK_STARTED="false" CUSTOM_CERT_UP_STATUS
-		if [ -z "${CERTIFICATE_PATH}" ] && [ -n "${LETS_ENCRYPT_DOMAIN}" ] && [ -n "${LETS_ENCRYPT_MAIL}" ]; then
+		# config/apps-ssl-setup only writes the SSL configuration (--no-start); Compose applies it here so Docs adoption tracking stays intact.
+		local SSL_SETUP="${BASE_DIR}/config/${PRODUCT}-ssl-setup" SSL_REQUESTED="false" SSL_STATUS=0 UP_STATUS
+		if [ -n "${CERTIFICATE_PATH}" ] && [ -n "${APP_DOMAIN_PORTAL}" ]; then
+			SSL_REQUESTED="true"
+			bash "${SSL_SETUP}" --no-start -f "${APP_DOMAIN_PORTAL}" "${CERTIFICATE_PATH}" "${CERTIFICATE_KEY_PATH}" || SSL_STATUS=$?
+		elif [ -n "${LETS_ENCRYPT_DOMAIN}" ] && [ -n "${LETS_ENCRYPT_MAIL}" ]; then
+			SSL_REQUESTED="true"
 			# Webroot challenges need openresty up on :80 first.
 			compose_with_document_server_mounts "${COMPOSE_FILES[@]}" up -d || exit 1
-			STACK_STARTED="true"
-			if ! standalone_issue_letsencrypt; then
-				echo "Warning: failed to obtain a Let's Encrypt certificate for ${LETS_ENCRYPT_DOMAIN}; ${PRODUCT_NAME} stays on http://." >&2
-				finish_https_takeover 1
-			fi
-		fi
-
-		if [ -n "${CERTIFICATE_PATH}" ] && [ -n "${APP_DOMAIN_PORTAL}" ]; then
-			reconfigure CERTIFICATE_PATH "${CERTIFICATE_PATH}"
-			reconfigure CERTIFICATE_KEY_PATH "${CERTIFICATE_KEY_PATH}"
-			# Share Certbot's renewal configuration with Apps for host-managed LE certificates.
-			if [[ "${CERTIFICATE_PATH}" == */letsencrypt/live/*/fullchain.pem ]]; then
-				reconfigure LETSENCRYPT_CONFIG_DIR "${CERTIFICATE_PATH%/live/*}"
-			fi
-			reconfigure APP_CORE_SERVER_ROOT "https://*$([ "${EXTERNAL_PORT_HTTPS}" = "443" ] || echo ":${EXTERNAL_PORT_HTTPS}")/"
-			mkdir -p "${BASE_DIR}/config/nginx/certs"
-			cp "${CERTIFICATE_PATH}" "${BASE_DIR}/config/nginx/certs/"
-			cp "${CERTIFICATE_KEY_PATH}" "${BASE_DIR}/config/nginx/certs/"
-			# Keep the private key group-readable, not world-readable.
-			chmod 644 "${BASE_DIR}/config/nginx/certs/$(basename "${CERTIFICATE_PATH}")"
-			chown "0:$(get_env_parameter "GID")" "${BASE_DIR}/config/nginx/certs/$(basename "${CERTIFICATE_KEY_PATH}")"
-			chmod 640 "${BASE_DIR}/config/nginx/certs/$(basename "${CERTIFICATE_KEY_PATH}")"
-			SSL_MODE="custom" SSL_DOMAIN="${LETS_ENCRYPT_DOMAIN:-${APP_DOMAIN_PORTAL}}" \
-				SSL_CERT_PATH="/etc/nginx/certs/$(basename "${CERTIFICATE_PATH}")" \
-				SSL_KEY_PATH="/etc/nginx/certs/$(basename "${CERTIFICATE_KEY_PATH}")" \
-				compose_with_document_server_mounts "${COMPOSE_FILES[@]}" up -d
-			CUSTOM_CERT_UP_STATUS=$?
-			finish_https_takeover "${CUSTOM_CERT_UP_STATUS}"
-			[ "${CUSTOM_CERT_UP_STATUS}" -eq 0 ] || exit "${CUSTOM_CERT_UP_STATUS}"
-			if [[ "${CERTIFICATE_PATH}" == */letsencrypt/live/*/fullchain.pem ]]; then
-				create_standalone_renew_script && check_standalone_letsencrypt_renewal
-			fi
-		elif [[ -n "${CERTIFICATE_KEY_PATH}${CERTIFICATE_PATH}" ]] || { [ "${STACK_STARTED}" = "false" ] && [[ -n "${LETS_ENCRYPT_DOMAIN}${LETS_ENCRYPT_MAIL}" ]]; }; then
+			bash "${SSL_SETUP}" --no-start "${LETS_ENCRYPT_MAIL}" "${LETS_ENCRYPT_DOMAIN}" || SSL_STATUS=$?
+		elif [[ -n "${CERTIFICATE_KEY_PATH}${CERTIFICATE_PATH}${LETS_ENCRYPT_DOMAIN}${LETS_ENCRYPT_MAIL}" ]]; then
 			echo -e "\e[31mERROR:\e[0m Missing required parameters for SSL setup"
 			exit 1
-		elif [ "${STACK_STARTED}" = "false" ]; then
-			compose_with_document_server_mounts "${COMPOSE_FILES[@]}" up -d || exit 1
 		fi
+		[ "${SSL_STATUS}" -eq 0 ] || echo "Warning: failed to set up HTTPS for ${APP_DOMAIN_PORTAL:-${LETS_ENCRYPT_DOMAIN}}; ${PRODUCT_NAME} starts on http://." >&2
+
+		compose_with_document_server_mounts "${COMPOSE_FILES[@]}" up -d
+		UP_STATUS=$?
+		# The inherited Docs HTTPS is stripped only once the outcome of the Apps start is known.
+		[ "${SSL_REQUESTED}" = "false" ] || finish_https_takeover "$(( SSL_STATUS != 0 ? SSL_STATUS : UP_STATUS ))"
+		[ "${UP_STATUS}" -eq 0 ] || exit "${UP_STATUS}"
 
 		chown_app_volumes || exit 1
 		finish_document_server_migration || exit 1
