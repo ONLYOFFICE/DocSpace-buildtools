@@ -162,7 +162,7 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
     declare -x JWT_ENABLED=${JWT_ENABLED:-true}
     declare -x JWT_SECRET=${JWT_SECRET:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)}
     declare -x JWT_HEADER=${JWT_HEADER:-AuthorizationJwt}
-    [ -n "${WOPI_ENABLED}" ] && declare -x WOPI_ENABLED
+    [ -n "${WOPI_ENABLED}" ] && export WOPI_ENABLED
 
     [ "$INSTALLATION_TYPE" != "community" ] && setup_postgres_db
 
