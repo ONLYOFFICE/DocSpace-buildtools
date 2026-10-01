@@ -123,7 +123,8 @@ if [ "$UPDATE" != "true" ]; then
 	fi
 
 	# Move installed Docs off ports needed by Apps, inheriting HTTPS when possible.
-	declare -x INHERIT_SSL_DOMAIN="" INHERIT_SSL_CERT="" INHERIT_SSL_KEY=""
+	# export, not declare -x: this file is sourced from a function in the remote mode, where declare makes the variables local and the package scripts never see them.
+	export INHERIT_SSL_DOMAIN="" INHERIT_SSL_CERT="" INHERIT_SSL_KEY=""
 	if [ -n "$DS_INSTALLED_PKG_NAME" ]; then
 		DS_CONF_FILE="/etc/${package_sysname}/documentserver/nginx/ds.conf"
 		DS_CURRENT_PORT="$(grep -oP '^\s*listen\s+(\S*:)?\K\d+' "$DS_CONF_FILE" 2>/dev/null | head -1)"
@@ -136,6 +137,11 @@ if [ "$UPDATE" != "true" ]; then
 			CANDIDATE_SSL_DOMAIN="${CANDIDATE_SSL_DOMAIN%;}"
 			[ -z "$CANDIDATE_SSL_DOMAIN" ] && [ -n "$CANDIDATE_SSL_CERT" ] && \
 				CANDIDATE_SSL_DOMAIN="$(openssl x509 -noout -subject -in "$CANDIDATE_SSL_CERT" 2>/dev/null | grep -oP 'CN\s*=\s*\K[^,/]+' | sed 's/^\*\.//')"
+			# Certificates from modern CAs have no subject CN, their names are in the SAN only; a plain hostname beats a wildcard, whose apex the certificate may not cover.
+			if [ -z "$CANDIDATE_SSL_DOMAIN" ] && [ -n "$CANDIDATE_SSL_CERT" ]; then
+				CANDIDATE_SAN_NAMES="$(openssl x509 -noout -ext subjectAltName -in "$CANDIDATE_SSL_CERT" 2>/dev/null | grep -oP 'DNS:\K[^, ]+' || true)"
+				CANDIDATE_SSL_DOMAIN="$(grep -v -m1 '^\*\.' <<< "$CANDIDATE_SAN_NAMES" || sed -n '1s/^\*\.//p' <<< "$CANDIDATE_SAN_NAMES")"
+			fi
 
 			# Compare public keys so ECDSA certs work too.
 			if [ -n "$CANDIDATE_SSL_CERT" ] && [ -n "$CANDIDATE_SSL_KEY" ] && [ -n "$CANDIDATE_SSL_DOMAIN" ] \
