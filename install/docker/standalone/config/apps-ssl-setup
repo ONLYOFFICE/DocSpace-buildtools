@@ -311,6 +311,13 @@ install -m 644 "$CERTIFICATE_PEM" "${CERTS_DIR}/fullchain.pem"
 # Keep the private key group-readable, not world-readable.
 install -m 640 -o 0 -g "${APP_GID}" "$PRIVATEKEY_PEM" "${CERTS_DIR}/privkey.pem"
 
+# Not a secret and reusable across certificates; the container picks it up from the certs mount instead of generating it on start.
+if [ ! -f "${CERTS_DIR}/dhparam.pem" ]; then
+  echo "Generating DH parameters, this may take a few minutes..."
+  openssl dhparam -out "${CERTS_DIR}/dhparam.pem" 2048
+  chmod 644 "${CERTS_DIR}/dhparam.pem"
+fi
+
 # The original files are stored: they outlive a configuration refresh, the copies in config/ do not.
 set_env_parameter CERTIFICATE_PATH "$CERTIFICATE_FILE"
 set_env_parameter CERTIFICATE_KEY_PATH "$PRIVATEKEY_FILE"
