@@ -673,6 +673,11 @@ set_apps_params() {
 set_installation_type_data () {
 	detect_current_deployment_mode
 	is_command_exists docker && UPDATE=${UPDATE:-$(test -n "${CURRENT_DEPLOYMENT_MODE}" && echo true)}
+	# An explicit --update without an installed product is a fresh install: otherwise Docs adoption, port checks and secret generation are skipped.
+	if [ "${UPDATE}" = "true" ] && [ -z "${CURRENT_DEPLOYMENT_MODE}" ]; then
+		echo "Warning: no existing ${PRODUCT_NAME} installation found; ignoring --update and performing a fresh install." >&2
+		UPDATE="false"
+	fi
 	if [ -z "${DOCUMENT_SERVER_IMAGE_NAME}" ]; then
 		DOCUMENT_SERVER_IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}documentserver"
 		case "${INSTALLATION_TYPE}" in
