@@ -98,6 +98,22 @@ function ApplyInstalledDocumentServerSettings {
     if ($Value = AI_GetMsiProperty DOCS_RABBITMQPWD) { AI_SetMsiProperty AMQP_PWD $Value }
     if ($Value = AI_GetMsiProperty DOCS_RABBITMQUSER) { AI_SetMsiProperty AMQP_USER $Value }
     if ($Value = AI_GetMsiProperty DOCS_REDISHOST) { AI_SetMsiProperty REDIS_HOST $Value }
+
+    try {
+        $DocsInstallDir = AI_GetMsiProperty DOCS_INSTALL_LOCATION
+        if (-not $DocsInstallDir) {
+            $DocsInstallDir = Join-Path (AI_GetMsiProperty ProgramFiles64Folder) 'ONLYOFFICE\DocumentServer'
+        }
+        $DocsConfigPath = Join-Path $DocsInstallDir 'config\local.json'
+        if (Test-Path -LiteralPath $DocsConfigPath -PathType Leaf) {
+            $DocsLicensePath = (Get-Content -LiteralPath $DocsConfigPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop).license.license_file
+            if ($DocsLicensePath -and (Test-Path -LiteralPath $DocsLicensePath -PathType Leaf)) {
+                AI_SetMsiProperty LICENSE_PATH $DocsLicensePath
+            }
+        }
+    }
+    catch { Write-Warning 'Unable to read the existing DocumentServer license configuration.' }
+
     Write-Output 'Existing DocumentServer settings applied.'
 }
 
