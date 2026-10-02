@@ -143,8 +143,13 @@ else
             continue
         fi
 
-        # Apps over an existing Docs is always Community, whatever edition Docs is; the Docs edition itself is kept as found.
-        [ "$USER_SET_INSTALLATION_TYPE" != "true" ] && PARAMETERS+=(-it community)
+        if [ "$USER_SET_INSTALLATION_TYPE" != "true" ]; then
+            case "$DS_EDITION_SUFFIX" in
+                "-de") PARAMETERS+=(-it developer) ;;
+                "-ee") PARAMETERS+=(-it enterprise) ;;
+                *)     PARAMETERS+=(-it community) ;;
+            esac
+        fi
         break
     done
 fi
