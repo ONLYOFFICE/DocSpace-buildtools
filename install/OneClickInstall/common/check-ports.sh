@@ -124,7 +124,7 @@ if [ "$UPDATE" != "true" ]; then
 
 	# Move installed Docs off ports needed by Apps, inheriting HTTPS when possible.
 	# export, not declare -x: this file is sourced from a function in the remote mode, where declare makes the variables local and the package scripts never see them.
-	export INHERIT_SSL_DOMAIN="" INHERIT_SSL_CERT="" INHERIT_SSL_KEY=""
+	export INHERIT_SSL_DOMAIN="" INHERIT_SSL_CERT="" INHERIT_SSL_KEY="" INHERIT_SSL_INTERNAL_PORTAL=""
 	if [ -n "$DS_INSTALLED_PKG_NAME" ]; then
 		DS_CONF_FILE="/etc/${package_sysname}/documentserver/nginx/ds.conf"
 		DS_CURRENT_PORT="$(grep -oP '^\s*listen\s+(\S*:)?\K\d+' "$DS_CONF_FILE" 2>/dev/null | head -1)"
@@ -133,14 +133,30 @@ if [ "$UPDATE" != "true" ]; then
 			&& grep -qE '^\s*listen\s+\S*:?443\b.*\bssl\b' "$DS_CONF_FILE" 2>/dev/null; then
 			CANDIDATE_SSL_CERT="$(grep -oP '^\s*ssl_certificate\s+\K[^;]+' "$DS_CONF_FILE" | head -1)"
 			CANDIDATE_SSL_KEY="$(grep -oP '^\s*ssl_certificate_key\s+\K[^;]+' "$DS_CONF_FILE" | head -1)"
-			CANDIDATE_SSL_DOMAIN="$(grep -oP '^\s*server_name\s+\K\S+' "$DS_CONF_FILE" | grep -vE '^(_|localhost);?$' | head -1 | sed 's/^\*\.//')"
+			CANDIDATE_SSL_INTERNAL_PORTAL=""
+			CANDIDATE_SSL_DOMAIN="$(grep -oP '^\s*server_name\s+\K\S+' "$DS_CONF_FILE" | grep -vE '^(_|localhost);?$|^\*\.' | head -1)"
 			CANDIDATE_SSL_DOMAIN="${CANDIDATE_SSL_DOMAIN%;}"
-			[ -z "$CANDIDATE_SSL_DOMAIN" ] && [ -n "$CANDIDATE_SSL_CERT" ] && \
-				CANDIDATE_SSL_DOMAIN="$(openssl x509 -noout -subject -in "$CANDIDATE_SSL_CERT" 2>/dev/null | grep -oP 'CN\s*=\s*\K[^,/]+' | sed 's/^\*\.//')"
-			# Certificates from modern CAs have no subject CN, their names are in the SAN only; a plain hostname beats a wildcard, whose apex the certificate may not cover.
+			# Certificate names: subject CN first, then SAN (certificates from modern CAs have no CN).
 			if [ -z "$CANDIDATE_SSL_DOMAIN" ] && [ -n "$CANDIDATE_SSL_CERT" ]; then
-				CANDIDATE_SAN_NAMES="$(openssl x509 -noout -ext subjectAltName -in "$CANDIDATE_SSL_CERT" 2>/dev/null | grep -oP 'DNS:\K[^, ]+' || true)"
-				CANDIDATE_SSL_DOMAIN="$(grep -v -m1 '^\*\.' <<< "$CANDIDATE_SAN_NAMES" || sed -n '1s/^\*\.//p' <<< "$CANDIDATE_SAN_NAMES")"
+				CANDIDATE_CERT_NAMES="$({ openssl x509 -noout -subject -in "$CANDIDATE_SSL_CERT" 2>/dev/null | grep -oP 'CN\s*=\s*\K[^,/]+' || true
+					openssl x509 -noout -ext subjectAltName -in "$CANDIDATE_SSL_CERT" 2>/dev/null | grep -oP 'DNS:\K[^, ]+' || true; } | awk '!seen[$0]++')"
+				CANDIDATE_WILDCARD="$(grep -m1 '^\*\.' <<< "$CANDIDATE_CERT_NAMES" || true)"
+				if [ -z "$CANDIDATE_WILDCARD" ]; then
+					CANDIDATE_SSL_DOMAIN="$(head -1 <<< "$CANDIDATE_CERT_NAMES")"
+				else
+					# A wildcard does not tell which host serves Docs and its apex may be absent from DNS: take a covered name that resolves.
+					for CANDIDATE_HOST in "$(hostname -f 2>/dev/null || true)" $(grep -v '^\*\.' <<< "$CANDIDATE_CERT_NAMES"); do
+						[ -n "$CANDIDATE_HOST" ] || continue
+						{ grep -qxF "$CANDIDATE_HOST" <<< "$CANDIDATE_CERT_NAMES" || grep -qxF "*.${CANDIDATE_HOST#*.}" <<< "$CANDIDATE_CERT_NAMES"; } || continue
+						timeout 5 getent hosts "$CANDIDATE_HOST" >/dev/null 2>&1 || continue
+						CANDIDATE_SSL_DOMAIN="$CANDIDATE_HOST"; break
+					done
+					# No usable name: still inherit the certificate, the portal keeps its internal address.
+					if [ -z "$CANDIDATE_SSL_DOMAIN" ]; then
+						CANDIDATE_SSL_DOMAIN="${CANDIDATE_WILDCARD#\*.}"
+						CANDIDATE_SSL_INTERNAL_PORTAL="true"
+					fi
+				fi
 			fi
 
 			# Compare public keys so ECDSA certs work too.
@@ -151,7 +167,8 @@ if [ "$UPDATE" != "true" ]; then
 				&& [ -n "$CANDIDATE_SSL_CERT_PUBKEY" ] \
 				&& [ "$CANDIDATE_SSL_CERT_PUBKEY" = "$(openssl pkey -pubout -passin pass: -in "$CANDIDATE_SSL_KEY" 2>/dev/null)" ]; then
 				echo "${DS_INSTALLED_PKG_NAME} is serving HTTPS for ${CANDIDATE_SSL_DOMAIN}; ${product_name} will take over as the HTTPS front end with the same certificate."
-				INHERIT_SSL_CERT="$CANDIDATE_SSL_CERT"; INHERIT_SSL_KEY="$CANDIDATE_SSL_KEY"; INHERIT_SSL_DOMAIN="$CANDIDATE_SSL_DOMAIN"
+				INHERIT_SSL_CERT="$CANDIDATE_SSL_CERT"; INHERIT_SSL_KEY="$CANDIDATE_SSL_KEY"; INHERIT_SSL_DOMAIN="$CANDIDATE_SSL_DOMAIN"; INHERIT_SSL_INTERNAL_PORTAL="$CANDIDATE_SSL_INTERNAL_PORTAL"
+				[ -z "$INHERIT_SSL_INTERNAL_PORTAL" ] || echo "Note: the host name behind the wildcard certificate cannot be determined, so ${product_name} keeps its internal portal address; run 'apps-ssl-setup -f <domain> <certificate> <key>' afterwards to set the portal domain used in e-mails."
 			else
 				echo "Warning: ${DS_INSTALLED_PKG_NAME} looks HTTPS-configured but its certificate could not be verified; leaving it untouched and installing ${product_name} on plain HTTP (port ${APP_PORT:-80})." >&2
 			fi

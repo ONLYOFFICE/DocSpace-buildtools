@@ -188,7 +188,10 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
     APP_PORT=${APP_PORT:-$(sed -nE 's/.*listen .+:([0-9]{2,5}).*/\1/p' ${OPENRESTY}/onlyoffice-proxy.conf 2>/dev/null | head -1)}
     [[ "${APP_PORT}" = "80" || "${APP_PORT}" = "443" ]] && APP_PORT=""
     cp -f ${OPENRESTY}/onlyoffice-proxy-ssl.conf.template ${OPENRESTY}/onlyoffice-proxy.conf
-    json -I -f ${USER_CONF} -e "this.files.docservice.url.portal = \"https://${DOMAIN}${APP_PORT:+:${APP_PORT}}\""
+    PORTAL_URL="https://${DOMAIN}${APP_PORT:+:${APP_PORT}}"
+    # Inherited wildcard certificate without a known host name: keep the portal on the internal listener, which does not depend on DNS.
+    [[ "${INHERIT_SSL_INTERNAL_PORTAL}" = "true" ]] && PORTAL_URL="http://localhost:80"
+    json -I -f ${USER_CONF} -e "this.files.docservice.url.portal = \"${PORTAL_URL}\""
     json -I -f ${USER_CONF} -e "this.core['server-root'] = 'https://*${APP_PORT:+:${APP_PORT}}/'"
     sed -i "/\(ssl\|quic\)/s/\(listen .*:\)[0-9]\{2,5\}\( .*\)/\1${APP_PORT:-443}\2/" ${OPENRESTY}/onlyoffice-proxy.conf
     sed -i -E "s#https://\\\$host(:[0-9]+)?#https://\\\$host${APP_PORT:+:${APP_PORT}}#g" ${OPENRESTY}/onlyoffice-proxy.conf
@@ -271,7 +274,7 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
     IFS=';' read -ra CONN_ITEM <<< "$(json -f "$USER_CONF" ConnectionStrings.default.connectionString)"; 
     for ITEM in "${CONN_ITEM[@]}"; do KEY="${ITEM%%=*}"; VAL="${ITEM#*=}"; KEY="${KEY// /_}"; export "$KEY=$VAL"; done
     MYSQL=(mysql -h"$Server" -P"${Port:-3306}" -u"$User_ID" "-p$Password" "$Database")
-    if [ -z "$(${MYSQL[@]} -N -s -e "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1")" ]; then
+    if [[ "${INHERIT_SSL_INTERNAL_PORTAL}" != "true" ]] && [ -z "$(${MYSQL[@]} -N -s -e "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1")" ]; then
       ${MYSQL[@]} -e "UPDATE tenants_tenants SET mappeddomain='${DOMAIN}' WHERE alias='localhost';"
     fi
 
