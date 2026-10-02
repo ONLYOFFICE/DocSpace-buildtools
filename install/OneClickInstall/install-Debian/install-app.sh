@@ -53,9 +53,6 @@ case "${INSTALLATION_TYPE}" in
 	"enterprise") ds_pkg_name+="-ee" ;;
 esac
 
-# Apps installed over an already present Docs is always Community, instead of following the edition of the Docs package.
-[ "$PRODUCT_INSTALLED" = "false" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ] && [ -z "${ENVIRONMENT:-}" ] && export ENVIRONMENT=community
-
 DS_COMMON_NAME=${DS_COMMON_NAME:-ds}
 setup_postgres_db() {
 	DS_DB_NAME=${DS_DB_NAME:-$DS_COMMON_NAME}

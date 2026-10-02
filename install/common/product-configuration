@@ -356,9 +356,6 @@ setup_docs() {
 
 	if [ $1 == "LOCAL_DOCS_SERVER" ]; then
 		DS_CONF_DIR="/etc/${PACKAGE_SYSNAME}/documentserver"
-		# Docs keeps its own edition: it may be Enterprise/Developer even when Apps is Community.
-		local DS_IS_COMMUNITY=true
-		{ ${PACKAGE_MANAGER} ${PACKAGE_SYSNAME}-documentserver-ee || ${PACKAGE_MANAGER} ${PACKAGE_SYSNAME}-documentserver-de; } >/dev/null 2>&1 && DS_IS_COMMUNITY=false
 		DOCUMENT_SERVER_HOST="127.0.0.1"
 		sed -e 's/listen 0\.0\.0\.0:/listen 127.0.0.1:/' -i "${DS_CONF_DIR}/nginx/ds.conf"
 		if [ -f /proc/net/if_inet6 ] && ip -6 addr show lo 2>/dev/null | grep -q '::1'; then
@@ -374,7 +371,7 @@ setup_docs() {
 		: "${DOCUMENT_SERVER_JWT_HEADER:=$(json -f ${DS_CONF_DIR}/local.json services.CoAuthoring.token.inbox.header 2>/dev/null)}"
 		json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.server.host" "127.0.0.1"
 
-		if [ "${DS_IS_COMMUNITY}" = "false" ]; then
+		if [ "${ENVIRONMENT}" != "community" ]; then
 			json_configuration "${DS_CONF_DIR}/local.json" "adminPanel.host" "127.0.0.1"
 			json_configuration "${DS_CONF_DIR}/local.json" "rabbitmq" "{ url: '${RABBITMQ_URI}' }"
 			json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis" "{ host: '${REDIS_HOST}', port: '${REDIS_PORT}' }"
@@ -393,7 +390,7 @@ setup_docs() {
 		chmod g+rwxs /var/www/${PACKAGE_SYSNAME}/Data
 		systemctl is-active --quiet nginx && systemctl reload nginx
 		systemctl restart ds-converter ds-docservice ds-metrics
-		if [ "${DS_IS_COMMUNITY}" = "false" ] && systemctl cat ds-adminpanel.service >/dev/null 2>&1; then
+		if [ "${ENVIRONMENT}" != "community" ] && systemctl cat ds-adminpanel.service >/dev/null 2>&1; then
 			systemctl restart ds-adminpanel
 		fi
 	elif [ $1 == "EXTERNAL_DOCS_SERVER" ]; then
