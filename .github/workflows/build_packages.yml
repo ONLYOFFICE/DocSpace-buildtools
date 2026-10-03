@@ -132,7 +132,8 @@ jobs:
           sudo corepack enable
           if [[ "${{ matrix.packageType }}" == "rpm" ]]; then
             sudo apt install -y python3-rpm python3-pip
-            sudo pip install rpmlint
+            sudo python3 -m pip install --upgrade pip
+            sudo python3 -m pip install rpmlint
           else
             sudo apt install -y build-essential lintian dh-make
             DPKG_SIG_VERSION=$(wget -qO- https://archive.ubuntu.com/ubuntu/pool/universe/d/dpkg-sig/ | grep -oP '(?<=href=")dpkg-sig_[^"]+_all\.deb' | sort -Vr | head -1)
