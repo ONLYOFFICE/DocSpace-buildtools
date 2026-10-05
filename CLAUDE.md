@@ -26,6 +26,7 @@ runMigrations.standalone.bat        # Windows (standalone mode)
 ./start/restart.sh                  # Restart all services
 
 # Docker Compose (from install/docker/)
+# Set MYSQL_ROOT_PASSWORD, MYSQL_PASSWORD, RABBIT_PASSWORD, and DOCUMENT_SERVER_JWT_SECRET in .env first.
 docker compose -f apps.yml -f db.yml -f redis.yml -f rabbitmq.yml up -d
 docker compose -f apps-stack.yml up -d  # Full stack shortcut
 
@@ -69,7 +70,8 @@ install/
         docker-identity-entrypoint.sh
         docker-migration-entrypoint.sh
         docker-healthchecks-entrypoint.sh
-        bin-share-docker-entrypoint.sh / wait-bin-share-docker-entrypoint.sh
+        docker-standalone-entrypoint.sh
+        docker-bin-share-entrypoint.sh / docker-wait-bin-share-entrypoint.sh
         prepare-nginx-router.sh
       dev/                  — Local-dev-only Compose overlays (build.backend.docker.py):
         db.dev.yml            — MySQL dev overrides (exposed ports)
@@ -77,8 +79,10 @@ install/
         apps.overcome.yml     — Local dev overrides
         dnsmasq.yml           — DNS for local dev
         build-identity.yml    — ASC.Identity (Java) build
-      stack/supervisor/     — Supervisor service configs baked into the image
-    community/              — Single-container community edition stack
+      supervisor/           — Supervisor configs baked into images:
+        stack/                — apps-stack.yml services (dotnet/node/java)
+        standalone.conf       — standalone image
+    standalone/             — Single-container (standalone) stack
     apps.yml                — All ONLYOFFICE Apps services
     apps-stack.yml          — Full stack (app + all dependencies)
     db.yml                  — MySQL
@@ -92,6 +96,7 @@ install/
     healthchecks.yml        — Health check UI
     notify.yml              — Notification service
     dashboards.yml          — Monitoring dashboards
+    proxy.yml / proxy-ssl.yml — Standalone Nginx reverse proxy (HTTP / Let's Encrypt SSL)
   OneClickInstall/          — Installer scripts (Debian, RedHat, Docker, universal)
   common/                   — Shared packaging: build-services.py/sh, changelog.sh,
                               packages-build.sh, plugins-build.sh, systemd/, product-ssl-setup/
@@ -106,6 +111,7 @@ scripts/                    — Service startup: identity, socketio, ssoauth, we
 start/                      — Dev lifecycle: start/stop/restart (.sh + .bat + .py)
 tests/                      — lint/, vagrant/
 tools/                      — check.sh
+templates/                  — gitea-claude-review (AI code review templates)
 .gitea/actions/             — claude-review (Gitea AI code review action)
 .github/workflows/          — GitHub Actions workflows (see CI/CD section)
 Jenkinsfile                 — Jenkins declarative pipeline
@@ -114,6 +120,7 @@ Jenkinsfile                 — Jenkins declarative pipeline
 ## Docker Compose Architecture
 
 Compose is **modular** — compose files are combined with `-f`. The `install/docker/.env` has ~200 variables covering all services.
+For direct Compose runs, fill `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`, `RABBIT_PASSWORD`, and `DOCUMENT_SERVER_JWT_SECRET` in `.env` before starting bundled dependencies. `install-Docker.sh` generates these automatically.
 
 Key compose combinations:
 ```bash
@@ -141,6 +148,7 @@ docker compose --env-file .env -f apps.yml -f build/dev/apps.overcome.yml up -d
 | `offline-release.yml` | Offline package build |
 | `oci-release.yml` | Container registry release |
 | `readme-update.yml` | Update OS support list in README |
+| `readme-update.yml` | Auto-update README |
 
 **Testing & Quality:**
 
@@ -150,6 +158,7 @@ docker compose --env-file .env -f apps.yml -f build/dev/apps.overcome.yml up -d
 | `ci-oci-install.yml` | Linux package install tests |
 | `ci-oci-update.yml` | Update mechanism tests |
 | `rebuild-boxes.yml` | Rebuild Vagrant boxes for install tests |
+| `zap-scanner.yaml` | OWASP ZAP security scan |
 
 ## Key Patterns
 

@@ -8,6 +8,7 @@ ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:10.0-noble"
 ARG BUSYBOX_VERSION="1.37"
 ARG PYTHON_VERSION="3.12-slim"
 ARG NODE_VERSION="24.16-trixie-slim"
+ARG OPENRESTY_VERSION="1.31.1.1-2"
 ARG PLUGIN_NODE_TYPES_VERSION="18.19.0"
 ARG JAVA_VERSION="25"
 ARG JAVA_RUN_VERSION="${JAVA_VERSION}-jre"
@@ -17,6 +18,9 @@ ARG MAVEN_VERSION="3.9-eclipse-temurin-${JAVA_VERSION}"
 FROM --platform=$BUILDPLATFORM python:${PYTHON_VERSION} AS src
 ARG GIT_BRANCH="master"
 ARG FALLBACK_BRANCH="develop"
+ARG BUILDTOOLS_BRANCH=""
+ARG SERVER_BRANCH=""
+ARG CLIENT_BRANCH=""
 ARG SRC_PATH="/app/onlyoffice/src"
 ARG BUILD_PATH="/var/www"
 ARG PRODUCT_VERSION=0.0.0
@@ -37,7 +41,7 @@ RUN --mount=type=secret,id=github_token,env=GITHUB_TOKEN sh -ec '\
     curl --retry 3 --retry-delay 2 --retry-connrefused -fsSL \
       -H "Accept: application/vnd.github+json" \
       ${GITHUB_TOKEN:+-H "Authorization: Bearer ${GITHUB_TOKEN}"} \
-      "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/git/refs/heads/${GIT_BRANCH}" -o version.json'
+      "https://api.github.com/repos/ONLYOFFICE/DocSpace-buildtools/git/refs/heads/${BUILDTOOLS_BRANCH:-$GIT_BRANCH}" -o version.json'
 
 # BEGIN_SOURCE
 RUN <<'EOF'
@@ -46,15 +50,19 @@ RUN <<'EOF'
 
     git_clone() {
         local REPO=$1 DEST=$2 EXTRA_OPTS=$3 FALLBACK=${4:-$FALLBACK_BRANCH}
-        local BRANCH=$(git ls-remote --exit-code --heads "${REPO}" "${GIT_BRANCH}" > /dev/null 2>&1 && echo "${GIT_BRANCH}" || echo "${FALLBACK}")
+        local BRANCH=${5:-}
+        # Explicit overrides must exist; only implicit branches may fall back.
+        if [ -z "$BRANCH" ]; then
+            BRANCH=$(git ls-remote --exit-code --heads "${REPO}" "${GIT_BRANCH}" > /dev/null 2>&1 && echo "${GIT_BRANCH}" || echo "${FALLBACK}")
+        fi
         git clone ${EXTRA_OPTS} -b "${BRANCH}" "${REPO}" "${DEST}"
     }
 
     PIDS=()
     DEPTH=$([[ "${DEBUG_INFO,,}" =~ ^(true|1|yes)$ ]] && echo 30 || echo 1)
-    git_clone "${BUILDTOOLS_REPO}" "${SRC_PATH}/buildtools" "--recurse-submodules --depth ${DEPTH}" & PIDS+=($!)
-    git_clone "${SERVER_REPO}"     "${SRC_PATH}/server"     "--recurse-submodules --depth ${DEPTH}" & PIDS+=($!)
-    git_clone "${CLIENT_REPO}"     "${SRC_PATH}/client"     "--recurse-submodules --depth ${DEPTH}" & PIDS+=($!)
+    git_clone "${BUILDTOOLS_REPO}" "${SRC_PATH}/buildtools" "--recurse-submodules --depth ${DEPTH}" "$FALLBACK_BRANCH" "$BUILDTOOLS_BRANCH" & PIDS+=($!)
+    git_clone "${SERVER_REPO}"     "${SRC_PATH}/server"     "--recurse-submodules --depth ${DEPTH}" "$FALLBACK_BRANCH" "$SERVER_BRANCH" & PIDS+=($!)
+    git_clone "${CLIENT_REPO}"     "${SRC_PATH}/client"     "--recurse-submodules --depth ${DEPTH}" "$FALLBACK_BRANCH" "$CLIENT_BRANCH" & PIDS+=($!)
     git_clone https://github.com/ONLYOFFICE/docspace-plugins.git "${SRC_PATH}/plugins" "--depth 1" master & PIDS+=($!)
     git_clone https://github.com/ONLYOFFICE/ASC.Web.Campaigns.git "${SRC_PATH}/campaigns" "--depth 1" master & PIDS+=($!)
 
@@ -63,7 +71,9 @@ EOF
 # END_SOURCE
 
 WORKDIR ${SRC_PATH}/buildtools/config
-RUN <<EOF
+# The secret is optional: debuginfo.py falls back to unauthenticated GitHub API
+# calls, which are rate-limited per IP but enough for one repository.
+RUN --mount=type=secret,id=github_token,env=GITHUB_TOKEN <<EOF
 #!/bin/bash
     mkdir -p /app/onlyoffice/config/ && \
     ls | grep -Ev 'test|\.dev\.|nginx' | xargs cp -r -t /app/onlyoffice/config/
@@ -109,9 +119,9 @@ ARG SRC_PATH
 WORKDIR ${SRC_PATH}/server
 COPY --from=src ${SRC_PATH}/server/common/ASC.Socket.IO ./common/ASC.Socket.IO
 COPY --from=src ${SRC_PATH}/server/common/ASC.SsoAuth ./common/ASC.SsoAuth
-COPY --from=src ${SRC_PATH}/server/common/ASC.NewAi ./common/ASC.NewAi
+COPY --from=src ${SRC_PATH}/server/common/ASC.AI.Chat ./common/ASC.AI.Chat
 
-RUN for svc in ASC.Socket.IO ASC.SsoAuth ASC.NewAi; do \
+RUN for svc in ASC.Socket.IO ASC.SsoAuth ASC.AI.Chat; do \
     (cd ${SRC_PATH}/server/common/$svc && yarn install --immutable); \
     done && \
     yarn cache clean --all && \
@@ -130,7 +140,9 @@ COPY --from=src ${SRC_PATH}/client/ ./client
 WORKDIR ${SRC_PATH}/client
 ENV PNPM_HOME=/tmp/pnpm
 ENV NODE_OPTIONS="--max-old-space-size=4096"
-RUN corepack enable && corepack prepare pnpm@latest --activate && \
+# pnpm version comes from client/package.json "packageManager"; do not `corepack prepare pnpm@latest --activate`, it pins nothing.
+RUN (command -v corepack >/dev/null || npm install -g corepack) && \
+    corepack enable && \
     pnpm install && \
     pnpm ${BUILD_ARGS} && \
     pnpm run ${DEPLOY_ARGS} && \
@@ -246,8 +258,46 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
 USER onlyoffice
 ENTRYPOINT ["/bin/bash", "/usr/bin/docker-identity-entrypoint.sh"]
 
+## Nginx router otel lua dependencies ##
+# Built on the -fat flavour of the same OpenResty release the router runs, so
+# the native pb.so is linked against the LuaJIT ABI that ships at runtime.
+FROM openresty/openresty:${OPENRESTY_VERSION}-bullseye-fat AS otel-build
+# Git tags and the luarocks registry are both mutable, so every dependency is
+# fetched as a tarball and checked against a pinned sha256 before it is used.
+# Refresh a checksum with: curl -sL <url> | sha256sum
+ARG OPENTELEMETRY_LUA_VERSION=0.2.6
+ARG OPENTELEMETRY_LUA_SHA256=645259acbc5af7f5b374fdad102c961584aa831a20a7bc392e34ec557acf6314
+ARG LUA_RESTY_HTTP_VERSION=0.16.1
+ARG LUA_RESTY_HTTP_SHA256=d2f867ea8cacb406172d258ba5c17ca530b5deff56d58583e6c11f4f190be015
+ARG LUA_PROTOBUF_VERSION=0.3.3
+ARG LUA_PROTOBUF_SHA256=5df24cbff460d40a1de770486cb0cc74e0e0dd6950d9c61ec97559d2f5c504ef
+
+RUN set -eu; \
+    fetch_verified() { \
+        curl -fsSL -o /tmp/dep.tar.gz "$1"; \
+        echo "$2  /tmp/dep.tar.gz" | sha256sum -c -; \
+        tar -xzf /tmp/dep.tar.gz -C /tmp; \
+        rm -f /tmp/dep.tar.gz; \
+    }; \
+    fetch_verified https://github.com/starwing/lua-protobuf/archive/refs/tags/${LUA_PROTOBUF_VERSION}.tar.gz ${LUA_PROTOBUF_SHA256}; \
+    cd /tmp/lua-protobuf-${LUA_PROTOBUF_VERSION}; \
+    rockspec="$(find rockspecs -name "lua-protobuf-${LUA_PROTOBUF_VERSION}-*.rockspec" | sort | tail -1)"; \
+    test -n "$rockspec" || { echo "no rockspec for lua-protobuf ${LUA_PROTOBUF_VERSION}" >&2; exit 1; }; \
+    /usr/local/openresty/luajit/bin/luarocks make "$rockspec"; \
+    cd /; \
+    mkdir -p /usr/local/openresty/site/lualib/resty; \
+    fetch_verified https://github.com/yangxikun/opentelemetry-lua/archive/refs/tags/v${OPENTELEMETRY_LUA_VERSION}.tar.gz ${OPENTELEMETRY_LUA_SHA256}; \
+    cp -r /tmp/opentelemetry-lua-${OPENTELEMETRY_LUA_VERSION}/lib/opentelemetry /usr/local/openresty/site/lualib/; \
+# otel/init.lua hands the exporter the bare collector URL because http_client.new
+# is where the /v1/traces suffix comes from. Fail the build if a version bump ever
+# changes that, rather than silently posting every span to the wrong path.
+    /usr/local/openresty/luajit/bin/luajit -e 'package.loaded["resty.http"] = {}; package.path = "/usr/local/openresty/site/lualib/?.lua;" .. package.path; local client = require("opentelemetry.trace.exporter.http_client"); local uri = client.new("http://collector:4318", 1, {}).uri; assert(uri == "http://collector:4318/v1/traces", "opentelemetry-lua http_client.new no longer appends /v1/traces, it built " .. uri)'; \
+    fetch_verified https://github.com/ledgetech/lua-resty-http/archive/refs/tags/v${LUA_RESTY_HTTP_VERSION}.tar.gz ${LUA_RESTY_HTTP_SHA256}; \
+    cp -r /tmp/lua-resty-http-${LUA_RESTY_HTTP_VERSION}/lib/resty/. /usr/local/openresty/site/lualib/resty/; \
+    rm -rf /tmp/*
+
 ## Nginx image ##
-FROM openresty/openresty:bullseye AS router
+FROM openresty/openresty:${OPENRESTY_VERSION}-bullseye AS router
 ARG SRC_PATH
 ARG BUILD_PATH
 ARG COUNT_WORKER_CONNECTIONS=1024
@@ -275,6 +325,13 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
 
+# opentelemetry tracing: lua sdk + deps and the otel nginx wiring
+COPY --from=otel-build --chown=onlyoffice:onlyoffice /usr/local/openresty/site/lualib /usr/local/openresty/site/lualib
+COPY --from=otel-build --chown=onlyoffice:onlyoffice /usr/local/openresty/luajit/lib/lua/5.1 /usr/local/openresty/luajit/lib/lua/5.1
+COPY --from=otel-build --chown=onlyoffice:onlyoffice /usr/local/openresty/luajit/share/lua/5.1 /usr/local/openresty/luajit/share/lua/5.1
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/config/nginx/lua /etc/nginx/lua
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/otel.conf /etc/nginx/conf.d/00-otel.conf
+
 # changes for upstream configure
 RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5012/$service_backup/' /etc/nginx/conf.d/onlyoffice.conf && \
@@ -284,7 +341,7 @@ RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.
     sed -i 's/127.0.0.1:5003/$service_studio/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5157/$service_ai/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:9899/$service_socket/' /etc/nginx/conf.d/onlyoffice.conf && \
-    sed -i 's/127.0.0.1:9837/$service_new_ai/' /etc/nginx/conf.d/onlyoffice.conf && \
+    sed -i 's/127.0.0.1:9837/$service_ai_chat/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:9834/$service_sso/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5013/$service_doceditor/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i 's/127.0.0.1:5099/$service_sdk/' /etc/nginx/conf.d/onlyoffice.conf && \
@@ -423,12 +480,12 @@ COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server
 
 CMD  ["server.js", "ASC.Socket.IO"]
 
-## ASC.NewAi ##
-FROM noderun AS newai
-WORKDIR ${BUILD_PATH}/services/ASC.NewAi/
-COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.NewAi .
+## ASC.AI.Chat ##
+FROM noderun AS ai-chat
+WORKDIR ${BUILD_PATH}/services/ASC.AI.Chat/
+COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.AI.Chat .
 
-CMD  ["server.js", "ASC.NewAi"]
+CMD  ["server.js", "ASC.AI.Chat"]
 
 ## ASC.SsoAuth ##
 FROM noderun AS ssoauth
@@ -507,7 +564,7 @@ RUN mkdir -p /app/ASC.Files/server && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -u 104 onlyoffice --home /var/www/onlyoffice --system -G onlyoffice
 USER onlyoffice
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/bin-share-docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-bin-share-entrypoint.sh /usr/bin/docker-entrypoint.sh
 COPY --from=files --chown=onlyoffice:onlyoffice ${BUILD_PATH}/products/ASC.Files/server/ /app/ASC.Files/server/
 COPY --from=people_server --chown=onlyoffice:onlyoffice ${BUILD_PATH}/products/ASC.People/server/ /app/ASC.People/server/
 COPY --from=ai --chown=onlyoffice:onlyoffice ${BUILD_PATH}/products/ASC.AI/server/ /app/ASC.AI/server/
@@ -520,7 +577,7 @@ RUN addgroup --system --gid 107 onlyoffice && \
     adduser -u 104 onlyoffice --home /var/www/onlyoffice --system -G onlyoffice && \
     mkdir /app
 USER onlyoffice
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/wait-bin-share-docker-entrypoint.sh /usr/bin/docker-entrypoint.sh
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-wait-bin-share-entrypoint.sh /usr/bin/docker-entrypoint.sh
 ENTRYPOINT ["/bin/sh", "/usr/bin/docker-entrypoint.sh"]
 
 ## Dotnet Services ##
@@ -542,8 +599,8 @@ RUN set -eux; \
 
 USER onlyoffice
 
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/stack/supervisor/dotnet_services.conf /etc/supervisor/conf.d/supervisord.conf
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/stack/supervisor/start-after-migration.py /usr/local/bin/start-after-migration.py
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/supervisor/stack/dotnet_services.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/supervisor/stack/start-after-migration.py /usr/local/bin/start-after-migration.py
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.AI/service/ ${BUILD_PATH}/products/ASC.AI/server/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.AI.Worker/service/ ${BUILD_PATH}/products/ASC.AI/service/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.ApiSystem/service/  ${BUILD_PATH}/services/ASC.ApiSystem/service/
@@ -572,13 +629,13 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 USER onlyoffice
 
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/stack/supervisor/node_services.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/supervisor/stack/node_services.conf /etc/supervisor/conf.d/supervisord.conf
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/editor/ ${BUILD_PATH}/products/ASC.Editors/editor/
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/login/ ${BUILD_PATH}/products/ASC.Login/login/
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/management/ ${BUILD_PATH}/products/ASC.Management/management/
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/sdk/ ${BUILD_PATH}/products/ASC.Sdk/sdk/
 COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Socket.IO ${BUILD_PATH}/services/ASC.Socket.IO/
-COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.NewAi ${BUILD_PATH}/services/ASC.NewAi/
+COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.AI.Chat ${BUILD_PATH}/services/ASC.AI.Chat/
 COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.SsoAuth ${BUILD_PATH}/services/ASC.SsoAuth/
 
 CMD ["supervisord", "-n"]
@@ -592,7 +649,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 USER onlyoffice
 
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/stack/supervisor/java_services.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/supervisor/stack/java_services.conf /etc/supervisor/conf.d/supervisord.conf
 COPY --from=build-java --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.Authorization/app.jar ${BUILD_PATH}/services/ASC.Identity.Authorization/app.jar
 COPY --from=build-java --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/services/ASC.Identity.Registration/app.jar ${BUILD_PATH}/services/ASC.Identity.Registration/app.jar
 
@@ -600,8 +657,8 @@ CMD ["supervisord", "-n"]
 
 FROM onlyoffice/4testing-docspace-mcp:latest AS mcp
 
-## Image community ##
-FROM dotnetrun AS community
+## Image standalone ##
+FROM dotnetrun AS standalone
 USER root
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -621,15 +678,18 @@ RUN set -eux; \
     apt-get update && apt-get install -y --no-install-recommends openresty; \
     # let the unprivileged onlyoffice user bind :80, then prepare nginx dirs
     setcap 'cap_net_bind_service=+ep' /usr/local/openresty/nginx/sbin/nginx; \
-    mkdir -p /var/log/nginx /var/log/openresty /var/log/supervisor /etc/nginx/conf.d /etc/nginx/includes /etc/nginx/templates /etc/letsencrypt /var/www/certbot; \
-    chown -R onlyoffice:onlyoffice /etc/nginx /var/log/nginx /var/log/openresty /var/log/supervisor /usr/local/openresty /etc/letsencrypt /var/www/certbot; \
+    mkdir -p /var/log/nginx /var/log/openresty /var/log/supervisor /etc/nginx/conf.d /etc/nginx/includes /etc/nginx/templates /etc/letsencrypt /letsencrypt; \
+    # /etc/ssl/certs (created by ca-certificates, owned by root) needs to be writable by onlyoffice too: the entrypoint generates dhparam.pem there at runtime, and onlyoffice-proxy-ssl.conf requires it.
+    chown -R onlyoffice:onlyoffice /etc/nginx /var/log/nginx /var/log/openresty /var/log/supervisor /usr/local/openresty /etc/letsencrypt /letsencrypt /etc/ssl/certs; \
+    # onlyoffice-document-server shares app_data/log_data with this container (docker-compose.yml) and owns its own Data dir as "ds", gid 102 in its own image - confirmed live. It only chowns that directory's own inode (not recursively), never its mode, so membership here plus the entrypoint's one-time chmod g+w survives any number of its restarts, no ongoing fixup needed. Keep gid 102 in sync if onlyoffice/documentserver's own "ds" group ever changes.
+    groupadd -g 102 dsdata && usermod -aG 102 onlyoffice; \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb /tmp/*
 
 # Services config + entrypoint + supervisor config
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/community/docker-entrypoint.sh /docker-entrypoint.sh
-# COPY --chown=onlyoffice:onlyoffice community/docker-entrypoint.sh /docker-entrypoint.sh
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/community/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-# COPY --chown=onlyoffice:onlyoffice community/supervisord/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-standalone-entrypoint.sh /docker-entrypoint.sh
+# COPY --chown=onlyoffice:onlyoffice entrypoints/docker-standalone-entrypoint.sh /docker-entrypoint.sh
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/supervisor/standalone.conf /etc/supervisor/conf.d/supervisord.conf
+# COPY --chown=onlyoffice:onlyoffice supervisor/standalone.conf /etc/supervisor/conf.d/supervisord.conf
 
 # nginx config, static files, router scripts
 COPY --from=src --exclude=onlyoffice-login.conf --exclude=onlyoffice-management.conf --chown=onlyoffice:onlyoffice /etc/nginx/conf.d /etc/nginx/conf.d
@@ -640,12 +700,11 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/docker-entrypoint.sh /nginx/docker-entrypoint.sh
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/nginx.conf.template /etc/nginx/nginx.conf.template
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
-#COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/community/config/nginx/conf.d/onlyoffice-proxy.conf /etc/nginx/conf.d/
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/community/config/nginx/templates/upstream.conf.template /etc/nginx/templates/upstream.conf.template
-
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/community/config/nginx/templates/onlyoffice-proxy.ssl.conf.template /app/onlyoffice/template/nginx/onlyoffice-proxy.ssl.conf.template
-# COPY --chown=onlyoffice:onlyoffice community/config/nginx/templates/onlyoffice-proxy.ssl.conf.template /app/onlyoffice/template/nginx/onlyoffice-proxy.ssl.conf.template
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/community/config/nginx/templates/onlyoffice-proxy.http.conf /app/onlyoffice/template/nginx/onlyoffice-proxy.http.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/templates/standalone-upstream.conf.template /etc/nginx/templates/upstream.conf.template
+# Same front-proxy configs the microservices proxy container and the DEB/RPM packages use; the RUN below adapts them the way packages-build.sh does.
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/proxy/onlyoffice-proxy.conf /app/onlyoffice/template/nginx/onlyoffice-proxy.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/proxy/onlyoffice-proxy-ssl.conf /app/onlyoffice/template/nginx/onlyoffice-proxy-ssl.conf
+COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/proxy/letsencrypt.conf /etc/nginx/includes/letsencrypt.conf
 
 # nodejs static and dynamic files
 COPY --from=node:24-bookworm-slim /usr/local/bin/node /usr/local/bin/node
@@ -653,10 +712,11 @@ COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/ ${
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/static ${BUILD_PATH}/build
 COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Socket.IO ${SRC_PATH}/publish/services/ASC.Socket.IO
 COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.SsoAuth ${SRC_PATH}/publish/services/ASC.SsoAuth
-COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.NewAi ${SRC_PATH}/publish/services/ASC.NewAi
-COPY --from=build-plugins --chown=onlyoffice:onlyoffice ${SRC_PATH}/plugins/publish/ ${APP_STORAGE_ROOT}/Studio/webplugins
+COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.AI.Chat ${SRC_PATH}/publish/services/ASC.AI.Chat
+# Release plugins stay outside the app_data volume; the entrypoint syncs them into it
+COPY --from=build-plugins --chown=onlyoffice:onlyoffice ${SRC_PATH}/plugins/publish/ ${BUILD_PATH}/studio/plugins
 
-# .NET Monolith and Migration Runner, plugins
+# .NET Monolith and Migration Runner
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Monolith/service ${SRC_PATH}/publish/services/backend/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Migration.Runner/service ${SRC_PATH}/publish/services/backend/
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Files/service/DocStore/ ${SRC_PATH}/publish/services/backend/DocStore/
@@ -677,15 +737,19 @@ RUN set -eux; \
     # route every .NET backend upstream to the single monolith port
     sed -i -E "s#default \"(http://127.0.0.1):(5000|5003|5004|5007|5010|5012|5157)\";#default \"\1:5051\";#g" "/etc/nginx/conf.d/onlyoffice.conf"; \
     sed -i 's#http://127.0.0.1:9090#http://127.0.0.1:8080#g' /etc/nginx/conf.d/onlyoffice.conf && \
+    # The router runs in this same openresty, as in the DEB/RPM packages, and the main config sits under /usr/local/openresty, so relative includes would miss /etc/nginx.
+    sed -i -e 's/\$router_host/127.0.0.1/g' -e 's#include includes/#include /etc/nginx/includes/#' /app/onlyoffice/template/nginx/onlyoffice-proxy.conf /app/onlyoffice/template/nginx/onlyoffice-proxy-ssl.conf && \
+    # Paths are fixed in the shared config (proxy-ssl.yml bind-mounts a host cert there); the entrypoint envsubst's them per SSL_CERT_PATH/SSL_KEY_PATH instead, since standalone takes its certificate from a mounted directory, not a fixed host path.
+    sed -i -e 's#ssl_certificate /usr/local/share/ca-certificates/tls.crt;#ssl_certificate ${SSL_CERTIFICATE};#' -e 's#ssl_certificate_key /etc/ssl/private/tls.key;#ssl_certificate_key ${SSL_CERTIFICATE_KEY};#' /app/onlyoffice/template/nginx/onlyoffice-proxy-ssl.conf && \
+    { /usr/local/openresty/bin/openresty -V 2>&1 | grep -q http_v3_module || sed -i -e '/quic/d' -e "/alt-svc/d" /app/onlyoffice/template/nginx/onlyoffice-proxy-ssl.conf; } && \
     sed -i '/client_body_temp_path/ i \ \ \ \ $MAP_HASH_BUCKET_SIZE' /etc/nginx/nginx.conf.template && \
     sed -i 's/\(worker_connections\).*;/\1 $COUNT_WORKER_CONNECTIONS;/' /etc/nginx/nginx.conf.template && \
     sed -i -e '/^user/s/^/#/' -e 's#/tmp/nginx.pid#nginx.pid#' -e 's#/etc/nginx/mime.types#mime.types#' /etc/nginx/nginx.conf.template && \
     echo '{ "Redis": {} }' > /app/onlyoffice/config/redis.json && \
     echo '{ "RabbitMQ": {} }' > /app/onlyoffice/config/rabbitmq.json
     # Note: redis.json / rabbitmq.json are baked as empty objects in the image
-    # (no Redis/RabbitMQ container in the community stack), so they are left as-is.
+    # (no Redis/RabbitMQ container in the standalone stack), so they are left as-is.
 
-USER onlyoffice
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=300s --retries=5 \

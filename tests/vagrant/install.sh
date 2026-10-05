@@ -54,6 +54,17 @@ add-repo-rpm-docs() {
 }
 
 prepare_vm() {
+  # Debian 11 reached EOL on 2026-08-31 - repoint apt to the archive and security snapshot mirrors
+  if grep -q '^VERSION_CODENAME=bullseye$' /etc/os-release 2>/dev/null; then
+    sed -Ei \
+      -e 's#https?://(security|deb)\.debian\.org/debian-security#https://snapshot.debian.org/archive/debian-security/20260901T000000Z#g' \
+      -e 's#https?://deb\.debian\.org/debian#https://archive.debian.org/debian#g' \
+      -e '/archive\.debian\.org\/debian/ { / contrib/! s/$/ contrib/; }' \
+      -e '/(archive\.debian\.org\/debian|snapshot\.debian\.org\/archive\/debian-security)/ { /check-valid-until=no/! s|^(deb(-src)?) \[|\1 [check-valid-until=no |; }' \
+      -e '/(archive\.debian\.org\/debian|snapshot\.debian\.org\/archive\/debian-security)/ { /check-valid-until=no/! s|^(deb(-src)?) |\1 [check-valid-until=no] |; }' \
+      /etc/apt/sources.list
+  fi
+
   # Ensure curl and gpg are installed
   if ! command -v curl >/dev/null 2>&1; then
     (command -v apt-get >/dev/null 2>&1 && apt-get update -y && apt-get install -y curl) || (command -v dnf >/dev/null 2>&1 && dnf install -y curl)
@@ -118,6 +129,17 @@ esac
   # Some RPM boxes ship firewalld enabled — it blocks the port forwarded to the host
   if command -v firewall-cmd >/dev/null 2>&1; then
     systemctl disable --now firewalld 2>/dev/null || true
+  fi
+
+  # Permanently disable apt's background auto-update machinery for the lifetime of this
+  # disposable VM - it randomly grabs the dpkg frontend lock (via unattended-upgrades) mid-test
+  # and "systemctl stop" alone doesn't kill an already-running unattended-upgrade process
+  if command -v apt-get >/dev/null 2>&1; then
+    systemctl disable --now apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service unattended-upgrades.service 2>/dev/null || true
+    systemctl mask apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service unattended-upgrades.service 2>/dev/null || true
+    pkill -TERM -f '/usr/bin/unattended-upgrade' >/dev/null 2>&1 || true
+    sleep 2
+    pkill -KILL -f '/usr/bin/unattended-upgrade' >/dev/null 2>&1 || true
   fi
 
   # Clean up home folder

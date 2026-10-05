@@ -55,12 +55,12 @@ services:
       target: socket
     image: "${REPO}/${DOCKER_IMAGE_PREFIX}-socket:${DOCKER_TAG}"
 
-  onlyoffice-newai:
+  onlyoffice-ai-chat:
     build:
       context:  ./
       dockerfile: "${DOCKERFILE}"
-      target: newai
-    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-newai:${DOCKER_TAG}"
+      target: ai-chat
+    image: "${REPO}/${DOCKER_IMAGE_PREFIX}-ai-chat:${DOCKER_TAG}"
 
   onlyoffice-studio-notify:
     build:

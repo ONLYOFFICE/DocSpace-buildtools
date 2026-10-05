@@ -78,7 +78,11 @@ def api(path, method='GET', data=None, headers=None, raw_body=None, timeout=60):
         with urllib.request.urlopen(request, timeout=timeout) as response:
             return response.status, json.loads(response.read())
     except urllib.error.HTTPError as error:
-        return error.code, json.loads(error.read() or b'{}')
+        try:
+            return error.code, json.loads(error.read() or b'{}')
+        except json.JSONDecodeError:
+            # nginx serves its own HTML error page while an upstream is still starting
+            return error.code, {}
 
 def auth_headers():
     return {'Authorization': state['token']}
@@ -151,7 +155,7 @@ def dump_page_state(driver):
         print('Browser console (last 30 entries):')
         for entry in driver.get_log('browser')[-30:]:
             print(f"  [{entry.get('level')}] {entry.get('message')}")
-    except WebDriverException as log_error:
+    except (AttributeError, WebDriverException) as log_error:
         print(f"Could not collect browser console: {log_error}")
     print('Current page source:')
     print(driver.page_source[:1000])

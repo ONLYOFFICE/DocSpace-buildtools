@@ -126,13 +126,13 @@ services:
     expose:
       - ${SERVICE_PORT}
 
-  onlyoffice-newai:
+  onlyoffice-ai-chat:
     <<: *x-service-base
-    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-newai:${DOCKER_TAG}"
-    container_name: ${NEW_AI_HOST}
+    image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-ai-chat:${DOCKER_TAG}"
+    container_name: ${AI_CHAT_HOST}
     healthcheck:
       <<: *x-healthcheck
-      test: curl --fail http://${SERVICE_NEW_AI}/health/ || exit 1
+      test: curl --fail http://${SERVICE_AI_CHAT}/health/ || exit 1
     expose:
       - ${SERVICE_PORT}
 
@@ -274,7 +274,7 @@ services:
       - onlyoffice-ai
       - onlyoffice-ai-worker
       - onlyoffice-socket
-      - onlyoffice-newai
+      - onlyoffice-ai-chat
       - onlyoffice-studio-notify
       - onlyoffice-api
       - onlyoffice-api-system
@@ -301,7 +301,7 @@ services:
       - SERVICE_STUDIO=${SERVICE_STUDIO}
       - SERVICE_AI=${SERVICE_AI}
       - SERVICE_AI_WORKER=${SERVICE_AI_WORKER}
-      - SERVICE_NEW_AI=${SERVICE_NEW_AI}
+      - SERVICE_AI_CHAT=${SERVICE_AI_CHAT}
       - SERVICE_SSOAUTH=${SERVICE_SSOAUTH}
       - SERVICE_DOCEDITOR=${SERVICE_DOCEDITOR}
       - SERVICE_MANAGEMENT=${SERVICE_MANAGEMENT}
@@ -322,6 +322,12 @@ services:
       - DASHBOARDS_CONTAINER_NAME=${DASHBOARDS_CONTAINER_NAME}
       - DASHBOARDS_USERNAME=${DASHBOARDS_USERNAME}
       - DASHBOARDS_PASSWORD=${DASHBOARDS_PASSWORD}
+      - OTEL_TRACES_ENABLED=${OTEL_TRACES_ENABLED}
+      - OTEL_LOGS_ENABLED=${OTEL_LOGS_ENABLED}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME}
+      - OTEL_EXPORTER_OTLP_HEADERS=${OTEL_EXPORTER_OTLP_HEADERS}
+      - OTEL_TRACE_STATIC_ASSETS=${OTEL_TRACE_STATIC_ASSETS}
     volumes:
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
 

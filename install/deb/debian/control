@@ -31,7 +31,7 @@ Depends: debconf, openssl,
          {{package_name}}-proxy (= {{package_header_tag_version}}),
          {{package_name}}-plugins (= {{package_header_tag_version}}),
          {{package_name}}-socket (= {{package_header_tag_version}}),
-         {{package_name}}-newai (= {{package_header_tag_version}}),
+         {{package_name}}-ai-chat (= {{package_header_tag_version}}),
          {{package_name}}-ssoauth (= {{package_header_tag_version}}),
          {{package_name}}-studio (= {{package_header_tag_version}}),
          {{package_name}}-studio-notify (= {{package_header_tag_version}}),
@@ -132,14 +132,14 @@ Description: {{package_name}}-socket
 	The service which provides two-way communication between a web browser
 	and the server.
 
-Package: {{package_name}}-newai
+Package: {{package_name}}-ai-chat
 Architecture: all
 Multi-Arch: foreign
-Provides: {{legacy_product}}-newai
-Replaces: {{legacy_product}}-newai
-Breaks: {{legacy_product}}-newai (<< {{package_header_tag_version}})
+Provides: {{legacy_product}}-ai-chat
+Replaces: {{legacy_product}}-ai-chat
+Breaks: {{legacy_product}}-ai-chat (<< {{package_header_tag_version}})
 Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
-Description: {{package_name}}-newai
+Description: {{package_name}}-ai-chat
 	The service which provides AI chat features and MCP tool integrations.
 
 Package: {{package_name}}-studio-notify

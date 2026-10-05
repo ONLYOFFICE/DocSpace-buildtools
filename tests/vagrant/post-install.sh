@@ -12,6 +12,7 @@ get_colors() {
 healthcheck_systemd_services() {
   mapfile -t SERVICES_SYSTEMD < <(awk '/SERVICE_NAME=\(/{flag=1; next} /\)/{flag=0} flag' "build.sh" | sed -E 's/^[[:space:]]*|[[:space:]]*$//g; s/^/apps-/; s/$/.service/')
   SERVICES_SYSTEMD+=("ds-converter.service" "ds-docservice.service" "ds-metrics.service")
+  service_exists "nginx.service" && SERVICES_SYSTEMD+=("nginx.service")
 
   local FAILED=0
   for service in "${SERVICES_SYSTEMD[@]}"; do
@@ -115,6 +116,7 @@ dependency_logs() {
 services_logs() {
   mapfile -t SERVICES_SYSTEMD < <(awk '/SERVICE_NAME=\(/{flag=1; next} /\)/{flag=0} flag' "build.sh" | sed -E 's/^[[:space:]]*|[[:space:]]*$//g; s/^/apps-/; s/$/.service/')
   SERVICES_SYSTEMD+=("ds-converter.service" "ds-docservice.service" "ds-metrics.service")
+  service_exists "nginx.service" && SERVICES_SYSTEMD+=("nginx.service")
 
   echo $LINE_SEPARATOR && echo "${COLOR_YELLOW}Failed systemd units${COLOR_RESET}" && echo $LINE_SEPARATOR
   systemctl --failed --no-pager || true

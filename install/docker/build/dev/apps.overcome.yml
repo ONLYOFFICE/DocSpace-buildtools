@@ -97,13 +97,13 @@ services:
       onlyoffice-migration-runner:
         condition: service_completed_successfully
 
-  onlyoffice-newai:
+  onlyoffice-ai-chat:
     <<: *x-profiles-local
     image: ${Baseimage_Nodejs_Run}
-    working_dir: ${BUILD_PATH}/services/ASC.NewAi/
-    command: ["server.js", "ASC.NewAi"]
+    working_dir: ${BUILD_PATH}/services/ASC.AI.Chat/
+    command: ["server.js", "ASC.AI.Chat"]
     volumes:
-      - ${ROOT_DIR}/server/common/ASC.NewAi/:${BUILD_PATH}/services/ASC.NewAi/
+      - ${ROOT_DIR}/server/common/ASC.AI.Chat/:${BUILD_PATH}/services/ASC.AI.Chat/
     depends_on:
       onlyoffice-migration-runner:
         condition: service_completed_successfully

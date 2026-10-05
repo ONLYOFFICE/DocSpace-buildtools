@@ -23,7 +23,7 @@ for arg in "$@"; do
       exit 0
     ;;
     -v|-V|--version)
-      echo "${PRODUCT_NAME} (Stack) v${APPS_VERSION:-unknown}"
+      echo "${PRODUCT_NAME} v${APPS_VERSION:-unknown}"
       exit 0
     ;;
   esac
@@ -164,16 +164,16 @@ if [ "$OFFLINE_IMAGE_LOAD" != "true" ]; then
 fi
 
 echo "Extracting OneClickInstall files to the current directory..."
-mv -f "${TEMP_DIR}/docker-stack.tar.gz" "${TEMP_DIR}/install-Docker.sh" "${TEMP_DIR}/install-Docker-args.sh" "${SCRIPT_DIR}"
+mv -f "${TEMP_DIR}/docker-standalone.tar.gz" "${TEMP_DIR}/install-Docker.sh" "${TEMP_DIR}/install-Docker-args.sh" "${TEMP_DIR}/install-Docker-docs.sh" "${SCRIPT_DIR}"
 
 echo "Running the install-Docker.sh script..."
 chmod +x "${SCRIPT_DIR}/install-Docker.sh"
-if ! "${SCRIPT_DIR}/install-Docker.sh" "$@" --offline true --deployment-mode stack; then
+if ! "${SCRIPT_DIR}/install-Docker.sh" "$@" --offline true --deployment-mode standalone; then
   echo ""
   echo "ERROR: Installation failed. Fix the issue and re-run this script."
   echo "To clean up before retrying:"
   echo "  docker stop \$(docker ps -a -q); docker container prune -f; rm -rf /app/"
-  echo "Then re-run: ${SCRIPT_DIR}/install-Docker.sh $* --offline true --deployment-mode stack"
+  echo "Then re-run: ${SCRIPT_DIR}/install-Docker.sh $* --offline true --deployment-mode standalone"
   exit 1
 fi
 

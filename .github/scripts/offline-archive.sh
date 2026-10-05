@@ -16,10 +16,13 @@ prepare() {
   docker volume ls -q | xargs -r docker volume rm 2>/dev/null || true
   sudo CLEAN_DOCKER=0 bash "${GITHUB_WORKSPACE}/.github/scripts/free-disk-space-linux.sh"
 
+  local ARCH; ARCH="$(uname -m | sed -E 's/^(x86_64|amd64)$/amd64/; s/^(aarch64|arm64)$/arm64/')"
+
   for repo in onlyoffice/$( [ "${IS_4TESTING:-true}" != "false" ] && echo 4testing- )documentserver{,-de}; do
     tag=$(curl -s "https://registry.hub.docker.com/v2/repositories/${repo}/tags?page_size=100" \
-          | jq -r '.results[].name' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -Vr | head -n1)
-    [ -z "$tag" ] && { echo "Failed to get tag for $repo"; exit 1; }
+          | jq -r --arg arch "$ARCH" '.results[] | select(.images[]?.architecture==$arch) | .name' \
+          | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -Vr | head -n1)
+    [ -z "$tag" ] && { echo "Failed to get ${ARCH} tag for $repo"; exit 1; }
     docker pull "${repo}:${tag}"
   done
 
@@ -44,9 +47,9 @@ create() {
   if [ "$ARCH" = "arm" ]; then DOCKER_ARCH="aarch64"; CNI_ARCH="arm64";
   else                          DOCKER_ARCH="x86_64";  CNI_ARCH="amd64"; fi
 
-  sed -i -e 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\|NON_INTERACTIVE="\).*"$~\1true"~g' -e 's~^\(DEPLOYMENT_MODE="\).*"$~\1stack"~g' \
+  sed -i -e 's~\(OFFLINE_INSTALLATION="\|SKIP_HARDWARE_CHECK="\|NON_INTERACTIVE="\).*"$~\1true"~g' -e 's~^\(DEPLOYMENT_MODE="\).*"$~\1standalone"~g' \
     "${INSTALL_PATH}/OneClickInstall/install-Docker.sh"
-  APPS_VERSION=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "apps-" \
+  APPS_VERSION=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "apps:" \
     | sed -E "s/.*:([0-9]+\.[0-9]+\.[0-9]+).*/\1/" | head -n1)
   [ -n "$APPS_VERSION" ] || { echo "::error::Failed to determine APPS_VERSION"; exit 1; }
   sed -i "s~\(APPS_VERSION=\)\"[^\"]*\"~\1\"${APPS_VERSION}\"~g" \
@@ -83,11 +86,7 @@ create() {
   docker save "${ALL_IMAGES[@]}" | xz --verbose -T0 -z -9e > "${INSTALL_PATH}/apps_images.tar.xz"
 
   echo "Creating docker configuration archive..."
-  ( cd "${INSTALL_PATH}/docker" && tar -czvf "${INSTALL_PATH}/docker-stack.tar.gz" \
-      --exclude='config/nginx/router/' \
-      --exclude='apps.yml'         --exclude='healthchecks.yml'    --exclude='identity.yml' \
-      --exclude='migration-runner.yml' --exclude='notify.yml' \
-      ./*.yml .env config )
+  ( cd "${INSTALL_PATH}/docker/standalone" && tar -czvf "${INSTALL_PATH}/docker-standalone.tar.gz" .env docker-compose.yml config )
 }
 
 build() {
@@ -96,16 +95,16 @@ build() {
   local ARTIFACT_NAME="4testing-offline-apps-installation${SUFFIX}.sh"
 
   tar -cf "${INSTALL_PATH}/offline-apps.tar" \
-    -C "${INSTALL_PATH}/OneClickInstall" install-Docker-args.sh install-Docker.sh \
-    -C "${INSTALL_PATH}" docker-static docker-stack.tar.gz apps_images.tar.xz docs_images.tar.xz
+    -C "${INSTALL_PATH}/OneClickInstall" install-Docker-args.sh install-Docker-docs.sh install-Docker.sh \
+    -C "${INSTALL_PATH}" docker-static docker-standalone.tar.gz apps_images.tar.xz docs_images.tar.xz
 
-  local TEMP_BYTES; TEMP_BYTES=$(stat -c%s "${INSTALL_PATH}/docker-stack.tar.gz" \
+  local TEMP_BYTES; TEMP_BYTES=$(stat -c%s "${INSTALL_PATH}/docker-standalone.tar.gz" \
     "${INSTALL_PATH}/apps_images.tar.xz" "${INSTALL_PATH}/docs_images.tar.xz" | awk '{s+=$1} END{print s}')
   local TEMP_SPACE_MB=$(( (TEMP_BYTES + 1024*1024 - 1) / 1024 / 1024 ))
   sed -i "s~\(REQUIRED_TEMP_SPACE_MB=\)\"[^\"]*\"~\1\"${TEMP_SPACE_MB}\"~g" \
     "${INSTALL_PATH}/common/offline-self-extracting.sh"
 
-  rm -rf "${INSTALL_PATH}"/{apps_images.tar.xz,docs_images.tar.xz,docker-stack.tar.gz,docker-static}
+  rm -rf "${INSTALL_PATH}"/{apps_images.tar.xz,docs_images.tar.xz,docker-standalone.tar.gz,docker-static}
 
   awk '/^__ARGS_SCRIPT_START__$/{print; while((getline line < ARGS_FILE)>0) print line; close(ARGS_FILE); next} 1' \
     ARGS_FILE="${INSTALL_PATH}/OneClickInstall/install-Docker-args.sh" \

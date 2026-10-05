@@ -1,9 +1,9 @@
 <service>
-  <id>OnlyofficeNewAi</id>
-  <name>ONLYOFFICE NewAi</name>
+  <id>OnlyofficeAIChat</id>
+  <name>ONLYOFFICE AI.Chat</name>
   <startmode>manual</startmode>
   <executable>node</executable>
-  <arguments>../../server/common/ASC.NewAi/server.js</arguments>
+  <arguments>../../server/common/ASC.AI.Chat/server.js</arguments>
   <log mode="none"/>
   <delayedAutoStart>true</delayedAutoStart>
   <onfailure action="restart" delay="5 sec" />
