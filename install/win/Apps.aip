@@ -46,6 +46,8 @@
     <ROW Property="DOCUMENT_SERVER_HOST" Value="localhost"/>
     <ROW Property="DOCUMENT_SERVER_JWT_SECRET" Value=" "/>
     <ROW Property="DOCUMENT_SERVER_PORT" Value="8083"/>
+    <ROW Property="DOCUMENT_SERVER_URL_PUBLIC" Value="/ds-vpath"/>
+    <ROW Property="DS_VERSION" Value="0.0.0.0"/>
     <ROW Property="DOMAIN_NAME" Value="localhost:80"/>
     <ROW Property="ENVIRONMENT" Value="community" MultiBuildValue="ExeBuild:enterprise#ExeBuild_1:developer"/>
     <ROW Property="Editor_Port" Value="5013"/>
@@ -85,6 +87,7 @@
     <ROW Property="SUBFOLDER_SERVER" Value="--core:products:subfolder=server"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND;AI_SETUPEXEPATH;SETUPEXEDIR"/>
     <ROW Property="ServiceName_AI" Value="Apps.AI"/>
+    <ROW Property="ServiceName_AI.Chat" Value="Apps.AI.Chat"/>
     <ROW Property="ServiceName_AI_Worker" Value="Apps.AI.Worker"/>
     <ROW Property="ServiceName_ApiSystemService" Value="Apps.ApiSystemService"/>
     <ROW Property="ServiceName_BackupWorker" Value="Apps.Data.Backup.Worker"/>
@@ -127,6 +130,10 @@
     <ROW Property="WindowsTypeNTDisplay" MultiBuildValue="DefaultBuild:32-bit Windows versions#ExeBuild:32-bit Windows versions#ExeBuild_1:32-bit Windows versions" ValueLocId="-"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiDirsComponent">
+    <ROW Directory="ASC.Management_Dir" Directory_Parent="products_Dir" DefaultDir="ASCMAN~1|ASC.Management" DirectoryOptions="15"/>
+    <ROW Directory="ASC.AI.Chat_Dir" Directory_Parent="services_Dir" DefaultDir="ASCAI~1.CHA|ASC.AI.Chat" DirectoryOptions="15"/>
+    <ROW Directory="ASC.Identity.Authorization_Dir" Directory_Parent="services_Dir" DefaultDir="ASCIDE~1.AUT|ASC.Identity.Authorization" DirectoryOptions="15"/>
+    <ROW Directory="ASC.Identity.Registration_Dir" Directory_Parent="services_Dir" DefaultDir="ASCIDE~1.REG|ASC.Identity.Registration" DirectoryOptions="15"/>
     <ROW Directory="APPDIR" Directory_Parent="TARGETDIR" DefaultDir="APPDIR:." IsPseudoRoot="1" DirectoryOptions="15"/>
     <ROW Directory="ASC.AI_Dir" Directory_Parent="products_Dir" DefaultDir="ASC.AI" DirectoryOptions="15"/>
     <ROW Directory="ASC.ApiSystem_Dir" Directory_Parent="services_Dir" DefaultDir="ASC~1.API|ASC.ApiSystem" DirectoryOptions="15"/>
@@ -201,6 +208,7 @@
     <ROW Directory="tools_Dir" Directory_Parent="APPDIR" DefaultDir="tools" DirectoryOptions="15"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
+    <ROW Component="AI.Chat.exe" ComponentId="{80A8DED6-7D1E-45A6-9E75-766F2C7262E6}" Directory_="tools_Dir" Attributes="0" KeyPath="AI.Chat.exe"/>
     <ROW Component="AI_CustomARPName" ComponentId="{5283455D-3786-42EC-9887-FCF453E2FBF9}" Directory_="APPDIR" Attributes="4" KeyPath="DisplayName" Options="1"/>
     <ROW Component="AI_DisableModify" ComponentId="{E036B14F-E2E4-4247-B9AB-55C1F6142BF9}" Directory_="APPDIR" Attributes="4" KeyPath="NoModify" Options="1"/>
     <ROW Component="AI_ExePath" ComponentId="{EDF666FF-8C56-4EB7-8255-67DA879A090C}" Directory_="APPDIR" Attributes="4" KeyPath="AI_ExePath"/>
@@ -327,9 +335,13 @@
     <ROW Feature="WebApi" Feature_Parent="DotnetServices" Title=".NET WebApi Service" Description="Feature contains .NET WebApi service" Display="7" Level="1" Directory_="APPDIR" Attributes="0"/>
     <ROW Feature="WebHealthChecksUI" Feature_Parent="DotnetServices" Title=".NET WebHealthChecksUI Service" Description="Feature contains .NET WebHealthChecksUI service" Display="33" Level="1" Directory_="APPDIR" Attributes="0"/>
     <ROW Feature="WebStudio" Feature_Parent="DotnetServices" Title=".NET WebStudio Service" Description="Feature contains .NET WebStudio service" Display="5" Level="1" Directory_="APPDIR" Attributes="0"/>
+    <ROW Feature="AI.Chat" Feature_Parent="NodeJSServices" Title="AI.Chat" Display="0" Level="1" Directory_="APPDIR" Attributes="0"/>
+    <ROW Feature="IdentityAuthorization" Feature_Parent="MainFeature" Title="IdentityAuthorization" Display="0" Level="1" Directory_="APPDIR" Attributes="0"/>
+    <ROW Feature="IdentityRegistration" Feature_Parent="MainFeature" Title="IdentityRegistration" Display="0" Level="1" Directory_="APPDIR" Attributes="0"/>
     <ATTRIBUTE name="CurrentFeature" value="MainFeature"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiFilesComponent">
+    <ROW File="AI.Chat.exe" Component_="AI.Chat.exe" FileName="AICHAT~1.EXE|AI.Chat.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\AI.Chat.exe" SelfReg="false"/>
     <ROW File="ASC.Files.exe" Component_="ASC.Files.exe" FileName="ASCFIL~1.EXE|ASC.Files.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\products\ASC.Files\server\ASC.Files.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.People.exe" Component_="ASC.People.exe" FileName="ASCPEO~1.EXE|ASC.People.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\products\ASC.People\server\ASC.People.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.ApiSystem.exe" Component_="ASC.ApiSystem.exe" FileName="ASCAPI~1.EXE|ASC.ApiSystem.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.ApiSystem\service\ASC.ApiSystem.exe" SelfReg="false" DigSign="true"/>
@@ -353,7 +365,7 @@
     <ROW File="Identity.Authorization.exe" Component_="Identity.Authorization.exe" FileName="IDENTI~1.EXE|Identity.Authorization.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\Identity.Authorization.exe" SelfReg="false" DigSign="true"/>
     <ROW File="Identity.Registration.exe" Component_="Identity.Registration.exe" FileName="IDENTI~3.EXE|Identity.Registration.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\Identity.Registration.exe" SelfReg="false" DigSign="true"/>
     <ROW File="Management.exe" Component_="Management.exe" FileName="MANAGE~1.EXE|Management.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\Tools\Management.exe" SelfReg="false" DigSign="true"/>
-    <ROW File="ASC.TelegramService.exe" Component_="ASC.TelegramService.exe" FileName="ASCTEL~1.EXE|ASC.TelegramService.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.ASC.TelegramService\service\ASC.TelegramService.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="ASC.TelegramService.exe" Component_="ASC.TelegramService.exe" FileName="ASCTEL~1.EXE|ASC.TelegramService.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.TelegramService\service\ASC.TelegramService.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.AI.exe" Component_="ASC.AI.exe" FileName="ASCAI~1.EXE|ASC.AI.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\products\ASC.AI\server\ASC.AI.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.AI.Worker.exe" Component_="ASC.AI.Worker.exe" FileName="ASCAIS~1.EXE|ASC.AI.Worker.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\products\ASC.AI\service\ASC.AI.Worker.exe" SelfReg="false" DigSign="true"/>
     <ROW File="MCP.exe" Component_="MCP.exe" FileName="MCP.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\MCP.exe" SelfReg="false"/>
@@ -365,9 +377,9 @@
     <ROW Action="AI_DetectSoftware" Sequence="151"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.BuildComponent">
-    <ROW BuildKey="DefaultBuild" BuildName="APPS_COMMUNITY" BuildOrder="1" BuildType="0" PackageFolder="publish" PackageFileName="[|PACKAGE_NAME]" Languages="en" InstallationType="4" CabsLocation="1" PackageType="1" FilesInsideExe="true" ExeIconPath="Resources\icon.ico" ExtractionFolder="[AppDataFolder][|INSTALL_ROOT_FOLDER_NAME]\Apps\install" ExtUI="true" Options="8" UseLargeSchema="true" Unicode="true" ExeName="[|PACKAGE_NAME]" UACExecutionLevel="2"/>
-    <ROW BuildKey="ExeBuild" BuildName="APPS_ENTERPRISE" BuildOrder="2" BuildType="0" PackageFolder="publish" PackageFileName="[|PACKAGE_NAME]" Languages="en" InstallationType="4" CabsLocation="1" PackageType="1" FilesInsideExe="true" ExeIconPath="Resources\icon.ico" ExtractionFolder="[AppDataFolder][|INSTALL_ROOT_FOLDER_NAME]\Apps\install" ExtUI="true" Options="8" UseLargeSchema="true" Unicode="true" ExeName="[|PACKAGE_NAME]" UACExecutionLevel="2"/>
-    <ROW BuildKey="ExeBuild_1" BuildName="APPS_DEVELOPER" BuildOrder="3" BuildType="0" PackageFolder="publish" PackageFileName="[|PACKAGE_NAME]" Languages="en" InstallationType="4" CabsLocation="1" PackageType="1" FilesInsideExe="true" ExeIconPath="Resources\icon.ico" ExtractionFolder="[AppDataFolder][|INSTALL_ROOT_FOLDER_NAME]\Apps\install" Options="8" UseLargeSchema="true" Unicode="true" ExeName="[|PACKAGE_NAME]" UACExecutionLevel="2"/>
+    <ROW BuildKey="DefaultBuild" BuildName="APPS_COMMUNITY" BuildOrder="1" BuildType="0" PackageFolder="publish" PackageFileName="[|PACKAGE_NAME]" Languages="en" InstallationType="3" CabsLocation="1" PackageType="1" FilesInsideExe="true" ExeIconPath="Resources\icon.ico" ExtractionFolder="[AppDataFolder][|INSTALL_ROOT_FOLDER_NAME]\Apps\install" ExtUI="true" Options="8" UseLargeSchema="true" Unicode="true" ExeName="[|PACKAGE_NAME]" UACExecutionLevel="2"/>
+    <ROW BuildKey="ExeBuild" BuildName="APPS_ENTERPRISE" BuildOrder="2" BuildType="0" PackageFolder="publish" PackageFileName="[|PACKAGE_NAME]" Languages="en" InstallationType="3" CabsLocation="1" PackageType="1" FilesInsideExe="true" ExeIconPath="Resources\icon.ico" ExtractionFolder="[AppDataFolder][|INSTALL_ROOT_FOLDER_NAME]\Apps\install" ExtUI="true" Options="8" UseLargeSchema="true" Unicode="true" ExeName="[|PACKAGE_NAME]" UACExecutionLevel="2"/>
+    <ROW BuildKey="ExeBuild_1" BuildName="APPS_DEVELOPER" BuildOrder="3" BuildType="0" PackageFolder="publish" PackageFileName="[|PACKAGE_NAME]" Languages="en" InstallationType="3" CabsLocation="1" PackageType="1" FilesInsideExe="true" ExeIconPath="Resources\icon.ico" ExtractionFolder="[AppDataFolder][|INSTALL_ROOT_FOLDER_NAME]\Apps\install" Options="8" UseLargeSchema="true" Unicode="true" ExeName="[|PACKAGE_NAME]" UACExecutionLevel="2"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.DictionaryComponent">
     <ROW Path="&lt;AI_DICTS&gt;ui.ail"/>
@@ -412,6 +424,7 @@
     <ROW JsonFile="config.json_config_socketio" FileName="CONFIG~1.JSO|config.json" DirProperty="NewFolder_1_Dir" Component="config_socketio" RootProperty="Root_6" Flags="6" IndentUnits="2"/>
     <ROW JsonFile="config.json_config_ssoauth" FileName="CONFIG~1.JSO|config.json" DirProperty="config_2_Dir" Component="config_ssoauth" RootProperty="Root_7" Flags="6" IndentUnits="2"/>
     <ROW JsonFile="elastic.env.json" FileName="ELASTI~1.JSO|elastic.[|ENVIRONMENT].json" DirProperty="config_Dir" Component="config" RootProperty="Root" Flags="6" IndentUnits="2"/>
+    <ROW JsonFile="externalresources.json" FileName="EXTERN~1.JSO|externalresources.json" DirProperty="config_Dir" Component="config" RootProperty="Root_13" Flags="6" IndentUnits="2"/>
     <ROW JsonFile="rabbitmq.env.json" FileName="RABBIT~1.JSO|rabbitmq.[|ENVIRONMENT].json" DirProperty="config_Dir" Component="config" RootProperty="Root_2" Flags="6" IndentUnits="2"/>
     <ROW JsonFile="redis.env.json" FileName="REDIST~1.JSO|redis.[|ENVIRONMENT].json" DirProperty="config_Dir" Component="config" RootProperty="Root_3" Flags="6" IndentUnits="2"/>
   </COMPONENT>
@@ -438,6 +451,7 @@
     <ROW JsonProperty="Root_10" Name="Root" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="Root_11" Name="Root" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="Root_12" Name="Root" Condition="1" Order="0" Flags="60"/>
+    <ROW JsonProperty="Root_13" Name="Root" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="Root_2" Name="Root" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="Root_3" Name="Root" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="Root_4" Name="Root" Condition="1" Order="0" Flags="60"/>
@@ -455,6 +469,7 @@
     <ROW JsonProperty="__2" Parent="TeamlabsiteProviders" Name="0" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="__3" Parent="mcp" Name="0" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="ai" Parent="Root_1" Name="ai" Condition="1" Order="5" Flags="60"/>
+    <ROW JsonProperty="adminpanel" Parent="externalresources_1" Name="adminpanel" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="app" Parent="Root_6" Name="app" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="app_1" Parent="Root_7" Name="app" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="app_2" Parent="Root_5" Name="app" Condition="1" Order="0" Flags="60"/>
@@ -474,13 +489,16 @@
     <ROW JsonProperty="core_3" Parent="Root_12" Name="core" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="default" Parent="ConnectionStrings" Name="default" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="default_1" Parent="ConnectionStrings_1" Name="default" Condition="1" Order="0" Flags="60"/>
+    <ROW JsonProperty="default_2" Parent="adminpanel" Name="default" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="docservice" Parent="files" Name="docservice" Condition="1" Order="0" Flags="60"/>
+    <ROW JsonProperty="domain" Parent="default_2" Name="domain" Condition="1" Order="0" Flags="57" Value="[DOCUMENT_SERVER_URL_PUBLIC]/admin"/>
     <ROW JsonProperty="elastic" Parent="Root" Name="elastic" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="enabled" Parent="migration" Name="enabled" Condition="1" Order="0" Flags="57" Value="[DATABASE_MIGRATION]"/>
     <ROW JsonProperty="endpoint" Parent="__3" Name="endpoint" Condition="1" Order="0" Flags="57" Value="http://localhost:5158/mcp"/>
     <ROW JsonProperty="environment" Parent="app" Name="environment" Condition="1" Order="2" Flags="57" Value="[ENVIRONMENT]"/>
     <ROW JsonProperty="environment_1" Parent="app_1" Name="environment" Condition="1" Order="2" Flags="57" Value="[ENVIRONMENT]"/>
     <ROW JsonProperty="environment_2" Parent="app_3" Name="environment" Condition="1" Order="1" Flags="57" Value="[ENVIRONMENT]"/>
+    <ROW JsonProperty="externalresources_1" Parent="Root_13" Name="externalresources" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="file" Parent="license" Name="file" Condition="ProductName = &quot;ONLYOFFICE Apps Enterprise&quot; OR ProductName = &quot;ONLYOFFICE Apps Developer&quot;" Order="0" Flags="60"/>
     <ROW JsonProperty="files" Parent="Root_1" Name="files" Condition="1" Order="3" Flags="60"/>
     <ROW JsonProperty="folder" Parent="products" Name="folder" Condition="1" Order="0" Flags="57" Value="[APPDIR_FORWARD_SLASH]products"/>
@@ -503,7 +521,7 @@
     <ROW JsonProperty="postman" Parent="notify" Name="postman" Condition="1" Order="0" Flags="57" Value="services"/>
     <ROW JsonProperty="products" Parent="core" Name="products" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="products_1" Parent="core_1" Name="products" Condition="1" Order="2" Flags="60"/>
-    <ROW JsonProperty="public" Parent="url" Name="public" Condition="1" Order="0" Flags="57" Value="/ds-vpath/"/>
+    <ROW JsonProperty="public" Parent="url" Name="public" Condition="1" Order="0" Flags="57" Value="[DOCUMENT_SERVER_URL_PUBLIC]/"/>
     <ROW JsonProperty="secret" Parent="docservice" Name="secret" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="url" Parent="docservice" Name="url" Condition="1" Order="1" Flags="60"/>
     <ROW JsonProperty="value" Parent="secret" Name="value" Condition="1" Order="0" Flags="57" Value="[DOCUMENT_SERVER_JWT_SECRET]"/>
@@ -575,6 +593,20 @@
     <ROW Property="DASHBOARDS_PWD" Signature_="AppSearchSign_26"/>
     <ROW Property="IDENTITY_ENCRYPTION_SECRET" Signature_="AppSearchSign_27"/>
     <ROW Property="DOMAIN_NAME" Signature_="AppSearchSign_28"/>
+    <ROW Property="DOCS_DBHOST" Signature_="DocsRegistrySearch_DbHost"/>
+    <ROW Property="DOCS_DBNAME" Signature_="DocsRegistrySearch_DbName"/>
+    <ROW Property="DOCS_DBPORT" Signature_="DocsRegistrySearch_DbPort"/>
+    <ROW Property="DOCS_DBPWD" Signature_="DocsRegistrySearch_DbPwd"/>
+    <ROW Property="DOCS_DBUSER" Signature_="DocsRegistrySearch_DbUser"/>
+    <ROW Property="DOCS_JWTENABLED" Signature_="DocsRegistrySearch_JwtEnabled"/>
+    <ROW Property="DOCS_JWTHEADER" Signature_="DocsRegistrySearch_JwtHeader"/>
+    <ROW Property="DOCS_JWTSECRET" Signature_="DocsRegistrySearch_JwtSecret"/>
+    <ROW Property="DOCS_RABBITMQHOST" Signature_="DocsRegistrySearch_RabbitMqHost"/>
+    <ROW Property="DOCS_RABBITMQPROTO" Signature_="DocsRegistrySearch_RabbitMqProto"/>
+    <ROW Property="DOCS_RABBITMQPWD" Signature_="DocsRegistrySearch_RabbitMqPwd"/>
+    <ROW Property="DOCS_RABBITMQUSER" Signature_="DocsRegistrySearch_RabbitMqUser"/>
+    <ROW Property="DOCS_REDISHOST" Signature_="DocsRegistrySearch_RedisHost"/>
+    <ROW Property="DOCS_INSTALLED_VERSION" Signature_="DocsInstalledDisplayVersion"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiBinaryComponent">
     <ROW Name="NetFirewall.dll" SourcePath="&lt;AI_CUSTACTS&gt;NetFirewall.dll"/>
@@ -983,11 +1015,17 @@
     <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="[PostgreSQLConnectionDlg_Cond]" Argument="{}" Condition="1" Ordering="1"/>
     <ROW Dialog_="SQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="PostgreSQLConnectionDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="9"/>
     <ROW Dialog_="OpenSearchConnectionDlg" Control_="Back" Event="NewDialog" Argument="PostgreSQLConnectionDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( PostgreSqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="6"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;False&quot; )" Ordering="6"/>
     <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Back" Event="NewDialog" Argument="SQLConnectionDlg" Condition="PostgreSQLConnectionDlg_Cond AND AI_INSTALL AND ( SqlConnectionError &lt;&gt; &quot;&quot; )" Ordering="3"/>
-    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND PostgreSQLConnectionDlg_Cond AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="7"/>
     <ROW Dialog_="LicenseAgreementDlg" Control_="Next" Event="NewDialog" Argument="FolderDlg" Condition="AI_INSTALL" Ordering="1"/>
     <ROW Dialog_="LicenseAgreementDlg" Control_="Back" Event="NewDialog" Argument="WelcomeDlg" Condition="AI_INSTALL" Ordering="1"/>
+    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_1" Condition="AI_INSTALL AND ( SqlConnectionError=&quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; )" Ordering="5"/>
+    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="DoAction" Argument="TestOpenSearchConnection" Condition="AI_INSTALL AND ( SqlConnectionError=&quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; )" Ordering="6"/>
+    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="DoAction" Argument="TestRabbitMQServerConnection" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="7"/>
+    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="DoAction" Argument="TestRedisServerConnection" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="8"/>
+    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="OpenSearchConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;False&quot; )" Ordering="9"/>
+    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="RabbitMQConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="10"/>
+    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="RedisServerConnectionDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError &lt;&gt; &quot;&quot; )" Ordering="11"/>
+    <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="NewDialog" Argument="VerifyReadyDlg" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; AND PostgreSqlConnectionError = &quot;&quot; AND OPENSEARCH_CONNECTION = &quot;True&quot; AND RabbitMQServerConnectionError = &quot;&quot; AND RedisServerConnectionError = &quot;&quot; )" Ordering="12"/>
     <ROW Dialog_="PostgreSQLConnectionDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_31" Condition="AI_INSTALL" Ordering="1"/>
     <ROW Dialog_="FolderDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_31" Condition="AI_INSTALL AND ( SqlConnectionError = &quot;&quot; )" Ordering="211"/>
     <ROW Dialog_="WelcomeDlg" Control_="Next" Event="DoAction" Argument="AI_DATA_SETTER_31" Condition="AI_INSTALL" Ordering="15"/>
@@ -1114,6 +1152,8 @@
     <ROW Action="SET_SHORTCUTDIR" Type="307" Source="SHORTCUTDIR" Target="[ProgramMenuFolder][ProductName]" MultiBuildTarget="DefaultBuild:[ProgramMenuFolder][INSTALL_ROOT_FOLDER_NAME]\Apps#ExeBuild:[ProgramMenuFolder][INSTALL_ROOT_FOLDER_NAME]\Apps#ExeBuild_1:[ProgramMenuFolder][INSTALL_ROOT_FOLDER_NAME]\Apps"/>
     <ROW Action="SET_TARGETDIR_TO_APPDIR" Type="51" Source="TARGETDIR" Target="[APPDIR]"/>
     <ROW Action="SetDashboardsPwd" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_37"/>
+    <ROW Action="AI_DATA_SETTER_43" Type="51" Source="CustomActionData" Target="AEYAbABhAGcAcwACADEAAQBQAGEAcgBhAG0AcwACAEEAcABwAGwAeQBJAG4AcwB0AGEAbABsAGUAZABEAG8AYwB1AG0AZQBuAHQAUwBlAHIAdgBlAHIAUwBlAHQAdABpAG4AZwBzAAEAUwBjAHIAaQBwAHQAUwByAGMAQgBpAG4AYQByAHkAUgBvAHcASQBkAAIAdQB0AGkAbABzAC4AcABzADEAXwAx"/>
+    <ROW Action="ApplyInstalledDocumentServerSettings" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_43"/>
     <ROW Action="SetDocumentServerJWTSecretProp" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_35"/>
     <ROW Action="SetIdentityEncryptionSecret" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_41"/>
     <ROW Action="SetMachineKey" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_36"/>
@@ -1252,6 +1292,7 @@
     <ROW Feature_="Telegram" Component_="ASC.TelegramService.exe"/>
     <ROW Feature_="AI" Component_="ASC.AI.exe"/>
     <ROW Feature_="AI" Component_="ASC.AI.Worker.exe"/>
+    <ROW Feature_="AI.Chat" Component_="AI.Chat.exe"/>
     <ROW Feature_="MCP" Component_="MCP.exe"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
@@ -1266,6 +1307,8 @@
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstExSeqComponent">
     <ROW Action="AI_DATA_SETTER_42" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="97"/>
     <ROW Action="MigrateProductRegistry" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="98"/>
+    <ROW Action="AI_DATA_SETTER_43" Condition="NOT Installed" Sequence="949"/>
+    <ROW Action="ApplyInstalledDocumentServerSettings" Condition="NOT Installed" Sequence="950"/>
     <ROW Action="AI_DOWNGRADE" Condition="AI_NEWERPRODUCTFOUND AND (UILevel &lt;&gt; 5)" Sequence="210"/>
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>
     <ROW Action="AI_STORE_LOCATION" Condition="(Not Installed) OR REINSTALL" Sequence="1501"/>
@@ -1354,6 +1397,8 @@
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstallUISequenceComponent">
     <ROW Action="AI_DATA_SETTER_42" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="97"/>
     <ROW Action="MigrateProductRegistry" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="98"/>
+    <ROW Action="AI_DATA_SETTER_43" Condition="NOT Installed" Sequence="949"/>
+    <ROW Action="ApplyInstalledDocumentServerSettings" Condition="NOT Installed" Sequence="950"/>
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>
     <ROW Action="AI_ResolveKnownFolders" Sequence="55"/>
     <ROW Action="AI_DpiContentScale" Sequence="54"/>
@@ -1381,8 +1426,8 @@
     <ROW Action="AI_DATA_SETTER_36" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( MACHINE_KEY = &quot; &quot; )" Sequence="1110"/>
     <ROW Action="SetDashboardsPwd" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( DASHBOARDS_PWD = &quot; &quot; )" Sequence="1113"/>
     <ROW Action="AI_DATA_SETTER_37" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( DASHBOARDS_PWD = &quot; &quot; )" Sequence="1112"/>
-    <ROW Action="SetDocumentServerJWTSecretProp" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( JWT_ENABLED = &quot;true&quot; )" Sequence="1106"/>
-    <ROW Action="AI_DATA_SETTER_35" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( JWT_ENABLED = &quot;true&quot; )" Sequence="1105"/>
+    <ROW Action="SetDocumentServerJWTSecretProp" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( JWT_ENABLED = &quot;true&quot; AND DOCUMENT_SERVER_JWT_SECRET = &quot; &quot; )" Sequence="1106"/>
+    <ROW Action="AI_DATA_SETTER_35" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( JWT_ENABLED = &quot;true&quot; AND DOCUMENT_SERVER_JWT_SECRET = &quot; &quot; )" Sequence="1105"/>
     <ROW Action="SetIdentityEncryptionSecret" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( IDENTITY_ENCRYPTION_SECRET = &quot; &quot; )" Sequence="1115"/>
     <ROW Action="AI_DATA_SETTER_41" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( IDENTITY_ENCRYPTION_SECRET = &quot; &quot; )" Sequence="1114"/>
   </COMPONENT>
@@ -1425,6 +1470,20 @@
     <ROW Signature_="AppSearchSign_26" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="DASHBOARDS_PWD" Type="2"/>
     <ROW Signature_="AppSearchSign_27" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="IDENTITY_ENCRYPTION_SECRET" Type="2"/>
     <ROW Signature_="AppSearchSign_28" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="DOMAIN_NAME" Type="2"/>
+    <ROW Signature_="DocsRegistrySearch_DbHost" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="DbHost" Type="18"/>
+    <ROW Signature_="DocsRegistrySearch_DbName" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="DbName" Type="18"/>
+    <ROW Signature_="DocsRegistrySearch_DbPort" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="DbPort" Type="18"/>
+    <ROW Signature_="DocsRegistrySearch_DbPwd" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="DbPwd" Type="18"/>
+    <ROW Signature_="DocsRegistrySearch_DbUser" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="DbUser" Type="18"/>
+    <ROW Signature_="DocsRegistrySearch_JwtEnabled" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="JwtEnabled" Type="18"/>
+    <ROW Signature_="DocsRegistrySearch_JwtHeader" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="JwtHeader" Type="18"/>
+    <ROW Signature_="DocsRegistrySearch_JwtSecret" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="JwtSecret" Type="18"/>
+    <ROW Signature_="DocsRegistrySearch_RabbitMqHost" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="RabbitMqHost" Type="18"/>
+    <ROW Signature_="DocsRegistrySearch_RabbitMqProto" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="RabbitMqProto" Type="18"/>
+    <ROW Signature_="DocsRegistrySearch_RabbitMqPwd" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="RabbitMqPwd" Type="18"/>
+    <ROW Signature_="DocsRegistrySearch_RabbitMqUser" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="RabbitMqUser" Type="18"/>
+    <ROW Signature_="DocsRegistrySearch_RedisHost" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="RedisHost" Type="18"/>
+    <ROW Signature_="DocsInstalledDisplayVersion" Root="2" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1" Name="DisplayVersion" Type="18"/>
     <ROW Signature_="AppSearchSign_3" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_USER" Type="2"/>
     <ROW Signature_="AppSearchSign_4" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_PWD" Type="2"/>
     <ROW Signature_="AppSearchSign_5" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_PORT" Type="2"/>
@@ -1508,6 +1567,7 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiServConfigComponent">
     <ROW MsiServiceConfig="ServiceName_AI" Name="[ServiceName_AI]" Event="1" ConfigType="3" Argument="1" Component_="ASC.AI.exe"/>
+    <ROW MsiServiceConfig="ServiceName_AI.Chat" Name="[ServiceName_AI.Chat]" Event="1" ConfigType="3" Argument="1" Component_="AI.Chat.exe"/>
     <ROW MsiServiceConfig="ServiceName_AI_Worker" Name="[ServiceName_AI_Worker]" Event="1" ConfigType="3" Argument="1" Component_="ASC.AI.Worker.exe"/>
     <ROW MsiServiceConfig="ServiceName_ApiSystemService" Name="[ServiceName_ApiSystemService]" Event="1" ConfigType="3" Argument="1" Component_="ASC.ApiSystem.exe"/>
     <ROW MsiServiceConfig="ServiceName_BackupWorker" Name="[ServiceName_BackupWorker]" Event="1" ConfigType="3" Argument="1" Component_="ASC.Data.Backup.Worker.exe"/>
@@ -1534,6 +1594,7 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiServConfigFailureActionsComponent">
     <ROW MsiServiceConfigFailureActions="ServiceName_AI" Name="[ServiceName_AI]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.AI.exe"/>
+    <ROW MsiServiceConfigFailureActions="ServiceName_AI.Chat" Name="[ServiceName_AI.Chat]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="AI.Chat.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_AI_Worker" Name="[ServiceName_AI_Worker]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.AI.Worker.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_ApiSystemService" Name="[ServiceName_ApiSystemService]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.ApiSystem.exe"/>
     <ROW MsiServiceConfigFailureActions="ServiceName_BackupWorker" Name="[ServiceName_BackupWorker]" Event="1" ResetPeriod="0" Actions="1[~]1[~]1" DelayActions="1[~]1[~]1" Component_="ASC.Data.Backup.Worker.exe"/>
@@ -1560,6 +1621,7 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiServCtrlComponent">
     <ROW ServiceControl="ServiceName_AI" Name="[ServiceName_AI]" Event="161" Wait="0" Component_="ASC.AI.exe"/>
+    <ROW ServiceControl="ServiceName_AI.Chat" Name="[ServiceName_AI.Chat]" Event="161" Wait="0" Component_="AI.Chat.exe"/>
     <ROW ServiceControl="ServiceName_AI_Worker" Name="[ServiceName_AI_Worker]" Event="161" Wait="0" Component_="ASC.AI.Worker.exe"/>
     <ROW ServiceControl="ServiceName_ApiSystemService" Name="[ServiceName_ApiSystemService]" Event="161" Wait="0" Component_="ASC.ApiSystem.exe"/>
     <ROW ServiceControl="ServiceName_BackupWorker" Name="[ServiceName_BackupWorker]" Event="161" Wait="0" Component_="ASC.Data.Backup.Worker.exe"/>
@@ -1586,6 +1648,7 @@
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiServInstComponent">
     <ROW ServiceInstall="ServiceName_AI" Name="[ServiceName_AI]" DisplayName="[ShortProductName] AI" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5157 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_AI] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER]" Component_="ASC.AI.exe" Description="[ShortProductName] AI"/>
+    <ROW ServiceInstall="ServiceName_AI.Chat" Name="[ServiceName_AI.Chat]" DisplayName="[ShortProductName] AI.Chat" ServiceType="16" StartType="2" ErrorControl="1" Component_="AI.Chat.exe" Description="[ShortProductName] AI.Chat"/>
     <ROW ServiceInstall="ServiceName_AI_Worker" Name="[ServiceName_AI_Worker]" DisplayName="[ShortProductName] AI.Worker" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5124 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_AI_Worker] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER] --core:eventBus:subscriptionClientName=asc_event_bus_ai_service_queue" Component_="ASC.AI.Worker.exe" Description="[ShortProductName] AI.Worker"/>
     <ROW ServiceInstall="ServiceName_ApiSystemService" Name="[ServiceName_ApiSystemService]" DisplayName="[ShortProductName] ApiSystem" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5010 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_ApiSystemService] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER]" Component_="ASC.ApiSystem.exe" Description="[ShortProductName] ApiSystem"/>
     <ROW ServiceInstall="ServiceName_BackupWorker" Name="[ServiceName_BackupWorker]" DisplayName="[ShortProductName] Data.Backup.Worker" ServiceType="16" StartType="2" ErrorControl="1" Arguments="--urls=[APP_URLS]:5032 --ENVIRONMENT=[ENVIRONMENT] --pathToConf=&quot;[APPDIR]config&quot; --$STORAGE_ROOT=&quot;[APPDIR]Data&quot; --log:dir=&quot;[APPDIR]Logs&quot; --log:name=[ServiceName_BackupWorker] --core:products:folder=&quot;[APPDIR]products&quot; [SUBFOLDER_SERVER] --core:eventBus:subscriptionClientName=asc_event_bus_backup_queue" Component_="ASC.Data.Backup.Worker.exe" Description="[ShortProductName] Data.Backup.Worker"/>
@@ -1631,14 +1694,14 @@
     <ROW PrereqKey="F3520F64DA5998338D97129FAD2" DisplayName=".NET Runtime 10.0.0 x64" VersionMin="10.0" SetupFileUrl="https://builds.dotnet.microsoft.com/dotnet/Runtime/10.0.0/dotnet-runtime-10.0.0-win-x64.exe" Location="1" ExactSize="30828464" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" WinNT64Versions="Windows Vista x64, Windows Server 2008 x64, Windows 7 RTM x64, Windows Server 2008 R2 x64, Windows 8 x64, Windows Server 2012 x64, Windows 10 version 1507 x64, Windows 10 version 1511 x64" Operator="1" ComLine="/q /norestart" BasicUiComLine="/q /norestart" NoUiComLine="/q /norestart" Options="ym" MD5="f54f2192e10d207159d98d514ddd9329" TargetName=".NET 10.0"/>
     <ROW PrereqKey="FFmpegx64" DisplayName="FFmpeg v6.0 x64" VersionMin="6.0.0" SetupFileUrl="https://github.com/qwertyboy5/ffmpeg-installer/releases/download/6.0.0.20230306/FFmpeg_Essentials.msi" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="ym" TargetName="FFmpeg x64"/>
     <ROW PrereqKey="MySQLInstallerRunn" DisplayName="MySQL Installer Community 8.4.3 x64 Runner" SetupFileUrl="MySQL Installer Runner.exe" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/VERYSILENT /DB_PWD=&quot;root&quot;" BasicUiComLine="/VERYSILENT /DB_PWD=&quot;root&quot;" NoUiComLine="/VERYSILENT /DB_PWD=&quot;root&quot;" Options="yx" TargetName="MySQL Installer Runner                                      \MySQL Installer Runner.exe" ParentPrereq="RequiredApplication_2"/>
-    <ROW PrereqKey="OpenJDK_Java_Development" DisplayName="OpenJDK Java Development Kit 21" VersionMin="21.0" SetupFileUrl="https://download.oracle.com/java/21/latest/jdk-21_windows-x64_bin.msi" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/qn" BasicUiComLine="/qn" NoUiComLine="/qn" Options="ymx" TargetName="OpenJDK_Java_Development"/>
+    <ROW PrereqKey="OpenJDK_Java_Development" DisplayName="OpenJDK Java Development Kit 25.0.3" VersionMin="25.0.3" SetupFileUrl="https://download.oracle.com/java/25/archive/jdk-25.0.3_windows-x64_bin.msi" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/qn" BasicUiComLine="/qn" NoUiComLine="/qn" Options="ymx" TargetName="OpenJDK_Java_Development"/>
     <ROW PrereqKey="OpenResty" DisplayName="OpenResty v1.27.1.1" VersionMin="1.27.1.1" SetupFileUrl="publish\OpenResty-1.27.1.1.msi" Location="0" ExactSize="0" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="yxm" TargetName="OpenResty\OpenResty-1.27.1.1.msi"/>
     <ROW PrereqKey="OpenSearch3.5.0" DisplayName="OpenSearch v3.5.0 x64" VersionMin="3.5.0" SetupFileUrl="publish\OpenSearch-3.5.0.exe" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/exenoui /qn" BasicUiComLine="/exenoui /qn" NoUiComLine="/exenoui /qn" Options="y" TargetName="OpenSearch 3.5.0\OpenSearch-3.5.0.exe"/>
     <ROW PrereqKey="OpenSearchStack" DisplayName="OpenSearchStack v2.0.0 x64" VersionMin="2.0.0" SetupFileUrl="publish\OpenSearchStack.msi" Location="0" ExactSize="0" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="y" TargetName="OpenSearchStack\OpenSearchStack.msi"/>
     <ROW PrereqKey="PostgreSQL_ODBC" DisplayName="PostgreSQL ODBC Driver v15.0 x64" SetupFileUrl="https://download.onlyoffice.com/install/windows/redist/psqlodbc_15_x64.msi" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="myx" TargetName="PostgreSQL ODBC Driver v15.0 x64"/>
     <ROW PrereqKey="PostgresSQL" DisplayName="PostgreSQL v14.0 x64" VersionMin="14.0" SetupFileUrl="https://get.enterprisedb.com/postgresql/postgresql-14.0-1-windows-x64.exe" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="--unattendedmodeui none --install_runtimes 0 --mode unattended --superaccount &quot;postgres&quot; --superpassword &quot;postgres&quot;" BasicUiComLine="--unattendedmodeui none --install_runtimes 0 --mode unattended --superaccount &quot;postgres&quot; --superpassword &quot;postgres&quot;" NoUiComLine="--unattendedmodeui none --install_runtimes 0 --mode unattended --superaccount &quot;postgres&quot; --superpassword &quot;postgres&quot;" Options="xy" TargetName="PostgreSQL v14.0 x64"/>
     <ROW PrereqKey="RequiredApplication" DisplayName="MySQL Connector/ODBC 8.4.0 x64" VersionMin="8.4.0" SetupFileUrl="https://cdn.mysql.com/archives/mysql-connector-odbc-8.4/mysql-connector-odbc-8.4.0-winx64.msi" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="ym" TargetName="MySQL Connector ODBC 8.4.0 x64"/>
-    <ROW PrereqKey="RequiredApplication_1" DisplayName="Node.js 22.12.0" VersionMin="22.12.0" SetupFileUrl="https://nodejs.org/dist/v22.12.0/node-v22.12.0-x64.msi" Location="1" ExactSize="0" Operator="0" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="my" TargetName="Node.js v22.12.0 x64"/>
+    <ROW PrereqKey="RequiredApplication_1" DisplayName="Node.js 24.21.0" VersionMin="24.21.0" SetupFileUrl="https://nodejs.org/dist/v24.21.0/node-v24.21.0-x64.msi" Location="1" ExactSize="0" Operator="0" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="my" TargetName="Node.js v24.21.0 x64"/>
     <ROW PrereqKey="RequiredApplication_3" DisplayName="FireDaemon OpenSSL 3" VersionMin="3.3.0.0" SetupFileUrl="https://download.onlyoffice.com/install/windows/redist/FireDaemon-OpenSSL-x64-3.3.0.exe" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/exenoui /qn /norestart REBOOT=ReallySuppress ADJUSTSYSTEMPATHENV=yes" BasicUiComLine="/exenoui /qn /norestart REBOOT=ReallySuppress ADJUSTSYSTEMPATHENV=yes" NoUiComLine="/exenoui /qn /norestart REBOOT=ReallySuppress ADJUSTSYSTEMPATHENV=yes" Options="yx" TargetName="FireDaemon OpenSSL 3"/>
     <ROW PrereqKey="RequiredApplication_2" DisplayName="MySQL Community Server 8.4.3 x64" VersionMin="8.4.3" SetupFileUrl="https://cdn.mysql.com/archives/mysql-8.4/mysql-8.4.3-winx64.msi" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="y" TargetName="MySQL Community Server 8.4.3 x64"/>
     <ROW PrereqKey="RequiredApplication_5" DisplayName="RabbitMQ v3.12.1 x64" VersionMin="3.12" SetupFileUrl="https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.12.1/rabbitmq-server-3.12.1.exe" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/S" BasicUiComLine="/S" NoUiComLine="/S" Options="yx" TargetName="RabbitMQ v3.12.1 x64"/>
@@ -1654,12 +1717,12 @@
     <ROW SearchKey="EA5B60A5CAD4115A8386D017CC889B9ASP.N" Prereq="EA5B60A5CAD4115A8386D017CC889B9" SearchType="12" SearchString="HKLM\SOFTWARE\Wow6432Node\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.AspNetCore.App" VerMin="10.0.0" Order="1" Property="PreReqSearch_EA5B60A5CAD4115A8386D0"/>
     <ROW SearchKey="F3520F64DA5998338D97129FAD2Mic" Prereq="F3520F64DA5998338D97129FAD2" SearchType="12" SearchString="HKLM\SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.NETCore.App" VerMin="10.0.0" Order="1" Property="PreReqSearch_F3520F64DA5998338D9712"/>
     <ROW SearchKey="FFmpeg" Prereq="FFmpegx64" SearchType="4" SearchString="{384A74EC-865A-4907-8561-9DE765EE6E14}" Order="1" Property="PreReqSearch_3"/>
-    <ROW SearchKey="ONLYOFFICEDocumentServer_is1" Prereq="DocumentServer" SearchType="5" SearchString="HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1" Order="1" Property="PreReqSearch_1_1" Platform="1"/>
+    <ROW SearchKey="ONLYOFFICEDocumentServer_is1" Prereq="DocumentServer" SearchType="2" SearchString="HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1\DisplayVersion" VerMin="0.0.0.0" Order="1" Property="PreReqSearch_1_1" Platform="1"/>
     <ROW SearchKey="RabbitMQ_1" Prereq="RequiredApplication_5" SearchType="2" SearchString="HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\RabbitMQ\DisplayVersion" VerMin="3.12.1" Order="2" Property="PreReqSearch_9"/>
     <ROW SearchKey="SystemFolderfile.dll" Prereq="RequiredApplication" SearchType="4" SearchString="{FF073FBB-32E2-4052-B6B2-830C5ED4A809}" VerMin="8.4.0" Order="1" Property="PreReqSearch"/>
-    <ROW SearchKey="SystemFolderfile.dll_1" Prereq="RequiredApplication_1" SearchType="4" SearchString="{47C07A3A-42EF-4213-A85D-8F5A59077C28}" VerMin="22.12.0" Order="1" Property="PreReqSearch_1"/>
+    <ROW SearchKey="SystemFolderfile.dll_1" Prereq="RequiredApplication_1" SearchType="4" SearchString="{47C07A3A-42EF-4213-A85D-8F5A59077C28}" VerMin="24.21.0" Order="1" Property="PreReqSearch_1"/>
     <ROW SearchKey="SystemFolderfile.dll_14" Prereq="DocumentServer.EE" SearchType="0" SearchString="HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1" Order="1" Property="PreReqSearch_30" Platform="1"/>
-    <ROW SearchKey="SystemFolderfile.dll_15" Prereq="OpenJDK_Java_Development" SearchType="1" SearchString="HKLM\SOFTWARE\JavaSoft\JDK" VerMin="21.0" Order="1" Property="PreReqSearch_32"/>
+    <ROW SearchKey="SystemFolderfile.dll_15" Prereq="OpenJDK_Java_Development" SearchType="1" SearchString="HKLM\SOFTWARE\JavaSoft\JDK" VerMin="25.0.3" Order="1" Property="PreReqSearch_32"/>
     <ROW SearchKey="SystemFolderfile.dll_2" Prereq="RequiredApplication_2" SearchType="4" SearchString="{0E338B32-2B15-4B6B-8A21-E8412C153D81}" VerMin="8.4.3" Order="1" Property="PreReqSearch_2"/>
     <ROW SearchKey="SystemFolderfile.dll_3" Prereq="OpenResty" SearchType="4" SearchString="{264FA774-91E5-4854-8010-4AB58CA830BD}" VerMin="1.27.1.1" Order="1" Property="PreReqSearch_8"/>
     <ROW SearchKey="SystemFolderfile.dll_4" Prereq="Certbot" SearchType="2" SearchString="HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Certbot\DisplayVersion" VerMin="2.6.0" Order="1" Property="PreReqSearch_10"/>
@@ -1674,8 +1737,8 @@
     <ROW SearchKey="Version_1" Prereq="MySQLInstallerRunn" SearchType="2" SearchString="HKLM\SOFTWARE\MySQL AB\MySQL Server 8.0\Version" Order="2" Property="PreReqSearch_5"/>
     <ROW SearchKey="Version_2" Prereq="MySQLInstallerRunn" SearchType="2" SearchString="HKLM\SOFTWARE\MySQL AB\MySQL Server 5.5\Version" VerMin="5.5" Order="0" Property="PreReqSearch_6"/>
     <ROW SearchKey="Version_3" Prereq="MySQLInstallerRunn" SearchType="2" SearchString="HKLM\SOFTWARE\Wow6432Node\MySQL AB\MySQL Server 8.0\Version" Order="4" Property="PreReqSearch_31"/>
-    <ROW SearchKey="__1" Prereq="Erlangv26.0x64" SearchType="5" SearchString="HKLM\SOFTWARE\Wow6432Node\Ericsson\Erlang\14.0.2" Order="2" Property="PreReqSearch_11"/>
-    <ROW SearchKey="postgresqlx649.5" Prereq="PostgresSQL" SearchType="5" SearchString="HKLM\SOFTWARE\PostgreSQL\Installations\postgresql-x64-14" Order="1" Property="PreReqSearch_2_1"/>
+    <ROW SearchKey="__1" Prereq="Erlangv26.0x64" SearchType="1" SearchString="HKLM\SOFTWARE\Wow6432Node\Ericsson\Erlang\" VerMin="14.0.2" Order="2" Property="PreReqSearch_11"/>
+    <ROW SearchKey="postgresqlx649.5" Prereq="PostgresSQL" SearchType="2" SearchString="HKLM\SOFTWARE\PostgreSQL Global Development Group\PostgreSQL\Version" VerMin="14" Order="1" Property="PreReqSearch_2_1"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.SqlConnectionComponent">
     <ROW ConnectionName="MySql.Conection" Condition="1" Dbms="1" Flags="36" Order="0" LoginTimeout="60" ConnectionString="Driver={[MYSQLODBCDRIVER]};Server=[DB_HOST];Port=[DB_PORT];Database=[DB_NAME];User=[DB_USER];Password=[DB_PWD];charset=UTF8;GET_SERVER_PUBLIC_KEY=1;"/>
@@ -1685,7 +1748,31 @@
     <ATTRIBUTE name="ImpersonateUser" value="true"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.SynchronizedFolderComponent">
-    <ROW Directory_="APPDIR" SourcePath="Files" Feature="MainFeature" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="APPDIR" SourcePath="Files" Feature="MainFeature" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store|products|services" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="editor_Dir" SourcePath="Files\products\ASC.Files\editor" Feature="DocEditor" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="server_2_Dir" SourcePath="Files\products\ASC.Files\server" Feature="File" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.AI_Dir" SourcePath="Files\products\ASC.AI" Feature="AI" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Login_Dir" SourcePath="Files\products\ASC.Login" Feature="Login" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Management_Dir" SourcePath="Files\products\ASC.Management" Feature="Management" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.People_Dir" SourcePath="Files\products\ASC.People" Feature="People" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Sdk_Dir" SourcePath="Files\products\ASC.Sdk" Feature="Sdk" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.ApiSystem_Dir" SourcePath="Files\services\ASC.ApiSystem" Feature="ApiSystem" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.ClearEvents_Dir" SourcePath="Files\services\ASC.ClearEvents" Feature="ClearEvents" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Data.Backup_Dir" SourcePath="Files\services\ASC.Data.Backup" Feature="DataBackup" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Data.Backup.Worker_Dir" SourcePath="Files\services\ASC.Data.Backup.Worker" Feature="BackupWorker" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Files.Worker_Dir" SourcePath="Files\services\ASC.Files.Worker" Feature="Files" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Identity.Authorization_Dir" SourcePath="Files\services\ASC.Identity.Authorization" Feature="IdentityAuthorization" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Identity.Registration_Dir" SourcePath="Files\services\ASC.Identity.Registration" Feature="IdentityRegistration" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Migration.Runner_Dir" SourcePath="Files\services\ASC.Migration.Runner" Feature="MigrationRunner" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.AI.Chat_Dir" SourcePath="Files\services\ASC.AI.Chat" Feature="AI.Chat" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Notify_Dir" SourcePath="Files\services\ASC.Notify" Feature="Notify" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Socket.IO_Dir" SourcePath="Files\services\ASC.Socket.IO" Feature="SocketIO" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.SsoAuth_Dir" SourcePath="Files\services\ASC.SsoAuth" Feature="SsoAuth" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Studio.Notify_Dir" SourcePath="Files\services\ASC.Studio.Notify" Feature="StudioNotify" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.TelegramService" SourcePath="Files\services\ASC.TelegramService" Feature="Telegram" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Web.Api_Dir" SourcePath="Files\services\ASC.Web.Api" Feature="WebApi" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Web.HealthChecks.UI_Dir" SourcePath="Files\services\ASC.Web.HealthChecks.UI" Feature="WebHealthChecksUI" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="ASC.Web.Studio_Dir" SourcePath="Files\services\ASC.Web.Studio" Feature="WebStudio" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.TxtUpdateComponent">
     <ROW Name="ReplaceAppDir" TxtUpdateSet="xml" FindPattern="{APPDIR}" ReplacePattern="[APPDIR]" Options="2" Order="0" FileEncoding="-1"/>

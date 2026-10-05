@@ -126,10 +126,14 @@ jobs:
           JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | head -1)
           sudo update-alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && sudo update-alternatives --set java "$JAVA_PATH"
           echo "JAVA_HOME=$(dirname $(dirname "$JAVA_PATH"))" >> $GITHUB_ENV
-          sudo npm install -g json pnpm
+          sudo npm install -g json
+          # pnpm version comes from client/package.json "packageManager"; do not `corepack prepare pnpm@latest --activate`, it pins nothing.
+          sudo bash -c 'command -v corepack >/dev/null || npm install -g corepack'
+          sudo corepack enable
           if [[ "${{ matrix.packageType }}" == "rpm" ]]; then
             sudo apt install -y python3-rpm python3-pip
-            sudo pip install rpmlint
+            sudo python3 -m pip install --upgrade pip
+            sudo python3 -m pip install rpmlint
           else
             sudo apt install -y build-essential lintian dh-make
             DPKG_SIG_VERSION=$(wget -qO- https://archive.ubuntu.com/ubuntu/pool/universe/d/dpkg-sig/ | grep -oP '(?<=href=")dpkg-sig_[^"]+_all\.deb' | sort -Vr | head -1)

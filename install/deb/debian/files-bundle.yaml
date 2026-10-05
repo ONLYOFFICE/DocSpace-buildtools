@@ -112,9 +112,9 @@ files:
     content: |
       debian/build/publish/services/ASC.Socket.IO var/www/{{package_sysname}}/{{product}}/services
 
-  - name: "{{package_name}}-newai.install"
+  - name: "{{package_name}}-ai-chat.install"
     content: |
-      debian/build/publish/services/ASC.NewAi var/www/{{package_sysname}}/{{product}}/services
+      debian/build/publish/services/ASC.AI.Chat var/www/{{package_sysname}}/{{product}}/services
 
   - name: "{{package_name}}-ssoauth.install"
     content: |

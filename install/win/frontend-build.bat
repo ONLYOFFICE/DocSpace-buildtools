@@ -4,7 +4,7 @@ echo ######################
 echo #   build frontend   #
 echo ######################
 
-%sed% -i "s/^; node-linker=hoisted/node-linker=hoisted/" client\.npmrc
+%sed% -i "s/^# *nodeLinker: *hoisted/nodeLinker: hoisted/" client\pnpm-workspace.yaml
 
 pushd %~s1
 

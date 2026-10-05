@@ -94,21 +94,25 @@ sudo bash <script-name> package -h
 | Flag                    | Value placeholder                         | Default value             | Description                    |
 |-------------------------|-------------------------------------------|---------------------------|--------------------------------|
 | `--installapps`     | `true` \| `false`                         | `true`                    | Install / update ONLYOFFICE Apps      |
-| `--deployment-mode`     | `standard` \| `stack` \| `community`      | `standard`                | Deployment topology (see below)|
+| `--deployment-mode`     | `standalone` \| `stack` \| `microservices` | `standalone`              | Deployment topology (see below)|
 | `--appsversion`     | `<VERSION>`                               | *(latest stable)*         | ONLYOFFICE Apps version               |
 | `--appshost`        | `<HOST>`                                  | `localhost`               | Hostname / IP                  |
 | `--externalport`        | `<PORT>`                                  | `80`                      | External HTTP port             |
 | `--machinekey`          | `<KEY>`                                   | *(auto-generated)*        | `core.machinekey` value        |
 
 `--deployment-mode` selects how ONLYOFFICE Apps is deployed via Docker:
-- `standard` — modular multi-container deployment (default), one container per service.
+- `microservices` — modular multi-container deployment, one container per service.
 - `stack` — services grouped into fewer containers sharing a common runtime.
-- `community` — a single all-in-one `onlyoffice-apps` container (plus MySQL, OpenSearch and
-  Document Server), intended for quick evaluation/testing rather than production.
+- `standalone` — a single all-in-one `onlyoffice-apps` container (plus MySQL, OpenSearch and
+  Document Server, each replaceable by an external one). Runs as a single node: cache and queues
+  are in-process, so it cannot be scaled out horizontally.
+
+Every edition deploys `standalone` by default; an explicit `--deployment-mode` always wins. An
+existing install keeps its current topology on `--update` unless `--deployment-mode` is passed.
 
 You can switch topology on an existing install with `--update true --deployment-mode <mode>`:
 MySQL/OpenSearch/Document Server are reused as-is (no data loss), only the app layer is replaced.
-Not all Docker-specific flags apply in `community` mode (e.g. `--installrabbitmq`/`--installredis`
+Not all Docker-specific flags apply in `standalone` mode (e.g. `--installrabbitmq`/`--installredis`
 are ignored, since that topology has no separate Redis/RabbitMQ containers).
 
 #### Document Server (ONLYOFFICE Docs)
@@ -331,14 +335,14 @@ sudo bash apps-install.sh \
   --elasticprotocol https
 ```
 
-17. Install the single-container community stack, then switch to the standard topology
+17. Install the single-container standalone stack, then switch to the microservices topology
     (MySQL/OpenSearch/Document Server data is preserved)
 ```bash
-sudo bash apps-install.sh docker --deployment-mode community
+sudo bash apps-install.sh docker --deployment-mode standalone
 
 sudo bash apps-install.sh docker \
   --update true \
-  --deployment-mode standard
+  --deployment-mode microservices
 ```
 
 ## 🖥 System Requirements

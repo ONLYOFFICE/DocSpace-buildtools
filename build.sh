@@ -25,7 +25,7 @@ dotnet build $dir/ASC.Web.slnx  /fl1 /flp1:logfile=asc.web.log;verbosity=normal
 echo "install nodejs projects dependencies..."
 pushd $dir/common/ASC.Socket.IO/
 yarn install
-pushd $dir/common/ASC.NewAi/
+pushd $dir/common/ASC.AI.Chat/
 yarn install
 pushd $dir/common/ASC.SsoAuth/
 yarn install

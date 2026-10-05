@@ -8,7 +8,7 @@ on:
       - 'install/docker/*.yml'
       - 'install/docker/*.env'
       - 'install/docker/config/**'
-      - 'install/docker/community/**'
+      - 'install/docker/standalone/**'
       - 'install/OneClickInstall/**'
   workflow_dispatch:
 
@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DOCKER_DIR: "${{ github.workspace }}/install/docker"
-      COMMUNITY_DIR: "${{ github.workspace }}/install/docker/community"
+      STANDALONE_DIR: "${{ github.workspace }}/install/docker/standalone"
       SCRIPT_DIR: "${{ github.workspace }}/install/OneClickInstall"
     steps:
       - name: Checkout
@@ -54,9 +54,9 @@ jobs:
             --exclude='notify.yml' \
             *.yml .env config
 
-          cd ${{ env.COMMUNITY_DIR }}
-          tar -czvf ${{ env.SCRIPT_DIR }}/docker-community.tar.gz \
-            docker-compose.yml ssl.yml .env
+          cd ${{ env.STANDALONE_DIR }}
+          tar -czvf ${{ env.SCRIPT_DIR }}/docker-standalone.tar.gz \
+            docker-compose.yml .env config
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6.0.0
@@ -84,9 +84,10 @@ jobs:
             --include="install-Debian/*" \
             --include="install-Docker.sh" \
             --include="install-Docker-args.sh" \
+            --include="install-Docker-docs.sh" \
             --include="docker.tar.gz" \
             --include="docker-stack.tar.gz" \
-            --include="docker-community.tar.gz"
+            --include="docker-standalone.tar.gz"
 
       - name: Invalidate AWS CloudFront cache
         run: |

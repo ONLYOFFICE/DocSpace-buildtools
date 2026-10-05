@@ -84,6 +84,23 @@ MYSQL_SERVER_DB_NAME=${MYSQL_SERVER_DB_NAME:-"${package_sysname}"}
 MYSQL_SERVER_USER=${MYSQL_SERVER_USER:-"root"}
 MYSQL_SERVER_PORT=${MYSQL_SERVER_PORT:-3306}
 
+# Probe MySQL over TCP, like the product does.
+MYSQL_PROBE_HOST=$([ "${MYSQL_SERVER_HOST}" = "localhost" ] && echo "127.0.0.1" || echo "${MYSQL_SERVER_HOST}")
+
+# Empty $1 means "try without a password".
+mysql_root_connects() {
+	local MYSQL_ARGS=(--connect-expired-password -h "${MYSQL_PROBE_HOST}" -P "${MYSQL_SERVER_PORT}" -u "${MYSQL_SERVER_USER}")
+	[ -n "$1" ] && MYSQL_ARGS+=("-p$1")
+	mysql "${MYSQL_ARGS[@]}" -e ";" >/dev/null 2>&1
+}
+
+# A refused password still proves the server is up.
+mysql_responds() {
+	local PING_OUTPUT
+	PING_OUTPUT=$(mysqladmin -h "${MYSQL_PROBE_HOST}" -P "${MYSQL_SERVER_PORT}" -u "${MYSQL_SERVER_USER}" ping 2>&1) || true
+	[[ "${PING_OUTPUT}" == *"alive"* || "${PING_OUTPUT}" == *"Access denied"* ]]
+}
+
 if [ "${MYSQL_FIRST_TIME_INSTALL}" = "true" ]; then
 	MYSQL_TEMPORARY_ROOT_PASS=""
 
@@ -111,6 +128,32 @@ if [ "${MYSQL_FIRST_TIME_INSTALL}" = "true" ]; then
 
 		systemctl restart mysqld
 	fi
+elif [ "$PRODUCT_INSTALLED" = "false" ]; then
+	# MySQL predates this run, so its root password was not set here.
+	MYSQL_WAIT_DEADLINE=$((SECONDS + 60))
+	until mysql_responds; do
+		if [ "${SECONDS}" -ge "${MYSQL_WAIT_DEADLINE}" ]; then
+			echo "ERROR: MySQL is already installed but does not answer on ${MYSQL_PROBE_HOST}:${MYSQL_SERVER_PORT}." >&2
+			exit 1
+		fi
+		sleep 1
+	done
+
+	if [ -z "${MYSQL_ROOT_PASS}" ] || ! mysql_root_connects "${MYSQL_ROOT_PASS}"; then
+		# Earlier installers derived this from MySQL's temporary password.
+		MYSQL_RECOVERED_PASS=$(grep "temporary password" /var/log/mysqld.log 2>/dev/null | tail -1 | rev | cut -d " " -f 1 | rev | sed -e 's/;/%/g' -e 's/=/%/g')
+
+		if mysql_root_connects ""; then
+			MYSQL_ROOT_PASS=""
+		elif [ -n "${MYSQL_RECOVERED_PASS}" ] && mysql_root_connects "${MYSQL_RECOVERED_PASS}"; then
+			MYSQL_ROOT_PASS="${MYSQL_RECOVERED_PASS}"
+		else
+			echo "ERROR: cannot connect to MySQL at ${MYSQL_PROBE_HOST}:${MYSQL_SERVER_PORT} as '${MYSQL_SERVER_USER}'." >&2
+			echo "Pass a working password in the MYSQL_ROOT_PASS environment variable, or remove MySQL and run the installer again." >&2
+			echo "Note: a '${MYSQL_SERVER_USER}' user authenticated by unix socket cannot be used, the product connects over TCP." >&2
+			exit 1
+		fi
+	fi
 fi
 
 if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
@@ -119,15 +162,15 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
     declare -x JWT_ENABLED=${JWT_ENABLED:-true}
     declare -x JWT_SECRET=${JWT_SECRET:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)}
     declare -x JWT_HEADER=${JWT_HEADER:-AuthorizationJwt}
-    [ -n "${WOPI_ENABLED}" ] && declare -x WOPI_ENABLED
+    [ -n "${WOPI_ENABLED}" ] && export WOPI_ENABLED
 
     [ "$INSTALLATION_TYPE" != "community" ] && setup_postgres_db
 
     ${package_manager} -y install ${ds_pkg_name} --nobest # --nobest for rhel 8 compatibility
 
-	# nginx (a dependency of ${ds_pkg_name}) enables a default server listening on port 80, which conflicts with openresty
+	# nginx enables a default server on port 80.
 	if [ -f /etc/nginx/nginx.conf ] && grep -q "server {" /etc/nginx/nginx.conf; then
-		# fix Bug 81918 - Remove default server block without dropping conf.d includes
+		# fix Bug 81918 - Remove the default server block without dropping conf.d includes.
 		[ -f /etc/nginx/nginx.conf.bak ] || cp -f /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
 		echo "Note: removed default server block from /etc/nginx/nginx.conf to avoid conflict with openresty (backup: /etc/nginx/nginx.conf.bak)."
 		awk '/^[[:space:]]*server[[:space:]]*\{/&&!done{done=1;d=1;next}d{d+=gsub(/\{/,"{")-gsub(/\}/,"}");if(d<=0)d=0;next}1' \
@@ -161,31 +204,36 @@ if [ "$MAKESWAP" == "true" ]; then
 	make_swap
 fi
 
+configure_product_mysql() {
+	"${product}"-configuration -mysqlh "$1" -mysqlport "$2" -mysqld "$3" -mysqlu "$4" -mysqlp "$5"
+}
+
+configure_product_mysql_from_connection_string() {
+	local connection_string=$1 field values=()
+	for field in Server Port Database "User ID" Password; do
+		values+=("$(grep -oP "${field}=\K[^;]*" <<< "$connection_string")")
+	done
+	configure_product_mysql "${values[@]}"
+}
+
 { ${package_manager} check-update ${package}; PRODUCT_CHECK_UPDATE=$?; } || true
 if [ "$PRODUCT_INSTALLED" = "false" ]; then
 	[[ ${PRODUCT_VERSION} =~ ^[0-9]+(\.[0-9]+){3}$ ]] && PRODUCT_VERSION="${PRODUCT_VERSION%.*}-${PRODUCT_VERSION##*.}"
 	${package_manager} install -y "${package}${PRODUCT_VERSION:+-${PRODUCT_VERSION}}" --best --allowerasing $TESTING_REPO
-	"${product}"-configuration \
-		-mysqlh "${MYSQL_SERVER_HOST}" \
-		-mysqlport "${MYSQL_SERVER_PORT}" \
-		-mysqld "${MYSQL_SERVER_DB_NAME}" \
-		-mysqlu "${MYSQL_SERVER_USER}" \
-		-mysqlp "${MYSQL_ROOT_PASS}"
+	configure_product_mysql "${MYSQL_SERVER_HOST}" "${MYSQL_SERVER_PORT}" "${MYSQL_SERVER_DB_NAME}" "${MYSQL_SERVER_USER}" "${MYSQL_ROOT_PASS}"
 elif ! rpm -q "${package}" >/dev/null 2>&1; then # (DS v4.0.0) take over an installation made before the rename to ONLYOFFICE Apps
 	[[ ${PRODUCT_VERSION} =~ ^[0-9]+(\.[0-9]+){3}$ ]] && PRODUCT_VERSION="${PRODUCT_VERSION%.*}-${PRODUCT_VERSION##*.}"
 	${package_manager} install -y "${package}${PRODUCT_VERSION:+-${PRODUCT_VERSION}}" --best --allowerasing $TESTING_REPO
-	"${product}"-configuration
+	# Rename the copied pre-rename environment file.
+	ENVIRONMENT=$(grep -oP 'ENVIRONMENT=\K.*' /etc/"${package_sysname}"/"${product}"/systemd.env 2>/dev/null || grep -oP 'ENVIRONMENT=\K.*' /usr/lib/systemd/system/"${product}"-api.service 2>/dev/null)
+	CONNECTION_STRING=$(json -f /etc/"${package_sysname}"/"${product}"/appsettings."${ENVIRONMENT}".json ConnectionStrings.default.connectionString 2>/dev/null)
+	configure_product_mysql_from_connection_string "${CONNECTION_STRING}"
 elif [[ "${PRODUCT_CHECK_UPDATE}" -eq "${UPDATE_AVAILABLE_CODE}" || "${RECONFIGURE_PRODUCT}" = "true" ]]; then
 	${package_manager} -y update "${package}" --best --allowerasing $TESTING_REPO
 	if [[ "${RECONFIGURE_PRODUCT}" = "true" ]]; then
 		ENVIRONMENT=$(grep -oP 'ENVIRONMENT=\K.*' /etc/"${package_sysname}"/"${product}"/systemd.env || grep -oP 'ENVIRONMENT=\K.*' /usr/lib/systemd/system/"${product}"-api.service)
-		CONNECTION_STRING=$(json -f /etc/"${package_sysname}"/"${product}"/appsettings."$ENVIRONMENT".json ConnectionStrings.default.connectionString)
-		"${product}"-configuration \
-			-mysqlh "$(grep -oP 'Server=\K[^;]*' <<< "${CONNECTION_STRING}")" \
-			-mysqlport "$(grep -oP 'Port=\K[^;]*' <<< "${CONNECTION_STRING}")" \
-			-mysqld "$(grep -oP 'Database=\K[^;]*' <<< "${CONNECTION_STRING}")" \
-			-mysqlu "$(grep -oP 'User ID=\K[^;]*' <<< "${CONNECTION_STRING}")" \
-			-mysqlp "$(grep -oP 'Password=\K[^;]*' <<< "${CONNECTION_STRING}")"
+		CONNECTION_STRING=$(json -f /etc/"${package_sysname}"/"${product}"/appsettings."${ENVIRONMENT}".json ConnectionStrings.default.connectionString)
+		configure_product_mysql_from_connection_string "${CONNECTION_STRING}"
 	else
 		"${product}"-configuration
 	fi

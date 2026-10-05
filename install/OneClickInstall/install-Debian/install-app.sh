@@ -81,6 +81,37 @@ if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ]; then
 	fi
 fi
 
+# MySQL predates this run, so its root password was not set here.
+if [ "${MYSQL_FIRST_TIME_INSTALL}" != "true" ] && [ "$PRODUCT_INSTALLED" = "false" ]; then
+	# Probe MySQL over TCP, like the product does.
+	MYSQL_PROBE_HOST=$([ "${MYSQL_SERVER_HOST}" = "localhost" ] && echo "127.0.0.1" || echo "${MYSQL_SERVER_HOST}")
+
+	# A refused password still proves the server is up.
+	mysql_responds() {
+		local PING_OUTPUT
+		PING_OUTPUT=$(mysqladmin -h "${MYSQL_PROBE_HOST}" -P "${MYSQL_SERVER_PORT}" -u "${MYSQL_SERVER_USER}" ping 2>&1) || true
+		[[ "${PING_OUTPUT}" == *"alive"* || "${PING_OUTPUT}" == *"Access denied"* ]]
+	}
+
+	MYSQL_WAIT_DEADLINE=$((SECONDS + 60))
+	until mysql_responds; do
+		if [ "${SECONDS}" -ge "${MYSQL_WAIT_DEADLINE}" ]; then
+			echo "ERROR: MySQL is already installed but does not answer on ${MYSQL_PROBE_HOST}:${MYSQL_SERVER_PORT}." >&2
+			exit 1
+		fi
+		sleep 1
+	done
+
+	MYSQL_ARGS=(--connect-expired-password -h "${MYSQL_PROBE_HOST}" -P "${MYSQL_SERVER_PORT}" -u "${MYSQL_SERVER_USER}")
+	[ -n "${MYSQL_SERVER_PASS}" ] && MYSQL_ARGS+=("-p${MYSQL_SERVER_PASS}")
+	if ! mysql "${MYSQL_ARGS[@]}" -e ";" >/dev/null 2>&1; then
+		echo "ERROR: cannot connect to MySQL at ${MYSQL_PROBE_HOST}:${MYSQL_SERVER_PORT} as '${MYSQL_SERVER_USER}'." >&2
+		echo "Pass a working password in the MYSQL_SERVER_PASS environment variable, or remove MySQL and run the installer again." >&2
+		echo "Note: a '${MYSQL_SERVER_USER}' user authenticated by unix socket cannot be used, the product connects over TCP." >&2
+		exit 1
+	fi
+fi
+
 if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
 	DS_PORT=${DS_PORT:-8083}
 	DS_JWT_ENABLED=${DS_JWT_ENABLED:-true}
@@ -96,7 +127,7 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
 
 	apt-get install -yq "${ds_pkg_name}"
 
-	# Debian nginx package (a dependency of ${ds_pkg_name}) enables a default site listening on port 80, which conflicts with openresty
+	# Debian nginx enables a default site on port 80.
 	[ -e /etc/nginx/sites-enabled/default ] && \
 		mv -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default.disabled
 	[ -e /etc/nginx/conf.d/default.conf ] && \

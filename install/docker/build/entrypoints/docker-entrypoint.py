@@ -7,7 +7,11 @@ def require_env(name):
 
 PRODUCT = os.environ.get("PRODUCT") or "onlyoffice"
 BASE_DIR =  os.environ.get("BASE_DIR") or  "/app/" + PRODUCT
-ENV_EXTENSION = (os.environ.get("ENV_EXTENSION") or os.environ.get("INSTALLATION_TYPE")).lower() or "none"
+# .env ships ENV_EXTENSION=none as its literal, un-reconfigured default (install-Docker.sh's reconfigure() is a no-op when nothing overrides it) - treat that the same as unset, or INSTALLATION_TYPE (the actual edition) never gets a chance to apply.
+_env_extension = os.environ.get("ENV_EXTENSION")
+if not _env_extension or _env_extension.lower() == "none":
+    _env_extension = os.environ.get("INSTALLATION_TYPE")
+ENV_EXTENSION = (_env_extension or "none").lower()
 PROXY_HOST = os.environ.get("PROXY_HOST") or "onlyoffice-proxy"
 SERVICE_PORT = os.environ.get("SERVICE_PORT") or "5050"
 URLS = os.environ.get("URLS") or "http://0.0.0.0:"
@@ -54,6 +58,7 @@ DOCUMENT_SERVER_URL_EXTERNAL = os.environ.get("DOCUMENT_SERVER_URL_EXTERNAL") or
 DOCUMENT_SERVER_URL_PUBLIC = DOCUMENT_SERVER_URL_EXTERNAL if DOCUMENT_SERVER_URL_EXTERNAL else os.environ.get("DOCUMENT_SERVER_URL_PUBLIC") or "/ds-vpath/"
 DOCUMENT_SERVER_CONNECTION_HOST = DOCUMENT_SERVER_URL_EXTERNAL if DOCUMENT_SERVER_URL_EXTERNAL else DOCUMENT_SERVER_URL_INTERNAL
 DOCUMENT_SERVER_REQUIRED = {"true": True, "false": False}.get(os.environ.get("DOCUMENT_SERVER_REQUIRED", "").lower())
+DOCUMENT_SERVER_URL_ADMINPANEL = DOCUMENT_SERVER_URL_PUBLIC.rstrip("/") + "/admin"
 
 ELK_CONTAINER_NAME = os.environ.get("ELK_CONTAINER_NAME") or "onlyoffice-opensearch"
 ELK_SCHEME = os.environ.get("ELK_SCHEME") or "http"
@@ -355,6 +360,12 @@ updateJsonData(jsonData,"$.core.hosting.forwardedHeadersOptions.knownNetworks", 
 updateJsonData(jsonData,"$.core.hosting.forwardedHeadersOptions.knownProxies", knownProxies)
 
 writeJsonFile(filePath, jsonData)
+
+filePath = "/app/onlyoffice/config/externalresources.json"
+jsonData = openJsonFile(filePath)
+if jsonData:
+    updateJsonData(jsonData, "$.externalresources.adminpanel.default.domain", DOCUMENT_SERVER_URL_ADMINPANEL)
+    writeJsonFile(filePath, jsonData)
 
 filePath = "/app/onlyoffice/config/apisystem.json"
 jsonData = openJsonFile(filePath)
