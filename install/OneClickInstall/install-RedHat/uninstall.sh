@@ -52,8 +52,14 @@ if [[ "$DEP_CHOICE" =~ ^(y|yes|)$ ]]; then
     UNINSTALL_DEPENDENCIES=true
 fi
 
-# Get packages to uninstall
-mapfile -t PACKAGES_TO_UNINSTALL < <(rpm -qa | grep -E "^(${package_sysname}|${legacy_product})" || true)
+# Get Apps packages to uninstall
+mapfile -t PACKAGES_TO_UNINSTALL < <(rpm -qa --qf '%{NAME}\n' | grep -E "^(${package}|${legacy_product})(-|$)" || true)
+
+mapfile -t DOCUMENT_SERVER_PACKAGES < <(rpm -qa --qf '%{NAME}\n' | grep -E "^${package_sysname}-documentserver(-de|-ee)?$" || true)
+if [ "${#DOCUMENT_SERVER_PACKAGES[@]}" -gt 0 ]; then
+    read -r -p "Also uninstall ${package_sysname^^} Docs? (y/N): " DOCS_CHOICE || DOCS_CHOICE=""
+    [[ "${DOCS_CHOICE,,}" =~ ^(y|yes)$ ]] && PACKAGES_TO_UNINSTALL+=("${DOCUMENT_SERVER_PACKAGES[@]}")
+fi
 
 DEPENDENCIES=(
     nodejs aspnetcore-runtime-10.0 mysql-community-server postgresql
