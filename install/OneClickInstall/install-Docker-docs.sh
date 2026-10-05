@@ -41,6 +41,7 @@
 # Classify every actual mount, including anonymous volumes created by the image.
 # Fonts stay mounted at their original paths: an image VOLUME below /usr/share/fonts
 # would otherwise hide files copied into the parent ds_fonts volume.
+# Mounts nested below a managed path (OneClickInstall-Docs "forgotten") migrate into its volume.
 plan_document_server_mounts () {
 	local INSPECT SOURCE REAL_SOURCE REAL_BASE
 	INSPECT=$(cat) || return 1
@@ -69,6 +70,7 @@ plan_document_server_mounts () {
 			"/var/lib/postgresql": "ds_postgresql"
 		};
 		def beneath($a; $b): $a == $b or ($a | startswith($b + "/"));
+		def owner($dest): [managed | to_entries[] | select(beneath($dest; .key))] | sort_by(.key | length) | last // null;
 		.[0] as $c |
 		if (($c.HostConfig.Tmpfs // {}) | length) > 0 then
 			error("Docs has tmpfs mounts; migrate them explicitly before adoption")
@@ -77,7 +79,9 @@ plan_document_server_mounts () {
 			. as $m |
 			([$c.HostConfig.Mounts[]? | select(.Target == $m.Destination)][0] // {}) as $spec |
 			(.Mode // "" | split(",") | map(select(length > 0))) as $modes |
-			(managed[.Destination] // null) as $managed |
+			owner(.Destination) as $owner |
+			($owner.value // null) as $managed |
+			(if $owner != null then .Destination[($owner.key | length):] | ltrimstr("/") else "" end) as $subdir |
 			if (.Type != "bind" and .Type != "volume") then
 				error("Unsupported Docs mount type at " + .Destination)
 			elif ([.Source, .Destination, (.Name // "")] | any(test("[\r\n\t]"))) then
@@ -88,8 +92,8 @@ plan_document_server_mounts () {
 				error("Docs bind mount overlaps the installer directory: " + .Source)
 			elif $managed != null and .RW != true then
 				error("Cannot migrate a read-only managed Docs mount: " + .Destination)
-			elif $managed == null and (managed | keys | any(beneath($m.Destination; .) or beneath(.; $m.Destination))) then
-				error("Docs mount overlaps a managed data path: " + .Destination)
+			elif $managed == null and (managed | keys | any(beneath(.; $m.Destination))) then
+				error("Docs mount hides a managed data path: " + .Destination)
 			elif (($spec.BindOptions // {} | del(.Propagation, .CreateMountpoint)) | length) > 0 then
 				error("Unsupported bind options at " + .Destination)
 			elif ($modes - ["rw", "ro", "z", "Z", "private", "rprivate", "shared", "rshared", "slave", "rslave", "cached", "delegated", "consistent", "nocopy"] | length) > 0 then
@@ -99,7 +103,7 @@ plan_document_server_mounts () {
 			else . end |
 			{
 				type: .Type, source: (if .Type == "volume" then .Name else .Source end),
-				target: .Destination, read_only: (.RW | not), managed: $managed,
+				target: .Destination, read_only: (.RW | not), managed: $managed, subdir: $subdir,
 				propagation: ([$spec.BindOptions.Propagation, .Propagation] | map(select(. != null and . != "")) | first // "rprivate"),
 				selinux: ($modes | map(select(. == "z" or . == "Z")) | first // null),
 				consistency: ($modes | map(select(. == "cached" or . == "delegated" or . == "consistent")) | first // null),
@@ -404,12 +408,13 @@ migrate_document_server_data () {
 	done < <(jq -r '.[] | select(.managed != null and .type == "volume") | .source' <<<"${DS_MOUNT_PLAN}")
 	docker stop "${DS_ORIGINAL_ID}" >/dev/null || return 1
 
-	local MOUNT TYPE SRC SUBPATH NAME SOURCE_PATH TARGET_PATH
+	local MOUNT TYPE SRC SUBPATH NAME DEST_SUBDIR SOURCE_PATH TARGET_PATH
 	while IFS= read -r MOUNT; do
 		TYPE=$(jq -r '.type' <<<"${MOUNT}")
 		SRC=$(jq -r '.source' <<<"${MOUNT}")
 		SUBPATH=$(jq -r '.subpath // empty' <<<"${MOUNT}")
 		NAME=$(jq -r '.managed' <<<"${MOUNT}")
+		DEST_SUBDIR=$(jq -r '.subdir' <<<"${MOUNT}")
 		if [ "${TYPE}" = volume ]; then
 			SOURCE_PATH=$(docker volume inspect --format '{{.Mountpoint}}' "${SRC}") || return 1
 			[ -z "${SUBPATH}" ] || SOURCE_PATH+="/${SUBPATH}"
@@ -418,6 +423,10 @@ migrate_document_server_data () {
 		fi
 		[ -d "${SOURCE_PATH}" ] || { echo "Docs data directory is inaccessible: ${SOURCE_PATH}" >&2; return 1; }
 		TARGET_PATH=$(resolve_ds_volume_path "${NAME}") || return 1
+		if [ -n "${DEST_SUBDIR}" ]; then
+			TARGET_PATH+="/${DEST_SUBDIR}"
+			mkdir -p -- "${TARGET_PATH}" || return 1
+		fi
 		[ "${SOURCE_PATH}" -ef "${TARGET_PATH}" ] && continue
 		SOURCE_PATH=$(readlink -f "${SOURCE_PATH}") || return 1
 		TARGET_PATH=$(readlink -f "${TARGET_PATH}") || return 1
@@ -426,7 +435,7 @@ migrate_document_server_data () {
 			echo "Failed to copy Docs data from ${SOURCE_PATH}; keeping the original container." >&2
 			return 1
 		}
-	done < <(jq -c '.[] | select(.managed != null)' <<<"${DS_MOUNT_PLAN}")
+	done < <(jq -c '[.[] | select(.managed != null)] | sort_by(.target | length)[]' <<<"${DS_MOUNT_PLAN}")
 
 
 	if [ "${DS_NEW_CONTAINER_NAME}" = "${DS_ORIGINAL_NAME}" ]; then
