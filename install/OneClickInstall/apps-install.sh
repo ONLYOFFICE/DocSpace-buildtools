@@ -121,9 +121,33 @@ read_installation_method() {
     done
 }
 
+reject_method_override() {
+    local found_method="DEB/RPM packages" requested_method="Docker" found_arg="package"
+    [ "$DOCKER" == "true" ] && found_method="Docker containers" && found_arg="docker"
+    [ "$USER_DOCKER" == "false" ] && requested_method="DEB/RPM packages"
+
+    local requested_arg="docker"
+    [ "$USER_DOCKER" == "false" ] && requested_arg="package"
+
+    {
+        echo "You requested the ${requested_method} installation, but an existing installation uses ${found_method}."
+        echo "To switch to ${requested_method}:"
+        echo "  1. Remove the existing installation:"
+        echo "       bash $FILE_NAME ${found_arg} -uni true"
+        echo "  2. Install ${requested_method}:"
+        echo "       bash $FILE_NAME ${requested_arg}"
+        echo "To update the existing installation instead:"
+        echo "  bash $FILE_NAME ${found_arg}"
+    } >&2
+    exit 1
+}
+
 root_checking
 
 is_command_exists curl || install_curl
+
+# Remember the method explicitly requested via 'docker' / 'package'.
+USER_DOCKER="$DOCKER"
 
 # Infer install method from existing packages/containers.
 if is_command_exists docker && docker ps -a --format '{{.Names}}' | grep -qE "${PRODUCT_SYSNAME}-api|${PRODUCT_SYSNAME}-dotnet-services|${PRODUCT_SYSNAME}-apps"; then
@@ -152,6 +176,10 @@ else
         fi
         break
     done
+fi
+
+if [ -n "$USER_DOCKER" ] && [ -n "$DOCKER" ] && [ "$USER_DOCKER" != "$DOCKER" ]; then
+    reject_method_override
 fi
 
 [ -z "$DOCKER" ] && read_installation_method
