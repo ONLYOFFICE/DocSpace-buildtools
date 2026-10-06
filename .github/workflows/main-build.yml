@@ -71,15 +71,47 @@ jobs:
         timeout-minutes: 90
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          BASE_BRANCH: ${{ matrix.branch }}
+          SERVICE: ${{ matrix.service }}
+          PRODUCT_VERSION: ${{ env.PRODUCT_VERSION }}
+          BUILD_NUMBER: ${{ github.run_number }}
         run: |
-          cd .${DOCKER_PATH}
-          docker buildx bake -f build/build.hcl ${{ matrix.service }}-services \
-            --set "*.args.GIT_BRANCH=${{ matrix.branch }}" \
-            --set "*.args.PRODUCT_VERSION=${{ env.PRODUCT_VERSION }}" \
-            --set "*.args.BUILD_NUMBER=${{ github.run_number }}" \
+          set -euo pipefail
+
+          cd ".${DOCKER_PATH}"
+
+          BAKE_TARGET="${SERVICE}-services"
+
+          # Temporary compatibility:
+          # release/v3.8.0 and develop use community-services.
+          # release/v4.0.0 uses standalone-services.
+          if [[ "$SERVICE" == "standalone" &&
+                ( "$BASE_BRANCH" == release/v3.8.0* ||
+                  "$BASE_BRANCH" == hotfix/v3.8.* ) ]]; then
+                  BAKE_TARGET="community-services"
+          fi
+
+          echo "Branch:      ${BASE_BRANCH}"
+          echo "Service:     ${SERVICE}"
+          echo "Bake target: ${BAKE_TARGET}"
+
+          # Validate every target before starting the multiarch build.
+          docker buildx bake \
+            -f build/build.hcl \
+            "$BAKE_TARGET" \
+            --print >/dev/null
+
+          docker buildx bake \
+            -f build/build.hcl \
+            "$BAKE_TARGET" \
+            --set "*.args.GIT_BRANCH=${BASE_BRANCH}" \
+            --set "*.args.PRODUCT_VERSION=${PRODUCT_VERSION}" \
+            --set "*.args.BUILD_NUMBER=${BUILD_NUMBER}" \
             --set "*.platform=linux/amd64,linux/arm64" \
             --set "*.secrets=id=github_token,env=GITHUB_TOKEN" \
-            --sbom=true --provenance=mode=max --push
+            --sbom=true \
+            --provenance=mode=max \
+            --push
           
           # Clean up disk space after build
           printf '%.0s=' {1..80}; echo -e "\nDISK SPACE AFTER BUILD $(echo ${{ matrix.service }} | tr '[:lower:]' '[:upper:]')"; df -h; docker system df; printf '%.0s=' {1..80}; echo
