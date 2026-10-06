@@ -135,6 +135,8 @@ jobs:
 
       - name: Job summary
         if: ${{ !cancelled() }}
+        env:
+          JOB_STATUS: ${{ job.status }}
         run: bash .github/scripts/docker-utils.sh summary
 
       - name: Print logs for crashed containers
@@ -252,6 +254,8 @@ jobs:
 
       - name: Job summary
         if: ${{ !cancelled() }}
+        env:
+          JOB_STATUS: ${{ job.status }}
         run: bash .github/scripts/docker-utils.sh summary
 
       - name: Print logs for crashed containers

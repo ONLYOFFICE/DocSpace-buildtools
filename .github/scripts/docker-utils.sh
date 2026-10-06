@@ -52,12 +52,20 @@ print_logs() {
   fi
 }
 
+# Every step collects its part of the job summary here; publish_summary decides at the end
+SUMMARY_STAGING="${STATE_DIR}/summary-staging.md"
+
 summary_append() {
-  if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
-    cat >> "$GITHUB_STEP_SUMMARY"
-  else
-    cat > /dev/null
+  cat >> "$SUMMARY_STAGING"
+}
+
+# Publishes the collected summary only when something is wrong: a failed job, or a section that is open
+publish_summary() {
+  [ -f "$SUMMARY_STAGING" ] || return 0
+  if [ "${JOB_STATUS:-success}" != "success" ] || grep -q '<details open' "$SUMMARY_STAGING"; then
+    [ -z "${GITHUB_STEP_SUMMARY:-}" ] || cat "$SUMMARY_STAGING" >> "$GITHUB_STEP_SUMMARY"
   fi
+  rm -f "$SUMMARY_STAGING"
 }
 
 # Pads a summary title with non-breaking spaces to the width used by the smoke test lines
@@ -173,7 +181,7 @@ smoke_test() {
   DEPLOYMENT_MODE=$(detect_mode)
   export DEPLOYMENT_MODE
   export SMOKE_STATE_FILE="${SMOKE_STATE_FILE:-${STATE_DIR}/smoke-state.json}"
-  export SMOKE_SUMMARY_FILE="${GITHUB_STEP_SUMMARY:-}"
+  export SMOKE_SUMMARY_FILE="$SUMMARY_STAGING"
   if [ "$DEPLOYMENT_MODE" != "standalone" ]; then
     DASHBOARDS_USERNAME=$(env_value DASHBOARDS_USERNAME)
     DASHBOARDS_PASSWORD=$(env_value DASHBOARDS_PASSWORD)
@@ -220,8 +228,10 @@ log_audit() {
     fi
     # OpenSearch prints ERROR lines of its own plugins during a normal start
     case "$NAME" in *-opensearch) continue ;; esac
-    LOG_LINES=$(docker logs --tail 2000 "$NAME" 2>&1)
-    ERROR_LINES=$({ grep -E "$PATTERN" <<< "$LOG_LINES"; grep -iE "$CRASH_PATTERN" <<< "$LOG_LINES"; } | awk '!seen[$0]++' || true)
+    # a container removed in the meantime must not stop the audit of the others
+    LOG_LINES=$(docker logs --tail 2000 "$NAME" 2>&1) || true
+    # both passes keep the order of the log; a line found by both passes is listed once
+    ERROR_LINES=$({ grep -nE "$PATTERN" <<< "$LOG_LINES"; grep -niE "$CRASH_PATTERN" <<< "$LOG_LINES"; } | sort -t: -k1,1n -u | cut -d: -f2- || true)
     MATCHES=$(grep -c . <<< "$ERROR_LINES" || true)
     if [ "$MATCHES" -gt 0 ]; then
       # the first line goes to the summary without characters that break a table cell
@@ -289,6 +299,7 @@ write_summary() {
     echo "</details>"
     echo
   } | summary_append
+  publish_summary
 }
 
 install_previous() {
