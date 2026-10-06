@@ -131,6 +131,17 @@ esac
     systemctl disable --now firewalld 2>/dev/null || true
   fi
 
+  # Permanently disable apt's background auto-update machinery for the lifetime of this
+  # disposable VM - it randomly grabs the dpkg frontend lock (via unattended-upgrades) mid-test
+  # and "systemctl stop" alone doesn't kill an already-running unattended-upgrade process
+  if command -v apt-get >/dev/null 2>&1; then
+    systemctl disable --now apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service unattended-upgrades.service 2>/dev/null || true
+    systemctl mask apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service unattended-upgrades.service 2>/dev/null || true
+    pkill -TERM -f '/usr/bin/unattended-upgrade' >/dev/null 2>&1 || true
+    sleep 2
+    pkill -KILL -f '/usr/bin/unattended-upgrade' >/dev/null 2>&1 || true
+  fi
+
   # Clean up home folder
   rm -rf /home/vagrant/*
   [ -d /tmp/apps ] && mv /tmp/apps/* /home/vagrant

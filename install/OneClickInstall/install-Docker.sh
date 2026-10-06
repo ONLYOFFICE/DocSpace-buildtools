@@ -124,17 +124,44 @@ if [[ -n "${GIT_BRANCH:-}" ]]; then
   DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${PACKAGE_SYSNAME^^}/${LEGACY_PRODUCT}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
 fi
 
-if [[ "$LOCAL_SCRIPTS" = "true" ]] || [[ "$OFFLINE_INSTALLATION" = "true" ]]; then source "./${ARGS_SCRIPT}"; else source <(curl "${DOWNLOAD_URL_PREFIX}/${ARGS_SCRIPT}"); fi
+if [[ "$LOCAL_SCRIPTS" = "true" ]] || [[ "$OFFLINE_INSTALLATION" = "true" ]]; then
+	source "./${ARGS_SCRIPT}"
+else
+	ARGS_SCRIPT_TMP="$(mktemp)"
+	trap 'rm -f "${ARGS_SCRIPT_TMP:-}"' EXIT
+	curl -fsSL --retry 3 --retry-delay 2 "${DOWNLOAD_URL_PREFIX}/${ARGS_SCRIPT}" -o "${ARGS_SCRIPT_TMP}" || { echo "Failed to download ${ARGS_SCRIPT}" >&2; exit 1; }
+	bash -n "${ARGS_SCRIPT_TMP}" || { echo "Downloaded ${ARGS_SCRIPT} has invalid Bash syntax" >&2; exit 1; }
+	source "${ARGS_SCRIPT_TMP}"
+	rm -f "${ARGS_SCRIPT_TMP}"
+fi
+
+# Load the Docs lifecycle helpers for fresh installs, adoption and later updates.
+DOCS_SCRIPT="install-Docker-docs.sh"
+if [[ "$LOCAL_SCRIPTS" = "true" ]] || [[ "$OFFLINE_INSTALLATION" = "true" ]]; then
+	source "$(dirname "${BASH_SOURCE[0]}")/${DOCS_SCRIPT}" || exit 1
+else
+	DOCS_SCRIPT_TMP="$(mktemp)" || exit 1
+	if ! curl -fsSL --retry 3 --retry-delay 2 "${DOWNLOAD_URL_PREFIX}/${DOCS_SCRIPT}" -o "${DOCS_SCRIPT_TMP}"; then
+		rm -f "${DOCS_SCRIPT_TMP}"
+		echo "Failed to download ${DOCS_SCRIPT}" >&2
+		exit 1
+	fi
+	if ! bash -n "${DOCS_SCRIPT_TMP}"; then
+		rm -f "${DOCS_SCRIPT_TMP}"
+		echo "Downloaded ${DOCS_SCRIPT} has invalid Bash syntax" >&2
+		exit 1
+	fi
+	source "${DOCS_SCRIPT_TMP}"
+	rm -f "${DOCS_SCRIPT_TMP}"
+fi
 
 select_deployment_mode () {
   case "${DEPLOYMENT_MODE}" in
-    community)
+    standalone)
       CONTAINER_NAME="${PACKAGE_SYSNAME}-${PRODUCT}"
       IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}${PRODUCT}"
       SERVICES=("${PRODUCT}")
       COMPOSE_FILES=(-f "${BASE_DIR}/docker-compose.yml")
-      { [ "$INSTALL_RABBITMQ" = "true" ] || [ "$INSTALL_REDIS" = "true" ]; } && \
-        echo "Note: --installrabbitmq/--installredis are ignored in --deployment-mode community (no separate Redis/RabbitMQ containers)."
       ;;
     stack)
       CONTAINER_NAME="${PACKAGE_SYSNAME}-dotnet-services"
@@ -161,11 +188,11 @@ detect_current_deployment_mode () {
 	is_command_exists docker || return 0
 
 	if [ -n "$(docker ps -a -q -f "name=^${PACKAGE_SYSNAME}-${PRODUCT}$")" ]; then
-		CURRENT_DEPLOYMENT_MODE="community"
+		CURRENT_DEPLOYMENT_MODE="standalone"
 	elif [ -n "$(docker ps -a -q -f "name=^${PACKAGE_SYSNAME}-dotnet-services$")" ]; then
 		CURRENT_DEPLOYMENT_MODE="stack"
 	elif [ -n "$(docker ps -a -q -f "name=^${PACKAGE_SYSNAME}-api$")" ]; then
-		CURRENT_DEPLOYMENT_MODE="standard"
+		CURRENT_DEPLOYMENT_MODE="microservices"
 	fi
 
 	if [ -n "${CURRENT_DEPLOYMENT_MODE}" ] && [ "${DEPLOYMENT_MODE_SET}" != "true" ] && [ "${DEPLOYMENT_MODE}" != "${CURRENT_DEPLOYMENT_MODE}" ]; then
@@ -180,38 +207,36 @@ uninstall() {
 
     DOCKER_COMPOSE="$(docker compose version >/dev/null 2>&1 && echo 'docker compose' || echo 'docker-compose')"
 
-    if [ "${DEPLOYMENT_MODE}" = "community" ]; then
-        echo "Uninstallation of ${PRODUCT_NAME} (community)..."
-        COMMUNITY_FILES=("${COMPOSE_FILES[@]}")
-        [ -f "${BASE_DIR}/ssl.yml" ] && COMMUNITY_FILES+=(-f "${BASE_DIR}/ssl.yml")
+    if [ "${DEPLOYMENT_MODE}" = "standalone" ]; then
+        echo "Uninstallation of ${PRODUCT_NAME} (standalone)..."
 
         read -p "Also remove data volumes (mysql, opensearch, documents)? (Y/n): " REMOVE_DATA_SERVICES
         DOWN_ARGS=(down)
         [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]] && DOWN_ARGS+=(-v)
-        ${DOCKER_COMPOSE} "${COMMUNITY_FILES[@]}" "${DOWN_ARGS[@]}" || echo "Failed to remove ${PRODUCT_NAME}."
+        compose_with_document_server_mounts "${COMPOSE_FILES[@]}" "${DOWN_ARGS[@]}" || echo "Failed to remove ${PRODUCT_NAME}."
     else
         read -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " REMOVE_DATA_SERVICES
+        DOWN_ARGS=(down)
 
         if [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]]; then
             SERVICES+=("db" "rabbitmq" "redis" "opensearch" "dashboards" "fluent")
+            DOWN_ARGS+=(-v)
         fi
 
         for SERVICE in "${SERVICES[@]}" "ds"; do
             if [[ -f "$BASE_DIR/$SERVICE.yml" ]]; then
-                echo "Uninstallation of  $SERVICE and its volumes..."
-                ${DOCKER_COMPOSE} -f "$BASE_DIR/$SERVICE.yml" down -v || echo "Failed to remove $SERVICE."
+                echo "Uninstallation of $SERVICE..."
+                compose_with_document_server_mounts -f "$BASE_DIR/$SERVICE.yml" "${DOWN_ARGS[@]}" || echo "Failed to remove $SERVICE."
             fi
         done
     fi
 
 	docker network rm "${NETWORK_NAME}" 2>/dev/null || echo "Failed to remove network ${NETWORK_NAME}."
 
-	read -p "Do you want to retain data (keep .env file)? (Y/n): " KEEP_DATA
+	read -p "Keep configuration and Docs data for reinstallation? (Y/n): " KEEP_DATA
 
 	if ! docker network inspect "${NETWORK_NAME}" >/dev/null 2>&1 && [[ -d "$BASE_DIR" ]]; then
-		if [[ "${KEEP_DATA,,}" =~ ^(y|yes)?$ ]]; then
-			find "$BASE_DIR" -mindepth 1 ! -name ".env" -exec rm -rf {} +
-		else
+		if [[ ! "${KEEP_DATA,,}" =~ ^(y|yes)?$ ]]; then
 			rm -rf "$BASE_DIR" || echo "Failed to remove directory $BASE_DIR."
 		fi
 	fi
@@ -331,8 +356,16 @@ check_hardware () {
 	fi
 
 	if [ -n "${requirements_not_met}" ]; then
-		printf "Minimal requirements are not met, your system needs:%b\n\nTo skip this check, use the --skiphardwarecheck true parameter\n" "${requirements_not_met}"
-		exit 1
+		printf "Minimal requirements are not met, your system needs:%b\n\n" "${requirements_not_met}"
+
+		# Without a terminal or in non-interactive mode there is nobody to ask
+		if [ "${NON_INTERACTIVE:-false}" = "true" ] || [ ! -t 0 ]; then
+			echo "To skip this check, use the --skiphardwarecheck true parameter"
+			exit 1
+		fi
+
+		read -r -p "Continue installation anyway? (y/N): " CONTINUE_CHOICE
+		[[ "${CONTINUE_CHOICE,,}" =~ ^(y|yes)$ ]] || exit 1
 	fi
 }
 
@@ -354,19 +387,33 @@ install_package () {
 }
 
 install_docker_compose () {
-	curl -sL "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/bin/docker-compose
-	chmod +x /usr/bin/docker-compose && DOCKER_COMPOSE="docker-compose"
+	local COMPOSE_ASSET COMPOSE_URL COMPOSE_TMP COMPOSE_SHA_TMP
+
+	COMPOSE_ASSET="docker-compose-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)"
+	COMPOSE_URL="https://github.com/docker/compose/releases/latest/download/${COMPOSE_ASSET}"
+	COMPOSE_TMP="$(mktemp)"
+	COMPOSE_SHA_TMP="$(mktemp)"
+
+	curl -fsSL --retry 3 --retry-delay 2 "${COMPOSE_URL}" -o "${COMPOSE_TMP}" || { rm -f "${COMPOSE_TMP}" "${COMPOSE_SHA_TMP}"; return 1; }
+	curl -fsSL --retry 3 --retry-delay 2 "${COMPOSE_URL}.sha256" -o "${COMPOSE_SHA_TMP}" || { rm -f "${COMPOSE_TMP}" "${COMPOSE_SHA_TMP}"; return 1; }
+	awk '{print $1 "  '"${COMPOSE_TMP}"'"}' "${COMPOSE_SHA_TMP}" | sha256sum -c - || { rm -f "${COMPOSE_TMP}" "${COMPOSE_SHA_TMP}"; return 1; }
+	install -m 755 "${COMPOSE_TMP}" /usr/bin/docker-compose
+	rm -f "${COMPOSE_TMP}" "${COMPOSE_SHA_TMP}"
+	DOCKER_COMPOSE="docker-compose"
 }
 
 check_ports () {
 	RESERVED_PORTS=()
 	ARRAY_PORTS=()
 	USED_PORTS=""
+	EXTERNAL_PORT_NUM=""
+	EXTERNAL_PORT_HTTPS_NUM=""
 
-	if [ "${EXTERNAL_PORT//[0-9]}" = "" ]; then
+	if [[ "${EXTERNAL_PORT}" =~ ^[0-9]+$ ]] && (( 10#$EXTERNAL_PORT >= 1 && 10#$EXTERNAL_PORT <= 65535 )); then
+		EXTERNAL_PORT_NUM=$((10#$EXTERNAL_PORT))
 		for RESERVED_PORT in "${RESERVED_PORTS[@]}"
 		do
-			if [ "$RESERVED_PORT" -eq "$EXTERNAL_PORT" ] ; then
+			if [ "$RESERVED_PORT" -eq "$EXTERNAL_PORT_NUM" ] ; then
 				echo "External port $EXTERNAL_PORT is reserved. Select another port"
 				exit 1
 			fi
@@ -376,10 +423,11 @@ check_ports () {
 		exit 1
 	fi
 
-	if [ "${EXTERNAL_PORT_HTTPS//[0-9]}" = "" ]; then
+	if [[ "${EXTERNAL_PORT_HTTPS}" =~ ^[0-9]+$ ]] && (( 10#$EXTERNAL_PORT_HTTPS >= 1 && 10#$EXTERNAL_PORT_HTTPS <= 65535 )); then
+		EXTERNAL_PORT_HTTPS_NUM=$((10#$EXTERNAL_PORT_HTTPS))
 		for RESERVED_PORT in "${RESERVED_PORTS[@]}"
 		do
-			if [ "$RESERVED_PORT" -eq "$EXTERNAL_PORT_HTTPS" ] ; then
+			if [ "$RESERVED_PORT" -eq "$EXTERNAL_PORT_HTTPS_NUM" ] ; then
 				echo "External HTTPS port $EXTERNAL_PORT_HTTPS is reserved. Select another port"
 				exit 1
 			fi
@@ -390,9 +438,10 @@ check_ports () {
 	fi
 
 	if [ "$INSTALL_PRODUCT" == "true" ]; then
-		ARRAY_PORTS+=("$EXTERNAL_PORT")
-		if [[ -n "$CERTIFICATE_PATH" ]] || [[ -n "$LETS_ENCRYPT_DOMAIN" ]]; then
-			ARRAY_PORTS+=("$EXTERNAL_PORT_HTTPS")
+		ARRAY_PORTS+=("$EXTERNAL_PORT_NUM")
+		# Standalone always publishes HTTPS.
+		if [[ -n "$CERTIFICATE_PATH" ]] || [[ -n "$LETS_ENCRYPT_DOMAIN" ]] || [ "${DEPLOYMENT_MODE}" = "standalone" ]; then
+			ARRAY_PORTS+=("$EXTERNAL_PORT_HTTPS_NUM")
 		fi
 	fi
 
@@ -477,8 +526,11 @@ create_network () {
 }
 
 domain_check () {
-	APP_DOMAIN_PORTAL=$(cut -d ',' -f 1 <<< "$LETS_ENCRYPT_DOMAIN")
+	# Keep any domain detected from an existing Docs container.
+	APP_DOMAIN_PORTAL=${APP_DOMAIN_PORTAL:-$(cut -d ',' -f 1 <<< "$LETS_ENCRYPT_DOMAIN")}
 	APP_DOMAIN_PORTAL=${APP_DOMAIN_PORTAL:-${APP_URL_PORTAL:-$(get_env_parameter "APP_URL_PORTAL" "${PACKAGE_SYSNAME}-files" | awk -F[/:] '{if ($1 == "https") print $4; else print ""}')}}
+	# Standalone's external HTTPS domain lives in SSL_DOMAIN.
+	APP_DOMAIN_PORTAL=${APP_DOMAIN_PORTAL:-$(get_env_parameter "SSL_DOMAIN" "${PACKAGE_SYSNAME}-${PRODUCT}" | cut -d ',' -f 1)}
 	APP_URL_PORTAL=${APP_DOMAIN_PORTAL:+http://${APP_DOMAIN_PORTAL}:${EXTERNAL_PORT}}
 }
 
@@ -491,6 +543,8 @@ establish_conn() {
 get_env_parameter () {
 	local PARAMETER_NAME=$1
 	local CONTAINER_NAME=$2
+	local CONTAINER_EXIST=""
+	local VALUE=""
 
 	if [[ -z ${PARAMETER_NAME} ]]; then
 		echo "Empty parameter name"
@@ -501,15 +555,15 @@ get_env_parameter () {
 		[ -n "$CONTAINER_NAME" ] && CONTAINER_EXIST=$(docker ps -aqf "name=$CONTAINER_NAME")
 
 		if [[ -n ${CONTAINER_EXIST} ]]; then
-			VALUE=$(docker inspect --format='{{range .Config.Env}}{{println .}}{{end}}' ${CONTAINER_NAME} | grep "${PARAMETER_NAME}=" | sed 's/^.*=//')
+			VALUE=$(docker inspect --format='{{range .Config.Env}}{{println .}}{{end}}' "${CONTAINER_NAME}" | awk -v key="${PARAMETER_NAME}" '{ eq=index($0,"="); name=substr($0,1,eq-1); gsub(/^[ \t]+|[ \t]+$/,"",name); if (eq && name == key) { print substr($0,eq+1); exit } }')
 		fi
 	fi
 
-	if [ -z ${VALUE} ] && [ -f ${BASE_DIR}/.env ]; then
-		VALUE=$(awk -F= "/${PARAMETER_NAME}/ {print \$2}" ${BASE_DIR}/.env | tr -d '\r')
+	if [ -z "${VALUE}" ] && [ -f "${BASE_DIR}/.env" ]; then
+		VALUE=$(awk -v key="${PARAMETER_NAME}" '{ eq=index($0,"="); name=substr($0,1,eq-1); gsub(/^[ \t]+|[ \t]+$/,"",name); if (eq && name == key) { print substr($0,eq+1); exit } }' "${BASE_DIR}/.env" | tr -d '\r')
 	fi
 
-	echo ${VALUE//\"}
+	printf '%s\n' "${VALUE//\"/}"
 }
 
 get_tag_from_registry () {
@@ -544,8 +598,9 @@ get_available_version () {
 
 	VERSION_REGEX='^[0-9]+\.[0-9]+(\.[0-9]+){0,2}$'
 	[ ${#TAGS_RESP[@]} -eq 1 ] && LATEST_TAG="${TAGS_RESP[0]}" || \
-    LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$([[ $GIT_BRANCH == "develop" && -n $STATUS ]] && echo '^develop\.[0-9]+$' || echo "$VERSION_REGEX")" | sort -V | tail -n 1)
-	LATEST_TAG=${LATEST_TAG:-${STATUS:+$(printf "%s\n" "${TAGS_RESP[@]}" | sort -V | tail -n 1)}} #Fix for 4testing develop tags
+		LATEST_TAG=$(printf "%s\n" "${TAGS_RESP[@]}" | grep -E "$([[ $GIT_BRANCH == "develop" && -n $STATUS ]] && echo '^develop\.[0-9]+$' || echo "$VERSION_REGEX")" | sort -V | tail -n 1)
+	# Fallback for 4testing develop tags.
+	LATEST_TAG=${LATEST_TAG:-${STATUS:+$(printf "%s\n" "${TAGS_RESP[@]}" | sort -V | tail -n 1)}}
 
 	if [ ! -z "${LATEST_TAG}" ]; then
 		echo "${LATEST_TAG}" | sed "s/\"//g"
@@ -559,116 +614,12 @@ get_available_version () {
 	fi
 }
 
-# Ports are immutable on a running container, so recreate it on our network without them; rename+stop first so a failed docker run can be rolled back instead of destroying it.
-recreate_document_server_container () {
-	local CONTAINER="$1"
-	local BACKUP="${CONTAINER}-recreate-backup"
-	local IMAGE RESTART_POLICY VAR SRC DEST LINE
-	local ENV_ARGS=() MOUNT_ARGS=() RUN_ARGS=()
-
-	IMAGE=$(docker inspect --format '{{.Config.Image}}' "${CONTAINER}")
-	RESTART_POLICY=$(docker inspect --format '{{.HostConfig.RestartPolicy.Name}}' "${CONTAINER}")
-
-	while IFS= read -r VAR; do [ -n "${VAR}" ] && ENV_ARGS+=(-e "${VAR}"); done \
-		< <(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "${CONTAINER}")
-
-	# For a named/anonymous volume, use its name (not .Source's internal /var/lib/docker/volumes/<hash>/_data path) so it stays a real, prunable-by-name volume instead of a pinned bind mount.
-	while IFS= read -r LINE; do
-		SRC="${LINE%%$'\t'*}"; DEST="${LINE#*$'\t'}"
-		[ -n "${SRC}" ] && MOUNT_ARGS+=(-v "${SRC}:${DEST}")
-	done < <(docker inspect --format '{{range .Mounts}}{{if eq .Type "volume"}}{{.Name}}{{else}}{{.Source}}{{end}}{{"\t"}}{{.Destination}}{{"\n"}}{{end}}' "${CONTAINER}")
-
-	echo "Recreating ${CONTAINER} on our network without its conflicting published ports..."
-	docker rename "${CONTAINER}" "${BACKUP}" || return 1
-	docker stop "${BACKUP}" >/dev/null 2>&1
-
-	RUN_ARGS=(--name "${CONTAINER}" --network "${NETWORK_NAME}" --restart="${RESTART_POLICY:-always}")
-
-	if docker run -d "${RUN_ARGS[@]}" "${ENV_ARGS[@]}" "${MOUNT_ARGS[@]}" "${IMAGE}" >/dev/null; then
-		docker rm -f "${BACKUP}" >/dev/null
-	else
-		echo "Failed to recreate ${CONTAINER}; restoring the original container." >&2
-		docker rename "${BACKUP}" "${CONTAINER}"
-		docker start "${CONTAINER}" >/dev/null 2>&1
-		return 1
-	fi
-}
-
-detect_existing_document_server () {
-	[ "${UPDATE}" = "true" ] && return 0
-	[ "${INSTALL_DOCUMENT_SERVER}" = "true" ] || return 0
-
-	local CONTAINER FOUND_IMAGE CANDIDATE
-	while read -r CANDIDATE FOUND_IMAGE; do
-		# Skip anything already compose-managed (e.g. our own previously-adopted DS on a later, non-update run) - only a raw `docker run` standalone install needs adopting.
-		[ -n "$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' "${CANDIDATE}" 2>/dev/null)" ] && continue
-		CONTAINER="${CANDIDATE}"
-		break
-	done < <(docker ps -a --format '{{.Names}} {{.Image}}' 2>/dev/null | awk -v pkg="${PACKAGE_SYSNAME}" '$2 ~ ("(^|/)"pkg"/documentserver(-de|-ee)?(:|$)") {print}')
-	[ -z "${CONTAINER}" ] && return 0
-
-	echo "Found an existing Document Server container (${CONTAINER}); attaching it instead of deploying a new one."
-
-	# Reuse the detected container's own edition and tag, not DOCUMENT_SERVER_IMAGE_NAME/VERSION (from INSTALLATION_TYPE/registry), so adopting it doesn't swap editions or force an upgrade.
-	DOCUMENT_SERVER_IMAGE_NAME="${FOUND_IMAGE}"
-	if [[ "${FOUND_IMAGE}" == *:* ]] && [[ "${FOUND_IMAGE##*:}" != */* ]]; then
-		# The "/" check rules out a registry:port prefix (e.g. myregistry.com:5000/...) with no tag.
-		DOCUMENT_SERVER_IMAGE_NAME="${FOUND_IMAGE%:*}"
-		DOCUMENT_SERVER_VERSION="${FOUND_IMAGE##*:}"
-	fi
-
-	# Network membership isn't check_ports' concern and ds.yml's own `up -d` joins our network anyway, so only a real port clash needs handling here.
-	local PORT_CONFLICT="false" PUBLISHED_PORTS
-	if [ "${INSTALL_PRODUCT}" == "true" ]; then
-		PUBLISHED_PORTS="$(docker port "${CONTAINER}" 2>/dev/null)"
-		grep -qE ":${EXTERNAL_PORT}$" <<<"${PUBLISHED_PORTS}" && PORT_CONFLICT="true"
-		if [[ -n "$CERTIFICATE_PATH" ]] || [[ -n "$LETS_ENCRYPT_DOMAIN" ]]; then
-			grep -qE ":${EXTERNAL_PORT_HTTPS}$" <<<"${PUBLISHED_PORTS}" && PORT_CONFLICT="true"
-		fi
-	fi
-
-	if [ "${PORT_CONFLICT}" = "true" ]; then
-		recreate_document_server_container "${CONTAINER}" || return 0
-	fi
-
-	DOCUMENT_SERVER_HOST="${CONTAINER}"
-	DOCUMENT_SERVER_PORT="80"
-	INSTALL_DOCUMENT_SERVER="false"
-	DOCUMENT_SERVER_ATTACHED="true"
-}
-
-set_docs_url_external () {
-	DOCUMENT_SERVER_URL_EXTERNAL=${DOCUMENT_SERVER_URL_EXTERNAL:-$(get_env_parameter "DOCUMENT_SERVER_URL_EXTERNAL" "${CONTAINER_NAME}")}
-
-	if [[ ! -z ${DOCUMENT_SERVER_URL_EXTERNAL} ]] && [[ $DOCUMENT_SERVER_URL_EXTERNAL =~ ^(https?://)?([^:/]+)(:([0-9]+))?(/.*)?$ ]]; then
-		[[ -z ${BASH_REMATCH[1]} ]] && DOCUMENT_SERVER_URL_EXTERNAL="http://$DOCUMENT_SERVER_URL_EXTERNAL"
-		DOCUMENT_SERVER_PROTOCOL="${BASH_REMATCH[1]}"
-		DOCUMENT_SERVER_HOST="${BASH_REMATCH[2]}"
-		DOCUMENT_SERVER_PORT="${BASH_REMATCH[4]:-"80"}"
-	fi
-}
-
-set_jwt_secret () {
-	DOCUMENT_SERVER_JWT_SECRET="${DOCUMENT_SERVER_JWT_SECRET:-$(get_env_parameter "JWT_SECRET" "${PACKAGE_SYSNAME}-document-server")}"
-	DOCUMENT_SERVER_JWT_SECRET="${DOCUMENT_SERVER_JWT_SECRET:-$(get_env_parameter "DOCUMENT_SERVER_JWT_SECRET" "${CONTAINER_NAME}")}"
-	[ "${DOCUMENT_SERVER_ATTACHED}" = "true" ] && \
-		DOCUMENT_SERVER_JWT_SECRET="${DOCUMENT_SERVER_JWT_SECRET:-$(get_env_parameter "JWT_SECRET" "${DOCUMENT_SERVER_HOST}")}"
-	DOCUMENT_SERVER_JWT_SECRET="${DOCUMENT_SERVER_JWT_SECRET:-$(get_random_str 32)}"
-}
-
-set_jwt_header () {
-	DOCUMENT_SERVER_JWT_HEADER="${DOCUMENT_SERVER_JWT_HEADER:-$(get_env_parameter "JWT_HEADER" "${PACKAGE_SYSNAME}-document-server")}"
-	DOCUMENT_SERVER_JWT_HEADER="${DOCUMENT_SERVER_JWT_HEADER:-$(get_env_parameter "DOCUMENT_SERVER_JWT_HEADER" "${CONTAINER_NAME}")}"
-	[ "${DOCUMENT_SERVER_ATTACHED}" = "true" ] && \
-		DOCUMENT_SERVER_JWT_HEADER="${DOCUMENT_SERVER_JWT_HEADER:-$(get_env_parameter "JWT_HEADER" "${DOCUMENT_SERVER_HOST}")}"
-	DOCUMENT_SERVER_JWT_HEADER="${DOCUMENT_SERVER_JWT_HEADER:-"AuthorizationJwt"}"
-}
-
 set_secrets () {
 	APP_CORE_MACHINEKEY="${APP_CORE_MACHINEKEY:-$(get_env_parameter "APP_CORE_MACHINEKEY" "${CONTAINER_NAME}")}"
 	[ "$UPDATE" != "true" ] && APP_CORE_MACHINEKEY="${APP_CORE_MACHINEKEY:-$(get_random_str 12)}"
 	IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-$(get_env_parameter "IDENTITY_ENCRYPTION_SECRET" "${IDENTITY_CONTAINER_NAME}")}"
-	[ "${UPDATE}" = "true" ] && IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-"secret"}" # (DS v3.1.0) fix encryption key generation issue
+	# (DS v3.1.0) Legacy update fallback for the encryption key.
+	[ "${UPDATE}" = "true" ] && IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-"secret"}"
 	IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-$(get_random_str 12)}"
 }
 
@@ -691,13 +642,19 @@ set_apps_params() {
 	ENV_EXTENSION=${ENV_EXTENSION:-$(get_env_parameter "ENV_EXTENSION" "${CONTAINER_NAME}")}
 	VOLUMES_DIR=${VOLUMES_DIR:-$(get_env_parameter "VOLUMES_DIR")}
 	APP_CORE_BASE_DOMAIN=${APP_CORE_BASE_DOMAIN:-$(get_env_parameter "APP_CORE_BASE_DOMAIN" "${CONTAINER_NAME}")}
-	EXTERNAL_PORT=${EXTERNAL_PORT:-$(get_env_parameter "EXTERNAL_PORT" "${CONTAINER_NAME}")}
-	EXTERNAL_PORT_HTTPS=${EXTERNAL_PORT_HTTPS:-$(get_env_parameter "EXTERNAL_PORT_HTTPS" "${CONTAINER_NAME}")}
+	if [ "${EXTERNAL_PORT_SET}" != true ]; then
+		EXTERNAL_PORT=$(get_env_parameter "EXTERNAL_PORT" "${CONTAINER_NAME}")
+		EXTERNAL_PORT=${EXTERNAL_PORT:-80}
+	fi
+	if [ "${EXTERNAL_PORT_HTTPS_SET}" != true ]; then
+		EXTERNAL_PORT_HTTPS=$(get_env_parameter "EXTERNAL_PORT_HTTPS" "${CONTAINER_NAME}")
+		EXTERNAL_PORT_HTTPS=${EXTERNAL_PORT_HTTPS:-443}
+	fi
 
 	PREVIOUS_ELK_VERSION=$(get_env_parameter "ELK_VERSION")
 	ELK_SCHEME=${ELK_SCHEME:-$(get_env_parameter "ELK_SCHEME" "${CONTAINER_NAME}")}
-    # (DS v3.2.0) fallback for legacy ELK_SHEME
-    ELK_SCHEME=${ELK_SCHEME:-$(get_env_parameter "ELK_SHEME" "${CONTAINER_NAME}")}
+	# (DS v3.2.0) Legacy ELK_SHEME typo fallback.
+	ELK_SCHEME=${ELK_SCHEME:-$(get_env_parameter "ELK_SHEME" "${CONTAINER_NAME}")}
 	ELK_HOST=${ELK_HOST:-$(get_env_parameter "ELK_HOST" "${CONTAINER_NAME}")}
 	ELK_PORT=${ELK_PORT:-$(get_env_parameter "ELK_PORT" "${CONTAINER_NAME}")}
 
@@ -724,6 +681,11 @@ set_apps_params() {
 set_installation_type_data () {
 	detect_current_deployment_mode
 	is_command_exists docker && UPDATE=${UPDATE:-$(test -n "${CURRENT_DEPLOYMENT_MODE}" && echo true)}
+	# An explicit --update without an installed product is a fresh install: otherwise Docs adoption, port checks and secret generation are skipped.
+	if [ "${UPDATE}" = "true" ] && [ -z "${CURRENT_DEPLOYMENT_MODE}" ]; then
+		echo "Warning: no existing ${PRODUCT_NAME} installation found; ignoring --update and performing a fresh install." >&2
+		UPDATE="false"
+	fi
 	if [ -z "${DOCUMENT_SERVER_IMAGE_NAME}" ]; then
 		DOCUMENT_SERVER_IMAGE_NAME="${PACKAGE_SYSNAME}/${STATUS}documentserver"
 		case "${INSTALLATION_TYPE}" in
@@ -734,32 +696,37 @@ set_installation_type_data () {
 }
 
 download_files () {
+	local DOCKER_TARBALL DOWNLOAD_URL STAGING_DIR ARCHIVE_FILE DOCS_FILE
+	local TAR_ARGS=()
+
 	case "${DEPLOYMENT_MODE}" in
-		community) DOCKER_TARBALL="docker-community.tar.gz" ;;
-		stack)     DOCKER_TARBALL="docker-stack.tar.gz" ;;
-		*)         DOCKER_TARBALL="docker.tar.gz" ;;
+		standalone) DOCKER_TARBALL="docker-standalone.tar.gz" ;;
+		stack)      DOCKER_TARBALL="docker-stack.tar.gz" ;;
+		*)          DOCKER_TARBALL="docker.tar.gz" ;;
 	esac
 
 	[ "${OFFLINE_INSTALLATION}" = "false" ] && echo -n "Downloading configuration files to ${BASE_DIR}..." || echo "Unzip ${DOCKER_TARBALL} to ${BASE_DIR}..."
 
-	[ -d "${BASE_DIR:?}" ] && find "${BASE_DIR}" -mindepth 1 -maxdepth 1 -not -name "DocumentServer" -not -name "ds.env" -exec rm -rf {} +
-	mkdir -p ${BASE_DIR}
+	STAGING_DIR="$(mktemp -d)" || return 1
+	ARCHIVE_FILE="${STAGING_DIR}/${DOCKER_TARBALL}"
+	trap 'rm -rf "${STAGING_DIR}"; trap - RETURN' RETURN
 
 	if [ "${OFFLINE_INSTALLATION}" = "false" ]; then
 		if [ -z "${GIT_BRANCH}" ]; then
 			DOWNLOAD_URL="https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/${DOCKER_TARBALL}"
 		else
 			DOWNLOAD_URL="https://codeload.github.com/${PACKAGE_SYSNAME}/${LEGACY_PRODUCT}-buildtools/tar.gz/${GIT_BRANCH}"
-			if [ "${DEPLOYMENT_MODE}" = "community" ]; then
-				STRIP_COMPONENTS="--strip-components=4 --wildcards */install/docker/community/*"
+			if [ "${DEPLOYMENT_MODE}" = "standalone" ]; then
+				TAR_ARGS=(--strip-components=4 --wildcards '*/install/docker/standalone/*')
 			else
-				STRIP_COMPONENTS="--strip-components=3 --wildcards */install/docker/*"
+				TAR_ARGS=(--strip-components=3 --wildcards '*/install/docker/*')
 			fi
 		fi
-		curl -sL "${DOWNLOAD_URL}" | tar -xzf - -C "${BASE_DIR}" ${STRIP_COMPONENTS}
+		curl -fsSL --retry 3 --retry-delay 2 "${DOWNLOAD_URL}" -o "${ARCHIVE_FILE}" || { echo "FAIL"; echo "Error: failed to download ${DOWNLOAD_URL}" >&2; return 1; }
+		tar -xzf "${ARCHIVE_FILE}" -C "${STAGING_DIR}" "${TAR_ARGS[@]}" || { echo "FAIL"; echo "Error: failed to unpack ${DOCKER_TARBALL}" >&2; return 1; }
 	else
 		if [ -f "$(dirname "$0")/${DOCKER_TARBALL}" ]; then
-			tar -xf "$(dirname "$0")/${DOCKER_TARBALL}" -C "${BASE_DIR}"
+			tar -xf "$(dirname "$0")/${DOCKER_TARBALL}" -C "${STAGING_DIR}" || { echo "FAIL"; echo "Error: failed to unpack ${DOCKER_TARBALL}" >&2; return 1; }
 		else
 			echo "Error: ${DOCKER_TARBALL} not found in the same directory as the script."
 			echo "You need to download the ${DOCKER_TARBALL} file from https://download.${PACKAGE_SYSNAME}.com/${PRODUCT}/${DOCKER_TARBALL}"
@@ -767,15 +734,53 @@ download_files () {
 		fi
 	fi
 
+	if [ ! -f "${STAGING_DIR}/.env" ]; then
+		echo "FAIL"
+		echo "Error: ${DOCKER_TARBALL} does not contain .env" >&2
+		return 1
+	fi
+
+	if [ "${DEPLOYMENT_MODE}" = "standalone" ]; then
+		[ -f "${STAGING_DIR}/docker-compose.yml" ] || { echo "FAIL"; echo "Error: ${DOCKER_TARBALL} does not contain docker-compose.yml" >&2; return 1; }
+	else
+		[ -f "${STAGING_DIR}/apps.yml" ] || { echo "FAIL"; echo "Error: ${DOCKER_TARBALL} does not contain apps.yml" >&2; return 1; }
+	fi
+
+	mkdir -p "${BASE_DIR}" "${STAGING_DIR}/config" || return 1
+	# Preserve only the adopted Docs settings; refresh all other config files.
+	rm -f -- "${STAGING_DIR}/config/ds.env" "${STAGING_DIR}/config/ds-mounts.json" || return 1
+	for DOCS_FILE in ds.env ds-mounts.json; do
+		if [ -f "${BASE_DIR}/config/${DOCS_FILE}" ]; then
+			cp -a -- "${BASE_DIR}/config/${DOCS_FILE}" "${STAGING_DIR}/config/" || return 1
+		fi
+	done
+	# Retain the staged settings for recovery if cleanup or copying fails.
+	trap 'echo "Error: configuration refresh failed; recovery files remain in ${STAGING_DIR}" >&2; trap - RETURN' RETURN
+	# Keep inherited certs across updates and mode switches.
+	find "${BASE_DIR:?}" -mindepth 1 -maxdepth 1 -not -name "DocumentServer" -not -name "certs" -exec rm -rf {} + || return 1
+	cp -a "${STAGING_DIR}/." "${BASE_DIR}/" || return 1
+	trap 'rm -rf "${STAGING_DIR}"; trap - RETURN' RETURN
+	rm -f "${BASE_DIR:?}/${DOCKER_TARBALL}"
+	chmod 600 "${BASE_DIR}/.env"
+
 	echo "OK"
 }
 
 reconfigure () {
 	local VARIABLE_NAME="$1"
 	local VARIABLE_VALUE="$2"
+	local ENV_FILE="${BASE_DIR}/.env"
+	local ENV_TMP
 
 	if [[ -n ${VARIABLE_VALUE} ]]; then
-		sed -i "s~${VARIABLE_NAME}=.*~${VARIABLE_NAME}=${VARIABLE_VALUE}~g" $BASE_DIR/.env
+		[[ "${VARIABLE_NAME}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || { echo "Invalid .env variable name: ${VARIABLE_NAME}" >&2; exit 1; }
+		[[ "${VARIABLE_VALUE}" != *$'\n'* && "${VARIABLE_VALUE}" != *$'\r'* ]] || { echo "Invalid multiline value for ${VARIABLE_NAME}" >&2; exit 1; }
+		[ -f "${ENV_FILE}" ] || { echo "Missing ${ENV_FILE}" >&2; exit 1; }
+
+		ENV_TMP="$(mktemp "${BASE_DIR}/.env.XXXXXX")"
+		awk -v key="${VARIABLE_NAME}" -v value="${VARIABLE_VALUE}" \
+			'{ eq=index($0,"="); name=substr($0,1,eq-1); indent=name; sub(/[^ \t].*$/,"",indent); gsub(/^[ \t]+|[ \t]+$/,"",name); if (!updated && eq && name == key) { print indent key "=" value; updated=1; next } print } END { if (!updated) print key "=" value }' \
+			"${ENV_FILE}" > "${ENV_TMP}" && mv -f "${ENV_TMP}" "${ENV_FILE}"
 	fi
 }
 
@@ -783,8 +788,8 @@ opensearch_set_heap_size () {
 	local TARGET_FILE="$1"
 	local SAFE_MEMORY HEAP
 
-	SAFE_MEMORY=$(( ( $(free --mega | grep -oP '\d+' | head -n 1) - 1024 ) / 2 )) # half of the remaining memory after the 1 GB reserve for the OS
-	HEAP=$(( SAFE_MEMORY < 2048 ? 1 : SAFE_MEMORY < 4096 ? 2 : 4 ))  #if <2GB → 1GB; <4GB → 2GB; otherwise → 4GB
+	SAFE_MEMORY=$(( ( $(free --mega | grep -oP '\d+' | head -n 1) - 1024 ) / 2 ))
+	HEAP=$(( SAFE_MEMORY < 2048 ? 1 : SAFE_MEMORY < 4096 ? 2 : 4 ))
 	sed -i "s/Xms[0-9]g/Xms${HEAP}g/g; s/Xmx[0-9]g/Xmx${HEAP}g/g" "${TARGET_FILE}"
 }
 
@@ -793,16 +798,15 @@ wait_mysql_healthy () {
 	(timeout 30 bash -c "while ! docker inspect --format '{{json .State.Health.Status }}' ${PACKAGE_SYSNAME}-mysql-server | grep -q 'healthy'; do sleep 1; done") && echo "OK" || echo "FAILED"
 }
 
-# (DS v4.0.0) DS's own uid isn't fixed, so leave wopi_private.key/wopi_public.key untouched or DS may lose read access to them.
+# (DS v4.0.0) Docs UID varies; keep WOPI keys readable.
 chown_excluding_wopi_keys () {
 	find "$2" \( -name wopi_private.key -o -name wopi_public.key \) -prune -o -exec chown "$1" {} +
 }
 
 chown_app_volumes () {
-	# (DS v3.8.0) Own app_data/log_data as the container's non-root user before starting app services; called again after `up -d` since some containers (e.g. fluent-bit) finish their own root-owned setup after reporting "Started" (fixes host binds and volumes left root-owned by older installs).
+	# (DS v3.8.0) Ensure app volumes are owned by the app user.
 	local VOLUME_OWNER="$(get_env_parameter "UID"):$(get_env_parameter "GID")"
 	if [ -n "${VOLUMES_DIR}" ]; then
-		# Pre-create studio's plugin dir and the products storage dir so Docs non-recursive chown of the shared root leaves them owned by the apps non-root user.
 		mkdir -p "${VOLUMES_DIR}/app_data/Studio" "${VOLUMES_DIR}/app_data/Products" "${VOLUMES_DIR}/log_data"
 		chown_excluding_wopi_keys "${VOLUME_OWNER}" "${VOLUMES_DIR}/app_data"
 		chown_excluding_wopi_keys "${VOLUME_OWNER}" "${VOLUMES_DIR}/log_data"
@@ -812,16 +816,19 @@ chown_app_volumes () {
 		local VOLUME_NAMES
 		mapfile -t VOLUME_NAMES < <(docker volume ls -q "${PROJECT_FILTER[@]}")
 
-		local DEFAULT_VOLUME_NAME
-		for DEFAULT_VOLUME_NAME in "${PROJECT_NAME}_app_data" "${PROJECT_NAME}_log_data"; do
-			docker volume inspect "${DEFAULT_VOLUME_NAME}" &>/dev/null || docker volume create "${DEFAULT_VOLUME_NAME}" &>/dev/null
+		local NAME DEFAULT_VOLUME_NAME
+		for NAME in app_data log_data; do
+			DEFAULT_VOLUME_NAME="${PROJECT_NAME}_${NAME}"
+			docker volume inspect "${DEFAULT_VOLUME_NAME}" &>/dev/null || docker volume create \
+				--label "com.docker.compose.project=${PROJECT_NAME}" \
+				--label "com.docker.compose.volume=${NAME}" \
+				"${DEFAULT_VOLUME_NAME}" >/dev/null || return 1
 			VOLUME_NAMES+=("${DEFAULT_VOLUME_NAME}")
 		done
 
 		mapfile -t VOLUME_NAMES < <(printf "%s\n" "${VOLUME_NAMES[@]}" | sort -u)
 		for VOLUME_NAME in "${VOLUME_NAMES[@]}"; do
 			local MOUNT_POINT="$(docker volume inspect --format '{{.Mountpoint}}' "${VOLUME_NAME}")"
-			# Pre-create studio's plugin dir and the products storage dir so Docs non-recursive chown of the shared root leaves them owned by the apps non-root user.
 			[[ "${VOLUME_NAME}" == *app_data ]] && mkdir -p "${MOUNT_POINT}/Studio" "${MOUNT_POINT}/Products"
 			chown_excluding_wopi_keys "${VOLUME_OWNER}" "${MOUNT_POINT}"
 		done
@@ -829,11 +836,11 @@ chown_app_volumes () {
 }
 
 install_mysql_server () {
-	reconfigure DATABASE_MIGRATION ${DATABASE_MIGRATION}
-	reconfigure MYSQL_DATABASE ${MYSQL_DATABASE}
-	reconfigure MYSQL_USER ${MYSQL_USER}
-	reconfigure MYSQL_PASSWORD ${MYSQL_PASSWORD}
-	reconfigure MYSQL_ROOT_PASSWORD ${MYSQL_ROOT_PASSWORD}
+	reconfigure DATABASE_MIGRATION "${DATABASE_MIGRATION}"
+	reconfigure MYSQL_DATABASE "${MYSQL_DATABASE}"
+	reconfigure MYSQL_USER "${MYSQL_USER}"
+	reconfigure MYSQL_PASSWORD "${MYSQL_PASSWORD}"
+	reconfigure MYSQL_ROOT_PASSWORD "${MYSQL_ROOT_PASSWORD}"
 
 	if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ]; then
 		if [ -n "${VOLUMES_DIR}" ]; then
@@ -844,109 +851,6 @@ install_mysql_server () {
 		${DOCKER_COMPOSE} -f ${BASE_DIR}/db.yml up -d --force-recreate
 	elif [ "$INSTALL_MYSQL_SERVER" == "pull" ]; then
 		${DOCKER_COMPOSE} -f ${BASE_DIR}/db.yml pull
-	fi
-}
-
-# Resolves where a shared ds.yml volume actually lives on the host - a VOLUMES_DIR bind path if the install uses one (created if missing), otherwise the named Docker volume's mountpoint (volume created if missing).
-resolve_ds_volume_path () {
-	local NAME="$1"
-	if [ -n "${VOLUMES_DIR}" ]; then
-		mkdir -p "${VOLUMES_DIR}/${NAME}"
-		echo "${VOLUMES_DIR}/${NAME}"
-	else
-		local PROJECT_NAME="${COMPOSE_PROJECT_NAME:-${PACKAGE_SYSNAME}}"
-		docker volume inspect "${PROJECT_NAME}_${NAME}" >/dev/null 2>&1 || docker volume create "${PROJECT_NAME}_${NAME}" >/dev/null
-		docker volume inspect --format '{{.Mountpoint}}' "${PROJECT_NAME}_${NAME}"
-	fi
-}
-
-# Moves a standalone DS's Data/logs/internal-state/DB onto the volumes ds.yml already declares, so the adopted container needs no compose override and starts through the same `ds.yml up -d` as a fresh install.
-# Fonts are migrated separately (see migrate_document_server_fonts), only after that first start, so Docker still populates ds_fonts with the image's own default fonts before we add the custom ones on top.
-migrate_document_server_data () {
-	# Community's own Data volume is named ds_data (app_data there is the portal's own data, a different mount).
-	local DATA_VOLUME_NAME="app_data"
-	[ "${DEPLOYMENT_MODE}" = "community" ] && DATA_VOLUME_NAME="ds_data"
-
-	local APP_DATA_MOUNTPOINT LOG_DATA_MOUNTPOINT DS_STATE_MOUNTPOINT DS_POSTGRESQL_MOUNTPOINT
-	APP_DATA_MOUNTPOINT="$(resolve_ds_volume_path "${DATA_VOLUME_NAME}")"
-	LOG_DATA_MOUNTPOINT="$(resolve_ds_volume_path log_data)"
-	DS_STATE_MOUNTPOINT="$(resolve_ds_volume_path ds_state)"
-	DS_POSTGRESQL_MOUNTPOINT="$(resolve_ds_volume_path ds_postgresql)"
-
-	# Stop it first so postgres/internal state files aren't copied while the source is still writing to them.
-	docker stop "${DOCUMENT_SERVER_HOST}" >/dev/null || { echo "Failed to stop ${DOCUMENT_SERVER_HOST}; leaving it as is, untouched." >&2; return 1; }
-
-	MIGRATED_FONTS_SRC=""
-	local TYPE SRC DEST MOUNTPOINT
-	while IFS=$'\t' read -r TYPE SRC DEST; do
-		[ -z "${SRC}" ] && continue
-		[ "${TYPE}" = "volume" ] && MOUNTPOINT="$(docker volume inspect --format '{{.Mountpoint}}' "${SRC}")" || MOUNTPOINT="${SRC}"
-		case "${DEST}" in
-			/var/www/onlyoffice/Data)          cp -a "${MOUNTPOINT}/." "${APP_DATA_MOUNTPOINT}/" ;;
-			/var/log/onlyoffice)               cp -a "${MOUNTPOINT}/." "${LOG_DATA_MOUNTPOINT}/" ;;
-			/var/lib/onlyoffice)               cp -a "${MOUNTPOINT}/." "${DS_STATE_MOUNTPOINT}/" ;;
-			/var/lib/postgresql)               cp -a "${MOUNTPOINT}/." "${DS_POSTGRESQL_MOUNTPOINT}/" ;;
-			/usr/share/fonts/truetype/custom)  MIGRATED_FONTS_SRC="${MOUNTPOINT}" ;;
-			*) continue ;;
-		esac || { echo "Failed to copy ${DEST} from ${DOCUMENT_SERVER_HOST}; leaving it as is, untouched." >&2; docker start "${DOCUMENT_SERVER_HOST}" >/dev/null 2>&1; return 1; }
-	done < <(docker inspect --format '{{range .Mounts}}{{.Type}}{{"\t"}}{{if eq .Type "volume"}}{{.Name}}{{else}}{{.Source}}{{end}}{{"\t"}}{{.Destination}}{{"\n"}}{{end}}' "${DOCUMENT_SERVER_HOST}")
-
-	# Carry over only Configuration Parameters that differ from the image's own defaults (not ds.yml-managed, not baked into the image itself).
-	local IMAGE_REF DEFAULT_KEY DEFAULT_VAL
-	local -A IMAGE_DEFAULT_ENV=()
-	IMAGE_REF="$(docker inspect --format '{{.Config.Image}}' "${DOCUMENT_SERVER_HOST}")"
-	while IFS='=' read -r DEFAULT_KEY DEFAULT_VAL; do
-		[ -n "${DEFAULT_KEY}" ] && IMAGE_DEFAULT_ENV["${DEFAULT_KEY}"]="${DEFAULT_VAL}"
-	done < <(docker image inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "${IMAGE_REF}" 2>/dev/null)
-
-	local ENV_LINE ENV_KEY ENV_VAL
-	: > "${BASE_DIR}/ds.env"
-	while IFS= read -r ENV_LINE; do
-		ENV_KEY="${ENV_LINE%%=*}"
-		ENV_VAL="${ENV_LINE#*=}"
-		[ -z "${ENV_KEY}" ] && continue
-		case "${ENV_KEY}" in
-			JWT_ENABLED|JWT_SECRET|JWT_HEADER|JWT_IN_BODY|AMQP_URI|REDIS_SERVER_HOST|REDIS_SERVER_PORT|REDIS_SERVER_USER|REDIS_SERVER_PASS|REDIS_SERVER_DB|PATH|HOME|HOSTNAME) continue ;;
-		esac
-		[ "${IMAGE_DEFAULT_ENV[${ENV_KEY}]-__unset__}" = "${ENV_VAL}" ] && continue
-		echo "${ENV_LINE}" >> "${BASE_DIR}/ds.env"
-	done < <(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "${DOCUMENT_SERVER_HOST}")
-
-	docker rm -f "${DOCUMENT_SERVER_HOST}" >/dev/null
-
-	# download_files() re-extracts a pristine, commented-out compose file on every run, so this has to be reapplied every time, after migration has (re)populated ds.env.
-	local DS_COMPOSE_FILE="${BASE_DIR}/ds.yml"
-	[ "${DEPLOYMENT_MODE}" = "community" ] && DS_COMPOSE_FILE="${BASE_DIR}/docker-compose.yml"
-	[ -s "${BASE_DIR}/ds.env" ] && sed -i -e 's/^\( *\)#env_file:$/\1env_file:/' -e 's/^ *#  - ds\.env$/      - ds.env/' "${DS_COMPOSE_FILE}"
-	return 0
-}
-
-# Adds the migrated custom fonts on top of ds_fonts's already-populated default set; DS only rescans fonts at startup, so the caller must restart the container afterward.
-migrate_document_server_fonts () {
-	local DS_FONTS_MOUNTPOINT
-	DS_FONTS_MOUNTPOINT="$(resolve_ds_volume_path ds_fonts)"
-	mkdir -p "${DS_FONTS_MOUNTPOINT}/truetype/custom"
-	cp -a "${MIGRATED_FONTS_SRC}/." "${DS_FONTS_MOUNTPOINT}/truetype/custom/" 2>/dev/null
-}
-
-install_document_server () {
-	reconfigure DOCUMENT_SERVER_JWT_HEADER ${DOCUMENT_SERVER_JWT_HEADER}
-	reconfigure DOCUMENT_SERVER_JWT_SECRET ${DOCUMENT_SERVER_JWT_SECRET}
-	# download_files() re-extracts a pristine, commented-out ds.yml on every run; reapply for a later update run where ds.env already has content from an earlier adoption (a no-op here on the adoption run itself, since ds.env is still empty at this point - see the second check below).
-	[ -s "${BASE_DIR}/ds.env" ] && sed -i -e 's/^\( *\)#env_file:$/\1env_file:/' -e 's/^ *#  - ds\.env$/      - ds.env/' "${BASE_DIR}/ds.yml"
-	if [ "$INSTALL_DOCUMENT_SERVER" == "pull" ]; then
-		${DOCKER_COMPOSE} -f ${BASE_DIR}/ds.yml pull
-	elif [ "${DOCUMENT_SERVER_ATTACHED}" = "true" ]; then
-		migrate_document_server_data || { echo "Aborting: failed to migrate the existing Document Server's data." >&2; exit 1; }
-		${DOCKER_COMPOSE} -f ${BASE_DIR}/ds.yml up -d
-		if [ -n "${MIGRATED_FONTS_SRC}" ]; then
-			migrate_document_server_fonts
-			${DOCKER_COMPOSE} -f ${BASE_DIR}/ds.yml restart onlyoffice-document-server
-		fi
-		# Only now, since a bind-mounted font source lives under here too and migrate_document_server_fonts still needs to read it.
-		rm -rf "${BASE_DIR}/DocumentServer"
-	elif [[ -z ${DOCUMENT_SERVER_HOST} ]] && [ "$INSTALL_DOCUMENT_SERVER" == "true" ]; then
-		${DOCKER_COMPOSE} -f ${BASE_DIR}/ds.yml up -d
 	fi
 }
 
@@ -1028,26 +932,26 @@ install_product () {
 						docker ps -a --format '{{.ID}} {{.Image}}' | grep ":${LOCAL_CONTAINER_TAG}$" | awk '{print $1}' | xargs -r docker rm -f
 					fi
 				else
-					${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" down
+					compose_with_document_server_mounts "${COMPOSE_FILES[@]}" down
 				fi
 				docker images --format "{{.Repository}}:{{.Tag}}" | grep ":${LOCAL_CONTAINER_TAG}$" | xargs -r docker rmi
 			fi
 		fi
 
-		reconfigure ENV_EXTENSION ${ENV_EXTENSION}
+		reconfigure ENV_EXTENSION "${ENV_EXTENSION}"
 		reconfigure IDENTITY_PROFILE "${IDENTITY_PROFILE:-"prod,server"}"
-		reconfigure APP_CORE_MACHINEKEY ${APP_CORE_MACHINEKEY}
-		reconfigure IDENTITY_ENCRYPTION_SECRET ${IDENTITY_ENCRYPTION_SECRET}
-		reconfigure APP_CORE_BASE_DOMAIN ${APP_CORE_BASE_DOMAIN}
+		reconfigure APP_CORE_MACHINEKEY "${APP_CORE_MACHINEKEY}"
+		reconfigure IDENTITY_ENCRYPTION_SECRET "${IDENTITY_ENCRYPTION_SECRET}"
+		reconfigure APP_CORE_BASE_DOMAIN "${APP_CORE_BASE_DOMAIN}"
 		reconfigure APP_URL_PORTAL "${APP_URL_PORTAL:-"http://${PACKAGE_SYSNAME}-router:8092"}"
-		reconfigure EXTERNAL_PORT ${EXTERNAL_PORT}
-		reconfigure EXTERNAL_PORT_HTTPS ${EXTERNAL_PORT_HTTPS}
+		reconfigure EXTERNAL_PORT "${EXTERNAL_PORT}"
+		reconfigure EXTERNAL_PORT_HTTPS "${EXTERNAL_PORT_HTTPS}"
 
 		if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ] && [[ -n $(docker ps -q --filter "name=${PACKAGE_SYSNAME}-mysql-server") ]]; then
 			wait_mysql_healthy
 		fi
 
-		chown_app_volumes
+		chown_app_volumes || exit 1
 
 		if [ "${DEPLOYMENT_MODE}" = "stack" ]; then
 			${DOCKER_COMPOSE} -f "${BASE_DIR}/apps-stack.yml" up -d
@@ -1060,40 +964,41 @@ install_product () {
 				timeout 30 bash -c "while [ $(docker wait ${PACKAGE_SYSNAME}-migration-runner) -ne 0 ]; do sleep 1; done;" && echo "OK" || echo "FAILED"
 			fi
 
-			${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" up -d
+			compose_with_document_server_mounts "${COMPOSE_FILES[@]}" up -d
 		fi
 
-		chown_app_volumes
+		chown_app_volumes || exit 1
 
 		if [[ -n "${PREVIOUS_ELK_VERSION}" && "$(get_env_parameter "ELK_VERSION")" != "${PREVIOUS_ELK_VERSION}" ]]; then
 			docker ps -q -f name=${PACKAGE_SYSNAME}-elasticsearch | xargs -r docker stop
 			MYSQL_TAG=$(docker images --format "{{.Tag}}" mysql | head -n1)
 			MYSQL_CONTAINER_NAME=$(get_env_parameter "MYSQL_CONTAINER_NAME" | sed "s/\${CONTAINER_PREFIX}/${PACKAGE_SYSNAME}-/g")
-			docker run --rm --network="$(get_env_parameter "NETWORK_NAME")" mysql:${MYSQL_TAG:-latest} mysql -h "${MYSQL_HOST:-${MYSQL_CONTAINER_NAME}}" -P "${MYSQL_PORT:-3306}" -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DATABASE}" -e "TRUNCATE webstudio_index;"
+			docker run --rm --network="$(get_env_parameter "NETWORK_NAME")" -e MYSQL_PWD="${MYSQL_PASSWORD}" mysql:${MYSQL_TAG:-latest} mysql -h "${MYSQL_HOST:-${MYSQL_CONTAINER_NAME}}" -P "${MYSQL_PORT:-3306}" -u "${MYSQL_USER}" "${MYSQL_DATABASE}" -e "TRUNCATE webstudio_index;"
 		fi
 
 		if [ ! -z "${CERTIFICATE_PATH}" ] && [[ ! -z "${APP_DOMAIN_PORTAL}" ]]; then
 		    env ${DHPARAM_PATH:+DHPARAM_PATH="$DHPARAM_PATH"} \
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -f "${APP_DOMAIN_PORTAL}" "${CERTIFICATE_PATH}" "${CERTIFICATE_KEY_PATH}"
+		    finish_https_takeover $?
 		elif [ ! -z "${LETS_ENCRYPT_DOMAIN}" ] && [ ! -z "${LETS_ENCRYPT_MAIL}" ]; then
 		    env ${DHPARAM_PATH:+DHPARAM_PATH="$DHPARAM_PATH"} \
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup "${LETS_ENCRYPT_MAIL}" "${LETS_ENCRYPT_DOMAIN}"
+		    finish_https_takeover $?
 		elif [[ -n "${CERTIFICATE_KEY_PATH}${CERTIFICATE_PATH}${LETS_ENCRYPT_DOMAIN}${LETS_ENCRYPT_MAIL}" ]]; then
 			echo -e "\e[31mERROR:\e[0m Missing required parameters for SSL setup"
 			echo "Run 'bash $BASE_DIR/config/${PRODUCT}-ssl-setup --help' for usage information."
 		fi
 
-		#Fix for bug 70537 to ensure proper migration to version 3.0.0
+		# Fix for bug 70537 to ensure proper migration to version 3.0.0
 		if [ "${UPDATE}" = "true" ] && [ -f "/etc/cron.weekly/${PRODUCT}-letsencrypt" ]; then
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -r
 		fi
 	elif [ "$INSTALL_PRODUCT" == "pull" ]; then
-		${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" pull
+		compose_with_document_server_mounts "${COMPOSE_FILES[@]}" pull
 	fi
 }
 
-# Removes the app-layer container(s) of a deployment mode that's being switched away from,
-# leaving MySQL/OpenSearch/Document Server (shared across all modes) running untouched.
+# Remove the previous app layer while keeping shared dependencies.
 teardown_previous_deployment_mode () {
 	echo "Switching deployment mode from ${CURRENT_DEPLOYMENT_MODE} to ${DEPLOYMENT_MODE}; removing the previous app layer (MySQL/OpenSearch/Document Server are kept)..."
 
@@ -1109,90 +1014,107 @@ teardown_previous_deployment_mode () {
 		[ -f "${LEGACY_FILE}" ] && COMPOSE_FILES[INDEX]="${LEGACY_FILE}"
 	done
 
-	if [ "${CURRENT_DEPLOYMENT_MODE}" = "community" ]; then
-		${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" rm -sf "${PACKAGE_SYSNAME}-${PRODUCT}"
+	if [ "${CURRENT_DEPLOYMENT_MODE}" = "standalone" ]; then
+		compose_with_document_server_mounts "${COMPOSE_FILES[@]}" rm -sf "${PACKAGE_SYSNAME}-${PRODUCT}"
 	else
-		${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" down
+		compose_with_document_server_mounts "${COMPOSE_FILES[@]}" down
 	fi
+
+	# standalone bundles Redis/RabbitMQ/Fluent Bit/Dashboards into the single
+	# container; the other modes run them as separate containers via their own
+	# compose files, which COMPOSE_FILES above never references, so they'd
+	# otherwise keep running as unmanaged leftovers under the project.
+	if [ "${TARGET_DEPLOYMENT_MODE}" = "standalone" ] && [ "${CURRENT_DEPLOYMENT_MODE}" != "standalone" ]; then
+		[ -f "${BASE_DIR}/redis.yml" ] && ${DOCKER_COMPOSE} -f "${BASE_DIR}/redis.yml" down
+		[ -f "${BASE_DIR}/rabbitmq.yml" ] && ${DOCKER_COMPOSE} -f "${BASE_DIR}/rabbitmq.yml" down
+		[ -f "${BASE_DIR}/fluent.yml" ] && [ -f "${BASE_DIR}/dashboards.yml" ] && \
+			${DOCKER_COMPOSE} -f "${BASE_DIR}/fluent.yml" -f "${BASE_DIR}/dashboards.yml" down
+	fi
+
+	# The target mode writes its own renewal job if needed.
+	rm -f "/etc/cron.weekly/${PRODUCT}-renew-letsencrypt"
 
 	DEPLOYMENT_MODE="${TARGET_DEPLOYMENT_MODE}"
 	select_deployment_mode
 }
 
-install_community () {
+# Profiles for bundled services in standalone mode.
+standalone_compose_profiles () {
+	local PROFILES=()
+	[[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" != "false" ] && PROFILES+=(mysql)
+	[[ -z ${ELK_HOST} ]] && [ "$INSTALL_ELASTICSEARCH" != "false" ] && PROFILES+=(opensearch)
+	{ [ "${DOCUMENT_SERVER_ATTACHED}" = "true" ] || { [[ -z ${DOCUMENT_SERVER_HOST} ]] && [ "$INSTALL_DOCUMENT_SERVER" != "false" ]; }; } && PROFILES+=(docs)
+	(IFS=,; echo "${PROFILES[*]}")
+}
+
+install_standalone () {
+	sed -i "s~^\(\s*COMPOSE_PROFILES=\).*~\1$(standalone_compose_profiles)~" "${BASE_DIR}/.env"
+
 	if [ "$INSTALL_PRODUCT" == "true" ]; then
 		if [ "${UPDATE}" = "true" ]; then
 			LOCAL_CONTAINER_TAG="$(docker inspect --format='{{index .Config.Image}}' "${CONTAINER_NAME}" 2>/dev/null | awk -F':' '{print $2}';)"
 			echo "Updating images from tag ${LOCAL_CONTAINER_TAG} to ${DOCKER_TAG}..."
 
 			if [ "$LOCAL_CONTAINER_TAG" != "$DOCKER_TAG" ]; then
-				${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" rm -sf "${PACKAGE_SYSNAME}-${PRODUCT}"
+				compose_with_document_server_mounts "${COMPOSE_FILES[@]}" rm -sf "${PACKAGE_SYSNAME}-${PRODUCT}"
 				docker images --format "{{.Repository}}:{{.Tag}}" | grep ":${LOCAL_CONTAINER_TAG}$" | xargs -r docker rmi
 			fi
 		fi
 
-		reconfigure ENV_EXTENSION ${ENV_EXTENSION}
-		reconfigure GIT_BRANCH ${GIT_BRANCH}
-		reconfigure APP_CORE_BASE_DOMAIN ${APP_CORE_BASE_DOMAIN}
-		reconfigure APP_URL_PORTAL ${APP_URL_PORTAL}
-		reconfigure EXTERNAL_PORT ${EXTERNAL_PORT}
-		reconfigure EXTERNAL_PORT_HTTPS ${EXTERNAL_PORT_HTTPS}
-		reconfigure DATABASE_MIGRATION ${DATABASE_MIGRATION}
-		reconfigure MYSQL_DATABASE ${MYSQL_DATABASE}
-		reconfigure MYSQL_USER ${MYSQL_USER}
-		reconfigure MYSQL_PASSWORD ${MYSQL_PASSWORD}
-		reconfigure MYSQL_ROOT_PASSWORD ${MYSQL_ROOT_PASSWORD}
-		reconfigure DOCUMENT_SERVER_JWT_HEADER ${DOCUMENT_SERVER_JWT_HEADER}
-		reconfigure DOCUMENT_SERVER_JWT_SECRET ${DOCUMENT_SERVER_JWT_SECRET}
+		reconfigure ENV_EXTENSION "${ENV_EXTENSION}"
+		reconfigure GIT_BRANCH "${GIT_BRANCH}"
+		reconfigure APP_CORE_BASE_DOMAIN "${APP_CORE_BASE_DOMAIN}"
+		# Must stay shared across deployment modes.
+		reconfigure APP_CORE_MACHINEKEY "${APP_CORE_MACHINEKEY}"
+		reconfigure IDENTITY_ENCRYPTION_SECRET "${IDENTITY_ENCRYPTION_SECRET}"
+		# APP_URL_PORTAL stays on the internal router for Docs callbacks.
+		reconfigure EXTERNAL_PORT "${EXTERNAL_PORT}"
+		reconfigure EXTERNAL_PORT_HTTPS "${EXTERNAL_PORT_HTTPS}"
+		reconfigure DATABASE_MIGRATION "${DATABASE_MIGRATION}"
+		reconfigure MYSQL_DATABASE "${MYSQL_DATABASE}"
+		reconfigure MYSQL_USER "${MYSQL_USER}"
+		reconfigure MYSQL_PASSWORD "${MYSQL_PASSWORD}"
+		reconfigure MYSQL_ROOT_PASSWORD "${MYSQL_ROOT_PASSWORD}"
+		reconfigure DOCUMENT_SERVER_JWT_HEADER "${DOCUMENT_SERVER_JWT_HEADER}"
+		reconfigure DOCUMENT_SERVER_JWT_SECRET "${DOCUMENT_SERVER_JWT_SECRET}"
 
-		# download_files() re-extracts a pristine, commented-out docker-compose.yml on every run; reapply for a later update run where ds.env already has content from an earlier adoption (a no-op here on the adoption run itself, since ds.env is still empty at this point - see the second check below).
-		[ -s "${BASE_DIR}/ds.env" ] && sed -i -e 's/^\( *\)#env_file:$/\1env_file:/' -e 's/^ *#  - ds\.env$/      - ds.env/' "${BASE_DIR}/docker-compose.yml"
+		enable_document_server_env_file "${BASE_DIR}/docker-compose.yml"
 
 		if [ "${DOCUMENT_SERVER_ATTACHED}" = "true" ]; then
 			migrate_document_server_data || { echo "Aborting: failed to migrate the existing Document Server's data." >&2; exit 1; }
-			# download_files() re-extracts a pristine, commented-out docker-compose.yml on every run, so this has to be reapplied every time, after migration has (re)populated ds.env.
-			[ -s "${BASE_DIR}/ds.env" ] && sed -i -e 's/^\( *\)#env_file:$/\1env_file:/' -e 's/^ *#  - ds\.env$/      - ds.env/' "${BASE_DIR}/docker-compose.yml"
+			enable_document_server_env_file "${BASE_DIR}/docker-compose.yml"
 		fi
 
 		opensearch_set_heap_size "${BASE_DIR}/docker-compose.yml"
 
-		chown_app_volumes
+		chown_app_volumes || exit 1
 
-		local COMMUNITY_FILES=("${COMPOSE_FILES[@]}")
-
-		# ssl.yml contract (community-only): SSL_MODE/SSL_DOMAIN/SSL_EMAIL/SSL_CERT_PATH/SSL_KEY_PATH,
-		# different from the standard mode's config/${PRODUCT}-ssl-setup script.
+		# config/apps-ssl-setup only writes the SSL configuration (--no-start); Compose applies it here so Docs adoption tracking stays intact.
+		local SSL_SETUP="${BASE_DIR}/config/${PRODUCT}-ssl-setup" SSL_REQUESTED="false" SSL_STATUS=0 UP_STATUS
 		if [ -n "${CERTIFICATE_PATH}" ] && [ -n "${APP_DOMAIN_PORTAL}" ]; then
-			mkdir -p "${BASE_DIR}/config/nginx/certs"
-			cp "${CERTIFICATE_PATH}" "${BASE_DIR}/config/nginx/certs/"
-			cp "${CERTIFICATE_KEY_PATH}" "${BASE_DIR}/config/nginx/certs/"
-			COMMUNITY_FILES+=(-f "${BASE_DIR}/ssl.yml")
-			SSL_MODE="custom" SSL_DOMAIN="${APP_DOMAIN_PORTAL}" \
-				SSL_CERT_PATH="/etc/nginx/certs/$(basename "${CERTIFICATE_PATH}")" \
-				SSL_KEY_PATH="/etc/nginx/certs/$(basename "${CERTIFICATE_KEY_PATH}")" \
-				${DOCKER_COMPOSE} "${COMMUNITY_FILES[@]}" up -d
+			SSL_REQUESTED="true"
+			bash "${SSL_SETUP}" --no-start -f "${APP_DOMAIN_PORTAL}" "${CERTIFICATE_PATH}" "${CERTIFICATE_KEY_PATH}" || SSL_STATUS=$?
 		elif [ -n "${LETS_ENCRYPT_DOMAIN}" ] && [ -n "${LETS_ENCRYPT_MAIL}" ]; then
-			mkdir -p "${BASE_DIR}/config/nginx/ssl/letsencrypt"
-			COMMUNITY_FILES+=(-f "${BASE_DIR}/ssl.yml")
-			SSL_MODE="letsencrypt" SSL_DOMAIN="${LETS_ENCRYPT_DOMAIN}" SSL_EMAIL="${LETS_ENCRYPT_MAIL}" \
-				${DOCKER_COMPOSE} "${COMMUNITY_FILES[@]}" up -d
+			SSL_REQUESTED="true"
+			# Webroot challenges need openresty up on :80 first.
+			compose_with_document_server_mounts "${COMPOSE_FILES[@]}" up -d || exit 1
+			bash "${SSL_SETUP}" --no-start "${LETS_ENCRYPT_MAIL}" "${LETS_ENCRYPT_DOMAIN}" || SSL_STATUS=$?
 		elif [[ -n "${CERTIFICATE_KEY_PATH}${CERTIFICATE_PATH}${LETS_ENCRYPT_DOMAIN}${LETS_ENCRYPT_MAIL}" ]]; then
 			echo -e "\e[31mERROR:\e[0m Missing required parameters for SSL setup"
 			exit 1
-		else
-			${DOCKER_COMPOSE} "${COMMUNITY_FILES[@]}" up -d
 		fi
+		[ "${SSL_STATUS}" -eq 0 ] || echo "Warning: failed to set up HTTPS for ${APP_DOMAIN_PORTAL:-${LETS_ENCRYPT_DOMAIN}}; ${PRODUCT_NAME} starts on http://." >&2
 
-		if [ "${DOCUMENT_SERVER_ATTACHED}" = "true" ] && [ -n "${MIGRATED_FONTS_SRC}" ]; then
-			migrate_document_server_fonts
-			${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" restart onlyoffice-document-server
-		fi
-		# Only now, since a bind-mounted font source lives under here too and migrate_document_server_fonts still needs to read it.
-		[ "${DOCUMENT_SERVER_ATTACHED}" = "true" ] && rm -rf "${BASE_DIR}/DocumentServer"
+		compose_with_document_server_mounts "${COMPOSE_FILES[@]}" up -d
+		UP_STATUS=$?
+		# The inherited Docs HTTPS is stripped only once the outcome of the Apps start is known.
+		[ "${SSL_REQUESTED}" = "false" ] || finish_https_takeover "$(( SSL_STATUS != 0 ? SSL_STATUS : UP_STATUS ))"
+		[ "${UP_STATUS}" -eq 0 ] || exit "${UP_STATUS}"
 
-		chown_app_volumes
+		chown_app_volumes || exit 1
+		finish_document_server_migration || exit 1
 	elif [ "$INSTALL_PRODUCT" == "pull" ]; then
-		${DOCKER_COMPOSE} "${COMPOSE_FILES[@]}" pull
+		compose_with_document_server_mounts "${COMPOSE_FILES[@]}" pull
 	fi
 }
 
@@ -1215,7 +1137,7 @@ make_swap () {
 		chmod 600 ${SWAPFILE}
 		mkswap ${SWAPFILE}
 		swapon ${SWAPFILE}
-		echo "$SWAPFILE none swap sw 0 0" >> /etc/fstab
+		awk -v swapfile="${SWAPFILE}" '$1 == swapfile && $3 == "swap" { found = 1 } END { exit !found }' /etc/fstab || echo "$SWAPFILE none swap sw 0 0" >> /etc/fstab
 	fi
 }
 
@@ -1269,21 +1191,21 @@ dependency_installation() {
 
 check_docker_image () {
 	reconfigure REGISTRY "${REGISTRY_URL:+$(sed -E 's~^https?://~~; s~/*$~~' <<< "$REGISTRY_URL")/}"
-	reconfigure STATUS ${STATUS}
-	reconfigure INSTALLATION_TYPE ${INSTALLATION_TYPE}
-	reconfigure NETWORK_NAME ${NETWORK_NAME}
-	reconfigure VOLUMES_DIR ${VOLUMES_DIR}
-	reconfigure EXTRA_HOSTS ${EXTRA_HOSTS}
+	reconfigure STATUS "${STATUS}"
+	reconfigure INSTALLATION_TYPE "${INSTALLATION_TYPE}"
+	reconfigure NETWORK_NAME "${NETWORK_NAME}"
+	reconfigure VOLUMES_DIR "${VOLUMES_DIR}"
+	reconfigure EXTRA_HOSTS "${EXTRA_HOSTS}"
 	
-	reconfigure MYSQL_VERSION ${MYSQL_VERSION}
-	reconfigure ELK_VERSION ${ELK_VERSION}
+	reconfigure MYSQL_VERSION "${MYSQL_VERSION}"
+	reconfigure ELK_VERSION "${ELK_VERSION}"
 	reconfigure DOCUMENT_SERVER_IMAGE_NAME "${DOCUMENT_SERVER_IMAGE_NAME}:\${DOCUMENT_SERVER_VERSION}"
-	reconfigure DOCUMENT_SERVER_VERSION ${DOCUMENT_SERVER_VERSION:-$(get_available_version "$DOCUMENT_SERVER_IMAGE_NAME")}
+	reconfigure DOCUMENT_SERVER_VERSION "${DOCUMENT_SERVER_VERSION:-$(get_available_version "$DOCUMENT_SERVER_IMAGE_NAME")}"
 
 	DOCKER_TAG="${DOCKER_TAG:-$(get_available_version ${IMAGE_NAME})}"
-	reconfigure DOCKER_TAG ${DOCKER_TAG}
+	reconfigure DOCKER_TAG "${DOCKER_TAG}"
 	if [ "${OFFLINE_INSTALLATION}" != "false" ]; then
-		if [ "${DEPLOYMENT_MODE}" = "community" ]; then
+		if [ "${DEPLOYMENT_MODE}" = "standalone" ]; then
 			[ "$INSTALL_PRODUCT" == "true" ] && offline_check_docker_image "${BASE_DIR}/docker-compose.yml"
 		else
 			[ "$INSTALL_MYSQL_SERVER" == "true" ]       && offline_check_docker_image ${BASE_DIR}/db.yml
@@ -1309,35 +1231,35 @@ services_check_connection () {
 
 	if [[ ! -z "$MYSQL_HOST" ]]; then
 		establish_conn ${MYSQL_HOST} "${MYSQL_PORT:-3306}" "MySQL"
-		reconfigure MYSQL_HOST ${MYSQL_HOST}
+		reconfigure MYSQL_HOST "${MYSQL_HOST}"
 		reconfigure MYSQL_PORT "${MYSQL_PORT:-3306}"
 	fi
 	if [[ ! -z "$DOCUMENT_SERVER_HOST" ]]; then
 		APP_URL_PORTAL=${APP_URL_PORTAL:-"http://$(curl -s -4 ifconfig.me):${EXTERNAL_PORT}"}
 		[ "${DOCUMENT_SERVER_ATTACHED}" = "true" ] || establish_conn ${DOCUMENT_SERVER_HOST} ${DOCUMENT_SERVER_PORT} "${PACKAGE_SYSNAME^^} Docs"
-		reconfigure DOCUMENT_SERVER_URL_EXTERNAL ${DOCUMENT_SERVER_URL_EXTERNAL}
-		reconfigure DOCUMENT_SERVER_URL_PUBLIC ${DOCUMENT_SERVER_URL_EXTERNAL}
+		reconfigure DOCUMENT_SERVER_URL_EXTERNAL "${DOCUMENT_SERVER_URL_EXTERNAL}"
+		reconfigure DOCUMENT_SERVER_URL_PUBLIC "${DOCUMENT_SERVER_URL_EXTERNAL}"
 	fi
 	if [[ ! -z "$RABBIT_HOST" ]]; then
 		establish_conn ${RABBIT_HOST} "${RABBIT_PORT:-5672}" "RabbitMQ"
-		reconfigure RABBIT_PROTOCOL ${RABBIT_PROTOCOL:-amqp}
-		reconfigure RABBIT_HOST ${RABBIT_HOST}
+		reconfigure RABBIT_PROTOCOL "${RABBIT_PROTOCOL:-amqp}"
+		reconfigure RABBIT_HOST "${RABBIT_HOST}"
 		reconfigure RABBIT_PORT "${RABBIT_PORT:-5672}"
-		reconfigure RABBIT_USER_NAME ${RABBIT_USER_NAME}
-		reconfigure RABBIT_PASSWORD ${RABBIT_PASSWORD}
+		reconfigure RABBIT_USER_NAME "${RABBIT_USER_NAME}"
+		reconfigure RABBIT_PASSWORD "${RABBIT_PASSWORD}"
 		reconfigure RABBIT_VIRTUAL_HOST "${RABBIT_VIRTUAL_HOST:-/}"
 	fi
 	if [[ ! -z "$REDIS_HOST" ]]; then
 		establish_conn ${REDIS_HOST} "${REDIS_PORT:-6379}" "Redis"
-		reconfigure REDIS_HOST ${REDIS_HOST}
+		reconfigure REDIS_HOST "${REDIS_HOST}"
 		reconfigure REDIS_PORT "${REDIS_PORT:-6379}"
-		reconfigure REDIS_USER_NAME ${REDIS_USER_NAME}
-		reconfigure REDIS_PASSWORD ${REDIS_PASSWORD}
+		reconfigure REDIS_USER_NAME "${REDIS_USER_NAME}"
+		reconfigure REDIS_PASSWORD "${REDIS_PASSWORD}"
 	fi
 	if [[ ! -z "$ELK_HOST" ]]; then
 		establish_conn ${ELK_HOST} "${ELK_PORT:-9200}" "search engine"
 		reconfigure ELK_SCHEME "${ELK_SCHEME:-http}"
-		reconfigure ELK_HOST ${ELK_HOST}
+		reconfigure ELK_HOST "${ELK_HOST}"
 		reconfigure ELK_PORT "${ELK_PORT:-9200}"
 	fi
 }
@@ -1346,6 +1268,10 @@ start_installation () {
 	root_checking
 	
 	select_deployment_mode
+	# Avoid printing this again during mode-switch teardown.
+	if [ "${DEPLOYMENT_MODE}" = "standalone" ] && { [ "${INSTALL_RABBITMQ_SET}" = "true" ] || [ "${INSTALL_REDIS_SET}" = "true" ]; }; then
+		echo "Note: --installrabbitmq/--installredis are ignored in --deployment-mode standalone (no separate Redis/RabbitMQ containers)."
+	fi
 	set_installation_type_data
 
 	get_os_info
@@ -1367,17 +1293,19 @@ start_installation () {
 	[ "${OFFLINE_INSTALLATION}" = "false" ] && check_registry_connection
 
 	create_network
-	detect_existing_document_server
+
+	# A retained .env is also needed after uninstall, when no Apps container
+	# remains to trigger UPDATE. Restore storage paths and ports before checks.
+	if [ "$UPDATE" = "true" ] || [ -f "${BASE_DIR}/.env" ]; then
+		set_apps_params
+	fi
+	detect_existing_document_server || { echo "Cannot safely adopt the existing Document Server." >&2; exit 1; }
 
 	if [ "$UPDATE" != "true" ]; then
 		check_ports
 	fi
 
 	domain_check
-
-	if [ "$UPDATE" = "true" ]; then
-		set_apps_params
-	fi
 
 	set_docs_url_external
 	set_jwt_secret
@@ -1391,14 +1319,14 @@ start_installation () {
 		teardown_previous_deployment_mode
 	fi
 
-	download_files
+	download_files || exit 1
 
 	check_docker_image
 
 	services_check_connection
 
-	if [ "${DEPLOYMENT_MODE}" = "community" ]; then
-		install_community
+	if [ "${DEPLOYMENT_MODE}" = "standalone" ]; then
+		install_standalone
 	else
 		install_elasticsearch
 

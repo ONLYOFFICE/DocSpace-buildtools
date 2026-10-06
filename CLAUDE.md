@@ -26,6 +26,7 @@ runMigrations.standalone.bat        # Windows (standalone mode)
 ./start/restart.sh                  # Restart all services
 
 # Docker Compose (from install/docker/)
+# Set MYSQL_ROOT_PASSWORD, MYSQL_PASSWORD, RABBIT_PASSWORD, and DOCUMENT_SERVER_JWT_SECRET in .env first.
 docker compose -f apps.yml -f db.yml -f redis.yml -f rabbitmq.yml up -d
 docker compose -f apps-stack.yml up -d  # Full stack shortcut
 
@@ -69,7 +70,8 @@ install/
         docker-identity-entrypoint.sh
         docker-migration-entrypoint.sh
         docker-healthchecks-entrypoint.sh
-        bin-share-docker-entrypoint.sh / wait-bin-share-docker-entrypoint.sh
+        docker-standalone-entrypoint.sh
+        docker-bin-share-entrypoint.sh / docker-wait-bin-share-entrypoint.sh
         prepare-nginx-router.sh
       dev/                  — Local-dev-only Compose overlays (build.backend.docker.py):
         db.dev.yml            — MySQL dev overrides (exposed ports)
@@ -77,8 +79,10 @@ install/
         apps.overcome.yml     — Local dev overrides
         dnsmasq.yml           — DNS for local dev
         build-identity.yml    — ASC.Identity (Java) build
-      stack/supervisor/     — Supervisor service configs baked into the image
-    community/              — Single-container community edition stack
+      supervisor/           — Supervisor configs baked into images:
+        stack/                — apps-stack.yml services (dotnet/node/java)
+        standalone.conf       — standalone image
+    standalone/             — Single-container (standalone) stack
     apps.yml                — All ONLYOFFICE Apps services
     apps-stack.yml          — Full stack (app + all dependencies)
     db.yml                  — MySQL
@@ -116,6 +120,7 @@ Jenkinsfile                 — Jenkins declarative pipeline
 ## Docker Compose Architecture
 
 Compose is **modular** — compose files are combined with `-f`. The `install/docker/.env` has ~200 variables covering all services.
+For direct Compose runs, fill `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`, `RABBIT_PASSWORD`, and `DOCUMENT_SERVER_JWT_SECRET` in `.env` before starting bundled dependencies. `install-Docker.sh` generates these automatically.
 
 Key compose combinations:
 ```bash

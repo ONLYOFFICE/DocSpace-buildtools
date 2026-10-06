@@ -405,8 +405,12 @@ setup_docs() {
 	json_configuration "${USER_CONF}" "files.docservice.secret.value"  "${DOCUMENT_SERVER_JWT_SECRET}"
 	json_configuration "${USER_CONF}" "files.docservice.secret.header" "${DOCUMENT_SERVER_JWT_HEADER:-"AuthorizationJwt"}"
 	json_configuration "${USER_CONF}" "files.docservice.url.public"    "${DOCUMENT_SERVER_URL_EXTERNAL:-"/ds-vpath/"}"
-	json_configuration "${USER_CONF}" "files.docservice.url.portal"    "http://${APP_HOST}:${APP_PORT}"
+	# Stays http:// here even when inheriting a cert - apps-ssl-setup below only flips it to https:// once it has actually configured openresty with it, not before.
+	json_configuration "${USER_CONF}" "files.docservice.url.portal" "http://${APP_HOST}:${APP_PORT}"
 	
+	local _ds_public="${DOCUMENT_SERVER_URL_EXTERNAL:-"/ds-vpath"}"
+	json_configuration "${APP_DIR}/externalresources.${ENVIRONMENT}.json" "externalresources.adminpanel.default.domain" "${_ds_public%/}/admin"
+
 	echo "OK"
 }
 
@@ -773,6 +777,16 @@ if $PACKAGE_MANAGER openresty >/dev/null 2>&1; then
 fi
 
 restart_services
+
+# Runs after restart_services, not inside setup_openresty() above - apps-ssl-setup's mappeddomain update needs tenants_tenants, which migrations create there.
+if [[ -n "${INHERIT_SSL_DOMAIN}" ]] && $PACKAGE_MANAGER openresty >/dev/null 2>&1; then
+	if "/usr/bin/${PRODUCT}-ssl-setup" -f "${INHERIT_SSL_DOMAIN}" "${INHERIT_SSL_CERT}" "${INHERIT_SSL_KEY}"; then
+		# Services above started with the http:// url.portal restart_services() left them with - apps-ssl-setup only restarts openresty, so bounce them now that it flipped url.portal to https.
+		systemctl restart "${SERVICES_LIST[@]}"
+	else
+		echo "WARNING: failed to apply the inherited HTTPS certificate; ${PACKAGE_SYSNAME^^} Apps stays on http://${APP_HOST}:${APP_PORT}." >&2
+	fi
+fi
 
 # Truncate MySQL DB to make opensearch work with updated app. Strictly after restart_services ()
 if $PACKAGE_MANAGER opensearch >/dev/null 2>&1; then
