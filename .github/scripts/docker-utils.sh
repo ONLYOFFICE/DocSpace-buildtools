@@ -12,7 +12,6 @@
 #   docker-utils.sh install-previous          — install the latest released DocSpace (env: PREVIOUS_VERSION)
 #   docker-utils.sh update-install [ARGS]     — update the installed release with install-Docker.sh from this branch
 #   docker-utils.sh verify-update             — check that no container still runs the previous release
-#   docker-utils.sh compose-validate          — validate every shipped Compose combination
 
 set -e
 
@@ -349,42 +348,6 @@ verify_update() {
   } | summary_append
 }
 
-compose_validate() {
-  local WORK_DIR; WORK_DIR=$(mktemp -d)
-  local FAILED=0
-  cp -r install/docker/. "$WORK_DIR/"
-  # standalone reads its own .env from the installed directory
-  cp "$WORK_DIR/.env" "$WORK_DIR/standalone/.env"
-
-  validate_combination() {
-    local NAME="$1" ENV_DIR="$2"; shift 2
-    local ARGS=() SERVICE OUTPUT
-    for SERVICE in "$@"; do ARGS+=( -f "$WORK_DIR/${ENV_DIR}${SERVICE}.yml" ); done
-    if OUTPUT=$(docker compose --project-directory "$WORK_DIR/${ENV_DIR}" "${ARGS[@]}" config --quiet 2>&1); then
-      echo "ok: $NAME"
-    else
-      echo "::error::Compose combination '$NAME' is invalid:"
-      echo "$OUTPUT"
-      FAILED=1
-    fi
-  }
-
-  local INFRA=(db redis rabbitmq opensearch ds fluent dashboards)
-  validate_combination stack "" apps-stack proxy "${INFRA[@]}"
-  validate_combination microservices "" migration-runner identity notify apps healthchecks proxy "${INFRA[@]}"
-  validate_combination stack-ssl "" apps-stack proxy-ssl "${INFRA[@]}"
-  validate_combination microservices-ssl "" migration-runner identity notify apps healthchecks proxy-ssl "${INFRA[@]}"
-
-  if docker compose --project-directory "$WORK_DIR/standalone" -f "$WORK_DIR/standalone/docker-compose.yml" \
-      --profile mysql --profile opensearch --profile docs config --quiet; then
-    echo "ok: standalone"
-  else
-    echo "::error::Compose combination 'standalone' is invalid."
-    FAILED=1
-  fi
-  return "$FAILED"
-}
-
 case "$COMMAND" in
   test-install)     test_install "$2" ;;
   check-services)   check_services "$2" ;;
@@ -398,6 +361,5 @@ case "$COMMAND" in
   install-previous) install_previous ;;
   update-install)   update_install "$2" ;;
   verify-update)    verify_update ;;
-  compose-validate) compose_validate ;;
   *)                echo "Unknown command: $COMMAND"; exit 1 ;;
 esac

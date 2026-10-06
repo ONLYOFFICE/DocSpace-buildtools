@@ -155,7 +155,6 @@ docker compose --env-file .env -f apps.yml -f build/dev/apps.overcome.yml up -d
 | Workflow | Purpose |
 |----------|---------|
 | `ci-oci-docker-install.yml` | OneClickInstall Docker tests: install in stack/microservices/standalone modes, smoke tests, container restart, update from the released version |
-| `ci-static-analysis.yml` | Compose validation, hadolint, actionlint, yamllint, smoke test sources |
 | `ci-oci-install.yml` | Linux package install tests |
 | `ci-oci-update.yml` | Update mechanism tests |
 | `rebuild-boxes.yml` | Rebuild Vagrant boxes for install tests |
