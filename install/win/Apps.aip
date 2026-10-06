@@ -1365,8 +1365,6 @@
     <ROW Action="AI_FwUninstall" Condition="(VersionNT &gt;= 501) AND (REMOVE=&quot;ALL&quot;)" Sequence="1704"/>
     <ROW Action="AI_DATA_SETTER_22" Condition="(VersionNT &gt;= 501) AND (REMOVE=&quot;ALL&quot;)" Sequence="1703"/>
     <ROW Action="SetSERVERNAME" Condition="( NOT Installed )" Sequence="1604"/>
-    <ROW Action="StopOpenResty" Condition="( NOT Installed )" Sequence="6606"/>
-    <ROW Action="AI_DATA_SETTER_23" Condition="( NOT Installed )" Sequence="6605"/>
     <ROW Action="StartOpenResty" Condition="( NOT Installed )" Sequence="6608"/>
     <ROW Action="AI_DATA_SETTER_24" Condition="( NOT Installed )" Sequence="6607"/>
     <ROW Action="Set_LICENSE_PATH" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) OR ( Installed AND ( REMOVE = &quot;ALL&quot; OR AI_INSTALL_MODE = &quot;Remove&quot; ) AND UPGRADINGPRODUCTCODE ) )" Sequence="201"/>
@@ -1374,16 +1372,16 @@
     <ROW Action="AI_DATA_SETTER_28" Condition="( NOT Installed )" Sequence="1620"/>
     <ROW Action="StopFluentBitService" Condition="( NOT Installed )" Sequence="1617"/>
     <ROW Action="AI_DATA_SETTER_29" Condition="( NOT Installed )" Sequence="1616"/>
-    <ROW Action="StartFluentBitService" Condition="( NOT Installed )" Sequence="6604"/>
-    <ROW Action="AI_DATA_SETTER_30" Condition="( NOT Installed )" Sequence="6603"/>
+    <ROW Action="StartFluentBitService" Condition="( NOT Installed )" Sequence="6606"/>
+    <ROW Action="AI_DATA_SETTER_30" Condition="( NOT Installed )" Sequence="6605"/>
     <ROW Action="StartOpenSearchDashboardsService" Condition="( NOT Installed )" Sequence="1627"/>
     <ROW Action="AI_DATA_SETTER_27" Condition="( NOT Installed )" Sequence="1626"/>
     <ROW Action="OpenSearchSetup" Condition="( NOT Installed )" Sequence="1623"/>
     <ROW Action="AI_DATA_SETTER_38" Condition="( NOT Installed )" Sequence="1622"/>
     <ROW Action="RedisSetup" Condition="( NOT Installed )" Sequence="1629"/>
     <ROW Action="AI_DATA_SETTER_39" Condition="( NOT Installed )" Sequence="1628"/>
-    <ROW Action="MoveConfigs" Condition="( NOT Installed )" Sequence="6602"/>
-    <ROW Action="AI_DATA_SETTER_40" Condition="( NOT Installed )" Sequence="6601"/>
+    <ROW Action="MoveConfigs" Condition="( NOT Installed )" Sequence="6604"/>
+    <ROW Action="AI_DATA_SETTER_40" Condition="( NOT Installed )" Sequence="6603"/>
     <ROW Action="MySQLConfigure" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1606"/>
     <ROW Action="AI_DATA_SETTER_33" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1605"/>
     <ROW Action="PostgreSQLConfigure" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1610"/>
@@ -1394,6 +1392,8 @@
     <ROW Action="AI_DATA_SETTER_14" Condition="(VersionNT64 &gt;= 500) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5501"/>
     <ROW Action="AI_SqlUninstall64" Condition="(VersionNT64 &gt;= 500) AND (REMOVE=&quot;ALL&quot;)" Sequence="1702"/>
     <ROW Action="AI_DATA_SETTER_15" Condition="(VersionNT64 &gt;= 500) AND (REMOVE=&quot;ALL&quot;)" Sequence="1701"/>
+    <ROW Action="StopOpenResty" Condition="( NOT Installed )" Sequence="6602"/>
+    <ROW Action="AI_DATA_SETTER_23" Condition="( NOT Installed )" Sequence="6601"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstallUISequenceComponent">
     <ROW Action="AI_DATA_SETTER_42" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="97"/>

@@ -66,10 +66,28 @@ function ExtractPath {
     }
 }
 
+# MSI AppSearch can redirect Program Files paths in a 32-bit package.
+function GetDocumentServerInstallLocation {
+    $Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry64')
+    $Key = $null
+    try {
+        $Key = $Base.OpenSubKey('SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1')
+        if ($Key) { return $Key.GetValue('InstallLocation') }
+    } finally {
+        if ($Key) { $Key.Close() }
+        $Base.Close()
+    }
+}
+
 # Applies Docs registry search results to Apps properties.
 function ApplyInstalledDocumentServerSettings {
     $InstalledVersion = AI_GetMsiProperty DOCS_INSTALLED_VERSION
     if (-not $InstalledVersion) { return }
+
+    $RegistryDocsDir = GetDocumentServerInstallLocation
+    if ($RegistryDocsDir) {
+        AI_SetMsiProperty DOCS_INSTALL_LOCATION $RegistryDocsDir
+    }
 
     $SkipDocsInstall = $false
     try { $SkipDocsInstall = [version]$InstalledVersion -ge [version](AI_GetMsiProperty DS_VERSION) }
@@ -483,6 +501,9 @@ function MoveConfigs {
     $FluentBitSourceFile = Join-Path $AppDir "config\fluent-bit.conf"
     $FluentBitDstFolder = "C:\OpenSearchStack\fluent-bit-3.2.4-win64\conf\"
 
+    $SslCertPath = ''
+    $SslCertKeyPath = ''
+
     # Extract SSL certificate and key paths if config file exists.
     if (Test-Path $ConfigFile) {
         $Content = ReadFileContent $ConfigFile
@@ -491,6 +512,34 @@ function MoveConfigs {
         $DomainName = AI_GetMsiProperty DOMAIN_NAME
     } else {
         Write-Output "Configuration file not found!"
+    }
+
+    # Reuse Docs SSL when Apps has no certificate configured.
+    if (((AI_GetMsiProperty DOCUMENT_SERVER_INSTALL_NONE) -eq '1') -and
+        [string]::IsNullOrWhiteSpace($SslCertPath)) {
+        $DocsDir = AI_GetMsiProperty DOCS_INSTALL_LOCATION
+        $RegistryDocsDir = GetDocumentServerInstallLocation
+        if ($RegistryDocsDir) { $DocsDir = $RegistryDocsDir }
+        if (-not $DocsDir) { throw 'DocumentServer InstallLocation not found.' }
+
+        $DocsConfig = Join-Path $DocsDir 'nginx\conf\ds.conf'
+        if (Test-Path -LiteralPath $DocsConfig -PathType Leaf) {
+            $Content = ReadFileContent $DocsConfig
+            $SslCertPath = ExtractPath -Content $Content -RegexPattern "ssl_certificate\s+(.*?);"
+            $SslCertKeyPath = ExtractPath -Content $Content -RegexPattern "ssl_certificate_key\s+(.*?);"
+            $DomainName = AI_GetMsiProperty DOMAIN_NAME
+
+            if (-not [string]::IsNullOrWhiteSpace($SslCertPath) -and
+                -not [string]::IsNullOrWhiteSpace($SslCertKeyPath)) {
+                $DocsSslScript = Join-Path $DocsDir 'bin\documentserver-letsencrypt.ps1'
+                if (-not (Test-Path -LiteralPath $DocsSslScript -PathType Leaf)) {
+                    throw "DocumentServer SSL setup script not found: $DocsSslScript"
+                }
+                & $DocsSslScript -d
+            }
+        } else {
+            Write-Output "DocumentServer config not found: $DocsConfig"
+        }
     }
 
     # Remove existing onlyoffice* config files before copying.
@@ -541,11 +590,7 @@ function MoveConfigs {
     }
 
     if ((AI_GetMsiProperty DOCUMENT_SERVER_INSTALL_NONE) -eq '1') {
-        $Registry = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry64').OpenSubKey(
-            'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1')
-        if (-not $Registry) { throw 'DocumentServer uninstall registry key not found.' }
-        $DocsDir = $Registry.GetValue('InstallLocation')
-        $Registry.Close()
+        $DocsDir = GetDocumentServerInstallLocation
         if (-not $DocsDir) { throw 'DocumentServer InstallLocation not found.' }
 
         $DocsConfig = Join-Path $DocsDir 'nginx\conf\ds.conf'
