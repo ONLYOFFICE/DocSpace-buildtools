@@ -531,7 +531,7 @@
     <ROW SearchKey="UpgradeCode_6" Prereq="psqlODBC_x64" SearchType="4" SearchString="{BBD29DF5-89F6-4B8B-BDC9-C3EA3A4AFDBB}" VerMin="15.00.0000" Order="1" Property="PreReqSearch_20"/>
     <ROW SearchKey="UpgradeCode_7" Prereq="OpenResty" SearchType="4" SearchString="{264FA774-91E5-4854-8010-4AB58CA830BD}" VerMin="1.27.1.1" Order="1" Property="PreReqSearch_22"/>
     <ROW SearchKey="UpgradeCode_8" Prereq="OpenSearchStack" SearchType="4" SearchString="{93CD82F0-18A5-4803-AC50-9A0021E92A56}" VerMin="2.0.0" Order="1" Property="PreReqSearch_24"/>
-    <ROW SearchKey="UpgradeCode_9" Prereq="JavaTMSEDevelopm" SearchType="4" SearchString="{64A3A4F4-B792-11D6-A78A-00B0D0200210}" VerMin="25.0.3.0" Order="1" Property="PreReqSearch_25"/>
+    <ROW SearchKey="UpgradeCode_9" Prereq="JavaTMSEDevelopm" SearchType="1" SearchString="HKLM\SOFTWARE\JavaSoft\JDK" VerMin="25.0.3" Order="1" Property="PreReqSearch_25"/>
     <ROW SearchKey="Version" Prereq="MicrosoftVisualC" SearchType="2" SearchString="HKLM\SOFTWARE\Microsoft\DevDiv\VC\Servicing\12.0\RuntimeMinimum\Version" VerMin="12.0.40649" Order="2" Property="PreReqSearch_4"/>
     <ROW SearchKey="Version_1" Prereq="MicrosoftVisualC_1" SearchType="2" SearchString="HKLM\SOFTWARE\Microsoft\DevDiv\VC\Servicing\14.0\RuntimeMinimum\Version" VerMin="14.26.28720" Order="2" Property="PreReqSearch_5"/>
     <ROW SearchKey="Version_2" Prereq="MicrosoftVisualC_2" SearchType="2" SearchString="HKLM\SOFTWARE\Microsoft\DevDiv\VC\Servicing\14.0\RuntimeMinimum\Version" VerMin="14.26.28720" Order="2" Property="PreReqSearch_7"/>
