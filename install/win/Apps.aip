@@ -607,6 +607,7 @@
     <ROW Property="DOCS_RABBITMQUSER" Signature_="DocsRegistrySearch_RabbitMqUser"/>
     <ROW Property="DOCS_REDISHOST" Signature_="DocsRegistrySearch_RedisHost"/>
     <ROW Property="DOCS_INSTALLED_VERSION" Signature_="DocsInstalledDisplayVersion"/>
+    <ROW Property="DOCS_INSTALL_LOCATION" Signature_="DocsInstalledInstallLocation"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiBinaryComponent">
     <ROW Name="NetFirewall.dll" SourcePath="&lt;AI_CUSTACTS&gt;NetFirewall.dll"/>
@@ -1484,6 +1485,7 @@
     <ROW Signature_="DocsRegistrySearch_RabbitMqUser" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="RabbitMqUser" Type="18"/>
     <ROW Signature_="DocsRegistrySearch_RedisHost" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="RedisHost" Type="18"/>
     <ROW Signature_="DocsInstalledDisplayVersion" Root="2" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1" Name="DisplayVersion" Type="18"/>
+    <ROW Signature_="DocsInstalledInstallLocation" Root="2" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1" Name="InstallLocation" Type="18"/>
     <ROW Signature_="AppSearchSign_3" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_USER" Type="2"/>
     <ROW Signature_="AppSearchSign_4" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_PWD" Type="2"/>
     <ROW Signature_="AppSearchSign_5" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_PORT" Type="2"/>
