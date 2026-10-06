@@ -84,6 +84,13 @@ function ApplyInstalledDocumentServerSettings {
     $InstalledVersion = AI_GetMsiProperty DOCS_INSTALLED_VERSION
     if (-not $InstalledVersion) { return }
 
+    $Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry64')
+    try {
+        $DocsKey = $Base.CreateSubKey('SOFTWARE\ONLYOFFICE\DocumentServer')
+        $DocsPort = AI_GetMsiProperty DOCUMENT_SERVER_PORT
+        $DocsKey.SetValue('DsPort', $DocsPort, [Microsoft.Win32.RegistryValueKind]::String)
+    } finally { if ($DocsKey) { $DocsKey.Close() }; $Base.Close() }
+
     $RegistryDocsDir = GetDocumentServerInstallLocation
     if ($RegistryDocsDir) {
         AI_SetMsiProperty DOCS_INSTALL_LOCATION $RegistryDocsDir
