@@ -154,11 +154,19 @@ docker compose --env-file .env -f apps.yml -f build/dev/apps.overcome.yml up -d
 
 | Workflow | Purpose |
 |----------|---------|
-| `ci-oci-docker-install.yml` | OneClickInstall Docker tests |
+| `ci-oci-docker-install.yml` | OneClickInstall Docker tests: install in stack/microservices/standalone modes, smoke tests, container restart, update from the released version |
+| `ci-static-analysis.yml` | Compose validation, hadolint, actionlint, yamllint, smoke test sources |
 | `ci-oci-install.yml` | Linux package install tests |
 | `ci-oci-update.yml` | Update mechanism tests |
 | `rebuild-boxes.yml` | Rebuild Vagrant boxes for install tests |
 | `zap-scanner.yaml` | OWASP ZAP security scan |
+
+## Smoke Tests
+
+`tests/smoke/smoke_test.py` runs against a live portal (`SERVER_URL`); `.github/scripts/docker-utils.sh smoke-test [PYTEST_ARGS]` wraps it for CI.
+Tests run in file order and share state. Markers select phases: `bootstrap` (settings, wizard, auth), `seed` (creates data, writes `SMOKE_STATE_FILE`), `verify` (checks the data after a restart or update).
+Examples: `-m "bootstrap or seed"` before an update, `-m "bootstrap or verify"` after it. `DEPLOYMENT_MODE` (set by docker-utils.sh) gates mode-specific tests; the backup and restore test (marker `restore`) runs only with `SMOKE_RUN_RESTORE=true`, as the last step, because a restore regenerates user IDs and invalidates all passwords.
+`SMOKE_SUMMARY_FILE` (the job summary in CI) receives a result table written by `tests/smoke/conftest.py`.
 
 ## Key Patterns
 

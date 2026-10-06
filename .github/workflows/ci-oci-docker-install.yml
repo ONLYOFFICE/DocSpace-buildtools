@@ -32,6 +32,11 @@ on:
         required: false
         default: ''
         type: string
+      previous_version:
+        description: "Previous version (optional)"
+        required: false
+        default: ''
+        type: string
 
 env:
   IS_4TESTING: ${{ github.event.inputs.testing }}
@@ -97,10 +102,40 @@ jobs:
           bash .github/scripts/docker-utils.sh status
 
       - name: Smoke test
-        timeout-minutes: 20
+        timeout-minutes: 45
         env:
           LICENSE: ${{ secrets.LICENSE_ENTERPRISE }}
-        run: bash .github/scripts/docker-utils.sh smoke-test
+          SMOKE_SUMMARY_TITLE: Smoke test
+        run: bash .github/scripts/docker-utils.sh smoke-test -m "not restore"
+
+      - name: Audit containers
+        if: ${{ !cancelled() }}
+        run: bash .github/scripts/docker-utils.sh log-audit
+
+      - name: Recreate containers
+        run: bash .github/scripts/docker-utils.sh restart "${{ matrix.mode.services }}"
+
+      - name: Check containers after the restart
+        run: bash .github/scripts/docker-utils.sh check-services "${{ matrix.mode.services }}"
+
+      - name: Smoke test after the restart
+        timeout-minutes: 15
+        env:
+          LICENSE: ${{ secrets.LICENSE_ENTERPRISE }}
+          SMOKE_SUMMARY_TITLE: Smoke test after the restart
+        run: bash .github/scripts/docker-utils.sh smoke-test -m "bootstrap or verify"
+
+      - name: Backup and restore
+        timeout-minutes: 30
+        env:
+          LICENSE: ${{ secrets.LICENSE_ENTERPRISE }}
+          SMOKE_RUN_RESTORE: "true"
+          SMOKE_SUMMARY_TITLE: Backup and restore
+        run: bash .github/scripts/docker-utils.sh smoke-test -m "bootstrap or restore"
+
+      - name: Job summary
+        if: ${{ !cancelled() }}
+        run: bash .github/scripts/docker-utils.sh summary
 
       - name: Print logs for crashed containers
         if: ${{ !cancelled() }}
@@ -137,3 +172,88 @@ jobs:
           AWS_REST_API_ID: ${{ secrets.AWS_REST_API_ID }}
           AWS_RESOURCE_ID: ${{ secrets.AWS_RESOURCE_ID }}
         run: bash .github/scripts/offline-archive.sh upload
+
+  Update-OCI-Docker:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd
+          - runner: ubuntu-24.04-arm
+            arch: arm
+    name: OCI update [${{ matrix.arch }}]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Free Disk Space
+        run: sudo bash .github/scripts/free-disk-space-linux.sh
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Install the released version
+        env:
+          PREVIOUS_VERSION: ${{ github.event.inputs.previous_version }}
+        run: bash .github/scripts/docker-utils.sh install-previous
+
+      - name: Prepare data on the released version
+        timeout-minutes: 20
+        env:
+          LICENSE: ${{ secrets.LICENSE_ENTERPRISE }}
+          SMOKE_SUMMARY_TITLE: Released version before the update
+        run: bash .github/scripts/docker-utils.sh smoke-test -m "bootstrap or seed"
+
+      - name: Update to the tested version
+        env:
+          DOCKERHUB_USERNAME_PAT: ${{ secrets.DOCKERHUB_USERNAME_PAT }}
+          DOCKERHUB_TOKEN_PAT: ${{ secrets.DOCKERHUB_TOKEN_PAT }}
+        run: bash .github/scripts/docker-utils.sh update-install
+
+      - name: Verify the update
+        run: |
+          bash .github/scripts/docker-utils.sh verify-update
+          bash .github/scripts/docker-utils.sh check-services auto
+          bash .github/scripts/docker-utils.sh status
+
+      - name: Verify data after the update
+        timeout-minutes: 15
+        env:
+          LICENSE: ${{ secrets.LICENSE_ENTERPRISE }}
+          SMOKE_SUMMARY_TITLE: Data after the update
+        run: bash .github/scripts/docker-utils.sh smoke-test -m "bootstrap or verify"
+
+      - name: Smoke test of the updated portal
+        timeout-minutes: 45
+        env:
+          LICENSE: ${{ secrets.LICENSE_ENTERPRISE }}
+          SMOKE_SUMMARY_TITLE: Updated portal
+        run: bash .github/scripts/docker-utils.sh smoke-test -m "not restore"
+
+      - name: Audit containers
+        if: ${{ !cancelled() }}
+        run: bash .github/scripts/docker-utils.sh log-audit
+
+      - name: Backup and restore
+        timeout-minutes: 30
+        env:
+          LICENSE: ${{ secrets.LICENSE_ENTERPRISE }}
+          SMOKE_RUN_RESTORE: "true"
+          SMOKE_SUMMARY_TITLE: Backup and restore
+        run: bash .github/scripts/docker-utils.sh smoke-test -m "bootstrap or restore"
+
+      - name: Job summary
+        if: ${{ !cancelled() }}
+        run: bash .github/scripts/docker-utils.sh summary
+
+      - name: Print logs for crashed containers
+        if: ${{ !cancelled() }}
+        run: bash .github/scripts/docker-utils.sh logs 30
