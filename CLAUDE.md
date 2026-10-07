@@ -111,8 +111,6 @@ scripts/                    — Service startup: identity, socketio, ssoauth, we
 start/                      — Dev lifecycle: start/stop/restart (.sh + .bat + .py)
 tests/                      — lint/, vagrant/
 tools/                      — check.sh
-templates/                  — gitea-claude-review (AI code review templates)
-.gitea/actions/             — claude-review (Gitea AI code review action)
 .github/workflows/          — GitHub Actions workflows (see CI/CD section)
 Jenkinsfile                 — Jenkins declarative pipeline
 ```
@@ -148,7 +146,6 @@ docker compose --env-file .env -f apps.yml -f build/dev/apps.overcome.yml up -d
 | `offline-release.yml` | Offline package build |
 | `oci-release.yml` | Container registry release |
 | `readme-update.yml` | Update OS support list in README |
-| `readme-update.yml` | Auto-update README |
 
 **Testing & Quality:**
 
@@ -158,7 +155,6 @@ docker compose --env-file .env -f apps.yml -f build/dev/apps.overcome.yml up -d
 | `ci-oci-install.yml` | Linux package install tests |
 | `ci-oci-update.yml` | Update mechanism tests |
 | `rebuild-boxes.yml` | Rebuild Vagrant boxes for install tests |
-| `zap-scanner.yaml` | OWASP ZAP security scan |
 
 ## Smoke Tests
 

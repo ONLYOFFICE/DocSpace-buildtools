@@ -58,7 +58,7 @@ buildtools/
 ├── start/                      # Service lifecycle (start.sh, stop.sh, restart.sh)
 ├── tests/                      # Test utilities (lint, vagrant)
 ├── tools/                      # Utility scripts
-├── .github/workflows/          # GitHub Actions (18 workflows)
+├── .github/workflows/          # GitHub Actions (12 workflows)
 ├── build*.sh, build*.bat       # Platform-specific build scripts
 ├── run*.sh, run*.bat           # Test and migration runners
 ├── *.py                        # Python orchestration utilities
@@ -185,7 +185,7 @@ Docker-based migrations are handled by `migration-runner.yml` Compose service.
 
 ### GitHub Actions
 
-18 workflows in `.github/workflows/`:
+12 workflows in `.github/workflows/`:
 
 **Build & Release:**
 
@@ -206,8 +206,6 @@ Docker-based migrations are handled by `migration-runner.yml` Compose service.
 | `ci-oci-docker-install.yml` | OneClickInstall Docker testing |
 | `ci-oci-install.yml` | Linux package installation testing |
 | `ci-oci-update.yml` | Update mechanism testing |
-| `check-comments.yml` | Code review automation |
-| `claude-auto-review.yml` | Automated PR code review with Claude |
 
 **Infrastructure:**
 
