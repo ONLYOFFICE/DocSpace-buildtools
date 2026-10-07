@@ -40,8 +40,13 @@ echo "::notice::Backend build completed in $((BACKEND_END_TIMER - BACKEND_START_
 
 # MCP build
 cd "${BUILD_PATH}/mcp"
+# The mcp repo has no packageManager field; pin pnpm to the version from its mise.toml
+MCP_PNPM_VERSION=$(sed -nE 's/^pnpm *=[^0-9]*([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' mise.toml 2>/dev/null || true)
+[ -n "${MCP_PNPM_VERSION}" ] || { MCP_PNPM_VERSION=10.11.0; echo "::warning::pnpm version not found in mcp mise.toml, using ${MCP_PNPM_VERSION}"; }
+corepack prepare "pnpm@${MCP_PNPM_VERSION}" --activate
 # Allow postinstall scripts for MCP deps: esbuild and unrs-resolver
-pnpm install --frozen-lockfile --dangerously-allow-all-builds && pnpm build-app
+pnpm install --frozen-lockfile --dangerously-allow-all-builds
+pnpm build-app
 mkdir -p "${PUBLISH_DIR}/services/ASC.AI.MCP/service"
 cp -a bin "${PUBLISH_DIR}/services/ASC.AI.MCP/service/"
 
