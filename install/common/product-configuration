@@ -621,6 +621,73 @@ generate_key() {
 	chmod -R 600 ${APP_DIR}/.private
 }
 
+# Fill missing or empty keys of the target settings file from the source one, limited to the listed dotted keys if any
+fill_missing_settings() {
+	local TARGET_FILE="$1" SOURCE_FILE="$2"
+	shift 2
+	[ -f "$TARGET_FILE" ] && [ -f "$SOURCE_FILE" ] || return 0
+
+	node -e '
+		const fs = require("fs");
+		const [targetPath, sourcePath, ...keptKeys] = process.argv.slice(1);
+		const isObject = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+		const isMissing = (value) => value === undefined || value === null || value === "";
+		const fill = (target, source) => {
+			for (const key of Object.keys(source)) {
+				if (isMissing(target[key])) target[key] = source[key];
+				else if (isObject(target[key]) && isObject(source[key])) fill(target[key], source[key]);
+			}
+		};
+		const pick = (source, dottedKey) => {
+			const keys = dottedKey.split(".");
+			let value = source;
+			for (const key of keys) value = isObject(value) ? value[key] : undefined;
+			if (value === undefined) return {};
+			return keys.reduceRight((nested, key) => ({ [key]: nested }), value);
+		};
+		try {
+			const target = JSON.parse(fs.readFileSync(targetPath, "utf8"));
+			const source = JSON.parse(fs.readFileSync(sourcePath, "utf8"));
+			if (keptKeys.length === 0) fill(target, source);
+			else keptKeys.forEach((dottedKey) => fill(target, pick(source, dottedKey)));
+			fs.writeFileSync(targetPath, JSON.stringify(target, null, 2) + "\n");
+		} catch (error) {
+			console.log(error.message);
+			process.exit(1);
+		}
+	' "$TARGET_FILE" "$SOURCE_FILE" "$@"
+}
+
+# Carry over the state that cannot be re-derived when the environment changes (e.g. CE to DE update)
+migrate_environment_settings() {
+	local PREVIOUS_ENVIRONMENT="" CANDIDATE_FILE CANDIDATE SETTINGS_NAME FAILURE_REASON FAILED_FILES=""
+
+	# Runs only until the new environment has its database connection configured
+	[ -z "$(json -f "${USER_CONF}" ConnectionStrings.default.connectionString 2>/dev/null)" ] || return 0
+
+	# The previous environment is the newest configured one other than the current
+	for CANDIDATE_FILE in "$APP_DIR"/appsettings.*.json; do
+		CANDIDATE=${CANDIDATE_FILE##*/appsettings.}
+		CANDIDATE=${CANDIDATE%.json}
+		[ "$CANDIDATE" != "$ENVIRONMENT" ] || continue
+		[ -n "$(json -f "$CANDIDATE_FILE" ConnectionStrings.default.connectionString 2>/dev/null)" ] || continue
+		if [ -z "$PREVIOUS_ENVIRONMENT" ] || [ "$APP_DIR/appsettings.$CANDIDATE.json" -nt "$APP_DIR/appsettings.$PREVIOUS_ENVIRONMENT.json" ]; then
+			PREVIOUS_ENVIRONMENT="$CANDIDATE"
+		fi
+	done
+	[ -n "$PREVIOUS_ENVIRONMENT" ] || return 0
+
+	echo -n "Migrating ${PREVIOUS_ENVIRONMENT} settings to ${ENVIRONMENT}... "
+	command -v node >/dev/null 2>&1 || { echo "WARNING: node not found, settings were not carried over"; return 0; }
+
+	FAILURE_REASON=$(fill_missing_settings "$USER_CONF" "$APP_DIR/appsettings.$PREVIOUS_ENVIRONMENT.json" ConnectionStrings.default.connectionString) || FAILED_FILES+=" appsettings (${FAILURE_REASON})"
+	for SETTINGS_NAME in redis rabbitmq elastic; do
+		FAILURE_REASON=$(fill_missing_settings "$APP_DIR/$SETTINGS_NAME.$ENVIRONMENT.json" "$APP_DIR/$SETTINGS_NAME.$PREVIOUS_ENVIRONMENT.json") || FAILED_FILES+=" ${SETTINGS_NAME} (${FAILURE_REASON})"
+	done
+
+	[ -z "$FAILED_FILES" ] && echo "OK" || echo "WARNING: failed to carry over:${FAILED_FILES}"
+}
+
 product_configuration(){
 	echo -n "Configuring ${PRODUCT}... "
 
@@ -712,6 +779,7 @@ fi
 stop_services
 install_json
 product_configuration
+migrate_environment_settings
 
 if $PACKAGE_MANAGER mysql-client >/dev/null 2>&1 || $PACKAGE_MANAGER mysql-community-client >/dev/null 2>&1; then
 	input_db_params
