@@ -519,6 +519,7 @@ CMD ["ASC.Web.Studio.dll", "ASC.Web.Studio", "core:eventBus:subscriptionClientNa
 ## ASC.Web.HealthChecks.UI ##
 FROM dotnetrun AS healthchecks
 WORKDIR ${BUILD_PATH}/services/ASC.Web.HealthChecks.UI/service
+ENV PATH_TO_CONF=${BUILD_PATH}/services/ASC.Web.HealthChecks.UI/service
 
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-healthchecks-entrypoint.sh /usr/bin/docker-healthchecks-entrypoint.sh
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Web.HealthChecks.UI/service/ .
