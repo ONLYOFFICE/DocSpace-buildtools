@@ -9,7 +9,7 @@ on:
     paths:
       - 'config/**'
       - 'install/docker/build/Dockerfile'
-      - 'install/docker/build/*entrypoint*.*'
+      - 'install/docker/build/entrypoints/**'
   workflow_dispatch:
 
 jobs:
