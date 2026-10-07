@@ -177,12 +177,13 @@ detect_existing_document_server () {
 	[ "${INSTALL_DOCUMENT_SERVER}" = "true" ] || return 0
 
 	local CONTAINER FOUND_IMAGE CANDIDATE
+	# The status prefix is optional, so release images are adopted under any --status.
 	while read -r CANDIDATE FOUND_IMAGE; do
 		# Adopt only raw docker-run Docs containers.
 		[ -n "$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' "${CANDIDATE}" 2>/dev/null)" ] && continue
 		CONTAINER="${CANDIDATE}"
 		break
-	done < <(docker ps -a --format '{{.Names}} {{.Image}}' 2>/dev/null | awk -v pkg="${PACKAGE_SYSNAME}" -v status="${STATUS}" '$2 ~ ("(^|/)"pkg"/"status"documentserver(-de|-ee)?(:|$)") {print}')
+	done < <(docker ps -a --format '{{.Names}} {{.Image}}' 2>/dev/null | awk -v pkg="${PACKAGE_SYSNAME}" -v status="${STATUS}" 'BEGIN {prefix = (status == "") ? "" : "(" status ")?"} $2 ~ ("(^|/)"pkg"/"prefix"documentserver(-de|-ee)?(:|$)") {print}')
 	[ -z "${CONTAINER}" ] && return 0
 
 	# Inspect before stopping or recreating anything; mount options must survive too.
