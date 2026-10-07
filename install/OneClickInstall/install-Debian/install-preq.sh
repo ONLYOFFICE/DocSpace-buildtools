@@ -160,7 +160,13 @@ echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select tr
 
 # Install packages.
 apt-get -y update
-apt-get install -o DPkg::options::="--force-confnew" -yq \
+# Preserve existing dependency configs when adopting Docs, including during upgrades.
+DPKG_CONF_OPTION="--force-confnew"
+if [ -f "/etc/${package_sysname}/documentserver/nginx/ds.conf.apps.bak" ] \
+	|| [ -f "/etc/${package_sysname}/documentserver/nginx/ds.conf.ssl.bak" ]; then
+	DPKG_CONF_OPTION="--force-confold"
+fi
+apt-get install -o DPkg::options::="${DPKG_CONF_OPTION}" -yq \
 				expect \
 				nano \
 				nodejs \

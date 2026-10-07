@@ -147,7 +147,7 @@ uninstall_apps() {
   cd /home/vagrant
   # --localscripts true: reuse the platform script already placed here by install.sh instead of
   # downloading it from download.onlyoffice.com/apps, which doesn't exist until this release ships.
-  DEBIAN_FRONTEND=noninteractive bash apps-install.sh package -uni true -log false -ls true <<< "Y" \
+  DEBIAN_FRONTEND=noninteractive bash apps-install.sh package -uni true -log false -ls true <<< $'Y\nY' \
     || { echo "::error::Uninstall failed"; exit 1; }
   echo "${COLOR_GREEN}[OK] Package uninstalled${COLOR_RESET}"
 }

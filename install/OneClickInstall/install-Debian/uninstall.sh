@@ -55,30 +55,71 @@ fi
 # Get Apps packages to uninstall
 mapfile -t PACKAGES_TO_UNINSTALL < <(dpkg -l | awk '{print $2}' | grep -E "^(${package}|${legacy_product})(-|:|$)" || true)
 
-mapfile -t DOCUMENT_SERVER_PACKAGES < <(dpkg -l | awk '{print $2}' | grep -E "^${package_sysname}-documentserver(-de|-ee)?(:|$)" || true)
+KEEP_DOCS=false
+mapfile -t DOCUMENT_SERVER_PACKAGES < <(dpkg -l | awk '$1 ~ /^.i/{print $2}' | grep -E "^${package_sysname}-documentserver(-de|-ee)?(:|$)" || true)
 if [ "${#DOCUMENT_SERVER_PACKAGES[@]}" -gt 0 ]; then
     read -r -p "Also uninstall ${package_sysname^^} Docs? (y/N): " DOCS_CHOICE || DOCS_CHOICE=""
-    [[ "${DOCS_CHOICE,,}" =~ ^(y|yes)$ ]] && PACKAGES_TO_UNINSTALL+=("${DOCUMENT_SERVER_PACKAGES[@]}")
+    if [[ "${DOCS_CHOICE,,}" =~ ^(y|yes)$ ]]; then
+        PACKAGES_TO_UNINSTALL+=("${DOCUMENT_SERVER_PACKAGES[@]}")
+    else
+        KEEP_DOCS=true
+    fi
 fi
 
 DEPENDENCIES=(
-    nodejs aspnetcore-runtime-10.0 mysql-server mysql-client postgresql
-    redis-server rabbitmq-server ffmpeg opensearch
-    opensearch-dashboards fluent-bit openresty
+    aspnetcore-runtime-10.0 opensearch opensearch-dashboards fluent-bit openresty
 )
 
 if [ "$UNINSTALL_DEPENDENCIES" = true ]; then
+    # Docs may use either PostgreSQL or MySQL, including a pre-existing database.
+    if [ "${KEEP_DOCS}" = false ]; then
+        DEPENDENCIES+=(nodejs mysql-server mysql-client postgresql redis-server rabbitmq-server ffmpeg)
+        mapfile -t -O "${#PACKAGES_TO_UNINSTALL[@]}" PACKAGES_TO_UNINSTALL < <(dpkg-query -W -f='${Package}\n' | grep -E "^postgresql(-[0-9]+)?(-.*)?$")
+    fi
     PACKAGES_TO_UNINSTALL+=( "${DEPENDENCIES[@]}" )
-    mapfile -t -O "${#PACKAGES_TO_UNINSTALL[@]}" PACKAGES_TO_UNINSTALL < <(dpkg-query -W -f='${Package}\n' | grep -E "^postgresql(-[0-9]+)?(-.*)?$")
+fi
+
+# Restore the standalone Docs configuration before removing Apps.
+if [ "${KEEP_DOCS}" = true ]; then
+    if [ "${LOCAL_SCRIPTS}" = "true" ]; then
+        source common/restore-docs.sh
+    else
+        source_remote_script common/restore-docs.sh
+    fi
+
+    DS_CONF_FILE="/etc/${package_sysname}/documentserver/nginx/ds.conf"
+    restore_docs_configuration "${DS_CONF_FILE}" || exit 1
+
+    # Save only plain HTTP, preferring IPv4; Docs debconf accepts IPv4:port only.
+    DS_LISTEN_ADDRESS="$(awk '
+        { sub(/#.*/, ""); sub(/;.*/, "", $2) }
+        $1 == "listen" && $0 !~ /[[:space:]](ssl|quic)([[:space:];]|$)/ {
+            priority = 1
+            if ($2 !~ /^([0-9.]+:)?[0-9]+$/) { sub(/.*:/, "", $2); priority++ }
+            if ($2 ~ /^([0-9.]+:)?[0-9]+$/ && !(priority in addresses)) addresses[priority] = $2
+        }
+        END {
+            for (priority = 1; priority <= 2; priority++)
+                if (priority in addresses) { print (index(addresses[priority], ":") ? "" : "0.0.0.0:") addresses[priority]; exit }
+        }
+    ' "${DS_CONF_FILE}")"
+    { [ -n "${DS_LISTEN_ADDRESS}" ] && command -v debconf-set-selections >/dev/null 2>&1 \
+        && echo "${DOCUMENT_SERVER_PACKAGES[0]}" "${DS_COMMON_NAME:-onlyoffice}"/listenaddress string "${DS_LISTEN_ADDRESS}" | debconf-set-selections; } \
+        || echo "Warning: could not determine or save the restored Docs HTTP listen address for future package updates." >&2
 fi
 
 # Stop app services before their dependencies disappear.
 systemctl stop "${product}-*.service" "${legacy_product}-*.service" >/dev/null 2>&1 || true
 
 # Uninstall packages and clean up
-apt-get purge -y -o DPkg::Lock::Timeout=60 "${PACKAGES_TO_UNINSTALL[@]}" \
-  && apt-get autoremove -y -o DPkg::Lock::Timeout=60 \
-  && apt-get clean
+apt-get purge -y -o DPkg::Lock::Timeout=60 "${PACKAGES_TO_UNINSTALL[@]}"
+[ "${KEEP_DOCS}" = true ] || apt-get autoremove -y -o DPkg::Lock::Timeout=60
+apt-get clean
+
+rm -f -- "/etc/cron.weekly/${product}-renew-letsencrypt" "/etc/cron.weekly/${legacy_product}-renew-letsencrypt" \
+    /etc/letsencrypt/renewal-hooks/deploy/onlyoffice-apps-openresty
+rm -f -- "/etc/${package_sysname}/documentserver/nginx/ds.conf".{apps.bak,ssl.bak} \
+    "/etc/${package_sysname}/documentserver/nginx/ds.conf".apps.*.bak
 
 # Uninstall swap file if it exists
 for SWAPFILE_NAME in "${product}" "${legacy_product}"; do
@@ -89,4 +130,4 @@ for SWAPFILE_NAME in "${product}" "${legacy_product}"; do
 done
 
 echo -e "Uninstallation of ${product_name}" \
-         "$( [ "$UNINSTALL_DEPENDENCIES" = true ] && echo "and all dependencies" ) \e[32mcompleted.\e[0m"
+         "$( [ "$UNINSTALL_DEPENDENCIES" = true ] && { [ "${KEEP_DOCS}" = true ] && echo "and selected dependencies" || echo "and all dependencies"; } ) \e[32mcompleted.\e[0m"

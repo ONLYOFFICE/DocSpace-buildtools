@@ -55,21 +55,39 @@ fi
 # Get Apps packages to uninstall
 mapfile -t PACKAGES_TO_UNINSTALL < <(rpm -qa --qf '%{NAME}\n' | grep -E "^(${package}|${legacy_product})(-|$)" || true)
 
+KEEP_DOCS=false
 mapfile -t DOCUMENT_SERVER_PACKAGES < <(rpm -qa --qf '%{NAME}\n' | grep -E "^${package_sysname}-documentserver(-de|-ee)?$" || true)
 if [ "${#DOCUMENT_SERVER_PACKAGES[@]}" -gt 0 ]; then
     read -r -p "Also uninstall ${package_sysname^^} Docs? (y/N): " DOCS_CHOICE || DOCS_CHOICE=""
-    [[ "${DOCS_CHOICE,,}" =~ ^(y|yes)$ ]] && PACKAGES_TO_UNINSTALL+=("${DOCUMENT_SERVER_PACKAGES[@]}")
+    if [[ "${DOCS_CHOICE,,}" =~ ^(y|yes)$ ]]; then
+        PACKAGES_TO_UNINSTALL+=("${DOCUMENT_SERVER_PACKAGES[@]}")
+    else
+        KEEP_DOCS=true
+    fi
 fi
 
 DEPENDENCIES=(
-    nodejs aspnetcore-runtime-10.0 mysql-community-server postgresql
-    postgresql-server redis rabbitmq-server ffmpeg opensearch
-    opensearch-dashboards fluent-bit openresty
+    aspnetcore-runtime-10.0 opensearch opensearch-dashboards fluent-bit openresty
 )
 
 if [ "$UNINSTALL_DEPENDENCIES" = true ]; then
-    rpm -q valkey &>/dev/null && DEPENDENCIES+=("valkey")
+    # Docs may use either PostgreSQL or MySQL, including a pre-existing database.
+    if [ "${KEEP_DOCS}" = false ]; then
+        DEPENDENCIES+=(nodejs mysql-community-server postgresql postgresql-server redis rabbitmq-server ffmpeg)
+        rpm -q valkey &>/dev/null && DEPENDENCIES+=("valkey")
+    fi
     PACKAGES_TO_UNINSTALL+=("${DEPENDENCIES[@]}")
+fi
+
+# Restore the standalone Docs configuration before removing Apps.
+if [ "${KEEP_DOCS}" = true ]; then
+    if [ "${LOCAL_SCRIPTS}" = "true" ]; then
+        source common/restore-docs.sh
+    else
+        source_remote_script common/restore-docs.sh
+    fi
+
+    restore_docs_configuration "/etc/${package_sysname}/documentserver/nginx/ds.conf" || exit 1
 fi
 
 # Stop app services before their dependencies disappear.
@@ -77,7 +95,13 @@ systemctl stop "${product}-*.service" "${legacy_product}-*.service" >/dev/null 2
 
 # Uninstall packages and clean up
 yum remove -y "${PACKAGES_TO_UNINSTALL[@]}" --setopt=clean_requirements_on_remove=false --disableplugin=updateinfo
-yum autoremove -y && yum clean all
+[ "${KEEP_DOCS}" = true ] || yum autoremove -y
+yum clean all
+
+rm -f -- "/etc/cron.weekly/${product}-renew-letsencrypt" "/etc/cron.weekly/${legacy_product}-renew-letsencrypt" \
+    /etc/letsencrypt/renewal-hooks/deploy/onlyoffice-apps-openresty
+rm -f -- "/etc/${package_sysname}/documentserver/nginx/ds.conf".{apps.bak,ssl.bak} \
+    "/etc/${package_sysname}/documentserver/nginx/ds.conf".apps.*.bak
 
 # Uninstall swap file if it exists
 for SWAPFILE_NAME in "${product}" "${legacy_product}"; do
@@ -88,4 +112,4 @@ for SWAPFILE_NAME in "${product}" "${legacy_product}"; do
 done
 
 echo -e "Uninstallation of ${product_name}" \
-         "$( [ "$UNINSTALL_DEPENDENCIES" = true ] && echo "and all dependencies" ) \e[32mcompleted.\e[0m"
+         "$( [ "$UNINSTALL_DEPENDENCIES" = true ] && { [ "${KEEP_DOCS}" = true ] && echo "and selected dependencies" || echo "and all dependencies"; } ) \e[32mcompleted.\e[0m"

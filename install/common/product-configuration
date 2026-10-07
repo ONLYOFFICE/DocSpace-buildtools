@@ -211,7 +211,20 @@ establish_mysql_conn(){
 	echo "OK"
 }
 
+# Old adoption snapshots have no dependency inventory: preserve their services too.
+docs_owns_dependency() {
+	local SNAPSHOT="/etc/${PACKAGE_SYSNAME}/documentserver/nginx/ds.conf" DEPENDENCY
+	if [ -f "${SNAPSHOT}.apps.dependencies.bak" ]; then
+		for DEPENDENCY in "$@"; do
+			grep -qxF "${DEPENDENCY}" "${SNAPSHOT}.apps.dependencies.bak" && return 0
+		done
+		return 1
+	fi
+	[ -f "${SNAPSHOT}.apps.bak" ] || [ -f "${SNAPSHOT}.ssl.bak" ]
+}
+
 change_mysql_config(){
+	docs_owns_dependency mysql-server mysql-community-server && return 0
 	if [ "$DIST" = "RedHat" ]; then
 		CNF_PATH="/etc/my.cnf"
 		CNF_SERVICE_PATH="/usr/lib/systemd/system/mysqld.service"
@@ -369,23 +382,26 @@ setup_docs() {
 		: "${DOCUMENT_SERVER_PORT:=8083}"
 		: "${DOCUMENT_SERVER_JWT_SECRET:=$(json -f ${DS_CONF_DIR}/local.json services.CoAuthoring.secret.inbox.string 2>/dev/null)}"
 		: "${DOCUMENT_SERVER_JWT_HEADER:=$(json -f ${DS_CONF_DIR}/local.json services.CoAuthoring.token.inbox.header 2>/dev/null)}"
-		json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.server.host" "127.0.0.1"
+		# Adopted Docs keeps its service bindings and connections, including custom metrics overrides.
+		if [ ! -f "${DS_CONF_DIR}/nginx/ds.conf.apps.bak" ] && [ ! -f "${DS_CONF_DIR}/nginx/ds.conf.ssl.bak" ]; then
+			json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.server.host" "127.0.0.1"
 
-		if [ "${ENVIRONMENT}" != "community" ]; then
-			json_configuration "${DS_CONF_DIR}/local.json" "adminPanel.host" "127.0.0.1"
-			json_configuration "${DS_CONF_DIR}/local.json" "rabbitmq" "{ url: '${RABBITMQ_URI}' }"
-			json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis" "{ host: '${REDIS_HOST}', port: '${REDIS_PORT}' }"
-			json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis.options" "{
+			if [ "${ENVIRONMENT}" != "community" ]; then
+				json_configuration "${DS_CONF_DIR}/local.json" "adminPanel.host" "127.0.0.1"
+				json_configuration "${DS_CONF_DIR}/local.json" "rabbitmq" "{ url: '${RABBITMQ_URI}' }"
+				json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis" "{ host: '${REDIS_HOST}', port: '${REDIS_PORT}' }"
+				json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis.options" "{
 				${REDIS_USER:+username: '${REDIS_USER}',}
 				${REDIS_PASS:+password: '${REDIS_PASS}',}
 				${REDIS_DB:+database: '${REDIS_DB}',}
 			}"
+			fi
+			mkdir -p /etc/systemd/system/ds-metrics.service.d
+			printf '[Service]\nEnvironment=DS_METRICS_HOST=127.0.0.1\n' > /etc/systemd/system/ds-metrics.service.d/bind.conf
+			systemctl daemon-reload
 		fi
 		
 		chown ds:ds ${DS_CONF_DIR}/local.json
-		mkdir -p /etc/systemd/system/ds-metrics.service.d
-		printf '[Service]\nEnvironment=DS_METRICS_HOST=127.0.0.1\n' > /etc/systemd/system/ds-metrics.service.d/bind.conf
-		systemctl daemon-reload
 		usermod -aG ${PACKAGE_SYSNAME} ds
 		chmod g+rwxs /var/www/${PACKAGE_SYSNAME}/Data
 		systemctl is-active --quiet nginx && systemctl reload nginx
@@ -552,7 +568,7 @@ setup_redis() {
 		-e "s~\(redis_user =\).*~\1 \"$REDIS_USER\"~" -e "s~\(redis_pass =\).*~\1 \"$REDIS_PASS\"~" \
 		-e "s~\(redis_db =\).*~\1 $REDIS_DB~" "${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}.conf"
 
-	if [ $1 == "LOCAL_REDIS_SERVER" ]; then
+	if [ $1 == "LOCAL_REDIS_SERVER" ] && ! docs_owns_dependency redis-server redis valkey; then
 		REDIS_CONF=$(find /etc/redis/redis.conf /etc/redis.conf /etc/valkey/valkey.conf -type f 2>/dev/null | head -n 1)
 
 		sed "s_\(^bind\).*_\1 ${REDIS_HOST}_" -i ${REDIS_CONF}
@@ -585,7 +601,7 @@ setup_rabbitmq() {
 	[[ ${RABBITMQ_PROTOCOL} != "amqps" ]] || json_configuration "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" "RabbitMQ.Uri" "${RABBITMQ_URI}"
 	env_configuration "$APP_DIR/systemd.env" RABBIT_URI "${RABBITMQ_URI}"
 
-	if [ $1 == "LOCAL_RABBITMQ_SERVER" ]; then
+	if [ $1 == "LOCAL_RABBITMQ_SERVER" ] && ! docs_owns_dependency rabbitmq-server; then
 		touch /etc/rabbitmq/rabbitmq.conf /etc/rabbitmq/rabbitmq-env.conf
 		sed -i '/^[[:space:]]*listeners\.tcp\([.][^=]*\)\?[[:space:]]*=/d; /^[[:space:]]*distribution\.listener\.interface[[:space:]]*=/d' /etc/rabbitmq/rabbitmq.conf
 		printf '\nlisteners.tcp.1 = 127.0.0.1:%s\n' "${RABBITMQ_PORT}" >> /etc/rabbitmq/rabbitmq.conf

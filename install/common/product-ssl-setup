@@ -209,8 +209,21 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
         echo "${INHERITED_CERT_NAME} renews via DNS-01 (wildcard); its renewal stays manual." >&2
       else
         # "reconfigure" switches the authenticator for the next renewal without forcing one now.
+        DOCS_NGINX_CONF="${CONFIG_DIR%/*}/documentserver/nginx/ds.conf"
+        if { grep -qF "${CERTIFICATE_FILE}" "${DOCS_NGINX_CONF}.apps.bak" 2>/dev/null \
+            || grep -qF "${CERTIFICATE_FILE}" "${DOCS_NGINX_CONF}.ssl.bak" 2>/dev/null; } \
+            && ! grep -qE '/var/www/onlyoffice/(apps|docspace)' "${INHERITED_RENEWAL_CONF}" 2>/dev/null; then
+          # Save only the inherited Docs renewal state, before Apps changes it.
+          for FILE in "${INHERITED_RENEWAL_CONF}" /etc/cron.d/letsencrypt /usr/bin/letsencrypt_cron.sh; do
+            BACKUP_FILE="${DOCS_NGINX_CONF}.apps.$(basename "${FILE}").bak"
+            if [ -f "${FILE}" ] && [ ! -f "${BACKUP_FILE}" ]; then
+              cp -pL -- "${FILE}" "${BACKUP_FILE}.tmp"
+              mv -f -- "${BACKUP_FILE}.tmp" "${BACKUP_FILE}"
+            fi
+          done
+        fi
         mkdir -p "${WEBROOT_PATH}/.well-known/acme-challenge"
-        if certbot reconfigure --cert-name "${INHERITED_CERT_NAME}" --webroot -w "${WEBROOT_PATH}" >/var/log/le-takeover.log 2>&1; then
+        if certbot reconfigure --cert-name "${INHERITED_CERT_NAME}" --webroot -w "${WEBROOT_PATH}" --non-interactive >/var/log/le-takeover.log 2>&1; then
           mkdir -p /etc/letsencrypt/renewal-hooks/deploy
           printf '#!/bin/sh\nsystemctl reload openresty\n' > /etc/letsencrypt/renewal-hooks/deploy/onlyoffice-apps-openresty
           chmod 0755 /etc/letsencrypt/renewal-hooks/deploy/onlyoffice-apps-openresty

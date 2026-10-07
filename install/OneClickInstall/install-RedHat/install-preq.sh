@@ -207,7 +207,15 @@ fi
 
 package_services="rabbitmq-server ${REDIS_PACKAGE} mysqld"
 
-if [ "$INSTALLATION_TYPE" != "community" ]; then
+# Only adopted standalone Docs keeps its existing PostgreSQL configuration.
+PRESERVE_DOCS_POSTGRESQL=false
+if { [ -f "/etc/${package_sysname}/documentserver/nginx/ds.conf.apps.bak" ] \
+	|| [ -f "/etc/${package_sysname}/documentserver/nginx/ds.conf.ssl.bak" ]; } \
+	&& rpm -q postgresql-server >/dev/null 2>&1; then
+	PRESERVE_DOCS_POSTGRESQL=true
+fi
+if [ "$INSTALLATION_TYPE" != "community" ] \
+	&& [ "${PRESERVE_DOCS_POSTGRESQL}" != "true" ]; then
 	{ yum check-update postgresql; PSQLExitCode=$?; } || true
 	${package_manager} -y install postgresql postgresql-server
 	if [[ $PSQLExitCode -eq $UPDATE_AVAILABLE_CODE ]]; then

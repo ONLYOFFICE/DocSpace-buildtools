@@ -127,6 +127,25 @@ if [ "$UPDATE" != "true" ]; then
 	export INHERIT_SSL_DOMAIN="" INHERIT_SSL_CERT="" INHERIT_SSL_KEY="" INHERIT_SSL_INTERNAL_PORTAL=""
 	if [ -n "$DS_INSTALLED_PKG_NAME" ]; then
 		DS_CONF_FILE="/etc/${package_sysname}/documentserver/nginx/ds.conf"
+		DS_BACKUP_FILE="${DS_CONF_FILE}.apps.bak"
+		# Keep the first standalone configuration for Apps removal.
+		if [ ! -f "${DS_BACKUP_FILE}" ]; then
+			# Existing services may be shared with Docs. Do not reconfigure them for Apps.
+			if [ ! -f "${DS_CONF_FILE}.apps.dependencies.bak" ]; then
+				for PACKAGE_NAME in mysql-server mysql-community-server redis-server redis valkey rabbitmq-server; do
+					if package_installed "${PACKAGE_NAME}"; then
+						printf '%s\n' "${PACKAGE_NAME}"
+					fi
+				done > "${DS_CONF_FILE}.apps.dependencies.bak.tmp"
+				mv -f -- "${DS_CONF_FILE}.apps.dependencies.bak.tmp" "${DS_CONF_FILE}.apps.dependencies.bak"
+			fi
+			if [ -f "${DS_CONF_FILE}.ssl.bak" ]; then
+				cp -pL -- "${DS_CONF_FILE}.ssl.bak" "${DS_BACKUP_FILE}.tmp"
+			else
+				cp -pL -- "${DS_CONF_FILE}" "${DS_BACKUP_FILE}.tmp"
+			fi
+			mv -f -- "${DS_BACKUP_FILE}.tmp" "${DS_BACKUP_FILE}"
+		fi
 		DS_CURRENT_PORT="$(grep -oP '^\s*listen\s+(\S*:)?\K\d+' "$DS_CONF_FILE" 2>/dev/null | head -1)"
 
 		if ! grep -q ssl_certificate "/etc/openresty/conf.d/${package_sysname}-proxy.conf" 2>/dev/null \
@@ -192,7 +211,6 @@ if [ "$UPDATE" != "true" ]; then
 			SECURE_LINK_SECRET="$(grep -oP '(?<=secure_link_secret ).*(?=;)' "$DS_CONF_FILE" | head -1)"
 			if [ -n "$INHERIT_SSL_DOMAIN" ] && [ -f "$DS_CONF_TMPL" ] && [ -n "$SECURE_LINK_SECRET" ]; then
 				echo "Switching ${DS_INSTALLED_PKG_NAME} to plain HTTP on 127.0.0.1:${DS_NEW_PORT}; ${product_name} inherits its HTTPS certificate for ${INHERIT_SSL_DOMAIN}."
-				cp -a -- "$DS_CONF_FILE" "${DS_CONF_FILE}.ssl.bak"
 				cp -f -- "$DS_CONF_TMPL" "$DS_CONF_FILE"
 				SECURE_LINK_SECRET_ESC="$(printf '%s' "$SECURE_LINK_SECRET" | tr -d '\r\n' | sed 's/^"\(.*\)"$/\1/; s/[\\&|]/\\&/g')"
 				sed -e "s|^[[:space:]]*set[[:space:]]\+\$secure_link_secret[[:space:]]\+.*;|  set \$secure_link_secret \"${SECURE_LINK_SECRET_ESC}\";|" \
@@ -204,11 +222,11 @@ if [ "$UPDATE" != "true" ]; then
 				# Guard against template format drift that sed would silently miss.
 				if grep -qE '^\s*listen\s+(0\.0\.0\.0|\[::\]):80\b' "$DS_CONF_FILE"; then
 					echo "Error: ${DS_CONF_TMPL} didn't match the expected format; restoring ${DS_INSTALLED_PKG_NAME}'s HTTPS configuration." >&2
-					cp -f -- "${DS_CONF_FILE}.ssl.bak" "$DS_CONF_FILE"
+					cp -f -- "${DS_BACKUP_FILE}" "$DS_CONF_FILE"
 					INHERIT_SSL_DOMAIN=""; INHERIT_SSL_CERT=""; INHERIT_SSL_KEY=""
 				elif command -v nginx >/dev/null 2>&1 && ! nginx -t >/dev/null 2>&1; then
 					echo "Error: generated ${DS_CONF_FILE} failed nginx -t; restoring ${DS_INSTALLED_PKG_NAME}'s HTTPS configuration." >&2
-					cp -f -- "${DS_CONF_FILE}.ssl.bak" "$DS_CONF_FILE"
+					cp -f -- "${DS_BACKUP_FILE}" "$DS_CONF_FILE"
 					INHERIT_SSL_DOMAIN=""; INHERIT_SSL_CERT=""; INHERIT_SSL_KEY=""
 				else
 					{ command -v debconf-set-selections >/dev/null 2>&1 && echo "${DS_INSTALLED_PKG_NAME}" "${DS_COMMON_NAME:-onlyoffice}"/listenaddress string "127.0.0.1:${DS_NEW_PORT}" | debconf-set-selections; } || true
