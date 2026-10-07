@@ -124,9 +124,9 @@ install_json() {
 
 json_configuration() {
 	local JSON_FILE="$1" FIELD_PATH="$2" FIELD_VALUE="$3"
-	${JSON} "$JSON_FILE" -e \
+	JSON_FIELD_VALUE="$FIELD_VALUE" ${JSON} "$JSON_FILE" -e \
 	"var p='$FIELD_PATH'.split('.'),k=p.pop(),o=p.reduce((a,x)=>(a[x]??={}),this);
-	o[k] = $( [[ $FIELD_VALUE =~ ^(\{.*\}|\[.*\])$ ]] && printf %s "$FIELD_VALUE" || printf "'%s'" "$FIELD_VALUE")" >/dev/null 2>&1
+	o[k] = $( [[ $FIELD_VALUE =~ ^(\{.*\}|\[.*\])$ ]] && printf %s "$FIELD_VALUE" || printf %s 'process.env.JSON_FIELD_VALUE')" >/dev/null 2>&1
 }
 
 env_configuration() {
