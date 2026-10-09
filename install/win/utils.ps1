@@ -96,8 +96,10 @@ function ApplyInstalledDocumentServerSettings {
         AI_SetMsiProperty DOCS_INSTALL_LOCATION $RegistryDocsDir
     }
 
+    $EditionSuffix = @{ community = ''; enterprise = ' EE'; developer = ' DE' }[(AI_GetMsiProperty ENVIRONMENT)]
+    $SameEdition = (AI_GetMsiProperty DOCS_INSTALLED_DISPLAY_NAME) -match "^ONLYOFFICE Document Server$EditionSuffix(?:\s+\d|$)"
     $SkipDocsInstall = $false
-    try { $SkipDocsInstall = [version]$InstalledVersion -ge [version](AI_GetMsiProperty DS_VERSION) }
+    try { $SkipDocsInstall = $SameEdition -and [version]$InstalledVersion -ge [version](AI_GetMsiProperty DS_VERSION) }
     catch { Write-Warning "Invalid DocumentServer version: installed=$InstalledVersion" }
     AI_SetMsiProperty DOCUMENT_SERVER_INSTALL_NONE ([string][int]$SkipDocsInstall)
 
