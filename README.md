@@ -1,7 +1,7 @@
 # ONLYOFFICE Apps Build Tools
 
 [![Release Notes](https://img.shields.io/github/release/ONLYOFFICE/DocSpace?style=flat-square)](https://github.com/ONLYOFFICE/DocSpace/releases)
-[![License](https://img.shields.io/badge/license-AGPLv3-orange)](https://docspace.onlyoffice.com/s/gnC2xcxWjHhHmsM)
+[![License](https://img.shields.io/badge/license-AGPLv3-orange)](https://docspace.onlyoffice.com/s/wjQ94v2GWfm65wH)
 [![GitHub stars](https://img.shields.io/github/stars/ONLYOFFICE/DocSpace?style=flat-square)](https://star-history.com/#ONLYOFFICE/DocSpace)
 [![Open Issues](https://img.shields.io/github/issues-raw/ONLYOFFICE/DocSpace?style=flat-square)](https://github.com/ONLYOFFICE/DocSpace/issues)
 
