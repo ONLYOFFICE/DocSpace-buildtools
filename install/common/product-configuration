@@ -707,6 +707,10 @@ product_configuration(){
 		fi
 	done
 
+	# The environment file is created once, so keep its license link in sync with the template on upgrade
+	LICENSE_LINK=$(json -f "$APP_DIR/externalresources.$ENVIRONMENT.json.template" externalresources.common.default.entries.license 2>/dev/null)
+	[ -n "$LICENSE_LINK" ] && json_configuration "$APP_DIR/externalresources.$ENVIRONMENT.json" "externalresources.common.default.entries.license" "$LICENSE_LINK"
+
 	[ -f "$APP_DIR/systemd.env" ] || touch "$APP_DIR/systemd.env"
 	chmod o-rwx "$APP_DIR/systemd.env"
 
