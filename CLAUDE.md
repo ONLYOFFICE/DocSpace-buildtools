@@ -160,7 +160,7 @@ docker compose --env-file .env -f apps.yml -f build/dev/apps.overcome.yml up -d
 
 `tests/smoke/smoke_test.py` runs against a live portal (`SERVER_URL`); `.github/scripts/docker-utils.sh smoke-test [PYTEST_ARGS]` wraps it for CI.
 Tests run in file order and share state. Markers select phases: `bootstrap` (settings, wizard, auth), `seed` (creates data, writes `SMOKE_STATE_FILE`), `verify` (checks the data after a restart or update).
-Examples: `-m "bootstrap or seed"` before an update, `-m "bootstrap or verify"` after it. `DEPLOYMENT_MODE` (set by docker-utils.sh) gates mode-specific tests; the backup and restore test (marker `restore`) runs only with `SMOKE_RUN_RESTORE=true`, as the last step, because a restore regenerates user IDs and invalidates all passwords.
+Examples: `-m "bootstrap or seed"` before an update, `-m "bootstrap or verify"` after it. `DEPLOYMENT_MODE` (set by docker-utils.sh) gates mode-specific tests.
 `SMOKE_SUMMARY_FILE` receives a result line written by `tests/smoke/conftest.py`. The job summary is published only when the job failed or a section is open (failed tests, audit findings, unhealthy containers).
 
 ## Key Patterns
