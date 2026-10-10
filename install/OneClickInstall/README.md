@@ -370,9 +370,9 @@ The installation scripts support the following operating systems, which are **re
 - Debian 11
 - Debian 12
 - Debian 13
-- Ubuntu 22.04
-- Ubuntu 24.04
-- Ubuntu 26.04
+- Ubuntu 22.04 (x86_64, ARM64)
+- Ubuntu 24.04 (x86_64, ARM64)
+- Ubuntu 26.04 (x86_64, ARM64)
 <!-- OS-SUPPORT-LIST-END -->
 
 ## 📚 Additional Resources
