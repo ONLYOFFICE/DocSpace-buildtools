@@ -27,8 +27,12 @@ jobs:
       - name: Update OS list in README
         working-directory: ${{ github.event.repository.name }}
         run: |
+          # Entries with distr "arm" are named "<OS> ARM": merge them into the matching x86 entry as "<OS> (x86_64, ARM64)"
           OS_LIST=$(yq -r '.jobs.prepare.steps[] | select(.name == "Set matrix names") | .env.OS_MAP' .github/workflows/ci-oci-install.yml \
-            | jq -r 'to_entries | map(.value[0])[]' \
+            | jq -r '[.[]] as $all
+                | [$all[] | select(.[1] == "arm") | .[0] | sub(" ARM$"; "")] as $arm
+                | $all[] | select(.[1] != "arm") | .[0]
+                | if IN($arm[]) then . + " (x86_64, ARM64)" else . end' \
             | awk 'NF{print "- "$0}')
           {
             echo '<!-- OS-SUPPORT-LIST-START -->'

@@ -119,13 +119,15 @@ if ! dpkg -l | grep -q "mysql-server"; then
 	MYSQL_FIRST_TIME_INSTALL="true"
 	MYSQL_SERVER_PASS=${MYSQL_SERVER_PASS:-"$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)"}
 
-	# Set up MySQL 8.4 package.
-	curl -fsSLO "https://repo.mysql.com/${MYSQL_PACKAGE_NAME}"
-	echo "mysql-apt-config mysql-apt-config/repo-codename  select  ${DISTRIB_CODENAME/resolute/noble}" | debconf-set-selections
-	echo "mysql-apt-config mysql-apt-config/repo-distro  select  $DIST" | debconf-set-selections
-	echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.4-lts" | debconf-set-selections
-	DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
-	rm -f "${MYSQL_PACKAGE_NAME}"
+	# Set up MySQL 8.4 package (arm64 uses the distro package, the Oracle repo has no arm64 build).
+	if [ "$ARCH" = "amd64" ]; then
+		curl -fsSLO "https://repo.mysql.com/${MYSQL_PACKAGE_NAME}"
+		echo "mysql-apt-config mysql-apt-config/repo-codename  select  ${DISTRIB_CODENAME/resolute/noble}" | debconf-set-selections
+		echo "mysql-apt-config mysql-apt-config/repo-distro  select  $DIST" | debconf-set-selections
+		echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.4-lts" | debconf-set-selections
+		DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
+		rm -f "${MYSQL_PACKAGE_NAME}"
+	fi
 
 	echo mysql-community-server mysql-community-server/root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
 	echo mysql-community-server mysql-community-server/re-root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
@@ -147,7 +149,8 @@ fi
 curl -fsSL https://openresty.org/package/pubkey.gpg | gpg --batch --yes --dearmor -o /usr/share/keyrings/openresty.gpg
 # Temporary OpenResty codename fallback for Debian 13 and Ubuntu 26.04.
 OPENRESTY_CODENAME=$([ "${DISTRIB_CODENAME}" = "trixie" ] && echo "bookworm" || echo "${DISTRIB_CODENAME/resolute/noble}")
-echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/$DIST ${OPENRESTY_CODENAME} $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
+OPENRESTY_REPO_PATH="${DIST}"; [ "$ARCH" = "arm64" ] && OPENRESTY_REPO_PATH="arm64/${DIST}"
+echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/${OPENRESTY_REPO_PATH} ${OPENRESTY_CODENAME} $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
 
 # Add Java repo.
 curl -fsSL https://packages.adoptium.net/artifactory/api/gpg/key/public | gpg --batch --yes --dearmor -o /usr/share/keyrings/adoptium.gpg
