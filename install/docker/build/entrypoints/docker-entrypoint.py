@@ -129,13 +129,6 @@ def openJsonFile(filePath):
     except IOError as e:
         return False
 
-def parseJsonValue(jsonValue):
-    data = jsonValue.split("=")
-    data[0] = "$." + data[0].strip()
-    data[1] = data[1].replace(" ", "")
-    
-    return data
-
 def updateJsonData(jsonData, jsonKey, jsonUpdateValue):
     jsonpath_expr = parse(jsonKey)
     jsonpath_expr.find(jsonData)

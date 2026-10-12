@@ -11,6 +11,7 @@ xcopy "buildtools\install\win\opensearch-%opensearch_version%\plugins\opensearch
 xcopy "buildtools\install\win\opensearch-%opensearch_version%\plugins\opensearch-job-scheduler" "buildtools\install\win\OpenSearch\plugins\opensearch-job-scheduler" /s /y /b /i
 xcopy "buildtools\install\win\opensearch-%opensearch_version%\plugins\opensearch-index-management" "buildtools\install\win\OpenSearch\plugins\opensearch-index-management" /s /y /b /i
 xcopy "buildtools\install\win\opensearch-%opensearch_version%\plugins\opensearch-knn" "buildtools\install\win\OpenSearch\plugins\opensearch-knn" /s /y /b /i
+xcopy "buildtools\install\win\opensearch-%opensearch_version%\plugins\opensearch-neural-search" "buildtools\install\win\OpenSearch\plugins\opensearch-neural-search" /s /y /b /i
 rmdir buildtools\install\win\opensearch-%opensearch_version%\plugins /s /q
 xcopy "buildtools\install\win\opensearch-%opensearch_version%" "buildtools\install\win\OpenSearch" /s /y /b /i
 rmdir buildtools\install\win\opensearch-%opensearch_version% /s /q

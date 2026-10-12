@@ -388,6 +388,6 @@ The installation scripts support the following operating systems, which are **re
 
 ## 📝 License
 
-ONLYOFFICE Apps is distributed under the [**GNU AGPL v3**](https://onlyo.co/38YZGJh) license for the Community Edition.  
+ONLYOFFICE Apps is distributed under the [**GNU AGPL v3**](https://docspace.onlyoffice.com/s/wjQ94v2GWfm65wH) license for the Community Edition.  
 **Enterprise** and **Developer** editions require a valid commercial license. For more details, please contact [sales@onlyoffice.com](mailto:sales@onlyoffice.com).
 

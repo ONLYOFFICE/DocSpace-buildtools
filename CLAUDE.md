@@ -111,8 +111,6 @@ scripts/                    — Service startup: identity, socketio, ssoauth, we
 start/                      — Dev lifecycle: start/stop/restart (.sh + .bat + .py)
 tests/                      — lint/, vagrant/
 tools/                      — check.sh
-templates/                  — gitea-claude-review (AI code review templates)
-.gitea/actions/             — claude-review (Gitea AI code review action)
 .github/workflows/          — GitHub Actions workflows (see CI/CD section)
 Jenkinsfile                 — Jenkins declarative pipeline
 ```
@@ -148,17 +146,22 @@ docker compose --env-file .env -f apps.yml -f build/dev/apps.overcome.yml up -d
 | `offline-release.yml` | Offline package build |
 | `oci-release.yml` | Container registry release |
 | `readme-update.yml` | Update OS support list in README |
-| `readme-update.yml` | Auto-update README |
 
 **Testing & Quality:**
 
 | Workflow | Purpose |
 |----------|---------|
-| `ci-oci-docker-install.yml` | OneClickInstall Docker tests |
+| `ci-oci-docker-install.yml` | OneClickInstall Docker tests: install in stack/microservices/standalone modes, smoke tests, container restart, update from the released version |
 | `ci-oci-install.yml` | Linux package install tests |
 | `ci-oci-update.yml` | Update mechanism tests |
 | `rebuild-boxes.yml` | Rebuild Vagrant boxes for install tests |
-| `zap-scanner.yaml` | OWASP ZAP security scan |
+
+## Smoke Tests
+
+`tests/smoke/smoke_test.py` runs against a live portal (`SERVER_URL`); `.github/scripts/docker-utils.sh smoke-test [PYTEST_ARGS]` wraps it for CI.
+Tests run in file order and share state. Markers select phases: `bootstrap` (settings, wizard, auth), `seed` (creates data, writes `SMOKE_STATE_FILE`), `verify` (checks the data after a restart or update).
+Examples: `-m "bootstrap or seed"` before an update, `-m "bootstrap or verify"` after it. `DEPLOYMENT_MODE` (set by docker-utils.sh) gates mode-specific tests.
+`SMOKE_SUMMARY_FILE` receives a result line written by `tests/smoke/conftest.py`. The job summary is published only when the job failed or a section is open (failed tests, audit findings, unhealthy containers).
 
 ## Key Patterns
 

@@ -607,6 +607,8 @@
     <ROW Property="DOCS_RABBITMQUSER" Signature_="DocsRegistrySearch_RabbitMqUser"/>
     <ROW Property="DOCS_REDISHOST" Signature_="DocsRegistrySearch_RedisHost"/>
     <ROW Property="DOCS_INSTALLED_VERSION" Signature_="DocsInstalledDisplayVersion"/>
+    <ROW Property="DOCS_INSTALLED_DISPLAY_NAME" Signature_="DocsInstalledDisplayName"/>
+    <ROW Property="DOCS_INSTALL_LOCATION" Signature_="DocsInstalledInstallLocation"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiBinaryComponent">
     <ROW Name="NetFirewall.dll" SourcePath="&lt;AI_CUSTACTS&gt;NetFirewall.dll"/>
@@ -1364,8 +1366,6 @@
     <ROW Action="AI_FwUninstall" Condition="(VersionNT &gt;= 501) AND (REMOVE=&quot;ALL&quot;)" Sequence="1704"/>
     <ROW Action="AI_DATA_SETTER_22" Condition="(VersionNT &gt;= 501) AND (REMOVE=&quot;ALL&quot;)" Sequence="1703"/>
     <ROW Action="SetSERVERNAME" Condition="( NOT Installed )" Sequence="1604"/>
-    <ROW Action="StopOpenResty" Condition="( NOT Installed )" Sequence="6606"/>
-    <ROW Action="AI_DATA_SETTER_23" Condition="( NOT Installed )" Sequence="6605"/>
     <ROW Action="StartOpenResty" Condition="( NOT Installed )" Sequence="6608"/>
     <ROW Action="AI_DATA_SETTER_24" Condition="( NOT Installed )" Sequence="6607"/>
     <ROW Action="Set_LICENSE_PATH" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) OR ( Installed AND ( REMOVE = &quot;ALL&quot; OR AI_INSTALL_MODE = &quot;Remove&quot; ) AND UPGRADINGPRODUCTCODE ) )" Sequence="201"/>
@@ -1373,16 +1373,16 @@
     <ROW Action="AI_DATA_SETTER_28" Condition="( NOT Installed )" Sequence="1620"/>
     <ROW Action="StopFluentBitService" Condition="( NOT Installed )" Sequence="1617"/>
     <ROW Action="AI_DATA_SETTER_29" Condition="( NOT Installed )" Sequence="1616"/>
-    <ROW Action="StartFluentBitService" Condition="( NOT Installed )" Sequence="6604"/>
-    <ROW Action="AI_DATA_SETTER_30" Condition="( NOT Installed )" Sequence="6603"/>
+    <ROW Action="StartFluentBitService" Condition="( NOT Installed )" Sequence="6606"/>
+    <ROW Action="AI_DATA_SETTER_30" Condition="( NOT Installed )" Sequence="6605"/>
     <ROW Action="StartOpenSearchDashboardsService" Condition="( NOT Installed )" Sequence="1627"/>
     <ROW Action="AI_DATA_SETTER_27" Condition="( NOT Installed )" Sequence="1626"/>
     <ROW Action="OpenSearchSetup" Condition="( NOT Installed )" Sequence="1623"/>
     <ROW Action="AI_DATA_SETTER_38" Condition="( NOT Installed )" Sequence="1622"/>
     <ROW Action="RedisSetup" Condition="( NOT Installed )" Sequence="1629"/>
     <ROW Action="AI_DATA_SETTER_39" Condition="( NOT Installed )" Sequence="1628"/>
-    <ROW Action="MoveConfigs" Condition="( NOT Installed )" Sequence="6602"/>
-    <ROW Action="AI_DATA_SETTER_40" Condition="( NOT Installed )" Sequence="6601"/>
+    <ROW Action="MoveConfigs" Condition="( NOT Installed )" Sequence="6604"/>
+    <ROW Action="AI_DATA_SETTER_40" Condition="( NOT Installed )" Sequence="6603"/>
     <ROW Action="MySQLConfigure" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1606"/>
     <ROW Action="AI_DATA_SETTER_33" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1605"/>
     <ROW Action="PostgreSQLConfigure" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) )" Sequence="1610"/>
@@ -1393,6 +1393,8 @@
     <ROW Action="AI_DATA_SETTER_14" Condition="(VersionNT64 &gt;= 500) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5501"/>
     <ROW Action="AI_SqlUninstall64" Condition="(VersionNT64 &gt;= 500) AND (REMOVE=&quot;ALL&quot;)" Sequence="1702"/>
     <ROW Action="AI_DATA_SETTER_15" Condition="(VersionNT64 &gt;= 500) AND (REMOVE=&quot;ALL&quot;)" Sequence="1701"/>
+    <ROW Action="StopOpenResty" Condition="( NOT Installed )" Sequence="6602"/>
+    <ROW Action="AI_DATA_SETTER_23" Condition="( NOT Installed )" Sequence="6601"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstallUISequenceComponent">
     <ROW Action="AI_DATA_SETTER_42" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="97"/>
@@ -1484,6 +1486,8 @@
     <ROW Signature_="DocsRegistrySearch_RabbitMqUser" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="RabbitMqUser" Type="18"/>
     <ROW Signature_="DocsRegistrySearch_RedisHost" Root="2" Key="SOFTWARE\ONLYOFFICE\DocumentServer" Name="RedisHost" Type="18"/>
     <ROW Signature_="DocsInstalledDisplayVersion" Root="2" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1" Name="DisplayVersion" Type="18"/>
+    <ROW Signature_="DocsInstalledDisplayName" Root="2" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1" Name="DisplayName" Type="18"/>
+    <ROW Signature_="DocsInstalledInstallLocation" Root="2" Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1" Name="InstallLocation" Type="18"/>
     <ROW Signature_="AppSearchSign_3" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_USER" Type="2"/>
     <ROW Signature_="AppSearchSign_4" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_PWD" Type="2"/>
     <ROW Signature_="AppSearchSign_5" Root="2" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_PORT" Type="2"/>
@@ -1718,15 +1722,17 @@
     <ROW SearchKey="F3520F64DA5998338D97129FAD2Mic" Prereq="F3520F64DA5998338D97129FAD2" SearchType="12" SearchString="HKLM\SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.NETCore.App" VerMin="10.0.0" Order="1" Property="PreReqSearch_F3520F64DA5998338D9712"/>
     <ROW SearchKey="FFmpeg" Prereq="FFmpegx64" SearchType="4" SearchString="{384A74EC-865A-4907-8561-9DE765EE6E14}" Order="1" Property="PreReqSearch_3"/>
     <ROW SearchKey="ONLYOFFICEDocumentServer_is1" Prereq="DocumentServer" SearchType="2" SearchString="HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1\DisplayVersion" VerMin="0.0.0.0" Order="1" Property="PreReqSearch_1_1" Platform="1"/>
+    <ROW SearchKey="DocsCommunityNotDeveloper" Prereq="DocumentServer" SearchType="9" SearchString="HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1\DisplayName" RefContent="X DE" Order="2" Property="PreReqSearch_DocsCommunityNotDeveloper" Platform="1"/>
+    <ROW SearchKey="DocsCommunityNotEnterprise" Prereq="DocumentServer" SearchType="9" SearchString="HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1\DisplayName" RefContent="X EE" Order="3" Property="PreReqSearch_DocsCommunityNotEnterprise" Platform="1"/>
     <ROW SearchKey="RabbitMQ_1" Prereq="RequiredApplication_5" SearchType="2" SearchString="HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\RabbitMQ\DisplayVersion" VerMin="3.12.1" Order="2" Property="PreReqSearch_9"/>
     <ROW SearchKey="SystemFolderfile.dll" Prereq="RequiredApplication" SearchType="4" SearchString="{FF073FBB-32E2-4052-B6B2-830C5ED4A809}" VerMin="8.4.0" Order="1" Property="PreReqSearch"/>
     <ROW SearchKey="SystemFolderfile.dll_1" Prereq="RequiredApplication_1" SearchType="4" SearchString="{47C07A3A-42EF-4213-A85D-8F5A59077C28}" VerMin="24.21.0" Order="1" Property="PreReqSearch_1"/>
-    <ROW SearchKey="SystemFolderfile.dll_14" Prereq="DocumentServer.EE" SearchType="0" SearchString="HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1" Order="1" Property="PreReqSearch_30" Platform="1"/>
+    <ROW SearchKey="SystemFolderfile.dll_14" Prereq="DocumentServer.EE" SearchType="9" SearchString="HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1\DisplayName" RefContent="SONLYOFFICE Document Server EE" Order="1" Property="PreReqSearch_30" Platform="1"/>
     <ROW SearchKey="SystemFolderfile.dll_15" Prereq="OpenJDK_Java_Development" SearchType="1" SearchString="HKLM\SOFTWARE\JavaSoft\JDK" VerMin="25.0.3" Order="1" Property="PreReqSearch_32"/>
     <ROW SearchKey="SystemFolderfile.dll_2" Prereq="RequiredApplication_2" SearchType="4" SearchString="{0E338B32-2B15-4B6B-8A21-E8412C153D81}" VerMin="8.4.3" Order="1" Property="PreReqSearch_2"/>
     <ROW SearchKey="SystemFolderfile.dll_3" Prereq="OpenResty" SearchType="4" SearchString="{264FA774-91E5-4854-8010-4AB58CA830BD}" VerMin="1.27.1.1" Order="1" Property="PreReqSearch_8"/>
     <ROW SearchKey="SystemFolderfile.dll_4" Prereq="Certbot" SearchType="2" SearchString="HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Certbot\DisplayVersion" VerMin="2.6.0" Order="1" Property="PreReqSearch_10"/>
-    <ROW SearchKey="SystemFolderfile.dll_5" Prereq="DocumentServer.DE" SearchType="0" SearchString="HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1" Order="1" Property="PreReqSearch_15" Platform="1"/>
+    <ROW SearchKey="SystemFolderfile.dll_5" Prereq="DocumentServer.DE" SearchType="9" SearchString="HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1\DisplayName" RefContent="SONLYOFFICE Document Server DE" Order="1" Property="PreReqSearch_15" Platform="1"/>
     <ROW SearchKey="SystemFolderfile.dll_6" Prereq="RequiredApplication_3" SearchType="2" SearchString="HKLM\Software\FireDaemon Technologies Limited\FireDaemon OpenSSL 3\Version" VerMin="3.3.0" Order="1" Property="PreReqSearch_16"/>
     <ROW SearchKey="UpgradeCode" Prereq="PostgreSQL_ODBC" SearchType="4" SearchString="{BBD29DF5-89F6-4B8B-BDC9-C3EA3A4AFDBB}" VerMin="15.0" Order="1" Property="PreReqSearch_14"/>
     <ROW SearchKey="UpgradeCode_1" Prereq="OpenSearchStack" SearchType="4" SearchString="{93CD82F0-18A5-4803-AC50-9A0021E92A56}" VerMin="2.0.0" Order="1" Property="PreReqSearch_7"/>
