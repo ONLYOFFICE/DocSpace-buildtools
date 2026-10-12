@@ -174,6 +174,8 @@ else
                 *)     PARAMETERS+=(-it community) ;;
             esac
         fi
+        # A bare Document Server is not an Apps install, so an explicitly requested method stays.
+        [ -n "$USER_DOCKER" ] && DOCKER="$USER_DOCKER"
         break
     done
 fi

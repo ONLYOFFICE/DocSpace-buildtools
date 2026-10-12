@@ -373,12 +373,12 @@ setup_docs() {
 
 		if [ "${ENVIRONMENT}" != "community" ]; then
 			json_configuration "${DS_CONF_DIR}/local.json" "adminPanel.host" "127.0.0.1"
-			json_configuration "${DS_CONF_DIR}/local.json" "rabbitmq" "{ url: '${RABBITMQ_URI}' }"
-			json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis" "{ host: '${REDIS_HOST}', port: '${REDIS_PORT}' }"
-			json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis.options" "{
-				${REDIS_USER:+username: '${REDIS_USER}',}
-				${REDIS_PASS:+password: '${REDIS_PASS}',}
-				${REDIS_DB:+database: '${REDIS_DB}',}
+			RABBITMQ_URI="${RABBITMQ_URI}" json_configuration "${DS_CONF_DIR}/local.json" "rabbitmq" "{ url: process.env.RABBITMQ_URI }"
+			REDIS_HOST="${REDIS_HOST}" REDIS_PORT="${REDIS_PORT}" json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis" "{ host: process.env.REDIS_HOST, port: process.env.REDIS_PORT }"
+			REDIS_USER="${REDIS_USER}" REDIS_PASS="${REDIS_PASS}" REDIS_DB="${REDIS_DB}" json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis.options" "{
+				${REDIS_USER:+username: process.env.REDIS_USER,}
+				${REDIS_PASS:+password: process.env.REDIS_PASS,}
+				${REDIS_DB:+database: process.env.REDIS_DB,}
 			}"
 		fi
 		
