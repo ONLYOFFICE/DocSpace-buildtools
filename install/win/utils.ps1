@@ -134,7 +134,7 @@ function ApplyInstalledDocumentServerSettings {
         $DocsConfigPath = Join-Path $DocsInstallDir 'config\local.json'
         if (Test-Path -LiteralPath $DocsConfigPath -PathType Leaf) {
             $DocsLicensePath = (Get-Content -LiteralPath $DocsConfigPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop).license.license_file
-            if ($DocsLicensePath -and (Test-Path -LiteralPath $DocsLicensePath -PathType Leaf)) {
+            if ($DocsLicensePath) {
                 AI_SetMsiProperty LICENSE_PATH $DocsLicensePath
             }
         }
