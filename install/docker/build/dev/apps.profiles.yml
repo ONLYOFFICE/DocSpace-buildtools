@@ -60,6 +60,8 @@ x-service: &x-service-base
     ROUTER_HOST: ${ROUTER_HOST}
     API_HOST: ${API_HOST}
     AI_SERVICE_URL: http://${SERVICE_AI}
+    AI__DOCUMENT_AGENT__URL: ${DOCUMENT_AGENT_URL}
+    AI__DOCUMENT_AGENT__TOKEN: ${DOCUMENT_AGENT_TOKEN}
   volumes:
     - ${ROOT_DIR}/data:/app/onlyoffice/data
     - ${ROOT_DIR}/logs:/var/log/onlyoffice
