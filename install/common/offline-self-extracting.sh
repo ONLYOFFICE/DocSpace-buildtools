@@ -1,7 +1,11 @@
 #!/bin/bash
 set -e
 
-DOCSPACE_VERSION=""
+PACKAGE_SYSNAME="onlyoffice"
+PRODUCT_NAME="${PACKAGE_SYSNAME^^} Apps"
+APPS_VERSION=""
+REQUIRED_TEMP_SPACE_MB=""
+REQUIRED_DOCKER_SPACE_MB=""
 
 ARGS_SCRIPT=$(awk '/^__ARGS_SCRIPT_START__$/{f=1;next}/^__ARGS_SCRIPT_END__$/{exit}f' "$0")
 PAYLOAD_LINE=$(awk '/^__END_OF_SHELL_SCRIPT__$/ {print NR+1; exit}' "$0")
@@ -12,14 +16,14 @@ for arg in "$@"; do
   case "$arg" in
     -h|-\?|--help)
       echo "Usage: $(basename "$0") [OPTIONS]"
-      echo "Offline DocSpace installer. Docker images are bundled in this archive."
+      echo "Offline ${PRODUCT_NAME} installer. Docker images are bundled in this archive."
       echo "All options are passed to install-Docker.sh. Available options:"
       echo
       echo "$ARGS_SCRIPT" | bash /dev/stdin --help
       exit 0
     ;;
     -v|-V|--version)
-      echo "DocSpace Stack v${DOCSPACE_VERSION:-unknown}"
+      echo "${PRODUCT_NAME} v${APPS_VERSION:-unknown}"
       exit 0
     ;;
   esac
@@ -93,10 +97,31 @@ for pkg in tar iptables jq 'netstat:net-tools:net-tools' 'crontab:cron:cronie'; 
 done
 [ "$_MISSING" -eq 1 ] && exit 1
 
-ARCHIVE_SIZE=$(( $(stat -c%s "$0") / 1024 / 1024 ))
-AVAIL_MB=$(df -m "${TEMP_DIR}" | awk 'NR==2 {print $4}')
-if [ "${AVAIL_MB}" -lt $(( ARCHIVE_SIZE * 3 )) ]; then
-  echo "Warning: Low disk space. Archive is ~${ARCHIVE_SIZE}MB, available: ${AVAIL_MB}MB (recommended: $(( ARCHIVE_SIZE * 3 ))MB)"
+if [ "$SKIP_HARDWARE_CHECK" != "true" ]; then
+  echo "Checking free disk space..."
+ 
+  _check_free_space() {
+    local path="$1" required_mb="$2" label="$3"
+    local avail_mb; avail_mb=$(df -m "${path}" | awk 'NR==2 {print $4}')
+    if [ "${avail_mb}" -lt "${required_mb}" ]; then
+      echo "ERROR: Not enough free disk space on ${label} (${path}): available ${avail_mb}MB, required ~${required_mb}MB"
+      exit 1
+    fi
+  }
+ 
+  ARCHIVE_SIZE=$(( $(stat -c%s "$0") / 1024 / 1024 ))
+  DOCKER_ROOT_DIR=$(docker info -f '{{.DockerRootDir}}' 2>/dev/null || echo /var/lib/docker)
+
+  # +10% margin over the measured/estimated requirement for fs overhead and temp files created during install
+  REQUIRED_TEMP_MB=$(( ( ${REQUIRED_TEMP_SPACE_MB:-$(( ARCHIVE_SIZE * 3 ))} * 110 + 99 ) / 100 ))
+  REQUIRED_DOCKER_MB=$(( ( ${REQUIRED_DOCKER_SPACE_MB:-$(( ARCHIVE_SIZE * 4 ))} * 110 + 99 ) / 100 ))
+
+  if [ "$(df -P "${TEMP_DIR}" | awk 'NR==2{print $1}')" = "$(df -P "${DOCKER_ROOT_DIR}" | awk 'NR==2{print $1}')" ]; then
+    _check_free_space "${TEMP_DIR}" "$(( REQUIRED_TEMP_MB + REQUIRED_DOCKER_MB ))" "temp + Docker root (same filesystem)"
+  else
+    _check_free_space "${TEMP_DIR}" "${REQUIRED_TEMP_MB}" "temporary extraction directory"
+    _check_free_space "${DOCKER_ROOT_DIR}" "${REQUIRED_DOCKER_MB}" "Docker root directory"
+  fi
 fi
 
 echo "Extracting docker images to ${TEMP_DIR}..."
@@ -134,21 +159,21 @@ _load_images_parallel() {
 if [ "$OFFLINE_IMAGE_LOAD" != "true" ]; then
   echo "Loading docker images (this may take a few minutes)..."
   _load_images_parallel \
-    "${TEMP_DIR}/docspace_images.tar.xz" \
+    "${TEMP_DIR}/apps_images.tar.xz" \
     "${TEMP_DIR}/docs_images.tar.xz"
 fi
 
 echo "Extracting OneClickInstall files to the current directory..."
-mv -f "${TEMP_DIR}/docker-stack.tar.gz" "${TEMP_DIR}/install-Docker.sh" "${TEMP_DIR}/install-Docker-args.sh" "${SCRIPT_DIR}"
+mv -f "${TEMP_DIR}/docker-standalone.tar.gz" "${TEMP_DIR}/install-Docker.sh" "${TEMP_DIR}/install-Docker-args.sh" "${TEMP_DIR}/install-Docker-docs.sh" "${SCRIPT_DIR}"
 
 echo "Running the install-Docker.sh script..."
 chmod +x "${SCRIPT_DIR}/install-Docker.sh"
-if ! "${SCRIPT_DIR}/install-Docker.sh" "$@" --offline true --stack-mode true; then
+if ! "${SCRIPT_DIR}/install-Docker.sh" "$@" --offline true --deployment-mode standalone; then
   echo ""
   echo "ERROR: Installation failed. Fix the issue and re-run this script."
   echo "To clean up before retrying:"
   echo "  docker stop \$(docker ps -a -q); docker container prune -f; rm -rf /app/"
-  echo "Then re-run: ${SCRIPT_DIR}/install-Docker.sh $* --offline true --stack-mode true"
+  echo "Then re-run: ${SCRIPT_DIR}/install-Docker.sh $* --offline true --deployment-mode standalone"
   exit 1
 fi
 

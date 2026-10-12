@@ -1,7 +1,7 @@
 <service>
-	<id>DocSpace.Sdk</id>
-	<name>ONLYOFFICE DocSpace SDK</name>
-	<description>ONLYOFFICE DocSpace SDK</description>
+	<id>Apps.Sdk</id>
+	<name>ONLYOFFICE Apps SDK</name>
+	<description>ONLYOFFICE Apps SDK</description>
 	<priority>RealTime</priority>
 	<startmode>Automatic</startmode>
 	<autoRefresh>false</autoRefresh>

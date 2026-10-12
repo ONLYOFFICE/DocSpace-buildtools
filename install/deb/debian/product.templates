@@ -1,97 +1,97 @@
-Template: {{product}}/host
+Template: {{package_name}}/host
 Type: string
-Description: {{product}} host address
+_Description: Apps host address:
 
-Template: {{product}}/port
+Template: {{package_name}}/port
 Type: string
-Description: {{product}} port number
+_Description: Apps port number:
 
-Template: {{product}}/db-host
+Template: {{package_name}}/db-host
 Type: string
-Description: Database host address
+_Description: Database host address:
 
-Template: {{product}}/db-port
+Template: {{package_name}}/db-port
 Type: string
-Description: Database port number
+_Description: Database port number:
 
-Template: {{product}}/db-user
+Template: {{package_name}}/db-user
 Type: string
-Description: Database username
+_Description: Database username:
 
-Template: {{product}}/db-pwd
+Template: {{package_name}}/db-pwd
 Type: password
-Description: Database user password
+_Description: Database user password:
 
-Template: {{product}}/db-name
+Template: {{package_name}}/db-name
 Type: string
-Description: Database name
+_Description: Database name:
 
-Template: {{product}}/ds-url
+Template: {{package_name}}/ds-url
 Type: string
-Description: External Docs server URL (e.g., http://docs.example.com:8083)
+_Description: External Docs server URL (e.g., http://docs.example.com:8083):
 
-Template: {{product}}/elasticsearch-scheme
+Template: {{package_name}}/elasticsearch-scheme
 Type: select
-Choices: http, https
-Description: OpenSearch protocol
+_Choices: http, https
+_Description: OpenSearch protocol:
 
-Template: {{product}}/elasticsearch-host
+Template: {{package_name}}/elasticsearch-host
 Type: string
-Description: OpenSearch host address
+_Description: OpenSearch host address:
 
-Template: {{product}}/elasticsearch-port
+Template: {{package_name}}/elasticsearch-port
 Type: string
-Description: OpenSearch port number
+_Description: OpenSearch port number:
 
-Template: {{product}}/redis-host
+Template: {{package_name}}/redis-host
 Type: string
-Description: Redis host address
+_Description: Redis host address:
 
-Template: {{product}}/redis-port
+Template: {{package_name}}/redis-port
 Type: string
-Description: Redis port number
+_Description: Redis port number:
 
-Template: {{product}}/redis-username
+Template: {{package_name}}/redis-username
 Type: string
-Description: Redis username (optional)
+_Description: Redis username (optional):
 
-Template: {{product}}/redis-password
+Template: {{package_name}}/redis-password
 Type: password
-Description: Redis password (optional)
+_Description: Redis password (optional):
 
-Template: {{product}}/redis-db
+Template: {{package_name}}/redis-db
 Type: string
-Description: Redis database index
+_Description: Redis database index:
 
-Template: {{product}}/rabbitmq-protocol
+Template: {{package_name}}/rabbitmq-protocol
 Type: select
-Choices: amqp, amqps
-Description: RabbitMQ protocol
+_Choices: amqp, amqps
+_Description: RabbitMQ protocol:
 
-Template: {{product}}/rabbitmq-host
+Template: {{package_name}}/rabbitmq-host
 Type: string
-Description: RabbitMQ host address
+_Description: RabbitMQ host address:
 
-Template: {{product}}/rabbitmq-port
+Template: {{package_name}}/rabbitmq-port
 Type: string
-Description: RabbitMQ port number
+_Description: RabbitMQ port number:
 
-Template: {{product}}/rabbitmq-user
+Template: {{package_name}}/rabbitmq-user
 Type: string
-Description: RabbitMQ username
+_Description: RabbitMQ username:
 
-Template: {{product}}/rabbitmq-password
+Template: {{package_name}}/rabbitmq-password
 Type: string
-Description: RabbitMQ user password
+_Description: RabbitMQ user password:
 
-Template: {{product}}/machinekey
+Template: {{package_name}}/machinekey
 Type: string
-Description: Machine key for encryption 
+_Description: Machine key for encryption:
 
-Template: {{product}}/jwt-header
+Template: {{package_name}}/jwt-header
 Type: string
-Description: JWT header name
+_Description: JWT header name:
 
-Template: {{product}}/jwt-secret
+Template: {{package_name}}/jwt-secret
 Type: string
-Description: JWT secret key
+_Description: JWT secret key:

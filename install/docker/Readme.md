@@ -1,27 +1,259 @@
-# Getting Started
+# ONLYOFFICE Apps - Docker
 
-* Download App run:	git clone git clone https://github.com/ONLYOFFICE/AppServer.git
-* cd ./AppServer/buildtools/install/docker/
+Docker Compose definitions, image-build files and runtime configuration for
+running **ONLYOFFICE Apps** in containers.
 
-# Installation
+## Contents
 
-* Build Appserver docker microservices run: docker-compose -f build.yml build
+- [Prerequisites](#prerequisites)
+- [Directory layout](#directory-layout)
+- [Quick start](#quick-start)
+- [Configuration](#configuration)
+- [Running with Docker Compose](#running-with-docker-compose)
+- [Building images](#building-images)
 
-*  In file .env check values and if it needs modify for JSON Web Token validation:
-  - list of values:
-    - DOCUMENT_SERVER_JWT_SECRET
-    - APP_CORE_MACHINEKEY
-    - DOCUMENT_SERVER_JWT_HEADER
+## Prerequisites
 
-* Run Appserver with Community Server:  
-  - check file appserver.yml before running: 
-    - app_data:/app/onlyoffice/data should be commented,
-    - /app/onlyoffice CommunityServer/data:/app/onlyoffice/data should be uncommented
-  - docker-compose -f appserver.yml up -d
+- Docker Engine 24+
+- Docker Compose 2.18.0+
+- Docker Buildx (bundled with recent Docker) - required only to **build** images
 
-* Run standlone Appserver: 
-  - check file appserver.yml before running: 
-    - app_data:/app/onlyoffice/data should be uncommented,
-    - /app/onlyoffice CommunityServer/data:/app/onlyoffice/data should be commented
-  - docker-compose -f db.yml up -d
-  - docker-compose -f ds.yml -f appserver.yml up -d
+## Directory layout
+
+Production service files live at the root. Everything needed only to **build**
+images or to run a **local development** environment lives under `build/`.
+
+```text
+install/docker/
+├── *.yml                     # Production Compose files (shipped in OCI tarballs)
+├── .env                      # All runtime variables (images, ports, secrets, hosts)
+├── config/                   # Configs mounted into containers (nginx, mysql.cnf, fluent-bit, …)
+├── build/                    # Build + local-dev assets - NOT shipped to end users
+│   ├── Dockerfile            #   main multi-stage image (used by CI)
+│   ├── Dockerfile.runtime    #   base runtime images (dotnet / node / router)
+│   ├── Dockerfile.ffvideo    #   ffmpeg helper image
+│   ├── build.hcl             #   buildx bake definition (multi-arch)
+│   ├── build.yml             #   compose build definition
+│   ├── entrypoints/          #   scripts COPY'd into images at build time
+│   │   ├── docker-entrypoint.py
+│   │   ├── docker-identity-entrypoint.sh
+│   │   ├── docker-migration-entrypoint.sh
+│   │   ├── docker-healthchecks-entrypoint.sh
+│   │   ├── docker-standalone-entrypoint.sh
+│   │   ├── docker-bin-share-entrypoint.sh / docker-wait-bin-share-entrypoint.sh
+│   │   └── prepare-nginx-router.sh
+│   ├── dev/                  #   local-dev-only Compose overlays (build.backend.docker.py)
+│   │   ├── db.dev.yml            #   MySQL dev overrides (exposed ports)
+│   │   ├── apps.profiles.yml     #   local-dev application stack
+│   │   ├── apps.overcome.yml     #   local-dev overrides
+│   │   ├── dnsmasq.yml           #   local DNS for development
+│   │   └── build-identity.yml    #   ASC.Identity (Java) build
+│   └── supervisor/            #   supervisor configs baked into images
+│       ├── stack/                 #   apps-stack.yml services (dotnet/node/java)
+│       └── standalone.conf        #   standalone image
+└── standalone/               # single-container (standalone) stack
+```
+
+### Production Compose files
+
+| File | Service |
+|------|---------|
+| `apps.yml` | All ONLYOFFICE Apps application services (modular) |
+| `apps-stack.yml` | Same application services bundled as one stack |
+| `db.yml` | MySQL |
+| `ds.yml` | ONLYOFFICE Document Server |
+| `redis.yml` · `rabbitmq.yml` | Redis · RabbitMQ |
+| `opensearch.yml` · `dashboards.yml` · `fluent.yml` | OpenSearch + Dashboards + Fluent Bit |
+| `identity.yml` | OAuth2 identity service |
+| `notify.yml` | Notification service |
+| `healthchecks.yml` | Health-check UI |
+| `migration-runner.yml` | One-shot DB migration container |
+| `proxy.yml` · `proxy-ssl.yml` | Nginx reverse proxy (HTTP · HTTPS) |
+
+## Quick start
+
+The one-click installer pulls the published images, generates `.env` and starts
+the whole stack - the recommended path for most users:
+
+```bash
+# from the repository root
+bash install/OneClickInstall/install-Docker.sh
+
+# stack mode (single bundled application container)
+bash install/OneClickInstall/install-Docker.sh -dm stack
+```
+
+> [!TIP]
+> Prefer the installer for production. The manual Compose commands below are for
+> custom setups and for understanding how the pieces fit together.
+
+## Standalone deployment
+
+A lightweight, single-container ONLYOFFICE Apps solution you bring up with a single
+`docker compose` command — no extra infrastructure to wire up. See
+[`standalone/`](standalone/README.md).
+
+## Configuration
+
+All settings come from [`.env`](.env) (~200 variables: image versions, ports,
+hosts, credentials). Compose reads it automatically when you run from this
+directory.
+
+Review these before the first start:
+
+| Variable | Purpose |
+|----------|---------|
+| `APP_CORE_MACHINEKEY` | Internal services shared secret |
+| `DOCUMENT_SERVER_JWT_SECRET` | Document Server JWT secret |
+| `DOCUMENT_SERVER_JWT_HEADER` | Document Server JWT header name |
+| `EXTERNAL_PORT` · `EXTERNAL_PORT_HTTPS` | Published HTTP / HTTPS ports |
+| `REGISTRY` · `DOCKER_TAG` | Image registry prefix and tag |
+
+> [!IMPORTANT]
+> Change `APP_CORE_MACHINEKEY` and `DOCUMENT_SERVER_JWT_SECRET` from their
+> defaults before exposing the instance to a network.
+
+## Running with Docker Compose
+
+Compose is **modular** - files are combined with `-f`. Run all commands from
+`install/docker/` so that `.env` is picked up.
+
+Before direct Compose runs, set these blank secrets in `.env`:
+`MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`, `RABBIT_PASSWORD`, and
+`DOCUMENT_SERVER_JWT_SECRET`. The OneClickInstall Docker installer generates
+them automatically, but plain `docker compose` uses `.env` as-is.
+
+**Modular** (individual application services):
+
+```bash
+docker compose \
+  -f apps.yml -f healthchecks.yml -f identity.yml -f notify.yml \
+  -f dashboards.yml -f db.yml -f ds.yml -f fluent.yml -f opensearch.yml \
+  -f proxy.yml -f rabbitmq.yml -f redis.yml \
+  up -d
+```
+
+**Stack** (application bundled in one container + dependencies):
+
+```bash
+docker compose \
+  -f apps-stack.yml -f dashboards.yml -f db.yml -f ds.yml -f fluent.yml \
+  -f opensearch.yml -f proxy.yml -f rabbitmq.yml -f redis.yml \
+  up -d
+```
+
+### HTTPS / SSL
+
+Once the stack is running, enable HTTPS with the
+[`config/apps-ssl-setup`](config/apps-ssl-setup) helper. It switches the
+proxy to `proxy-ssl.yml`, installs the certificate and sets up automatic
+renewal - run it from `install/docker/`:
+
+```bash
+# Let's Encrypt (auto-renew); EMAIL and DOMAIN(s), comma-separated
+config/apps-ssl-setup support@example.com example.com,s1.example.com
+
+# bring your own certificate (PEM/PFX/DER/CER; key required unless PFX)
+config/apps-ssl-setup --file example.com /etc/ssl/example.crt /etc/ssl/example.key
+
+# revert to the default (HTTP) proxy configuration
+config/apps-ssl-setup --default
+```
+
+> [!NOTE]
+> The script must run next to `.env`, `proxy.yml` and `proxy-ssl.yml` (i.e. from
+> `install/docker/`). Run `config/apps-ssl-setup` without arguments for full
+> usage, including wildcard-domain (DNS-01) certificates.
+
+> [!TIP]
+> To avoid repeating long `-f` chains, export the file list once:
+> ```bash
+> export COMPOSE_FILE=apps.yml:healthchecks.yml:identity.yml:notify.yml:dashboards.yml:db.yml:ds.yml:fluent.yml:opensearch.yml:proxy.yml:rabbitmq.yml:redis.yml
+> docker compose up -d        # then just use plain compose commands
+> ```
+
+### OpenTelemetry (router)
+
+The `onlyoffice-router` container can push distributed traces and
+trace-correlated request logs straight to an external OpenTelemetry Collector
+over OTLP/HTTP (none is bundled). Disabled by default; enable via `.env`:
+
+| Variable | Purpose |
+|----------|---------|
+| `OTEL_TRACES_ENABLED` | `true` enables tracing (spans to `<endpoint>/v1/traces`) |
+| `OTEL_LOGS_ENABLED` | `true` enables request logs (records to `<endpoint>/v1/logs`) |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP/HTTP collector base URL, e.g. `http://otel-collector:4318` |
+| `OTEL_SERVICE_NAME` | `service.name` resource attribute (default `onlyoffice-router`) |
+| `OTEL_EXPORTER_OTLP_HEADERS` | Extra export headers, `key1=value1,key2=value2` |
+| `OTEL_TRACE_STATIC_ASSETS` | `true` also reports static assets (off by default, see below) |
+
+The hooks run for every location the router serves, so static assets are
+filtered out: a single page load pulls in hundreds of chunks, fonts and images
+that would bury the API traces and overflow the log queue. A failing asset is
+still reported, since broken app chunks are a routine router problem. Set
+`OTEL_TRACE_STATIC_ASSETS=true` to report them all.
+
+Both signals are batched in the background and never block request
+processing; the `traceparent` header is propagated to the upstream DocSpace
+services. With both flags on, each log record carries the `traceId`/`spanId`
+of the request's server span.
+
+The filtered nginx access log is written to `/var/log/nginx/access.log` for
+Fluent Bit regardless of OpenTelemetry settings. Successful static asset and
+liveness check requests are omitted.
+
+Collector side — a single `otlp` receiver covers both pipelines:
+
+```yaml
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [...]
+    logs:
+      receivers: [otlp]
+      exporters: [...]
+```
+
+## Building images
+
+Images are built with **buildx bake** from the `build/` definition. The build
+clones the source repositories (buildtools / server / client) by branch inside
+the image, so a local source checkout is **not** required.
+
+Run from `install/docker/` so the adjacent `.env` is picked up:
+
+```bash
+cd install/docker
+
+# all services
+docker buildx bake -f build/build.hcl
+
+# a single group
+docker buildx bake -f build/build.hcl dotnet-services
+docker buildx bake -f build/build.hcl node-services
+docker buildx bake -f build/build.hcl java-services
+```
+
+Build groups: `default` (all), `dotnet-services`, `node-services`, `java-services`.
+
+## Database
+
+- `config/mysql.cnf` — MySQL server tuning, mounted into the MySQL container by `db.yml`.
+
+## Process management
+
+Supervisor configs baked into the images, under `build/supervisor/`:
+
+| File | Purpose |
+|------|---------|
+| `stack/dotnet_services.conf` | Supervisor daemon settings + .NET service management |
+| `stack/node_services.conf` | Node.js service management |
+| `stack/java_services.conf` | Java service management |
+| `standalone.conf` | Supervisor daemon + all services, for the single-container standalone image |

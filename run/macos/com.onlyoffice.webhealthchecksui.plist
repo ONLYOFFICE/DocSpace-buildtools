@@ -6,7 +6,7 @@
     <string>com.onlyoffice.webhealthchecksui</string>
 
     <key>WorkingDirectory</key>
-    <string>${DOCSPACE_ROOT}</string>
+    <string>${APPS_ROOT}</string>
    
     <key>ProgramArguments</key>
     <array>
@@ -19,10 +19,10 @@
     <false/>
 
     <!--<key>StandardErrorPath</key>
-    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.webhealthchecksui.err</string>-->
+    <string>${APPS_ROOT}/Logs/com.onlyoffice.webhealthchecksui.err</string>-->
 
     <!--<key>StandardOutPath</key>
-    <string>${DOCSPACE_ROOT}/Logs/com.onlyoffice.webhealthchecksui.log</string>-->
+    <string>${APPS_ROOT}/Logs/com.onlyoffice.webhealthchecksui.log</string>-->
 
     <key>KeepAlive</key>
     <true/>

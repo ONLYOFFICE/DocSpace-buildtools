@@ -7,6 +7,7 @@ while [ "$1" != "" ]; do
     -ds  | --download-scripts  ) [ -n "$2" ] && DOWNLOAD_SCRIPTS="$2"      && shift ;;
     -arg | --arguments         ) [ -n "$2" ] && ARGUMENTS="$2"             && shift ;;
     -tr  | --test-repo         ) [ -n "$2" ] && TEST_REPO_ENABLE="$2"      && shift ;;
+    -v   | --version           ) [ -n "$2" ] && VER="$2"                  && shift ;;
   esac
   shift
 done
@@ -25,12 +26,10 @@ check_hw() {
 }
 
 add-repo-deb() {
-  mkdir -p "$HOME"/.gnupg && chmod 700 "$HOME"/.gnupg
   echo "deb [signed-by=/usr/share/keyrings/onlyoffice.gpg] https://nexus.onlyoffice.com/repository/4testing-debian stable main" | \
   sudo tee /etc/apt/sources.list.d/onlyoffice4testing.list
   curl -fsSL https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE | \
-  gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/onlyoffice.gpg --import
-  chmod 644 /usr/share/keyrings/onlyoffice.gpg
+  gpg --batch --yes --dearmor -o /usr/share/keyrings/onlyoffice.gpg
 }
 
 add-repo-rpm() {
@@ -44,7 +43,28 @@ gpgkey=https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE
 END
 }
 
+add-repo-deb-docs() {
+  echo "deb [trusted=yes] https://s3.eu-west-1.amazonaws.com/repo-doc-onlyoffice-com/repo/debian stable ${VER}" | \
+  sudo tee /etc/apt/sources.list.d/onlyoffice-dev.list
+}
+
+add-repo-rpm-docs() {
+  curl -fsSL "https://s3.eu-west-1.amazonaws.com/repo-doc-onlyoffice-com/repo/centos/onlyoffice-dev-${VER}.repo" \
+    -o "/etc/yum.repos.d/onlyoffice-dev-${VER}.repo"
+}
+
 prepare_vm() {
+  # Debian 11 reached EOL on 2026-08-31 - repoint apt to the archive and security snapshot mirrors
+  if grep -q '^VERSION_CODENAME=bullseye$' /etc/os-release 2>/dev/null; then
+    sed -Ei \
+      -e 's#https?://(security|deb)\.debian\.org/debian-security#https://snapshot.debian.org/archive/debian-security/20260901T000000Z#g' \
+      -e 's#https?://deb\.debian\.org/debian#https://archive.debian.org/debian#g' \
+      -e '/archive\.debian\.org\/debian/ { / contrib/! s/$/ contrib/; }' \
+      -e '/(archive\.debian\.org\/debian|snapshot\.debian\.org\/archive\/debian-security)/ { /check-valid-until=no/! s|^(deb(-src)?) \[|\1 [check-valid-until=no |; }' \
+      -e '/(archive\.debian\.org\/debian|snapshot\.debian\.org\/archive\/debian-security)/ { /check-valid-until=no/! s|^(deb(-src)?) |\1 [check-valid-until=no] |; }' \
+      /etc/apt/sources.list
+  fi
+
   # Ensure curl and gpg are installed
   if ! command -v curl >/dev/null 2>&1; then
     (command -v apt-get >/dev/null 2>&1 && apt-get update -y && apt-get install -y curl) || (command -v dnf >/dev/null 2>&1 && dnf install -y curl)
@@ -59,16 +79,20 @@ case $ID in
   ubuntu|debian)
       if [[ "${TEST_REPO_ENABLE}" == 'true' ]]; then
         add-repo-deb
+        add-repo-deb-docs
       else
         rm -f /etc/apt/sources.list.d/onlyoffice4testing.list
+        rm -f /etc/apt/sources.list.d/onlyoffice-dev.list
       fi
       ;;
 
   centos|fedora|rhel)
       if [[ "${TEST_REPO_ENABLE}" == 'true' ]]; then
         add-repo-rpm
+        add-repo-rpm-docs
       else
         rm -f /etc/yum.repos.d/onlyoffice4testing.repo
+        rm -f /etc/yum.repos.d/onlyoffice-dev-*.repo
       fi
 
       if [ "$ID" = "rhel" ] && [ "${VERSION_ID%%.*}" = "9" ]; then
@@ -102,18 +126,34 @@ esac
       echo "${COLOR_RED}File /etc/os-release doesn't exist${COLOR_RESET}"; exit 1
   fi
 
+  # Some RPM boxes ship firewalld enabled — it blocks the port forwarded to the host
+  if command -v firewall-cmd >/dev/null 2>&1; then
+    systemctl disable --now firewalld 2>/dev/null || true
+  fi
+
+  # Permanently disable apt's background auto-update machinery for the lifetime of this
+  # disposable VM - it randomly grabs the dpkg frontend lock (via unattended-upgrades) mid-test
+  # and "systemctl stop" alone doesn't kill an already-running unattended-upgrade process
+  if command -v apt-get >/dev/null 2>&1; then
+    systemctl disable --now apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service unattended-upgrades.service 2>/dev/null || true
+    systemctl mask apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service unattended-upgrades.service 2>/dev/null || true
+    pkill -TERM -f '/usr/bin/unattended-upgrade' >/dev/null 2>&1 || true
+    sleep 2
+    pkill -KILL -f '/usr/bin/unattended-upgrade' >/dev/null 2>&1 || true
+  fi
+
   # Clean up home folder
   rm -rf /home/vagrant/*
-  [ -d /tmp/docspace ] && mv /tmp/docspace/* /home/vagrant
+  [ -d /tmp/apps ] && mv /tmp/apps/* /home/vagrant
 
   echo '127.0.0.1 host4test' | sudo tee -a /etc/hosts
   echo "${COLOR_GREEN}[OK] PREPARE_VM: Hostname was setting up${COLOR_RESET}"
 }
 
-install_docspace() {
+install_apps() {
   INSTALL_START_TIME=$(date +%s)
-  [[ "${DOWNLOAD_SCRIPTS}" == 'true' ]] && curl -fsSLO https://download.onlyoffice.com/docspace/docspace-install.sh || sed 's/set -e/set -xe/' -i *.sh
-  bash docspace-install.sh package ${ARGUMENTS} -log false || { echo "Exit code non-zero. Exit with 1."; exit 1; }
+  [[ "${DOWNLOAD_SCRIPTS}" == 'true' ]] && curl -fsSLO https://download.onlyoffice.com/apps/apps-install.sh || sed 's/set -e/set -xe/' -i *.sh
+  bash apps-install.sh package ${ARGUMENTS} -log false || { echo "Exit code non-zero. Exit with 1."; exit 1; }
   echo "::notice::Installation on "${ID:-unknown} ${VERSION_ID:-}" took $((($(date +%s) - INSTALL_START_TIME) / 60))m"
 }
 
@@ -133,7 +173,7 @@ main() {
   echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
   echo "${COLOR_BLUE}STEP 3: Installing${COLOR_RESET}"
   echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
-  install_docspace
+  install_apps
 }
 
 main

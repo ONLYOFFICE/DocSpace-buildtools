@@ -1,0 +1,233 @@
+#!/bin/bash
+
+ #
+ # Copyright (C) Ascensio System SIA, 2009-2026
+ #
+ # This program is a free software product. You can redistribute it and/or
+ # modify it under the terms of the GNU Affero General Public License (AGPL)
+ # version 3 as published by the Free Software Foundation, together with the
+ # additional terms provided in the LICENSE file.
+ #
+ # This program is distributed WITHOUT ANY WARRANTY; without even the implied
+ # warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. For
+ # details, see the GNU AGPL at: https://www.gnu.org/licenses/agpl-3.0.html
+ #
+ # You can contact Ascensio System SIA by email at info@onlyoffice.com
+ # or by postal mail at 20A-6 Ernesta Birznieka-Upisha Street, Riga,
+ # LV-1050, Latvia, European Union.
+ #
+ # The interactive user interfaces in modified versions of the Program
+ # are required to display Appropriate Legal Notices in accordance with
+ # Section 5 of the GNU AGPL version 3.
+ #
+ # No trademark rights are granted under this License.
+ #
+ # All non-code elements of the Product, including illustrations,
+ # icon sets, and technical writing content, are licensed under the
+ # Creative Commons Attribution-ShareAlike 4.0 International License:
+ # https://creativecommons.org/licenses/by-sa/4.0/legalcode
+ #
+ # This license applies only to such non-code elements and does not
+ # modify or replace the licensing terms applicable to the Program's
+ # source code, which remains licensed under the GNU Affero General
+ # Public License v3.
+ #
+ # SPDX-License-Identifier: AGPL-3.0-only
+ #
+
+PARAMETERS=(-it COMMUNITY)
+DOCKER=""
+LOCAL_SCRIPTS="false"
+PRODUCT="apps"
+LEGACY_PRODUCT="docspace"
+PRODUCT_SYSNAME="onlyoffice"
+PRODUCT_NAME="${PRODUCT_SYSNAME^^} Apps"
+FILE_NAME="$(basename "$0")"
+ENABLE_LOGGING="true"
+
+require_value() {
+    [ -n "${2-}" ] || { echo "Error: Missing value for ${1}" >&2; exit 1; }
+}
+
+USER_SET_INSTALLATION_TYPE="false"
+for ARG in "$@"; do
+    case "$ARG" in
+        -it | --installationtype | --installation_type ) USER_SET_INSTALLATION_TYPE="true" ;;
+    esac
+done
+
+while [ "$1" != "" ]; do
+    case "$1" in
+        -h | -? | --help | docker | package ) ;;
+        -* ) require_value "$1" "$2" ;;
+    esac
+
+	case $1 in
+        -ls | --localscripts )     [[ "$2" == "true" || "$2" == "false" ]] && PARAMETERS+=("${1}") && LOCAL_SCRIPTS=$2 && shift ;;
+        -log | --logging )         [[ "$2" == "true" || "$2" == "false" ]] && ENABLE_LOGGING=$2 && shift 2 && continue ;;
+        -gb | --gitbranch )        [ -n "$2" ] && PARAMETERS+=("${1}") && GIT_BRANCH=$2 && shift ;;
+        -av | --appsversion | -dsv | --docspaceversion ) [ -n "$2" ] && PARAMETERS+=("${1}") && DOCKER_TAG=$2 && PRODUCT_VERSION=$2 && shift ;;
+        docker ) DOCKER="true"; shift ; continue ;;
+        package ) DOCKER="false"; shift ; continue ;;
+        -h | -? | --help )
+            if [ -z "$DOCKER" ]; then
+                echo "Run 'bash $FILE_NAME docker' to install Docker version of application."
+                echo "Run 'bash $FILE_NAME package' to install DEB/RPM version."
+                echo "Run 'bash $FILE_NAME docker -h' or 'bash $FILE_NAME package -h' to get more details."
+                exit 0
+            fi
+            PARAMETERS+=(-ht "$FILE_NAME")
+        ;;
+    esac
+
+	PARAMETERS+=("${1}")
+	shift
+done
+
+root_checking () {
+	[[ $EUID -eq 0 ]] || { echo "To perform this action you must be logged in with root rights"; exit 1; }
+}
+
+is_command_exists () {
+	type "$1" &> /dev/null
+}
+
+pkg_exists () {
+	(is_command_exists dpkg-query && [ "$(dpkg-query -W -f='${db:Status-Status}' "$1" 2>/dev/null)" = "installed" ]) || (is_command_exists rpm && rpm -q "$1" >/dev/null 2>&1)
+}
+
+install_curl () {
+	if is_command_exists apt-get; then
+		apt-get -y update
+		apt-get -y -q install curl
+	elif is_command_exists yum; then
+		yum -y install curl
+	fi
+
+	is_command_exists curl || { echo "Command curl not found."; exit 1; }
+}
+
+read_installation_method() {
+    echo "Select 'Y' to install ${PRODUCT_NAME} using Docker (recommended)."
+    echo "Select 'N' to install it using RPM/DEB packages."
+    while true; do
+        read -p "Install with Docker [Y/N/C]? " choice
+        case "$choice" in
+            [yY]) DOCKER="true"; break ;;
+            [nN]) DOCKER="false"; break ;;
+            [cC]) exit 0 ;;
+            *) echo "Please, enter Y, N, or C to cancel." ;;
+        esac
+    done
+}
+
+reject_method_override() {
+    local found_method="DEB/RPM packages" requested_method="Docker" found_arg="package"
+    [ "$DOCKER" == "true" ] && found_method="Docker containers" && found_arg="docker"
+    [ "$USER_DOCKER" == "false" ] && requested_method="DEB/RPM packages"
+
+    local requested_arg="docker"
+    [ "$USER_DOCKER" == "false" ] && requested_arg="package"
+
+    {
+        echo "You requested the ${requested_method} installation, but an existing installation uses ${found_method}."
+        echo "To switch to ${requested_method}:"
+        echo "  1. Remove the existing installation:"
+        echo "       bash $FILE_NAME ${found_arg} -uni true"
+        echo "  2. Install ${requested_method}:"
+        echo "       bash $FILE_NAME ${requested_arg}"
+        echo "To update the existing installation instead:"
+        echo "  bash $FILE_NAME ${found_arg}"
+    } >&2
+    exit 1
+}
+
+root_checking
+
+is_command_exists curl || install_curl
+
+# Remember the method explicitly requested via 'docker' / 'package'.
+USER_DOCKER="$DOCKER"
+
+# Infer install method from existing packages/containers.
+if is_command_exists docker && docker ps -a --format '{{.Names}}' | grep -qE "${PRODUCT_SYSNAME}-api|${PRODUCT_SYSNAME}-dotnet-services|${PRODUCT_SYSNAME}-apps"; then
+    DOCKER="true"
+    PARAMETERS=(-u true "${PARAMETERS[@]}")
+elif pkg_exists "${PRODUCT_SYSNAME}-${PRODUCT}-api" || pkg_exists "${LEGACY_PRODUCT}-api"; then
+    DOCKER="false"
+	PARAMETERS=(-u true "${PARAMETERS[@]}")
+else
+    for DS_EDITION_SUFFIX in "" "-de" "-ee"; do
+        if pkg_exists "${PRODUCT_SYSNAME}-documentserver${DS_EDITION_SUFFIX}"; then
+            DOCKER="false"
+        # [^/]* covers a status prefix (e.g. -s 4testing- gives onlyoffice/4testing-documentserver-ee) - this script never parses --status itself, it only forwards it.
+        elif is_command_exists docker && docker ps -a --format '{{.Image}}' 2>/dev/null | grep -qE "(^|/)${PRODUCT_SYSNAME}/[^/]*documentserver${DS_EDITION_SUFFIX}(:|$)"; then
+            DOCKER="true"
+        else
+            continue
+        fi
+
+        if [ "$USER_SET_INSTALLATION_TYPE" != "true" ]; then
+            case "$DS_EDITION_SUFFIX" in
+                "-de") PARAMETERS+=(-it developer) ;;
+                "-ee") PARAMETERS+=(-it enterprise) ;;
+                *)     PARAMETERS+=(-it community) ;;
+            esac
+        fi
+        break
+    done
+fi
+
+if [ -n "$USER_DOCKER" ] && [ -n "$DOCKER" ] && [ "$USER_DOCKER" != "$DOCKER" ]; then
+    reject_method_override
+fi
+
+[ -z "$DOCKER" ] && read_installation_method
+
+# Detect legacy installs.
+if [[ "${DOCKER}" == "true" ]] && [[ ${DOCKER_TAG} =~ ^([0-9]+\.[0-9]+\.[0-9]+)(\.[0-9]+)?$ ]]; then
+  TAG="v${BASH_REMATCH[1]}"; LATEST_TAG=$(curl -s "https://api.github.com/repos/${PRODUCT_SYSNAME^^}/${LEGACY_PRODUCT}/releases/latest" | grep -Po '"tag_name":\s*"\K[^"]+')
+  if [[ "${TAG}" != "${LATEST_TAG}" ]] && curl -sfI "https://github.com/${PRODUCT_SYSNAME^^}/${LEGACY_PRODUCT}-buildtools/releases/tag/${TAG}-server" >/dev/null; then
+	>&2 echo "Warning: legacy install detected (v${BASH_REMATCH[1]}) — compatibility issues or unforeseen errors may occur."
+    PARAMETERS+=(-gb "${TAG}-server"); GIT_BRANCH="${TAG}-server"
+  fi
+fi
+
+DOWNLOAD_URL_PREFIX="https://download.${PRODUCT_SYSNAME}.com/${PRODUCT}"
+[ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${PRODUCT_SYSNAME^^}/${LEGACY_PRODUCT}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
+
+if [ "$DOCKER" == "true" ]; then
+    SCRIPT_NAME="install-Docker.sh"
+elif [ -f /etc/redhat-release ]; then
+    SCRIPT_NAME="install-RedHat.sh"
+elif [ -f /etc/debian_version ]; then
+    SCRIPT_NAME="install-Debian.sh"
+else
+    echo "Not supported OS"
+    exit 1
+fi
+
+if [ "$LOCAL_SCRIPTS" != "true" ]; then
+    curl -fsSLO --retry 3 --retry-delay 2 "${DOWNLOAD_URL_PREFIX}/${SCRIPT_NAME}" || { echo "Failed to download ${SCRIPT_NAME}" >&2; exit 1; }
+    bash -n "${SCRIPT_NAME}" || { echo "Downloaded ${SCRIPT_NAME} has invalid Bash syntax" >&2; exit 1; }
+fi
+
+if [ "$ENABLE_LOGGING" = "true" ]; then
+    command -v script >/dev/null 2>&1 || { command -v dnf >/dev/null 2>&1 && dnf -y install util-linux-script; }
+    if command -v script >/dev/null 2>&1; then
+        LOG_FILE="OneClick${SCRIPT_NAME%.sh}_$(date +%Y%m%d_%H%M%S).log"
+        touch "${LOG_FILE}" || { echo "Failed to create log file"; exit 1; }
+        printf -v SCRIPT_COMMAND '%q ' bash "${SCRIPT_NAME}" "${PARAMETERS[@]}"
+        script -q -e "${LOG_FILE}" -c "${SCRIPT_COMMAND}"
+        EXIT_CODE=${PIPESTATUS[0]}
+    else
+        bash "${SCRIPT_NAME}" "${PARAMETERS[@]}" || EXIT_CODE=$?
+    fi
+else
+    bash "${SCRIPT_NAME}" "${PARAMETERS[@]}" || EXIT_CODE=$?
+fi
+
+[ "$LOCAL_SCRIPTS" != "true" ] && rm "${SCRIPT_NAME}"
+[ "$ENABLE_LOGGING" = "true" ] && { [ "${EXIT_CODE:-0}" -eq 0 ] && rm -f "$LOG_FILE" || echo -e "\033[0;31mAn error occurred while executing the script. Log saved to: $LOG_FILE\033[0m"; }
+
+exit ${EXIT_CODE:-0}

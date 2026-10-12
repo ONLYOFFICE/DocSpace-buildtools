@@ -10,8 +10,10 @@ case "$1" in
 			. /usr/share/debconf/confmodule
 			db_purge
 		fi
-		rm -rf /etc/{{product}}
-		rm -rf /var/www/{{product}}
+		rm -rf /etc/{{package_sysname}}/{{product}}
+		rm -rf /var/www/{{package_sysname}}/{{product}}
+		rm -rf /etc/{{package_sysname}}/{{legacy_product}}
+		rm -rf /var/www/{{legacy_product}}
 	;;
 
 	remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)

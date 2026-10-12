@@ -1,7 +1,7 @@
 @echo off
 echo 
 echo ######################
-echo #   build docspace-mcp   #
+echo #   build mcp   #
 echo ######################
 
 pushd %~s1

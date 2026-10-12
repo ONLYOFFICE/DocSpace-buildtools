@@ -7,7 +7,7 @@ BUILD_PATH=${BUILD_PATH:-${SRC_PATH}/publish}
 BUILD_DOTNET_CORE_ARGS=${BUILD_DOTNET_CORE_ARGS:-"false"}
 PROPERTY_BUILD=${PROPERTY_BUILD:-"all"}
 
-BACKEND_NODEJS_SERVICES=${BACKEND_NODEJS_SERVICES:-"ASC.Socket.IO, ASC.SsoAuth"}
+BACKEND_NODEJS_SERVICES=${BACKEND_NODEJS_SERVICES:-"ASC.Socket.IO, ASC.SsoAuth, ASC.AI.Chat"}
 BACKEND_DOTNETCORE_SERVICES=${BACKEND_DOTNETCORE_SERVICES:-"ASC.Files, ASC.People, ASC.Data.Backup, ASC.Files.Worker, ASC.Notify, \
 ASC.Studio.Notify, ASC.Web.Api, ASC.Web.Studio, ASC.Data.Backup.Worker, ASC.ClearEvents, ASC.ApiSystem, ASC.Web.HealthChecks.UI"}
 SELF_CONTAINED=${SELF_CONTAINED:-"false"}
@@ -99,7 +99,7 @@ while [ "$1" != "" ]; do
             echo -e " -mc, --migration-check \t check migration build (by default=true)"
             echo " -?, -h, --help              this help"
             echo "  Examples"
-            echo "  bash build-services.sh -sp /app/DocSpace"
+            echo "  bash build-services.sh -sp /app/${PROJECT_REPOSITORY_NAME}"
             exit 0
       ;;
 		    * )
@@ -139,8 +139,8 @@ function build_dotnetcore_backend {
     fi
     if [[ ${DOCKER_ENTRYPOINT} != "false" ]]
     then
-       echo "== ADD ${SRC_PATH}/buildtools/install/docker/docker-migration-entrypoint.sh to ASC.Migration.Runner =="
-       cp ${SRC_PATH}/buildtools/install/docker/docker-migration-entrypoint.sh ${BUILD_PATH}/services/ASC.Migration.Runner/service/
+       echo "== ADD ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-migration-entrypoint.sh to ASC.Migration.Runner =="
+       cp ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-migration-entrypoint.sh ${BUILD_PATH}/services/ASC.Migration.Runner/service/
     fi
   fi
 }

@@ -66,8 +66,88 @@ function ExtractPath {
     }
 }
 
+# MSI AppSearch can redirect Program Files paths in a 32-bit package.
+function GetDocumentServerInstallLocation {
+    $Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry64')
+    $Key = $null
+    try {
+        $Key = $Base.OpenSubKey('SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\ONLYOFFICE DocumentServer_is1')
+        if ($Key) { return $Key.GetValue('InstallLocation') }
+    } finally {
+        if ($Key) { $Key.Close() }
+        $Base.Close()
+    }
+}
+
+# Applies Docs registry search results to Apps properties.
+function ApplyInstalledDocumentServerSettings {
+    $InstalledVersion = AI_GetMsiProperty DOCS_INSTALLED_VERSION
+    if (-not $InstalledVersion) { return }
+
+    $Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry64')
+    try {
+        $DocsKey = $Base.CreateSubKey('SOFTWARE\ONLYOFFICE\DocumentServer')
+        $DocsPort = AI_GetMsiProperty DOCUMENT_SERVER_PORT
+        $DocsKey.SetValue('DsPort', $DocsPort, [Microsoft.Win32.RegistryValueKind]::String)
+    } finally { if ($DocsKey) { $DocsKey.Close() }; $Base.Close() }
+
+    $RegistryDocsDir = GetDocumentServerInstallLocation
+    if ($RegistryDocsDir) {
+        AI_SetMsiProperty DOCS_INSTALL_LOCATION $RegistryDocsDir
+    }
+
+    $EditionSuffix = @{ community = ''; enterprise = ' EE'; developer = ' DE' }[(AI_GetMsiProperty ENVIRONMENT)]
+    $SameEdition = (AI_GetMsiProperty DOCS_INSTALLED_DISPLAY_NAME) -match "^ONLYOFFICE Document Server$EditionSuffix(?:\s+\d|$)"
+    $SkipDocsInstall = $false
+    try { $SkipDocsInstall = $SameEdition -and [version]$InstalledVersion -ge [version](AI_GetMsiProperty DS_VERSION) }
+    catch { Write-Warning "Invalid DocumentServer version: installed=$InstalledVersion" }
+    AI_SetMsiProperty DOCUMENT_SERVER_INSTALL_NONE ([string][int]$SkipDocsInstall)
+
+    if ($Value = AI_GetMsiProperty DOCS_DBHOST) { AI_SetMsiProperty PS_DB_HOST $Value }
+    if ($Value = AI_GetMsiProperty DOCS_DBNAME) { AI_SetMsiProperty PS_DB_NAME $Value }
+    if ($Value = AI_GetMsiProperty DOCS_DBPORT) { AI_SetMsiProperty PS_DB_PORT $Value }
+    if ($Value = AI_GetMsiProperty DOCS_DBPWD) { AI_SetMsiProperty PS_DB_PWD $Value }
+    if ($Value = AI_GetMsiProperty DOCS_DBUSER) { AI_SetMsiProperty PS_DB_USER $Value }
+    if ($Value = AI_GetMsiProperty DOCS_JWTENABLED) {
+        AI_SetMsiProperty DOCUMENT_SERVER_JWT_ENABLED $Value
+        AI_SetMsiProperty JWT_ENABLED $Value
+    }
+    if ($Value = AI_GetMsiProperty DOCS_JWTHEADER) {
+        AI_SetMsiProperty DOCUMENT_SERVER_JWT_HEADER $Value
+        AI_SetMsiProperty JWT_HEADER $Value
+    }
+    if ($Value = AI_GetMsiProperty DOCS_JWTSECRET) {
+        AI_SetMsiProperty DOCUMENT_SERVER_JWT_SECRET $Value
+        AI_SetMsiProperty JWT_SECRET $Value
+    }
+    if ($Value = AI_GetMsiProperty DOCS_RABBITMQHOST) { AI_SetMsiProperty AMQP_HOST $Value }
+    if ($Value = AI_GetMsiProperty DOCS_RABBITMQPROTO) { AI_SetMsiProperty AMQP_PROTOCOL $Value }
+    if ($Value = AI_GetMsiProperty DOCS_RABBITMQPWD) { AI_SetMsiProperty AMQP_PWD $Value }
+    if ($Value = AI_GetMsiProperty DOCS_RABBITMQUSER) { AI_SetMsiProperty AMQP_USER $Value }
+    if ($Value = AI_GetMsiProperty DOCS_REDISHOST) { AI_SetMsiProperty REDIS_HOST $Value }
+
+    try {
+        $DocsInstallDir = AI_GetMsiProperty DOCS_INSTALL_LOCATION
+        if (-not $DocsInstallDir) {
+            $DocsInstallDir = Join-Path (AI_GetMsiProperty ProgramFiles64Folder) 'ONLYOFFICE\DocumentServer'
+        }
+        $DocsConfigPath = Join-Path $DocsInstallDir 'config\local.json'
+        if (Test-Path -LiteralPath $DocsConfigPath -PathType Leaf) {
+            $DocsLicensePath = (Get-Content -LiteralPath $DocsConfigPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop).license.license_file
+            if ($DocsLicensePath) {
+                AI_SetMsiProperty LICENSE_PATH $DocsLicensePath
+            }
+        }
+    }
+    catch { Write-Warning 'Unable to read the existing DocumentServer license configuration.' }
+
+    Write-Output 'Existing DocumentServer settings applied.'
+}
+
 # Tests the connection to PostgreSQL using ODBC.
 function TestPostgreSqlConnection {
+    AI_SetMsiProperty PostgreSqlConnectionError ""
+
     $Server   = AI_GetMsiProperty PS_DB_HOST
     $Port     = AI_GetMsiProperty PS_DB_PORT
     $Database = AI_GetMsiProperty PS_DB_NAME
@@ -305,9 +385,9 @@ function SetIdentityEncryptionSecret {
 # Function to set up OpenSearch.
 function OpenSearchSetup {
     $AppDir = AI_GetMsiProperty APPDIR
-    $AppIndexDir = Join-Path $AppDir "Data\Index\v2.18.0\"
+    $AppIndexDir = Join-Path $AppDir "Data\Index\v3.5.0\"
     $LogsDir     = Join-Path $AppDir "Logs\"
-    $OpenSearchDashboardsYml = "C:\OpenSearchStack\opensearch-dashboards-2.18.0\config\opensearch_dashboards.yml"
+    $OpenSearchDashboardsYml = "C:\OpenSearchStack\opensearch-dashboards-3.5.0\config\opensearch_dashboards.yml"
 
     # Check if the index directory exists and set NEED_REINDEX_OPENSEARCH property if it doesn't.
     if (-not (Test-Path $AppIndexDir)) {
@@ -381,6 +461,41 @@ function SetAppDirWithForwardSlash {
     AI_SetMsiProperty APPDIR_FORWARD_SLASH $AppDirForwardSlash
 }
 
+function MigrateProductRegistry {
+    $LegacyKey = "HKLM\Software\Ascensio System SIA\ONLYOFFICE DocSpace"
+    $AppsKey = "HKLM\Software\Ascensio System SIA\ONLYOFFICE Apps"
+    $LegacyPath = "Registry::$LegacyKey"
+    $AppsPath = "Registry::$AppsKey"
+
+    if (-not (Test-Path -LiteralPath $LegacyPath)) {
+        return
+    }
+
+    if (Test-Path -LiteralPath $AppsPath) {
+        return
+    }
+
+    try {
+        Rename-Item -LiteralPath $LegacyPath -NewName "ONLYOFFICE Apps" -ErrorAction Stop
+        Write-Output "The product registry key was renamed to ONLYOFFICE Apps."
+        return
+    }
+    catch {
+        Write-Output "Unable to rename the product registry key. Falling back to a recursive copy."
+    }
+
+    try {
+        & "$env:SystemRoot\System32\reg.exe" copy $LegacyKey $AppsKey /s /f | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            throw "reg.exe exited with code $LASTEXITCODE"
+        }
+        Write-Output "The legacy product registry tree was copied to ONLYOFFICE Apps."
+    }
+    catch {
+        Write-Warning "Unable to migrate the product registry key: $($_.Exception.Message)"
+    }
+}
+
 # Function to move configurations and manage files.
 function MoveConfigs {
     # Define source and target paths.
@@ -391,9 +506,12 @@ function MoveConfigs {
     $ConfigSslFile = Join-Path $TargetFolder "onlyoffice-proxy-ssl.conf.tmpl"
     $ConfigFile = Join-Path $TargetFolder "onlyoffice-proxy.conf"
     $SslScriptDir = Join-Path $AppDir "sbin\"
-    $SslScriptPath = Join-Path $AppDir "sbin\docspace-ssl-setup.ps1"
+    $SslScriptPath = Join-Path $AppDir "sbin\apps-ssl-setup.ps1"
     $FluentBitSourceFile = Join-Path $AppDir "config\fluent-bit.conf"
     $FluentBitDstFolder = "C:\OpenSearchStack\fluent-bit-3.2.4-win64\conf\"
+
+    $SslCertPath = ''
+    $SslCertKeyPath = ''
 
     # Extract SSL certificate and key paths if config file exists.
     if (Test-Path $ConfigFile) {
@@ -403,6 +521,34 @@ function MoveConfigs {
         $DomainName = AI_GetMsiProperty DOMAIN_NAME
     } else {
         Write-Output "Configuration file not found!"
+    }
+
+    # Reuse Docs SSL when Apps has no certificate configured.
+    if (((AI_GetMsiProperty DOCUMENT_SERVER_INSTALL_NONE) -eq '1') -and
+        [string]::IsNullOrWhiteSpace($SslCertPath)) {
+        $DocsDir = AI_GetMsiProperty DOCS_INSTALL_LOCATION
+        $RegistryDocsDir = GetDocumentServerInstallLocation
+        if ($RegistryDocsDir) { $DocsDir = $RegistryDocsDir }
+        if (-not $DocsDir) { throw 'DocumentServer InstallLocation not found.' }
+
+        $DocsConfig = Join-Path $DocsDir 'nginx\conf\ds.conf'
+        if (Test-Path -LiteralPath $DocsConfig -PathType Leaf) {
+            $Content = ReadFileContent $DocsConfig
+            $SslCertPath = ExtractPath -Content $Content -RegexPattern "ssl_certificate\s+(.*?);"
+            $SslCertKeyPath = ExtractPath -Content $Content -RegexPattern "ssl_certificate_key\s+(.*?);"
+            $DomainName = AI_GetMsiProperty DOMAIN_NAME
+
+            if (-not [string]::IsNullOrWhiteSpace($SslCertPath) -and
+                -not [string]::IsNullOrWhiteSpace($SslCertKeyPath)) {
+                $DocsSslScript = Join-Path $DocsDir 'bin\documentserver-letsencrypt.ps1'
+                if (-not (Test-Path -LiteralPath $DocsSslScript -PathType Leaf)) {
+                    throw "DocumentServer SSL setup script not found: $DocsSslScript"
+                }
+                & $DocsSslScript -d
+            }
+        } else {
+            Write-Output "DocumentServer config not found: $DocsConfig"
+        }
     }
 
     # Remove existing onlyoffice* config files before copying.
@@ -450,6 +596,24 @@ function MoveConfigs {
     }
     if (Test-Path $FluentBitSourceFile) {
         Move-Item -Path $FluentBitSourceFile -Destination $FluentBitDstFolder
+    }
+
+    if ((AI_GetMsiProperty DOCUMENT_SERVER_INSTALL_NONE) -eq '1') {
+        $DocsDir = GetDocumentServerInstallLocation
+        if (-not $DocsDir) { throw 'DocumentServer InstallLocation not found.' }
+
+        $DocsConfig = Join-Path $DocsDir 'nginx\conf\ds.conf'
+        if (-not (Test-Path -LiteralPath $DocsConfig)) { throw "DocumentServer config not found: $DocsConfig" }
+        $Content = [IO.File]::ReadAllText($DocsConfig)
+        $ListenPattern = '(?m)^([ \t]*listen[ \t]+(?:0\.0\.0\.0|\[::\]):)\d+'
+        if ($Content -notmatch $ListenPattern) { throw "DocumentServer listen directive not found: $DocsConfig" }
+        $DocsPort = AI_GetMsiProperty DOCUMENT_SERVER_PORT
+        $UpdatedContent = $Content -replace $ListenPattern, ('${1}' + $DocsPort)
+        if ($UpdatedContent -cne $Content) {
+            [IO.File]::WriteAllText($DocsConfig, $UpdatedContent, (New-Object Text.UTF8Encoding($false)))
+        }
+        Restart-Service -Name DsProxySvc -Force -ErrorAction Stop
+        Write-Output "DocumentServer port set to $DocsPort and DsProxySvc restarted."
     }
 
     Write-Output "Script execution completed."

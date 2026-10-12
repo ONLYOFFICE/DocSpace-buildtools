@@ -7,7 +7,7 @@ on:
     inputs:
       box-version:
          type: string
-         description: 'DocSpace version that will be installed inside box'
+         description: 'Version that will be installed inside box'
          required: true
       os-name:
         type: string
@@ -74,7 +74,7 @@ jobs:
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
 
   vagrant-up:
-    name: "Rebuild DocSpace ${{ matrix.name }}"
+    name: "Rebuild ${{ matrix.name }}"
     needs: prepare
     runs-on: ubuntu-22.04
     strategy:

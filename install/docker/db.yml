@@ -15,14 +15,14 @@ services:
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     healthcheck:
-      test: ["CMD", "mysql", "-u", "${MYSQL_USER}", "--password=${MYSQL_PASSWORD}", "-e", ";"]
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$${MYSQL_PASSWORD}\" mysql -u \"$${MYSQL_USER}\" -e ';'"]
       interval: 10s
       timeout: 5s
       start_period: 10s
       retries: 3
     volumes:
       - ${VOLUMES_DIR:+${VOLUMES_DIR}/}mysql_data:/var/lib/mysql
-      - ./config/mysql/conf.d/:/etc/mysql/conf.d
+      - ./config/mysql.cnf:/etc/mysql/conf.d/mysql.cnf
     networks:
       - ${NETWORK_NAME}
 

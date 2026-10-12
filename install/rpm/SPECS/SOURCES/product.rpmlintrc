@@ -1,74 +1,65 @@
 # Ignoring node_modules errors due to lack of ability to influence them
 addFilter(r'node_modules')
 
+# The bundled Node.js CLI entrypoint uses the standard `#!/usr/bin/env node` shebang; hardcoding an absolute interpreter path would break the upstream npm packaging convention
+addFilter(r'E: env-script-interpreter')
+
 # Packages use a non-standard user and group for our project directories, but the user and group are created in %pre common
 addFilter(r' W: non-standard-(uid|gid)')
 
 # This is necessary to ensure that all child packages are updated correctly
 addFilter(r'W: requires-on-release')
 
-# The basic documentation comes with the common package
+# These are internal backend microservices; there is no user-facing README/doc to ship beyond the %license files already included
 addFilter(r'W: no-documentation')
 
-# The directory is needed to keep the required data
+# Needed build/runtime artifacts that happen to be dotfiles: Next.js .next build dirs, client i18n .constants/.meta locale metadata, and the .private secrets dir
 addFilter(r'W: hidden-file-or-dir')
 
-# Some packages do not need scriptlets
-addFilter(r'W: empty-(%preun|%pre|%postun|%post)')
+# The document-formats directory is restricted to the onlyoffice group only, consistent with the 640 config files inside it
+addFilter(r'E: non-standard-dir-perm')
 
 # This is implemented for easier updating of the config, in case of adding new data or correcting errors.
 addFilter(r'W: conffile-without-noreplace-flag')
 
-# In our packaging libraries are stored in the catalog of services
+# Third-party native libraries bundled via .NET self-contained publish (librdkafka, libgrpc_csharp_ext, etc.) live under our own service directories instead of standard system library paths; we can't alter RPATH/RUNPATH in vendored binaries if a future upstream build sets one
 addFilter(r'E: binary-or-shlib-defines-rpath')
 
-# The directory is used to store systemd files
+# The directory is used to store systemd files. rpmlint 2.4.0 (what CI actually installs via unpinned pip) does not exempt /usr/lib/systemd from only-non-binary-in-usr-lib in its default UsrLibBinaryException config; that exemption was only added in a later rpmlint version
 addFilter(r'W: only-non-binary-in-usr-lib')
 
-# Rpmbuild does not support different architectures for child packages
-addFilter(r'E: no-binary')
+# Third-party vendored libraries (librdkafka.so, libgrpc_csharp_ext*.so) call the legacy gethostbyname family for DNS resolution; this check still exists in rpmlint 2.4.0 (what CI actually installs) even though a later rpmlint version we tested against dropped it
+addFilter(r'W: binary-or-shlib-calls-gethostbyname')
 
-# There is no manual page for docspace-configuration.sh
-addFilter(r'W: no-manual-page-for-binary')
+# rpmlint infers a spurious "locales-<subpackage>" dependency from bundled translation files; no such package exists or should exist
+addFilter(r'E: no-dependency-on locales-\S+')
 
-# Dependency on a non-existent package
-addFilter(r'E: no-dependency-on locales-api')
-
-# Scripts are not designed to be run manually
-addFilter(r'E: non-executable-script')
-
-# docspace-configuration.sh has a permission of 744, so that users do not have the opportunity to run the script
+# apps-configuration and apps-ssl-setup have a permission of 744, so that users do not have the opportunity to run the scripts
 addFilter(r'non-standard-executable-perm')
+
+# There is no manual page for apps-configuration or apps-ssl-setup
+addFilter(r'W: no-manual-page-for-binary')
 
 # We use this to protect sensitive information (ie passwords) in the config file
 addFilter(r'non-readable')
 
-# No one license from allowed pull AGPLv3, AGPLv3+ worked
-addFilter(r'W: invalid-license AGPLv3')
+# aspell false positives on correctly spelled technical words missing from its dictionary; scoped to the specific known words so a real future typo still gets reported
+addFilter(r"E: spelling-error \('(vectorizes|configs|integrations)'")
 
-# Certain services require write access to the log directory. These services are launched under a user account that is different from the root user.
-addFilter(r'logrotate-user-writable-log-dir')
+# rpmlint's known-license list does not include the SPDX identifiers used for our dual license; no accepted spelling exists for this AGPL-3.0-only AND CC-BY-SA-4.0 combination
+addFilter(r'W: invalid-license (AGPL-3.0-only|CC-BY-SA-4.0)')
 
 # The use of the /var/www directory is caused by its past history as the default document root
 addFilter(r'W: non-standard-dir-in-var www')
 
-# Shared libraries centos7-librdkafka.so, libgrpc_csharp_ext.x64.so location of which is hardcoded
-addFilter(r'W: binary-or-shlib-calls-gethostbyname')
-
-# There are the same files, however on a different languages
+# Identical files are an expected artifact of the upstream build tooling: translation JSON identical across close locale variants (e.g. pt vs pt-BR), and Next.js/.NET publish output duplicating identical build artifacts
 addFilter(r'files-duplicate')
 
 # Building a cross-platform project, so those files are arch-independent
 addFilter(r'arch-independent-package-contains-binary-or-object')
 
-# File is a static library that is used when building our application. 
-# The presence of an executable bit on it is justified, since the object files that are used for linking when building the program are included.
-# /var/www/docspace/services/ASC.Web.HealthChecks.UI/runtimes/browser-wasm/nativeassets/net7.0/e_sqlite3.a
-addFilter(r'spurious-executable-perm')
-addFilter(r'devel-file-in-non-devel-package')
-
-# Necessary to resolve a config conflict
-addFilter(r'dangerous-command-in-%pre')
+# Necessary to resolve a config conflict (%pre proxy) and to clean up the fixed, build-time-defined %{buildpath} on full removal (%postun)
+addFilter(r'dangerous-command-in-%(pre|postun)')
 
 # Log rotation is handled by nlog
 addFilter(r'log-files-without-logrotate')

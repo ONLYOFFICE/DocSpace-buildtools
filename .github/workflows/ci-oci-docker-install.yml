@@ -10,9 +10,11 @@ on:
       - "develop"
     paths:
       - ".github/workflows/ci-oci-docker-install.yml"
-      - "install/OneClickInstall/install-Docker.sh"
-      - "install/docker/*.yml"
-      - "install/docker/community/docker-compose.yml"
+      - ".github/scripts/docker-utils.sh"
+      - "tests/smoke/**"
+      - "install/OneClickInstall/install-Docker*.sh"
+      - "install/OneClickInstall/common/check-ports.sh"
+      - "install/docker/**"
   workflow_dispatch:
     inputs:
       testing:
@@ -30,6 +32,11 @@ on:
         required: false
         default: ''
         type: string
+      previous_version:
+        description: "Previous version (optional)"
+        required: false
+        default: ''
+        type: string
 
 env:
   IS_4TESTING: ${{ github.event.inputs.testing }}
@@ -44,12 +51,11 @@ jobs:
       - id: modes
         name: Configure matrix modes
         run: |
-          STACK=$(jq -cn '{name:"stack", services:"docspace-stack dashboards db ds fluent opensearch proxy rabbitmq redis ", args:"-sm true"}')
-          STANDARD=$(jq -cn '{name:"standard", services:"docspace healthchecks identity notify dashboards db ds fluent opensearch proxy rabbitmq redis", args:""}')
+          STACK=$(jq -cn '{name:"stack", services:"apps-stack dashboards db ds fluent opensearch proxy rabbitmq redis ", args:"-dm stack"}')
+          MICROSERVICES=$(jq -cn '{name:"microservices", services:"apps healthchecks identity notify dashboards db ds fluent opensearch proxy rabbitmq redis", args:"-dm microservices"}')
+          STANDALONE=$(jq -cn '{name:"standalone", services:"docker-compose", args:"-dm standalone"}')
 
-          VALUE=$([ "${{ github.event.inputs.offline }}" = "true" ] \
-            && echo "[$STACK]" \
-            || jq -cn --argjson a "$STANDARD" --argjson b "$STACK" '[$a,$b]')
+          VALUE=$(jq -cn --argjson a "$MICROSERVICES" --argjson b "$STACK" --argjson c "$STANDALONE" '[$a,$b,$c]')
           echo "value=$VALUE" >> "$GITHUB_OUTPUT"
 
   Install-OCI-Docker:
@@ -95,7 +101,38 @@ jobs:
           bash .github/scripts/docker-utils.sh check-services "${{ matrix.mode.services }}"
           bash .github/scripts/docker-utils.sh status
 
+      - name: Smoke test
+        timeout-minutes: 45
+        env:
+          LICENSE: ${{ secrets.LICENSE_ENTERPRISE }}
+          SMOKE_SUMMARY_TITLE: Smoke test
+        run: bash .github/scripts/docker-utils.sh smoke-test
+
+      - name: Audit containers
+        if: ${{ !cancelled() }}
+        run: bash .github/scripts/docker-utils.sh log-audit
+
+      - name: Recreate containers
+        run: bash .github/scripts/docker-utils.sh restart "${{ matrix.mode.services }}"
+
+      - name: Check containers after the restart
+        run: bash .github/scripts/docker-utils.sh check-services "${{ matrix.mode.services }}"
+
+      - name: Smoke test after the restart
+        timeout-minutes: 15
+        env:
+          LICENSE: ${{ secrets.LICENSE_ENTERPRISE }}
+          SMOKE_SUMMARY_TITLE: Smoke test after the restart
+        run: bash .github/scripts/docker-utils.sh smoke-test -m "bootstrap or verify"
+
+      - name: Job summary
+        if: ${{ !cancelled() }}
+        env:
+          JOB_STATUS: ${{ job.status }}
+        run: bash .github/scripts/docker-utils.sh summary
+
       - name: Print logs for crashed containers
+        if: ${{ !cancelled() }}
         run: bash .github/scripts/docker-utils.sh logs 30
 
       - name: Check Docker scripts for errors
@@ -103,19 +140,19 @@ jobs:
         run: bash .github/scripts/docker-utils.sh shellcheck
 
       - name: Prepare offline environment
-        if: success() && github.event.inputs.offline == 'true'
+        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'standalone'
         run: bash .github/scripts/offline-archive.sh prepare
 
       - name: Create compressed archives
-        if: success() && github.event.inputs.offline == 'true'
+        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'standalone'
         run: bash .github/scripts/offline-archive.sh create ${{ matrix.arch }}
 
       - name: Build self-extracting archive
-        if: success() && github.event.inputs.offline == 'true'
+        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'standalone'
         run: bash .github/scripts/offline-archive.sh build ${{ matrix.arch }}
 
       - name: Configure AWS Credentials
-        if: success() && github.event.inputs.offline == 'true'
+        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'standalone'
         uses: aws-actions/configure-aws-credentials@v6.0.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_OCI }}
@@ -123,15 +160,14 @@ jobs:
           aws-region: us-east-1
 
       - name: Upload 4testing offline self-extracting archive
-        if: success() && github.event.inputs.offline == 'true'
+        if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'standalone'
         env:
           AWS_BUCKET_URL_OCI: ${{ secrets.AWS_BUCKET_URL_OCI }}
           AWS_REST_API_ID: ${{ secrets.AWS_REST_API_ID }}
           AWS_RESOURCE_ID: ${{ secrets.AWS_RESOURCE_ID }}
         run: bash .github/scripts/offline-archive.sh upload
 
-  Install-Community:
-    if: github.event.inputs.offline != 'true'
+  Update-OCI-Docker:
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -141,7 +177,7 @@ jobs:
             arch: amd
           - runner: ubuntu-24.04-arm
             arch: arm
-    name: Community [${{ matrix.arch }}]
+    name: OCI update [${{ matrix.arch }}]
 
     steps:
       - name: Checkout repository
@@ -158,16 +194,54 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Start community
-        working-directory: install/docker/community
+      - name: Install the released version
+        env:
+          PREVIOUS_VERSION: ${{ github.event.inputs.previous_version }}
+        run: bash .github/scripts/docker-utils.sh install-previous
+
+      - name: Prepare data on the released version
+        timeout-minutes: 20
+        env:
+          LICENSE: ${{ secrets.LICENSE_ENTERPRISE }}
+          SMOKE_SUMMARY_TITLE: Released version before the update
+        run: bash .github/scripts/docker-utils.sh smoke-test -m "bootstrap or seed"
+
+      - name: Update to the tested version
         env:
           DOCKERHUB_USERNAME_PAT: ${{ secrets.DOCKERHUB_USERNAME_PAT }}
           DOCKERHUB_TOKEN_PAT: ${{ secrets.DOCKERHUB_TOKEN_PAT }}
-        run: bash "$GITHUB_WORKSPACE/.github/scripts/docker-utils.sh" start-community
+        run: bash .github/scripts/docker-utils.sh update-install
 
-      - name: Check container status
-        run: bash .github/scripts/docker-utils.sh status
+      - name: Verify the update
+        run: |
+          bash .github/scripts/docker-utils.sh verify-update
+          bash .github/scripts/docker-utils.sh check-services auto
+          bash .github/scripts/docker-utils.sh status
+
+      - name: Verify data after the update
+        timeout-minutes: 15
+        env:
+          LICENSE: ${{ secrets.LICENSE_ENTERPRISE }}
+          SMOKE_SUMMARY_TITLE: Data after the update
+        run: bash .github/scripts/docker-utils.sh smoke-test -m "bootstrap or verify"
+
+      - name: Smoke test of the updated portal
+        timeout-minutes: 45
+        env:
+          LICENSE: ${{ secrets.LICENSE_ENTERPRISE }}
+          SMOKE_SUMMARY_TITLE: Updated portal
+        run: bash .github/scripts/docker-utils.sh smoke-test
+
+      - name: Audit containers
+        if: ${{ !cancelled() }}
+        run: bash .github/scripts/docker-utils.sh log-audit
+
+      - name: Job summary
+        if: ${{ !cancelled() }}
+        env:
+          JOB_STATUS: ${{ job.status }}
+        run: bash .github/scripts/docker-utils.sh summary
 
       - name: Print logs for crashed containers
-        if: always()
-        run: bash .github/scripts/docker-utils.sh logs 50
+        if: ${{ !cancelled() }}
+        run: bash .github/scripts/docker-utils.sh logs 30

@@ -1,7 +1,7 @@
 <service>
-	<id>DocSpace.DocEditor</id>
-	<name>ONLYOFFICE DocSpace DocEditor</name>
-	<description>ONLYOFFICE DocSpace DocEditor</description>
+	<id>Apps.DocEditor</id>
+	<name>ONLYOFFICE Apps DocEditor</name>
+	<description>ONLYOFFICE Apps DocEditor</description>
 	<priority>RealTime</priority>
 	<startmode>Automatic</startmode>
 	<autoRefresh>false</autoRefresh>

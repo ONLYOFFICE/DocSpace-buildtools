@@ -40,7 +40,7 @@ set -e
 
 echo "
 #######################################
-#  UNINSTALL ${package_sysname^^} ${product_name}
+#  UNINSTALL ${product_name}
 #######################################
 "
 
@@ -52,11 +52,17 @@ if [[ "$DEP_CHOICE" =~ ^(y|yes|)$ ]]; then
     UNINSTALL_DEPENDENCIES=true
 fi
 
-# Get packages to uninstall
-mapfile -t PACKAGES_TO_UNINSTALL < <(rpm -qa | grep -E "^(${package_sysname}|${product})" || true)
+# Get Apps packages to uninstall
+mapfile -t PACKAGES_TO_UNINSTALL < <(rpm -qa --qf '%{NAME}\n' | grep -E "^(${package}|${legacy_product})(-|$)" || true)
+
+mapfile -t DOCUMENT_SERVER_PACKAGES < <(rpm -qa --qf '%{NAME}\n' | grep -E "^${package_sysname}-documentserver(-de|-ee)?$" || true)
+if [ "${#DOCUMENT_SERVER_PACKAGES[@]}" -gt 0 ]; then
+    read -r -p "Also uninstall ${package_sysname^^} Docs? (y/N): " DOCS_CHOICE || DOCS_CHOICE=""
+    [[ "${DOCS_CHOICE,,}" =~ ^(y|yes)$ ]] && PACKAGES_TO_UNINSTALL+=("${DOCUMENT_SERVER_PACKAGES[@]}")
+fi
 
 DEPENDENCIES=(
-    nodejs dotnet-sdk-10.0 mysql-community-server postgresql
+    nodejs aspnetcore-runtime-10.0 mysql-community-server postgresql
     postgresql-server redis rabbitmq-server ffmpeg opensearch
     opensearch-dashboards fluent-bit openresty
 )
@@ -66,16 +72,20 @@ if [ "$UNINSTALL_DEPENDENCIES" = true ]; then
     PACKAGES_TO_UNINSTALL+=("${DEPENDENCIES[@]}")
 fi
 
+# Stop app services before their dependencies disappear.
+systemctl stop "${product}-*.service" "${legacy_product}-*.service" >/dev/null 2>&1 || true
+
 # Uninstall packages and clean up
 yum remove -y "${PACKAGES_TO_UNINSTALL[@]}" --setopt=clean_requirements_on_remove=false --disableplugin=updateinfo
 yum autoremove -y && yum clean all
 
 # Uninstall swap file if it exists
-if swapon --show | grep -q "/${product}_swapfile"; then
-    swapoff "/${product}_swapfile"
-    rm -f "/${product}_swapfile"
-fi
+for SWAPFILE_NAME in "${product}" "${legacy_product}"; do
+    if swapon --show | grep -q "/${SWAPFILE_NAME}_swapfile"; then
+        swapoff "/${SWAPFILE_NAME}_swapfile"
+        rm -f "/${SWAPFILE_NAME}_swapfile"
+    fi
+done
 
-echo -e "Uninstallation of ${package_sysname^^} ${product_name}" \
+echo -e "Uninstallation of ${product_name}" \
          "$( [ "$UNINSTALL_DEPENDENCIES" = true ] && echo "and all dependencies" ) \e[32mcompleted.\e[0m"
-

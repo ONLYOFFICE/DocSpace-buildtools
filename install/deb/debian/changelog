@@ -1,4 +1,4 @@
-{{product}} (3.7.1) unstable; urgency=medium
+{{package_name}} (3.7.1) unstable; urgency=medium
 
   * Updated Node.js to v24 (LTS)
   * Updated the following packages: `react`, `react-dom`, `react-router`,
@@ -190,13 +190,13 @@
 
  -- Ascensio System SIA <support@onlyoffice.com>  Wed, 24 Jun 2026 20:32:03 +0000
 
-{{product}} (3.7.0) unstable; urgency=medium
+{{package_name}} (3.7.0) unstable; urgency=medium
 
   * No public release.
 
  -- Ascensio System SIA <support@onlyoffice.com>  Wed, 24 Jun 2026 20:32:03 +0000
 
-{{product}} (3.6.1) unstable; urgency=medium
+{{package_name}} (3.6.1) unstable; urgency=medium
 
   * Added an email to support (the `support@onlyoffice.com` mailbox from
     the config) when a user deletes a paid SaaS portal
@@ -215,7 +215,7 @@
 
  -- Ascensio System SIA <support@onlyoffice.com>  Wed, 24 Jun 2026 20:32:03 +0000
 
-{{product}} (3.6.0) unstable; urgency=medium
+{{package_name}} (3.6.0) unstable; urgency=medium
 
   * `react-dom`, `next`, `typescript` Wallet services (backup) are now
     performed by `serviceName`, not by ID multiple selection mode has been
@@ -275,7 +275,7 @@
 
  -- Ascensio System SIA <support@onlyoffice.com>  Wed, 24 Jun 2026 20:32:03 +0000
 
-{{product}} (3.5.0) unstable; urgency=medium
+{{package_name}} (3.5.0) unstable; urgency=medium
 
   * Switching from yarn to pnpm in the client
   * Updated the nodejs version to v22
@@ -444,7 +444,7 @@
 
  -- Ascensio System SIA <support@onlyoffice.com>  Sat, 01 Nov 2025 13:20:43 +0000
 
-{{product}} (3.2.1) unstable; urgency=medium
+{{package_name}} (3.2.1) unstable; urgency=medium
 
   * The ability to rename the portal is now only available on Business
     plans
@@ -533,7 +533,7 @@
 
  -- Ascensio System SIA <support@onlyoffice.com>  Wed, 23 Jul 2025 11:21:52 +0000
 
-{{product}} (3.2.0) unstable; urgency=medium
+{{package_name}} (3.2.0) unstable; urgency=medium
 
   * Updated the react-virtualized library to the latest version used for
     rendering lists of files/rooms/contacts
@@ -567,7 +567,7 @@
 
  -- Ascensio System SIA <support@onlyoffice.com>  Wed, 23 Jul 2025 11:21:57 +0000
 
-{{product}} (3.1.1) unstable; urgency=medium
+{{package_name}} (3.1.1) unstable; urgency=medium
 
   * Fixed client crash when authorizing via Auth link without specifying
     scope
@@ -655,7 +655,7 @@
 
  -- Ascensio System SIA <support@onlyoffice.com>  Tue, 03 Jun 2025 17:14:42 +0000
 
-{{product}} (3.1.0) unstable; urgency=medium
+{{package_name}} (3.1.0) unstable; urgency=medium
 
   * Fixed a security issue in NextJS (Authorization Bypass in Next.js
     Middleware)
@@ -723,7 +723,7 @@
 
  -- Ascensio System SIA <support@onlyoffice.com>  Wed, 07 May 2025 12:42:17 +0000
 
-{{product}} (3.0.4) unstable; urgency=medium
+{{package_name}} (3.0.4) unstable; urgency=medium
 
   * Fixed adding users with a dot in the email
   * Fixed context menu for creating files with screen width 1000px
@@ -732,19 +732,19 @@
 
  -- Ascensio System SIA <support@onlyoffice.com>  Tue, 25 Feb 2025 15:44:19 +0000
 
-{{product}} (3.0.3) unstable; urgency=medium
+{{package_name}} (3.0.3) unstable; urgency=medium
 
   * No public release.
 
  -- Ascensio System SIA <support@onlyoffice.com>  Tue, 25 Feb 2025 15:44:19 +0000
 
-{{product}} (3.0.2) unstable; urgency=medium
+{{package_name}} (3.0.2) unstable; urgency=medium
 
   * No public release.
 
  -- Ascensio System SIA <support@onlyoffice.com>  Tue, 25 Feb 2025 15:44:19 +0000
 
-{{product}} (3.0.1) unstable; urgency=medium
+{{package_name}} (3.0.1) unstable; urgency=medium
 
   * Fixed the work of OAuth2 in the US region
   * Fixed viewing document versions in someone else's room for the
@@ -770,7 +770,7 @@
 
  -- Ascensio System SIA <support@onlyoffice.com>  Wed, 25 Dec 2024 16:42:45 +0000
 
-{{product}} (3.0.0) unstable; urgency=medium
+{{package_name}} (3.0.0) unstable; urgency=medium
 
   * Restored the mobile app advertising banner.
   * Changed the licensing scheme. The Branding functionality is blocked
@@ -896,7 +896,7 @@
 
  -- Ascensio System SIA <support@onlyoffice.com>  Sun, 24 Nov 2024 08:32:21 +0000
 
-{{product}} (2.6.3) unstable; urgency=medium
+{{package_name}} (2.6.3) unstable; urgency=medium
 
   * Fixed redirection to mobile app when opening documents via deeplink
   * Added duplication function for the form filling room
@@ -912,7 +912,7 @@
 
  -- Ascensio System SIA <support@onlyoffice.com>  Mon, 21 Oct 2024 09:16:12 +0000
 
-{{product}} (2.6.0) unstable; urgency=medium
+{{package_name}} (2.6.0) unstable; urgency=medium
 
   * Added banners about reaching the disk space limit for Room
     Admins/Power users.
@@ -1068,7 +1068,7 @@
 
  -- Ascensio System SIA <support@onlyoffice.com>  Thu, 01 Aug 2024 12:51:51 +0000
 
-{{product}} (2.5.0) unstable; urgency=medium
+{{package_name}} (2.5.0) unstable; urgency=medium
 
   * Switching to .net 8 and yarn v4.
   * Added distributed locking based on Redis/ZooKeeper.

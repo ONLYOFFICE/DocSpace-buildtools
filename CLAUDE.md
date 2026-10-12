@@ -1,6 +1,6 @@
 ## Project Overview
 
-ONLYOFFICE DocSpace Build Tools — build scripts, Docker configurations, installation packages, CI/CD pipelines, and application configuration for [DocSpace-server](../DocSpace-server) and [DocSpace-client](../DocSpace-client).
+ONLYOFFICE Apps Build Tools — build scripts, Docker configurations, installation packages, CI/CD pipelines, and application configuration for [DocSpace-server](../DocSpace-server) and [DocSpace-client](../DocSpace-client).
 
 ## Tech Stack
 
@@ -26,11 +26,12 @@ runMigrations.standalone.bat        # Windows (standalone mode)
 ./start/restart.sh                  # Restart all services
 
 # Docker Compose (from install/docker/)
-docker compose -f docspace.yml -f db.yml -f redis.yml -f rabbitmq.yml up -d
-docker compose -f docspace-stack.yml up -d  # Full stack shortcut
+# Set MYSQL_ROOT_PASSWORD, MYSQL_PASSWORD, RABBIT_PASSWORD, and DOCUMENT_SERVER_JWT_SECRET in .env first.
+docker compose -f apps.yml -f db.yml -f redis.yml -f rabbitmq.yml up -d
+docker compose -f apps-stack.yml up -d  # Full stack shortcut
 
 # OneClickInstall
-bash install/OneClickInstall/docspace-install.sh      # Universal installer
+bash install/OneClickInstall/apps-install.sh          # Universal installer
 bash install/OneClickInstall/install-Docker.sh        # Docker only
 bash install/OneClickInstall/install-Debian.sh        # Debian/Ubuntu
 bash install/OneClickInstall/install-RedHat.sh        # RHEL/CentOS
@@ -43,7 +44,7 @@ bash install/OneClickInstall/install-RedHat.sh        # RHEL/CentOS
 ## Project Structure
 
 ```
-config/                     — Application configuration (41 JSON + nginx)
+config/                     — Application configuration (~30 JSON + nginx)
   appsettings*.json         — App configs (base, developer, enterprise, test, services)
   autofac*.json             — DI container (base, consumers, products)
   storage.json              — Storage backend
@@ -52,38 +53,50 @@ config/                     — Application configuration (41 JSON + nginx)
   nlog.config               — Structured logging (NLog)
   dnsmasq.conf              — DNS for local dev
   radicale.*                — CalDAV/CardDAV server configs
-  nginx/                    — Nginx configs + templates + docker-entrypoint.d/
+  nginx/                    — Nginx configs + includes/ + sites-enabled/
   document-formats/         — Document format definitions (git submodule)
-  supervisor/               — Supervisor configs (dotnet_services, node_services, java_services)
 
 install/
-  docker/                   — Dockerfiles, Compose files, entrypoints
-    Dockerfile.app          — Main multi-stage DocSpace image
-    Dockerfile.runtime      — Runtime dependencies
-    Dockerfile.ffvideo       — FFmpeg video processing
-    docker-entrypoint.py/sh — Main service entrypoints
-    docker-identity-entrypoint.sh
-    docker-migration-entrypoint.sh
-    docker-healthchecks-entrypoint.sh
-    bin-share-docker-entrypoint.sh / wait-bin-share-docker-entrypoint.sh
-    build.hcl               — BuildX multi-arch config
-    build.yml / build-identity.yml
-    docspace.yml            — All DocSpace app services
-    docspace-stack.yml      — Full stack (app + all dependencies)
-    docspace.profiles.yml   — Profile-based configs
-    docspace.overcome.yml   — Local dev overrides
-    db.yml / db.dev.yml     — MySQL
+  docker/                   — Production Compose files (shipped in OCI tarballs)
+    build/                  — Build + local-dev assets (NOT shipped to end users):
+      Dockerfile            — Main multi-stage ONLYOFFICE Apps image
+      Dockerfile.runtime    — Runtime dependencies
+      Dockerfile.ffvideo    — FFmpeg video processing
+      build.hcl             — BuildX multi-arch config
+      build.yml
+      .dockerignore
+      entrypoints/          — Scripts COPY'd into images at build time:
+        docker-entrypoint.py
+        docker-identity-entrypoint.sh
+        docker-migration-entrypoint.sh
+        docker-healthchecks-entrypoint.sh
+        docker-standalone-entrypoint.sh
+        docker-bin-share-entrypoint.sh / docker-wait-bin-share-entrypoint.sh
+        prepare-nginx-router.sh
+      dev/                  — Local-dev-only Compose overlays (build.backend.docker.py):
+        db.dev.yml            — MySQL dev overrides (exposed ports)
+        apps.profiles.yml     — Profile-based configs (local dev)
+        apps.overcome.yml     — Local dev overrides
+        dnsmasq.yml           — DNS for local dev
+        build-identity.yml    — ASC.Identity (Java) build
+      supervisor/           — Supervisor configs baked into images:
+        stack/                — apps-stack.yml services (dotnet/node/java)
+        standalone.conf       — standalone image
+    standalone/             — Single-container (standalone) stack
+    apps.yml                — All ONLYOFFICE Apps services
+    apps-stack.yml          — Full stack (app + all dependencies)
+    db.yml                  — MySQL
     redis.yml               — Redis
     rabbitmq.yml            — RabbitMQ
     opensearch.yml          — OpenSearch
     identity.yml            — OAuth2 identity service
-    proxy.yml / proxy-ssl.yml — Nginx reverse proxy
     ds.yml                  — ONLYOFFICE Document Server
     migration-runner.yml    — DB migration runner container
     fluent.yml              — Fluent Bit log collector
     healthchecks.yml        — Health check UI
     notify.yml              — Notification service
-    dnsmasq.yml             — DNS for local dev
+    dashboards.yml          — Monitoring dashboards
+    proxy.yml / proxy-ssl.yml — Standalone Nginx reverse proxy (HTTP / Let's Encrypt SSL)
   OneClickInstall/          — Installer scripts (Debian, RedHat, Docker, universal)
   common/                   — Shared packaging: build-services.py/sh, changelog.sh,
                               packages-build.sh, plugins-build.sh, systemd/, product-ssl-setup/
@@ -92,31 +105,31 @@ install/
   rpm/                      — RPM spec files
   snap/                     — Snap package config
 
-run/                        — Per-service launch scripts (28 services, .bat + .xml)
+run/                        — Per-service launch scripts (~15 services, .bat + .xml)
                               WebApi, Files, People, Notify, Backup, AI, Identity, etc.
 scripts/                    — Service startup: identity, socketio, ssoauth, webdav (.sh + .bat)
 start/                      — Dev lifecycle: start/stop/restart (.sh + .bat + .py)
 tests/                      — lint/, vagrant/
 tools/                      — check.sh
-templates/                  — gitea-claude-review (AI code review templates)
-.github/workflows/          — 18 GitHub Actions workflows (see CI/CD section)
+.github/workflows/          — GitHub Actions workflows (see CI/CD section)
 Jenkinsfile                 — Jenkins declarative pipeline
 ```
 
 ## Docker Compose Architecture
 
 Compose is **modular** — compose files are combined with `-f`. The `install/docker/.env` has ~200 variables covering all services.
+For direct Compose runs, fill `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`, `RABBIT_PASSWORD`, and `DOCUMENT_SERVER_JWT_SECRET` in `.env` before starting bundled dependencies. `install-Docker.sh` generates these automatically.
 
 Key compose combinations:
 ```bash
 # Minimal (app only, external deps assumed)
-docker compose -f docspace.yml up -d
+docker compose -f apps.yml up -d
 
 # Full local stack
-docker compose -f docspace-stack.yml up -d
+docker compose -f apps-stack.yml up -d
 
 # With local dev overrides
-docker compose -f docspace.yml -f docspace.overcome.yml up -d
+docker compose --env-file .env -f apps.yml -f build/dev/apps.overcome.yml up -d
 ```
 
 ## CI/CD Workflows
@@ -129,20 +142,26 @@ docker compose -f docspace.yml -f docspace.overcome.yml up -d
 | `build_packages.yml` | DEB/RPM packages |
 | `config-build.yml` | Config-triggered builds |
 | `cron-build.yml` | Nightly scheduled builds |
-| `windows-build.yml` | Windows installer |
-| `release-docspace.yaml` | Production release |
+| `release-docker.yaml` | Production release |
 | `offline-release.yml` | Offline package build |
 | `oci-release.yml` | Container registry release |
+| `readme-update.yml` | Update OS support list in README |
 
 **Testing & Quality:**
 
 | Workflow | Purpose |
 |----------|---------|
-| `ci-oci-docker-install.yml` | OneClickInstall Docker tests |
+| `ci-oci-docker-install.yml` | OneClickInstall Docker tests: install in stack/microservices/standalone modes, smoke tests, container restart, update from the released version |
 | `ci-oci-install.yml` | Linux package install tests |
 | `ci-oci-update.yml` | Update mechanism tests |
-| `zap-scanner.yaml` | OWASP ZAP security scan |
-| `claude-auto-review.yml` | Automated PR review with Claude |
+| `rebuild-boxes.yml` | Rebuild Vagrant boxes for install tests |
+
+## Smoke Tests
+
+`tests/smoke/smoke_test.py` runs against a live portal (`SERVER_URL`); `.github/scripts/docker-utils.sh smoke-test [PYTEST_ARGS]` wraps it for CI.
+Tests run in file order and share state. Markers select phases: `bootstrap` (settings, wizard, auth), `seed` (creates data, writes `SMOKE_STATE_FILE`), `verify` (checks the data after a restart or update).
+Examples: `-m "bootstrap or seed"` before an update, `-m "bootstrap or verify"` after it. `DEPLOYMENT_MODE` (set by docker-utils.sh) gates mode-specific tests.
+`SMOKE_SUMMARY_FILE` receives a result line written by `tests/smoke/conftest.py`. The job summary is published only when the job failed or a section is open (failed tests, audit findings, unhealthy containers).
 
 ## Key Patterns
 

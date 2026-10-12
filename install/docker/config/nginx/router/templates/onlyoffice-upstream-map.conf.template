@@ -61,7 +61,6 @@ map $SERVICE_STUDIO $webstudio_service_url {
 }
 
 map $SERVICE_PEOPLE_SERVER $people_service_url {
- {
     volatile;
     "" 127.0.0.1:5004;
     default $SERVICE_PEOPLE_SERVER;

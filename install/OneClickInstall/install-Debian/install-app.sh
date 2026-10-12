@@ -49,8 +49,8 @@ apt-get -y update
 
 ds_pkg_name="${package_sysname}-documentserver"
 case "${INSTALLATION_TYPE}" in
-	"DEVELOPER") ds_pkg_name+="-de" ;;
-	"ENTERPRISE") ds_pkg_name+="-ee" ;;
+	"developer") ds_pkg_name+="-de" ;;
+	"enterprise") ds_pkg_name+="-ee" ;;
 esac
 
 DS_COMMON_NAME=${DS_COMMON_NAME:-ds}
@@ -64,23 +64,51 @@ setup_postgres_db() {
 		su - postgres -s /bin/bash -c "psql -c \"CREATE DATABASE ${DS_DB_NAME} OWNER ${DS_DB_USER};\""
 	fi
 
-	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/db-pwd select "$DS_DB_PWD" | debconf-set-selections
-	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/db-user select "$DS_DB_USER" | debconf-set-selections
-	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/db-name select "$DS_DB_NAME" | debconf-set-selections
+	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/db-pwd select "$DS_DB_PWD" | debconf-set-selections
+	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/db-user select "$DS_DB_USER" | debconf-set-selections
+	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/db-name select "$DS_DB_NAME" | debconf-set-selections
 }
 
 if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ]; then
-	ds_pkg_installed_name=$(dpkg -l | grep "${package_sysname}"-documentserver | tail -n1 | awk '{print $2}')
-	if [ -n "${ds_pkg_installed_name}" ] && [ "${ds_pkg_installed_name}" != "${ds_pkg_name}" ]; then
-		[ "$INSTALLATION_TYPE" != "COMMUNITY" ] && [ "${ds_pkg_installed_name}" = "${package_sysname}-documentserver" ] && setup_postgres_db
-		debconf-get-selections | grep ^"${ds_pkg_installed_name}" | sed s/"${ds_pkg_installed_name}"/"${ds_pkg_name}"/g | debconf-set-selections
-		DEBIAN_FRONTEND=noninteractive apt-get purge -yq "${ds_pkg_installed_name}"
-		# Temporary kill orphaned nginx workers blocking port after purge
-		nginx -s reload 2>/dev/null || pkill -x nginx 2>/dev/null || true
-		apt-get install -yq "${ds_pkg_name}"
-		RECONFIGURE_PRODUCT="true"
+	ds_pkg_installed_name=$(dpkg -l | awk -v pkg="${package_sysname}-documentserver" '$1=="ii" && index($2,pkg)==1{print $2}' | tail -n1)
+    if [ -z "${ds_pkg_installed_name}" ]; then
+        RECONFIGURE_PRODUCT="true"; DOCUMENT_SERVER_INSTALLED="false"
+	elif [ -n "${ds_pkg_installed_name}" ] && [ "${ds_pkg_installed_name}" != "${ds_pkg_name}" ]; then
+		apt-get remove -yq "${ds_pkg_installed_name}"
+		RECONFIGURE_PRODUCT="true"; DOCUMENT_SERVER_INSTALLED="false"
 	else
 		apt-get install -y --only-upgrade "${ds_pkg_name}"
+	fi
+fi
+
+# MySQL predates this run, so its root password was not set here.
+if [ "${MYSQL_FIRST_TIME_INSTALL}" != "true" ] && [ "$PRODUCT_INSTALLED" = "false" ]; then
+	# Probe MySQL over TCP, like the product does.
+	MYSQL_PROBE_HOST=$([ "${MYSQL_SERVER_HOST}" = "localhost" ] && echo "127.0.0.1" || echo "${MYSQL_SERVER_HOST}")
+
+	# A refused password still proves the server is up.
+	mysql_responds() {
+		local PING_OUTPUT
+		PING_OUTPUT=$(mysqladmin -h "${MYSQL_PROBE_HOST}" -P "${MYSQL_SERVER_PORT}" -u "${MYSQL_SERVER_USER}" ping 2>&1) || true
+		[[ "${PING_OUTPUT}" == *"alive"* || "${PING_OUTPUT}" == *"Access denied"* ]]
+	}
+
+	MYSQL_WAIT_DEADLINE=$((SECONDS + 60))
+	until mysql_responds; do
+		if [ "${SECONDS}" -ge "${MYSQL_WAIT_DEADLINE}" ]; then
+			echo "ERROR: MySQL is already installed but does not answer on ${MYSQL_PROBE_HOST}:${MYSQL_SERVER_PORT}." >&2
+			exit 1
+		fi
+		sleep 1
+	done
+
+	MYSQL_ARGS=(--connect-expired-password -h "${MYSQL_PROBE_HOST}" -P "${MYSQL_SERVER_PORT}" -u "${MYSQL_SERVER_USER}")
+	[ -n "${MYSQL_SERVER_PASS}" ] && MYSQL_ARGS+=("-p${MYSQL_SERVER_PASS}")
+	if ! mysql "${MYSQL_ARGS[@]}" -e ";" >/dev/null 2>&1; then
+		echo "ERROR: cannot connect to MySQL at ${MYSQL_PROBE_HOST}:${MYSQL_SERVER_PORT} as '${MYSQL_SERVER_USER}'." >&2
+		echo "Pass a working password in the MYSQL_SERVER_PASS environment variable, or remove MySQL and run the installer again." >&2
+		echo "Note: a '${MYSQL_SERVER_USER}' user authenticated by unix socket cannot be used, the product connects over TCP." >&2
+		exit 1
 	fi
 fi
 
@@ -90,14 +118,22 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
 	DS_JWT_SECRET=${DS_JWT_SECRET:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)}
 	DS_JWT_HEADER=${DS_JWT_HEADER:-AuthorizationJwt}
 
-	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/ds-port select "$DS_PORT" | debconf-set-selections
-	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/jwt-enabled select "${DS_JWT_ENABLED}" | debconf-set-selections
-	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/jwt-secret select "${DS_JWT_SECRET}" | debconf-set-selections
-	echo "${package_sysname}"-documentserver "$DS_COMMON_NAME"/jwt-header select "${DS_JWT_HEADER}" | debconf-set-selections
+	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/listenaddress string "127.0.0.1:${DS_PORT}" | debconf-set-selections
+	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/jwt-enabled select "${DS_JWT_ENABLED}" | debconf-set-selections
+	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/jwt-secret select "${DS_JWT_SECRET}" | debconf-set-selections
+	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/jwt-header select "${DS_JWT_HEADER}" | debconf-set-selections
 
-	[ "$INSTALLATION_TYPE" != "COMMUNITY" ] && setup_postgres_db
+	[ "$INSTALLATION_TYPE" != "community" ] && setup_postgres_db
 
 	apt-get install -yq "${ds_pkg_name}"
+
+	# Debian nginx enables a default site on port 80.
+	[ -e /etc/nginx/sites-enabled/default ] && \
+		mv -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default.disabled
+	[ -e /etc/nginx/conf.d/default.conf ] && \
+		mv -f /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf.disabled
+	echo "Note: nginx default sites disabled to avoid conflict with openresty."
+	systemctl is-active --quiet nginx && systemctl reload nginx || systemctl start nginx
 fi
 
 if [ "$MAKESWAP" == "true" ]; then
@@ -105,28 +141,30 @@ if [ "$MAKESWAP" == "true" ]; then
 fi
 
 if [ "$PRODUCT_INSTALLED" = "false" ]; then
-	echo "${product}" "${product}"/db-host select "$MYSQL_SERVER_HOST" | debconf-set-selections
-	echo "${product}" "${product}"/db-port select "$MYSQL_SERVER_PORT" | debconf-set-selections
-	echo "${product}" "${product}"/db-name select "$MYSQL_SERVER_DB_NAME" | debconf-set-selections
-	echo "${product}" "${product}"/db-user select "$MYSQL_SERVER_USER" | debconf-set-selections
-	echo "${product}" "${product}"/db-pwd select "$MYSQL_SERVER_PASS" | debconf-set-selections
+	echo "${package}" "${package}"/db-host select "$MYSQL_SERVER_HOST" | debconf-set-selections
+	echo "${package}" "${package}"/db-port select "$MYSQL_SERVER_PORT" | debconf-set-selections
+	echo "${package}" "${package}"/db-name select "$MYSQL_SERVER_DB_NAME" | debconf-set-selections
+	echo "${package}" "${package}"/db-user select "$MYSQL_SERVER_USER" | debconf-set-selections
+	echo "${package}" "${package}"/db-pwd select "$MYSQL_SERVER_PASS" | debconf-set-selections
 
-	if apt-get install -y "${product}${PRODUCT_VERSION:+*=${PRODUCT_VERSION}}"; then
+	if apt-get install -y "${package}${PRODUCT_VERSION:+*=${PRODUCT_VERSION}}"; then
 		# Clear the password in debconf for a successful update when using external MySQL
-		if [ "$(echo "GET ${PRODUCT}/db-pwd" | debconf-communicate "$PRODUCT" | awk '{print $2}')" = "$MYSQL_SERVER_PASS" ]; then
-			printf "SET ${product}/db-host\nSET ${product}/db-name\nSET ${product}/db-user\nSET ${product}/db-pwd\nSET ${product}/db-port\n" | debconf-communicate ${product} >/dev/null
+		if [ "$(echo "GET ${package}/db-pwd" | debconf-communicate "${package}" | awk '{print $2}')" = "$MYSQL_SERVER_PASS" ]; then
+			printf "SET ${package}/db-host\nSET ${package}/db-name\nSET ${package}/db-user\nSET ${package}/db-pwd\nSET ${package}/db-port\n" | debconf-communicate "${package}" >/dev/null
 		fi
 	else
-		echo "Error: installation of ${product} failed."
+		echo "Error: installation of ${package} failed."
 		exit 1
 	fi
 elif [ "$UPDATE" = "true" ] && [ "$PRODUCT_INSTALLED" = "true" ]; then
-	CURRENT_VERSION=$(dpkg-query -W -f='${Version}' "${product}" 2>/dev/null)
-	AVAILABLE_VERSIONS=$(apt show "${product}" 2>/dev/null | grep -E '^Version:' | awk '{print $2}')
-	if [[ "$AVAILABLE_VERSIONS" != *"$CURRENT_VERSION"* ]]; then
-		apt-get install -o DPkg::options::="--force-confnew" -y --only-upgrade "${product}" opensearch="${ELASTIC_VERSION}"
+	CURRENT_VERSION=$(dpkg-query -W -f='${Version}' "${package}" 2>/dev/null) || true
+	AVAILABLE_VERSIONS=$(apt show "${package}" 2>/dev/null | grep -E '^Version:' | awk '{print $2}')
+	if [ -z "${CURRENT_VERSION}" ]; then # (DS v4.0.0) take over an installation made before the rename to ONLYOFFICE Apps
+		apt-get install -o DPkg::options::="--force-confnew" -y "${package}" opensearch="${OPENSEARCH_VERSION}"
+	elif [[ "$AVAILABLE_VERSIONS" != *"$CURRENT_VERSION"* ]]; then
+		apt-get install -o DPkg::options::="--force-confnew" -y --only-upgrade "${package}" opensearch="${OPENSEARCH_VERSION}"
 	elif [ "${RECONFIGURE_PRODUCT}" = "true" ]; then
-		DEBIAN_FRONTEND=noninteractive dpkg-reconfigure "${product}"
+		DEBIAN_FRONTEND=noninteractive dpkg-reconfigure "${package}"
 	fi
 fi
 

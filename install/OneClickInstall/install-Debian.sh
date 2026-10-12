@@ -40,17 +40,28 @@ set -e
 
 package_sysname="onlyoffice"
 DS_COMMON_NAME="onlyoffice"
-product_name="DocSpace"
-product=$(tr '[:upper:]' '[:lower:]' <<< ${product_name})
-INSTALLATION_TYPE="ENTERPRISE"
+product="apps"
+legacy_product="docspace"
+product_name="${package_sysname^^} Apps"
+package="${package_sysname}-${product}"
+INSTALLATION_TYPE="enterprise"
 MAKESWAP="true"
 RES_APP_INSTALLED="is already installed"
 RES_CHECK_PORTS="Please make sure that the ports are free."
-RES_INSTALL_SUCCESS="Thank you for installing ONLYOFFICE ${product_name}."
-RES_QUESTIONS="In case you have any questions contact us via http://support.onlyoffice.com or visit our forum at http://forum.onlyoffice.com"
+RES_INSTALL_SUCCESS="Thank you for installing ${product_name}."
+RES_QUESTIONS="In case you have any questions contact us via http://support.onlyoffice.com or visit our forum at http://community.onlyoffice.com"
 INSTALL_FLUENT_BIT="true"
 
+require_value() {
+    [ -n "${2-}" ] || { echo "Error: Missing value for ${1}" >&2; exit 1; }
+}
+
 while [ "$1" != "" ]; do
+    case "$1" in
+        -h | -? | --help ) ;;
+        -* ) require_value "$1" "$2" ;;
+    esac
+
 	case $1 in
         -u | --update )                     [ -n "$2" ] && UPDATE=$2 && shift ;;
         -uni | --uninstall )                [ -n "$2" ] && UNINSTALL=$2 && shift ;;
@@ -59,12 +70,12 @@ while [ "$1" != "" ]; do
         -js | --jwtsecret )                 [ -n "$2" ] && DS_JWT_SECRET=$2 && shift ;;
         -gb | --gitbranch )                 [ -n "$2" ] && GIT_BRANCH=$2 && shift ;;
         -ifb | --installfluentbit )         [ -n "$2" ] && INSTALL_FLUENT_BIT=$2 && shift ;;
-        -dsv | --docspaceversion )          [ -n "$2" ] && PRODUCT_VERSION=$2 && shift ;;
+        -av | --appsversion | -dsv | --docspaceversion ) [ -n "$2" ] && PRODUCT_VERSION=$2 && shift ;;
         -du | --dashboardsusername )        [ -n "$2" ] && DASHBOARDS_USERNAME=$2 && shift ;;
         -dp | --dashboardspassword )        [ -n "$2" ] && DASHBOARDS_PASSWORD=$2 && shift ;;
         -ls | --localscripts )              [ -n "$2" ] && LOCAL_SCRIPTS=$2 && shift ;;
         -skiphc | --skiphardwarecheck )     [ -n "$2" ] && SKIP_HARDWARE_CHECK=$2 && shift ;;
-        -it | --installationtype | --installation_type ) [ -n "$2" ] && INSTALLATION_TYPE="${2^^}" && shift ;;
+        -it | --installationtype | --installation_type ) [ -n "$2" ] && INSTALLATION_TYPE="${2,,}" && shift ;;
         -ms | --makeswap )                  [ -n "$2" ] && MAKESWAP=$2 && shift ;;
         -h | -? | --help )
             echo "  Usage $0 [PARAMETER] [[PARAMETER], ...]"
@@ -93,33 +104,72 @@ UPDATE="${UPDATE:-false}"
 LOCAL_SCRIPTS="${LOCAL_SCRIPTS:-false}"
 SKIP_HARDWARE_CHECK="${SKIP_HARDWARE_CHECK:-false}"
 
+case "${INSTALLATION_TYPE}" in
+    community | developer | enterprise ) ;;
+    * ) echo "Error: Invalid --installationtype '${INSTALLATION_TYPE}'. Valid values: community, developer, enterprise." >&2; exit 1 ;;
+esac
+
+validate_bool() {
+    case "$2" in
+        true | false ) ;;
+        * ) echo "Error: Invalid ${1} '${2}'. Valid values: true, false." >&2; exit 1 ;;
+    esac
+}
+
+validate_bool --update "$UPDATE"
+validate_bool --localscripts "$LOCAL_SCRIPTS"
+validate_bool --skiphardwarecheck "$SKIP_HARDWARE_CHECK"
+validate_bool --makeswap "$MAKESWAP"
+validate_bool --installfluentbit "$INSTALL_FLUENT_BIT"
+[ -n "$UNINSTALL" ] && validate_bool --uninstall "$UNINSTALL"
+[ -n "$DS_JWT_ENABLED" ] && validate_bool --jwtenabled "$DS_JWT_ENABLED"
+
+# Pause apt auto-updates to avoid dpkg lock contention.
+APT_TIMERS_TO_RESTORE=()
+for _apt_timer in apt-daily.timer apt-daily-upgrade.timer; do
+    systemctl is-active --quiet "${_apt_timer}" && APT_TIMERS_TO_RESTORE+=("${_apt_timer}")
+done
+systemctl stop apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service unattended-upgrades.service >/dev/null 2>&1 || true
+trap '[ ${#APT_TIMERS_TO_RESTORE[@]} -eq 0 ] || systemctl start "${APT_TIMERS_TO_RESTORE[@]}" >/dev/null 2>&1 || true' EXIT
+
 if fuser /var/lib/dpkg/lock-frontend &>/dev/null; then
   echo "Waiting for /var/lib/dpkg/lock-frontend to be released (up to 60 seconds)..."
-   timeout 60 bash -c 'while fuser /var/lib/dpkg/lock-frontend &>/dev/null; do sleep 1; done'
+  # apt-get's DPkg::Lock::Timeout below handles slow lock release.
+  timeout 60 bash -c 'while fuser /var/lib/dpkg/lock-frontend &>/dev/null; do sleep 1; done' || true
 fi
 
+# Suppress interactive apt/needrestart prompts.
+export DEBIAN_FRONTEND=noninteractive
 export NEEDRESTART_MODE=a
-apt-get update -y --allow-releaseinfo-change
-apt-get install -yq sudo curl dirmngr debian-archive-keyring
+apt-get update -y --allow-releaseinfo-change -o DPkg::Lock::Timeout=60
+apt-get install -yq -o DPkg::Lock::Timeout=60 sudo curl dirmngr debian-archive-keyring
 
 DOWNLOAD_URL_PREFIX="https://download.onlyoffice.com/${product}"
-[ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
+[ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${legacy_product}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
 
-# Run uninstall if requested
+source_remote_script() {
+    local SCRIPT_PATH="$1"
+    local SCRIPT_TMP
+
+    SCRIPT_TMP="$(mktemp)"
+    curl -fsSL --retry 3 --retry-delay 2 "${DOWNLOAD_URL_PREFIX}/${SCRIPT_PATH}" -o "${SCRIPT_TMP}" || { rm -f "${SCRIPT_TMP}"; return 1; }
+    bash -n "${SCRIPT_TMP}" || { rm -f "${SCRIPT_TMP}"; return 1; }
+    source "${SCRIPT_TMP}"
+    rm -f "${SCRIPT_TMP}"
+}
+
 if [ "${UNINSTALL}" == "true" ]; then
     if [ "${LOCAL_SCRIPTS}" == "true" ]; then
         source install-Debian/uninstall.sh
     else
-        source <(curl -fsSL "${DOWNLOAD_URL_PREFIX}"/install-Debian/uninstall.sh)
+        source_remote_script install-Debian/uninstall.sh
     fi
     exit 0
 fi
 
-# add onlyoffice repo
-mkdir -p "$HOME/.gnupg" && chmod 700 "$HOME/.gnupg"
+# Add ONLYOFFICE repo.
 echo "deb [signed-by=/usr/share/keyrings/onlyoffice.gpg] http://download.onlyoffice.com/repo/debian squeeze main" | tee /etc/apt/sources.list.d/onlyoffice.list
-curl -fsSL https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/onlyoffice.gpg --import
-chmod 644 /usr/share/keyrings/onlyoffice.gpg
+curl -fsSL https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE | gpg --batch --yes --dearmor -o /usr/share/keyrings/onlyoffice.gpg
 
 declare -x LANG="en_US.UTF-8"
 declare -x LANGUAGE="en_US:en"
@@ -131,8 +181,8 @@ if [ "${LOCAL_SCRIPTS}" == "true" ]; then
 	source install-Debian/install-preq.sh
 	source install-Debian/install-app.sh
 else
-	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/install-Debian/tools.sh)
-	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/common/check-ports.sh)
-	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/install-Debian/install-preq.sh)
-	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/install-Debian/install-app.sh)
+	source_remote_script install-Debian/tools.sh
+	source_remote_script common/check-ports.sh
+	source_remote_script install-Debian/install-preq.sh
+	source_remote_script install-Debian/install-app.sh
 fi

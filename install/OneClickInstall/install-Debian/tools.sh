@@ -43,8 +43,8 @@ make_swap () {
 	MEMORY_REQUIREMENTS=12000 #RAM ~12Gb
 	SWAPFILE="/${product}_swapfile"
 
-	AVAILABLE_DISK_SPACE=$(df -m /  | tail -1 | awk '{ print $4 }')
-	TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1)
+	AVAILABLE_DISK_SPACE=$(df -Pm / | awk 'NR == 2 { print $4 }')
+	TOTAL_MEMORY=$(free --mega | awk '/^Mem:/ { print $2 }')
 	EXIST=$(swapon -s | awk '{ print $1 }' | { grep -x "${SWAPFILE}" || true; })
 
 	if [[ -z $EXIST ]] && [ "${TOTAL_MEMORY}" -lt ${MEMORY_REQUIREMENTS} ] && [ "${AVAILABLE_DISK_SPACE}" -gt ${DISK_REQUIREMENTS} ]; then
@@ -54,7 +54,7 @@ make_swap () {
 		chmod 600 "${SWAPFILE}"
 		mkswap "${SWAPFILE}"
 		swapon "${SWAPFILE}"
-		echo "$SWAPFILE none swap sw 0 0" >> /etc/fstab
+		awk -v swapfile="${SWAPFILE}" '$1 == swapfile && $3 == "swap" { found = 1 } END { exit !found }' /etc/fstab || echo "$SWAPFILE none swap sw 0 0" >> /etc/fstab
 	fi
 }
 
@@ -62,21 +62,21 @@ command_exists () {
 	type "$1" &> /dev/null;
 }
 
-# Function to prevent package auto-update
+# Prevent package auto-updates.
 hold_package_version() {
-	packages=("dotnet-*" "aspnetcore-*" opensearch redis-server rabbitmq-server opensearch-dashboards fluent-bit)
-	for package in "${packages[@]}"; do 
-		command -v apt-mark >/dev/null 2>&1 && apt-mark showhold | grep -q "^$package" && apt-mark unhold "$package"
+	local pkg pkgs=("dotnet-*" "aspnetcore-*" opensearch redis-server rabbitmq-server opensearch-dashboards fluent-bit)
+	for pkg in "${pkgs[@]}"; do
+		command -v apt-mark >/dev/null 2>&1 && apt-mark showhold | grep -q "^$pkg" && apt-mark unhold "$pkg"
 	done
 
 	UNATTENDED_UPGRADES_FILE="/etc/apt/apt.conf.d/50unattended-upgrades"
 	if [ -f ${UNATTENDED_UPGRADES_FILE} ] && grep -q "Package-Blacklist" ${UNATTENDED_UPGRADES_FILE}; then
-		for package in "${packages[@]}"; do 
-			if ! grep -q "$package" ${UNATTENDED_UPGRADES_FILE}; then
-				sed -i "/Package-Blacklist/a \\\t\"$package\";" ${UNATTENDED_UPGRADES_FILE}
+		for pkg in "${pkgs[@]}"; do
+			if ! grep -q "$pkg" ${UNATTENDED_UPGRADES_FILE}; then
+				sed -i "/Package-Blacklist/a \\\t\"$pkg\";" ${UNATTENDED_UPGRADES_FILE}
 			fi
 		done
-		
+
 		if systemctl list-units --type=service --state=running | grep -q "unattended-upgrades"; then
 			systemctl restart unattended-upgrades
 		fi
@@ -84,29 +84,39 @@ hold_package_version() {
 }
 
 check_hardware () {
-    DISK_REQUIREMENTS=40960
-    MEMORY_REQUIREMENTS=8000
-    CORE_REQUIREMENTS=4
+	local DISK_REQUIREMENTS=40960
+	local MEMORY_REQUIREMENTS=8000
+	local CORE_REQUIREMENTS=4
 
-	AVAILABLE_DISK_SPACE=$(df -m /  | tail -1 | awk '{ print $4 }')
+	AVAILABLE_DISK_SPACE=$(df -Pm / | awk 'NR == 2 { print $4 }')
+	TOTAL_MEMORY=$(free --mega | awk '/^Mem:/ { print $2 }')
+	CPU_CORES_NUMBER=$(nproc)
 
-	if [ "${AVAILABLE_DISK_SPACE}" -lt ${DISK_REQUIREMENTS} ]; then
-		echo "Minimal requirements are not met: need at least $DISK_REQUIREMENTS MB of free HDD space"
-		exit 1
+	local requirements_not_met=""
+
+	if (( AVAILABLE_DISK_SPACE < DISK_REQUIREMENTS )); then
+		requirements_not_met="${requirements_not_met}\n  - at least ${DISK_REQUIREMENTS} MB of free disk space (available: ${AVAILABLE_DISK_SPACE} MB)"
 	fi
 
-	TOTAL_MEMORY=$(free --mega | grep -oP '\d+' | head -n 1)
-
-	if [ "${TOTAL_MEMORY}" -lt ${MEMORY_REQUIREMENTS} ]; then
-		echo "Minimal requirements are not met: need at least $MEMORY_REQUIREMENTS MB of RAM"
-		exit 1
+	if (( TOTAL_MEMORY < MEMORY_REQUIREMENTS )); then
+		requirements_not_met="${requirements_not_met}\n  - at least ${MEMORY_REQUIREMENTS} MB of RAM (available: ${TOTAL_MEMORY} MB)"
 	fi
 
-	CPU_CORES_NUMBER=$(grep -c ^processor /proc/cpuinfo)
+	if (( CPU_CORES_NUMBER < CORE_REQUIREMENTS )); then
+		requirements_not_met="${requirements_not_met}\n  - a CPU with at least ${CORE_REQUIREMENTS} cores (available: ${CPU_CORES_NUMBER})"
+	fi
 
-	if [ "${CPU_CORES_NUMBER}" -lt ${CORE_REQUIREMENTS} ]; then
-		echo "The system does not meet the minimal hardware requirements. CPU with at least $CORE_REQUIREMENTS cores is required"
-		exit 1
+	if [ -n "${requirements_not_met}" ]; then
+		printf "Minimal requirements are not met, your system needs:%b\n\n" "${requirements_not_met}"
+
+		# Without a terminal or in non-interactive mode there is nobody to ask
+		if [ "${NON_INTERACTIVE:-false}" = "true" ] || [ ! -t 0 ]; then
+			echo "To skip this check, use the --skiphardwarecheck true parameter"
+			exit 1
+		fi
+
+		read -r -p "Continue installation anyway? (y/N): " CONTINUE_CHOICE
+		[[ "${CONTINUE_CHOICE,,}" =~ ^(y|yes)$ ]] || exit 1
 	fi
 }
 
@@ -116,7 +126,7 @@ fi
 
 ARCH="$(dpkg --print-architecture)"
 if [ "$ARCH" != "amd64" ]; then
-    echo "ONLYOFFICE ${product^^} doesn't support architecture '$ARCH'"
+    echo "${product_name} doesn't support architecture '$ARCH'"
     exit
 fi
 

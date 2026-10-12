@@ -40,18 +40,29 @@ set -e
 
 package_manager="yum"
 package_sysname="onlyoffice"
-product_name="DocSpace"
-product=$(tr '[:upper:]' '[:lower:]' <<< ${product_name})
-INSTALLATION_TYPE="ENTERPRISE"
+product="apps"
+legacy_product="docspace"
+product_name="${package_sysname^^} Apps"
+package="${package_sysname}-${product}"
+INSTALLATION_TYPE="enterprise"
 MAKESWAP="true"
 RES_APP_INSTALLED="is already installed"
 RES_CHECK_PORTS="Please make sure that the ports are free."
-RES_INSTALL_SUCCESS="Thank you for installing ONLYOFFICE ${product_name}."
-RES_QUESTIONS="In case you have any questions contact us via http://support.onlyoffice.com or visit our forum at http://forum.onlyoffice.com"
+RES_INSTALL_SUCCESS="Thank you for installing ${product_name}."
+RES_QUESTIONS="In case you have any questions contact us via http://support.onlyoffice.com or visit our forum at http://community.onlyoffice.com"
 RES_MARIADB="To continue the installation, you need to remove MariaDB"
 INSTALL_FLUENT_BIT="true"
 
+require_value() {
+    [ -n "${2-}" ] || { echo "Error: Missing value for ${1}" >&2; exit 1; }
+}
+
 while [ "$1" != "" ]; do
+    case "$1" in
+        -h | -? | --help ) ;;
+        -* ) require_value "$1" "$2" ;;
+    esac
+
 	case $1 in
         -u | --update )                     [ -n "$2" ] && UPDATE=$2 && shift ;;
         -uni | --uninstall )                [ -n "$2" ] && UNINSTALL=$2 && shift ;;
@@ -60,12 +71,12 @@ while [ "$1" != "" ]; do
         -js | --jwtsecret )                 [ -n "$2" ] && JWT_SECRET=$2 && shift ;;
         -gb | --gitbranch )                 [ -n "$2" ] && GIT_BRANCH=$2 && shift ;;
         -ifb | --installfluentbit )         [ -n "$2" ] && INSTALL_FLUENT_BIT=$2 && shift ;;
-        -dsv | --docspaceversion )          [ -n "$2" ] && PRODUCT_VERSION=$2 && shift ;;
+        -av | --appsversion | -dsv | --docspaceversion ) [ -n "$2" ] && PRODUCT_VERSION=$2 && shift ;;
         -du | --dashboardsusername )        [ -n "$2" ] && DASHBOARDS_USERNAME=$2 && shift ;;
         -dp | --dashboardspassword )        [ -n "$2" ] && DASHBOARDS_PASSWORD=$2 && shift ;;
         -ls | --localscripts )              [ -n "$2" ] && LOCAL_SCRIPTS=$2 && shift ;;
         -skiphc | --skiphardwarecheck )     [ -n "$2" ] && SKIP_HARDWARE_CHECK=$2 && shift ;;
-        -it | --installationtype | --installation_type ) [ -n "$2" ] && INSTALLATION_TYPE="${2^^}" && shift ;;
+        -it | --installationtype | --installation_type ) [ -n "$2" ] && INSTALLATION_TYPE="${2,,}" && shift ;;
         -ms | --makeswap )                  [ -n "$2" ] && MAKESWAP=$2 && shift ;;
         -h | -? | --help )
             echo "  Usage $0 [PARAMETER] [[PARAMETER], ...]"
@@ -94,15 +105,46 @@ UPDATE="${UPDATE:-false}"
 LOCAL_SCRIPTS="${LOCAL_SCRIPTS:-false}"
 SKIP_HARDWARE_CHECK="${SKIP_HARDWARE_CHECK:-false}"
 
+case "${INSTALLATION_TYPE}" in
+    community | developer | enterprise ) ;;
+    * ) echo "Error: Invalid --installationtype '${INSTALLATION_TYPE}'. Valid values: community, developer, enterprise." >&2; exit 1 ;;
+esac
+
+validate_bool() {
+    case "$2" in
+        true | false ) ;;
+        * ) echo "Error: Invalid ${1} '${2}'. Valid values: true, false." >&2; exit 1 ;;
+    esac
+}
+
+validate_bool --update "$UPDATE"
+validate_bool --localscripts "$LOCAL_SCRIPTS"
+validate_bool --skiphardwarecheck "$SKIP_HARDWARE_CHECK"
+validate_bool --makeswap "$MAKESWAP"
+validate_bool --installfluentbit "$INSTALL_FLUENT_BIT"
+[ -n "$UNINSTALL" ] && validate_bool --uninstall "$UNINSTALL"
+[ -n "$JWT_ENABLED" ] && validate_bool --jwtenabled "$JWT_ENABLED"
+
 DOWNLOAD_URL_PREFIX="https://download.onlyoffice.com/${product}"
-[ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${product}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
+[ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${legacy_product}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
+
+source_remote_script() {
+    local SCRIPT_PATH="$1"
+    local SCRIPT_TMP
+
+    SCRIPT_TMP="$(mktemp)"
+    curl -fsSL --retry 3 --retry-delay 2 "${DOWNLOAD_URL_PREFIX}/${SCRIPT_PATH}" -o "${SCRIPT_TMP}" || { rm -f "${SCRIPT_TMP}"; return 1; }
+    bash -n "${SCRIPT_TMP}" || { rm -f "${SCRIPT_TMP}"; return 1; }
+    source "${SCRIPT_TMP}"
+    rm -f "${SCRIPT_TMP}"
+}
 
 # Run uninstall if requested
 if [ "${UNINSTALL}" == "true" ]; then
     if [ "${LOCAL_SCRIPTS}" == "true" ]; then
         source install-RedHat/uninstall.sh
     else
-        source <(curl -fsSL "${DOWNLOAD_URL_PREFIX}"/install-RedHat/uninstall.sh)
+        source_remote_script install-RedHat/uninstall.sh
     fi
     exit 0
 fi
@@ -122,8 +164,8 @@ if [ "$LOCAL_SCRIPTS" = "true" ]; then
 	source install-RedHat/install-preq.sh
 	source install-RedHat/install-app.sh
 else
-	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/install-RedHat/tools.sh)
-	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/common/check-ports.sh)
-	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/install-RedHat/install-preq.sh)
-	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/install-RedHat/install-app.sh)
+	source_remote_script install-RedHat/tools.sh
+	source_remote_script common/check-ports.sh
+	source_remote_script install-RedHat/install-preq.sh
+	source_remote_script install-RedHat/install-app.sh
 fi

@@ -1,5 +1,5 @@
 [Unit]
-Description=DocSpace-${SERVICE_NAME}
+Description=${PACKAGE_NAME}-${SERVICE_NAME}
 After=network.target
 
 [Service]

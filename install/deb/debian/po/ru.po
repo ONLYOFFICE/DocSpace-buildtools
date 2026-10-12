@@ -1,9 +1,9 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: {{product}}\n"
+"Project-Id-Version: {{package_name}}\n"
 "Report-Msgid-Bugs-To: support@onlyoffice.com\n"
-"POT-Creation-Date: 2023-01-24 18:30+0300\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"POT-Creation-Date: 2026-08-27 00:49+0000\n"
+"PO-Revision-Date: 2026-08-27 00:00+0300\n"
 "Last-Translator: Ascensio System SIA <support@onlyoffice.com>\n"
 "Language-Team: Ascensio System SIA <support@onlyoffice.com>\n"
 "Language: ru_RU\n"
@@ -13,6 +13,156 @@ msgstr ""
 
 #. Type: string
 #. Description
-#: ../{{product}}.templates:1001
-msgid "Select environment for {{product}} configuration:"
-msgstr "Выберите наименование среды для конфигурации {{product}}:"
+#: ../{{package_name}}.templates:1002
+msgid "Apps host address:"
+msgstr "Адрес хоста Apps:"
+
+#. Type: string
+#. Description
+#: ../{{package_name}}.templates:2002
+msgid "Apps port number:"
+msgstr "Номер порта Apps:"
+
+#. Type: string
+#. Description
+#: ../{{package_name}}.templates:3002
+msgid "Database host address:"
+msgstr "Адрес хоста базы данных:"
+
+#. Type: string
+#. Description
+#: ../{{package_name}}.templates:4002
+msgid "Database port number:"
+msgstr "Номер порта базы данных:"
+
+#. Type: string
+#. Description
+#: ../{{package_name}}.templates:5002
+msgid "Database username:"
+msgstr "Имя пользователя базы данных:"
+
+#. Type: password
+#. Description
+#: ../{{package_name}}.templates:6002
+msgid "Database user password:"
+msgstr "Пароль пользователя базы данных:"
+
+#. Type: string
+#. Description
+#: ../{{package_name}}.templates:7002
+msgid "Database name:"
+msgstr "Имя базы данных:"
+
+#. Type: string
+#. Description
+#: ../{{package_name}}.templates:8002
+msgid "External Docs server URL (e.g., http://docs.example.com:8083):"
+msgstr "URL внешнего сервера Docs (например, http://docs.example.com:8083):"
+
+#. Type: select
+#. Choices
+#: ../{{package_name}}.templates:9002
+msgid "http, https"
+msgstr ""
+
+#. Type: select
+#. Description
+#: ../{{package_name}}.templates:9003
+msgid "OpenSearch protocol:"
+msgstr "Протокол OpenSearch:"
+
+#. Type: string
+#. Description
+#: ../{{package_name}}.templates:10002
+msgid "OpenSearch host address:"
+msgstr "Адрес хоста OpenSearch:"
+
+#. Type: string
+#. Description
+#: ../{{package_name}}.templates:11002
+msgid "OpenSearch port number:"
+msgstr "Номер порта OpenSearch:"
+
+#. Type: string
+#. Description
+#: ../{{package_name}}.templates:12002
+msgid "Redis host address:"
+msgstr "Адрес хоста Redis:"
+
+#. Type: string
+#. Description
+#: ../{{package_name}}.templates:13002
+msgid "Redis port number:"
+msgstr "Номер порта Redis:"
+
+#. Type: string
+#. Description
+#: ../{{package_name}}.templates:14002
+msgid "Redis username (optional):"
+msgstr "Имя пользователя Redis (необязательно):"
+
+#. Type: password
+#. Description
+#: ../{{package_name}}.templates:15002
+msgid "Redis password (optional):"
+msgstr "Пароль Redis (необязательно):"
+
+#. Type: string
+#. Description
+#: ../{{package_name}}.templates:16002
+msgid "Redis database index:"
+msgstr "Индекс базы данных Redis:"
+
+#. Type: select
+#. Choices
+#: ../{{package_name}}.templates:17002
+msgid "amqp, amqps"
+msgstr ""
+
+#. Type: select
+#. Description
+#: ../{{package_name}}.templates:17003
+msgid "RabbitMQ protocol:"
+msgstr "Протокол RabbitMQ:"
+
+#. Type: string
+#. Description
+#: ../{{package_name}}.templates:18002
+msgid "RabbitMQ host address:"
+msgstr "Адрес хоста RabbitMQ:"
+
+#. Type: string
+#. Description
+#: ../{{package_name}}.templates:19002
+msgid "RabbitMQ port number:"
+msgstr "Номер порта RabbitMQ:"
+
+#. Type: string
+#. Description
+#: ../{{package_name}}.templates:20002
+msgid "RabbitMQ username:"
+msgstr "Имя пользователя RabbitMQ:"
+
+#. Type: string
+#. Description
+#: ../{{package_name}}.templates:21002
+msgid "RabbitMQ user password:"
+msgstr "Пароль пользователя RabbitMQ:"
+
+#. Type: string
+#. Description
+#: ../{{package_name}}.templates:22002
+msgid "Machine key for encryption:"
+msgstr "Ключ шифрования (machine key):"
+
+#. Type: string
+#. Description
+#: ../{{package_name}}.templates:23002
+msgid "JWT header name:"
+msgstr "Имя заголовка JWT:"
+
+#. Type: string
+#. Description
+#: ../{{package_name}}.templates:24002
+msgid "JWT secret key:"
+msgstr "Секретный ключ JWT:"

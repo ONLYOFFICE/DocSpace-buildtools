@@ -6,18 +6,18 @@
     <string>com.onlyoffice.webapi</string>
 
     <key>WorkingDirectory</key>
-    <string>/Users/alexeybannov/Documents/Works/docspace</string>
+    <string>${APPS_ROOT}</string>
    
     <key>ProgramArguments</key>
     <array>
         <string>/usr/local/share/dotnet/dotnet</string>
         <string>server/web/ASC.Web.Api/bin/Debug/ASC.Web.Api.dll</string>
         <string>urls=http://0.0.0.0:5000</string>
-        <string>$STORAGE_ROOT=/Users/alexeybannov/Documents/Works/docspace/Data</string>
-        <string>log:dir=/Users/alexeybannov/Documents/Works/docspace/Logs</string>
+        <string>$STORAGE_ROOT=${APPS_ROOT}/Data</string>
+        <string>log:dir=${APPS_ROOT}/Logs</string>
         <string>log:name=web.api</string>
-        <string>pathToConf=/Users/alexeybannov/Documents/Works/docspace/buildtools/config</string>
-        <string>core:products:folder=/Users/alexeybannov/Documents/Works/docspace/server/products</string>
+        <string>pathToConf=${APPS_ROOT}/buildtools/config</string>
+        <string>core:products:folder=${APPS_ROOT}/server/products</string>
     </array>
 
     <key>RunAtLoad</key>
@@ -27,9 +27,9 @@
     <true/>
 
     <!--<key>StandardOutPath</key>
-    <string>/Users/alexeybannov/Documents/Works/docspace/Logs/webapi.stdout.log</string>-->
+    <string>${APPS_ROOT}/Logs/webapi.stdout.log</string>-->
 
     <!--<key>StandardErrorPath</key>
-    <string>/Users/alexeybannov/Documents/Works/docspace/Logs/webapi.stderr.log</string>-->
+    <string>${APPS_ROOT}/Logs/webapi.stderr.log</string>-->
 </dict>
 </plist>

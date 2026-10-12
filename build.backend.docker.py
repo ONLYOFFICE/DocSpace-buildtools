@@ -68,13 +68,13 @@ migration_type = "STANDALONE"  # SAAS
 env_extension = ""
 document_server_image_name = "onlyoffice/documentserver:latest"
 base_domain = "localhost"
-mysql_database = "docspace"
+mysql_database = "onlyoffice_apps"
 node_version = "dev"
-node_image_name = "onlyoffice/4testing-docspace-nodejs-runtime"
+node_image_name = "onlyoffice/4testing-apps-nodejs-runtime"
 proxy_version = "dev"
-proxy_image_name = "onlyoffice/4testing-docspace-proxy-runtime"
+proxy_image_name = "onlyoffice/4testing-apps-proxy-runtime"
 dotnet_version = "dev"
-dotnet_image_name = "onlyoffice/4testing-docspace-dotnet-runtime"
+dotnet_image_name = "onlyoffice/4testing-apps-dotnet-runtime"
 bin_dir = "bin/Debug"
 
 # Get the options
@@ -135,7 +135,7 @@ if identity == True:
 if opensearch == True:
     print(f"SERVICE_OPENSEARCH: {opensearch}")
 
-# print(f"DOCSPACE_APP_URL: {portal_url}")
+# print(f"APPS_APP_URL: {portal_url}")
 
 print()
 print("FORCE REBUILD BASE IMAGES:", force)
@@ -146,22 +146,22 @@ print("Skip stop and build:", skip_build)
 
 if standalone == False:
     migration_type = "SAAS"
-    base_domain = "docspace.site"
-    mysql_database = "docspace"  # "docspace_saas"
+    base_domain = "apps.site"
+    mysql_database = "onlyoffice_apps"  # "onlyoffice_apps_saas"
 
 if env_extension == "enterprise":
     # installation_type = "ENTERPRISE"
     document_server_image_name = "onlyoffice/documentserver-ee:latest"
-    mysql_database = "docspace"  # "docspace_enterprise"
+    mysql_database = "onlyoffice_apps"  # "onlyoffice_apps_enterprise"
 elif env_extension == "developer":
     # installation_type = "DEVELOPER"
     document_server_image_name = "onlyoffice/documentserver-de:latest"
-    mysql_database = "docspace"  # "docspace_developer"
+    mysql_database = "onlyoffice_apps"  # "onlyoffice_apps_developer"
 else:
     env_extension = ""
     # installation_type = "COMMUNITY"
     document_server_image_name = "onlyoffice/documentserver:latest"
-    mysql_database = "docspace"  # "docspace_community"
+    mysql_database = "onlyoffice_apps"  # "onlyoffice_apps_community"
 
 print()
 print("MIGRATION TYPE:", migration_type)
@@ -197,14 +197,14 @@ if arch_name == "x86_64" or arch_name == "AMD64":
     os.environ["MYSQL_DATABASE"] = mysql_database
     subprocess.run(["docker", "compose",
                     "-f", os.path.join(dockerDir, "db.yml"),
-                    "-f", os.path.join(dockerDir, "db.dev.yml"), "up", "-d"])
+                    "-f", os.path.join(dockerDir, "build", "dev", "db.dev.yml"), "up", "-d"])
 elif arch_name == "arm64":
     print("CPU Type: arm64 -> run db.yml with arm64v8 image")
     os.environ["MYSQL_IMAGE"] = "arm64v8/mysql:8.3.0-oracle"
     os.environ["MYSQL_DATABASE"] = mysql_database
     subprocess.run(["docker", "compose",
                     "-f", os.path.join(dockerDir, "db.yml"),
-                    "-f", os.path.join(dockerDir, "db.dev.yml"), "up", "-d"])
+                    "-f", os.path.join(dockerDir, "build", "dev", "db.dev.yml"), "up", "-d"])
 else:
     print("Error: Unknown CPU Type:", arch_name)
     sys.exit(1)
@@ -212,8 +212,8 @@ else:
 if dns == True:
     print("Run local dns server")
     os.environ["ROOT_DIR"] = dir
-    subprocess.run(["docker", "compose", "-f",
-                   os.path.join(dockerDir, "dnsmasq.yml"), "up", "-d"])
+    subprocess.run(["docker", "compose", "--env-file", os.path.join(dockerDir, ".env"), "-f",
+                   os.path.join(dockerDir, "build", "dev", "dnsmasq.yml"), "up", "-d"])
 
 if skip_build == False:
     # print("Clear publish folder")
@@ -231,9 +231,9 @@ if skip_build == False:
 
     DOCKER_ENTRYPOINT = "docker-entrypoint.py"
     DOCKER_ENTRYPOINT_PATH = os.path.join(
-        dir, "buildtools", "install", "docker", DOCKER_ENTRYPOINT)
+        dir, "buildtools", "install", "docker", "build", "entrypoints", DOCKER_ENTRYPOINT)
 
-    BACKEND_NODEJS_SERVICES = ["ASC.Socket.IO", "ASC.SsoAuth"]
+    BACKEND_NODEJS_SERVICES = ["ASC.Socket.IO", "ASC.SsoAuth", "ASC.AI.Chat"]
     for service in BACKEND_NODEJS_SERVICES:
         # print(f"== Build {service} project ==")
         src = os.path.join(dir, "server", "common", service)
@@ -270,7 +270,7 @@ if skip_build == False:
     file_path = os.path.join(dir, "server", "common", "Tools", "ASC.Migration.Runner",
                              bin_dir, "docker-migration-entrypoint.sh")
     src_file_path = os.path.join(
-        dir, "buildtools", "install", "docker", "docker-migration-entrypoint.sh")
+        dir, "buildtools", "install", "docker", "build", "entrypoints", "docker-migration-entrypoint.sh")
 
     WINDOWS_LINE_ENDING = b'\r\n'
     UNIX_LINE_ENDING = b'\n'
@@ -294,7 +294,7 @@ exists = check_image(dotnet_image)
 if not exists or force == True:
     print("Build dotnet base image from source (apply new dotnet config)")
     subprocess.run(["docker", "build", "-t", dotnet_image, "-f",
-                   os.path.join(dockerDir, "Dockerfile.runtime"), "--target", "dotnetrun", "."])
+                   os.path.join(dockerDir, "build", "Dockerfile.runtime"), "--target", "dotnetrun", "."])
 else:
     print(f"SKIP build {dotnet_image} (already exists)")
 
@@ -305,7 +305,7 @@ exists = check_image(node_image)
 if not exists or force == True:
     print("Build nodejs base image from source")
     subprocess.run(["docker", "build", "-t", node_image, "-f",
-                   os.path.join(dockerDir, "Dockerfile.runtime"), "--target", "noderun", "."])
+                   os.path.join(dockerDir, "build", "Dockerfile.runtime"), "--target", "noderun", "."])
 else:
     print(f"SKIP build {node_image} (already exists)")
 
@@ -315,7 +315,7 @@ exists = check_image(proxy_image)
 if not exists or force == True:
     print("Build proxy base image from source (apply new nginx config)")
     subprocess.run(["docker", "build", "-t", proxy_image, "-f",
-                   os.path.join(dockerDir, "Dockerfile.runtime"), "--target", "router", "."])
+                   os.path.join(dockerDir, "build", "Dockerfile.runtime"), "--target", "router", "."])
 else:
     print(f"SKIP build {proxy_image} (already exists)")
 
@@ -324,9 +324,9 @@ print("Run migration and services")
 os.environ["ENV_EXTENSION"] = env_extension
 os.environ["APP_CORE_BASE_DOMAIN"] = base_domain
 # os.environ["INSTALLATION_TYPE"] = installation_type
-os.environ["Baseimage_Dotnet_Run"] = "onlyoffice/4testing-docspace-dotnet-runtime:" + dotnet_version
-os.environ["Baseimage_Nodejs_Run"] = "onlyoffice/4testing-docspace-nodejs-runtime:" + node_version
-os.environ["Baseimage_Proxy_Run"] = "onlyoffice/4testing-docspace-proxy-runtime:" + proxy_version
+os.environ["Baseimage_Dotnet_Run"] = "onlyoffice/4testing-apps-dotnet-runtime:" + dotnet_version
+os.environ["Baseimage_Nodejs_Run"] = "onlyoffice/4testing-apps-nodejs-runtime:" + node_version
+os.environ["Baseimage_Proxy_Run"] = "onlyoffice/4testing-apps-proxy-runtime:" + proxy_version
 os.environ["DOCUMENT_SERVER_IMAGE_NAME"] = document_server_image_name
 os.environ["SERVICE_DOCEDITOR"] = doceditor
 os.environ["SERVICE_SDK"] = sdk
@@ -343,13 +343,13 @@ os.environ["APP_URL_PORTAL"] = portal_url
 os.environ["MIGRATION_TYPE"] = migration_type
 os.environ["MYSQL_DATABASE"] = mysql_database
 os.environ["BIN_DIR"] = bin_dir
-subprocess.run(["docker", "compose", "-f", os.path.join(dockerDir, "docspace.profiles.yml"), "-f", os.path.join(
-    dockerDir, "docspace.overcome.yml"), "--profile", "migration-runner", "--profile", "backend-local", "up", "-d"])
+subprocess.run(["docker", "compose", "--env-file", os.path.join(dockerDir, ".env"), "-f", os.path.join(dockerDir, "build", "dev", "apps.profiles.yml"), "-f", os.path.join(
+    dockerDir, "build", "dev", "apps.overcome.yml"), "--profile", "migration-runner", "--profile", "backend-local", "up", "-d"])
 
 if identity:
     print("Run identity")
-    subprocess.run(["docker-compose", "-f",
-                   os.path.join(dockerDir, "build-identity.yml"), "up", "-d"])
+    subprocess.run(["docker-compose", "--env-file", os.path.join(dockerDir, ".env"), "-f",
+                   os.path.join(dockerDir, "build", "dev", "build-identity.yml"), "up", "-d"])
 
 if opensearch:
     print("Run opensearch")
@@ -386,19 +386,19 @@ print("DS image:", document_server_image_name)
 print()
 
 if dns == True and standalone == False:
-    print(f"DOCSPACE_URL: http://localhost.docspace.site")
+    print(f"APPS_URL: http://localhost.apps.site")
     print()
     print("!!!DO NOT FORGET TO CONFIGURE DNSMASQ!!!")
     print()
     print("1. Enable DNSMASQ as a local DNS server")
     print(f"2. Edit configuration: {dnsmasqConf}")
     print("3. Replace: server=/site/[your_local_ipv4]")
-    print("4. Replace: address=/docspace.site/[your_local_ipv4]")
+    print("4. Replace: address=/apps.site/[your_local_ipv4]")
     print("5. Restart dnsmasq service")
-    print("6. Run in terminal: ping docspace.site")
+    print("6. Run in terminal: ping apps.site")
 else:
     hostname = socket.gethostname()
-    print(f"DOCSPACE_URL: http://{hostname} or http://[your_local_ipv4]")
+    print(f"APPS_URL: http://{hostname} or http://[your_local_ipv4]")
 
 end = time.time()
 

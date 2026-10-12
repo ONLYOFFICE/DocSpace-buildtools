@@ -34,7 +34,7 @@ while IFS= read -r VERSION; do
   EXISTING_VERSIONS["${VERSION}"]=1
 done < <(
   if [[ "${PACKAGE}" == "deb" ]]; then
-    grep -oP '^{{product}} \(\K[0-9]+\.[0-9]+\.[0-9]+(?=\))' "${PACKAGE_CHANGELOG}"
+    grep -oP '^{{package_name}} \(\K[0-9]+\.[0-9]+\.[0-9]+(?=\))' "${PACKAGE_CHANGELOG}"
   elif [[ "${PACKAGE}" == "rpm" ]]; then
     sed -n 's/.*-\s*\([0-9]\+\.[0-9]\+\.[0-9]\+\)$/\1/p' "${PACKAGE_CHANGELOG}"
   fi
@@ -44,7 +44,7 @@ TMP_FILE=$(mktemp)
 for VERSION in $(awk '/^## /{print $2}' "${TMP_CHANGELOG}"); do
   [[ ${EXISTING_VERSIONS[${VERSION}]:-} ]] && continue
   if [[ "${PACKAGE}" == "deb" ]]; then
-    printf '%s (%s) unstable; urgency=medium\n\n' "{{product}}" "${VERSION}" >> "${TMP_FILE}"
+    printf '%s (%s) unstable; urgency=medium\n\n' "{{package_name}}" "${VERSION}" >> "${TMP_FILE}"
     awk -v v="$VERSION" 'BEGIN{f=0;it="";subit=0;ml=74}/^## /{if($0=="## "v){f=1;next}else if(f){exit}}f&&/^###/{next}f&&/^\* /&&!/^[[:space:]]+[[:space:]]+\* /{if(it!=""){print_item(it,subit);it="";subit=0}sub(/^\* /,"");it=$0;next}f&&/^[[:space:]]+[[:space:]]+\* /{if(it==""){it="- "$0;sub(/^[[:space:]]+[[:space:]]+\*[[:space:]]*/,"",it);subit=1;next}sub(/^[[:space:]]+[[:space:]]+\*[[:space:]]*/,"- ");it=it"\n"$0;subit=1;next}f&&/^[[:space:]]/&&!/^[[:space:]]*$/&&!/^[[:space:]]+[[:space:]]+\* /{gsub(/^[[:space:]]+/,"");it=it" "$0;next}END{if(it!="")print_item(it,subit)}function print_item(t,s){n=split(t,l,"\n");if(s){wrap_print("  * ",l[1],"  ");for(i=2;i<=n;i++){if(l[i]~/^- /){wrap_print("    - ",substr(l[i],3),"      ")}else{wrap_print("      ",l[i],"      ")}}}else{wrap_print("  * ",t,"    ")}}function wrap_print(p,tx,cp){if(length(p tx)<=ml){print p tx;return}nw=split(tx,w," ");line=p;for(j=1;j<=nw;j++){if(length(line" "w[j])>ml&&line!=p){print line;line=cp}if(line==p||line==cp){line=line w[j]}else{line=line" "w[j]}}if(line!="")print line}' "${TMP_CHANGELOG}" >> "${TMP_FILE}"
     printf '\n -- %s  %s\n\n' "${MAINTAINER}" "$(date -R)" >> "${TMP_FILE}"
   elif [[ "${PACKAGE}" == "rpm" ]]; then

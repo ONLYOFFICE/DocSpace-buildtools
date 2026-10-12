@@ -1,7 +1,7 @@
 <service>
-	<id>DocSpace.SsoAuth.Svc</id>
-	<name>ONLYOFFICE DocSpace SsoAuth.Svc</name>
-	<description>ONLYOFFICE DocSpace ASC.SsoAuth.Svc</description>
+	<id>Apps.SsoAuth.Svc</id>
+	<name>ONLYOFFICE Apps SsoAuth.Svc</name>
+	<description>ONLYOFFICE Apps ASC.SsoAuth.Svc</description>
 	<priority>RealTime</priority>
 	<startmode>Automatic</startmode>
 	<autoRefresh>false</autoRefresh>

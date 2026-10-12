@@ -2,14 +2,20 @@
 
 set -e
 
-PRODUCT="docspace"
+PRODUCT="apps"
+LEGACY_PRODUCT="docspace"
+PACKAGE_NAME="onlyoffice-${PRODUCT}"
 DIR="/usr/bin"
 LETSENCRYPT="/etc/letsencrypt/live"
+
+# Reuse the certificate issued under the former product name, so an existing installation is not re-issued a new one.
+CERT_NAME="${PRODUCT}"
+[ ! -d "${LETSENCRYPT}/${PRODUCT}" ] && [ -d "${LETSENCRYPT}/${LEGACY_PRODUCT}" ] && CERT_NAME="${LEGACY_PRODUCT}"
 OPENRESTY="/etc/openresty/conf.d"
-WEBROOT_PATH="/var/www/${PRODUCT}"
+WEBROOT_PATH="/var/www/onlyoffice/${PRODUCT}"
 CONFIG_DIR="/etc/onlyoffice/${PRODUCT}"
 DHPARAM_PATH=${DHPARAM_PATH:-"/etc/ssl/certs/dhparam.pem"}
-SYSTEMD_DIR=$(dirname $($(command -v dpkg-query &> /dev/null && echo "dpkg-query -L" || echo "rpm -ql") ${PRODUCT}-api | grep systemd/system/))
+SYSTEMD_DIR=$(dirname $($(command -v dpkg-query &> /dev/null && echo "dpkg-query -L" || echo "rpm -ql") ${PACKAGE_NAME}-api | grep systemd/system/))
 ENVIRONMENT=$(grep -oP 'ENVIRONMENT=\K.*' "${CONFIG_DIR}/systemd.env")
 USER_CONF="${CONFIG_DIR}/appsettings.${ENVIRONMENT}.json"
 
@@ -20,9 +26,9 @@ fi
 
 help(){
   echo 
-  echo "This script provided to automatically setup SSL Certificates for DocSpace"
+  echo "This script provided to automatically setup SSL Certificates for ONLYOFFICE Apps"
   echo "Automatically get Let's Encrypt SSL Certificates:"
-  echo "  docspace-ssl-setup EMAIL DOMAIN"
+  echo "  apps-ssl-setup EMAIL DOMAIN"
   echo "    EMAIL         Email used for registration and recovery contact."
   echo "                  Use commas to specify multiple emails."
   echo "    DOMAIN        Domain name(s) to apply the certificate to."
@@ -30,21 +36,21 @@ help(){
   echo "                  Wildcard domains (no auto-renew): require DNS-01 challenge and ability to create DNS TXT records."
   echo 
   echo "    Example:"
-  echo "      docspace-ssl-setup u1@example.com,u2@example.com example.com,s1.example.com,s2.example.com"
-  echo "      docspace-ssl-setup support@example.com example.com,*.example.com"
+  echo "      apps-ssl-setup u1@example.com,u2@example.com example.com,s1.example.com,s2.example.com"
+  echo "      apps-ssl-setup support@example.com example.com,*.example.com"
   echo 
   echo "Using your own certificates via the -f or --file parameter:"
-  echo "  docspace-ssl-setup --file DOMAIN CERTIFICATE [PRIVATEKEY]"
+  echo "  apps-ssl-setup --file DOMAIN CERTIFICATE [PRIVATEKEY]"
   echo "    DOMAIN        Main domain name to apply."
   echo "    CERTIFICATE   Path to the certificate file for the domain (PEM, PFX, DER, CER, PKCS#7)."
   echo "    PRIVATEKEY    (Optional) Path to private key (required unless PFX)."
   echo "                  Required for PEM, DER, and CER formats."
   echo "    Example:"
-  echo "      docspace-ssl-setup --file example.com /etc/ssl/example.crt /etc/ssl/example.key"
-  echo "      docspace-ssl-setup --file example.com /etc/ssl/example.pfx"
+  echo "      apps-ssl-setup --file example.com /etc/ssl/example.crt /etc/ssl/example.key"
+  echo "      apps-ssl-setup --file example.com /etc/ssl/example.pfx"
   echo 
   echo "Return to the default proxy configuration using the -d or --default parameter:"
-  echo "  docspace-ssl-setup --default"
+  echo "  apps-ssl-setup --default"
   echo ""
   exit 0
 }
@@ -88,7 +94,7 @@ case $1 in
       DOMAIN=$2
       CERTIFICATE_FILE=$3
 
-      [[ $DOMAIN =~ ^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,6}$ ]] || { echo "Error: domain name '$DOMAIN' is incorrect." >&2; exit 1; }
+      [[ $DOMAIN =~ ^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$ ]] || { echo "Error: domain name '$DOMAIN' is incorrect." >&2; exit 1; }
       if [[ "$CERTIFICATE_FILE" =~ \.(p12|pfx)$ ]]; then
         echo "Using PKCS#12 file for SSL configuration..."
         openssl pkcs12 -in "$CERTIFICATE_FILE" -info -noout -passin pass: >/dev/null 2>&1 || read -rsp "Enter password: " PFX_PASSWORD
@@ -110,6 +116,8 @@ case $1 in
     cp -f ${OPENRESTY}/onlyoffice-proxy.conf.template ${OPENRESTY}/onlyoffice-proxy.conf
     [[ -f "${DIR}/${PRODUCT}-renew-letsencrypt" ]] && rm -rf "${DIR}/${PRODUCT}-renew-letsencrypt"
     [[ -f "/etc/cron.weekly/${PRODUCT}-renew-letsencrypt" ]] && rm -rf "/etc/cron.weekly/${PRODUCT}-renew-letsencrypt"
+    # Drop the renewal job left by the former product name so certbot is not run twice a week.
+    [[ -f "/etc/cron.weekly/${LEGACY_PRODUCT}-renew-letsencrypt" ]] && rm -f "/etc/cron.weekly/${LEGACY_PRODUCT}-renew-letsencrypt"
     [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ] && systemctl restart openresty || service openresty restart
     json -I -f ${USER_CONF} -e "this.files.docservice.url.portal = \"http://localhost:80\""
     json -I -f ${USER_CONF} -e "delete this.core['server-root']"
@@ -156,9 +164,9 @@ case $1 in
       echo "Generating Let's Encrypt SSL Certificates..."
 
       if [[ "${DOMAINS}" =~ \*\.[^,]* ]]; then
-        CERTBOT_CMD=(certbot certonly --manual --preferred-challenges dns --key-type rsa --cert-name "${PRODUCT}" --agree-tos --email "${MAIL}" -d "${DOMAINS[@]}")
+        CERTBOT_CMD=(certbot certonly --manual --preferred-challenges dns --key-type rsa --cert-name "${CERT_NAME}" --agree-tos --email "${MAIL}" -d "${DOMAINS[@]}")
       else
-        CERTBOT_CMD=(certbot certonly --expand --webroot -w "${WEBROOT_PATH}" --key-type rsa --cert-name "${PRODUCT}" --noninteractive --agree-tos --email "${MAIL}" -d "${DOMAINS[@]}")
+        CERTBOT_CMD=(certbot certonly --expand --webroot -w "${WEBROOT_PATH}" --key-type rsa --cert-name "${CERT_NAME}" --noninteractive --agree-tos --email "${MAIL}" -d "${DOMAINS[@]}")
       fi
       echo "${CERTBOT_CMD[@]}" > /var/log/le-start.log
       "${CERTBOT_CMD[@]}" | tee /var/log/le-new.log
@@ -169,8 +177,8 @@ case $1 in
 esac
 
 [[ ! -f "${DHPARAM_PATH}" ]] && openssl dhparam -out ${DHPARAM_PATH} 2048
-CERTIFICATE_FILE="${CERTIFICATE_FILE:-"${LETSENCRYPT}/${PRODUCT}/fullchain.pem"}"
-PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${PRODUCT}/privkey.pem"}"
+CERTIFICATE_FILE="${CERTIFICATE_FILE:-"${LETSENCRYPT}/${CERT_NAME}/fullchain.pem"}"
+PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${CERT_NAME}/privkey.pem"}"
 [[ "$CERTIFICATE_FILE" != /* ]] && CERTIFICATE_FILE="$(cd "$(dirname "$CERTIFICATE_FILE")" && pwd)/$(basename "$CERTIFICATE_FILE")"
 [[ "$PRIVATEKEY_FILE" != /* ]] && PRIVATEKEY_FILE="$(cd "$(dirname "$PRIVATEKEY_FILE")" && pwd)/$(basename "$PRIVATEKEY_FILE")"
 
@@ -180,7 +188,10 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
     APP_PORT=${APP_PORT:-$(sed -nE 's/.*listen .+:([0-9]{2,5}).*/\1/p' ${OPENRESTY}/onlyoffice-proxy.conf 2>/dev/null | head -1)}
     [[ "${APP_PORT}" = "80" || "${APP_PORT}" = "443" ]] && APP_PORT=""
     cp -f ${OPENRESTY}/onlyoffice-proxy-ssl.conf.template ${OPENRESTY}/onlyoffice-proxy.conf
-    json -I -f ${USER_CONF} -e "this.files.docservice.url.portal = \"https://${DOMAIN}${APP_PORT:+:${APP_PORT}}\""
+    PORTAL_URL="https://${DOMAIN}${APP_PORT:+:${APP_PORT}}"
+    # Inherited wildcard certificate without a known host name: keep the portal on the internal listener, which does not depend on DNS.
+    [[ "${INHERIT_SSL_INTERNAL_PORTAL}" = "true" ]] && PORTAL_URL="http://localhost:80"
+    json -I -f ${USER_CONF} -e "this.files.docservice.url.portal = \"${PORTAL_URL}\""
     json -I -f ${USER_CONF} -e "this.core['server-root'] = 'https://*${APP_PORT:+:${APP_PORT}}/'"
     sed -i "/\(ssl\|quic\)/s/\(listen .*:\)[0-9]\{2,5\}\( .*\)/\1${APP_PORT:-443}\2/" ${OPENRESTY}/onlyoffice-proxy.conf
     sed -i -E "s#https://\\\$host(:[0-9]+)?#https://\\\$host${APP_PORT:+:${APP_PORT}}#g" ${OPENRESTY}/onlyoffice-proxy.conf
@@ -188,6 +199,30 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
     sed -i "s~\(ssl_certificate_key \).*;~\1${PRIVATEKEY_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
     sed -i "s~\(ssl_dhparam \).*;~\1${DHPARAM_PATH};~g" ${OPENRESTY}/onlyoffice-proxy.conf
     chown onlyoffice:onlyoffice ${USER_CONF}
+
+    # A cert handed to us via -f may still renew through Docs' own --nginx authenticator - re-point it at our webroot instead.
+    INHERITED_CERT_NAME=""
+    [[ "${CERTIFICATE_FILE}" == "${LETSENCRYPT}/"*/fullchain.pem ]] && INHERITED_CERT_NAME="$(basename "$(dirname "${CERTIFICATE_FILE}")")"
+    if [ -n "${INHERITED_CERT_NAME}" ] && [ "${INHERITED_CERT_NAME}" != "${CERT_NAME}" ] && command -v certbot >/dev/null 2>&1; then
+      INHERITED_RENEWAL_CONF="/etc/letsencrypt/renewal/${INHERITED_CERT_NAME}.conf"
+      if grep -q '^authenticator = manual' "${INHERITED_RENEWAL_CONF}" 2>/dev/null; then
+        echo "${INHERITED_CERT_NAME} renews via DNS-01 (wildcard); its renewal stays manual." >&2
+      else
+        # "reconfigure" switches the authenticator for the next renewal without forcing one now.
+        mkdir -p "${WEBROOT_PATH}/.well-known/acme-challenge"
+        if certbot reconfigure --cert-name "${INHERITED_CERT_NAME}" --webroot -w "${WEBROOT_PATH}" >/var/log/le-takeover.log 2>&1; then
+          mkdir -p /etc/letsencrypt/renewal-hooks/deploy
+          printf '#!/bin/sh\nsystemctl reload openresty\n' > /etc/letsencrypt/renewal-hooks/deploy/onlyoffice-apps-openresty
+          chmod 0755 /etc/letsencrypt/renewal-hooks/deploy/onlyoffice-apps-openresty
+          # documentserver-letsencrypt.m4 always overwrites (not appends) these paths, but verify their content before removing them anyway - the filenames aren't namespaced to our cert.
+          grep -q 'letsencrypt_cron\.sh' /etc/cron.d/letsencrypt 2>/dev/null && rm -f /etc/cron.d/letsencrypt
+          grep -q 'certbot renew' /usr/bin/letsencrypt_cron.sh 2>/dev/null && rm -f /usr/bin/letsencrypt_cron.sh
+          LETSENCRYPT_ENABLE="true"
+        else
+          echo "Warning: could not switch ${INHERITED_CERT_NAME}'s renewal to webroot; see /var/log/le-takeover.log. It may keep failing via --nginx now that ${PRODUCT} holds ports 80/443." >&2
+        fi
+      fi
+    fi
 
     if [[ "${LETSENCRYPT_ENABLE}" = "true" ]]; then
       CRON_PATH=$(command -v crond || command -v cron) && CRON_SVC=${CRON_PATH##*/} || { echo "Error: neither crond nor cron is installed." >&2; }
@@ -239,7 +274,7 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
     IFS=';' read -ra CONN_ITEM <<< "$(json -f "$USER_CONF" ConnectionStrings.default.connectionString)"; 
     for ITEM in "${CONN_ITEM[@]}"; do KEY="${ITEM%%=*}"; VAL="${ITEM#*=}"; KEY="${KEY// /_}"; export "$KEY=$VAL"; done
     MYSQL=(mysql -h"$Server" -P"${Port:-3306}" -u"$User_ID" "-p$Password" "$Database")
-    if [ -z "$(${MYSQL[@]} -N -s -e "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1")" ]; then
+    if [[ "${INHERIT_SSL_INTERNAL_PORTAL}" != "true" ]] && [ -z "$(${MYSQL[@]} -N -s -e "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1")" ]; then
       ${MYSQL[@]} -e "UPDATE tenants_tenants SET mappeddomain='${DOMAIN}' WHERE alias='localhost';"
     fi
 

@@ -46,13 +46,27 @@ cat<<EOF
 
 EOF
 
+run_remote_bash() {
+	local URL="$1"
+	shift
+	local SCRIPT_TMP
+
+	SCRIPT_TMP="$(mktemp)"
+	curl -fsSL --retry 3 --retry-delay 2 "${URL}" -o "${SCRIPT_TMP}" || { rm -f "${SCRIPT_TMP}"; return 1; }
+	bash -n "${SCRIPT_TMP}" || { rm -f "${SCRIPT_TMP}"; return 1; }
+	bash "${SCRIPT_TMP}" "$@"
+	local EXIT_CODE=$?
+	rm -f "${SCRIPT_TMP}"
+	return "${EXIT_CODE}"
+}
+
 hold_package_version
 
 if [ "$DIST" = "debian" ] && [ "$(apt-cache search ttf-mscorefonts-installer | wc -l)" -eq 0 ]; then
 		echo "deb http://deb.debian.org/debian/ $DISTRIB_CODENAME main contrib" >> /etc/apt/sources.list
 fi
 
-# Temporary workaround extend apt-sequoia policy until 2027-02-01 (OpenResty/OpenSearch)
+# Temporary OpenResty/OpenSearch apt-sequoia policy extension until 2027-02-01.
 if [ "$DISTRIB_CODENAME" = "trixie" ]; then
     install -D /usr/share/apt/default-sequoia.config /etc/crypto-policies/back-ends/apt-sequoia.config
     sed -i 's/2026-02-01/2027-02-01/' /etc/crypto-policies/back-ends/apt-sequoia.config
@@ -60,7 +74,7 @@ fi
 
 apt-get -y update
 
-if [ -n "$PRODUCT_VERSION" ] && ! apt-cache madison "$product" | awk '{print $3}' | grep -Eq "^${PRODUCT_VERSION}([.-]|$)"; then
+if [ -n "$PRODUCT_VERSION" ] && ! apt-cache madison "$package" | awk '{print $3}' | grep -Eq "^${PRODUCT_VERSION}([.-]|$)"; then
   echo "Requested ${product_name} version ${PRODUCT_VERSION} not found in repository."; exit 1
 fi
 
@@ -68,24 +82,24 @@ dpkg -l | grep -q "debconf-utils" || apt-get install -yq debconf-utils
 command -v locale-gen &>/dev/null || apt-get install -yq locales
 locale-gen en_US.UTF-8
 
-# add opensearch repo
-curl -fsSL https://artifacts.opensearch.org/publickeys/opensearch.pgp | gpg --dearmor --batch --yes -o /usr/share/keyrings/opensearch-keyring
-echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch/2.x/apt stable main" > /etc/apt/sources.list.d/opensearch-2.x.list
-ELASTIC_VERSION="2.18.0"
+# Add OpenSearch repo.
+curl -fsSL https://artifacts.opensearch.org/publickeys/opensearch-release.pgp | gpg --dearmor --batch --yes -o /usr/share/keyrings/opensearch-keyring
+echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch/3.x/apt stable main" > /etc/apt/sources.list.d/opensearch-3.x.list
+OPENSEARCH_VERSION="3.5.0"
 export OPENSEARCH_INITIAL_ADMIN_PASSWORD="$(echo "${package_sysname}!A1")"
 
-#add opensearch dashboards repo
+# Add OpenSearch Dashboards repo.
 if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then
-	curl -fsSL https://artifacts.opensearch.org/publickeys/opensearch.pgp | gpg --dearmor --batch --yes -o /usr/share/keyrings/opensearch-keyring
-	echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/2.x/apt stable main" > /etc/apt/sources.list.d/opensearch-dashboards-2.x.list
-	DASHBOARDS_VERSION="2.18.0"
+	curl -fsSL https://artifacts.opensearch.org/publickeys/opensearch-release.pgp | gpg --dearmor --batch --yes -o /usr/share/keyrings/opensearch-keyring
+	echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/3.x/apt stable main" > /etc/apt/sources.list.d/opensearch-dashboards-3.x.list
+	DASHBOARDS_VERSION="3.5.0"
 fi
 
-# add nodejs repo
-NODE_VERSION="22"
-curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
+# Add Node.js repo.
+NODE_VERSION="24"
+run_remote_bash "https://deb.nodesource.com/setup_${NODE_VERSION}.x"
 
-#add dotnet repo
+# Add .NET repo.
 if [ "$DIST" = "ubuntu" ]; then
     add-apt-repository -y ppa:dotnet/backports
 elif [ "$DIST" = "debian" ]; then
@@ -96,16 +110,17 @@ fi
 
 MYSQL_REPO_VERSION="$(curl -fsSL https://dev.mysql.com/downloads/repo/apt/ | grep -oP '(?<=mysql-apt-config_)[0-9.]+-[0-9]+(?=_all\.deb)' | head -n1)"
 MYSQL_PACKAGE_NAME="mysql-apt-config_${MYSQL_REPO_VERSION}_all.deb"
-if ! dpkg -l | grep -q "mysql-server"; then
+MYSQL_SERVER_HOST=${MYSQL_SERVER_HOST:-"localhost"}
+MYSQL_SERVER_PORT=${MYSQL_SERVER_PORT:-"3306"}
+MYSQL_SERVER_DB_NAME=${MYSQL_SERVER_DB_NAME:-"${package_sysname}"}
+MYSQL_SERVER_USER=${MYSQL_SERVER_USER:-"root"}
 
-	MYSQL_SERVER_HOST=${MYSQL_SERVER_HOST:-"localhost"}
-	MYSQL_SERVER_PORT=${MYSQL_SERVER_PORT:-"3306"}
-	MYSQL_SERVER_DB_NAME=${MYSQL_SERVER_DB_NAME:-"${package_sysname}"}
-	MYSQL_SERVER_USER=${MYSQL_SERVER_USER:-"root"}
+if ! dpkg -l | grep -q "mysql-server"; then
+	MYSQL_FIRST_TIME_INSTALL="true"
 	MYSQL_SERVER_PASS=${MYSQL_SERVER_PASS:-"$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)"}
 
-	# setup mysql 8.4 package
-	curl -fsSLO http://repo.mysql.com/"${MYSQL_PACKAGE_NAME}"
+	# Set up MySQL 8.4 package.
+	curl -fsSLO "https://repo.mysql.com/${MYSQL_PACKAGE_NAME}"
 	echo "mysql-apt-config mysql-apt-config/repo-codename  select  ${DISTRIB_CODENAME/resolute/noble}" | debconf-set-selections
 	echo "mysql-apt-config mysql-apt-config/repo-distro  select  $DIST" | debconf-set-selections
 	echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.4-lts" | debconf-set-selections
@@ -119,33 +134,31 @@ if ! dpkg -l | grep -q "mysql-server"; then
 	echo mysql-server mysql-server/root_password_again password "${MYSQL_SERVER_PASS}" | debconf-set-selections
 
 elif dpkg -l | grep -q "mysql-apt-config" && [ "$(apt-cache policy mysql-apt-config | awk 'NR==2{print $2}')" != "${MYSQL_REPO_VERSION}" ]; then
-	curl -fsSLO http://repo.mysql.com/${MYSQL_PACKAGE_NAME}
+	curl -fsSLO "https://repo.mysql.com/${MYSQL_PACKAGE_NAME}"
 	DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
 	rm -f "${MYSQL_PACKAGE_NAME}"
 fi
 
-if [ "$DIST" = "ubuntu" ]; then	
-	curl -fsSL https://packages.redis.io/gpg | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/redis.gpg --import
+if [ "$DIST" = "ubuntu" ]; then
+	curl -fsSL https://packages.redis.io/gpg | gpg --batch --yes --dearmor -o /usr/share/keyrings/redis.gpg
 	echo "deb [signed-by=/usr/share/keyrings/redis.gpg] https://packages.redis.io/deb ${DISTRIB_CODENAME} main" | tee /etc/apt/sources.list.d/redis.list
-	chmod 644 /usr/share/keyrings/redis.gpg
 fi
 
-curl -fsSL https://openresty.org/package/pubkey.gpg | gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/openresty.gpg --import
-# Temporary workaround Debian 13 (trixie) and Ubuntu 26.04 (resolute) use previous LTS codename for OpenResty
+curl -fsSL https://openresty.org/package/pubkey.gpg | gpg --batch --yes --dearmor -o /usr/share/keyrings/openresty.gpg
+# Temporary OpenResty codename fallback for Debian 13 and Ubuntu 26.04.
 OPENRESTY_CODENAME=$([ "${DISTRIB_CODENAME}" = "trixie" ] && echo "bookworm" || echo "${DISTRIB_CODENAME/resolute/noble}")
 echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/$DIST ${OPENRESTY_CODENAME} $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
-chmod 644 /usr/share/keyrings/openresty.gpg
 
-#add java repo
-curl -fsSL https://packages.adoptium.net/artifactory/api/gpg/key/public | gpg --dearmor | tee /usr/share/keyrings/adoptium.gpg > /dev/null
+# Add Java repo.
+curl -fsSL https://packages.adoptium.net/artifactory/api/gpg/key/public | gpg --batch --yes --dearmor -o /usr/share/keyrings/adoptium.gpg
 echo "deb [signed-by=/usr/share/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb $DISTRIB_CODENAME main" | tee /etc/apt/sources.list.d/adoptium.list
 chmod 644 /usr/share/keyrings/adoptium.gpg
-JAVA_VERSION="21"
+JAVA_VERSION="25"
 
-# setup msttcorefonts
+# Set up msttcorefonts.
 echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
 
-# install
+# Install packages.
 apt-get -y update
 apt-get install -o DPkg::options::="--force-confnew" -yq \
 				expect \
@@ -160,29 +173,32 @@ apt-get install -o DPkg::options::="--force-confnew" -yq \
 				temurin-${JAVA_VERSION}-jre \
 				ffmpeg 
 
-if [ "$INSTALLATION_TYPE" != "COMMUNITY" ]; then
+if [ "$INSTALLATION_TYPE" != "community" ]; then
 	apt-get install -yq postgresql
 fi
 
-# Temporary fallback dotnet-sdk-10.0 on Debian 11 and Ubuntu 24.04
-DOTNET_VERSION="10.0.100"; DOTNET_PKG="dotnet-sdk-${DOTNET_VERSION%.*}"
+# Temporary aspnetcore-runtime-10.0 fallback for Debian 11 and Ubuntu 24.04.
+DOTNET_VERSION="10.0"; DOTNET_PKG="aspnetcore-runtime-${DOTNET_VERSION}"
 if ! apt-get install -yq "${DOTNET_PKG}"; then
-  curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --version "${DOTNET_VERSION}" --install-dir /usr/share/dotnet
+  run_remote_bash "https://dot.net/v1/dotnet-install.sh" --channel "${DOTNET_VERSION}" --runtime aspnetcore --install-dir /usr/share/dotnet
   ln -sf /usr/share/dotnet/dotnet /usr/bin/dotnet
 
+  DOTNET_RUNTIME_VERSION=$(dotnet --list-runtimes | awk '$1 == "Microsoft.AspNetCore.App" {print $2}' | sort -V | tail -1)
+  [ -n "${DOTNET_RUNTIME_VERSION}" ] || { echo "ASP.NET Core runtime installation failed" >&2; exit 1; }
+
   DOTNET_PKGDIR="/tmp/${DOTNET_PKG}"; mkdir -p "${DOTNET_PKGDIR}/DEBIAN"
-  printf "Package: %s\nVersion: %s\nArchitecture: amd64\nMaintainer: local\nDescription: Provides .NET %s SDK\n" \
-	"${DOTNET_PKG}" "${DOTNET_VERSION}" "${DOTNET_VERSION%%.*}" > "${DOTNET_PKGDIR}/DEBIAN/control"
+  printf "Package: %s\nVersion: %s\nArchitecture: %s\nMaintainer: local\nDescription: Provides ASP.NET Core %s Runtime\n" \
+	"${DOTNET_PKG}" "${DOTNET_RUNTIME_VERSION}" "$(dpkg --print-architecture)" "${DOTNET_VERSION}" > "${DOTNET_PKGDIR}/DEBIAN/control"
 
   dpkg-deb --build "${DOTNET_PKGDIR}" "/tmp/${DOTNET_PKG}.deb" && dpkg -i "/tmp/${DOTNET_PKG}.deb"
   rm -rf "${DOTNET_PKGDIR}" "/tmp/${DOTNET_PKG}.deb"
 fi
 
 if ! dpkg -l | grep -q "opensearch"; then
-	apt-get install -yq opensearch=${ELASTIC_VERSION}
+	apt-get install -yq opensearch=${OPENSEARCH_VERSION}
 else
 	ELASTIC_PLUGIN="/usr/share/opensearch/bin/opensearch-plugin"
-	if dpkg --compare-versions "$(dpkg-query -W -f='${Version}\n' opensearch 2>/dev/null || true)" ne "$ELASTIC_VERSION"; then
+	if dpkg --compare-versions "$(dpkg-query -W -f='${Version}\n' opensearch 2>/dev/null || true)" ne "$OPENSEARCH_VERSION"; then
 		"${ELASTIC_PLUGIN}" list | grep -q ingest-attachment && "${ELASTIC_PLUGIN}" remove -s ingest-attachment
 		systemctl restart opensearch || true
 	fi
@@ -198,4 +214,3 @@ if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then
 	apt-get -y update
 	apt-get install -o DPkg::options::="--force-confnew" -yq opensearch-dashboards="${DASHBOARDS_VERSION}" fluent-bit
 fi
-
