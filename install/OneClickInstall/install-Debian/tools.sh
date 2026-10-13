@@ -54,7 +54,7 @@ make_swap () {
 		chmod 600 "${SWAPFILE}"
 		mkswap "${SWAPFILE}"
 		swapon "${SWAPFILE}"
-		echo "$SWAPFILE none swap sw 0 0" >> /etc/fstab
+		awk -v swapfile="${SWAPFILE}" '$1 == swapfile && $3 == "swap" { found = 1 } END { exit !found }' /etc/fstab || echo "$SWAPFILE none swap sw 0 0" >> /etc/fstab
 	fi
 }
 
@@ -62,7 +62,7 @@ command_exists () {
 	type "$1" &> /dev/null;
 }
 
-# Function to prevent package auto-update
+# Prevent package auto-updates.
 hold_package_version() {
 	local pkg pkgs=("dotnet-*" "aspnetcore-*" opensearch redis-server rabbitmq-server opensearch-dashboards fluent-bit)
 	for pkg in "${pkgs[@]}"; do
@@ -107,8 +107,16 @@ check_hardware () {
 	fi
 
 	if [ -n "${requirements_not_met}" ]; then
-		printf "Minimal requirements are not met, your system needs:%b\n\nTo skip this check, use the --skiphardwarecheck true parameter\n" "${requirements_not_met}"
-		exit 1
+		printf "Minimal requirements are not met, your system needs:%b\n\n" "${requirements_not_met}"
+
+		# Without a terminal or in non-interactive mode there is nobody to ask
+		if [ "${NON_INTERACTIVE:-false}" = "true" ] || [ ! -t 0 ]; then
+			echo "To skip this check, use the --skiphardwarecheck true parameter"
+			exit 1
+		fi
+
+		read -r -p "Continue installation anyway? (y/N): " CONTINUE_CHOICE
+		[[ "${CONTINUE_CHOICE,,}" =~ ^(y|yes)$ ]] || exit 1
 	fi
 }
 
@@ -117,9 +125,9 @@ if [ "$SKIP_HARDWARE_CHECK" != "true" ]; then
 fi
 
 ARCH="$(dpkg --print-architecture)"
-if [ "$ARCH" != "amd64" ]; then
+if [[ "$ARCH" != "amd64" && "$ARCH" != "arm64" ]]; then
     echo "${product_name} doesn't support architecture '$ARCH'"
-    exit
+    exit 1
 fi
 
 REV=$(< /etc/debian_version)
@@ -142,6 +150,12 @@ fi
 DIST=$(echo "$DIST" | tr '[:upper:]' '[:lower:]' | xargs)
 DISTRIB_CODENAME=$(echo "$DISTRIB_CODENAME" | tr '[:upper:]' '[:lower:]' | xargs)
 [ "$DIST" = "debian" ] && REV="${REV%%.*}"
+
+# MySQL 8.4 has no arm64 build in the Oracle repo and Debian ships only MariaDB.
+if [ "$ARCH" = "arm64" ] && [ "$DIST" != "ubuntu" ]; then
+    echo "${product_name} on architecture '$ARCH' is supported only on Ubuntu (detected '${DIST}'). Please use a Docker installation."
+    exit 1
+fi
 
 if [[ ( "${DIST}" == "ubuntu" && "${REV%.*}" -lt 22 ) || ( "${DIST}" == "debian" && "${REV}" -lt 11 ) ]]; then
     echo "Your ${DIST} ${REV} operating system has reached the end of its service life."

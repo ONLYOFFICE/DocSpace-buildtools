@@ -14,8 +14,11 @@ on:
           debian12,
           debian13,
           ubuntu2204,
+          ubuntu2204-arm,
           ubuntu2404,
+          ubuntu2404-arm,
           ubuntu2604,
+          ubuntu2604-arm,
           rhel9,
           centos9S,
           centos10S,
@@ -39,6 +42,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      arm_matrix: ${{ steps.set-matrix.outputs.arm_matrix }}
+      has_x86: ${{ steps.set-matrix.outputs.has_x86 }}
+      has_arm: ${{ steps.set-matrix.outputs.has_arm }}
       docs_version: ${{ steps.get-docs-version.outputs.version }}
     steps:
       - name: Get latest Docs test repo version
@@ -51,7 +57,7 @@ jobs:
       - name: Set matrix names
         id: set-matrix
         env:
-          OS_ORDER: rhel9 centos9S centos10S fedora43 fedora44 debian11 debian12 debian13 ubuntu2204 ubuntu2404 ubuntu2604
+          OS_ORDER: rhel9 centos9S centos10S fedora43 fedora44 debian11 debian12 debian13 ubuntu2204 ubuntu2404 ubuntu2604 ubuntu2204-arm ubuntu2404-arm ubuntu2604-arm
           OS_MAP: |
             {
               "rhel9":      ["RHEL 9",       "generic",    "rhel9"],
@@ -64,7 +70,10 @@ jobs:
               "debian13":   ["Debian 13",    "onlyoffice", "base-debian13"],
               "ubuntu2204": ["Ubuntu 22.04", "onlyoffice", "base-ubuntu2204"],
               "ubuntu2404": ["Ubuntu 24.04", "onlyoffice", "base-ubuntu2404"],
-              "ubuntu2604": ["Ubuntu 26.04", "onlyoffice", "base-ubuntu2604"]
+              "ubuntu2604": ["Ubuntu 26.04", "onlyoffice", "base-ubuntu2604"],
+              "ubuntu2204-arm": ["Ubuntu 22.04 ARM", "arm", "ubuntu-22.04-arm"],
+              "ubuntu2404-arm": ["Ubuntu 24.04 ARM", "arm", "ubuntu-24.04-arm"],
+              "ubuntu2604-arm": ["Ubuntu 26.04 ARM", "arm", "ubuntu-26.04-arm"]
             }
         run: |
           declare -A os_set
@@ -90,17 +99,24 @@ jobs:
           [[ "${{ github.event_name }}" == "schedule" ]] && \
             for os in $(jq -r 'keys[]' <<< "$OS_MAP"); do os_set["$os"]=1; done
 
-          # Build matrix in defined order
-          matrix=$(jq -c -n --argjson map "$OS_MAP" --arg order "$OS_ORDER" \
+          # Build the list in defined order
+          all=$(jq -c -n --argjson map "$OS_MAP" --arg order "$OS_ORDER" \
             --argjson list "$(printf '%s\n' "${!os_set[@]}" | jq -R . | jq -s .)" \
-            '{include: [($order | split(" "))[] | select(. as $k | $list[] == $k) | {name: $map[.][0], os: ($map[.][2] // .), distr: $map[.][1]}]}')
+            '[($order | split(" "))[] | select(. as $k | $list[] == $k) | {name: $map[.][0], os: ($map[.][2] // .), distr: $map[.][1]}]')
 
-          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+          # Entries with distr "arm" run natively on arm64 runners (os holds the runner label), the rest in Vagrant VMs
+          {
+            echo "matrix=$(jq -c '{include: map(select(.distr != "arm"))}' <<< "$all")"
+            echo "arm_matrix=$(jq -c '{include: map(select(.distr == "arm") | {name, runner: .os})}' <<< "$all")"
+            echo "has_x86=$(jq 'map(select(.distr != "arm")) | length > 0' <<< "$all")"
+            echo "has_arm=$(jq 'map(select(.distr == "arm")) | length > 0' <<< "$all")"
+          } >> $GITHUB_OUTPUT
 
   vagrant-up:
     name: "${{ matrix.name }}"
     runs-on: ubuntu-22.04
     needs: prepare
+    if: needs.prepare.outputs.has_x86 == 'true'
     env:
       VER: ${{ needs.prepare.outputs.docs_version }}
     strategy:
@@ -284,3 +300,87 @@ jobs:
           cd tests/vagrant || exit 0
           vagrant destroy --force || true
           vagrant global-status --prune || true
+
+  arm-install:
+    name: "${{ matrix.name }}"
+    runs-on: ${{ matrix.runner }}
+    needs: prepare
+    # The Vagrant jobs above are x86 only, so ARM is tested natively on GitHub-hosted arm64 runners. Ubuntu only: the installer rejects arm64 on Debian.
+    if: needs.prepare.outputs.has_arm == 'true'
+    env:
+      VER: ${{ needs.prepare.outputs.docs_version }}
+      USE_4TESTING: ${{ github.event.inputs.testing }}
+      # the tests/vagrant scripts expect the VM layout: scripts and build.sh in /home/vagrant
+      INSTALL_DIR: /home/vagrant
+    strategy:
+      fail-fast: false
+      matrix: ${{fromJSON(needs.prepare.outputs.arm_matrix)}}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Prepare runner
+        run: |
+          set -eux
+          # Selenium needs docker, so keep it and the packages
+          sudo CLEAN_DOCKER=0 bash .github/scripts/free-disk-space-linux.sh || true
+
+          # A clean host like in the VM tests: drop the database and web servers preinstalled in the runner image
+          sudo systemctl stop mysql postgresql nginx apache2 2>/dev/null || true
+          sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y 'mysql-*' 'mariadb-*' 'postgresql*' 'nginx*' 'apache2*' || true
+          sudo apt-get autoremove -y || true
+          sudo rm -rf /var/lib/mysql /etc/mysql /var/lib/postgresql
+          df -h /
+
+      - name: Install
+        id: install
+        timeout-minutes: 55
+        run: |
+          set -eux
+
+          # Local scripts from this checkout: the released apps-install.sh has no ARM support
+          if [[ "$USE_4TESTING" == "true" ]]; then
+            echo -e "\e[33mUsing 4testing packages\e[0m"
+            ARGS=(-ds false -tr true -v "$VER" -arg "--skiphardwarecheck true --localscripts true")
+          else
+            echo -e "\e[32mUsing production packages\e[0m"
+            ARGS=(-ds false -tr false -arg "--skiphardwarecheck true --localscripts true")
+          fi
+
+          sudo mkdir -p "$INSTALL_DIR" /tmp/apps
+          sudo cp -a install/OneClickInstall/. /tmp/apps/
+          sudo cp install/common/systemd/build.sh /tmp/apps/build.sh
+          sudo bash -c 'cd "$1" && shift && bash "$@"' _ "$INSTALL_DIR" "$GITHUB_WORKSPACE/tests/vagrant/install.sh" "${ARGS[@]}"
+
+      - name: Health check
+        run: sudo bash -c 'cd "$1" && bash "$2" healthcheck' _ "$INSTALL_DIR" "$GITHUB_WORKSPACE/tests/vagrant/post-install.sh"
+
+      - name: External ports
+        continue-on-error: true
+        run: sudo bash -c 'cd "$1" && bash "$2" external-ports' _ "$INSTALL_DIR" "$GITHUB_WORKSPACE/tests/vagrant/post-install.sh"
+
+      - name: Smoke test
+        timeout-minutes: 20
+        env:
+          LICENSE: ${{ secrets.LICENSE_ENTERPRISE }}
+        run: |
+          set -eux
+          PIP_BREAK_SYSTEM_PACKAGES=1 python3 -m pip install -q --disable-pip-version-check -r tests/smoke/requirements.txt
+
+          # arm64 runners have no Chrome/chromedriver builds, so the browser runs in the selenium container
+          docker pull -q selenium/standalone-chromium:latest
+          docker run -d --name selenium --network host --shm-size 2g selenium/standalone-chromium:latest
+          timeout 90 bash -c 'until curl -sf http://localhost:4444/status | grep -qE "\"ready\":\s*true"; do sleep 2; done'
+
+          SELENIUM_REMOTE_URL=http://localhost:4444 SERVER_URL=http://localhost python3 -m pytest tests/smoke/smoke_test.py -v -s
+
+      # Run even when the health check or the smoke test failed, as long as the install itself succeeded
+      - name: Uninstall
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        timeout-minutes: 25
+        run: sudo bash -c 'cd "$1" && bash "$2" uninstall' _ "$INSTALL_DIR" "$GITHUB_WORKSPACE/tests/vagrant/post-install.sh"
+
+      - name: Collect logs
+        if: always()
+        run: sudo bash -c 'cd "$1" && bash "$2" logs' _ "$INSTALL_DIR" "$GITHUB_WORKSPACE/tests/vagrant/post-install.sh" || true

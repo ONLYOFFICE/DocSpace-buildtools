@@ -39,7 +39,8 @@ install/docker/
 │   │   ├── docker-identity-entrypoint.sh
 │   │   ├── docker-migration-entrypoint.sh
 │   │   ├── docker-healthchecks-entrypoint.sh
-│   │   ├── bin-share-docker-entrypoint.sh / wait-bin-share-docker-entrypoint.sh
+│   │   ├── docker-standalone-entrypoint.sh
+│   │   ├── docker-bin-share-entrypoint.sh / docker-wait-bin-share-entrypoint.sh
 │   │   └── prepare-nginx-router.sh
 │   ├── dev/                  #   local-dev-only Compose overlays (build.backend.docker.py)
 │   │   ├── db.dev.yml            #   MySQL dev overrides (exposed ports)
@@ -47,8 +48,10 @@ install/docker/
 │   │   ├── apps.overcome.yml     #   local-dev overrides
 │   │   ├── dnsmasq.yml           #   local DNS for development
 │   │   └── build-identity.yml    #   ASC.Identity (Java) build
-│   └── stack/supervisor/     #   supervisor configs baked into the image
-└── community/                # single-container community edition stack
+│   └── supervisor/            #   supervisor configs baked into images
+│       ├── stack/                 #   apps-stack.yml services (dotnet/node/java)
+│       └── standalone.conf        #   standalone image
+└── standalone/               # single-container (standalone) stack
 ```
 
 ### Production Compose files
@@ -84,11 +87,11 @@ bash install/OneClickInstall/install-Docker.sh -dm stack
 > Prefer the installer for production. The manual Compose commands below are for
 > custom setups and for understanding how the pieces fit together.
 
-## Community edition
+## Standalone deployment
 
 A lightweight, single-container ONLYOFFICE Apps solution you bring up with a single
 `docker compose` command — no extra infrastructure to wire up. See
-[`community/`](community/README.md).
+[`standalone/`](standalone/README.md).
 
 ## Configuration
 
@@ -114,6 +117,11 @@ Review these before the first start:
 
 Compose is **modular** - files are combined with `-f`. Run all commands from
 `install/docker/` so that `.env` is picked up.
+
+Before direct Compose runs, set these blank secrets in `.env`:
+`MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`, `RABBIT_PASSWORD`, and
+`DOCUMENT_SERVER_JWT_SECRET`. The OneClickInstall Docker installer generates
+them automatically, but plain `docker compose` uses `.env` as-is.
 
 **Modular** (individual application services):
 
@@ -241,11 +249,11 @@ Build groups: `default` (all), `dotnet-services`, `node-services`, `java-service
 
 ## Process management
 
-Supervisor configs baked into the image, under `build/stack/supervisor/`:
+Supervisor configs baked into the images, under `build/supervisor/`:
 
 | File | Purpose |
 |------|---------|
-| `supervisord.conf` | Supervisor daemon settings |
-| `dotnet_services.conf` | .NET service management |
-| `node_services.conf` | Node.js service management |
-| `java_services.conf` | Java service management |
+| `stack/dotnet_services.conf` | Supervisor daemon settings + .NET service management |
+| `stack/node_services.conf` | Node.js service management |
+| `stack/java_services.conf` | Java service management |
+| `standalone.conf` | Supervisor daemon + all services, for the single-container standalone image |

@@ -26,6 +26,10 @@ else
   echo "Error: configuration files not found." && exit 1
 fi
 
+# Certificate changes can recreate Docs; keep mounts adopted by the installer.
+DS_COMPOSE_FILES=(-f "${DOCKERCOMPOSE}/ds.yml")
+[ ! -f "${DOCKERCOMPOSE}/config/ds-mounts.json" ] || DS_COMPOSE_FILES+=(-f "${DOCKERCOMPOSE}/config/ds-mounts.json")
+
 PROXY_SSL_CONF="${DOCKERCOMPOSE}/config/nginx/proxy/onlyoffice-proxy-ssl.conf"
 EXTERNAL_PORT_HTTPS=$(awk -F= '/^[[:space:]]*EXTERNAL_PORT_HTTPS=/{gsub(/^[[:space:]]*/,"",$2); gsub(/"/,"",$2); print $2; exit}' "${DOCKERCOMPOSE}/.env")
 EXTERNAL_PORT_HTTPS="${EXTERNAL_PORT_HTTPS:-443}"
@@ -160,6 +164,8 @@ case $1 in
       else
         echo "Error: PRIVATEKEY_FILE is required unless using a .p12/.pfx file." && exit 1
       fi
+      # A Let's Encrypt certificate handed over as a file (e.g. carried over from the standalone deployment mode) still needs the renewal job.
+      [[ "$CERTIFICATE_FILE" == "${LETSENCRYPT}/"*/fullchain.pem ]] && LETSENCRYPT_ENABLE="true"
     else
       help
     fi
@@ -192,7 +198,7 @@ case $1 in
       else
         ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/${APPS_COMPOSE_FILE} up --force-recreate -d onlyoffice-doceditor onlyoffice-sdk onlyoffice-login onlyoffice-socket onlyoffice-ssoauth
       fi
-      ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/ds.yml up --force-recreate -d
+      ${DOCKER_COMPOSE} "${DS_COMPOSE_FILES[@]}" up --force-recreate -d
     fi
 
     ${DOCKER_COMPOSE} -f ${DOCKERCOMPOSE}/proxy.yml up --force-recreate -d
@@ -300,7 +306,7 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
 
       if [ "$CERT_TRUST_REQUIRED" = true ]; then
         sed -i 's/^\([[:space:]]*\)#-\(.*${CERTIFICATE_PATH}.*\)/\1-\2/' ${DOCKERCOMPOSE}/${APPS_COMPOSE_FILE} ${DOCKERCOMPOSE}/ds.yml
-        ${DOCKER_COMPOSE} -f "${DOCKERCOMPOSE}/ds.yml" up --force-recreate -d
+        ${DOCKER_COMPOSE} "${DS_COMPOSE_FILES[@]}" up --force-recreate -d
       fi
     fi
     

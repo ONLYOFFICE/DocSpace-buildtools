@@ -11,7 +11,19 @@ on:
   workflow_dispatch:
     inputs:
       branches:
-        description: 'Branches for multiarch build (JSON array)'
+        description: 'Base branches (JSON; default: workflow branch)'
+        required: false
+        type: string
+      branch-buildtools:
+        description: 'Buildtools branch (default: base)'
+        required: false
+        type: string
+      branch-server:
+        description: 'Server branch (default: base, then develop)'
+        required: false
+        type: string
+      branch-client:
+        description: 'Client branch (default: base, then develop)'
         required: false
         type: string
 
@@ -32,15 +44,24 @@ jobs:
   build:
     name: ${{ matrix.service }} (${{ matrix.branch }})
     runs-on: ubuntu-latest
+    env:
+      BASE_BRANCH: ${{ matrix.branch }}
+      BUILDTOOLS_BRANCH: ${{ inputs.branch-buildtools || matrix.branch }}
+      SERVER_BRANCH: ${{ inputs.branch-server }}
+      CLIENT_BRANCH: ${{ inputs.branch-client }}
+      TAG_BRANCH: >-
+        ${{ inputs.branch-buildtools && inputs.branch-buildtools != matrix.branch && inputs.branch-buildtools ||
+            inputs.branch-server && inputs.branch-server != matrix.branch && inputs.branch-server ||
+            inputs.branch-client && inputs.branch-client != matrix.branch && inputs.branch-client || matrix.branch }}
     strategy:
       matrix:
-        branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches) }}
-        service: [dotnet, node, java, community]
+        branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches || format('[{0}]', toJSON(github.ref_name))) }}
+        service: [dotnet, node, java, standalone]
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
-          ref: ${{ matrix.branch }}
+          ref: ${{ env.BUILDTOOLS_BRANCH }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
@@ -61,9 +82,11 @@ jobs:
 
       - name: Prepare build variables
         run: |
-          PRODUCT_VERSION=$(echo "${{ matrix.branch }}" | sed '/^release\b\|^hotfix\b\|^feature\b\|^bugfix\b/s/release.*\/\|hotfix.*\/\|feature.*\/\|bugfix.*\///; s/-git-action$//; s/^v//')
-          [ "${PRODUCT_VERSION}" = "develop" ] && PRODUCT_VERSION="develop"
-          echo "DOCKER_TAG=${PRODUCT_VERSION}.${{ github.run_number }}" >> $GITHUB_ENV
+          PRODUCT_VERSION=$(printf '%s' "$BASE_BRANCH" | sed '/^release\b\|^hotfix\b\|^feature\b\|^bugfix\b/s/release.*\/\|hotfix.*\/\|feature.*\/\|bugfix.*\///; s/-git-action$//; s/^v//')
+          TAG_PREFIX="$PRODUCT_VERSION"
+          [ "$TAG_BRANCH" = "$BASE_BRANCH" ] || TAG_PREFIX="${PRODUCT_VERSION}-${TAG_BRANCH}"
+          TAG_PREFIX=$(printf '%s' "$TAG_PREFIX" | LC_ALL=C sed 's/[^a-zA-Z0-9_.-]/-/g; s/^[.-]/_/; s/^$/build/' | cut -c1-100)
+          echo "DOCKER_TAG=${TAG_PREFIX}.${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
           echo "PRODUCT_VERSION=${PRODUCT_VERSION}" >> $GITHUB_ENV
         shell: bash
 
@@ -74,8 +97,11 @@ jobs:
         run: |
           cd .${DOCKER_PATH}
           docker buildx bake -f build/build.hcl ${{ matrix.service }}-services \
-            --set "*.args.GIT_BRANCH=${{ matrix.branch }}" \
-            --set "*.args.PRODUCT_VERSION=${{ env.PRODUCT_VERSION }}" \
+            --set "*.args.GIT_BRANCH=${BASE_BRANCH}" \
+            --set "*.args.BUILDTOOLS_BRANCH=${BUILDTOOLS_BRANCH}" \
+            --set "*.args.SERVER_BRANCH=${SERVER_BRANCH}" \
+            --set "*.args.CLIENT_BRANCH=${CLIENT_BRANCH}" \
+            --set "*.args.PRODUCT_VERSION=${PRODUCT_VERSION}" \
             --set "*.args.BUILD_NUMBER=${{ github.run_number }}" \
             --set "*.platform=linux/amd64,linux/arm64" \
             --set "*.secrets=id=github_token,env=GITHUB_TOKEN" \
@@ -91,14 +117,21 @@ jobs:
     if: ${{ !cancelled() && needs.build.result == 'success' }}
     continue-on-error: true
     runs-on: ubuntu-latest
+    env:
+      BASE_BRANCH: ${{ matrix.branch }}
+      BUILDTOOLS_BRANCH: ${{ inputs.branch-buildtools || matrix.branch }}
+      TAG_BRANCH: >-
+        ${{ inputs.branch-buildtools && inputs.branch-buildtools != matrix.branch && inputs.branch-buildtools ||
+            inputs.branch-server && inputs.branch-server != matrix.branch && inputs.branch-server ||
+            inputs.branch-client && inputs.branch-client != matrix.branch && inputs.branch-client || matrix.branch }}
     strategy:
       matrix:
-        branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches) }}
+        branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches || format('[{0}]', toJSON(github.ref_name))) }}
     steps:
       - name: Checkout ${{ matrix.branch }}
         uses: actions/checkout@v6
         with:
-          ref: ${{ matrix.branch }}
+          ref: ${{ env.BUILDTOOLS_BRANCH }}
 
       - name: Process branch ${{ matrix.branch }}
         env:
@@ -106,12 +139,15 @@ jobs:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME_PAT }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN_PAT }}
         run: |
-          PRODUCT_VERSION=$(echo "${{ matrix.branch }}" | sed '/^release\b\|^hotfix\b\|^feature\b\|^bugfix\b/s/release.*\/\|hotfix.*\/\|feature.*\/\|bugfix.*\///; s/-git-action$//; s/^v//')
-          DOCKER_TAG="${PRODUCT_VERSION}.${{ github.run_number }}"
+          PRODUCT_VERSION=$(printf '%s' "$BASE_BRANCH" | sed '/^release\b\|^hotfix\b\|^feature\b\|^bugfix\b/s/release.*\/\|hotfix.*\/\|feature.*\/\|bugfix.*\///; s/-git-action$//; s/^v//')
+          TAG_PREFIX="$PRODUCT_VERSION"
+          [ "$TAG_BRANCH" = "$BASE_BRANCH" ] || TAG_PREFIX="${PRODUCT_VERSION}-${TAG_BRANCH}"
+          TAG_PREFIX=$(printf '%s' "$TAG_PREFIX" | LC_ALL=C sed 's/[^a-zA-Z0-9_.-]/-/g; s/^[.-]/_/; s/^$/build/' | cut -c1-100)
+          DOCKER_TAG="${TAG_PREFIX}.${GITHUB_RUN_NUMBER}"
 
-          sudo GITHUB_REPOSITORY=${{ github.repository }} BRANCH=${{ matrix.branch }} \
+          sudo GITHUB_REPOSITORY="${GITHUB_REPOSITORY}" BRANCH="${BUILDTOOLS_BRANCH}" \
             DOCKER_REPOSITORY=${{ env.REPO }} DOCKER_PREFIX=${{ env.DOCKER_IMAGE_PREFIX }} DOCKER_TAG=$DOCKER_TAG \
             DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME} DOCKERHUB_TOKEN=${DOCKERHUB_TOKEN} \
             bash .github/scripts/docker-images-availability.sh
 
-          gh workflow run "ci-oci-docker-install.yml" --repo "${{ github.repository }}" --ref "${{ matrix.branch }}" --field offline=false --field testing=true --field tag=$DOCKER_TAG
+          gh workflow run "ci-oci-docker-install.yml" --repo "${GITHUB_REPOSITORY}" --ref "${BUILDTOOLS_BRANCH}" --field offline=false --field testing=true --field tag="$DOCKER_TAG"

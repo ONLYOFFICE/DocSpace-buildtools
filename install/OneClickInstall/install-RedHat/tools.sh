@@ -54,7 +54,7 @@ function make_swap () {
 		chmod 600 "$SWAPFILE"
 		mkswap "$SWAPFILE"
 		swapon "$SWAPFILE"
-		echo "$SWAPFILE none swap sw 0 0" >> /etc/fstab
+		awk -v swapfile="$SWAPFILE" '$1 == swapfile && $3 == "swap" { found = 1 } END { exit !found }' /etc/fstab || echo "$SWAPFILE none swap sw 0 0" >> /etc/fstab
 	fi
 }
 
@@ -82,8 +82,16 @@ check_hardware () {
 	fi
 
 	if [ -n "${requirements_not_met}" ]; then
-		printf "Minimal requirements are not met, your system needs:%b\n\nTo skip this check, use the --skiphardwarecheck true parameter\n" "${requirements_not_met}"
-		exit 1
+		printf "Minimal requirements are not met, your system needs:%b\n\n" "${requirements_not_met}"
+
+		# Without a terminal or in non-interactive mode there is nobody to ask
+		if [ "${NON_INTERACTIVE:-false}" = "true" ] || [ ! -t 0 ]; then
+			echo "To skip this check, use the --skiphardwarecheck true parameter"
+			exit 1
+		fi
+
+		read -r -p "Continue installation anyway? (y/N): " CONTINUE_CHOICE
+		[[ "${CONTINUE_CHOICE,,}" =~ ^(y|yes)$ ]] || exit 1
 	fi
 }
 
@@ -128,10 +136,10 @@ if [ "$DIST" == "fedora" ]; then
 	OPENRESTY_REV=$([ "$REV" -ge 37 ] && echo 36 || echo "$REV")
 fi
 
-# Disable Cockpit to free 9090 needed by identity-api
+# Disable Cockpit to free 9090 for identity-api.
 systemctl list-sockets | awk '$1 ~ /:9090$/ && $2 ~ /cockpit/ {print $2; exit}' | xargs -r systemctl disable --now 2>/dev/null || true
 
-# Check if it's Centos less than 8 or Fedora release is out of service
+# Check unsupported CentOS/Fedora releases.
 if { [[ "${DIST}" == "centos" && "${REV}" -lt 9 ]] || \
      [[ "${DIST}" == "redhat" && "${REV}" -lt 8 ]] || \
      { [[ "${DIST}" == "fedora" ]] && ( . /etc/os-release; [ -n "${SUPPORT_END:-}" ] && [ "$(date -d "$SUPPORT_END" +%Y%m%d)" -lt "$(date +%Y%m%d)" ] ); }; }; then
