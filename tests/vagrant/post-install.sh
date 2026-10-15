@@ -80,6 +80,7 @@ service_exists() {
 
 dependency_logs() {
   local SERVICE
+  local OPENSEARCH_INSTALL_LOG="/var/log/opensearch/install_demo_configuration.log"
   local SERVICES=(
     opensearch.service
     opensearch-dashboards.service
@@ -97,6 +98,14 @@ dependency_logs() {
   echo "$LINE_SEPARATOR"
   echo "${COLOR_BLUE}DEPENDENCY DIAGNOSTICS${COLOR_RESET}"
   echo "$LINE_SEPARATOR"
+
+  # Package installation can fail before the service starts.
+  if [ -f "$OPENSEARCH_INSTALL_LOG" ]; then
+    echo "$LINE_SEPARATOR"
+    echo "${COLOR_GREEN}OpenSearch installation log: $OPENSEARCH_INSTALL_LOG${COLOR_RESET}"
+    echo "$LINE_SEPARATOR"
+    tail -n 200 "$OPENSEARCH_INSTALL_LOG" || true
+  fi
 
   for SERVICE in "${SERVICES[@]}"; do
     service_exists "$SERVICE" || continue
@@ -145,9 +154,11 @@ services_logs() {
 
 uninstall_apps() {
   cd /home/vagrant
-  # --localscripts true: reuse the platform script already placed here by install.sh instead of
-  # downloading it from download.onlyoffice.com/apps, which doesn't exist until this release ships.
-  DEBIAN_FRONTEND=noninteractive bash apps-install.sh package -uni true -log false -ls true <<< "Y" \
+  local PLATFORM_SCRIPT="install-Debian.sh" LOCAL_SCRIPTS=false
+  [[ -f /etc/redhat-release ]] && PLATFORM_SCRIPT="install-RedHat.sh"
+  [[ -f "$PLATFORM_SCRIPT" ]] && LOCAL_SCRIPTS=true
+
+  DEBIAN_FRONTEND=noninteractive bash apps-install.sh package -uni true -log false -ls "$LOCAL_SCRIPTS" <<< "Y" \
     || { echo "::error::Uninstall failed"; exit 1; }
   echo "${COLOR_GREEN}[OK] Package uninstalled${COLOR_RESET}"
 }

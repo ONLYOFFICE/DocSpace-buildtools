@@ -48,7 +48,6 @@ check_archives:
 	wait; \
 	tar -xf ${SOURCE_PATH}/document-formats.tar.gz --wildcards --strip-components=1 -C ${BUILDTOOLS_PATH}/config/document-formats '*/onlyoffice-docs-formats.json' \
 		|| { echo "Error: failed to extract onlyoffice-docs-formats.json from document-formats.tar.gz"; exit 1; }; \
-	$(call extract_archive,${SOURCE_PATH}/ui-kit.tar.gz,ui-kit,-C ${CLIENT_PATH}/libs); \
 	echo "Source archives check passed."
 
 override_dh_auto_build: check_archives

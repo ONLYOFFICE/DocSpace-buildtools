@@ -52,8 +52,14 @@ if [[ "$DEP_CHOICE" =~ ^(y|yes|)$ ]]; then
     UNINSTALL_DEPENDENCIES=true
 fi
 
-# Get packages to uninstall
-mapfile -t PACKAGES_TO_UNINSTALL < <(dpkg -l | awk '{print $2}' | grep -E "^(${package_sysname}|${legacy_product})" || true)
+# Get Apps packages to uninstall
+mapfile -t PACKAGES_TO_UNINSTALL < <(dpkg -l | awk '{print $2}' | grep -E "^(${package}|${legacy_product})(-|:|$)" || true)
+
+mapfile -t DOCUMENT_SERVER_PACKAGES < <(dpkg -l | awk '{print $2}' | grep -E "^${package_sysname}-documentserver(-de|-ee)?(:|$)" || true)
+if [ "${#DOCUMENT_SERVER_PACKAGES[@]}" -gt 0 ]; then
+    read -r -p "Also uninstall ${package_sysname^^} Docs? (y/N): " DOCS_CHOICE || DOCS_CHOICE=""
+    [[ "${DOCS_CHOICE,,}" =~ ^(y|yes)$ ]] && PACKAGES_TO_UNINSTALL+=("${DOCUMENT_SERVER_PACKAGES[@]}")
+fi
 
 DEPENDENCIES=(
     nodejs aspnetcore-runtime-10.0 mysql-server mysql-client postgresql
@@ -66,7 +72,7 @@ if [ "$UNINSTALL_DEPENDENCIES" = true ]; then
     mapfile -t -O "${#PACKAGES_TO_UNINSTALL[@]}" PACKAGES_TO_UNINSTALL < <(dpkg-query -W -f='${Package}\n' | grep -E "^postgresql(-[0-9]+)?(-.*)?$")
 fi
 
-# Stop app services first - some hang on SIGTERM once their dependencies are gone, eating the full TimeoutStopSec.
+# Stop app services before their dependencies disappear.
 systemctl stop "${product}-*.service" "${legacy_product}-*.service" >/dev/null 2>&1 || true
 
 # Uninstall packages and clean up
@@ -84,4 +90,3 @@ done
 
 echo -e "Uninstallation of ${product_name}" \
          "$( [ "$UNINSTALL_DEPENDENCIES" = true ] && echo "and all dependencies" ) \e[32mcompleted.\e[0m"
-

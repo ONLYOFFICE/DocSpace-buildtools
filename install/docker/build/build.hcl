@@ -221,10 +221,10 @@ target "onlyoffice-node-services" {
   tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-node:${DOCKER_TAG}"]
 }
 
-target "onlyoffice-community" {
+target "onlyoffice-standalone" {
   context    = "build"
   dockerfile = "${DOCKERFILE}"
-  target     = "community"
+  target     = "standalone"
   tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}:${DOCKER_TAG}"]
   args = {
     DEPLOY_ARGS = "deploy:preview"
@@ -264,7 +264,7 @@ group "default" {
     "onlyoffice-studio-notify",
     "onlyoffice-telegram",
     "onlyoffice-wait-bin-share",
-    "onlyoffice-community",
+    "onlyoffice-standalone",
   ]
 }
 
@@ -314,9 +314,9 @@ group "java-services" {
   ]
 }
 
-group "community-services" {
+group "standalone-services" {
   targets = [
-    "onlyoffice-community",
+    "onlyoffice-standalone",
   ]
 }
 

@@ -4,7 +4,7 @@ services:
     container_name: ${DOCUMENT_CONTAINER_NAME}
     # Uncomment to load custom Configuration Parameters migrated from an adopted install.
     #env_file:
-    #  - ds.env
+    #  - config/ds.env
     environment:
       - JWT_ENABLED=true
       - JWT_SECRET=${DOCUMENT_SERVER_JWT_SECRET}
