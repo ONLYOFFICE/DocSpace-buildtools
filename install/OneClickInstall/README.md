@@ -345,6 +345,33 @@ sudo bash apps-install.sh docker \
   --deployment-mode microservices
 ```
 
+## 🔄 Installing over ONLYOFFICE Docs and rolling back
+
+If standalone ONLYOFFICE Docs is already installed, the installer reuses it instead of deploying a second Document Server.
+
+### Packages (DEB/RPM)
+
+Docs (`onlyoffice-documentserver`, `-de` or `-ee`) is detected automatically. Before changing anything, the installer saves a snapshot of its nginx configuration, Let's Encrypt renewal settings and `Data` permissions. Then:
+
+- If Docs uses a port required by Apps, it is moved to another one (`8083` by default).
+- If Docs serves HTTPS with a valid certificate, Apps takes it over and Docs switches to plain HTTP on `127.0.0.1:8083`.
+- If the installation fails, Docs is restored automatically; re-run the installer to finish.
+
+**Rolling back to standalone Docs:**
+
+```bash
+sudo bash apps-install.sh package --uninstall true
+```
+
+Answer "N" to "Also uninstall ONLYOFFICE Docs?" to keep Docs: the snapshot is restored before the Apps packages are removed. If it is missing or the restoration fails, the script stops before removing any packages.
+
+### Docker
+
+A Docs container started with `docker run` (not from a Compose project) is attached instead of deploying a new one, with its image tag, data and HTTPS certificate. The original container is kept until the replacement is healthy and restored if the installation fails.
+
+> [!NOTE]
+> Unlike packages, `--uninstall true` does not recreate the original Docs container. To keep the Docs data, answer "Y" to "Keep configuration and Docs data for reinstallation?" and "n" to removing the data volumes.
+
 ## 🖥 System Requirements
 
 | Resource   | Minimum              |
