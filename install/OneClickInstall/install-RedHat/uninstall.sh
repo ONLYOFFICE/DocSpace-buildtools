@@ -44,6 +44,14 @@ echo "
 #######################################
 "
 
+mapfile -t PACKAGES_TO_UNINSTALL < <(rpm -qa --qf '%{NAME}\n' | grep -E "^(${package}|${legacy_product})(-|$)" || true)
+if [ "${#PACKAGES_TO_UNINSTALL[@]}" -eq 0 ] \
+    && [ ! -f "/etc/${package_sysname}/documentserver/nginx/ds.conf.apps.bak" ] \
+    && [ ! -f "/etc/${package_sysname}/documentserver/nginx/ds.conf.ssl.bak" ]; then
+    echo "No Apps packages to uninstall."
+    return 0
+fi
+
 # Ask to uninstall dependencies
 read -r -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " DEP_CHOICE
 DEP_CHOICE=${DEP_CHOICE,,}
@@ -52,32 +60,60 @@ if [[ "$DEP_CHOICE" =~ ^(y|yes|)$ ]]; then
     UNINSTALL_DEPENDENCIES=true
 fi
 
-# Get Apps packages to uninstall
-mapfile -t PACKAGES_TO_UNINSTALL < <(rpm -qa --qf '%{NAME}\n' | grep -E "^(${package}|${legacy_product})(-|$)" || true)
-
+KEEP_DOCS=false
 mapfile -t DOCUMENT_SERVER_PACKAGES < <(rpm -qa --qf '%{NAME}\n' | grep -E "^${package_sysname}-documentserver(-de|-ee)?$" || true)
 if [ "${#DOCUMENT_SERVER_PACKAGES[@]}" -gt 0 ]; then
     read -r -p "Also uninstall ${package_sysname^^} Docs? (y/N): " DOCS_CHOICE || DOCS_CHOICE=""
-    [[ "${DOCS_CHOICE,,}" =~ ^(y|yes)$ ]] && PACKAGES_TO_UNINSTALL+=("${DOCUMENT_SERVER_PACKAGES[@]}")
+    if [[ "${DOCS_CHOICE,,}" =~ ^(y|yes)$ ]]; then
+        PACKAGES_TO_UNINSTALL+=("${DOCUMENT_SERVER_PACKAGES[@]}")
+    else
+        KEEP_DOCS=true
+    fi
 fi
 
 DEPENDENCIES=(
-    nodejs aspnetcore-runtime-10.0 mysql-community-server postgresql
-    postgresql-server redis rabbitmq-server ffmpeg opensearch
-    opensearch-dashboards fluent-bit openresty
+    aspnetcore-runtime-10.0 opensearch opensearch-dashboards fluent-bit openresty
 )
 
 if [ "$UNINSTALL_DEPENDENCIES" = true ]; then
-    rpm -q valkey &>/dev/null && DEPENDENCIES+=("valkey")
+    # Docs may use either PostgreSQL or MySQL, including a pre-existing database.
+    if [ "${KEEP_DOCS}" = false ]; then
+        DEPENDENCIES+=(nodejs mysql-community-server postgresql postgresql-server redis rabbitmq-server ffmpeg)
+        rpm -q valkey &>/dev/null && DEPENDENCIES+=("valkey")
+    fi
     PACKAGES_TO_UNINSTALL+=("${DEPENDENCIES[@]}")
 fi
 
-# Stop app services before their dependencies disappear.
-systemctl stop "${product}-*.service" "${legacy_product}-*.service" >/dev/null 2>&1 || true
+remove_apps_packages() {
+    systemctl stop "${product}-*.service" "${legacy_product}-*.service" >/dev/null 2>&1 || true
+    [ "${#PACKAGES_TO_UNINSTALL[@]}" -gt 0 ] || return 0
+    yum remove -y "${PACKAGES_TO_UNINSTALL[@]}" --setopt=clean_requirements_on_remove=false --disableplugin=updateinfo
+}
 
-# Uninstall packages and clean up
-yum remove -y "${PACKAGES_TO_UNINSTALL[@]}" --setopt=clean_requirements_on_remove=false --disableplugin=updateinfo
-yum autoremove -y && yum clean all
+# Restore the standalone Docs configuration before removing Apps.
+if [ "${KEEP_DOCS}" = true ]; then
+    if [ "${LOCAL_SCRIPTS}" = "true" ]; then
+        source common/preserve-docs.sh
+    else
+        source_remote_script common/preserve-docs.sh
+    fi
+
+    restore_docs_configuration "/etc/${package_sysname}/documentserver/nginx/ds.conf" || exit 1
+fi
+# Package removal can fail partway through; keep the restored Docs configuration.
+REMOVE_RESULT=0
+remove_apps_packages || REMOVE_RESULT=$?
+if [ "${KEEP_DOCS}" = true ]; then
+    restore_docs_data_access "/etc/${package_sysname}/documentserver/nginx/ds.conf" || exit 1
+fi
+[ "${REMOVE_RESULT}" -eq 0 ] || exit "${REMOVE_RESULT}"
+[ "${KEEP_DOCS}" = true ] || yum autoremove -y
+yum clean all
+
+rm -f -- "/etc/cron.weekly/${product}-renew-letsencrypt" "/etc/cron.weekly/${legacy_product}-renew-letsencrypt" \
+    /etc/letsencrypt/renewal-hooks/deploy/onlyoffice-apps-openresty
+rm -f -- "/etc/${package_sysname}/documentserver/nginx/ds.conf".{apps.bak,ssl.bak,apps.install-pending} \
+    "/etc/${package_sysname}/documentserver/nginx/ds.conf".apps.*.bak
 
 # Uninstall swap file if it exists
 for SWAPFILE_NAME in "${product}" "${legacy_product}"; do

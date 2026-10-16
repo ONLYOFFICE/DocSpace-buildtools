@@ -8,6 +8,7 @@ running **ONLYOFFICE Apps** in containers.
 - [Prerequisites](#prerequisites)
 - [Directory layout](#directory-layout)
 - [Quick start](#quick-start)
+- [Offline installation](#offline-installation)
 - [Configuration](#configuration)
 - [Running with Docker Compose](#running-with-docker-compose)
 - [Building images](#building-images)
@@ -92,6 +93,23 @@ bash install/OneClickInstall/install-Docker.sh -dm stack
 A lightweight, single-container ONLYOFFICE Apps solution you bring up with a single
 `docker compose` command — no extra infrastructure to wire up. See
 [`standalone/`](standalone/README.md).
+
+## Offline installation
+
+A single script that bundles everything needed for the [standalone](standalone/README.md) deployment: the Docker Engine, Compose and CNI plugins (installed only when Docker is missing), the Apps and Document Server images, and the configuration files.
+
+| Architecture | Archive |
+|--------------|---------|
+| x86_64 | `offline-apps-installation.sh` |
+| ARM64 | `offline-apps-installation-arm.sh` |
+
+Download it on a machine with internet access from `https://download.onlyoffice.com/apps/offline/<archive>`, copy it to the target host and run:
+
+```bash
+sudo bash offline-apps-installation.sh
+```
+
+The archive accepts the same flags as `install-Docker.sh` (see `-h`). Before unpacking it checks the free space for the temporary files and the Docker root directory (skip with `--skiphardwarecheck true`); `iptables` must be present if Docker is not installed.
 
 ## Configuration
 

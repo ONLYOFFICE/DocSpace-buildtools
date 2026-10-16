@@ -64,7 +64,18 @@ command_exists () {
 
 # Prevent package auto-updates.
 hold_package_version() {
-	local pkg pkgs=("dotnet-*" "aspnetcore-*" opensearch redis-server rabbitmq-server opensearch-dashboards fluent-bit)
+	local pkg dependency i pkgs=("dotnet-*" "aspnetcore-*" opensearch redis-server rabbitmq-server opensearch-dashboards fluent-bit)
+	if [ "${PRESERVE_DOCS}" = true ]; then
+		# Leave the holds and update policy of Docs dependencies unchanged.
+		for i in "${!pkgs[@]}"; do
+			for dependency in "${DOCS_RUNTIME_PACKAGES[@]}"; do
+				if [[ "${dependency%%:*}" == ${pkgs[i]} ]]; then
+					unset 'pkgs[i]'
+					break
+				fi
+			done
+		done
+	fi
 	for pkg in "${pkgs[@]}"; do
 		command -v apt-mark >/dev/null 2>&1 && apt-mark showhold | grep -q "^$pkg" && apt-mark unhold "$pkg"
 	done

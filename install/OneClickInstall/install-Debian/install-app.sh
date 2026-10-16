@@ -69,7 +69,7 @@ setup_postgres_db() {
 	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/db-name select "$DS_DB_NAME" | debconf-set-selections
 }
 
-if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ]; then
+if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ] && [ "${PRESERVE_DOCS}" = false ]; then
 	ds_pkg_installed_name=$(dpkg -l | awk -v pkg="${package_sysname}-documentserver" '$1=="ii" && index($2,pkg)==1{print $2}' | tail -n1)
     if [ -z "${ds_pkg_installed_name}" ]; then
         RECONFIGURE_PRODUCT="true"; DOCUMENT_SERVER_INSTALLED="false"
@@ -147,7 +147,7 @@ if [ "$PRODUCT_INSTALLED" = "false" ]; then
 	echo "${package}" "${package}"/db-user select "$MYSQL_SERVER_USER" | debconf-set-selections
 	echo "${package}" "${package}"/db-pwd select "$MYSQL_SERVER_PASS" | debconf-set-selections
 
-	if apt-get install -y "${package}${PRODUCT_VERSION:+*=${PRODUCT_VERSION}}"; then
+	if apt-get "${DOCS_APT_OPTIONS[@]}" install -y "${package}${PRODUCT_VERSION:+*=${PRODUCT_VERSION}}"; then
 		# Clear the password in debconf for a successful update when using external MySQL
 		if [ "$(echo "GET ${package}/db-pwd" | debconf-communicate "${package}" | awk '{print $2}')" = "$MYSQL_SERVER_PASS" ]; then
 			printf "SET ${package}/db-host\nSET ${package}/db-name\nSET ${package}/db-user\nSET ${package}/db-pwd\nSET ${package}/db-port\n" | debconf-communicate "${package}" >/dev/null
@@ -160,9 +160,9 @@ elif [ "$UPDATE" = "true" ] && [ "$PRODUCT_INSTALLED" = "true" ]; then
 	CURRENT_VERSION=$(dpkg-query -W -f='${Version}' "${package}" 2>/dev/null) || true
 	AVAILABLE_VERSIONS=$(apt show "${package}" 2>/dev/null | grep -E '^Version:' | awk '{print $2}')
 	if [ -z "${CURRENT_VERSION}" ]; then # (DS v4.0.0) take over an installation made before the rename to ONLYOFFICE Apps
-		apt-get install -o DPkg::options::="--force-confnew" -y "${package}" opensearch="${OPENSEARCH_VERSION}"
+		apt-get "${DOCS_APT_OPTIONS[@]}" install -o DPkg::options::="--force-confnew" -y "${package}" opensearch="${OPENSEARCH_VERSION}"
 	elif [[ "$AVAILABLE_VERSIONS" != *"$CURRENT_VERSION"* ]]; then
-		apt-get install -o DPkg::options::="--force-confnew" -y --only-upgrade "${package}" opensearch="${OPENSEARCH_VERSION}"
+		apt-get "${DOCS_APT_OPTIONS[@]}" install -o DPkg::options::="--force-confnew" -y --only-upgrade "${package}" opensearch="${OPENSEARCH_VERSION}"
 	elif [ "${RECONFIGURE_PRODUCT}" = "true" ]; then
 		DEBIAN_FRONTEND=noninteractive dpkg-reconfigure "${package}"
 	fi

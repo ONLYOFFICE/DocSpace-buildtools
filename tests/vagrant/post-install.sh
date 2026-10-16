@@ -158,7 +158,7 @@ uninstall_apps() {
   [[ -f /etc/redhat-release ]] && PLATFORM_SCRIPT="install-RedHat.sh"
   [[ -f "$PLATFORM_SCRIPT" ]] && LOCAL_SCRIPTS=true
 
-  DEBIAN_FRONTEND=noninteractive bash apps-install.sh package -uni true -log false -ls "$LOCAL_SCRIPTS" <<< "Y" \
+  DEBIAN_FRONTEND=noninteractive bash apps-install.sh package -uni true -log false -ls "$LOCAL_SCRIPTS" <<< $'Y\nY' \
     || { echo "::error::Uninstall failed"; exit 1; }
   echo "${COLOR_GREEN}[OK] Package uninstalled${COLOR_RESET}"
 }
