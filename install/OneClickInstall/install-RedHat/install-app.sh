@@ -48,7 +48,7 @@ EOF
 
 for SVC in $package_services; do
 		systemctl start $SVC
-		systemctl enable $SVC
+		[ "${PRESERVE_DOCS}" = true ] || systemctl enable $SVC
 done
 
 ds_pkg_name="${package_sysname}-documentserver"
@@ -69,7 +69,7 @@ setup_postgres_db() {
 	fi
 }
 
-if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ]; then
+if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ] && [ "${PRESERVE_DOCS}" = false ]; then
 	ds_pkg_installed_name=$(rpm -qa --qf '%{NAME}\n' | grep "${package_sysname}"-documentserver)
 	if [ -n "${ds_pkg_installed_name}" ] && [ "${ds_pkg_installed_name}" != "${ds_pkg_name}" ]; then
 		"${package_manager}" -y remove "${ds_pkg_installed_name}" --setopt=clean_requirements_on_remove=false
@@ -207,14 +207,14 @@ fi
 { ${package_manager} check-update ${package}; PRODUCT_CHECK_UPDATE=$?; } || true
 if [ "$PRODUCT_INSTALLED" = "false" ]; then
 	[[ ${PRODUCT_VERSION} =~ ^[0-9]+(\.[0-9]+){3}$ ]] && PRODUCT_VERSION="${PRODUCT_VERSION%.*}-${PRODUCT_VERSION##*.}"
-	${package_manager} install -y "${package}${PRODUCT_VERSION:+-${PRODUCT_VERSION}}" --best --allowerasing $TESTING_REPO
+	${package_manager} "${DOCS_RPM_OPTIONS[@]}" install -y "${package}${PRODUCT_VERSION:+-${PRODUCT_VERSION}}" --best "${APPS_ERASING_OPTIONS[@]}" $TESTING_REPO
 	"${product}"-configuration -mysqlh "${MYSQL_SERVER_HOST}" -mysqlport "${MYSQL_SERVER_PORT}" -mysqld "${MYSQL_SERVER_DB_NAME}" -mysqlu "${MYSQL_SERVER_USER}" -mysqlp "${MYSQL_ROOT_PASS}"
 elif ! rpm -q "${package}" >/dev/null 2>&1; then # (DS v4.0.0) take over an installation made before the rename to ONLYOFFICE Apps
 	[[ ${PRODUCT_VERSION} =~ ^[0-9]+(\.[0-9]+){3}$ ]] && PRODUCT_VERSION="${PRODUCT_VERSION%.*}-${PRODUCT_VERSION##*.}"
-	${package_manager} install -y "${package}${PRODUCT_VERSION:+-${PRODUCT_VERSION}}" --best --allowerasing $TESTING_REPO
+	${package_manager} "${DOCS_RPM_OPTIONS[@]}" install -y "${package}${PRODUCT_VERSION:+-${PRODUCT_VERSION}}" --best "${APPS_ERASING_OPTIONS[@]}" $TESTING_REPO
 	"${product}"-configuration
 elif [[ "${PRODUCT_CHECK_UPDATE}" -eq "${UPDATE_AVAILABLE_CODE}" || "${RECONFIGURE_PRODUCT}" = "true" ]]; then
-	${package_manager} -y update "${package}" --best --allowerasing $TESTING_REPO
+	${package_manager} "${DOCS_RPM_OPTIONS[@]}" -y update "${package}" --best "${APPS_ERASING_OPTIONS[@]}" $TESTING_REPO
 	"${product}"-configuration
 fi
 
