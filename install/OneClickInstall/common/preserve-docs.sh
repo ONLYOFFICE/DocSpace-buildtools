@@ -205,6 +205,7 @@ prepare_docs_nginx() {
 					cp -f -- "${DS_BACKUP_FILE}" "$DS_CONF_FILE"
 					INHERIT_SSL_DOMAIN=""; INHERIT_SSL_CERT=""; INHERIT_SSL_KEY=""
 				else
+					{ command -v debconf-set-selections >/dev/null 2>&1 && echo "${DS_INSTALLED_PKG_NAME}" "${DS_COMMON_NAME:-onlyoffice}"/listenaddress string "127.0.0.1:${DS_NEW_PORT}" | debconf-set-selections; } || true
 					systemctl restart nginx 2>/dev/null || echo "Warning: failed to restart nginx after switching ${DS_INSTALLED_PKG_NAME} to HTTP; check its status manually." >&2
 					timeout 5 bash -c "while ss -H -lnt | awk '{print \$4}' | grep -qE ':(80|443)\$'; do sleep 0.2; done" || true
 				fi
@@ -230,6 +231,8 @@ prepare_docs_nginx() {
 			echo "${DS_INSTALLED_PKG_NAME} is using port ${DS_CURRENT_PORT}, required by ${product_name}. Switching it to port ${DS_NEW_PORT}."
 			DOCS_RECONFIGURED=true
 			sed -i -E "s/(^[[:space:]]*listen[[:space:]]+(\S*:)?)${DS_CURRENT_PORT}([[:space:];])/\1${DS_NEW_PORT}\3/" "$DS_CONF_FILE"
+			DS_NEW_LISTENADDRESS="$(grep -oP '^\s*listen\s+\K[0-9]{1,3}(\.[0-9]{1,3}){3}(?=:'"${DS_NEW_PORT}"'\b)' "$DS_CONF_FILE" | head -1)"
+			{ command -v debconf-set-selections >/dev/null 2>&1 && echo "${DS_INSTALLED_PKG_NAME}" "${DS_COMMON_NAME:-onlyoffice}"/listenaddress string "${DS_NEW_LISTENADDRESS:-0.0.0.0}:${DS_NEW_PORT}" | debconf-set-selections; } || true
 			systemctl restart nginx 2>/dev/null || echo "Warning: failed to restart nginx after moving ${DS_INSTALLED_PKG_NAME} to port ${DS_NEW_PORT}; check its status manually." >&2
 			timeout 5 bash -c "while ss -H -lnt | awk '{print \$4}' | grep -qE ':${DS_CURRENT_PORT}\$'; do sleep 0.2; done" || true
 		fi
