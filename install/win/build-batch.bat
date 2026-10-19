@@ -146,6 +146,12 @@ REM echo ######## Delete temp files ########
 del /f /q buildtools\install\win\*.back.*
 del /f /q sed*
 
+REM echo ######## Sign Windows artifacts before packaging ########
+IF "%SignBuild%"=="true" (
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "buildtools\install\win\sign-artifacts.ps1"
+if errorlevel 1 exit /b 1
+)
+
 REM echo ######## Build MySQL Server Installer ########
 iscc /Qp /S"byparam="signtool" sign /a /n "%publisher%" /t http://timestamp.digicert.com $f" "buildtools\install\win\MySQL Server Installer Runner.iss"
 
