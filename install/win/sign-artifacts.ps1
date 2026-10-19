@@ -9,7 +9,7 @@ if (-not (Test-Path $signScript)) {
 }
 
 $files = Get-ChildItem -Path $folderPath -Recurse -File |
-    Where-Object { $_.Extension -in '.exe', '.dll', '.pdb' }
+    Where-Object { $_.Extension -in '.exe', '.dll' }
 
 Write-Host "Found files count: $($files.Count)"
 
