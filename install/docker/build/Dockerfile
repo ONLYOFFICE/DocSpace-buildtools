@@ -130,7 +130,6 @@ RUN for svc in ASC.Socket.IO ASC.SsoAuth ASC.AI.Chat; do \
 # build frondend from client
 FROM --platform=$BUILDPLATFORM node:${NODE_VERSION} AS build-node
 ARG SRC_PATH
-ARG BUILD_ARGS="build"
 ARG DEPLOY_ARGS="deploy"
 
 WORKDIR ${SRC_PATH}
@@ -144,7 +143,6 @@ ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN (command -v corepack >/dev/null || npm install -g corepack) && \
     corepack enable && \
     pnpm install && \
-    pnpm ${BUILD_ARGS} && \
     pnpm run ${DEPLOY_ARGS} && \
     find ${SRC_PATH}/publish/web -type f \( -name "*.js.map" -o -name "*.css.map" \) -delete && \
     rm -rf "$(pnpm store path)" /root/.cache ${SRC_PATH}/client ${SRC_PATH}/buildtools
