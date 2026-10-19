@@ -94,6 +94,7 @@ EOF
 # .net build
 FROM --platform=$BUILDPLATFORM $DOTNET_SDK AS build-dotnet
 ARG DEBIAN_FRONTEND=noninteractive
+ARG BUILD_SITE_CORE=false
 ARG SRC_PATH
 
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
@@ -108,6 +109,11 @@ RUN PUBLISH_ARGS='-c Release --self-contained false -p:DebugType=None -p:DebugSy
         RID="${PAIR%%:*}"; ARCH="${PAIR##*:}"; \
         dotnet publish common/Tools/ASC.Migration.Runner/ASC.Migration.Runner.csproj $PUBLISH_ARGS -r "$RID" -o "${SRC_PATH}/publish/services/ASC.Migration.Runner/service/" && \
         dotnet publish ASC.Web.slnx $PUBLISH_ARGS -r "$RID" -p:PublishProfile=ReleaseProfile && \
+        if [ "$BUILD_SITE_CORE" = "true" ]; then \
+            dotnet publish common/services/ASC.Site.Core/ASC.Site.Core.csproj \
+            $PUBLISH_ARGS -r "$RID" \
+            -o "${SRC_PATH}/publish/services/ASC.Site.Core/service/"; \
+        fi && \
         mv ${SRC_PATH}/publish ${SRC_PATH}/publish-${ARCH} || exit 1; \
     done && \
     dotnet nuget locals all --clear && \
@@ -542,6 +548,13 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Migration.Runner/service/ .
 
 ENTRYPOINT ["/bin/bash", "/usr/bin/docker-migration-entrypoint.sh"]
+
+## ASC.Site.Core ##
+FROM dotnetrun AS site-core
+WORKDIR ${BUILD_PATH}/services/ASC.Site.Core/service
+COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Site.Core/service/ .
+
+CMD ["ASC.Site.Core.dll", "ASC.Site.Core"]
 
 ## ASC.Identity.Authorization ##
 FROM javarun AS identity-authorization
