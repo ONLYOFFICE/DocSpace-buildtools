@@ -5,7 +5,8 @@ run-name: >-
   ${{ github.event.action == 'cron-trigger-action'   && '[Cron]'   ||
       github.event.action == 'config-trigger-action' && '[Config]' ||
       github.event.action == 'client-trigger-action' && '[Client]' ||
-      github.event.action == 'server-trigger-action' && '[Server]' || '' }}
+      github.event.action == 'server-trigger-action' && '[Server]' ||
+      github.event_name == 'workflow_dispatch' && inputs.build-target == 'site-core' && '[Site Core]' || '' }}
 
 on:
   workflow_dispatch:
@@ -26,11 +27,14 @@ on:
         description: 'Client branch (default: base, then develop)'
         required: false
         type: string
-      build-site-core:
-        description: 'Build and push the site-core image'
-        required: false
-        type: boolean
-        default: false
+      build-target:
+        description: 'Images to build'
+        required: true
+        type: choice
+        options:
+          - all
+          - site-core
+        default: all
 
   repository_dispatch:
     types:
@@ -48,6 +52,7 @@ env:
 jobs:
   build:
     name: ${{ matrix.service }} (${{ matrix.branch }})
+    if: ${{ github.event_name == 'repository_dispatch' || inputs.build-target == 'all' }}
     runs-on: ubuntu-latest
     env:
       BASE_BRANCH: ${{ matrix.branch }}
@@ -118,7 +123,7 @@ jobs:
 
   build-site-core:
     name: site-core (${{ matrix.branch }})
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build-site-core }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build-target == 'site-core' }}
     runs-on: ubuntu-latest
     env:
       BASE_BRANCH: ${{ matrix.branch }}
