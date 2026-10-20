@@ -229,6 +229,7 @@ target "onlyoffice-standalone" {
   args = {
     DEPLOY_ARGS = "deploy:preview"
   }
+}  
 
 target "onlyoffice-site-core" {
   context    = "build"
