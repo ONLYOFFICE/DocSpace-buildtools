@@ -8,7 +8,7 @@ if (-not (Test-Path -LiteralPath $signScript -PathType Leaf)) {
 }
 
 $files = @(Get-ChildItem -Path $folderPath -Recurse -File -ErrorAction Stop |
-    Where-Object { $_.Extension -in '.exe', '.dll' } |
+    Where-Object { $_.Extension -in '.exe'} |
     ForEach-Object { $_.FullName })
 
 Write-Host "Signing $($files.Count) files with $workerCount workers."
