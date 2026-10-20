@@ -1,4 +1,4 @@
-$workerCount = 2
+$workerCount = 1
 $workingDirectory = (Get-Location).Path
 $folderPath = Join-Path $workingDirectory "buildtools\install\win\Files"
 $signScript = Join-Path $workingDirectory "buildtools\install\win\signing-tool.ps1"
