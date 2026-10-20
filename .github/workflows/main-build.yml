@@ -5,8 +5,7 @@ run-name: >-
   ${{ github.event.action == 'cron-trigger-action'   && '[Cron]'   ||
       github.event.action == 'config-trigger-action' && '[Config]' ||
       github.event.action == 'client-trigger-action' && '[Client]' ||
-      github.event.action == 'server-trigger-action' && '[Server]' ||
-      github.event_name == 'workflow_dispatch' && inputs.build-target == 'site-core' && '[Site Core]' || '' }}
+      github.event.action == 'server-trigger-action' && '[Server]' || '' }}
 
 on:
   workflow_dispatch:
@@ -35,7 +34,6 @@ on:
           - all
           - site-core
         default: all
-
   repository_dispatch:
     types:
       - cron-trigger-action
@@ -52,7 +50,6 @@ env:
 jobs:
   build:
     name: ${{ matrix.service }} (${{ matrix.branch }})
-    if: ${{ github.event_name == 'repository_dispatch' || inputs.build-target == 'all' }}
     runs-on: ubuntu-latest
     env:
       BASE_BRANCH: ${{ matrix.branch }}
@@ -66,7 +63,7 @@ jobs:
     strategy:
       matrix:
         branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches || format('[{0}]', toJSON(github.ref_name))) }}
-        service: [dotnet, node, java, standalone]
+        service: ${{ fromJSON(inputs.build-target == 'site-core' && '["site-core"]' || '["dotnet","node","java","standalone"]') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -121,83 +118,10 @@ jobs:
           printf '%.0s=' {1..80}; echo -e "\nDISK SPACE AFTER BUILD $(echo ${{ matrix.service }} | tr '[:lower:]' '[:upper:]')"; df -h; docker system df; printf '%.0s=' {1..80}; echo
           docker buildx prune -a -f; docker system prune -a -f --volumes
 
-  build-site-core:
-    name: site-core (${{ matrix.branch }})
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build-target == 'site-core' }}
-    runs-on: ubuntu-latest
-    env:
-      BASE_BRANCH: ${{ matrix.branch }}
-      BUILDTOOLS_BRANCH: ${{ inputs.branch-buildtools || matrix.branch }}
-      SERVER_BRANCH: ${{ inputs.branch-server }}
-      CLIENT_BRANCH: ${{ inputs.branch-client }}
-      TAG_BRANCH: >-
-        ${{ inputs.branch-buildtools && inputs.branch-buildtools != matrix.branch && inputs.branch-buildtools ||
-            inputs.branch-server && inputs.branch-server != matrix.branch && inputs.branch-server ||
-            inputs.branch-client && inputs.branch-client != matrix.branch && inputs.branch-client || matrix.branch }}
-    strategy:
-      matrix:
-        branch: ${{ fromJson(inputs.branches || format('[{0}]', toJSON(github.ref_name))) }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ env.BUILDTOOLS_BRANCH }}
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-
-      - name: Setup BuildKit with /mnt support
-        run: |
-          docker rm -f buildkitd || true
-          mountpoint -q /mnt && { sudo mkdir -p /mnt/buildkit; sudo chmod 777 /mnt/buildkit; STORAGE_ARGS="-v /mnt/buildkit:/var/lib/buildkit"; } || STORAGE_ARGS=""
-          docker run -d --name buildkitd --privileged --network host ${STORAGE_ARGS} moby/buildkit:buildx-stable-1 --addr tcp://0.0.0.0:1234 --allow-insecure-entitlement security.insecure --allow-insecure-entitlement network.host
-          docker buildx create --name builder --driver remote tcp://127.0.0.1:1234 --use
-          docker buildx inspect --bootstrap
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Prepare build variables
-        run: |
-          PRODUCT_VERSION=$(printf '%s' "$BASE_BRANCH" | sed '/^release\b\|^hotfix\b\|^feature\b\|^bugfix\b/s/release.*\/\|hotfix.*\/\|feature.*\/\|bugfix.*\///; s/-git-action$//; s/^v//')
-          TAG_PREFIX="$PRODUCT_VERSION"
-          [ "$TAG_BRANCH" = "$BASE_BRANCH" ] || TAG_PREFIX="${PRODUCT_VERSION}-${TAG_BRANCH}"
-          TAG_PREFIX=$(printf '%s' "$TAG_PREFIX" | LC_ALL=C sed 's/[^a-zA-Z0-9_.-]/-/g; s/^[.-]/_/; s/^$/build/' | cut -c1-100)
-          echo "DOCKER_TAG=${TAG_PREFIX}.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
-          echo "PRODUCT_VERSION=${PRODUCT_VERSION}" >> "$GITHUB_ENV"
-        shell: bash
-
-      - name: Build site-core
-        timeout-minutes: 90
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          cd .${DOCKER_PATH}
-          docker buildx build \
-            --file "build/${DOCKERFILE}" \
-            --target site-core \
-            --build-arg GIT_BRANCH="${BASE_BRANCH}" \
-            --build-arg BUILDTOOLS_BRANCH="${BUILDTOOLS_BRANCH}" \
-            --build-arg SERVER_BRANCH="${SERVER_BRANCH}" \
-            --build-arg CLIENT_BRANCH="${CLIENT_BRANCH}" \
-            --build-arg PRODUCT_VERSION="${PRODUCT_VERSION}" \
-            --build-arg BUILD_NUMBER="${{ github.run_number }}" \
-            --build-arg BUILD_SITE_CORE=true \
-            --platform linux/amd64,linux/arm64 \
-            --secret id=github_token,env=GITHUB_TOKEN \
-            --tag "${REPO}/${DOCKER_IMAGE_PREFIX}-site-core:${DOCKER_TAG}" \
-            --sbom=true --provenance=mode=max --push .
-
-          printf '%.0s=' {1..80}; echo -e "\nDISK SPACE AFTER SITE-CORE BUILD"; df -h; docker system df; printf '%.0s=' {1..80}; echo
-          docker buildx prune -a -f; docker system prune -a -f --volumes
-
   trigger-oci-docker:
     name: OCI (${{ matrix.branch }})
     needs: build
-    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    if: ${{ !cancelled() && needs.build.result == 'success' && inputs.build-target != 'site-core' }}
     continue-on-error: true
     runs-on: ubuntu-latest
     env:

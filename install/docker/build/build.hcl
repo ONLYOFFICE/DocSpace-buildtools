@@ -229,6 +229,16 @@ target "onlyoffice-standalone" {
   args = {
     DEPLOY_ARGS = "deploy:preview"
   }
+
+target "onlyoffice-site-core" {
+  context    = "build"
+  dockerfile = "${DOCKERFILE}"
+  target     = "site-core"
+  tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-site-core:${DOCKER_TAG}"]
+
+  args = {
+    BUILD_SITE_CORE = "true"
+  }
 }
 
 group "default" {
@@ -320,3 +330,8 @@ group "standalone-services" {
   ]
 }
 
+group "site-core-services" {
+  targets = [
+    "onlyoffice-site-core",
+  ]
+}
