@@ -282,6 +282,9 @@ set_docs_url_external () {
 		DOCUMENT_SERVER_PROTOCOL="${BASH_REMATCH[1]}"
 		DOCUMENT_SERVER_HOST="${BASH_REMATCH[2]}"
 		DOCUMENT_SERVER_PORT="${BASH_REMATCH[4]:-"80"}"
+		if [[ ${BASH_REMATCH[1]} == "https://" && -z ${BASH_REMATCH[4]} ]]; then
+			DOCUMENT_SERVER_PORT="443"
+		fi
 	fi
 }
 
