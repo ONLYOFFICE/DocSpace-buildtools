@@ -39,6 +39,7 @@
 prepare_docs_install() {
 	PRODUCT_INSTALLED="false"
 	DOCUMENT_SERVER_INSTALLED="false"
+	DS_DEBCONF_PACKAGE=""
 
 	for PACKAGE_NAME in "${package}" "${legacy_product}"; do
 		package_installed "${PACKAGE_NAME}" || continue
@@ -52,6 +53,7 @@ prepare_docs_install() {
 		DS_INSTALLED_PKG_NAME="${PACKAGE_NAME}"
 		echo "${DS_INSTALLED_PKG_NAME} $RES_APP_INSTALLED"
 		DOCUMENT_SERVER_INSTALLED="true"
+		command -v debconf-set-selections >/dev/null 2>&1 && DS_DEBCONF_PACKAGE="${DS_INSTALLED_PKG_NAME}"
 		break
 	done
 
@@ -90,7 +92,7 @@ prepare_docs_install() {
 		touch "${DS_CONF_FILE}.apps.install-pending"
 		if [ "${RESUME_DOCS_INSTALL}" = true ]; then
 			systemctl stop "${product}-*.service" "${legacy_product}-*.service" >/dev/null 2>&1 || true
-			restore_docs_configuration "${DS_CONF_FILE}" || exit 1
+			restore_docs_configuration "${DS_CONF_FILE}" "${DS_DEBCONF_PACKAGE}" || exit 1
 			restore_docs_data_access "${DS_CONF_FILE}" || exit 1
 		fi
 	fi
@@ -100,7 +102,7 @@ finish_docs_install() {
 	local RESULT=$? RESTORE_FAILED=false
 	if [ "${RESULT}" -ne 0 ] && [ "${DOCS_RECONFIGURED}" = true ]; then
 		systemctl stop "${product}-*.service" "${legacy_product}-*.service" >/dev/null 2>&1 || true
-		restore_docs_configuration "${DS_CONF_FILE}" || RESTORE_FAILED=true
+		restore_docs_configuration "${DS_CONF_FILE}" "${DS_DEBCONF_PACKAGE}" || RESTORE_FAILED=true
 		restore_docs_data_access "${DS_CONF_FILE}" || RESTORE_FAILED=true
 		if [ "${RESTORE_FAILED}" = true ]; then
 			echo "Could not restore Docs after the failed Apps installation; original backups have been retained." >&2
@@ -115,6 +117,7 @@ finish_docs_install() {
 }
 
 prepare_docs_nginx() {
+	local DS_LISTEN_ADDRESS
 	# Move installed Docs off ports needed by Apps, inheriting HTTPS when possible.
 	# Export these settings so package scripts can use them after this function returns.
 	export INHERIT_SSL_DOMAIN="" INHERIT_SSL_CERT="" INHERIT_SSL_KEY="" INHERIT_SSL_INTERNAL_PORTAL=""
@@ -232,6 +235,11 @@ prepare_docs_nginx() {
 			sed -i -E "s/(^[[:space:]]*listen[[:space:]]+(\S*:)?)${DS_CURRENT_PORT}([[:space:];])/\1${DS_NEW_PORT}\3/" "$DS_CONF_FILE"
 			systemctl restart nginx 2>/dev/null || echo "Warning: failed to restart nginx after moving ${DS_INSTALLED_PKG_NAME} to port ${DS_NEW_PORT}; check its status manually." >&2
 			timeout 5 bash -c "while ss -H -lnt | awk '{print \$4}' | grep -qE ':${DS_CURRENT_PORT}\$'; do sleep 0.2; done" || true
+		fi
+		if [ -n "${DS_DEBCONF_PACKAGE}" ] && [ "${DOCS_RECONFIGURED}" = true ]; then
+			DS_LISTEN_ADDRESS=$(sed -nE 's/^[[:space:]]*listen[[:space:]]+([0-9.]+:[0-9]+)[[:space:];].*/\1/p' "${DS_CONF_FILE}" | head -1)
+			[ -z "${DS_LISTEN_ADDRESS}" ] || printf '%s %s/listenaddress string %s\n' \
+				"${DS_DEBCONF_PACKAGE}" "${DS_COMMON_NAME:-onlyoffice}" "${DS_LISTEN_ADDRESS}" | debconf-set-selections || exit 1
 		fi
 	fi
 
