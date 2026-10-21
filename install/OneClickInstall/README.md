@@ -363,7 +363,7 @@ Docs (`onlyoffice-documentserver`, `-de` or `-ee`) is detected automatically. Be
 sudo bash apps-install.sh package --uninstall true
 ```
 
-Answer "N" to "Also uninstall ONLYOFFICE Docs?" to keep Docs: the snapshot is restored before the Apps packages are removed. If it is missing or the restoration fails, the script stops before removing any packages.
+Answer "N" to "Also uninstall ONLYOFFICE Docs?" to keep Docs: the snapshot is restored before the Apps packages are removed. After a clean installation without a snapshot, a standard Docs HTTP configuration is made accessible on its existing port (`8083` by default); HTTPS configured in Apps is not transferred to Docs. If the configuration cannot be restored or is unsupported, the script stops before removing any packages.
 
 ### Docker
 

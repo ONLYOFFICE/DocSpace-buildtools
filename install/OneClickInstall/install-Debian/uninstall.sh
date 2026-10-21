@@ -100,7 +100,7 @@ if [ "${KEEP_DOCS}" = true ]; then
     fi
 
     DS_CONF_FILE="/etc/${package_sysname}/documentserver/nginx/ds.conf"
-    restore_docs_configuration "${DS_CONF_FILE}" || exit 1
+    restore_docs_configuration "${DS_CONF_FILE}" "${DOCUMENT_SERVER_PACKAGES[0]%%:*}" || exit 1
 fi
 # Package removal can fail partway through; keep the restored Docs configuration.
 REMOVE_RESULT=0

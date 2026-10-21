@@ -290,6 +290,7 @@ restore_docs_configuration() (
     local WORK DS_CERTIFICATE DS_CERT_NAME DS_RENEWAL_FILE NGINX_CONFIG I
     local OPENRESTY_ACTIVE=false OPENRESTY_ENABLED=false NGINX_ACTIVE=false
     local SERVICES_CHANGED=false ENABLEMENT_CHANGED=false
+    local DEBCONF_PACKAGE="${2:-}" DS_LISTEN_ADDRESS=""
     local -a TARGETS=("${DS_CONF_FILE}") SOURCES=() TOUCHED=()
 
     WORK=$(mktemp -d "${DS_CONF_FILE}.apps.restore.XXXXXX") || return 1
@@ -332,11 +333,21 @@ restore_docs_configuration() (
     trap finish_restore EXIT
 
     [ -f "${DS_BACKUP_FILE}" ] || DS_BACKUP_FILE="${DS_CONF_FILE}.ssl.bak"
-    if [ ! -f "${DS_BACKUP_FILE}" ]; then
-        echo "Cannot keep Docs automatically: no original configuration was saved. Restore standalone Docs and remove Apps manually, or choose to remove Docs too." >&2
+    if [ -f "${DS_BACKUP_FILE}" ]; then
+        cp -pL -- "${DS_BACKUP_FILE}" "${WORK}/standalone.conf" || exit 1
+    elif [ -f "${DS_CONF_FILE}" ] \
+        && [ "$(grep -oE '\bserver[[:space:]]*\{' "${DS_CONF_FILE}" | wc -l)" -eq 1 ] \
+        && grep -qE '^[[:space:]]*listen[[:space:]]+(127\.0\.0\.1|0\.0\.0\.0):[0-9]+([[:space:]]+default_server)?[[:space:]]*;' "${DS_CONF_FILE}" \
+        && ! grep -qE '^[[:space:]]*(ssl_certificate|listen[[:space:]].*[[:space:]]ssl)' "${DS_CONF_FILE}"; then
+        # Fresh installations have no snapshot; expose the existing HTTP listener without changing its port.
+        cp -pL -- "${DS_CONF_FILE}" "${WORK}/standalone.conf" || exit 1
+        sed -i -E 's/(^[[:space:]]*listen[[:space:]]+)127\.0\.0\.1:/\10.0.0.0:/; s/(^[[:space:]]*listen[[:space:]]+)\[::1\]:/\1[::]:/' "${WORK}/standalone.conf" || exit 1
+        DS_LISTEN_ADDRESS=$(sed -nE 's/^[[:space:]]*listen[[:space:]]+(0\.0\.0\.0:[0-9]+).*/\1/p' "${WORK}/standalone.conf" | head -1)
+        [ -n "${DS_LISTEN_ADDRESS}" ] || exit 1
+    else
+        echo "Cannot keep Docs automatically: no original configuration was saved and the current configuration is not a standard HTTP setup." >&2
         exit 1
     fi
-    cp -pL -- "${DS_BACKUP_FILE}" "${WORK}/standalone.conf" || exit 1
     SOURCES+=("${WORK}/standalone.conf")
 
     for NGINX_CONFIG in main:/etc/nginx/nginx.conf site:/etc/nginx/sites-enabled/default default:/etc/nginx/conf.d/default.conf; do
@@ -405,6 +416,10 @@ restore_docs_configuration() (
         ENABLEMENT_CHANGED=true
         systemctl disable openresty || exit 1
     fi
+    if [ -n "${DS_LISTEN_ADDRESS}" ] && [ -n "${DEBCONF_PACKAGE}" ]; then
+        printf 'SET %s/listenaddress %s\n' "${DS_COMMON_NAME:-onlyoffice}" "${DS_LISTEN_ADDRESS}" \
+            | debconf-communicate "${DEBCONF_PACKAGE}" >/dev/null || exit 1
+    fi
     exit 0
 )
 
@@ -417,6 +432,9 @@ restore_docs_data_access() {
         mkdir -p -- "${DATA_DIR}" || return 1
         chown "${DATA_UID}:${DATA_GID}" "${DATA_DIR}" || return 1
         chmod "${DATA_MODE}" "${DATA_DIR}" || return 1
+    elif [ ! -d "${DATA_DIR}" ]; then
+        mkdir -p -m 755 -- "${DATA_DIR}" || return 1
+        chown ds:ds "${DATA_DIR}" || return 1
     fi
     if [ -f "${BACKUP}" ]; then
         while IFS= read -r DATA_GROUP; do
