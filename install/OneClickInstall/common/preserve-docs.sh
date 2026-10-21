@@ -336,18 +336,17 @@ restore_docs_configuration() (
     if [ -f "${DS_BACKUP_FILE}" ]; then
         cp -pL -- "${DS_BACKUP_FILE}" "${WORK}/standalone.conf" || exit 1
     elif [ -f "${DS_CONF_FILE}" ] \
-        && [ "$(grep -oE '\bserver[[:space:]]*\{' "${DS_CONF_FILE}" | wc -l)" -eq 1 ] \
+        && [ "$(grep -vE '^[[:space:]]*#' "${DS_CONF_FILE}" | grep -oE '\bserver[[:space:]]*\{' | wc -l)" -eq 1 ] \
         && grep -qE '^[[:space:]]*listen[[:space:]]+(127\.0\.0\.1|0\.0\.0\.0):[0-9]+([[:space:]]+default_server)?[[:space:]]*;' "${DS_CONF_FILE}" \
         && ! grep -qE '^[[:space:]]*(ssl_certificate|listen[[:space:]].*[[:space:]]ssl)' "${DS_CONF_FILE}"; then
         # Fresh installations have no snapshot; expose the existing HTTP listener without changing its port.
         cp -pL -- "${DS_CONF_FILE}" "${WORK}/standalone.conf" || exit 1
         sed -i -E 's/(^[[:space:]]*listen[[:space:]]+)127\.0\.0\.1:/\10.0.0.0:/; s/(^[[:space:]]*listen[[:space:]]+)\[::1\]:/\1[::]:/' "${WORK}/standalone.conf" || exit 1
-        DS_LISTEN_ADDRESS=$(sed -nE 's/^[[:space:]]*listen[[:space:]]+(0\.0\.0\.0:[0-9]+).*/\1/p' "${WORK}/standalone.conf" | head -1)
-        [ -n "${DS_LISTEN_ADDRESS}" ] || exit 1
     else
         echo "Cannot keep Docs automatically: no original configuration was saved and the current configuration is not a standard HTTP setup." >&2
         exit 1
     fi
+    DS_LISTEN_ADDRESS=$(sed -nE 's/^[[:space:]]*listen[[:space:]]+([0-9.]+:[0-9]+)[[:space:];].*/\1/p' "${WORK}/standalone.conf" | head -1)
     SOURCES+=("${WORK}/standalone.conf")
 
     for NGINX_CONFIG in main:/etc/nginx/nginx.conf site:/etc/nginx/sites-enabled/default default:/etc/nginx/conf.d/default.conf; do
