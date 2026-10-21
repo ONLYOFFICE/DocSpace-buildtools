@@ -6,6 +6,8 @@ run-name: >-
       github.event.action == 'config-trigger-action' && '[Config]' ||
       github.event.action == 'client-trigger-action' && '[Client]' ||
       github.event.action == 'server-trigger-action' && '[Server]' || '' }}
+  ${{ github.event_name == 'workflow_dispatch' && inputs.build-target != 'dotnet,node,java,standalone' &&
+      format('[{0}] [no OCI tests]', inputs.build-target) || '' }}
 
 on:
   workflow_dispatch:
@@ -27,7 +29,7 @@ on:
         required: false
         type: string
       build-target:
-        description: 'Build target'
+        description: 'Build target (OCI tests run only for dotnet,node,java,standalone)'
         required: true
         type: choice
         options:
@@ -127,6 +129,19 @@ jobs:
           # Clean up disk space after build
           printf '%.0s=' {1..80}; echo -e "\nDISK SPACE AFTER BUILD $(echo ${{ matrix.service }} | tr '[:lower:]' '[:upper:]')"; df -h; docker system df; printf '%.0s=' {1..80}; echo
           docker buildx prune -a -f; docker system prune -a -f --volumes
+
+  oci-skipped-notice:
+    name: OCI tests skipped
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build-target != 'dotnet,node,java,standalone' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inform about the build without OCI tests
+        env:
+          BUILD_TARGET: ${{ inputs.build-target }}
+        run: |
+          MSG="Build target '${BUILD_TARGET}' is a build without OCI tests. OCI tests run only for the defualt full target 'dotnet,node,java,standalone'."
+          echo "::notice title=Build without OCI tests::${MSG}"
+          printf '### ⚠️ Build without OCI tests\n%s\n' "$MSG" >> "$GITHUB_STEP_SUMMARY"
 
   trigger-oci-docker:
     name: OCI (${{ matrix.branch }})
