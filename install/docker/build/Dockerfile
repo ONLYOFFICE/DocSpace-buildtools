@@ -91,10 +91,9 @@ RUN --mount=type=secret,id=github_token,env=GITHUB_TOKEN <<EOF
     find ${SRC_PATH} -name '.git' -type d -prune -exec rm -rf {} +
 EOF
 
-# .net build
-FROM --platform=$BUILDPLATFORM $DOTNET_SDK AS build-dotnet
+# Shared .NET build source
+FROM --platform=$BUILDPLATFORM $DOTNET_SDK AS build-dotnet-base
 ARG DEBIAN_FRONTEND=noninteractive
-ARG BUILD_SITE_CORE=false
 ARG SRC_PATH
 
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
@@ -104,29 +103,32 @@ ENV MSBUILDDISABLENODEREUSE=1
 WORKDIR ${SRC_PATH}/server
 COPY --from=src ${SRC_PATH}/server/ .
 
-RUN set -eu; \
+# Main .NET services build
+FROM build-dotnet-base AS build-dotnet
+ARG SRC_PATH
+
+RUN set -eux; \
     PUBLISH_ARGS='-c Release --self-contained false -p:DebugType=None -p:DebugSymbols=false -p:UseAppHost=false'; \
     for PAIR in "linux-x64:amd64" "linux-arm64:arm64"; do \
         RID="${PAIR%%:*}"; \
         ARCH="${PAIR##*:}"; \
-        if [ "${BUILD_SITE_CORE}" = "true" ]; then \
-            dotnet publish \
-                common/services/ASC.Site.Core/ASC.Site.Core.csproj \
-                ${PUBLISH_ARGS} \
-                -r "${RID}" \
-                -o "${SRC_PATH}/publish/services/ASC.Site.Core/service/"; \
-        else \
-            dotnet publish \
-                common/Tools/ASC.Migration.Runner/ASC.Migration.Runner.csproj \
-                ${PUBLISH_ARGS} \
-                -r "${RID}" \
-                -o "${SRC_PATH}/publish/services/ASC.Migration.Runner/service/"; \
-            dotnet publish \
-                ASC.Web.slnx \
-                ${PUBLISH_ARGS} \
-                -r "${RID}" \
-                -p:PublishProfile=ReleaseProfile; \
-        fi; \
+        dotnet publish common/Tools/ASC.Migration.Runner/ASC.Migration.Runner.csproj ${PUBLISH_ARGS} -r "${RID}" -o "${SRC_PATH}/publish/services/ASC.Migration.Runner/service/"; \
+        dotnet publish ASC.Web.slnx ${PUBLISH_ARGS} -r "${RID}" -p:PublishProfile=ReleaseProfile; \
+        mv "${SRC_PATH}/publish" "${SRC_PATH}/publish-${ARCH}"; \
+    done; \
+    dotnet nuget locals all --clear; \
+    rm -rf "${SRC_PATH}/server"
+
+# ASC.Site.Core build
+FROM build-dotnet-base AS build-site-core
+ARG SRC_PATH
+
+RUN set -eux; \
+    PUBLISH_ARGS='-c Release --self-contained false -p:DebugType=None -p:DebugSymbols=false -p:UseAppHost=false'; \
+    for PAIR in "linux-x64:amd64" "linux-arm64:arm64"; do \
+        RID="${PAIR%%:*}"; \
+        ARCH="${PAIR##*:}"; \
+        dotnet publish common/services/ASC.Site.Core/ASC.Site.Core.csproj ${PUBLISH_ARGS} -r "${RID}" -o "${SRC_PATH}/publish/services/ASC.Site.Core/service/"; \
         mv "${SRC_PATH}/publish" "${SRC_PATH}/publish-${ARCH}"; \
     done; \
     dotnet nuget locals all --clear; \
@@ -565,7 +567,7 @@ ENTRYPOINT ["/bin/bash", "/usr/bin/docker-migration-entrypoint.sh"]
 ## ASC.Site.Core ##
 FROM dotnetrun AS site-core
 WORKDIR ${BUILD_PATH}/services/ASC.Site.Core/service
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Site.Core/service/ .
+COPY --from=build-site-core --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Site.Core/service/ .
 
 CMD ["ASC.Site.Core.dll", "ASC.Site.Core"]
 

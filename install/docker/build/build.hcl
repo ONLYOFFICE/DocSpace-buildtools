@@ -207,6 +207,13 @@ target "onlyoffice-dotnet-services" {
   tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-dotnet:${DOCKER_TAG}"]
 }
 
+target "onlyoffice-site-core" {
+  context    = "build"
+  dockerfile = "${DOCKERFILE}"
+  target     = "site-core"
+  tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-site-core:${DOCKER_TAG}"]
+}
+
 target "onlyoffice-java-services" {
   context    = "build"
   dockerfile = "${DOCKERFILE}"
@@ -228,17 +235,6 @@ target "onlyoffice-standalone" {
   tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}:${DOCKER_TAG}"]
   args = {
     DEPLOY_ARGS = "deploy:preview"
-  }
-}  
-
-target "onlyoffice-site-core" {
-  context    = "build"
-  dockerfile = "${DOCKERFILE}"
-  target     = "site-core"
-  tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-site-core:${DOCKER_TAG}"]
-
-  args = {
-    BUILD_SITE_CORE = "true"
   }
 }
 

@@ -27,13 +27,18 @@ on:
         required: false
         type: string
       build-target:
-        description: 'Images to build'
+        description: 'Build target'
         required: true
         type: choice
         options:
-          - all
+          - 'dotnet,node,java,standalone'
+          - 'dotnet,node,java'
+          - dotnet
+          - node
+          - java
+          - standalone
           - site-core
-        default: all
+        default: 'dotnet,node,java,standalone'
   repository_dispatch:
     types:
       - cron-trigger-action
@@ -63,7 +68,12 @@ jobs:
     strategy:
       matrix:
         branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches || format('[{0}]', toJSON(github.ref_name))) }}
-        service: ${{ fromJSON(inputs.build-target == 'site-core' && '["site-core"]' || '["dotnet","node","java","standalone"]') }}
+        service: >-
+          ${{ fromJSON(
+              (github.event_name == 'repository_dispatch' || inputs.build-target == 'dotnet,node,java,standalone') && '["dotnet","node","java","standalone"]' ||
+              inputs.build-target == 'dotnet,node,java' && '["dotnet","node","java"]' ||
+              format('["{0}"]', inputs.build-target)
+          ) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -121,7 +131,7 @@ jobs:
   trigger-oci-docker:
     name: OCI (${{ matrix.branch }})
     needs: build
-    if: ${{ !cancelled() && needs.build.result == 'success' && inputs.build-target != 'site-core' }}
+    if: ${{ !cancelled() && needs.build.result == 'success' && (github.event_name == 'repository_dispatch' || inputs.build-target == 'dotnet,node,java,standalone') }}
     continue-on-error: true
     runs-on: ubuntu-latest
     env:
