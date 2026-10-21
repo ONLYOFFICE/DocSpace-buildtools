@@ -382,6 +382,9 @@ parse_external_docs_url () {
 	if [[ $DOCUMENT_SERVER_URL_EXTERNAL =~ ^(https?://)?([^:/]+)(:([0-9]+))?(/.*)?$ ]]; then 
 		DOCUMENT_SERVER_PORT="${BASH_REMATCH[4]:-80}"
 		DOCUMENT_SERVER_HOST="${BASH_REMATCH[2]}"
+		if [[ ${BASH_REMATCH[1]} == "https://" && -z ${BASH_REMATCH[4]} ]]; then
+			DOCUMENT_SERVER_PORT="443"
+		fi
 
 		[[ -n ${BASH_REMATCH[1]} ]] || DOCUMENT_SERVER_URL_EXTERNAL="http://$DOCUMENT_SERVER_HOST:$DOCUMENT_SERVER_PORT"
 	fi
@@ -438,8 +441,8 @@ setup_docs() {
 		fi
 	elif [ $1 == "EXTERNAL_DOCS_SERVER" ]; then
 		APP_HOST=$(curl -s -4 ifconfig.me)
-		: "${DOCUMENT_SERVER_JWT_SECRET:=$(json -f "${USER_CONF}" services.CoAuthoring.secret.inbox.string 2>/dev/null)}"
-		: "${DOCUMENT_SERVER_JWT_HEADER:=$(json -f "${USER_CONF}" services.CoAuthoring.token.inbox.header 2>/dev/null)}"
+		: "${DOCUMENT_SERVER_JWT_SECRET:=$(json -f "${USER_CONF}" files.docservice.secret.value 2>/dev/null)}"
+		: "${DOCUMENT_SERVER_JWT_HEADER:=$(json -f "${USER_CONF}" files.docservice.secret.header 2>/dev/null)}"
 	fi
 
 	local _ds_url="${DOCUMENT_SERVER_URL_EXTERNAL:-http://$DOCUMENT_SERVER_HOST:$DOCUMENT_SERVER_PORT}"
@@ -850,7 +853,7 @@ fi
 : "${REDIS_HOST:=$(json -f "${APP_DIR}/redis.${ENVIRONMENT}.json" Redis.Hosts.0.Host 2>/dev/null)}"
 : "${RABBITMQ_HOST:=$(json -f "${APP_DIR}/rabbitmq.${ENVIRONMENT}.json" RabbitMQ.Hostname 2>/dev/null)}"
 : "${ELK_HOST:=$(json -f "${APP_DIR}/elastic.${ENVIRONMENT}.json" elastic.Host 2>/dev/null)}"
-: "${DOCUMENT_SERVER_URL_EXTERNAL:-$(URL=$(json -f "${USER_CONF}" files.docservice.url.public 2>/dev/null); curl -fsS "${URL}" >/dev/null 2>&1 && echo "${URL}" || echo "")}"
+: "${DOCUMENT_SERVER_URL_EXTERNAL:=$(URL=$(json -f "${USER_CONF}" files.docservice.url.public 2>/dev/null); [[ "${URL}" =~ ^https?:// ]] && echo "${URL}")}"
 [[ -n "$RABBITMQ_HOST" && "$RABBITMQ_HOST" != localhost && "$RABBITMQ_HOST" != 127.0.0.1 ]] && EXTERNAL_RABBITMQ_FLAG=true || { RABBITMQ_HOST=""; unset EXTERNAL_RABBITMQ_FLAG; }
 [[ -n "$REDIS_HOST" && "$REDIS_HOST" != localhost && "$REDIS_HOST" != 127.0.0.1 ]] && EXTERNAL_REDIS_FLAG=true || { REDIS_HOST=""; unset EXTERNAL_REDIS_FLAG; }
 [[ -n "$ELK_HOST" && "$ELK_HOST" != localhost && "$ELK_HOST" != 127.0.0.1 ]] && EXTERNAL_ELK_FLAG=true || { ELK_HOST=""; unset EXTERNAL_ELK_FLAG; }
