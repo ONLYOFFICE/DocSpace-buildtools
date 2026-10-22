@@ -345,6 +345,33 @@ sudo bash apps-install.sh docker \
   --deployment-mode microservices
 ```
 
+## 🔄 Installing over ONLYOFFICE Docs and rolling back
+
+If standalone ONLYOFFICE Docs is already installed, the installer reuses it instead of deploying a second Document Server.
+
+### Packages (DEB/RPM)
+
+Docs (`onlyoffice-documentserver`, `-de` or `-ee`) is detected automatically. Before changing anything, the installer saves a snapshot of its nginx configuration, Let's Encrypt renewal settings and `Data` permissions. Then:
+
+- If Docs uses a port required by Apps, it is moved to another one (`8083` by default).
+- If Docs serves HTTPS with a valid certificate, Apps takes it over and Docs switches to plain HTTP on `127.0.0.1:8083`.
+- If the installation fails, Docs is restored automatically; re-run the installer to finish.
+
+**Rolling back to standalone Docs:**
+
+```bash
+sudo bash apps-install.sh package --uninstall true
+```
+
+Answer "N" to "Also uninstall ONLYOFFICE Docs?" to keep Docs: the snapshot is restored before the Apps packages are removed. After a clean installation without a snapshot, a standard Docs HTTP configuration is made accessible on its existing port (`8083` by default); HTTPS configured in Apps is not transferred to Docs. If the configuration cannot be restored or is unsupported, the script stops before removing any packages.
+
+### Docker
+
+A Docs container started with `docker run` (not from a Compose project) is attached instead of deploying a new one, with its image tag, data and HTTPS certificate. The original container is kept until the replacement is healthy and restored if the installation fails.
+
+> [!NOTE]
+> Unlike packages, `--uninstall true` does not recreate the original Docs container. To keep the Docs data, answer "Y" to "Keep configuration and Docs data for reinstallation?" and "n" to removing the data volumes.
+
 ## 🖥 System Requirements
 
 | Resource   | Minimum              |
@@ -370,9 +397,9 @@ The installation scripts support the following operating systems, which are **re
 - Debian 11
 - Debian 12
 - Debian 13
-- Ubuntu 22.04
-- Ubuntu 24.04
-- Ubuntu 26.04
+- Ubuntu 22.04 (x86_64, ARM64)
+- Ubuntu 24.04 (x86_64, ARM64)
+- Ubuntu 26.04 (x86_64, ARM64)
 <!-- OS-SUPPORT-LIST-END -->
 
 ## 📚 Additional Resources

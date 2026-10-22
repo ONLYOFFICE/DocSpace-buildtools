@@ -89,7 +89,8 @@ function ApplyInstalledDocumentServerSettings {
         $DocsKey = $Base.CreateSubKey('SOFTWARE\ONLYOFFICE\DocumentServer')
         $DocsPort = AI_GetMsiProperty DOCUMENT_SERVER_PORT
         $DocsKey.SetValue('DsPort', $DocsPort, [Microsoft.Win32.RegistryValueKind]::String)
-    } finally { if ($DocsKey) { $DocsKey.Close() }; $Base.Close() }
+    } catch { Write-Warning "Failed to set DocumentServer port in registry: $_" }
+    finally { if ($DocsKey) { $DocsKey.Close() }; $Base.Close() }
 
     $RegistryDocsDir = GetDocumentServerInstallLocation
     if ($RegistryDocsDir) {
@@ -541,10 +542,13 @@ function MoveConfigs {
             if (-not [string]::IsNullOrWhiteSpace($SslCertPath) -and
                 -not [string]::IsNullOrWhiteSpace($SslCertKeyPath)) {
                 $DocsSslScript = Join-Path $DocsDir 'bin\documentserver-letsencrypt.ps1'
-                if (-not (Test-Path -LiteralPath $DocsSslScript -PathType Leaf)) {
-                    throw "DocumentServer SSL setup script not found: $DocsSslScript"
+                if (Test-Path -LiteralPath $DocsSslScript -PathType Leaf) {
+                    & $DocsSslScript -d
+                } else {
+                    Write-Output "DocumentServer SSL setup script not found: $DocsSslScript. Skipping SSL reuse."
+                    $SslCertPath = $null
+                    $SslCertKeyPath = $null
                 }
-                & $DocsSslScript -d
             }
         } else {
             Write-Output "DocumentServer config not found: $DocsConfig"

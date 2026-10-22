@@ -130,7 +130,11 @@ for _apt_timer in apt-daily.timer apt-daily-upgrade.timer; do
     systemctl is-active --quiet "${_apt_timer}" && APT_TIMERS_TO_RESTORE+=("${_apt_timer}")
 done
 systemctl stop apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service unattended-upgrades.service >/dev/null 2>&1 || true
-trap '[ ${#APT_TIMERS_TO_RESTORE[@]} -eq 0 ] || systemctl start "${APT_TIMERS_TO_RESTORE[@]}" >/dev/null 2>&1 || true' EXIT
+finish_debian_install() {
+    [ -z "${DOCS_APT_PREFERENCES:-}" ] || rm -f -- "${DOCS_APT_PREFERENCES}"
+    [ ${#APT_TIMERS_TO_RESTORE[@]} -eq 0 ] || systemctl start "${APT_TIMERS_TO_RESTORE[@]}" >/dev/null 2>&1 || true
+}
+trap finish_debian_install EXIT
 
 if fuser /var/lib/dpkg/lock-frontend &>/dev/null; then
   echo "Waiting for /var/lib/dpkg/lock-frontend to be released (up to 60 seconds)..."
@@ -142,7 +146,7 @@ fi
 export DEBIAN_FRONTEND=noninteractive
 export NEEDRESTART_MODE=a
 apt-get update -y --allow-releaseinfo-change -o DPkg::Lock::Timeout=60
-apt-get install -yq -o DPkg::Lock::Timeout=60 sudo curl dirmngr debian-archive-keyring
+apt-get install --no-upgrade -yq -o DPkg::Lock::Timeout=60 sudo curl dirmngr debian-archive-keyring
 
 DOWNLOAD_URL_PREFIX="https://download.onlyoffice.com/${product}"
 [ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${legacy_product}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
@@ -178,11 +182,26 @@ declare -x LC_ALL="en_US.UTF-8"
 if [ "${LOCAL_SCRIPTS}" == "true" ]; then
 	source install-Debian/tools.sh
 	source common/check-ports.sh
-	source install-Debian/install-preq.sh
-	source install-Debian/install-app.sh
+	source common/preserve-docs.sh
 else
 	source_remote_script install-Debian/tools.sh
 	source_remote_script common/check-ports.sh
+	source_remote_script common/preserve-docs.sh
+fi
+
+prepare_docs_install
+if [ "$UPDATE" != "true" ] || [ "${PRODUCT_INSTALLED}" = false ] || [ "${RESUME_DOCS_INSTALL}" = true ]; then
+	get_required_ports
+	prepare_docs_nginx
+	check_ports
+	# Product configuration may adjust the Docs binding after these checks.
+	DOCS_RECONFIGURED=true
+fi
+
+if [ "${LOCAL_SCRIPTS}" == "true" ]; then
+	source install-Debian/install-preq.sh
+	source install-Debian/install-app.sh
+else
 	source_remote_script install-Debian/install-preq.sh
 	source_remote_script install-Debian/install-app.sh
 fi

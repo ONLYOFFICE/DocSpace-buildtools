@@ -44,6 +44,15 @@ echo "
 #######################################
 "
 
+# Removed Apps packages may still have configuration files to purge.
+mapfile -t PACKAGES_TO_UNINSTALL < <(dpkg -l | awk '{print $2}' | grep -E "^(${package}|${legacy_product})(-|:|$)" || true)
+if [ "${#PACKAGES_TO_UNINSTALL[@]}" -eq 0 ] \
+    && [ ! -f "/etc/${package_sysname}/documentserver/nginx/ds.conf.apps.bak" ] \
+    && [ ! -f "/etc/${package_sysname}/documentserver/nginx/ds.conf.ssl.bak" ]; then
+    echo "No Apps packages to uninstall."
+    return 0
+fi
+
 # Ask to uninstall dependencies
 read -r -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " DEP_CHOICE
 DEP_CHOICE=${DEP_CHOICE,,}
@@ -52,33 +61,62 @@ if [[ "$DEP_CHOICE" =~ ^(y|yes|)$ ]]; then
     UNINSTALL_DEPENDENCIES=true
 fi
 
-# Get Apps packages to uninstall
-mapfile -t PACKAGES_TO_UNINSTALL < <(dpkg -l | awk '{print $2}' | grep -E "^(${package}|${legacy_product})(-|:|$)" || true)
-
-mapfile -t DOCUMENT_SERVER_PACKAGES < <(dpkg -l | awk '{print $2}' | grep -E "^${package_sysname}-documentserver(-de|-ee)?(:|$)" || true)
+KEEP_DOCS=false
+mapfile -t DOCUMENT_SERVER_PACKAGES < <(dpkg -l | awk '$1 ~ /^.i/{print $2}' | grep -E "^${package_sysname}-documentserver(-de|-ee)?(:|$)" || true)
 if [ "${#DOCUMENT_SERVER_PACKAGES[@]}" -gt 0 ]; then
     read -r -p "Also uninstall ${package_sysname^^} Docs? (y/N): " DOCS_CHOICE || DOCS_CHOICE=""
-    [[ "${DOCS_CHOICE,,}" =~ ^(y|yes)$ ]] && PACKAGES_TO_UNINSTALL+=("${DOCUMENT_SERVER_PACKAGES[@]}")
+    if [[ "${DOCS_CHOICE,,}" =~ ^(y|yes)$ ]]; then
+        PACKAGES_TO_UNINSTALL+=("${DOCUMENT_SERVER_PACKAGES[@]}")
+    else
+        KEEP_DOCS=true
+    fi
 fi
 
 DEPENDENCIES=(
-    nodejs aspnetcore-runtime-10.0 mysql-server mysql-client postgresql
-    redis-server rabbitmq-server ffmpeg opensearch
-    opensearch-dashboards fluent-bit openresty
+    aspnetcore-runtime-10.0 opensearch opensearch-dashboards fluent-bit openresty
 )
 
 if [ "$UNINSTALL_DEPENDENCIES" = true ]; then
+    # Docs may use either PostgreSQL or MySQL, including a pre-existing database.
+    if [ "${KEEP_DOCS}" = false ]; then
+        DEPENDENCIES+=(nodejs mysql-server mysql-client postgresql redis-server rabbitmq-server ffmpeg)
+        mapfile -t -O "${#PACKAGES_TO_UNINSTALL[@]}" PACKAGES_TO_UNINSTALL < <(dpkg-query -W -f='${Package}\n' | grep -E "^postgresql(-[0-9]+)?(-.*)?$")
+    fi
     PACKAGES_TO_UNINSTALL+=( "${DEPENDENCIES[@]}" )
-    mapfile -t -O "${#PACKAGES_TO_UNINSTALL[@]}" PACKAGES_TO_UNINSTALL < <(dpkg-query -W -f='${Package}\n' | grep -E "^postgresql(-[0-9]+)?(-.*)?$")
 fi
 
-# Stop app services before their dependencies disappear.
-systemctl stop "${product}-*.service" "${legacy_product}-*.service" >/dev/null 2>&1 || true
+remove_apps_packages() {
+    systemctl stop "${product}-*.service" "${legacy_product}-*.service" >/dev/null 2>&1 || true
+    [ "${#PACKAGES_TO_UNINSTALL[@]}" -gt 0 ] || return 0
+    apt-get purge -y -o DPkg::Lock::Timeout=60 "${PACKAGES_TO_UNINSTALL[@]}"
+}
 
-# Uninstall packages and clean up
-apt-get purge -y -o DPkg::Lock::Timeout=60 "${PACKAGES_TO_UNINSTALL[@]}" \
-  && apt-get autoremove -y -o DPkg::Lock::Timeout=60 \
-  && apt-get clean
+# Restore the standalone Docs configuration before removing Apps.
+if [ "${KEEP_DOCS}" = true ]; then
+    if [ "${LOCAL_SCRIPTS}" = "true" ]; then
+        source common/preserve-docs.sh
+    else
+        source_remote_script common/preserve-docs.sh
+    fi
+
+    DS_CONF_FILE="/etc/${package_sysname}/documentserver/nginx/ds.conf"
+    restore_docs_configuration "${DS_CONF_FILE}" "${DOCUMENT_SERVER_PACKAGES[0]%%:*}" || exit 1
+fi
+# Package removal can fail partway through; keep the restored Docs configuration.
+REMOVE_RESULT=0
+remove_apps_packages || REMOVE_RESULT=$?
+if [ "${KEEP_DOCS}" = true ]; then
+    restore_docs_data_access "${DS_CONF_FILE}" || exit 1
+fi
+[ "${REMOVE_RESULT}" -eq 0 ] || exit "${REMOVE_RESULT}"
+[ "${KEEP_DOCS}" = true ] || apt-get autoremove -y -o DPkg::Lock::Timeout=60
+apt-get clean
+rm -f -- /etc/apt/preferences.d/00onlyoffice-docs-*.pref
+
+rm -f -- "/etc/cron.weekly/${product}-renew-letsencrypt" "/etc/cron.weekly/${legacy_product}-renew-letsencrypt" \
+    /etc/letsencrypt/renewal-hooks/deploy/onlyoffice-apps-openresty
+rm -f -- "/etc/${package_sysname}/documentserver/nginx/ds.conf".{apps.bak,ssl.bak,apps.install-pending} \
+    "/etc/${package_sysname}/documentserver/nginx/ds.conf".apps.*.bak
 
 # Uninstall swap file if it exists
 for SWAPFILE_NAME in "${product}" "${legacy_product}"; do
