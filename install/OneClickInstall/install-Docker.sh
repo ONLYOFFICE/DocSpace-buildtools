@@ -213,6 +213,8 @@ uninstall() {
         read -p "Also remove data volumes (mysql, opensearch, documents)? (Y/n): " REMOVE_DATA_SERVICES
         DOWN_ARGS=(down)
         [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]] && DOWN_ARGS+=(-v)
+        # A background certbot renewal check (see apps-ssl-setup) may still hold the webroot volume.
+        docker ps -aq --filter "ancestor=certbot/certbot" --filter "volume=${COMPOSE_PROJECT_NAME:-$PACKAGE_SYSNAME}_webroot_path" | xargs -r docker rm -f >/dev/null
         compose_with_document_server_mounts "${COMPOSE_FILES[@]}" "${DOWN_ARGS[@]}" || echo "Failed to remove ${PRODUCT_NAME}."
     else
         read -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " REMOVE_DATA_SERVICES
