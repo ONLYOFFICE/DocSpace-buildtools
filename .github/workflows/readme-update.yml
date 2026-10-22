@@ -17,8 +17,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
         run: |
-          git clone https://${{ secrets.GITEA_TOKEN }}@${{ secrets.GITEA_HOST }}/${{ github.repository }} -b ${{ github.ref_name }} --single-branch --depth=1
+          git config --global 'credential.https://${{ secrets.GITEA_HOST }}.helper' "store --file=${RUNNER_TEMP}/gitea-credentials"
+          [[ "$GITEA_TOKEN" == *:* ]] || GITEA_TOKEN+=":"
+          printf 'url=https://%s@%s\n\n' "$GITEA_TOKEN" '${{ secrets.GITEA_HOST }}' | git credential approve
+          git clone https://${{ secrets.GITEA_HOST }}/${{ github.repository }} -b ${{ github.ref_name }} --single-branch --depth=1
 
       - name: Install yq
         run: |
