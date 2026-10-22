@@ -136,11 +136,6 @@ compose_with_document_server_mounts () {
 		INFO=$(docker inspect --type container "${DS_NEW_CONTAINER_NAME}" 2>/dev/null) || INFO='[]'
 		DS_NEW_CONTAINER_ID=$(jq -r --arg old "${DS_ORIGINAL_ID}" \
 			'.[0] | select(.Id != $old and .Config.Labels["com.docker.compose.service"] == "onlyoffice-document-server") | .Id // empty' <<<"${INFO}")
-		if [ "${DEPLOYMENT_MODE}" = standalone ]; then
-			INFO=$(docker inspect --type container "${CONTAINER_NAME}" 2>/dev/null) || INFO='[]'
-			DS_NEW_FRONTEND_ID=$(jq -r --arg old "${DS_EXISTING_FRONTEND_ID}" --arg service "${PACKAGE_SYSNAME}-${PRODUCT}" \
-				'.[0] | select(.Id != $old and .Config.Labels["com.docker.compose.service"] == $service) | .Id // empty' <<<"${INFO}")
-		fi
 	fi
 	return "${RESULT}"
 }
@@ -151,8 +146,10 @@ rollback_document_server_migration () {
 	# Remove the newly created front end to release the original Docs ports
 	# and prevent the next installer run from treating this failed adoption
 	# as an existing Apps installation.
-	if [ -n "${DS_NEW_FRONTEND_ID}" ]; then
-		docker rm -f "${DS_NEW_FRONTEND_ID}" >/dev/null || return 1
+	if [ "${DS_APPS_STARTED}" = true ]; then
+		local REMOVE_ARGS=(rm -sf)
+		[ "${DEPLOYMENT_MODE}" != standalone ] || REMOVE_ARGS+=("${PACKAGE_SYSNAME}-${PRODUCT}")
+		compose_with_document_server_mounts "${COMPOSE_FILES[@]}" "${REMOVE_ARGS[@]}" >/dev/null || return 1
 	fi
 	if [ -n "${DS_NEW_CONTAINER_ID}" ]; then
 		docker rm -f "${DS_NEW_CONTAINER_ID}" >/dev/null || {
@@ -160,21 +157,33 @@ rollback_document_server_migration () {
 			return 1
 		}
 	fi
-	if [ "${DS_ORIGINAL_RENAMED}" = true ]; then
-		docker rename "${DS_ORIGINAL_ID}" "${DS_ORIGINAL_NAME}" || return 1
-	fi
-	if [ "${DS_ORIGINAL_RUNNING}" = true ]; then
-		docker start "${DS_ORIGINAL_ID}" >/dev/null || {
-			echo "The original Docs container is retained but could not be restarted." >&2
-			return 1
-		}
-	fi
+	restore_original_document_server || return 1
 	DS_ADOPTION_ACTIVE=false
+}
+
+restore_original_document_server () {
+	local ORIGINAL="${BASE_DIR}/config/ds-original.json" STATE="${DS_ORIGINAL_STATE}" ID NAME RESTART
+	[ -n "${STATE}" ] || STATE=$(cat "${ORIGINAL}") || return 1
+	ID=$(jq -er '.id' <<<"${STATE}") || return 1
+	NAME=$(jq -er '.name' <<<"${STATE}") || return 1
+	RESTART=$(jq -er '.restart' <<<"${STATE}") || return 1
+	if [ "$(docker inspect --format '{{.Name}}' "${ID}")" != "/${NAME}" ]; then
+		docker rename "${ID}" "${NAME}" || return 1
+	fi
+	docker update --restart="${RESTART}" "${ID}" >/dev/null || return 1
+	if [ "$(jq -r '.running' <<<"${STATE}")" = true ]; then
+		docker start "${ID}" >/dev/null || return 1
+	fi
+	rm -f "${ORIGINAL}"
 }
 
 detect_existing_document_server () {
 	[ "${UPDATE}" = "true" ] && return 0
 	[ "${INSTALL_DOCUMENT_SERVER}" = "true" ] || return 0
+	[ ! -f "${BASE_DIR}/config/ds-original.json" ] || {
+		echo "An original Docs container is already saved; restore it with --uninstall true before retrying adoption." >&2
+		return 1
+	}
 
 	local CONTAINER FOUND_IMAGE CANDIDATE
 	# The status prefix is optional, so release images are adopted under any --status.
@@ -191,11 +200,17 @@ detect_existing_document_server () {
 	DS_MOUNT_PLAN=$(plan_document_server_mounts <<<"${DS_CONTAINER_INSPECT}") || return 1
 	DS_ORIGINAL_ID=$(jq -r '.[0].Id' <<<"${DS_CONTAINER_INSPECT}")
 	DS_ORIGINAL_NAME="${CONTAINER}"
-	DS_ORIGINAL_RUNNING=$(jq -r '.[0].State.Running' <<<"${DS_CONTAINER_INSPECT}")
-	DS_EXISTING_FRONTEND_ID=$(docker inspect --format '{{.Id}}' "${CONTAINER_NAME}" 2>/dev/null) || DS_EXISTING_FRONTEND_ID=""
+	mkdir -p "${BASE_DIR}/config" || return 1
+	DS_ORIGINAL_STATE=$(jq '.[0] | {id: .Id, name: (.Name | ltrimstr("/")), running: .State.Running,
+		restart: (.HostConfig.RestartPolicy | .Name +
+			(if .Name == "on-failure" and .MaximumRetryCount > 0 then ":" + (.MaximumRetryCount | tostring) else "" end))}' \
+		<<<"${DS_CONTAINER_INSPECT}") || return 1
+	(umask 077; printf '%s\n' "${DS_ORIGINAL_STATE}" > "${BASE_DIR}/config/ds-original.json") || return 1
 	DS_ADOPTION_ACTIVE=true
 	DS_PREVIOUS_EXIT_TRAP=$(trap -p EXIT)
 	trap 'DS_EXIT_STATUS=$?; rollback_document_server_migration; exit "${DS_EXIT_STATUS}"' EXIT
+	# A retained container must not restart alongside Apps after a Docker/host restart.
+	docker update --restart=no "${DS_ORIGINAL_ID}" >/dev/null || return 1
 	jq -r '.[] | "Docs mount: " + .source + " -> " + .target + " (" +
 		(if .managed then "copy to " + .managed else "keep original mount" end) + ")"' <<<"${DS_MOUNT_PLAN}"
 
@@ -431,7 +446,10 @@ migrate_document_server_data () {
 			TARGET_PATH+="/${DEST_SUBDIR}"
 			mkdir -p -- "${TARGET_PATH}" || return 1
 		fi
-		[ "${SOURCE_PATH}" -ef "${TARGET_PATH}" ] && continue
+		[ ! "${SOURCE_PATH}" -ef "${TARGET_PATH}" ] || {
+			echo "Docs already uses the Apps data directory ${TARGET_PATH}; separate its data before adoption to allow restoration." >&2
+			return 1
+		}
 		SOURCE_PATH=$(readlink -f "${SOURCE_PATH}") || return 1
 		TARGET_PATH=$(readlink -f "${TARGET_PATH}") || return 1
 		case "${TARGET_PATH}/" in "${SOURCE_PATH}/"*) echo "Docs migration target is inside its source: ${TARGET_PATH}" >&2; return 1 ;; esac
@@ -444,7 +462,6 @@ migrate_document_server_data () {
 
 	if [ "${DS_NEW_CONTAINER_NAME}" = "${DS_ORIGINAL_NAME}" ]; then
 		docker rename "${DS_ORIGINAL_ID}" "${DS_ORIGINAL_NAME}-apps-migration-backup" || return 1
-		DS_ORIGINAL_RENAMED=true
 	fi
 	if [ "${DEPLOYMENT_MODE}" != standalone ]; then
 		echo "Docs RabbitMQ/Redis storage is retained on Docs; it is not imported into the external services."
@@ -452,7 +469,7 @@ migrate_document_server_data () {
 	return 0
 }
 
-# Keep the original container until the replacement has its mounts and is healthy.
+# Verify adoption after Apps starts; retain the original for uninstall.
 finish_document_server_migration () {
 	[ "${DS_ADOPTION_ACTIVE}" = true ] || return 0
 	local INSPECT STATUS DEADLINE=$((SECONDS + 600))
@@ -484,7 +501,19 @@ finish_document_server_migration () {
 					([$container.HostConfig.Mounts[]? | select(.Target == $expected.target)][0].VolumeOptions.Subpath // null) == $expected.subpath
 				 end)))
 	' <<<"${INSPECT}" >/dev/null || { echo "Replacement Docs mount verification failed." >&2; return 1; }
-	docker rm "${DS_ORIGINAL_ID}" >/dev/null || return 1
+	if [ "${INSTALL_PRODUCT}" = true ]; then
+		DEADLINE=$((SECONDS + 600))
+		while [ "${SECONDS}" -lt "${DEADLINE}" ]; do
+			STATUS=$(docker inspect --format '{{if .State.Running}}{{if .State.Health}}{{.State.Health.Status}}{{else}}healthy{{end}}{{else}}stopped{{end}}' "${CONTAINER_NAME}") || return 1
+			case "${STATUS}" in
+				healthy) break ;;
+				starting) sleep 5 ;;
+				*) echo "${PRODUCT_NAME} is ${STATUS}; restoring the original Docs container." >&2; return 1 ;;
+			esac
+		done
+		[ "${STATUS}" = healthy ] || { echo "Timed out waiting for ${PRODUCT_NAME}." >&2; return 1; }
+	fi
+	echo "Original Docs container retained for restoration when ${PRODUCT_NAME} is uninstalled."
 	DS_ADOPTION_ACTIVE=false
 	trap - EXIT
 	[ -z "${DS_PREVIOUS_EXIT_TRAP}" ] || eval "${DS_PREVIOUS_EXIT_TRAP}"
@@ -510,9 +539,12 @@ strip_inherited_https_from_document_server () {
 # Complete inherited HTTPS handoff after cert setup.
 finish_https_takeover () {
 	if [ "$1" -eq 0 ]; then
-		[ "${DS_HTTPS_INHERITED}" = "true" ] && strip_inherited_https_from_document_server
+		if [ "${DS_HTTPS_INHERITED}" = "true" ]; then
+			strip_inherited_https_from_document_server || return 1
+		fi
 	elif [ "${DS_HTTPS_INHERITED}" = "true" ]; then
-		echo "Warning: failed to set up HTTPS for ${PRODUCT_NAME} for ${APP_DOMAIN_PORTAL}, inherited from the migrated Document Server; HTTPS is not reachable until this is resolved manually." >&2
+		echo "Failed to restore inherited Docs HTTPS on ${PRODUCT_NAME}." >&2
+		return 1
 	fi
 }
 
@@ -525,7 +557,6 @@ install_document_server () {
 	elif [ "${DOCUMENT_SERVER_ATTACHED}" = "true" ]; then
 		migrate_document_server_data || { echo "Aborting: failed to migrate the existing Document Server's data." >&2; exit 1; }
 		compose_with_document_server_mounts -f "${BASE_DIR}/ds.yml" up -d || exit 1
-		finish_document_server_migration || exit 1
 	elif [[ -z ${DOCUMENT_SERVER_HOST} ]] && [ "$INSTALL_DOCUMENT_SERVER" == "true" ]; then
 		compose_with_document_server_mounts -f "${BASE_DIR}/ds.yml" up -d
 	fi

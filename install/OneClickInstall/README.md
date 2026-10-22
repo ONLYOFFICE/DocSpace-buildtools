@@ -367,10 +367,9 @@ Answer "N" to "Also uninstall ONLYOFFICE Docs?" to keep Docs: the snapshot is re
 
 ### Docker
 
-A Docs container started with `docker run` (not from a Compose project) is attached instead of deploying a new one, with its image tag, data and HTTPS certificate. The original container is kept until the replacement is healthy and restored if the installation fails.
+A Docs container started with `docker run` (not from a Compose project) is attached instead of deploying a new one, with its image tag, data and HTTPS certificate. The original container is retained with automatic restart disabled and restored if adoption fails.
 
-> [!NOTE]
-> Unlike packages, `--uninstall true` does not recreate the original Docs container. To keep the Docs data, answer "Y" to "Keep configuration and Docs data for reinstallation?" and "n" to removing the data volumes.
+With `--uninstall true`, answer "Y" to "Keep ONLYOFFICE Docs after uninstalling ONLYOFFICE Apps?" to restore the original container, including its name and restart policy. Without a saved original, the current Docs container is kept and its HTTP listener is published on the former Apps HTTP port; Apps HTTPS is not transferred. Shared volumes and configuration are retained, along with RabbitMQ/Redis when keeping the current Docs. Answer "N" to remove Docs as well.
 
 ## 🖥 System Requirements
 

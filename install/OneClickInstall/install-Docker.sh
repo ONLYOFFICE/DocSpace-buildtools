@@ -207,29 +207,90 @@ uninstall() {
 
     DOCKER_COMPOSE="$(docker compose version >/dev/null 2>&1 && echo 'docker compose' || echo 'docker-compose')"
 
+    local KEEP_DOCS=false ANSWER ORIGINAL_ID DS_FILE="${BASE_DIR}/ds.yml" DOCS_ID
+    local DOCS_PORTS="${BASE_DIR}/config/ds-standalone.json"
+    [ "${DEPLOYMENT_MODE}" != standalone ] || DS_FILE="${BASE_DIR}/docker-compose.yml"
+    if [ -f "${BASE_DIR}/config/ds-original.json" ]; then
+        ORIGINAL_ID=$(jq -er '.id' "${BASE_DIR}/config/ds-original.json") || exit 1
+    fi
+    if [ -f "${DS_FILE}" ]; then
+        DOCS_ID=$(compose_with_document_server_mounts -f "${DS_FILE}" ps -a -q onlyoffice-document-server) || exit 1
+    fi
+    if [ -n "${ORIGINAL_ID}${DOCS_ID}" ]; then
+        read -p "Keep ONLYOFFICE Docs after uninstalling ${PRODUCT_NAME}? (Y/n): " ANSWER
+        if [[ "${ANSWER,,}" =~ ^(y|yes)?$ ]]; then
+            KEEP_DOCS=true
+            if [ -n "${ORIGINAL_ID}" ]; then
+                docker inspect "${ORIGINAL_ID}" >/dev/null || { echo "The original Docs container is missing; aborting uninstall." >&2; exit 1; }
+            else
+                # Publish the existing HTTP listener after removing the Apps front end.
+                mkdir -p "${BASE_DIR}/config" || exit 1
+                jq -n --arg port "$(get_env_parameter EXTERNAL_PORT)" \
+                    '{services: {"onlyoffice-document-server": {ports: [{target: 80, published: (if $port == "" then "80" else $port end), protocol: "tcp"}]}}}' \
+                    > "${DOCS_PORTS}" || exit 1
+                compose_with_document_server_mounts -f "${DS_FILE}" -f "${DOCS_PORTS}" config --quiet || exit 1
+            fi
+            echo "Shared data volumes and configuration will be kept for Docs."
+        fi
+    fi
+
     if [ "${DEPLOYMENT_MODE}" = "standalone" ]; then
         echo "Uninstallation of ${PRODUCT_NAME} (standalone)..."
 
-        read -p "Also remove data volumes (mysql, opensearch, documents)? (Y/n): " REMOVE_DATA_SERVICES
+        REMOVE_DATA_SERVICES=n
+        [ "${KEEP_DOCS}" = true ] || read -p "Also remove data volumes (mysql, opensearch, documents)? (Y/n): " REMOVE_DATA_SERVICES
         DOWN_ARGS=(down)
         [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]] && DOWN_ARGS+=(-v)
-        compose_with_document_server_mounts "${COMPOSE_FILES[@]}" "${DOWN_ARGS[@]}" || echo "Failed to remove ${PRODUCT_NAME}."
+        if [ "${KEEP_DOCS}" = true ] && [ -z "${ORIGINAL_ID}" ]; then
+            local CONFIG
+            CONFIG=$(compose_with_document_server_mounts "${COMPOSE_FILES[@]}" config --format json) || exit 1
+            mapfile -t SERVICES < <(jq -r '.services | keys[] | select(. != "onlyoffice-document-server")' <<<"${CONFIG}")
+            [ "${#SERVICES[@]}" -gt 0 ] || exit 1
+            compose_with_document_server_mounts "${COMPOSE_FILES[@]}" rm -sf "${SERVICES[@]}" || exit 1
+        else
+            compose_with_document_server_mounts "${COMPOSE_FILES[@]}" "${DOWN_ARGS[@]}" || {
+                echo "Failed to remove ${PRODUCT_NAME}."
+                [ "${KEEP_DOCS}" != true ] || exit 1
+            }
+        fi
     else
         read -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " REMOVE_DATA_SERVICES
         DOWN_ARGS=(down)
 
         if [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]]; then
             SERVICES+=("db" "rabbitmq" "redis" "opensearch" "dashboards" "fluent")
-            DOWN_ARGS+=(-v)
+            [ "${KEEP_DOCS}" = true ] || DOWN_ARGS+=(-v)
         fi
 
         for SERVICE in "${SERVICES[@]}" "ds"; do
+            if [ "${KEEP_DOCS}" = true ] && [ -z "${ORIGINAL_ID}" ]; then
+                case "${SERVICE}" in ds|rabbitmq|redis) continue ;; esac
+            fi
             if [[ -f "$BASE_DIR/$SERVICE.yml" ]]; then
                 echo "Uninstallation of $SERVICE..."
-                compose_with_document_server_mounts -f "$BASE_DIR/$SERVICE.yml" "${DOWN_ARGS[@]}" || echo "Failed to remove $SERVICE."
+                compose_with_document_server_mounts -f "$BASE_DIR/$SERVICE.yml" "${DOWN_ARGS[@]}" || {
+                    echo "Failed to remove $SERVICE."
+                    [ "${KEEP_DOCS}" != true ] || exit 1
+                }
             fi
         done
     fi
+
+	if [ "${KEEP_DOCS}" = true ]; then
+		if [ -n "${ORIGINAL_ID}" ]; then
+			restore_original_document_server || { echo "Could not restart the original Docs container; its recovery settings have been kept." >&2; exit 1; }
+		else
+			compose_with_document_server_mounts -f "${DS_FILE}" -f "${DOCS_PORTS}" up -d --no-deps onlyoffice-document-server || exit 1
+		fi
+		echo "${PRODUCT_NAME} has been uninstalled; Docs has been kept."
+		return 0
+	fi
+	if [ -n "${ORIGINAL_ID}" ]; then
+		if docker inspect "${ORIGINAL_ID}" >/dev/null 2>&1; then
+			docker rm "${ORIGINAL_ID}" >/dev/null || exit 1
+		fi
+		rm -f "${BASE_DIR}/config/ds-original.json" || exit 1
+	fi
 
 	docker network rm "${NETWORK_NAME}" 2>/dev/null || echo "Failed to remove network ${NETWORK_NAME}."
 
@@ -748,8 +809,8 @@ download_files () {
 
 	mkdir -p "${BASE_DIR}" "${STAGING_DIR}/config" || return 1
 	# Preserve only the adopted Docs settings; refresh all other config files.
-	rm -f -- "${STAGING_DIR}/config/ds.env" "${STAGING_DIR}/config/ds-mounts.json" || return 1
-	for DOCS_FILE in ds.env ds-mounts.json; do
+	rm -f -- "${STAGING_DIR}/config/ds.env" "${STAGING_DIR}/config/ds-mounts.json" "${STAGING_DIR}/config/ds-original.json" || return 1
+	for DOCS_FILE in ds.env ds-mounts.json ds-original.json; do
 		if [ -f "${BASE_DIR}/config/${DOCS_FILE}" ]; then
 			cp -a -- "${BASE_DIR}/config/${DOCS_FILE}" "${STAGING_DIR}/config/" || return 1
 		fi
@@ -953,9 +1014,10 @@ install_product () {
 
 		chown_app_volumes || exit 1
 
+		DS_APPS_STARTED=true
 		if [ "${DEPLOYMENT_MODE}" = "stack" ]; then
-			${DOCKER_COMPOSE} -f "${BASE_DIR}/apps-stack.yml" up -d
-			${DOCKER_COMPOSE} -f "${BASE_DIR}/proxy.yml" up -d
+			${DOCKER_COMPOSE} -f "${BASE_DIR}/apps-stack.yml" up -d || { [ "${DS_ADOPTION_ACTIVE}" != true ] || exit 1; }
+			${DOCKER_COMPOSE} -f "${BASE_DIR}/proxy.yml" up -d || { [ "${DS_ADOPTION_ACTIVE}" != true ] || exit 1; }
 		else
 			${DOCKER_COMPOSE} -f "${BASE_DIR}/migration-runner.yml" up -d
 
@@ -964,7 +1026,7 @@ install_product () {
 				timeout 30 bash -c "while [ $(docker wait ${PACKAGE_SYSNAME}-migration-runner) -ne 0 ]; do sleep 1; done;" && echo "OK" || echo "FAILED"
 			fi
 
-			compose_with_document_server_mounts "${COMPOSE_FILES[@]}" up -d
+			compose_with_document_server_mounts "${COMPOSE_FILES[@]}" up -d || { [ "${DS_ADOPTION_ACTIVE}" != true ] || exit 1; }
 		fi
 
 		chown_app_volumes || exit 1
@@ -979,11 +1041,11 @@ install_product () {
 		if [ ! -z "${CERTIFICATE_PATH}" ] && [[ ! -z "${APP_DOMAIN_PORTAL}" ]]; then
 		    env ${DHPARAM_PATH:+DHPARAM_PATH="$DHPARAM_PATH"} \
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup -f "${APP_DOMAIN_PORTAL}" "${CERTIFICATE_PATH}" "${CERTIFICATE_KEY_PATH}"
-		    finish_https_takeover $?
+		    finish_https_takeover $? || exit 1
 		elif [ ! -z "${LETS_ENCRYPT_DOMAIN}" ] && [ ! -z "${LETS_ENCRYPT_MAIL}" ]; then
 		    env ${DHPARAM_PATH:+DHPARAM_PATH="$DHPARAM_PATH"} \
 			bash $BASE_DIR/config/${PRODUCT}-ssl-setup "${LETS_ENCRYPT_MAIL}" "${LETS_ENCRYPT_DOMAIN}"
-		    finish_https_takeover $?
+		    finish_https_takeover $? || exit 1
 		elif [[ -n "${CERTIFICATE_KEY_PATH}${CERTIFICATE_PATH}${LETS_ENCRYPT_DOMAIN}${LETS_ENCRYPT_MAIL}" ]]; then
 			echo -e "\e[31mERROR:\e[0m Missing required parameters for SSL setup"
 			echo "Run 'bash $BASE_DIR/config/${PRODUCT}-ssl-setup --help' for usage information."
@@ -1089,6 +1151,7 @@ install_standalone () {
 
 		chown_app_volumes || exit 1
 
+		DS_APPS_STARTED=true
 		# config/apps-ssl-setup only writes the SSL configuration (--no-start); Compose applies it here so Docs adoption tracking stays intact.
 		local SSL_SETUP="${BASE_DIR}/config/${PRODUCT}-ssl-setup" SSL_REQUESTED="false" SSL_STATUS=0 UP_STATUS
 		if [ -n "${CERTIFICATE_PATH}" ] && [ -n "${APP_DOMAIN_PORTAL}" ]; then
@@ -1108,11 +1171,10 @@ install_standalone () {
 		compose_with_document_server_mounts "${COMPOSE_FILES[@]}" up -d
 		UP_STATUS=$?
 		# The inherited Docs HTTPS is stripped only once the outcome of the Apps start is known.
-		[ "${SSL_REQUESTED}" = "false" ] || finish_https_takeover "$(( SSL_STATUS != 0 ? SSL_STATUS : UP_STATUS ))"
+		[ "${SSL_REQUESTED}" = "false" ] || finish_https_takeover "$(( SSL_STATUS != 0 ? SSL_STATUS : UP_STATUS ))" || exit 1
 		[ "${UP_STATUS}" -eq 0 ] || exit "${UP_STATUS}"
 
 		chown_app_volumes || exit 1
-		finish_document_server_migration || exit 1
 	elif [ "$INSTALL_PRODUCT" == "pull" ]; then
 		compose_with_document_server_mounts "${COMPOSE_FILES[@]}" pull
 	fi
@@ -1342,6 +1404,7 @@ start_installation () {
 
 		install_product
 	fi
+	finish_document_server_migration || exit 1
 
 	echo ""
 	echo "Thank you for installing ${PRODUCT_NAME}."
