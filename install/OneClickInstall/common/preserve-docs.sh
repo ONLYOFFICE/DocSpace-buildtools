@@ -116,6 +116,24 @@ finish_docs_install() {
 	exit "${RESULT}"
 }
 
+allow_docs_selinux_port() {
+	command -v selinuxenabled >/dev/null 2>&1 && selinuxenabled || return 0
+	if ! command -v semanage >/dev/null 2>&1; then
+		if [ -z "${package_manager}" ] || ! {
+			${package_manager} -y install policycoreutils-python-utils || \
+			${package_manager} -y install policycoreutils-python;
+		}; then
+			echo "Error: cannot install semanage to allow Docs port $1 in SELinux." >&2
+			return 1
+		fi
+	fi
+	if ! semanage port -a -t http_port_t -p tcp "$1" >/dev/null 2>&1 && \
+		! semanage port -m -t http_port_t -p tcp "$1"; then
+		echo "Error: cannot allow Docs port $1 in SELinux; Docs configuration has not been changed." >&2
+		return 1
+	fi
+}
+
 prepare_docs_nginx() {
 	local DS_LISTEN_ADDRESS
 	# Move installed Docs off ports needed by Apps, inheriting HTTPS when possible.
@@ -188,6 +206,7 @@ prepare_docs_nginx() {
 			DS_CONF_TMPL="/etc/${package_sysname}/documentserver/nginx/ds.conf.tmpl"
 			SECURE_LINK_SECRET="$(grep -oP '(?<=secure_link_secret ).*(?=;)' "$DS_CONF_FILE" | head -1)"
 			if [ -n "$INHERIT_SSL_DOMAIN" ] && [ -f "$DS_CONF_TMPL" ] && [ -n "$SECURE_LINK_SECRET" ]; then
+				allow_docs_selinux_port "${DS_NEW_PORT}" || exit 1
 				DOCS_RECONFIGURED=true
 				echo "Switching ${DS_INSTALLED_PKG_NAME} to plain HTTP on 127.0.0.1:${DS_NEW_PORT}; ${product_name} inherits its HTTPS certificate for ${INHERIT_SSL_DOMAIN}."
 				cp -f -- "$DS_CONF_TMPL" "$DS_CONF_FILE"
@@ -230,6 +249,7 @@ prepare_docs_nginx() {
 				echo "$RES_CHECK_PORTS"
 				exit 1
 			fi
+			allow_docs_selinux_port "${DS_NEW_PORT}" || exit 1
 			echo "${DS_INSTALLED_PKG_NAME} is using port ${DS_CURRENT_PORT}, required by ${product_name}. Switching it to port ${DS_NEW_PORT}."
 			DOCS_RECONFIGURED=true
 			sed -i -E "s/(^[[:space:]]*listen[[:space:]]+(\S*:)?)${DS_CURRENT_PORT}([[:space:];])/\1${DS_NEW_PORT}\3/" "$DS_CONF_FILE"
