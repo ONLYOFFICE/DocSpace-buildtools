@@ -295,11 +295,12 @@ restore_docs_configuration() (
     # so every fallible step must be checked without relying on errexit.
     local DS_CONF_FILE="${1}"
     local DS_BACKUP_FILE="${DS_CONF_FILE}.apps.bak"
-    local WORK DS_CERTIFICATE DS_CERT_NAME DS_RENEWAL_FILE NGINX_CONFIG I
+    local WORK DS_CERTIFICATE DS_CERT_NAME DS_RENEWAL_FILE NGINX_CONFIG I APP_UNITS
     local OPENRESTY_ACTIVE=false OPENRESTY_ENABLED=false NGINX_ACTIVE=false
     local SERVICES_CHANGED=false ENABLEMENT_CHANGED=false
     local DEBCONF_PACKAGE="${2:-}" DS_LISTEN_ADDRESS=""
     local -a TARGETS=("${DS_CONF_FILE}") SOURCES=() TOUCHED=()
+    local -a ACTIVE_APP_SERVICES=()
 
     WORK=$(mktemp -d "${DS_CONF_FILE}.apps.restore.XXXXXX") || return 1
     finish_restore() {
@@ -324,6 +325,9 @@ restore_docs_configuration() (
                 fi
                 if [ "${OPENRESTY_ACTIVE}" = true ]; then
                     systemctl start openresty || ROLLBACK_FAILED=true
+                fi
+                if [ "${#ACTIVE_APP_SERVICES[@]}" -gt 0 ]; then
+                    systemctl start "${ACTIVE_APP_SERVICES[@]}" || ROLLBACK_FAILED=true
                 fi
             fi
             echo "Docs restoration failed; original backups have been retained for retry." >&2
@@ -404,6 +408,9 @@ restore_docs_configuration() (
     systemctl is-active --quiet nginx && NGINX_ACTIVE=true
     systemctl is-active --quiet openresty && OPENRESTY_ACTIVE=true
     systemctl is-enabled --quiet openresty && OPENRESTY_ENABLED=true
+    APP_UNITS=$(systemctl list-units --type=service --state=active,activating,reloading \
+        --no-legend --plain --full --no-pager "${product}-*.service" "${legacy_product}-*.service") || exit 1
+    mapfile -t ACTIVE_APP_SERVICES < <(awk 'NF {print $1}' <<< "${APP_UNITS}")
 
     for I in "${!TARGETS[@]}"; do
         TOUCHED+=("${I}")
@@ -415,6 +422,10 @@ restore_docs_configuration() (
     done
     nginx -t || exit 1
     SERVICES_CHANGED=true
+    # Apps may still own the original Docs port (for example, identity on 8080).
+    if [ "${#ACTIVE_APP_SERVICES[@]}" -gt 0 ]; then
+        systemctl stop "${ACTIVE_APP_SERVICES[@]}" || exit 1
+    fi
     if [ "${OPENRESTY_ACTIVE}" = true ]; then
         systemctl stop openresty || exit 1
     fi
