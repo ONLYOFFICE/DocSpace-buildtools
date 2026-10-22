@@ -43,8 +43,13 @@ jobs:
     steps:
       - name: Get latest Docs test repo version
         id: get-docs-version
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
         run: |
-          VERSION=$(git ls-remote --heads "https://${{ secrets.GITEA_TOKEN }}@${{ secrets.GITEA_HOST }}/ONLYOFFICE/document-server-package" \
+          git config --global 'credential.https://${{ secrets.GITEA_HOST }}.helper' "store --file=${RUNNER_TEMP}/gitea-credentials"
+          [[ "$GITEA_TOKEN" == *:* ]] || GITEA_TOKEN+=":"
+          printf 'url=https://%s@%s\n\n' "$GITEA_TOKEN" '${{ secrets.GITEA_HOST }}' | git credential approve
+          VERSION=$(git ls-remote --heads "https://${{ secrets.GITEA_HOST }}/ONLYOFFICE/document-server-package" \
             'refs/heads/release/v*' 'refs/heads/hotfix/v*' | awk -F/ '{print $NF}' | sed 's/^v//' | sort -Vr | head -n1)
           echo "version=${VERSION:-99.99.99}" >> "$GITHUB_OUTPUT"
 
