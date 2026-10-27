@@ -193,6 +193,7 @@ services:
       DOCSPACE_TRANSPORT: "http"
       DOCSPACE_HOST: "0.0.0.0"
       DOCSPACE_PORT: "${SERVICE_MCP_PORT}"
+      DOCSPACE_DISABLED_TOOLS: "run_builder_script,get_office_api_reference"
     healthcheck:
       <<: *x-healthcheck
       test: wget -qO- http://${MCP_HOST}:${SERVICE_MCP_PORT}/health || exit 1

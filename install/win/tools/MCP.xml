@@ -11,6 +11,7 @@
 	<env name="DOCSPACE_TRANSPORT" value="http" />
 	<env name="DOCSPACE_HOST" value="0.0.0.0" />
 	<env name="DOCSPACE_PORT" value="5158" />
+	<env name="DOCSPACE_DISABLED_TOOLS" value="run_builder_script,get_office_api_reference" />
 	<executable>node</executable>
 	<arguments>&quot;{APPDIR}products\ASC.AI\mcp\onlyoffice-docspace-mcp.js&quot;</arguments>
 	<log mode="roll-by-size">
