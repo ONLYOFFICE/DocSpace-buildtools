@@ -14,6 +14,15 @@ on:
         description: 'Branches for multiarch build (JSON array)'
         required: false
         type: string
+      archs:
+        description: 'Architectures (JSON array), overrides the BUILD_ARCHS repo variable'
+        required: false
+        type: string
+      trigger_oci:
+        description: 'Trigger OCI install tests after the build'
+        required: false
+        type: boolean
+        default: true
 
   repository_dispatch:
     types:
@@ -35,11 +44,14 @@ jobs:
     outputs:
       branches: ${{ steps.vars.outputs.branches }}
       tags: ${{ steps.vars.outputs.tags }}
+      archs: ${{ steps.vars.outputs.archs }}
     steps:
       - name: Resolve branches and tags
         id: vars
         env:
           BRANCHES: ${{ toJson(github.event.client_payload.branches || fromJson(inputs.branches)) }}
+          # kill switch: set the BUILD_ARCHS repo variable to '["amd64"]' to stop building arm64 without a code change
+          ARCHS: ${{ inputs.archs || vars.BUILD_ARCHS || '["amd64","arm64"]' }}
         run: |
           BRANCHES=$(jq -c '.' <<< "$BRANCHES")
           [ "$(jq 'length' <<< "$BRANCHES")" -gt 0 ] || { echo "::error::No branches to build"; exit 1; }
@@ -48,6 +60,12 @@ jobs:
           echo "branches=$BRANCHES" >> "$GITHUB_OUTPUT"
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
           echo "$TAGS" | jq .
+
+          ARCHS=$(jq -c 'unique' <<< "$ARCHS")
+          jq -e 'index("amd64") != null and all(.[]; . == "amd64" or . == "arm64")' <<< "$ARCHS" > /dev/null \
+            || { echo "::error::Invalid archs ${ARCHS}: amd64 is required, only amd64/arm64 are supported"; exit 1; }
+          echo "archs=$ARCHS" >> "$GITHUB_OUTPUT"
+          echo "Architectures: $ARCHS"
 
   build:
     name: ${{ matrix.service }}:${{ matrix.arch }} (${{ matrix.branch }})
@@ -60,8 +78,8 @@ jobs:
       fail-fast: false
       matrix:
         branch: ${{ fromJson(needs.prepare.outputs.branches) }}
-        service: [dotnet, node, java, community]
-        arch: [amd64, arm64]
+        service: [dotnet, node, java, standalone]
+        arch: ${{ fromJson(needs.prepare.outputs.archs) }}
     env:
       DOCKER_TAG: ${{ fromJson(needs.prepare.outputs.tags)[matrix.branch] }}
     steps:
@@ -132,7 +150,7 @@ jobs:
       fail-fast: false
       matrix:
         branch: ${{ fromJson(needs.prepare.outputs.branches) }}
-        service: [dotnet, node, java, community]
+        service: [dotnet, node, java, standalone]
     env:
       DOCKER_TAG: ${{ fromJson(needs.prepare.outputs.tags)[matrix.branch] }}
     steps:
@@ -285,7 +303,7 @@ jobs:
   trigger-oci-docker:
     name: OCI (${{ matrix.branch }})
     needs: [prepare, manifest]
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && inputs.trigger_oci != false }}
     continue-on-error: true
     runs-on: ubuntu-latest
     strategy:
