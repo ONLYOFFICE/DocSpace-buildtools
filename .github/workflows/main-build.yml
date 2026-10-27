@@ -29,21 +29,46 @@ env:
   DOCKERFILE: "Dockerfile"
 
 jobs:
-  build:
-    name: ${{ matrix.service }} (${{ matrix.branch }})
+  prepare:
+    name: Prepare
     runs-on: ubuntu-latest
+    outputs:
+      branches: ${{ steps.vars.outputs.branches }}
+      tags: ${{ steps.vars.outputs.tags }}
+    steps:
+      - name: Resolve branches and tags
+        id: vars
+        env:
+          BRANCHES: ${{ toJson(github.event.client_payload.branches || fromJson(inputs.branches)) }}
+        run: |
+          BRANCHES=$(jq -c '.' <<< "$BRANCHES")
+          [ "$(jq 'length' <<< "$BRANCHES")" -gt 0 ] || { echo "::error::No branches to build"; exit 1; }
+
+          TAGS=$(jq -c --arg run "${{ github.run_number }}" 'map({ (.): ((sub("^(release|hotfix|feature|bugfix).*/"; "") | sub("-git-action$"; "") | sub("^v"; "")) + "." + $run) }) | add' <<< "$BRANCHES")
+          echo "branches=$BRANCHES" >> "$GITHUB_OUTPUT"
+          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
+          echo "$TAGS" | jq .
+
+  build:
+    name: ${{ matrix.service }}:${{ matrix.arch }} (${{ matrix.branch }})
+    needs: prepare
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    # arm64 is best-effort: its failure must not turn the run red, block the manifest or the OCI tests
+    continue-on-error: ${{ matrix.arch == 'arm64' }}
+    timeout-minutes: 150
     strategy:
+      fail-fast: false
       matrix:
-        branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches) }}
+        branch: ${{ fromJson(needs.prepare.outputs.branches) }}
         service: [dotnet, node, java, community]
+        arch: [amd64, arm64]
+    env:
+      DOCKER_TAG: ${{ fromJson(needs.prepare.outputs.tags)[matrix.branch] }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
           ref: ${{ matrix.branch }}
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
 
       - name: Setup BuildKit with /mnt support
         run: |
@@ -59,285 +84,257 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Prepare build variables
-        run: |
-          PRODUCT_VERSION=$(echo "${{ matrix.branch }}" | sed '/^release\b\|^hotfix\b\|^feature\b\|^bugfix\b/s/release.*\/\|hotfix.*\/\|feature.*\/\|bugfix.*\///; s/-git-action$//; s/^v//')
-          [ "${PRODUCT_VERSION}" = "develop" ] && PRODUCT_VERSION="develop"
-          echo "DOCKER_TAG=${PRODUCT_VERSION}.${{ github.run_number }}" >> $GITHUB_ENV
-          echo "PRODUCT_VERSION=${PRODUCT_VERSION}" >> $GITHUB_ENV
-        shell: bash
-
-      - name: Build ${{ matrix.service }}
-        id: build
-        timeout-minutes: 150
+      - name: Build ${{ matrix.service }} (${{ matrix.arch }})
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          set -o pipefail
           cd ".${DOCKER_PATH}"
+          PRODUCT_VERSION="${DOCKER_TAG%.${{ github.run_number }}}"
 
-          light_prune() {
-            echo "-- light prune --"
-            df -h . | tail -1
-            docker buildx prune -f 2>/dev/null || true
-            docker container prune -f 2>/dev/null || true
-            docker image prune -f 2>/dev/null || true
-          }
+          # push under the arch-specific tag, the manifest job publishes the common one
+          DOCKER_TAG="${DOCKER_TAG}-${{ matrix.arch }}" docker buildx bake -f build/build.hcl ${{ matrix.service }}-services \
+            --set "*.args.GIT_BRANCH=${{ matrix.branch }}" \
+            --set "*.args.PRODUCT_VERSION=${PRODUCT_VERSION}" \
+            --set "*.args.BUILD_NUMBER=${{ github.run_number }}" \
+            --set "*.platform=linux/${{ matrix.arch }}" \
+            --set "*.secrets=id=github_token,env=GITHUB_TOKEN" \
+            --sbom=true --provenance=mode=max --progress=plain --push
 
-          full_cleanup() {
-            printf '%.0s=' {1..80}
-            echo
-            echo "DISK SPACE AFTER BUILD"
-            df -h
-            docker system df
-            printf '%.0s=' {1..80}
-            echo
-            docker buildx prune -a -f
-            docker system prune -a -f --volumes
-          }
-          trap full_cleanup EXIT
-
-          echo "PRODUCT_VERSION=${PRODUCT_VERSION}"
-
-          build_bake() {
-            local platforms="$1"
-            local mode="$2"
-            local tag_override="$3"   # optional; if set, pushes under this tag instead of DOCKER_TAG
-            local -a options=(
-              -f build/build.hcl
-              "${{ matrix.service }}-services"
-              --set "*.args.GIT_BRANCH=${{ matrix.branch }}"
-              --set "*.args.PRODUCT_VERSION=${PRODUCT_VERSION}"
-              --set "*.args.BUILD_NUMBER=${{ github.run_number }}"
-              --set "*.platform=${platforms}"
-              --set "*.secrets=id=github_token,env=GITHUB_TOKEN"
-              --progress=plain
-            )
-            if [[ "$mode" == "push" ]]; then
-              options+=(--sbom=true --provenance=mode=max --push)
-            else
-              options+=(--set "*.output=type=cacheonly")
-            fi
-
-            if [[ -n "$tag_override" ]]; then
-              DOCKER_TAG="$tag_override" docker buildx bake "${options[@]}"
-            else
-              docker buildx bake "${options[@]}"
-            fi
-          }
-
-          MULTI_LOG="${RUNNER_TEMP}/${{ matrix.service }}-multiarch.log"
-          AMD64_LOG="${RUNNER_TEMP}/${{ matrix.service }}-amd64.log"
-          ARM64_LOG="${RUNNER_TEMP}/${{ matrix.service }}-arm64.log"
-          AMD64_PUSH_LOG="${RUNNER_TEMP}/${{ matrix.service }}-amd64-push.log"
-
-          STEP_START=$SECONDS
-          RETRY_DEADLINE=$(( 150 * 60 - 20 * 60 ))  # reserve 20 min for fallback push + cleanup
-          MIN_FREE_KB=$((10 * 1024 * 1024))         # 10GB floor, tune to your images
-
-          MULTI_ARCH_OK=false
-          echo "Attempting multi-architecture build..."
-          if build_bake "linux/amd64,linux/arm64" push 2>&1 | tee "$MULTI_LOG"; then
-            MULTI_ARCH_OK=true
-          fi
-          light_prune
-
-          if [[ "$MULTI_ARCH_OK" == "true" ]]; then
-            echo "Multi-architecture build succeeded."
-            echo "arch_fallback=false" >> "$GITHUB_OUTPUT"
-            echo "arch_fallback_reason=none" >> "$GITHUB_OUTPUT"
-          else
-            echo "::warning::Multi-architecture build failed. Testing platforms separately."
-
-            echo "Testing linux/amd64..."
-            AMD64_DIAG_OK=false
-            build_bake "linux/amd64" diagnostic 2>&1 | tee "$AMD64_LOG" && AMD64_DIAG_OK=true
-            light_prune
-
-            if [[ "$AMD64_DIAG_OK" != "true" ]]; then
-              echo "::error::AMD64 also failed. The failure is not ARM64-specific."
-              exit 1
-            fi
-
-            echo "AMD64 succeeded. Testing linux/arm64 separately..."
-            ARM64_DIAG_OK=false
-            build_bake "linux/arm64" diagnostic 2>&1 | tee "$ARM64_LOG" && ARM64_DIAG_OK=true
-            light_prune
-
-            if [[ "$ARM64_DIAG_OK" == "true" ]]; then
-              AVAIL_KB=$(df --output=avail -k . | tail -1 | tr -d ' ')
-              if [[ "$AVAIL_KB" -lt "$MIN_FREE_KB" ]]; then
-                echo "::warning::Only $((AVAIL_KB / 1024 / 1024))GB free after pruning — skipping multi-arch retry, disk pressure makes it unlikely to succeed."
-                RETRY_OK=false
-              elif [[ "$SECONDS" -ge "$RETRY_DEADLINE" ]]; then
-                echo "::warning::Not enough time budget left to attempt multi-arch retries — going straight to amd64-only fallback."
-                RETRY_OK=false
-              else
-                RETRY_OK=false
-                for attempt in 1 2; do
-                  if [[ "$SECONDS" -ge "$RETRY_DEADLINE" ]]; then
-                    echo "::warning::Time budget for retries exhausted, skipping remaining attempts."
-                    break
-                  fi
-                  echo "::warning::Retrying full multi-arch push (attempt ${attempt}/2)..."
-                  sleep 15
-                  if build_bake "linux/amd64,linux/arm64" push 2>&1 | tee "${RUNNER_TEMP}/${{ matrix.service }}-multiarch-retry${attempt}.log"; then
-                    RETRY_OK=true
-                    light_prune
-                    break
-                  fi
-                  light_prune
-                done
-              fi
-
-              if [[ "$RETRY_OK" == "true" ]]; then
-                echo "Multi-architecture push succeeded on retry."
-                echo "arch_fallback=false" >> "$GITHUB_OUTPUT"
-                echo "arch_fallback_reason=none" >> "$GITHUB_OUTPUT"
-              else
-                echo "::warning::Multi-arch push still failing despite both platforms building independently — publishing under ${DOCKER_TAG}-amd64 only. Main tag stays untouched."
-                if ! build_bake "linux/amd64" push "${DOCKER_TAG}-amd64" 2>&1 | tee "$AMD64_PUSH_LOG"; then
-                  echo "::error::Failed to publish the ${DOCKER_TAG}-amd64 fallback tag."
-                  exit 1
-                fi
-                echo "arch_fallback=true" >> "$GITHUB_OUTPUT"
-                echo "arch_fallback_reason=manifest_or_push_issue" >> "$GITHUB_OUTPUT"
-                echo "fallback_tag=${DOCKER_TAG}-amd64" >> "$GITHUB_OUTPUT"
-              fi
-            else
-              echo "::warning::AMD64 succeeded and ARM64 failed independently — confirmed ARM64-specific failure. Publishing under ${DOCKER_TAG}-amd64 only. Main tag stays untouched."
-              if ! build_bake "linux/amd64" push "${DOCKER_TAG}-amd64" 2>&1 | tee "$AMD64_PUSH_LOG"; then
-                echo "::error::Failed to publish the ${DOCKER_TAG}-amd64 fallback tag."
-                exit 1
-              fi
-              echo "arch_fallback=true" >> "$GITHUB_OUTPUT"
-              echo "arch_fallback_reason=arm64_build_failure" >> "$GITHUB_OUTPUT"
-              echo "fallback_tag=${DOCKER_TAG}-amd64" >> "$GITHUB_OUTPUT"
-            fi
-          fi
-
-      - name: Attention!!! arm64 was skipped
-        if: steps.build.outputs.arch_fallback == 'true'
-        run: echo "::warning::${{ matrix.service }} (${{ matrix.branch }}) was pushed as amd64-only this run — arm64 temporarily unavailable under this tag"
-              
-      - name: Record build status
-        if: always() && steps.build.outcome == 'success'
+      - name: Clean up disk space
+        if: always()
         run: |
-          mkdir -p /tmp/build-status
-          cat > /tmp/build-status/status.json <<EOF
-          {
-            "service": "${{ matrix.service }}",
-            "branch": "${{ matrix.branch }}",
-            "main_tag": "${{ env.DOCKER_TAG }}",
-            "arch_fallback": "${{ steps.build.outputs.arch_fallback }}",
-            "arch_fallback_reason": "${{ steps.build.outputs.arch_fallback_reason || 'none' }}",
-            "fallback_tag": "${{ steps.build.outputs.fallback_tag || '' }}"
-          }
-          EOF
+          printf '%.0s=' {1..80}; echo -e "\nDISK SPACE AFTER BUILD ${{ matrix.service }}:${{ matrix.arch }}"; df -h; docker system df; printf '%.0s=' {1..80}; echo
+          docker buildx prune -a -f || true; docker system prune -a -f --volumes || true
 
-      - name: Upload build status artifact
-        if: always() && steps.build.outcome == 'success'
+      - name: Record build status
+        if: always()
+        run: |
+          mkdir -p "${RUNNER_TEMP}/build-status"
+          jq -n --arg branch "${{ matrix.branch }}" --arg service "${{ matrix.service }}" \
+            --arg arch "${{ matrix.arch }}" --arg status "${{ job.status }}" \
+            '{branch: $branch, service: $service, arch: $arch, status: $status}' \
+            > "${RUNNER_TEMP}/build-status/build-${{ strategy.job-index }}.json"
+
+      - name: Upload build status
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: build-status-${{ strategy.job-index }}
-          path: /tmp/build-status/status.json
+          path: ${{ runner.temp }}/build-status/
           retention-days: 1
 
-  collect-build-results:
-    name: Collect build results
-    needs: build
-    if: always()
+  manifest:
+    name: manifest ${{ matrix.service }} (${{ matrix.branch }})
+    needs: [prepare, build]
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
-    outputs:
-      status_json: ${{ steps.merge.outputs.status_json }}
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: ${{ fromJson(needs.prepare.outputs.branches) }}
+        service: [dotnet, node, java, community]
+    env:
+      DOCKER_TAG: ${{ fromJson(needs.prepare.outputs.tags)[matrix.branch] }}
     steps:
-      - name: Download all status artifacts
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ matrix.branch }}
+          sparse-checkout: install/docker/build
+
+      - name: Download build statuses
         uses: actions/download-artifact@v4
         with:
           pattern: build-status-*
-          path: /tmp/statuses
+          path: ${{ runner.temp }}/statuses
           merge-multiple: true
 
-      - name: Merge into single JSON array
-        id: merge
+      - name: Login to DockerHub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create multi-arch manifests
+        id: manifest
+        run: |
+          arch_status() {
+            jq -rs --arg b "${{ matrix.branch }}" --arg s "${{ matrix.service }}" --arg a "$1" \
+              'map(select(.branch == $b and .service == $s and .arch == $a))[0].status // "missing"' \
+              "${RUNNER_TEMP}"/statuses/*.json
+          }
+          AMD64_STATUS=$(arch_status amd64)
+          ARM64_STATUS=$(arch_status arm64)
+          echo "amd64=${AMD64_STATUS}" >> "$GITHUB_OUTPUT"
+          echo "arm64=${ARM64_STATUS}" >> "$GITHUB_OUTPUT"
+          echo "AMD64: ${AMD64_STATUS} | ARM64: ${ARM64_STATUS}"
+
+          if [[ "$AMD64_STATUS" != "success" ]]; then
+            echo "::error::${{ matrix.service }} (${{ matrix.branch }}): amd64 build ${AMD64_STATUS} — manifest ${DOCKER_TAG} not published"
+            exit 1
+          fi
+
+          ARCHS=(amd64)
+          if [[ "$ARM64_STATUS" == "success" ]]; then
+            ARCHS+=(arm64)
+          else
+            echo "::warning::${{ matrix.service }} (${{ matrix.branch }}): arm64 build ${ARM64_STATUS} — ${DOCKER_TAG} published as amd64-only"
+          fi
+
+          mapfile -t IMAGES < <(
+            cd ".${DOCKER_PATH}" && DOCKER_TAG=__TAG__ docker buildx bake -f build/build.hcl ${{ matrix.service }}-services --print 2>/dev/null \
+              | jq -r '.target[].tags[]' | sed 's/:__TAG__$//' | sort -u
+          )
+          [ ${#IMAGES[@]} -gt 0 ] || { echo "::error::No images resolved for ${{ matrix.service }}-services"; exit 1; }
+
+          ERROR=0
+          for IMAGE in "${IMAGES[@]}"; do
+            SOURCES=()
+            for ARCH in "${ARCHS[@]}"; do SOURCES+=("${IMAGE}:${DOCKER_TAG}-${ARCH}"); done
+            for ATTEMPT in 1 2 3; do
+              docker buildx imagetools create -t "${IMAGE}:${DOCKER_TAG}" "${SOURCES[@]}" && { echo "[OK]   ${IMAGE}:${DOCKER_TAG} (${ARCHS[*]})"; continue 2; }
+              echo "[WAIT] ${IMAGE}:${DOCKER_TAG} attempt ${ATTEMPT}/3 failed, retrying..."
+              sleep 20
+            done
+            echo "::error::Failed to create manifest ${IMAGE}:${DOCKER_TAG}"
+            ERROR=1
+          done
+          [ "$ERROR" -eq 0 ] || exit 1
+
+          printf '%s\n' "${IMAGES[@]}" > "${RUNNER_TEMP}/images.txt"
+          echo "archs=${ARCHS[*]}" >> "$GITHUB_OUTPUT"
+
+      - name: Delete arch-specific tags
+        if: steps.manifest.outcome == 'success'
+        continue-on-error: true
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME_PAT }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN_PAT }}
+        run: |
+          JWT=$(curl -fsSL -X POST "https://hub.docker.com/v2/users/login" -H "Content-Type: application/json" \
+            -d "{\"username\":\"${DOCKERHUB_USERNAME}\",\"password\":\"${DOCKERHUB_TOKEN}\"}" | jq -r '.token // empty')
+          [ -n "$JWT" ] || { echo "::warning::Docker Hub login failed, arch-specific tags left in place"; exit 0; }
+
+          while read -r IMAGE; do
+            for ARCH in amd64 arm64; do
+              CODE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE -H "Authorization: JWT ${JWT}" \
+                "https://hub.docker.com/v2/repositories/${IMAGE}/tags/${DOCKER_TAG}-${ARCH}/")
+              case "$CODE" in
+                204) echo "[DEL]  ${IMAGE}:${DOCKER_TAG}-${ARCH}" ;;
+                404) ;;
+                *)   echo "::warning::Unexpected status ${CODE} deleting ${IMAGE}:${DOCKER_TAG}-${ARCH}" ;;
+              esac
+            done
+          done < "${RUNNER_TEMP}/images.txt"
+
+      - name: Record manifest status
+        if: always()
+        run: |
+          mkdir -p "${RUNNER_TEMP}/manifest-status"
+          jq -n --arg branch "${{ matrix.branch }}" --arg service "${{ matrix.service }}" \
+            --arg amd64 "${{ steps.manifest.outputs.amd64 || 'missing' }}" --arg arm64 "${{ steps.manifest.outputs.arm64 || 'missing' }}" \
+            --arg status "${{ steps.manifest.outcome }}" --arg archs "${{ steps.manifest.outputs.archs }}" \
+            '{branch: $branch, service: $service, amd64: $amd64, arm64: $arm64, status: $status, archs: $archs}' \
+            > "${RUNNER_TEMP}/manifest-status/manifest-${{ strategy.job-index }}.json"
+
+      - name: Upload manifest status
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: manifest-status-${{ strategy.job-index }}
+          path: ${{ runner.temp }}/manifest-status/
+          retention-days: 1
+
+  report:
+    name: Report
+    needs: [prepare, manifest]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download manifest statuses
+        uses: actions/download-artifact@v4
+        with:
+          pattern: manifest-status-*
+          path: ${{ runner.temp }}/statuses
+          merge-multiple: true
+
+      - name: Build summary
+        env:
+          TAGS: ${{ needs.prepare.outputs.tags }}
         run: |
           shopt -s nullglob
-          FILES=(/tmp/statuses/*.json)
-          if [ ${#FILES[@]} -eq 0 ]; then
-            echo "status_json=[]" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          MERGED=$(jq -s '.' "${FILES[@]}")
-          echo "status_json<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$MERGED" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"        
+          FILES=("${RUNNER_TEMP}"/statuses/*.json)
+          [ ${#FILES[@]} -gt 0 ] || { echo "::error::No manifest statuses found"; exit 1; }
+
+          icon() { case "$1" in success) echo "✅" ;; missing) echo "➖" ;; *) echo "❌ $1" ;; esac; }
+          {
+            echo "### Docker build #${{ github.run_number }}"
+            echo
+            echo "| Branch | Tag | Service | amd64 | arm64 | Manifest |"
+            echo "|---|---|---|---|---|---|"
+            jq -rs 'sort_by(.branch, .service)[] | [.branch, .service, .amd64, .arm64, .status, .archs] | @tsv' "${FILES[@]}" |
+            while IFS=$'\t' read -r BRANCH SERVICE AMD64 ARM64 STATUS ARCHS; do
+              TAG=$(jq -r --arg b "$BRANCH" '.[$b]' <<< "$TAGS")
+              echo "| ${BRANCH} | \`${TAG}\` | ${SERVICE} | $(icon "$AMD64") | $(icon "$ARM64") | $(icon "$STATUS") ${ARCHS} |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          ARM_FAILED=$(jq -rs '[.[] | select(.arm64 != "success") | "\(.service) (\(.branch))"] | join(", ")' "${FILES[@]}")
+          [ -z "$ARM_FAILED" ] || echo "::warning::arm64 not included in the manifest for: ${ARM_FAILED}"
 
   trigger-oci-docker:
     name: OCI (${{ matrix.branch }})
-    needs: [build, collect-build-results]
-    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    needs: [prepare, manifest]
+    if: ${{ !cancelled() }}
     continue-on-error: true
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches) }}
+        branch: ${{ fromJson(needs.prepare.outputs.branches) }}
+    env:
+      DOCKER_TAG: ${{ fromJson(needs.prepare.outputs.tags)[matrix.branch] }}
     steps:
       - name: Checkout ${{ matrix.branch }}
         uses: actions/checkout@v6
         with:
           ref: ${{ matrix.branch }}
 
-      - name: Resolve per-service tags for this branch
-        id: tagmap
+      - name: Download manifest statuses
+        uses: actions/download-artifact@v4
+        with:
+          pattern: manifest-status-*
+          path: ${{ runner.temp }}/statuses
+          merge-multiple: true
+
+      - name: Check all services were published
+        id: services
         run: |
-          echo '${{ needs.collect-build-results.outputs.status_json }}' > /tmp/all_status.json
+          shopt -s nullglob
+          FILES=("${RUNNER_TEMP}"/statuses/*.json)
+          [ ${#FILES[@]} -gt 0 ] || { echo "::error::No manifest statuses found"; exit 1; }
 
-          PRODUCT_VERSION=$(echo "${{ matrix.branch }}" | sed '/^release\b\|^hotfix\b\|^feature\b\|^bugfix\b/s/release.*\/\|hotfix.*\/\|feature.*\/\|bugfix.*\///; s/-git-action$//; s/^v//')
-          DOCKER_TAG="${PRODUCT_VERSION}.${{ github.run_number }}"
-          echo "DOCKER_TAG=$DOCKER_TAG" >> "$GITHUB_OUTPUT"
-
-          jq --arg branch "${{ matrix.branch }}" '[.[] | select(.branch == $branch)]' /tmp/all_status.json > /tmp/branch_status.json
-
-          if [ "$(jq 'length' /tmp/branch_status.json)" -eq 0 ]; then
-            echo "::error::No recorded build status found for branch ${{ matrix.branch }} — cannot determine which tags were actually published. Refusing to check or trigger against a guessed tag."
+          BRANCH_STATUS=$(jq -cs --arg b "${{ matrix.branch }}" 'map(select(.branch == $b))' "${FILES[@]}")
+          NOT_PUBLISHED=$(jq -r '[.[] | select(.status != "success") | .service] | join(", ")' <<< "$BRANCH_STATUS")
+          if [ "$(jq 'length' <<< "$BRANCH_STATUS")" -ne 4 ] || [ -n "$NOT_PUBLISHED" ]; then
+            echo "::error::Not all services were published under ${DOCKER_TAG} for ${{ matrix.branch }} (failed: ${NOT_PUBLISHED:-unknown}) — OCI install not triggered"
             exit 1
           fi
+          echo "service_tags_json=$(jq -c --arg t "$DOCKER_TAG" 'map({ (.service): $t }) | add' <<< "$BRANCH_STATUS")" >> "$GITHUB_OUTPUT"
 
-          SERVICE_TAGS_JSON=$(jq --arg maintag "$DOCKER_TAG" '
-            map({ (.service): (if .arch_fallback == "true" then .fallback_tag else $maintag end) }) | add
-          ' /tmp/branch_status.json)
-
-          echo "Resolved per-service tags:"
-          echo "$SERVICE_TAGS_JSON" | jq .
-
-          echo "service_tags_json<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$SERVICE_TAGS_JSON" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
-
-          DIVERGED=$(jq --arg maintag "$DOCKER_TAG" 'to_entries | map(select(.value != $maintag)) | length' <<< "$SERVICE_TAGS_JSON")
-          echo "has_divergence=$([ "$DIVERGED" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
-
-      - name: Check image availability against actual published tags
+      - name: Check image availability
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME_PAT }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN_PAT }}
         run: |
           sudo GITHUB_REPOSITORY=${{ github.repository }} BRANCH=${{ matrix.branch }} \
             DOCKER_REPOSITORY=${{ env.REPO }} DOCKER_PREFIX=${{ env.DOCKER_IMAGE_PREFIX }} \
-            SERVICE_TAGS_JSON='${{ steps.tagmap.outputs.service_tags_json }}' \
+            SERVICE_TAGS_JSON='${{ steps.services.outputs.service_tags_json }}' \
             DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME} DOCKERHUB_TOKEN=${DOCKERHUB_TOKEN} \
             bash .github/scripts/docker-images-availability.sh
 
-      - name: Refuse to trigger install — tags diverged
-        if: steps.tagmap.outputs.has_divergence == 'true'
-        run: |
-          echo "::error::One or more services for branch ${{ matrix.branch }} were published under a fallback tag, not '${{ steps.tagmap.outputs.DOCKER_TAG }}'. The OCI install workflow expects one uniform tag for all services, so it cannot be triggered automatically here. Affected mapping:"
-          echo '${{ steps.tagmap.outputs.service_tags_json }}' | jq .
-          exit 1
-
       - name: Trigger OCI install
-        if: steps.tagmap.outputs.has_divergence == 'false'
         env:
           GH_TOKEN: ${{ secrets.TOKEN }}
         run: |
-          gh workflow run "ci-oci-docker-install.yml" --repo "${{ github.repository }}" --ref "${{ matrix.branch }}" --field offline=false --field testing=true --field tag=${{ steps.tagmap.outputs.DOCKER_TAG }}
+          gh workflow run "ci-oci-docker-install.yml" --repo "${{ github.repository }}" --ref "${{ matrix.branch }}" --field offline=false --field testing=true --field tag=${DOCKER_TAG}
