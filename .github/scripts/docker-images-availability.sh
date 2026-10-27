@@ -4,7 +4,7 @@
 : "${BRANCH:?::error::[FAIL] BRANCH not set}"
 : "${DOCKER_REPOSITORY:?::error::[FAIL] DOCKER_REPOSITORY not set}"
 : "${DOCKER_PREFIX:?::error::[FAIL] DOCKER_PREFIX not set}"
-: "${SERVICE_TAGS_JSON:?::error::[FAIL] SERVICE_TAGS_JSON not set}"
+: "${DOCKER_TAG:?::error::[FAIL] DOCKER_TAG not set}"
 : "${DOCKERHUB_USERNAME:?::error::[FAIL] DOCKERHUB_USERNAME not set}"
 : "${DOCKERHUB_TOKEN:?::error::[FAIL] DOCKERHUB_TOKEN not set}"
 
@@ -52,36 +52,22 @@ check_image() {
 BUILD_HCL=$(curl -sSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/refs/heads/${BRANCH}/install/docker/build/build.hcl") \
   || { echo "::error::[FAIL] Could not fetch build.hcl"; exit 1; }
 
+mapfile -t SERVICES < <(
+  echo "$BUILD_HCL" \
+    | REPO=r DOCKER_IMAGE_PREFIX=p DOCKER_TAG=t docker buildx bake -f - default --print 2>/dev/null \
+    | jq -r '.target | .[] | .tags[]' \
+    | sed -E 's#^r/p-?##; s#:t$##' \
+    | grep -vE '^(dotnet|java|node)?$'
+)
+[ ${#SERVICES[@]} -gt 0 ] || { echo "::error::[FAIL] No images resolved from build.hcl"; exit 1; }
+
 ERROR=0
 PIDS=()
 trap 'kill 0' SIGINT SIGTERM
 
-for GROUP in $(echo "$SERVICE_TAGS_JSON" | jq -r 'keys[]'); do
-  TAG=$(echo "$SERVICE_TAGS_JSON" | jq -r --arg g "$GROUP" '.[$g]')
-  if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
-    echo "::error::[FAIL] No tag provided for service group '${GROUP}'"
-    ERROR=1
-    continue
-  fi
-
-  mapfile -t GROUP_SERVICES < <(
-    echo "$BUILD_HCL" \
-      | REPO=r DOCKER_IMAGE_PREFIX=p DOCKER_TAG=t docker buildx bake -f - "${GROUP}-services" --print 2>/dev/null \
-      | jq -r '.target | .[] | .tags[]' \
-      | sed -E 's#^r/p-?##; s#:t$##' \
-      | grep -vE '^(dotnet|java|node|)$'
-  )
-
-  if [ ${#GROUP_SERVICES[@]} -eq 0 ]; then
-    echo "::warning::No images resolved for service group '${GROUP}' — skipping"
-    continue
-  fi
-
-  echo "[INFO]    Group '${GROUP}' -> tag '${TAG}' (${#GROUP_SERVICES[@]} image(s))"
-  for SERVICE in "${GROUP_SERVICES[@]}"; do
-    check_image "${DOCKER_REPOSITORY}" "${DOCKER_PREFIX}" "${SERVICE}" "${TAG}" &
-    PIDS+=("$!")
-  done
+for SERVICE in "${SERVICES[@]}"; do
+  check_image "${DOCKER_REPOSITORY}" "${DOCKER_PREFIX}" "${SERVICE}" "${DOCKER_TAG}" &
+  PIDS+=("$!")
 done
 
 for PID in "${PIDS[@]}"; do wait "$PID" || ERROR=1; done

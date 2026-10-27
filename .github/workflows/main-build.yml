@@ -308,7 +308,6 @@ jobs:
           merge-multiple: true
 
       - name: Check all services were published
-        id: services
         run: |
           shopt -s nullglob
           FILES=("${RUNNER_TEMP}"/statuses/*.json)
@@ -320,7 +319,6 @@ jobs:
             echo "::error::Not all services were published under ${DOCKER_TAG} for ${{ matrix.branch }} (failed: ${NOT_PUBLISHED:-unknown}) — OCI install not triggered"
             exit 1
           fi
-          echo "service_tags_json=$(jq -c --arg t "$DOCKER_TAG" 'map({ (.service): $t }) | add' <<< "$BRANCH_STATUS")" >> "$GITHUB_OUTPUT"
 
       - name: Check image availability
         env:
@@ -328,8 +326,7 @@ jobs:
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN_PAT }}
         run: |
           sudo GITHUB_REPOSITORY=${{ github.repository }} BRANCH=${{ matrix.branch }} \
-            DOCKER_REPOSITORY=${{ env.REPO }} DOCKER_PREFIX=${{ env.DOCKER_IMAGE_PREFIX }} \
-            SERVICE_TAGS_JSON='${{ steps.services.outputs.service_tags_json }}' \
+            DOCKER_REPOSITORY=${{ env.REPO }} DOCKER_PREFIX=${{ env.DOCKER_IMAGE_PREFIX }} DOCKER_TAG=${DOCKER_TAG} \
             DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME} DOCKERHUB_TOKEN=${DOCKERHUB_TOKEN} \
             bash .github/scripts/docker-images-availability.sh
 
