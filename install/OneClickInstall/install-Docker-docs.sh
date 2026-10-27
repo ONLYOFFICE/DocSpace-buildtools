@@ -38,6 +38,74 @@
 # Sourced by install-Docker.sh. Uses installer configuration and shared helpers.
 # Contains Docs adoption, mount preservation, rollback and HTTPS handoff.
 
+# Keep this outside config: configuration refreshes must not replace the return
+# point. The original container holds settings and certificates in its writable
+# layer as well as references to its anonymous volumes.
+load_document_server_restore () {
+	local SNAPSHOT="${BASE_DIR}/.docs-restore/container.json"
+	DS_CONTAINER_INSPECT=$(cat "${SNAPSHOT}") || return 1
+	jq -e 'length == 1 and (.[0] | (.Id | type == "string") and
+		(.Name | type == "string") and (.HostConfig.AutoRemove != true))' <<<"${DS_CONTAINER_INSPECT}" >/dev/null || return 1
+	DS_ORIGINAL_ID=$(jq -r '.[0].Id' <<<"${DS_CONTAINER_INSPECT}")
+	DS_ORIGINAL_NAME=$(jq -r '.[0].Name | ltrimstr("/")' <<<"${DS_CONTAINER_INSPECT}")
+	DS_ORIGINAL_RUNNING=$(jq -r '.[0].State.Running' <<<"${DS_CONTAINER_INSPECT}")
+	DS_ORIGINAL_RESTART_POLICY=$(jq -r '.[0].HostConfig.RestartPolicy |
+		(.Name // "no") + (if .Name == "on-failure" and .MaximumRetryCount > 0
+		then ":" + (.MaximumRetryCount | tostring) else "" end)' <<<"${DS_CONTAINER_INSPECT}")
+	docker inspect --type container "${DS_ORIGINAL_ID}" >/dev/null 2>&1 || {
+		echo "The saved Docs container ${DS_ORIGINAL_ID} is missing. No data has been removed; recover the original container before continuing." >&2
+		return 1
+	}
+}
+
+save_document_server_restore () {
+	local RESTORE_DIR="${BASE_DIR}/.docs-restore" SNAPSHOT_TMP
+	jq -e '.[0].HostConfig.AutoRemove != true' <<<"${DS_CONTAINER_INSPECT}" >/dev/null || {
+		echo "Docs uses --rm and cannot be retained for restoration; recreate it without --rm before installing Apps." >&2
+		return 1
+	}
+	mkdir -p "${RESTORE_DIR}" && chmod 700 "${RESTORE_DIR}" || return 1
+	SNAPSHOT_TMP=$(mktemp "${RESTORE_DIR}/.container.XXXXXX") || return 1
+	printf '%s\n' "${DS_CONTAINER_INSPECT}" > "${SNAPSHOT_TMP}" &&
+		mv -f "${SNAPSHOT_TMP}" "${RESTORE_DIR}/container.json" || return 1
+	load_document_server_restore
+}
+
+restore_document_server_container () {
+	local CURRENT_NAME
+	CURRENT_NAME=$(docker inspect --format '{{.Name}}' "${DS_ORIGINAL_ID}") || return 1
+	if [ "${CURRENT_NAME#/}" != "${DS_ORIGINAL_NAME}" ]; then
+		docker rename "${DS_ORIGINAL_ID}" "${DS_ORIGINAL_NAME}" || return 1
+	fi
+	docker update --restart="${DS_ORIGINAL_RESTART_POLICY}" "${DS_ORIGINAL_ID}" >/dev/null || return 1
+	[ "${DS_ORIGINAL_RUNNING}" = true ] || return 0
+	docker start "${DS_ORIGINAL_ID}" >/dev/null || return 1
+	local DEADLINE=$((SECONDS + 600))
+	# Follow the original HTTP-to-HTTPS redirect, including self-signed certificates.
+	until [ "$(docker exec "${DS_ORIGINAL_ID}" curl -fkLsS --max-time 10 http://localhost/healthcheck 2>/dev/null)" = true ]; do
+		[ "${SECONDS}" -lt "${DEADLINE}" ] || {
+			echo "Docs did not become ready. Data and configuration are retained; fix its startup error and retry." >&2
+			return 1
+		}
+		sleep 5
+	done
+}
+
+stop_apps_certificate_renewal () {
+	local PROJECT="$1" CONTAINER
+	# An already running renewal script must not bring the Apps proxy back up.
+	if [ -d "${BASE_DIR}/.docs-restore" ]; then
+		touch "${BASE_DIR}/.docs-restore/apps-stopped" || return 1
+	fi
+	rm -f "/etc/cron.weekly/${PRODUCT}-renew-letsencrypt" || return 1
+	# The SSL helper also runs a background renewal test outside Compose.
+	local CONTAINERS
+	CONTAINERS=$(docker ps -aq --filter "ancestor=certbot/certbot" --filter "volume=${PROJECT}_webroot_path") || return 1
+	for CONTAINER in ${CONTAINERS}; do
+		docker rm -f "${CONTAINER}" >/dev/null || return 1
+	done
+}
+
 # Classify every actual mount, including anonymous volumes created by the image.
 # Fonts stay mounted at their original paths: an image VOLUME below /usr/share/fonts
 # would otherwise hide files copied into the parent ds_fonts volume.
@@ -160,42 +228,46 @@ rollback_document_server_migration () {
 			return 1
 		}
 	fi
-	if [ "${DS_ORIGINAL_RENAMED}" = true ]; then
-		docker rename "${DS_ORIGINAL_ID}" "${DS_ORIGINAL_NAME}" || return 1
-	fi
-	if [ "${DS_ORIGINAL_RUNNING}" = true ]; then
-		docker start "${DS_ORIGINAL_ID}" >/dev/null || {
-			echo "The original Docs container is retained but could not be restarted." >&2
-			return 1
-		}
-	fi
+	stop_apps_certificate_renewal "${COMPOSE_PROJECT_NAME:-${PACKAGE_SYSNAME}}" || return 1
+	restore_document_server_container || return 1
 	DS_ADOPTION_ACTIVE=false
 }
 
 detect_existing_document_server () {
+	if [ -d "${BASE_DIR}/.docs-restore" ]; then
+		load_document_server_restore || return 1
+	fi
 	[ "${UPDATE}" = "true" ] && return 0
 	[ "${INSTALL_DOCUMENT_SERVER}" = "true" ] || return 0
 
 	local CONTAINER FOUND_IMAGE CANDIDATE
-	# The status prefix is optional, so release images are adopted under any --status.
-	while read -r CANDIDATE FOUND_IMAGE; do
-		# Adopt only raw docker-run Docs containers.
-		[ -n "$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' "${CANDIDATE}" 2>/dev/null)" ] && continue
-		CONTAINER="${CANDIDATE}"
-		break
-	done < <(docker ps -a --format '{{.Names}} {{.Image}}' 2>/dev/null | awk -v pkg="${PACKAGE_SYSNAME}" -v status="${STATUS}" 'BEGIN {prefix = (status == "") ? "" : "(" status ")?"} $2 ~ ("(^|/)"pkg"/"prefix"documentserver(-de|-ee)?(:|$)") {print}')
+	if [ -d "${BASE_DIR}/.docs-restore" ]; then
+		CONTAINER="${DS_ORIGINAL_ID}"
+		FOUND_IMAGE=$(jq -r '.[0].Config.Image' <<<"${DS_CONTAINER_INSPECT}")
+	else
+		# The status prefix is optional, so release images are adopted under any --status.
+		while read -r CANDIDATE FOUND_IMAGE; do
+			# Adopt only raw docker-run Docs containers.
+			[ -n "$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' "${CANDIDATE}" 2>/dev/null)" ] && continue
+			CONTAINER="${CANDIDATE}"
+			break
+		done < <(docker ps -a --format '{{.Names}} {{.Image}}' 2>/dev/null | awk -v pkg="${PACKAGE_SYSNAME}" -v status="${STATUS}" 'BEGIN {prefix = (status == "") ? "" : "(" status ")?"} $2 ~ ("(^|/)"pkg"/"prefix"documentserver(-de|-ee)?(:|$)") {print}')
+	fi
 	[ -z "${CONTAINER}" ] && return 0
 
 	# Inspect before stopping or recreating anything; mount options must survive too.
-	DS_CONTAINER_INSPECT=$(docker inspect --type container "${CONTAINER}") || return 1
+	if [ ! -d "${BASE_DIR}/.docs-restore" ]; then
+		DS_CONTAINER_INSPECT=$(docker inspect --type container "${CONTAINER}") || return 1
+	fi
 	DS_MOUNT_PLAN=$(plan_document_server_mounts <<<"${DS_CONTAINER_INSPECT}") || return 1
-	DS_ORIGINAL_ID=$(jq -r '.[0].Id' <<<"${DS_CONTAINER_INSPECT}")
-	DS_ORIGINAL_NAME="${CONTAINER}"
-	DS_ORIGINAL_RUNNING=$(jq -r '.[0].State.Running' <<<"${DS_CONTAINER_INSPECT}")
+	[ -f "${BASE_DIR}/.docs-restore/container.json" ] || save_document_server_restore || return 1
 	DS_EXISTING_FRONTEND_ID=$(docker inspect --format '{{.Id}}' "${CONTAINER_NAME}" 2>/dev/null) || DS_EXISTING_FRONTEND_ID=""
 	DS_ADOPTION_ACTIVE=true
 	DS_PREVIOUS_EXIT_TRAP=$(trap -p EXIT)
 	trap 'DS_EXIT_STATUS=$?; rollback_document_server_migration; exit "${DS_EXIT_STATUS}"' EXIT
+	# A stopped container with restart=always otherwise comes back after a
+	# Docker daemon restart and competes with Apps for the original ports.
+	docker update --restart=no "${DS_ORIGINAL_ID}" >/dev/null || return 1
 	jq -r '.[] | "Docs mount: " + .source + " -> " + .target + " (" +
 		(if .managed then "copy to " + .managed else "keep original mount" end) + ")"' <<<"${DS_MOUNT_PLAN}"
 
@@ -207,6 +279,19 @@ detect_existing_document_server () {
 		# Avoid treating registry:port as an image tag.
 		DOCUMENT_SERVER_IMAGE_NAME="${FOUND_IMAGE%:*}"
 		DOCUMENT_SERVER_VERSION="${FOUND_IMAGE##*:}"
+	fi
+	if [ -f "${BASE_DIR}/.docs-restore/storage.json" ]; then
+		[ -s "${BASE_DIR}/.env" ] && [ -f "${BASE_DIR}/config/ds.env" ] &&
+			[ -s "${BASE_DIR}/config/ds-mounts.json" ] || {
+			echo "Saved Apps configuration is missing; restore it before reusing the Apps data." >&2
+			return 1
+		}
+		# Apps may have updated Docs or its JWT since the initial adoption.
+		DOCUMENT_SERVER_IMAGE_NAME=$(get_env_parameter DOCUMENT_SERVER_IMAGE_NAME)
+		DOCUMENT_SERVER_IMAGE_NAME="${DOCUMENT_SERVER_IMAGE_NAME%:*}"
+		DOCUMENT_SERVER_VERSION=$(get_env_parameter DOCUMENT_SERVER_VERSION)
+		DOCUMENT_SERVER_JWT_SECRET="${DOCUMENT_SERVER_JWT_SECRET:-$(get_env_parameter DOCUMENT_SERVER_JWT_SECRET)}"
+		DOCUMENT_SERVER_JWT_HEADER="${DOCUMENT_SERVER_JWT_HEADER:-$(get_env_parameter DOCUMENT_SERVER_JWT_HEADER)}"
 	fi
 
 	# Inherit HTTPS before moving Docs behind ds.yml's port 80.
@@ -268,7 +353,7 @@ detect_existing_document_server () {
 		docker stop "${DS_ORIGINAL_ID}" >/dev/null || return 1
 	fi
 
-	DOCUMENT_SERVER_HOST="${CONTAINER}"
+	DOCUMENT_SERVER_HOST="${DS_ORIGINAL_NAME}"
 	DOCUMENT_SERVER_PORT="80"
 	INSTALL_DOCUMENT_SERVER="false"
 	DOCUMENT_SERVER_ATTACHED="true"
@@ -362,89 +447,122 @@ write_document_server_mounts () {
 # Move adopted Docs data into the volumes declared by ds.yml.
 migrate_document_server_data () {
 	local DS_COMPOSE_FILE="${BASE_DIR}/ds.yml"
+	local STORAGE="${BASE_DIR}/.docs-restore/storage.json"
 	[ "${DEPLOYMENT_MODE}" = standalone ] && DS_COMPOSE_FILE="${BASE_DIR}/docker-compose.yml"
-	write_document_server_mounts || return 1
+	if [ ! -f "${STORAGE}" ]; then
+		write_document_server_mounts || return 1
 
-	# Keep only env values changed from image defaults.
-	local IMAGE_REF DEFAULT_KEY DEFAULT_VAL
-	local -A IMAGE_DEFAULT_ENV=()
-	IMAGE_REF=$(jq -r '.[0].Image' <<<"${DS_CONTAINER_INSPECT}")
-	while IFS='=' read -r DEFAULT_KEY DEFAULT_VAL; do
-		[ -n "${DEFAULT_KEY}" ] && IMAGE_DEFAULT_ENV["${DEFAULT_KEY}"]="${DEFAULT_VAL}"
-	done < <(docker image inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "${IMAGE_REF}" 2>/dev/null)
+		# Keep only env values changed from image defaults.
+		local IMAGE_REF DEFAULT_KEY DEFAULT_VAL
+		local -A IMAGE_DEFAULT_ENV=()
+		IMAGE_REF=$(jq -r '.[0].Image' <<<"${DS_CONTAINER_INSPECT}")
+		while IFS='=' read -r DEFAULT_KEY DEFAULT_VAL; do
+			[ -n "${DEFAULT_KEY}" ] && IMAGE_DEFAULT_ENV["${DEFAULT_KEY}"]="${DEFAULT_VAL}"
+		done < <(docker image inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "${IMAGE_REF}" 2>/dev/null)
 
-	local ENV_LINE ENV_KEY ENV_VAL
-	mkdir -p "${BASE_DIR}/config" || return 1
-	(umask 077; : > "${BASE_DIR}/config/ds.env") || return 1
-	while IFS= read -r ENV_LINE; do
-		ENV_KEY="${ENV_LINE%%=*}"
-		ENV_VAL="${ENV_LINE#*=}"
-		[ -z "${ENV_KEY}" ] && continue
-		case "${ENV_KEY}" in
-			JWT_ENABLED|JWT_SECRET|JWT_HEADER|JWT_IN_BODY|AMQP_URI|REDIS_SERVER_HOST|REDIS_SERVER_PORT|REDIS_SERVER_USER|REDIS_SERVER_PASS|REDIS_SERVER_DB|PATH|HOME|HOSTNAME) continue ;;
-			# LE state would be lost; the new front end owns renewal.
-			LETS_ENCRYPT_DOMAIN|LETS_ENCRYPT_MAIL) continue ;;
-		esac
-		[ "${IMAGE_DEFAULT_ENV[${ENV_KEY}]-__unset__}" = "${ENV_VAL}" ] && continue
-		printf '%s\n' "${ENV_LINE}" >> "${BASE_DIR}/config/ds.env" || return 1
-	done < <(jq -r '.[0].Config.Env[]' <<<"${DS_CONTAINER_INSPECT}")
-	chmod 600 "${BASE_DIR}/config/ds.env" || return 1
+		local ENV_LINE ENV_KEY ENV_VAL
+		mkdir -p "${BASE_DIR}/config" || return 1
+		(umask 077; : > "${BASE_DIR}/config/ds.env") || return 1
+		while IFS= read -r ENV_LINE; do
+			ENV_KEY="${ENV_LINE%%=*}"
+			ENV_VAL="${ENV_LINE#*=}"
+			[ -z "${ENV_KEY}" ] && continue
+			case "${ENV_KEY}" in
+				JWT_ENABLED|JWT_SECRET|JWT_HEADER|JWT_IN_BODY|AMQP_URI|REDIS_SERVER_HOST|REDIS_SERVER_PORT|REDIS_SERVER_USER|REDIS_SERVER_PASS|REDIS_SERVER_DB|PATH|HOME|HOSTNAME) continue ;;
+				# LE state would be lost; the new front end owns renewal.
+				LETS_ENCRYPT_DOMAIN|LETS_ENCRYPT_MAIL) continue ;;
+			esac
+			[ "${IMAGE_DEFAULT_ENV[${ENV_KEY}]-__unset__}" = "${ENV_VAL}" ] && continue
+			printf '%s\n' "${ENV_LINE}" >> "${BASE_DIR}/config/ds.env" || return 1
+		done < <(jq -r '.[0].Config.Env[]' <<<"${DS_CONTAINER_INSPECT}")
+		chmod 600 "${BASE_DIR}/config/ds.env" || return 1
+	fi
 	enable_document_server_env_file "${DS_COMPOSE_FILE}" || return 1
 	local CONFIG EXISTING_ID
 	CONFIG=$(compose_with_document_server_mounts -f "${DS_COMPOSE_FILE}" config --format json) || return 1
 	DS_NEW_CONTAINER_NAME=$(jq -er '.services["onlyoffice-document-server"].container_name' <<<"${CONFIG}") || return 1
 	COMPOSE_PROJECT_NAME=$(jq -er '.name' <<<"${CONFIG}") || return 1
 	EXISTING_ID=$(docker inspect --format '{{.Id}}' "${DS_NEW_CONTAINER_NAME}" 2>/dev/null) || EXISTING_ID=""
-	[ -z "${EXISTING_ID}" ] || [ "${EXISTING_ID}" = "${DS_ORIGINAL_ID}" ] || {
-		echo "Target Docs container ${DS_NEW_CONTAINER_NAME} already exists; aborting adoption." >&2
-		return 1
-	}
-	# Driver-backed volumes may unmount when Docs stops. Do not mistake their
-	# empty host mountpoint for the data to copy. Additional mounts can reuse
-	# those volumes directly, but managed data needs an explicit migration.
-	local VOLUME_INFO VOLUME_NAME
-	while IFS= read -r VOLUME_NAME; do
-		VOLUME_INFO=$(docker volume inspect "${VOLUME_NAME}") || return 1
-		jq -e '.[0] | .Driver == "local" and ((.Options // {}) | length == 0)' <<<"${VOLUME_INFO}" >/dev/null || {
-			echo "Managed Docs volume ${VOLUME_NAME} uses driver options; migrate its data explicitly before adoption." >&2
+	if [ -n "${EXISTING_ID}" ] && [ "${EXISTING_ID}" != "${DS_ORIGINAL_ID}" ]; then
+		# Recover a run interrupted after creating the replacement but before Apps.
+		[ -f "${STORAGE}" ] && docker inspect "${EXISTING_ID}" | jq -e --arg project "${COMPOSE_PROJECT_NAME}" \
+			'.[0].Config.Labels | .["com.docker.compose.project"] == $project and
+			.["com.docker.compose.service"] == "onlyoffice-document-server"' >/dev/null || {
+			echo "Target Docs container ${DS_NEW_CONTAINER_NAME} already exists; aborting adoption." >&2
 			return 1
 		}
-	done < <(jq -r '.[] | select(.managed != null and .type == "volume") | .source' <<<"${DS_MOUNT_PLAN}")
-	docker stop "${DS_ORIGINAL_ID}" >/dev/null || return 1
-
-	local MOUNT TYPE SRC SUBPATH NAME DEST_SUBDIR SOURCE_PATH TARGET_PATH
-	while IFS= read -r MOUNT; do
-		TYPE=$(jq -r '.type' <<<"${MOUNT}")
-		SRC=$(jq -r '.source' <<<"${MOUNT}")
-		SUBPATH=$(jq -r '.subpath // empty' <<<"${MOUNT}")
-		NAME=$(jq -r '.managed' <<<"${MOUNT}")
-		DEST_SUBDIR=$(jq -r '.subdir' <<<"${MOUNT}")
-		if [ "${TYPE}" = volume ]; then
-			SOURCE_PATH=$(docker volume inspect --format '{{.Mountpoint}}' "${SRC}") || return 1
-			[ -z "${SUBPATH}" ] || SOURCE_PATH+="/${SUBPATH}"
-		else
-			SOURCE_PATH="${SRC}"
-		fi
-		[ -d "${SOURCE_PATH}" ] || { echo "Docs data directory is inaccessible: ${SOURCE_PATH}" >&2; return 1; }
-		TARGET_PATH=$(resolve_ds_volume_path "${NAME}") || return 1
-		if [ -n "${DEST_SUBDIR}" ]; then
-			TARGET_PATH+="/${DEST_SUBDIR}"
-			mkdir -p -- "${TARGET_PATH}" || return 1
-		fi
-		[ "${SOURCE_PATH}" -ef "${TARGET_PATH}" ] && continue
-		SOURCE_PATH=$(readlink -f "${SOURCE_PATH}") || return 1
-		TARGET_PATH=$(readlink -f "${TARGET_PATH}") || return 1
-		case "${TARGET_PATH}/" in "${SOURCE_PATH}/"*) echo "Docs migration target is inside its source: ${TARGET_PATH}" >&2; return 1 ;; esac
-		cp -a -- "${SOURCE_PATH}/." "${TARGET_PATH}/" || {
-			echo "Failed to copy Docs data from ${SOURCE_PATH}; keeping the original container." >&2
+		DS_NEW_CONTAINER_ID="${EXISTING_ID}"
+	fi
+	if [ -f "${STORAGE}" ]; then
+		jq -e --arg project "${COMPOSE_PROJECT_NAME}" --arg directory "${VOLUMES_DIR}" \
+			'.project == $project and .volumes_dir == $directory' "${STORAGE}" >/dev/null || {
+			echo "Saved Apps data belongs to a different Compose project or volumes directory." >&2
 			return 1
 		}
-	done < <(jq -c '[.[] | select(.managed != null)] | sort_by(.target | length)[]' <<<"${DS_MOUNT_PLAN}")
+		local SAVED_PATH
+		while IFS= read -r SAVED_PATH; do
+			[ -d "${SAVED_PATH}" ] || { echo "Saved Apps data is missing: ${SAVED_PATH}" >&2; return 1; }
+		done < <(jq -r '.paths[]' "${STORAGE}")
+		echo "Reusing saved Apps data; the original Docs data will not be copied again."
+		docker stop "${DS_ORIGINAL_ID}" >/dev/null || return 1
+	else
+		# Driver-backed volumes may unmount when Docs stops. Do not mistake their
+		# empty host mountpoint for the data to copy. Additional mounts can reuse
+		# those volumes directly, but managed data needs an explicit migration.
+		local VOLUME_INFO VOLUME_NAME
+		while IFS= read -r VOLUME_NAME; do
+			VOLUME_INFO=$(docker volume inspect "${VOLUME_NAME}") || return 1
+			jq -e '.[0] | .Driver == "local" and ((.Options // {}) | length == 0)' <<<"${VOLUME_INFO}" >/dev/null || {
+				echo "Managed Docs volume ${VOLUME_NAME} uses driver options; migrate its data explicitly before adoption." >&2
+				return 1
+			}
+		done < <(jq -r '.[] | select(.managed != null and .type == "volume") | .source' <<<"${DS_MOUNT_PLAN}")
+		docker stop "${DS_ORIGINAL_ID}" >/dev/null || return 1
 
+		local MOUNT TYPE SRC SUBPATH NAME DEST_SUBDIR SOURCE_PATH TARGET_PATH STORAGE_TMP
+		local COPIED_PATHS=()
+		while IFS= read -r MOUNT; do
+			TYPE=$(jq -r '.type' <<<"${MOUNT}")
+			SRC=$(jq -r '.source' <<<"${MOUNT}")
+			SUBPATH=$(jq -r '.subpath // empty' <<<"${MOUNT}")
+			NAME=$(jq -r '.managed' <<<"${MOUNT}")
+			DEST_SUBDIR=$(jq -r '.subdir' <<<"${MOUNT}")
+			if [ "${TYPE}" = volume ]; then
+				SOURCE_PATH=$(docker volume inspect --format '{{.Mountpoint}}' "${SRC}") || return 1
+				[ -z "${SUBPATH}" ] || SOURCE_PATH+="/${SUBPATH}"
+			else
+				SOURCE_PATH="${SRC}"
+			fi
+			[ -d "${SOURCE_PATH}" ] || { echo "Docs data directory is inaccessible: ${SOURCE_PATH}" >&2; return 1; }
+			TARGET_PATH=$(resolve_ds_volume_path "${NAME}") || return 1
+			if [ -n "${DEST_SUBDIR}" ]; then
+				TARGET_PATH+="/${DEST_SUBDIR}"
+				mkdir -p -- "${TARGET_PATH}" || return 1
+			fi
+			[ ! "${SOURCE_PATH}" -ef "${TARGET_PATH}" ] || {
+				echo "Docs and Apps must use separate data directories: ${SOURCE_PATH}" >&2
+				return 1
+			}
+			SOURCE_PATH=$(readlink -f "${SOURCE_PATH}") || return 1
+			TARGET_PATH=$(readlink -f "${TARGET_PATH}") || return 1
+			case "${TARGET_PATH}/" in "${SOURCE_PATH}/"*) echo "Docs migration target is inside its source: ${TARGET_PATH}" >&2; return 1 ;; esac
+			case "${SOURCE_PATH}/" in "${TARGET_PATH}/"*) echo "Docs migration source is inside its target: ${SOURCE_PATH}" >&2; return 1 ;; esac
+			cp -a -- "${SOURCE_PATH}/." "${TARGET_PATH}/" || {
+				echo "Failed to copy Docs data from ${SOURCE_PATH}; keeping the original container." >&2
+				return 1
+			}
+			COPIED_PATHS+=("${TARGET_PATH}")
+		done < <(jq -c '[.[] | select(.managed != null)] | sort_by(.target | length)[]' <<<"${DS_MOUNT_PLAN}")
+		STORAGE_TMP=$(mktemp "${BASE_DIR}/.docs-restore/.storage.XXXXXX") || return 1
+		jq -n --arg project "${COMPOSE_PROJECT_NAME}" --arg directory "${VOLUMES_DIR}" --args \
+			'{project: $project, volumes_dir: $directory, paths: $ARGS.positional}' "${COPIED_PATHS[@]}" > "${STORAGE_TMP}" &&
+			mv -f "${STORAGE_TMP}" "${STORAGE}" || return 1
+	fi
 
 	if [ "${DS_NEW_CONTAINER_NAME}" = "${DS_ORIGINAL_NAME}" ]; then
-		docker rename "${DS_ORIGINAL_ID}" "${DS_ORIGINAL_NAME}-apps-migration-backup" || return 1
-		DS_ORIGINAL_RENAMED=true
+		if [ "$(docker inspect --format '{{.Name}}' "${DS_ORIGINAL_ID}")" != "/${DS_ORIGINAL_NAME}-apps-migration-backup" ]; then
+			docker rename "${DS_ORIGINAL_ID}" "${DS_ORIGINAL_NAME}-apps-migration-backup" || return 1
+		fi
 	fi
 	if [ "${DEPLOYMENT_MODE}" != standalone ]; then
 		echo "Docs RabbitMQ/Redis storage is retained on Docs; it is not imported into the external services."
@@ -452,7 +570,7 @@ migrate_document_server_data () {
 	return 0
 }
 
-# Keep the original container until the replacement has its mounts and is healthy.
+# Validate the replacement, then keep the original stopped for later uninstall.
 finish_document_server_migration () {
 	[ "${DS_ADOPTION_ACTIVE}" = true ] || return 0
 	local INSPECT STATUS DEADLINE=$((SECONDS + 600))
@@ -484,7 +602,7 @@ finish_document_server_migration () {
 					([$container.HostConfig.Mounts[]? | select(.Target == $expected.target)][0].VolumeOptions.Subpath // null) == $expected.subpath
 				 end)))
 	' <<<"${INSPECT}" >/dev/null || { echo "Replacement Docs mount verification failed." >&2; return 1; }
-	docker rm "${DS_ORIGINAL_ID}" >/dev/null || return 1
+	echo "Original Docs retained for restoration on uninstall: ${DS_ORIGINAL_ID}."
 	DS_ADOPTION_ACTIVE=false
 	trap - EXIT
 	[ -z "${DS_PREVIOUS_EXIT_TRAP}" ] || eval "${DS_PREVIOUS_EXIT_TRAP}"

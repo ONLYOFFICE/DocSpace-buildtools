@@ -202,36 +202,69 @@ detect_current_deployment_mode () {
 }
 
 uninstall() {
+    local RESTORE_DOCS=false
+    DOWN_ARGS=(down)
     select_deployment_mode
     detect_current_deployment_mode
 
     DOCKER_COMPOSE="$(docker compose version >/dev/null 2>&1 && echo 'docker compose' || echo 'docker-compose')"
 
+    if [ -d "${BASE_DIR}/.docs-restore" ]; then
+        load_document_server_restore || return 1
+        RESTORE_DOCS=true
+        REMOVE_DATA_SERVICES=n
+        # Include all Apps services even after an interrupted uninstall.
+        DOWN_ARGS+=(--remove-orphans)
+        if [ -f "${BASE_DIR}/.docs-restore/storage.json" ]; then
+            COMPOSE_PROJECT_NAME=$(jq -er '.project' "${BASE_DIR}/.docs-restore/storage.json") || return 1
+            export COMPOSE_PROJECT_NAME
+        fi
+        if [ -z "${CURRENT_DEPLOYMENT_MODE}" ] && [ "${DEPLOYMENT_MODE_SET}" != true ] && \
+            [ ! -f "${BASE_DIR}/docker-compose.yml" ]; then
+            DEPLOYMENT_MODE=microservices
+            select_deployment_mode
+        fi
+        echo "Removing Apps and restoring Docs; keeping Apps data and configuration."
+        stop_apps_certificate_renewal "${COMPOSE_PROJECT_NAME:-$PACKAGE_SYSNAME}" || return 1
+    fi
+
     if [ "${DEPLOYMENT_MODE}" = "standalone" ]; then
         echo "Uninstallation of ${PRODUCT_NAME} (standalone)..."
 
-        read -p "Also remove data volumes (mysql, opensearch, documents)? (Y/n): " REMOVE_DATA_SERVICES
-        DOWN_ARGS=(down)
+        [ "${RESTORE_DOCS}" = true ] || read -p "Also remove data volumes (mysql, opensearch, documents)? (Y/n): " REMOVE_DATA_SERVICES
         [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]] && DOWN_ARGS+=(-v)
-        # A background certbot renewal check (see apps-ssl-setup) may still hold the webroot volume.
-        docker ps -aq --filter "ancestor=certbot/certbot" --filter "volume=${COMPOSE_PROJECT_NAME:-$PACKAGE_SYSNAME}_webroot_path" | xargs -r docker rm -f >/dev/null
-        compose_with_document_server_mounts "${COMPOSE_FILES[@]}" "${DOWN_ARGS[@]}" || echo "Failed to remove ${PRODUCT_NAME}."
+        if [ "${RESTORE_DOCS}" != true ]; then
+            # A background certbot renewal check (see apps-ssl-setup) may still hold the webroot volume.
+            docker ps -aq --filter "ancestor=certbot/certbot" --filter "volume=${COMPOSE_PROJECT_NAME:-$PACKAGE_SYSNAME}_webroot_path" | xargs -r docker rm -f >/dev/null
+        fi
+        compose_with_document_server_mounts "${COMPOSE_FILES[@]}" "${DOWN_ARGS[@]}" || {
+            echo "Failed to remove ${PRODUCT_NAME}."
+            [ "${RESTORE_DOCS}" != true ] || return 1
+        }
     else
-        read -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " REMOVE_DATA_SERVICES
-        DOWN_ARGS=(down)
+        [ "${RESTORE_DOCS}" = true ] || read -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " REMOVE_DATA_SERVICES
 
-        if [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]]; then
+        if [ "${RESTORE_DOCS}" = true ] || [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]]; then
             SERVICES+=("db" "rabbitmq" "redis" "opensearch" "dashboards" "fluent")
-            DOWN_ARGS+=(-v)
+            [ "${RESTORE_DOCS}" = true ] || DOWN_ARGS+=(-v)
         fi
 
         for SERVICE in "${SERVICES[@]}" "ds"; do
             if [[ -f "$BASE_DIR/$SERVICE.yml" ]]; then
                 echo "Uninstallation of $SERVICE..."
-                compose_with_document_server_mounts -f "$BASE_DIR/$SERVICE.yml" "${DOWN_ARGS[@]}" || echo "Failed to remove $SERVICE."
+                compose_with_document_server_mounts -f "$BASE_DIR/$SERVICE.yml" "${DOWN_ARGS[@]}" || {
+                    echo "Failed to remove $SERVICE."
+                    [ "${RESTORE_DOCS}" != true ] || return 1
+                }
             fi
         done
     fi
+
+	if [ "${RESTORE_DOCS}" = true ]; then
+		restore_document_server_container || return 1
+		echo "Docs restored. Apps data, configuration and the shared network are retained."
+		return 0
+	fi
 
 	docker network rm "${NETWORK_NAME}" 2>/dev/null || echo "Failed to remove network ${NETWORK_NAME}."
 
@@ -700,6 +733,17 @@ set_installation_type_data () {
 download_files () {
 	local DOCKER_TARBALL DOWNLOAD_URL STAGING_DIR ARCHIVE_FILE DOCS_FILE
 	local TAR_ARGS=()
+	# The refresh below removes installer files. Never place retained Apps data
+	# in that cleanup area, including through a symlink.
+	if [ -d "${BASE_DIR}/.docs-restore" ] && [ -n "${VOLUMES_DIR}" ]; then
+		local REAL_BASE REAL_VOLUMES
+		REAL_BASE=$(readlink -m -- "${BASE_DIR}") || return 1
+		REAL_VOLUMES=$(readlink -m -- "${VOLUMES_DIR}") || return 1
+		case "${REAL_VOLUMES}/" in
+			"${REAL_BASE}/DocumentServer/"*|"${REAL_BASE}/certs/"*) ;;
+			"${REAL_BASE}/"*) echo "Apps volumes must be outside the installer configuration directory: ${VOLUMES_DIR}" >&2; return 1 ;;
+		esac
+	fi
 
 	case "${DEPLOYMENT_MODE}" in
 		standalone) DOCKER_TARBALL="docker-standalone.tar.gz" ;;
@@ -758,8 +802,8 @@ download_files () {
 	done
 	# Retain the staged settings for recovery if cleanup or copying fails.
 	trap 'echo "Error: configuration refresh failed; recovery files remain in ${STAGING_DIR}" >&2; trap - RETURN' RETURN
-	# Keep inherited certs across updates and mode switches.
-	find "${BASE_DIR:?}" -mindepth 1 -maxdepth 1 -not -name "DocumentServer" -not -name "certs" -exec rm -rf {} + || return 1
+	# Keep inherited certs and the original Docs return point across updates.
+	find "${BASE_DIR:?}" -mindepth 1 -maxdepth 1 -not -name "DocumentServer" -not -name "certs" -not -name ".docs-restore" -exec rm -rf {} + || return 1
 	cp -a "${STAGING_DIR}/." "${BASE_DIR}/" || return 1
 	trap 'rm -rf "${STAGING_DIR}"; trap - RETURN' RETURN
 	rm -f "${BASE_DIR:?}/${DOCKER_TARBALL}"
@@ -931,7 +975,7 @@ install_product () {
 				if [ "${DEPLOYMENT_MODE}" = "stack" ]; then
 					${DOCKER_COMPOSE} -f ${BASE_DIR}/apps-stack.yml -f ${BASE_DIR}/proxy.yml down
 					if [ "${ACTUAL_CONTAINER}" = "${PACKAGE_SYSNAME}-api" ]; then
-						docker ps -a --format '{{.ID}} {{.Image}}' | grep ":${LOCAL_CONTAINER_TAG}$" | awk '{print $1}' | xargs -r docker rm -f
+						docker ps -a --no-trunc --format '{{.ID}} {{.Image}}' | grep ":${LOCAL_CONTAINER_TAG}$" | awk -v original="${DS_ORIGINAL_ID}" '$1 != original {print $1}' | xargs -r docker rm -f
 					fi
 				else
 					compose_with_document_server_mounts "${COMPOSE_FILES[@]}" down
@@ -1343,6 +1387,11 @@ start_installation () {
 		install_document_server
 
 		install_product
+	fi
+
+	# Also clear this when a resumed installation is detected as an update.
+	if [ "${INSTALL_PRODUCT}" = true ] && [ -d "${BASE_DIR}/.docs-restore" ]; then
+		rm -f "${BASE_DIR}/.docs-restore/apps-stopped" || exit 1
 	fi
 
 	echo ""
