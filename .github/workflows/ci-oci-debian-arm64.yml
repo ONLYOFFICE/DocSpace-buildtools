@@ -8,10 +8,9 @@ on:
         type: string
         required: true
       docs_version:
-        description: "Exact Docs Developer DEB version (version-build)"
+        description: "Exact published Docs Developer DEB version (version-build)"
         type: string
-        required: false
-        default: "10.0.0-156"
+        required: true
     secrets:
       LICENSE_ENTERPRISE:
         required: false

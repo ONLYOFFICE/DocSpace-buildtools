@@ -6,11 +6,12 @@ ACTION=${1:-validate}
 DOCS_VERSION=${2:-}
 APPS_VERSION=${3:-}
 DS_PACKAGE=onlyoffice-documentserver-de
+DOCS_PORT=8083
 WORK_DIR=/opt/apps-ci
 
 if [ "$ACTION" != logs ]; then
     [[ "$DOCS_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-[0-9]+$ ]] \
-        || { echo "Use the exact Docs DEB version, for example 10.0.0-156." >&2; exit 1; }
+        || { echo "Set docs_version to an exact published Docs DEB version (version-build)." >&2; exit 1; }
     [[ "$APPS_VERSION" =~ ^[0-9]+(\.[0-9]+){2,3}(-[0-9]+)?$ ]] \
         || { echo "Use the exact Apps DEB version from 4testing." >&2; exit 1; }
 fi
@@ -44,6 +45,11 @@ case "$ACTION" in
         echo "deb [trusted=yes] https://s3.eu-west-1.amazonaws.com/repo-doc-onlyoffice-com/repo/debian stable ${DOCS_VERSION%%-*}" \
             > /etc/apt/sources.list.d/onlyoffice-dev.list
         apt-get update
+        if ! apt-cache madison "$DS_PACKAGE" | awk -v version="$DOCS_VERSION" '$3 == version { found=1 } END { exit !found }'; then
+            echo "Docs ${DOCS_VERSION} is unavailable in the configured repository. Available versions:" >&2
+            apt-cache madison "$DS_PACKAGE"
+            exit 1
+        fi
         echo 'ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true' | debconf-set-selections
         apt-get install -y postgresql redis-server rabbitmq-server nginx-extras openssl
         systemctl start postgresql redis-server rabbitmq-server
@@ -56,16 +62,17 @@ ${DS_PACKAGE} onlyoffice/db-host string localhost
 ${DS_PACKAGE} onlyoffice/db-user string ds
 ${DS_PACKAGE} onlyoffice/db-pwd password ${DOCS_DB_PASSWORD}
 ${DS_PACKAGE} onlyoffice/db-name string ds
+${DS_PACKAGE} onlyoffice/listenaddress string 0.0.0.0:${DOCS_PORT}
 EOF
         apt-get install -y "${DS_PACKAGE}=${DOCS_VERSION}"
         check_version "$DS_PACKAGE" "$DOCS_VERSION" | tee "$WORK_DIR/docs-version.before"
         for _ in $(seq 1 60); do
-            if [ "$(curl -fsS --max-time 5 http://localhost/healthcheck || true)" = true ]; then
+            if [ "$(curl -fsS --max-time 5 "http://127.0.0.1:${DOCS_PORT}/healthcheck" || true)" = true ]; then
                 exit 0
             fi
             sleep 2
         done
-        echo "Standalone Docs healthcheck failed before installing Apps" >&2
+        echo "Standalone Docs healthcheck failed at http://127.0.0.1:${DOCS_PORT}/healthcheck before installing Apps" >&2
         exit 1
         ;;
     apps)
@@ -93,6 +100,8 @@ EOF
         ;;
     logs)
         set +e
+        ss -lntp
+        nginx -T
         cd "$WORK_DIR" || exit 0
         dpkg-query -W -f='${Package}\t${Version}\t${db:Status-Status}\n' 'onlyoffice*' 'percona*'
         bash /workspace/tests/vagrant/post-install.sh logs

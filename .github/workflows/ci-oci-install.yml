@@ -46,8 +46,8 @@ on:
         required: false
       docs_version:
         type: string
-        description: "Exact Docs Developer DEB version for the Debian ARM64 test"
-        default: "10.0.0-156"
+        description: "Exact published Docs Developer DEB version (required for Debian ARM64)"
+        required: false
 
 jobs:
   debian-arm64:
