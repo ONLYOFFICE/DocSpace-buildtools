@@ -38,26 +38,6 @@
 
 set -e
 
-make_swap () {
-	DISK_REQUIREMENTS=6144 #6Gb free space
-	MEMORY_REQUIREMENTS=12000 #RAM ~12Gb
-	SWAPFILE="/${product}_swapfile"
-
-	AVAILABLE_DISK_SPACE=$(df -Pm / | awk 'NR == 2 { print $4 }')
-	TOTAL_MEMORY=$(free --mega | awk '/^Mem:/ { print $2 }')
-	EXIST=$(swapon -s | awk '{ print $1 }' | { grep -x "${SWAPFILE}" || true; })
-
-	if [[ -z $EXIST ]] && [ "${TOTAL_MEMORY}" -lt ${MEMORY_REQUIREMENTS} ] && [ "${AVAILABLE_DISK_SPACE}" -gt ${DISK_REQUIREMENTS} ]; then
-		touch "${SWAPFILE}"
-		[[ "$(df -T / | awk 'NR==2{print $2}')" = "btrfs" ]] && chattr +C "${SWAPFILE}"
-		fallocate -l 6G "${SWAPFILE}"
-		chmod 600 "${SWAPFILE}"
-		mkswap "${SWAPFILE}"
-		swapon "${SWAPFILE}"
-		awk -v swapfile="${SWAPFILE}" '$1 == swapfile && $3 == "swap" { found = 1 } END { exit !found }' /etc/fstab || echo "$SWAPFILE none swap sw 0 0" >> /etc/fstab
-	fi
-}
-
 command_exists () {
 	type "$1" &> /dev/null;
 }

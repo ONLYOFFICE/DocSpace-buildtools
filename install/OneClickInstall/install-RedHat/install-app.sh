@@ -201,7 +201,7 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
 fi
 
 if [ "$MAKESWAP" == "true" ]; then
-	make_swap
+	make_swap "/${product}_swapfile"
 fi
 
 { ${package_manager} check-update ${package}; PRODUCT_CHECK_UPDATE=$?; } || true

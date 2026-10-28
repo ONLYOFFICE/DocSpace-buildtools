@@ -137,7 +137,7 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
 fi
 
 if [ "$MAKESWAP" == "true" ]; then
-	make_swap
+	make_swap "/${product}_swapfile"
 fi
 
 if [ "$PRODUCT_INSTALLED" = "false" ]; then

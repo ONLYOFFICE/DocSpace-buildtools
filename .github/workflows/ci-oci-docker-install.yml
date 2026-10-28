@@ -14,6 +14,7 @@ on:
       - "tests/smoke/**"
       - "install/OneClickInstall/install-Docker*.sh"
       - "install/OneClickInstall/common/check-ports.sh"
+      - "install/OneClickInstall/common/swap.sh"
       - "install/docker/**"
   workflow_dispatch:
     inputs:

@@ -155,6 +155,18 @@ else
 	rm -f "${DOCS_SCRIPT_TMP}"
 fi
 
+# Load the swap helpers shared with the Debian and RedHat installers.
+SWAP_SCRIPT="common/swap.sh"
+if [[ "$LOCAL_SCRIPTS" = "true" ]] || [[ "$OFFLINE_INSTALLATION" = "true" ]]; then
+	source "$(dirname "${BASH_SOURCE[0]}")/${SWAP_SCRIPT}" || exit 1
+else
+	SWAP_SCRIPT_TMP="$(mktemp)" || exit 1
+	curl -fsSL --retry 3 --retry-delay 2 "${DOWNLOAD_URL_PREFIX}/${SWAP_SCRIPT}" -o "${SWAP_SCRIPT_TMP}" || { rm -f "${SWAP_SCRIPT_TMP}"; echo "Failed to download ${SWAP_SCRIPT}" >&2; exit 1; }
+	bash -n "${SWAP_SCRIPT_TMP}" || { rm -f "${SWAP_SCRIPT_TMP}"; echo "Downloaded ${SWAP_SCRIPT} has invalid Bash syntax" >&2; exit 1; }
+	source "${SWAP_SCRIPT_TMP}"
+	rm -f "${SWAP_SCRIPT_TMP}"
+fi
+
 select_deployment_mode () {
   case "${DEPLOYMENT_MODE}" in
     standalone)
@@ -259,6 +271,8 @@ uninstall() {
             fi
         done
     fi
+
+	is_macos || remove_swap "${SWAPFILE}" "/${LEGACY_PRODUCT}_swapfile"
 
 	if [ "${RESTORE_DOCS}" = true ]; then
 		restore_document_server_container || return 1
@@ -1164,29 +1178,6 @@ install_standalone () {
 	fi
 }
 
-make_swap () {
-	DISK_REQUIREMENTS=6144 #6Gb free space
-	MEMORY_REQUIREMENTS=12000 #RAM ~12Gb
-
-	AVAILABLE_DISK_SPACE=$(df -Pm / | awk 'NR == 2 { print $4 }')
-	TOTAL_MEMORY=$(free --mega | awk '/^Mem:/ { print $2 }')
-	EXIST=$(swapon -s | awk '{ print $1 }' | { grep -x ${SWAPFILE} || true; })
-
-	if [[ -z $EXIST ]] && [ ${TOTAL_MEMORY} -lt ${MEMORY_REQUIREMENTS} ] && [ ${AVAILABLE_DISK_SPACE} -gt ${DISK_REQUIREMENTS} ]; then
-
-		if [ "${DIST}" == "Ubuntu" ] || [ "${DIST}" == "Debian" ]; then
-			fallocate -l 6G ${SWAPFILE}
-		else
-			dd if=/dev/zero of=${SWAPFILE} count=6144 bs=1MiB
-		fi
-
-		chmod 600 ${SWAPFILE}
-		mkswap ${SWAPFILE}
-		swapon ${SWAPFILE}
-		awk -v swapfile="${SWAPFILE}" '$1 == swapfile && $3 == "swap" { found = 1 } END { exit !found }' /etc/fstab || echo "$SWAPFILE none swap sw 0 0" >> /etc/fstab
-	fi
-}
-
 offline_check_docker_image() {
 	[ ! -f "$1" ] && { echo "Error: File '$1' does not exist."; exit 1; }
 	${DOCKER_COMPOSE} -f "$1" config | grep -oP 'image:\s*\K\S+' | while IFS= read -r IMAGE_TAG; do
@@ -1331,7 +1322,7 @@ start_installation () {
 	fi
 
 	if [ "$MAKESWAP" == "true" ]; then
-		make_swap
+		make_swap "${SWAPFILE}"
 	fi
 
 	docker_login

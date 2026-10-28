@@ -116,12 +116,7 @@ rm -f -- "/etc/${package_sysname}/documentserver/nginx/ds.conf".{apps.bak,ssl.ba
     "/etc/${package_sysname}/documentserver/nginx/ds.conf".apps.*.bak
 
 # Uninstall swap file if it exists
-for SWAPFILE_NAME in "${product}" "${legacy_product}"; do
-    if swapon --show | grep -q "/${SWAPFILE_NAME}_swapfile"; then
-        swapoff "/${SWAPFILE_NAME}_swapfile"
-        rm -f "/${SWAPFILE_NAME}_swapfile"
-    fi
-done
+remove_swap "/${product}_swapfile" "/${legacy_product}_swapfile"
 
 echo -e "Uninstallation of ${product_name}" \
          "$( [ "$UNINSTALL_DEPENDENCIES" = true ] && echo "and all dependencies" ) \e[32mcompleted.\e[0m"

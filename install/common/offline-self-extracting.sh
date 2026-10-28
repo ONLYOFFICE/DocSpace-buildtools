@@ -165,6 +165,7 @@ fi
 
 echo "Extracting OneClickInstall files to the current directory..."
 mv -f "${TEMP_DIR}/docker-standalone.tar.gz" "${TEMP_DIR}/install-Docker.sh" "${TEMP_DIR}/install-Docker-args.sh" "${TEMP_DIR}/install-Docker-docs.sh" "${SCRIPT_DIR}"
+mkdir -p "${SCRIPT_DIR}/common" && mv -f "${TEMP_DIR}/common/swap.sh" "${SCRIPT_DIR}/common"
 
 echo "Running the install-Docker.sh script..."
 chmod +x "${SCRIPT_DIR}/install-Docker.sh"

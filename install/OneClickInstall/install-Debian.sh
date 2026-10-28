@@ -164,8 +164,10 @@ source_remote_script() {
 
 if [ "${UNINSTALL}" == "true" ]; then
     if [ "${LOCAL_SCRIPTS}" == "true" ]; then
+        source common/swap.sh
         source install-Debian/uninstall.sh
     else
+        source_remote_script common/swap.sh
         source_remote_script install-Debian/uninstall.sh
     fi
     exit 0
@@ -182,10 +184,12 @@ declare -x LC_ALL="en_US.UTF-8"
 if [ "${LOCAL_SCRIPTS}" == "true" ]; then
 	source install-Debian/tools.sh
 	source common/check-ports.sh
+	source common/swap.sh
 	source common/preserve-docs.sh
 else
 	source_remote_script install-Debian/tools.sh
 	source_remote_script common/check-ports.sh
+	source_remote_script common/swap.sh
 	source_remote_script common/preserve-docs.sh
 fi
 

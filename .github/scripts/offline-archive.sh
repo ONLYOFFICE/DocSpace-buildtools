@@ -97,7 +97,7 @@ build() {
   local ARTIFACT_NAME="4testing-offline-apps-installation${SUFFIX}.sh"
 
   tar -cf "${INSTALL_PATH}/offline-apps.tar" \
-    -C "${INSTALL_PATH}/OneClickInstall" install-Docker-args.sh install-Docker-docs.sh install-Docker.sh \
+    -C "${INSTALL_PATH}/OneClickInstall" install-Docker-args.sh install-Docker-docs.sh install-Docker.sh common/swap.sh \
     -C "${INSTALL_PATH}" docker-static docker-standalone.tar.gz apps_images.tar.xz docs_images.tar.xz
 
   local TEMP_BYTES; TEMP_BYTES=$(stat -c%s "${INSTALL_PATH}/docker-standalone.tar.gz" \
