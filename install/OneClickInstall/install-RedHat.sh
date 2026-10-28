@@ -142,8 +142,10 @@ source_remote_script() {
 # Run uninstall if requested
 if [ "${UNINSTALL}" == "true" ]; then
     if [ "${LOCAL_SCRIPTS}" == "true" ]; then
+        source common/swap.sh
         source install-RedHat/uninstall.sh
     else
+        source_remote_script common/swap.sh
         source_remote_script install-RedHat/uninstall.sh
     fi
     exit 0
@@ -161,10 +163,12 @@ END
 if [ "$LOCAL_SCRIPTS" = "true" ]; then
 	source install-RedHat/tools.sh
 	source common/check-ports.sh
+	source common/swap.sh
 	source common/preserve-docs.sh
 else
 	source_remote_script install-RedHat/tools.sh
 	source_remote_script common/check-ports.sh
+	source_remote_script common/swap.sh
 	source_remote_script common/preserve-docs.sh
 fi
 

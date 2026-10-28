@@ -155,6 +155,18 @@ else
 	rm -f "${DOCS_SCRIPT_TMP}"
 fi
 
+# Load the swap helpers shared with the Debian and RedHat installers.
+SWAP_SCRIPT="common/swap.sh"
+if [[ "$LOCAL_SCRIPTS" = "true" ]] || [[ "$OFFLINE_INSTALLATION" = "true" ]]; then
+	source "$(dirname "${BASH_SOURCE[0]}")/${SWAP_SCRIPT}" || exit 1
+else
+	SWAP_SCRIPT_TMP="$(mktemp)" || exit 1
+	curl -fsSL --retry 3 --retry-delay 2 "${DOWNLOAD_URL_PREFIX}/${SWAP_SCRIPT}" -o "${SWAP_SCRIPT_TMP}" || { rm -f "${SWAP_SCRIPT_TMP}"; echo "Failed to download ${SWAP_SCRIPT}" >&2; exit 1; }
+	bash -n "${SWAP_SCRIPT_TMP}" || { rm -f "${SWAP_SCRIPT_TMP}"; echo "Downloaded ${SWAP_SCRIPT} has invalid Bash syntax" >&2; exit 1; }
+	source "${SWAP_SCRIPT_TMP}"
+	rm -f "${SWAP_SCRIPT_TMP}"
+fi
+
 select_deployment_mode () {
   case "${DEPLOYMENT_MODE}" in
     standalone)
@@ -202,34 +214,71 @@ detect_current_deployment_mode () {
 }
 
 uninstall() {
+    local RESTORE_DOCS=false
+    DOWN_ARGS=(down)
     select_deployment_mode
     detect_current_deployment_mode
 
     DOCKER_COMPOSE="$(docker compose version >/dev/null 2>&1 && echo 'docker compose' || echo 'docker-compose')"
 
+    if [ -d "${BASE_DIR}/.docs-restore" ]; then
+        load_document_server_restore || return 1
+        RESTORE_DOCS=true
+        REMOVE_DATA_SERVICES=n
+        # Include all Apps services even after an interrupted uninstall.
+        DOWN_ARGS+=(--remove-orphans)
+        if [ -f "${BASE_DIR}/.docs-restore/storage.json" ]; then
+            COMPOSE_PROJECT_NAME=$(jq -er '.project' "${BASE_DIR}/.docs-restore/storage.json") || return 1
+            export COMPOSE_PROJECT_NAME
+        fi
+        if [ -z "${CURRENT_DEPLOYMENT_MODE}" ] && [ "${DEPLOYMENT_MODE_SET}" != true ] && \
+            [ ! -f "${BASE_DIR}/docker-compose.yml" ]; then
+            DEPLOYMENT_MODE=microservices
+            select_deployment_mode
+        fi
+        echo "Removing Apps and restoring Docs; keeping Apps data and configuration."
+        stop_apps_certificate_renewal "${COMPOSE_PROJECT_NAME:-$PACKAGE_SYSNAME}" || return 1
+    fi
+
     if [ "${DEPLOYMENT_MODE}" = "standalone" ]; then
         echo "Uninstallation of ${PRODUCT_NAME} (standalone)..."
 
-        read -p "Also remove data volumes (mysql, opensearch, documents)? (Y/n): " REMOVE_DATA_SERVICES
-        DOWN_ARGS=(down)
+        [ "${RESTORE_DOCS}" = true ] || read -p "Also remove data volumes (mysql, opensearch, documents)? (Y/n): " REMOVE_DATA_SERVICES
         [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]] && DOWN_ARGS+=(-v)
-        compose_with_document_server_mounts "${COMPOSE_FILES[@]}" "${DOWN_ARGS[@]}" || echo "Failed to remove ${PRODUCT_NAME}."
+        if [ "${RESTORE_DOCS}" != true ]; then
+            # A background certbot renewal check (see apps-ssl-setup) may still hold the webroot volume.
+            docker ps -aq --filter "ancestor=certbot/certbot" --filter "volume=${COMPOSE_PROJECT_NAME:-$PACKAGE_SYSNAME}_webroot_path" | xargs -r docker rm -f >/dev/null
+        fi
+        compose_with_document_server_mounts "${COMPOSE_FILES[@]}" "${DOWN_ARGS[@]}" || {
+            echo "Failed to remove ${PRODUCT_NAME}."
+            [ "${RESTORE_DOCS}" != true ] || return 1
+        }
     else
-        read -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " REMOVE_DATA_SERVICES
-        DOWN_ARGS=(down)
+        [ "${RESTORE_DOCS}" = true ] || read -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " REMOVE_DATA_SERVICES
 
-        if [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]]; then
+        if [ "${RESTORE_DOCS}" = true ] || [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]]; then
             SERVICES+=("db" "rabbitmq" "redis" "opensearch" "dashboards" "fluent")
-            DOWN_ARGS+=(-v)
+            [ "${RESTORE_DOCS}" = true ] || DOWN_ARGS+=(-v)
         fi
 
         for SERVICE in "${SERVICES[@]}" "ds"; do
             if [[ -f "$BASE_DIR/$SERVICE.yml" ]]; then
                 echo "Uninstallation of $SERVICE..."
-                compose_with_document_server_mounts -f "$BASE_DIR/$SERVICE.yml" "${DOWN_ARGS[@]}" || echo "Failed to remove $SERVICE."
+                compose_with_document_server_mounts -f "$BASE_DIR/$SERVICE.yml" "${DOWN_ARGS[@]}" || {
+                    echo "Failed to remove $SERVICE."
+                    [ "${RESTORE_DOCS}" != true ] || return 1
+                }
             fi
         done
     fi
+
+	is_macos || remove_swap "${SWAPFILE}" "/${LEGACY_PRODUCT}_swapfile"
+
+	if [ "${RESTORE_DOCS}" = true ]; then
+		restore_document_server_container || return 1
+		echo "Docs restored. Apps data, configuration and the shared network are retained."
+		return 0
+	fi
 
 	docker network rm "${NETWORK_NAME}" 2>/dev/null || echo "Failed to remove network ${NETWORK_NAME}."
 
@@ -698,6 +747,17 @@ set_installation_type_data () {
 download_files () {
 	local DOCKER_TARBALL DOWNLOAD_URL STAGING_DIR ARCHIVE_FILE DOCS_FILE
 	local TAR_ARGS=()
+	# The refresh below removes installer files. Never place retained Apps data
+	# in that cleanup area, including through a symlink.
+	if [ -d "${BASE_DIR}/.docs-restore" ] && [ -n "${VOLUMES_DIR}" ]; then
+		local REAL_BASE REAL_VOLUMES
+		REAL_BASE=$(readlink -m -- "${BASE_DIR}") || return 1
+		REAL_VOLUMES=$(readlink -m -- "${VOLUMES_DIR}") || return 1
+		case "${REAL_VOLUMES}/" in
+			"${REAL_BASE}/DocumentServer/"*|"${REAL_BASE}/certs/"*) ;;
+			"${REAL_BASE}/"*) echo "Apps volumes must be outside the installer configuration directory: ${VOLUMES_DIR}" >&2; return 1 ;;
+		esac
+	fi
 
 	case "${DEPLOYMENT_MODE}" in
 		standalone) DOCKER_TARBALL="docker-standalone.tar.gz" ;;
@@ -756,8 +816,8 @@ download_files () {
 	done
 	# Retain the staged settings for recovery if cleanup or copying fails.
 	trap 'echo "Error: configuration refresh failed; recovery files remain in ${STAGING_DIR}" >&2; trap - RETURN' RETURN
-	# Keep inherited certs across updates and mode switches.
-	find "${BASE_DIR:?}" -mindepth 1 -maxdepth 1 -not -name "DocumentServer" -not -name "certs" -exec rm -rf {} + || return 1
+	# Keep inherited certs and the original Docs return point across updates.
+	find "${BASE_DIR:?}" -mindepth 1 -maxdepth 1 -not -name "DocumentServer" -not -name "certs" -not -name ".docs-restore" -exec rm -rf {} + || return 1
 	cp -a "${STAGING_DIR}/." "${BASE_DIR}/" || return 1
 	trap 'rm -rf "${STAGING_DIR}"; trap - RETURN' RETURN
 	rm -f "${BASE_DIR:?}/${DOCKER_TARBALL}"
@@ -929,7 +989,7 @@ install_product () {
 				if [ "${DEPLOYMENT_MODE}" = "stack" ]; then
 					${DOCKER_COMPOSE} -f ${BASE_DIR}/apps-stack.yml -f ${BASE_DIR}/proxy.yml down
 					if [ "${ACTUAL_CONTAINER}" = "${PACKAGE_SYSNAME}-api" ]; then
-						docker ps -a --format '{{.ID}} {{.Image}}' | grep ":${LOCAL_CONTAINER_TAG}$" | awk '{print $1}' | xargs -r docker rm -f
+						docker ps -a --no-trunc --format '{{.ID}} {{.Image}}' | grep ":${LOCAL_CONTAINER_TAG}$" | awk -v original="${DS_ORIGINAL_ID}" '$1 != original {print $1}' | xargs -r docker rm -f
 					fi
 				else
 					compose_with_document_server_mounts "${COMPOSE_FILES[@]}" down
@@ -1118,29 +1178,6 @@ install_standalone () {
 	fi
 }
 
-make_swap () {
-	DISK_REQUIREMENTS=6144 #6Gb free space
-	MEMORY_REQUIREMENTS=12000 #RAM ~12Gb
-
-	AVAILABLE_DISK_SPACE=$(df -Pm / | awk 'NR == 2 { print $4 }')
-	TOTAL_MEMORY=$(free --mega | awk '/^Mem:/ { print $2 }')
-	EXIST=$(swapon -s | awk '{ print $1 }' | { grep -x ${SWAPFILE} || true; })
-
-	if [[ -z $EXIST ]] && [ ${TOTAL_MEMORY} -lt ${MEMORY_REQUIREMENTS} ] && [ ${AVAILABLE_DISK_SPACE} -gt ${DISK_REQUIREMENTS} ]; then
-
-		if [ "${DIST}" == "Ubuntu" ] || [ "${DIST}" == "Debian" ]; then
-			fallocate -l 6G ${SWAPFILE}
-		else
-			dd if=/dev/zero of=${SWAPFILE} count=6144 bs=1MiB
-		fi
-
-		chmod 600 ${SWAPFILE}
-		mkswap ${SWAPFILE}
-		swapon ${SWAPFILE}
-		awk -v swapfile="${SWAPFILE}" '$1 == swapfile && $3 == "swap" { found = 1 } END { exit !found }' /etc/fstab || echo "$SWAPFILE none swap sw 0 0" >> /etc/fstab
-	fi
-}
-
 offline_check_docker_image() {
 	[ ! -f "$1" ] && { echo "Error: File '$1' does not exist."; exit 1; }
 	${DOCKER_COMPOSE} -f "$1" config | grep -oP 'image:\s*\K\S+' | while IFS= read -r IMAGE_TAG; do
@@ -1285,7 +1322,7 @@ start_installation () {
 	fi
 
 	if [ "$MAKESWAP" == "true" ]; then
-		make_swap
+		make_swap "${SWAPFILE}"
 	fi
 
 	docker_login
@@ -1341,6 +1378,11 @@ start_installation () {
 		install_document_server
 
 		install_product
+	fi
+
+	# Also clear this when a resumed installation is detected as an update.
+	if [ "${INSTALL_PRODUCT}" = true ] && [ -d "${BASE_DIR}/.docs-restore" ]; then
+		rm -f "${BASE_DIR}/.docs-restore/apps-stopped" || exit 1
 	fi
 
 	echo ""

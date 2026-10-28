@@ -780,6 +780,7 @@ product_configuration(){
 	env_configuration "$APP_DIR/systemd.env" DOCSPACE_TRANSPORT "http"
 	env_configuration "$APP_DIR/systemd.env" DOCSPACE_HOST "127.0.0.1"
 	env_configuration "$APP_DIR/systemd.env" DOCSPACE_PORT "5158"
+	env_configuration "$APP_DIR/systemd.env" DOCSPACE_DISABLED_TOOLS "run_builder_script,get_office_api_reference"
 
 	: "${CORE_MACHINEKEY:=$(generate_key "machinekey")}"
 	json_configuration "${USER_CONF}" "core.machinekey" "${CORE_MACHINEKEY}"

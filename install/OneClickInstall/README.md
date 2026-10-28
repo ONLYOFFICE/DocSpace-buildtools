@@ -367,10 +367,13 @@ Answer "N" to "Also uninstall ONLYOFFICE Docs?" to keep Docs: the snapshot is re
 
 ### Docker
 
-A Docs container started with `docker run` (not from a Compose project) is attached instead of deploying a new one, with its image tag, data and HTTPS certificate. The original container is kept until the replacement is healthy and restored if the installation fails.
+For Docs installed with `docker run`, the installer keeps the original container stopped with automatic restart disabled. Apps uses a copy of its main data. Run this command to restore Docs and keep Apps data and settings for reinstallation:
 
-> [!NOTE]
-> Unlike packages, `--uninstall true` does not recreate the original Docs container. To keep the Docs data, answer "Y" to "Keep configuration and Docs data for reinstallation?" and "n" to removing the data volumes.
+```bash
+sudo bash apps-install.sh docker --uninstall true
+```
+
+Keep the original container, its data and the `/app/onlyoffice/.docs-restore` directory. `docker container prune` deletes the saved container. Additional custom mounts remain shared with Apps. Automatic restoration requires the installer to have saved the original container. Older installations need a backup or VM snapshot. Fresh Apps installations keep the usual uninstall options.
 
 ## 🖥 System Requirements
 

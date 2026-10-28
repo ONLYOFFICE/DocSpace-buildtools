@@ -100,9 +100,11 @@ create_renew_script() {
   cat > "${CRON_FILE}" <<END
 #!/bin/bash
 # ${PRODUCT} Renew Let's Encrypt SSL Certificates (standalone deployment mode)
+[ ! -e "${DOCKERCOMPOSE}/.docs-restore/apps-stopped" ] || exit 0
 echo "[\$(date '+%F %T')] START ${CRON_FILE}" >> "${LOG_FILE}"
 $(declare -p CERTBOT_DOCKER_ARGS)
 $(command -v docker) run "\${CERTBOT_DOCKER_ARGS[@]}" --network host certbot/certbot renew 2>&1 | tee -a "${LOG_FILE}"
+[ ! -e "${DOCKERCOMPOSE}/.docs-restore/apps-stopped" ] || exit 0
 install -m 644 "${LETSENCRYPT}/live/${CERT_NAME}/fullchain.pem" "${CERTS_DIR}/fullchain.pem"
 install -m 640 -o 0 -g "${APP_GID}" "${LETSENCRYPT}/live/${CERT_NAME}/privkey.pem" "${CERTS_DIR}/privkey.pem"
 $(command -v docker) exec ${CONTAINER_NAME} /usr/local/openresty/bin/openresty -s reload
