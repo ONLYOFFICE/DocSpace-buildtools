@@ -1,0 +1,145 @@
+name: Build Site-Core
+
+on:
+  workflow_dispatch:
+    inputs:
+      branches:
+        description: 'Base branches (JSON; default: workflow branch)'
+        required: false
+        type: string
+      branch-buildtools:
+        description: 'Buildtools branch (default: base)'
+        required: false
+        type: string
+      branch-server:
+        description: 'Server branch (default: base, then develop)'
+        required: false
+        type: string
+      branch-client:
+        description: 'Client branch (default: base, then develop)'
+        required: false
+        type: string
+
+env:
+  DOCKER_PATH: "/install/docker"
+  REPO: "onlyoffice"
+  DOCKER_IMAGE_PREFIX: "4testing-apps"
+  DOCKERFILE: "Dockerfile"
+  # Target platforms (comma-separated) for both the build and the check-image job.
+  # site-core is built for linux/amd64 only on purpose: it is a technical service, not shipped
+  # with DocSpace, so the arm64 build is skipped to save build time.
+  # To build arm64 as well, set "linux/amd64,linux/arm64": QEMU is already set up in the build job,
+  # and check-image will verify every platform listed here.
+  PLATFORMS: "linux/amd64"
+
+jobs:
+  build:
+    name: site-core (${{ matrix.branch }})
+    runs-on: ubuntu-latest
+    env:
+      BASE_BRANCH: ${{ matrix.branch }}
+      BUILDTOOLS_BRANCH: ${{ inputs.branch-buildtools || matrix.branch }}
+      SERVER_BRANCH: ${{ inputs.branch-server }}
+      CLIENT_BRANCH: ${{ inputs.branch-client }}
+      TAG_BRANCH: >-
+        ${{ inputs.branch-buildtools && inputs.branch-buildtools != matrix.branch && inputs.branch-buildtools ||
+            inputs.branch-server && inputs.branch-server != matrix.branch && inputs.branch-server ||
+            inputs.branch-client && inputs.branch-client != matrix.branch && inputs.branch-client || matrix.branch }}
+    strategy:
+      matrix:
+        branch: ${{ fromJson(inputs.branches || format('[{0}]', toJSON(github.ref_name))) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.BUILDTOOLS_BRANCH }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Setup BuildKit with /mnt support
+        run: |
+          docker rm -f buildkitd || true
+          mountpoint -q /mnt && { sudo mkdir -p /mnt/buildkit; sudo chmod 777 /mnt/buildkit; STORAGE_ARGS="-v /mnt/buildkit:/var/lib/buildkit"; } || STORAGE_ARGS=""
+          docker run -d --name buildkitd --privileged --network host ${STORAGE_ARGS} moby/buildkit:buildx-stable-1 --addr tcp://0.0.0.0:1234 --allow-insecure-entitlement security.insecure --allow-insecure-entitlement network.host
+          docker buildx create --name builder --driver remote tcp://127.0.0.1:1234 --use
+          docker buildx inspect --bootstrap
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Prepare build variables
+        run: |
+          PRODUCT_VERSION=$(printf '%s' "$BASE_BRANCH" | sed '/^release\b\|^hotfix\b\|^feature\b\|^bugfix\b/s/release.*\/\|hotfix.*\/\|feature.*\/\|bugfix.*\///; s/-git-action$//; s/^v//')
+          TAG_PREFIX="$PRODUCT_VERSION"
+          [ "$TAG_BRANCH" = "$BASE_BRANCH" ] || TAG_PREFIX="${PRODUCT_VERSION}-${TAG_BRANCH}"
+          TAG_PREFIX=$(printf '%s' "$TAG_PREFIX" | LC_ALL=C sed 's/[^a-zA-Z0-9_.-]/-/g; s/^[.-]/_/; s/^$/build/' | cut -c1-100)
+          echo "DOCKER_TAG=${TAG_PREFIX}.${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
+          echo "PRODUCT_VERSION=${PRODUCT_VERSION}" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Build site-core
+        timeout-minutes: 90
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          cd .${DOCKER_PATH}
+          docker buildx bake -f build/build.hcl site-core-services \
+            --set "*.args.GIT_BRANCH=${BASE_BRANCH}" \
+            --set "*.args.BUILDTOOLS_BRANCH=${BUILDTOOLS_BRANCH}" \
+            --set "*.args.SERVER_BRANCH=${SERVER_BRANCH}" \
+            --set "*.args.CLIENT_BRANCH=${CLIENT_BRANCH}" \
+            --set "*.args.PRODUCT_VERSION=${PRODUCT_VERSION}" \
+            --set "*.args.BUILD_NUMBER=${{ github.run_number }}" \
+            --set "*.platform=${PLATFORMS}" \
+            --set "*.secrets=id=github_token,env=GITHUB_TOKEN" \
+            --sbom=true --provenance=mode=max --push
+
+  check-image:
+    name: Check image (${{ matrix.branch }})
+    needs: build
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    runs-on: ubuntu-latest
+    env:
+      BASE_BRANCH: ${{ matrix.branch }}
+      TAG_BRANCH: >-
+        ${{ inputs.branch-buildtools && inputs.branch-buildtools != matrix.branch && inputs.branch-buildtools ||
+            inputs.branch-server && inputs.branch-server != matrix.branch && inputs.branch-server ||
+            inputs.branch-client && inputs.branch-client != matrix.branch && inputs.branch-client || matrix.branch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: ${{ fromJson(inputs.branches || format('[{0}]', toJSON(github.ref_name))) }}
+    steps:
+      - name: Login to DockerHub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Check site-core image availability
+        run: |
+          PRODUCT_VERSION=$(printf '%s' "$BASE_BRANCH" | sed '/^release\b\|^hotfix\b\|^feature\b\|^bugfix\b/s/release.*\/\|hotfix.*\/\|feature.*\/\|bugfix.*\///; s/-git-action$//; s/^v//')
+          TAG_PREFIX="$PRODUCT_VERSION"
+          [ "$TAG_BRANCH" = "$BASE_BRANCH" ] || TAG_PREFIX="${PRODUCT_VERSION}-${TAG_BRANCH}"
+          TAG_PREFIX=$(printf '%s' "$TAG_PREFIX" | LC_ALL=C sed 's/[^a-zA-Z0-9_.-]/-/g; s/^[.-]/_/; s/^$/build/' | cut -c1-100)
+          IMAGE="${REPO}/${DOCKER_IMAGE_PREFIX}-site-core:${TAG_PREFIX}.${GITHUB_RUN_NUMBER}"
+
+          DEADLINE=$(( SECONDS + 300 ))
+          until MANIFEST=$(docker buildx imagetools inspect --raw "$IMAGE" 2>/dev/null); do
+            [ "$SECONDS" -ge "$DEADLINE" ] && { echo "::error::[FAIL] ${IMAGE} manifest not found"; exit 1; }
+            echo "[WAIT] ${IMAGE} manifest not yet available..."
+            sleep 10
+          done
+
+          AVAILABLE=$(jq -r '.manifests[]?.platform | select(.os != "unknown") | "\(.os)/\(.architecture)"' <<< "$MANIFEST" | sort -u)
+          for PLATFORM in ${PLATFORMS//,/ }; do
+            grep -qx "$PLATFORM" <<< "$AVAILABLE" || { echo "::error::[FAIL] ${IMAGE} has no ${PLATFORM} manifest"; ERROR=1; continue; }
+            echo "[OK]   ${IMAGE} ${PLATFORM}"
+          done
+          [ "${ERROR:-0}" -eq 0 ] || exit 1
+
+          printf '### ✅ Site-core image is available\n`%s` (%s)\n' "$IMAGE" "$PLATFORMS" >> "$GITHUB_STEP_SUMMARY"
