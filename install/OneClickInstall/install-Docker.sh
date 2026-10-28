@@ -245,7 +245,7 @@ detect_current_deployment_mode () {
 
 # Without Docker Desktop on macOS there is no container or volume, only the local files are left
 uninstall_local_files () {
-	echo "Docker is not installed, only the local files in ${BASE_DIR} are removed (use --basedir for another directory)."
+	echo "Docker is not installed, only the local files in ${BASE_DIR} are removed."
 	remove_apps_renewal_job
 	read -p "Keep configuration and Docs data for reinstallation? (Y/n): " KEEP_DATA
 	if [[ ! "${KEEP_DATA,,}" =~ ^(y|yes)?$ ]]; then
@@ -260,7 +260,6 @@ uninstall() {
         uninstall_local_files
         return 0
     fi
-    detect_base_dir
     local RESTORE_DOCS=false
     DOWN_ARGS=(down)
     select_deployment_mode
@@ -642,18 +641,6 @@ install_docker () {
 		echo "error while installing docker"
 		exit 1
 	fi
-}
-
-# Reuse the directory of an existing installation made with a custom --basedir
-detect_base_dir () {
-	local WORKING_DIR CONTAINER
-	[ "$BASE_DIR_FROM_ARGS" = "true" ] && return 0
-
-	for CONTAINER in "${PACKAGE_SYSNAME}-${PRODUCT}" "${PACKAGE_SYSNAME}-dotnet-services" "${PACKAGE_SYSNAME}-api"; do
-		WORKING_DIR=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "${CONTAINER}" 2>/dev/null) || continue
-		[ -n "${WORKING_DIR}" ] && BASE_DIR="${WORKING_DIR}" && return 0
-	done
-	return 0
 }
 
 install_docker_desktop () {
@@ -1487,9 +1474,7 @@ services_check_connection () {
 start_installation () {
 	root_checking
 
-	# BASE_DIR must be known before the compose file paths are built
 	is_macos && prepare_docker_desktop
-	detect_base_dir
 
 	select_deployment_mode
 	# Avoid printing this again during mode-switch teardown.

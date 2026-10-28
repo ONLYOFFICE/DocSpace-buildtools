@@ -113,7 +113,6 @@ while [ "$1" != "" ]; do
         -eh      | --extrahosts          ) [ -n "$2" ] && EXTRA_HOSTS=$2                                                          && shift ;;
         -ls      | --localscripts        ) [ -n "$2" ] && LOCAL_SCRIPTS=$2                                                        && shift ;;
         -vd      | --volumesdir          ) [ -n "$2" ] && VOLUMES_DIR="$2"                                                        && shift ;;
-        -bd      | --basedir             ) [ -n "$2" ] && BASE_DIR="${2%/}" && BASE_DIR_FROM_ARGS="true"                          && shift ;;
         -cf      | --certfile            ) [ -n "$2" ] && CERTIFICATE_PATH="$2"                                                   && shift ;;
         -ckf     | --certkeyfile         ) [ -n "$2" ] && CERTIFICATE_KEY_PATH="$2"                                               && shift ;;
         -h | -? | --help )
@@ -140,7 +139,6 @@ while [ "$1" != "" ]; do
             help_opt "--makeswap"            "<true|false>"   "Create swap file (default: true)"
             help_opt "--extrahosts"          "<DOMAIN:IP>"    "Specify extra hostname resolution"
             help_opt "--volumesdir"          "<path>"         "Host dir for Docker volumes (default: /var/lib/docker/volumes)"
-            help_opt "--basedir"             "<path>"         "Dir for configuration files (default: /app/${PACKAGE_SYSNAME}, ~/${PACKAGE_SYSNAME} on macOS)"
 
             echo
             echo "${PRODUCT_NAME^^} OPTIONS:"
@@ -270,18 +268,6 @@ validate_bool_or_pull --installrabbitmq "$INSTALL_RABBITMQ"
 validate_bool_or_pull --installredis "$INSTALL_REDIS"
 validate_bool_or_pull --installelastic "$INSTALL_ELASTICSEARCH"
 validate_bool_or_pull --installfluentbit "$INSTALL_FLUENT_BIT"
-
-if [ "$BASE_DIR_FROM_ARGS" = "true" ]; then
-    [[ "$BASE_DIR" == /* ]] || { echo "Error: --basedir must be an absolute path: ${BASE_DIR}" >&2; exit 1; }
-    # The installer deletes everything else in this directory during an update
-    case "$BASE_DIR" in
-        "" | "$HOME" ) echo "Error: --basedir must be a dedicated directory, not ${BASE_DIR:-/}" >&2; exit 1 ;;
-    esac
-    if [ -d "$BASE_DIR" ] && [ ! -f "$BASE_DIR/.env" ] && [ -n "$(ls -A "$BASE_DIR")" ]; then
-        echo "Error: --basedir ${BASE_DIR} is not empty and holds no ${PRODUCT_NAME} installation" >&2
-        exit 1
-    fi
-fi
 
 if [[ "$OSTYPE" == darwin* ]]; then
     { [ -z "${CERTIFICATE_PATH}${CERTIFICATE_KEY_PATH}${LETS_ENCRYPT_DOMAIN}${LETS_ENCRYPT_MAIL}" ] || [ -z "${DEPLOYMENT_MODE}" ] || [ "${DEPLOYMENT_MODE}" = "standalone" ]; } || { echo "Error: HTTPS options (--certfile, --certkeyfile, --letsencryptdomain, --letsencryptmail) are supported on macOS only in the standalone deployment mode." >&2; exit 1; }

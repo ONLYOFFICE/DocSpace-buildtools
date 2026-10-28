@@ -91,13 +91,6 @@ grep -qE '^[[:space:]]*DOCKER_TAG=4[.]0[.]1$' "${SCENARIO_HOME}/onlyoffice/.env"
 ls "${INSTALL_DIR}"/OneClick*.log > /dev/null 2>&1 && fail "the log file stays after a successful install"
 end_scenario
 
-new_scenario "Custom --basedir"
-run_wrapper "${BASE_ARGS[@]}" -skiphc true -bd "${WORK_DIR}/custom/onlyoffice"
-expect_rc 0
-[ -f "${WORK_DIR}/custom/onlyoffice/.env" ] || fail "no .env in the custom base directory"
-[ -e "${SCENARIO_HOME}/onlyoffice" ] && fail "the default directory was used"
-end_scenario
-
 new_scenario "A volumes directory is owned through a helper container"
 mkdir -p "${SCENARIO_HOME}/data"
 run_wrapper "${BASE_ARGS[@]}" -skiphc true -vd "${SCENARIO_HOME}/data"
@@ -148,9 +141,6 @@ expect_output "are supported on macOS only in the standalone deployment mode"
 run_wrapper docker -ls true -off true -it community -dm microservices -noni true -skiphc true -cf /tmp/own.crt -ckf /tmp/own.key --certdomain example.com
 expect_rc 1
 expect_output "are supported on macOS only in the standalone deployment mode"
-run_wrapper "${BASE_ARGS[@]}" -skiphc true -bd "${SCENARIO_HOME}"
-expect_rc 1
-expect_output "dedicated directory"
 run_wrapper package
 expect_rc 1
 expect_output "Only the Docker installation is available on macOS"
