@@ -42,10 +42,11 @@ check_image() {
   done
 
   local CONTENT_TYPE
-  CONTENT_TYPE=$(echo "$RESP" | grep -i '^content-type:' | tr -d '\r' | awk '{print $2}')
+  CONTENT_TYPE=$(echo "$RESP" | tr -d '\r' | awk -F': *' 'tolower($1) == "content-type" { sub(/;.*/, "", $2); ct = $2 } END { print ct }')
   case "$CONTENT_TYPE" in
     *manifest.list*|*image.index*) printf "[OK]      %-22s tag=%-30s (multi-arch)\n" "$SVC" "$TAG" ;;
-    *) printf "[OK]      %-22s tag=%-30s (single-arch: %s)\n" "$SVC" "$TAG" "$CONTENT_TYPE" ;;
+    *manifest.v2*|*image.manifest*) printf "[OK]      %-22s tag=%-30s (single-arch: %s)\n" "$SVC" "$TAG" "$CONTENT_TYPE" ;;
+    *) printf "::warning::[OK]      %-22s tag=%-30s manifest found, unexpected content type: '%s'\n" "$SVC" "$TAG" "$CONTENT_TYPE" ;;
   esac
 }
 
