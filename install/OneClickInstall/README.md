@@ -89,6 +89,7 @@ sudo bash <script-name> package -h
 | `--username`            | `<USER>`                                  | -                         | Registry login                 |
 | `--password`            | `<PASS>`                                  | -                         | Registry password              |
 | `--volumesdir`          | `<DIR>`                                   | `/var/lib/docker/volumes` | Host dir for Docker volumes    |
+| `--basedir`             | `<DIR>`                                   | `/app/onlyoffice` (`~/onlyoffice` on macOS) | Dir for configuration files; must be empty or hold an existing installation |
 
 #### ONLYOFFICE Apps Core
 | Flag                    | Value placeholder                         | Default value             | Description                    |
@@ -404,6 +405,22 @@ The installation scripts support the following operating systems, which are **re
 - Ubuntu 24.04 (x86_64, ARM64)
 - Ubuntu 26.04 (x86_64, ARM64)
 <!-- OS-SUPPORT-LIST-END -->
+
+## 🍎 macOS
+
+Apps can be installed in Docker on macOS (Apple Silicon and Intel) with [Docker Desktop](https://docs.docker.com/desktop/setup/install/mac-install/). The DEB/RPM installation is not available.
+
+- Run the script **without** `sudo`: Docker Desktop works per user.
+- [Homebrew](https://brew.sh) is required. The script installs `bash`, `coreutils`, `findutils`, `gnu-sed`, `grep`, `gnu-tar` and `jq` with it and re-runs itself under the Homebrew `bash`.
+- Docker Desktop is installed with Homebrew when it is missing (accept its license agreement in the window that opens) and started automatically when it is not running. CPU and memory are taken from its limits (Settings > Resources): at least 4 cores and 8 GB RAM.
+- Configuration files are stored in `~/onlyoffice` by default. Use `--basedir <DIR>` to change it; the path must be shared with Docker Desktop.
+- Data is kept in Docker volumes by default. With `--volumesdir <DIR>` it is kept in the directory instead: the owner of its subdirectories is set from a helper container, because on the Mac a user cannot give files to another owner; the directory must be shared with Docker Desktop.
+- HTTPS works only in the standalone deployment mode, with your own certificate (`--certfile`, `--certkeyfile`, `--certdomain`) or with Let's Encrypt (`--letsencryptdomain`, `--letsencryptmail`). For Let's Encrypt the domain must point to the Mac and ports 80 and 443 must be reachable from the Internet. The certificate is renewed weekly (Sunday, 03:00) by the launchd agent `~/Library/LaunchAgents/com.onlyoffice.apps-renew-letsencrypt.plist`, which needs the Mac awake and Docker Desktop running.
+- An existing Document Server container started with `docker run` is adopted like on Linux; its data is copied between Docker volumes by a helper container.
+
+```bash
+bash apps-install.sh docker
+```
 
 ## 📚 Additional Resources
 

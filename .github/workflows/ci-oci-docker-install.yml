@@ -11,7 +11,9 @@ on:
     paths:
       - ".github/workflows/ci-oci-docker-install.yml"
       - ".github/scripts/docker-utils.sh"
+      - ".github/scripts/macos-check/**"
       - "tests/smoke/**"
+      - "install/OneClickInstall/apps-install.sh"
       - "install/OneClickInstall/install-Docker*.sh"
       - "install/OneClickInstall/common/check-ports.sh"
       - "install/OneClickInstall/common/swap.sh"
@@ -167,6 +169,21 @@ jobs:
           AWS_REST_API_ID: ${{ secrets.AWS_REST_API_ID }}
           AWS_RESOURCE_ID: ${{ secrets.AWS_RESOURCE_ID }}
         run: bash .github/scripts/offline-archive.sh upload
+
+  macOS-script-check:
+    name: OCI (macOS script check)
+    # no Docker VM: the paths that are specific to macOS run on a real runner against a fake docker
+    runs-on: macos-26
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Check the macOS paths of the installer
+        run: bash .github/scripts/macos-check/check.sh
 
   Update-OCI-Docker:
     runs-on: ${{ matrix.runner }}

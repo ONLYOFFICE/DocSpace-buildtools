@@ -35,11 +35,41 @@
  # SPDX-License-Identifier: AGPL-3.0-only
  #
 
+# macOS: refuse sudo, get bash 4+ and GNU tools from Homebrew, re-run under Homebrew bash (keep this block bash 3.2 compatible)
+if [[ "$OSTYPE" == darwin* ]]; then
+    [ "$EUID" -eq 0 ] && { echo "On macOS, run this script without sudo" >&2; exit 1; }
+    BREW_BIN=$(PATH="$PATH:/opt/homebrew/bin:/usr/local/bin" command -v brew)
+    [ -n "$BREW_BIN" ] || { echo "Homebrew is required on macOS, see https://brew.sh" >&2; exit 1; }
+    BREW_PREFIX=$("$BREW_BIN" --prefix)
+    [ -n "$BREW_PREFIX" ] || { echo "Could not resolve the Homebrew prefix" >&2; exit 1; }
+    MISSING_FORMULAE=()
+    for FORMULA in bash coreutils findutils gnu-sed grep gnu-tar jq; do
+        [ -d "$BREW_PREFIX/opt/$FORMULA" ] || MISSING_FORMULAE+=("$FORMULA")
+    done
+    [ ${#MISSING_FORMULAE[@]} -eq 0 ] || "$BREW_BIN" install "${MISSING_FORMULAE[@]}" || exit 1
+    # Each directory is checked on its own: the user may already have some of them in PATH
+    GNU_PATHS=""
+    for FORMULA in coreutils findutils gnu-sed grep gnu-tar; do
+        case ":$PATH:" in
+            *":$BREW_PREFIX/opt/$FORMULA/libexec/gnubin:"*) ;;
+            *) GNU_PATHS="$GNU_PATHS$BREW_PREFIX/opt/$FORMULA/libexec/gnubin:" ;;
+        esac
+    done
+    case "$PATH" in
+        "$BREW_PREFIX/bin:"*) ;;
+        *) GNU_PATHS="$GNU_PATHS$BREW_PREFIX/bin:" ;;
+    esac
+    export PATH="$GNU_PATHS$PATH"
+    [ "${BASH_VERSINFO[0]}" -ge 4 ] || exec "$BREW_PREFIX/bin/bash" "$0" "$@"
+fi
+
 PACKAGE_SYSNAME="onlyoffice"
 PRODUCT="apps"
 LEGACY_PRODUCT="docspace"
 PRODUCT_NAME="${PACKAGE_SYSNAME^^} Apps"
 BASE_DIR="/app/$PACKAGE_SYSNAME"
+# The root volume is read-only on macOS and Docker Desktop shares /Users by default
+[[ "$OSTYPE" == darwin* ]] && BASE_DIR="$HOME/$PACKAGE_SYSNAME"
 STATUS=""
 DOCKER_TAG=""
 INSTALLATION_TYPE="enterprise"
@@ -125,7 +155,7 @@ if [[ -n "${GIT_BRANCH:-}" ]]; then
 fi
 
 if [[ "$LOCAL_SCRIPTS" = "true" ]] || [[ "$OFFLINE_INSTALLATION" = "true" ]]; then
-	source "./${ARGS_SCRIPT}"
+	source "$(dirname "${BASH_SOURCE[0]}")/${ARGS_SCRIPT}"
 else
 	ARGS_SCRIPT_TMP="$(mktemp)"
 	trap 'rm -f "${ARGS_SCRIPT_TMP:-}"' EXIT
@@ -213,7 +243,24 @@ detect_current_deployment_mode () {
 	fi
 }
 
+# Without Docker Desktop on macOS there is no container or volume, only the local files are left
+uninstall_local_files () {
+	echo "Docker is not installed, only the local files in ${BASE_DIR} are removed (use --basedir for another directory)."
+	remove_apps_renewal_job
+	read -p "Keep configuration and Docs data for reinstallation? (Y/n): " KEEP_DATA
+	if [[ ! "${KEEP_DATA,,}" =~ ^(y|yes)?$ ]]; then
+		rm -rf "$BASE_DIR" || echo "Failed to remove directory $BASE_DIR."
+	fi
+	echo -e "Uninstallation of $PRODUCT_NAME \e[32mcompleted.\e[0m"
+}
+
 uninstall() {
+    # Removing the product must not install Docker Desktop, only start it when it is there
+    if is_macos && ! prepare_docker_desktop --no-install; then
+        uninstall_local_files
+        return 0
+    fi
+    detect_base_dir
     local RESTORE_DOCS=false
     DOWN_ARGS=(down)
     select_deployment_mode
@@ -281,6 +328,8 @@ uninstall() {
 	fi
 
 	docker network rm "${NETWORK_NAME}" 2>/dev/null || echo "Failed to remove network ${NETWORK_NAME}."
+	# macOS keeps the renewal job in launchd; the cron.weekly script of Linux is left as before
+	is_macos && remove_apps_renewal_job
 
 	read -p "Keep configuration and Docs data for reinstallation? (Y/n): " KEEP_DATA
 
@@ -294,8 +343,14 @@ uninstall() {
 		"$( [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]] && echo "and all dependencies" ) \e[32mcompleted.\e[0m"
 }
 
+is_macos () {
+	[[ "$OSTYPE" == darwin* ]]
+}
+
 root_checking () {
 	PID=$$
+	# Docker Desktop runs per user, root is refused by the macOS block at the top
+	is_macos && return 0
 	[[ $EUID -eq 0 ]] || { echo "To perform this action you must be logged in with root rights"; exit 1; }
 }
 
@@ -305,16 +360,31 @@ is_command_exists () {
 
 get_random_str () {
     local LENGTH=${1:-12}
-    tr -dc 'A-Za-z0-9' < /dev/urandom | head -c "$LENGTH"
+    local VALUE=""
+    # Filter finite chunks: cutting the endless stream with head makes tr fail with a broken pipe
+    while [ "${#VALUE}" -lt "$LENGTH" ]; do
+        VALUE+=$(head -c 1024 /dev/urandom | LC_ALL=C tr -dc 'A-Za-z0-9')
+    done
+    printf '%s' "${VALUE:0:LENGTH}"
 }
 
 get_os_info () {
 	OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 
     case "$OS" in
-        windowsnt|darwin|sunos|aix)
+        windowsnt|sunos|aix)
             echo "Not supported OS"
             exit 1
+            ;;
+        darwin)
+            if [[ "$(uname -m)" != "x86_64" && "$(uname -m)" != "arm64" ]]; then
+                echo "Currently only supports 64bit OS's"
+                exit 1
+            fi
+
+            KERNEL=$(uname -r)
+            DIST=$(sw_vers -productName)
+            REV=$(sw_vers -productVersion)
             ;;
     esac
 
@@ -386,9 +456,16 @@ check_kernel () {
 }
 
 check_hardware () {
-	AVAILABLE_DISK_SPACE=$(df -Pm / | awk 'NR == 2 { print $4 }')
-	TOTAL_MEMORY=$(free --mega | awk '/^Mem:/ { print $2 }')
-	CPU_CORES_NUMBER=$(nproc)
+	if is_macos; then
+		# Containers get only the CPU and memory of the Docker Desktop VM
+		AVAILABLE_DISK_SPACE=$(df -Pm "$HOME" | awk 'NR == 2 { print $4 }')
+		TOTAL_MEMORY=$(( $(docker info --format '{{.MemTotal}}') / 1000000 ))
+		CPU_CORES_NUMBER=$(docker info --format '{{.NCPU}}')
+	else
+		AVAILABLE_DISK_SPACE=$(df -Pm / | awk 'NR == 2 { print $4 }')
+		TOTAL_MEMORY=$(free --mega | awk '/^Mem:/ { print $2 }')
+		CPU_CORES_NUMBER=$(nproc)
+	fi
 
 	local requirements_not_met=""
 
@@ -406,6 +483,8 @@ check_hardware () {
 
 	if [ -n "${requirements_not_met}" ]; then
 		printf "Minimal requirements are not met, your system needs:%b\n\n" "${requirements_not_met}"
+		# Disk space is the host disk, only CPU and memory are limited by Docker Desktop
+		is_macos && [[ "${requirements_not_met}" == *"of RAM"* || "${requirements_not_met}" == *"CPU"* ]] && echo -e "CPU and memory limits can be raised in Docker Desktop: Settings > Resources\n"
 
 		# Without a terminal or in non-interactive mode there is nobody to ask
 		if [ "${NON_INTERACTIVE:-false}" = "true" ] || [ ! -t 0 ]; then
@@ -496,8 +575,13 @@ check_ports () {
 
 	for PORT in "${ARRAY_PORTS[@]}"
 	do
-		REGEXP=":$PORT$"
-		CHECK_RESULT=$(netstat -lnt | awk '{print $4}' | { grep $REGEXP || true; })
+		if is_macos; then
+			# BSD netstat prints listening addresses as *.80 or 127.0.0.1.80
+			CHECK_RESULT=$(netstat -an | awk '$1 ~ /^tcp/ && $6 == "LISTEN" {print $4}' | { grep "\.$PORT$" || true; })
+		else
+			REGEXP=":$PORT$"
+			CHECK_RESULT=$(netstat -lnt | awk '{print $4}' | { grep $REGEXP || true; })
+		fi
 
 		if [[ $CHECK_RESULT != "" ]]; then
 			if [[ $USED_PORTS != "" ]]; then
@@ -557,6 +641,52 @@ install_docker () {
 	if ! is_command_exists docker ; then
 		echo "error while installing docker"
 		exit 1
+	fi
+}
+
+# Reuse the directory of an existing installation made with a custom --basedir
+detect_base_dir () {
+	local WORKING_DIR CONTAINER
+	[ "$BASE_DIR_FROM_ARGS" = "true" ] && return 0
+
+	for CONTAINER in "${PACKAGE_SYSNAME}-${PRODUCT}" "${PACKAGE_SYSNAME}-dotnet-services" "${PACKAGE_SYSNAME}-api"; do
+		WORKING_DIR=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "${CONTAINER}" 2>/dev/null) || continue
+		[ -n "${WORKING_DIR}" ] && BASE_DIR="${WORKING_DIR}" && return 0
+	done
+	return 0
+}
+
+install_docker_desktop () {
+	echo "Docker Desktop is not installed, installing it with Homebrew..."
+	"${BREW_BIN}" install --cask docker || { echo "Failed to install Docker Desktop, see https://docs.docker.com/desktop/setup/install/mac-install/"; exit 1; }
+	# The cask links the CLI into the Homebrew prefix, otherwise take it from the application
+	is_command_exists docker || export PATH="$PATH:/Applications/Docker.app/Contents/Resources/bin"
+	is_command_exists docker || { echo "docker was not found after the installation of Docker Desktop"; exit 1; }
+}
+
+prepare_docker_desktop () {
+	local DOCKER_DESKTOP_BIN="/Applications/Docker.app/Contents/Resources/bin"
+
+	# Docker Desktop may be installed without its CLI linked into PATH
+	if ! is_command_exists docker && [ -x "$DOCKER_DESKTOP_BIN/docker" ]; then
+		export PATH="$PATH:$DOCKER_DESKTOP_BIN"
+	fi
+
+	local START_TIMEOUT=180
+
+	if ! is_command_exists docker; then
+		[ "${1:-}" != "--no-install" ] || return 1
+		install_docker_desktop
+		# A fresh Docker Desktop waits for the user to accept its license and to allow its helper
+		START_TIMEOUT=600
+	fi
+
+	if ! docker info >/dev/null 2>&1; then
+		echo "Starting Docker Desktop..."
+		[ "${START_TIMEOUT}" -le 180 ] || echo "Accept the license agreement and allow the helper in the Docker Desktop window, waiting up to ${START_TIMEOUT} seconds."
+		# By path first: right after the installation Launch Services does not know the application by name yet
+		{ open /Applications/Docker.app || open -a Docker; } || { echo "Failed to start Docker Desktop"; exit 1; }
+		timeout "${START_TIMEOUT}" bash -c 'until docker info >/dev/null 2>&1; do sleep 3; done' || { echo "Docker Desktop did not start within ${START_TIMEOUT} seconds"; exit 1; }
 	fi
 }
 
@@ -745,7 +875,7 @@ set_installation_type_data () {
 }
 
 download_files () {
-	local DOCKER_TARBALL DOWNLOAD_URL STAGING_DIR ARCHIVE_FILE DOCS_FILE
+	local DOCKER_TARBALL DOWNLOAD_URL STAGING_DIR ARCHIVE_FILE DOCS_FILE MAIN_COMPOSE_FILE
 	local TAR_ARGS=()
 	# The refresh below removes installer files. Never place retained Apps data
 	# in that cleanup area, including through a symlink.
@@ -800,11 +930,13 @@ download_files () {
 		return 1
 	fi
 
-	if [ "${DEPLOYMENT_MODE}" = "standalone" ]; then
-		[ -f "${STAGING_DIR}/docker-compose.yml" ] || { echo "FAIL"; echo "Error: ${DOCKER_TARBALL} does not contain docker-compose.yml" >&2; return 1; }
-	else
-		[ -f "${STAGING_DIR}/apps.yml" ] || { echo "FAIL"; echo "Error: ${DOCKER_TARBALL} does not contain apps.yml" >&2; return 1; }
-	fi
+	# The stack archive ships apps-stack.yml and no apps.yml
+	case "${DEPLOYMENT_MODE}" in
+		standalone) MAIN_COMPOSE_FILE="docker-compose.yml" ;;
+		stack)      MAIN_COMPOSE_FILE="apps-stack.yml" ;;
+		*)          MAIN_COMPOSE_FILE="apps.yml" ;;
+	esac
+	[ -f "${STAGING_DIR}/${MAIN_COMPOSE_FILE}" ] || { echo "FAIL"; echo "Error: ${DOCKER_TARBALL} does not contain ${MAIN_COMPOSE_FILE}" >&2; return 1; }
 
 	mkdir -p "${BASE_DIR}" "${STAGING_DIR}/config" || return 1
 	# Preserve only the adopted Docs settings; refresh all other config files.
@@ -848,7 +980,11 @@ opensearch_set_heap_size () {
 	local TARGET_FILE="$1"
 	local SAFE_MEMORY HEAP
 
-	SAFE_MEMORY=$(( ( $(free --mega | grep -oP '\d+' | head -n 1) - 1024 ) / 2 ))
+	if is_macos; then
+		SAFE_MEMORY=$(( ( $(docker info --format '{{.MemTotal}}') / 1000000 - 1024 ) / 2 ))
+	else
+		SAFE_MEMORY=$(( ( $(free --mega | grep -oP '\d+' | head -n 1) - 1024 ) / 2 ))
+	fi
 	HEAP=$(( SAFE_MEMORY < 2048 ? 1 : SAFE_MEMORY < 4096 ? 2 : 4 ))
 	sed -i "s/Xms[0-9]g/Xms${HEAP}g/g; s/Xmx[0-9]g/Xmx${HEAP}g/g" "${TARGET_FILE}"
 }
@@ -863,13 +999,35 @@ chown_excluding_wopi_keys () {
 	find "$2" \( -name wopi_private.key -o -name wopi_public.key \) -prune -o -exec chown "$1" {} +
 }
 
+# The same as chown_excluding_wopi_keys from a container (keep the excluded names in sync): on macOS the host cannot give files to another owner.
+# MOUNT is a volume name or a directory, EXTRA_DIRS are created inside it first.
+# Running Docs creates and removes temporary files meanwhile, so a pass that met a vanished file is repeated once.
+chown_from_container () {
+	local MOUNT="$1" OWNER="$2" EXTRA_DIRS="${3:-}"
+	docker run --rm --user 0 --entrypoint sh -v "${MOUNT}:/volume" "$(get_helper_image)" -c \
+		'pass() { find /volume \( -name wopi_private.key -o -name wopi_public.key \) -prune -o -exec chown "$1" {} +; }; [ -z "$2" ] || mkdir -p $2; pass "$1" || pass "$1"' \
+		sh "${OWNER}" "${EXTRA_DIRS}"
+}
+
+# Prefer the already pulled app image so offline installs need no extra download
+get_helper_image () {
+	docker image inspect "${IMAGE_NAME}:${DOCKER_TAG}" >/dev/null 2>&1 && echo "${IMAGE_NAME}:${DOCKER_TAG}" || echo "alpine"
+}
+
 chown_app_volumes () {
 	# (DS v3.8.0) Ensure app volumes are owned by the app user.
 	local VOLUME_OWNER="$(get_env_parameter "UID"):$(get_env_parameter "GID")"
 	if [ -n "${VOLUMES_DIR}" ]; then
 		mkdir -p "${VOLUMES_DIR}/app_data/Studio" "${VOLUMES_DIR}/app_data/Products" "${VOLUMES_DIR}/log_data"
-		chown_excluding_wopi_keys "${VOLUME_OWNER}" "${VOLUMES_DIR}/app_data"
-		chown_excluding_wopi_keys "${VOLUME_OWNER}" "${VOLUMES_DIR}/log_data"
+		if is_macos; then
+			local DIR_NAME
+			for DIR_NAME in app_data log_data; do
+				chown_from_container "${VOLUMES_DIR}/${DIR_NAME}" "${VOLUME_OWNER}" || return 1
+			done
+		else
+			chown_excluding_wopi_keys "${VOLUME_OWNER}" "${VOLUMES_DIR}/app_data"
+			chown_excluding_wopi_keys "${VOLUME_OWNER}" "${VOLUMES_DIR}/log_data"
+		fi
 	else
 		local PROJECT_NAME="${COMPOSE_PROJECT_NAME:-$PACKAGE_SYSNAME}"
 		local PROJECT_FILTER=(--filter "label=com.docker.compose.project=${PROJECT_NAME}" --filter name=app_data --filter name=log_data)
@@ -888,6 +1046,13 @@ chown_app_volumes () {
 
 		mapfile -t VOLUME_NAMES < <(printf "%s\n" "${VOLUME_NAMES[@]}" | sort -u)
 		for VOLUME_NAME in "${VOLUME_NAMES[@]}"; do
+			if is_macos; then
+				# Volume mount points live inside the Docker Desktop VM, so adjust them from a container
+				local APP_DIRS=""
+				[[ "${VOLUME_NAME}" == *app_data ]] && APP_DIRS="/volume/Studio /volume/Products"
+				chown_from_container "${VOLUME_NAME}" "${VOLUME_OWNER}" "${APP_DIRS}" || return 1
+				continue
+			fi
 			local MOUNT_POINT="$(docker volume inspect --format '{{.Mountpoint}}' "${VOLUME_NAME}")"
 			[[ "${VOLUME_NAME}" == *app_data ]] && mkdir -p "${MOUNT_POINT}/Studio" "${MOUNT_POINT}/Products"
 			chown_excluding_wopi_keys "${VOLUME_OWNER}" "${MOUNT_POINT}"
@@ -905,8 +1070,14 @@ install_mysql_server () {
 	if [[ -z ${MYSQL_HOST} ]] && [ "$INSTALL_MYSQL_SERVER" == "true" ]; then
 		if [ -n "${VOLUMES_DIR}" ]; then
 			mkdir -p "${VOLUMES_DIR}/mysql_data"
-			chown $(docker run --rm "$(${DOCKER_COMPOSE} -f ${BASE_DIR}/db.yml config | awk '/image:/ {print $2; exit}')" stat -c '%u:%g' /var/lib/mysql) "${VOLUMES_DIR}/mysql_data"
-			chmod $(docker run --rm "$(${DOCKER_COMPOSE} -f ${BASE_DIR}/db.yml config | awk '/image:/ {print $2; exit}')" stat -c '%a' /var/lib/mysql) "${VOLUMES_DIR}/mysql_data"
+			if is_macos; then
+				# The image takes the owner and mode of its own data directory over to the mounted one
+				docker run --rm --user 0 --entrypoint sh -v "${VOLUMES_DIR}/mysql_data:/target" "$(${DOCKER_COMPOSE} -f ${BASE_DIR}/db.yml config | awk '/image:/ {print $2; exit}')" -c \
+					'chown "$(stat -c %u:%g /var/lib/mysql)" /target && chmod "$(stat -c %a /var/lib/mysql)" /target' || return 1
+			else
+				chown $(docker run --rm "$(${DOCKER_COMPOSE} -f ${BASE_DIR}/db.yml config | awk '/image:/ {print $2; exit}')" stat -c '%u:%g' /var/lib/mysql) "${VOLUMES_DIR}/mysql_data"
+				chmod $(docker run --rm "$(${DOCKER_COMPOSE} -f ${BASE_DIR}/db.yml config | awk '/image:/ {print $2; exit}')" stat -c '%a' /var/lib/mysql) "${VOLUMES_DIR}/mysql_data"
+			fi
 		fi
 		${DOCKER_COMPOSE} -f ${BASE_DIR}/db.yml up -d --force-recreate
 	elif [ "$INSTALL_MYSQL_SERVER" == "pull" ]; then
@@ -934,7 +1105,12 @@ install_elasticsearch () {
 	if [[ -z ${ELK_HOST} ]] && [ "$INSTALL_ELASTICSEARCH" == "true" ]; then
 		if [ -n "${VOLUMES_DIR}" ]; then
 			mkdir -p "${VOLUMES_DIR}/os_data"
-			chown $(docker run --rm "$(${DOCKER_COMPOSE} -f ${BASE_DIR}/opensearch.yml config | awk '/image:/ {print $2; exit}')" stat -c '%u:%g' /usr/share/opensearch/data) "${VOLUMES_DIR}/os_data"
+			if is_macos; then
+				docker run --rm --user 0 --entrypoint sh -v "${VOLUMES_DIR}/os_data:/target" "$(${DOCKER_COMPOSE} -f ${BASE_DIR}/opensearch.yml config | awk '/image:/ {print $2; exit}')" -c \
+					'chown "$(stat -c %u:%g /usr/share/opensearch/data)" /target' || return 1
+			else
+				chown $(docker run --rm "$(${DOCKER_COMPOSE} -f ${BASE_DIR}/opensearch.yml config | awk '/image:/ {print $2; exit}')" stat -c '%u:%g' /usr/share/opensearch/data) "${VOLUMES_DIR}/os_data"
+			fi
 		fi
 
 		opensearch_set_heap_size "${BASE_DIR}/opensearch.yml"
@@ -1021,7 +1197,7 @@ install_product () {
 
 			if [[ -n $(docker ps -q --filter "name=${PACKAGE_SYSNAME}-migration-runner") ]]; then
 				echo -n "Waiting for database migration to complete..."
-				timeout 30 bash -c "while [ $(docker wait ${PACKAGE_SYSNAME}-migration-runner) -ne 0 ]; do sleep 1; done;" && echo "OK" || echo "FAILED"
+				[ "$(timeout 60 docker wait "${PACKAGE_SYSNAME}-migration-runner")" = "0" ] && echo "OK" || echo "FAILED"
 			fi
 
 			compose_with_document_server_mounts "${COMPOSE_FILES[@]}" up -d
@@ -1092,7 +1268,7 @@ teardown_previous_deployment_mode () {
 	fi
 
 	# The target mode writes its own renewal job if needed.
-	rm -f "/etc/cron.weekly/${PRODUCT}-renew-letsencrypt"
+	remove_apps_renewal_job
 
 	DEPLOYMENT_MODE="${TARGET_DEPLOYMENT_MODE}"
 	select_deployment_mode
@@ -1200,6 +1376,13 @@ check_docker_compose() {
 }
 
 dependency_installation() {
+	if is_macos; then
+		# tar, curl, netstat, crontab ship with macOS; jq and GNU tools come from the Homebrew block at the top
+		prepare_docker_desktop
+		check_docker_compose || { echo "Docker Compose 2.18.0 or newer is required, please update Docker Desktop"; exit 1; }
+		return 0
+	fi
+
 	[ "$NON_INTERACTIVE" = "true" ] && export NEEDRESTART_MODE=a
 
 	[ "${OFFLINE_INSTALLATION}" = "false" ] && is_command_exists apt-get && apt-get -y update -qq
@@ -1303,7 +1486,11 @@ services_check_connection () {
 
 start_installation () {
 	root_checking
-	
+
+	# BASE_DIR must be known before the compose file paths are built
+	is_macos && prepare_docker_desktop
+	detect_base_dir
+
 	select_deployment_mode
 	# Avoid printing this again during mode-switch teardown.
 	if [ "${DEPLOYMENT_MODE}" = "standalone" ] && { [ "${INSTALL_RABBITMQ_SET}" = "true" ] || [ "${INSTALL_REDIS_SET}" = "true" ]; }; then
@@ -1313,7 +1500,7 @@ start_installation () {
 
 	get_os_info
 	check_os_info
-	check_kernel
+	is_macos || check_kernel
 
 	dependency_installation
 
@@ -1321,7 +1508,8 @@ start_installation () {
 		check_hardware
 	fi
 
-	if [ "$MAKESWAP" == "true" ]; then
+	# Swap of the Docker Desktop VM is configured in its settings
+	if [ "$MAKESWAP" == "true" ] && ! is_macos; then
 		make_swap "${SWAPFILE}"
 	fi
 

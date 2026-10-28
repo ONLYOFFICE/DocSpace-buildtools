@@ -91,13 +91,24 @@ restore_document_server_container () {
 	done
 }
 
+# The weekly Let's Encrypt renewal is a cron.weekly script on Linux and a launchd agent on macOS.
+remove_apps_renewal_job () {
+	if is_macos; then
+		local LABEL="com.${PACKAGE_SYSNAME}.${PRODUCT}-renew-letsencrypt"
+		launchctl bootout "gui/$(id -u)/${LABEL}" >/dev/null 2>&1 || launchctl unload "${HOME}/Library/LaunchAgents/${LABEL}.plist" >/dev/null 2>&1 || true
+		rm -f "${HOME}/Library/LaunchAgents/${LABEL}.plist" "${BASE_DIR}/certs/${PRODUCT}-renew-letsencrypt" "${BASE_DIR}/certs/${PRODUCT}-renew-letsencrypt.log" || return 1
+	else
+		rm -f "/etc/cron.weekly/${PRODUCT}-renew-letsencrypt" || return 1
+	fi
+}
+
 stop_apps_certificate_renewal () {
 	local PROJECT="$1" CONTAINER
 	# An already running renewal script must not bring the Apps proxy back up.
 	if [ -d "${BASE_DIR}/.docs-restore" ]; then
 		touch "${BASE_DIR}/.docs-restore/apps-stopped" || return 1
 	fi
-	rm -f "/etc/cron.weekly/${PRODUCT}-renew-letsencrypt" || return 1
+	remove_apps_renewal_job || return 1
 	# The SSL helper also runs a background renewal test outside Compose.
 	local CONTAINERS
 	CONTAINERS=$(docker ps -aq --filter "ancestor=certbot/certbot" --filter "volume=${PROJECT}_webroot_path") || return 1
@@ -408,7 +419,12 @@ resolve_ds_volume_path () {
 			--label "com.docker.compose.project=${PROJECT_NAME}" \
 			--label "com.docker.compose.volume=${NAME}" \
 			"${PROJECT_NAME}_${NAME}" >/dev/null || return 1
-		docker volume inspect --format '{{.Mountpoint}}' "${PROJECT_NAME}_${NAME}"
+		# On macOS the mountpoint is inside the Docker Desktop VM, so the volume is referenced by name instead
+		if is_macos; then
+			echo "volume:${PROJECT_NAME}_${NAME}"
+		else
+			docker volume inspect --format '{{.Mountpoint}}' "${PROJECT_NAME}_${NAME}"
+		fi
 	fi
 }
 
@@ -501,7 +517,10 @@ migrate_document_server_data () {
 		}
 		local SAVED_PATH
 		while IFS= read -r SAVED_PATH; do
-			[ -d "${SAVED_PATH}" ] || { echo "Saved Apps data is missing: ${SAVED_PATH}" >&2; return 1; }
+			case "${SAVED_PATH}" in
+				volume:*) docker volume inspect "${SAVED_PATH#volume:}" >/dev/null 2>&1 ;;
+				*) [ -d "${SAVED_PATH}" ] ;;
+			esac || { echo "Saved Apps data is missing: ${SAVED_PATH}" >&2; return 1; }
 		done < <(jq -r '.paths[]' "${STORAGE}")
 		echo "Reusing saved Apps data; the original Docs data will not be copied again."
 		docker stop "${DS_ORIGINAL_ID}" >/dev/null || return 1
@@ -527,6 +546,21 @@ migrate_document_server_data () {
 			SUBPATH=$(jq -r '.subpath // empty' <<<"${MOUNT}")
 			NAME=$(jq -r '.managed' <<<"${MOUNT}")
 			DEST_SUBDIR=$(jq -r '.subdir' <<<"${MOUNT}")
+			# The Docker Desktop VM hides volume mountpoints from the host, so a helper container copies the data
+			if is_macos; then
+				TARGET_PATH=$(resolve_ds_volume_path "${NAME}") || return 1
+				[ "${SRC}" != "${TARGET_PATH#volume:}" ] || {
+					echo "Docs and Apps must use separate data directories: ${SRC}" >&2
+					return 1
+				}
+				docker run --rm --user 0 --entrypoint sh -v "${SRC}:/from:ro" -v "${TARGET_PATH#volume:}:/to" "$(get_helper_image)" -c \
+					'[ -d "/from/$1" ] || exit 2; mkdir -p "/to/$2" && cp -a "/from/$1/." "/to/$2/"' sh "${SUBPATH}" "${DEST_SUBDIR}" || {
+					echo "Failed to copy Docs data from ${SRC}; keeping the original container." >&2
+					return 1
+				}
+				COPIED_PATHS+=("${TARGET_PATH}")
+				continue
+			fi
 			if [ "${TYPE}" = volume ]; then
 				SOURCE_PATH=$(docker volume inspect --format '{{.Mountpoint}}' "${SRC}") || return 1
 				[ -z "${SUBPATH}" ] || SOURCE_PATH+="/${SUBPATH}"
@@ -613,7 +647,11 @@ strip_inherited_https_from_document_server () {
 	local APP_DATA_PATH
 	APP_DATA_PATH=$(resolve_ds_volume_path app_data) || return 1
 	[ -n "${APP_DATA_PATH}" ] || return 1
-	rm -rf -- "${APP_DATA_PATH}/certs" || return 1
+	if is_macos; then
+		docker run --rm --user 0 --entrypoint sh -v "${APP_DATA_PATH#volume:}:/volume" "$(get_helper_image)" -c 'rm -rf /volume/certs' || return 1
+	else
+		rm -rf -- "${APP_DATA_PATH}/certs" || return 1
+	fi
 
 	local DS_COMPOSE_FILE="${BASE_DIR}/ds.yml"
 	[ "${DEPLOYMENT_MODE}" = "standalone" ] && DS_COMPOSE_FILE="${BASE_DIR}/docker-compose.yml"
