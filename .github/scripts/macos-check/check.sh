@@ -112,6 +112,8 @@ new_scenario "A busy port is detected with the BSD netstat"
 # a plain listening socket: http.server of some Python versions leaves the socket shown as CLOSED by netstat
 python3 -c "import socket, time; s = socket.socket(); s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1); s.bind(('0.0.0.0', 8080)); s.listen(5); time.sleep(120)" > /dev/null 2>&1 &
 LISTENER_PID=$!
+# no job notice about the process killed below
+disown "${LISTENER_PID}"
 for _ in 1 2 3 4 5; do netstat -an | grep -q '\.8080 .*LISTEN' && break; sleep 1; done
 run_wrapper "${BASE_ARGS[@]}" -skiphc true -ep 8080
 kill "${LISTENER_PID}" 2> /dev/null
