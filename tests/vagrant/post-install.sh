@@ -17,6 +17,13 @@ healthcheck_systemd_services() {
   local FAILED=0
   for service in "${SERVICES_SYSTEMD[@]}"; do
     [[ "$service" == *migration* ]] && continue;
+    # Standalone Docs leaves optional metrics disabled; Apps preserves that state.
+    if [[ "$service" == ds-metrics.service ]] \
+      && [[ "$(systemctl is-enabled "$service" 2>/dev/null || true)" == disabled ]] \
+      && [[ "$(systemctl is-active "$service" 2>/dev/null || true)" == inactive ]]; then
+      echo "${COLOR_YELLOW}[SKIP] Optional service ${service} is disabled and inactive${COLOR_RESET}"
+      continue
+    fi
     if systemctl is-active --quiet "${service}"; then
       echo "${COLOR_GREEN}[OK] Service ${service} is running${COLOR_RESET}"
     else
