@@ -1,0 +1,88 @@
+#!/bin/bash
+# Fake Docker CLI for the macOS script check: there is no daemon, it answers the calls of the installers and logs each of them.
+# State lives in $FAKE_DOCKER_STATE: "running" (the daemon is up), "container", "network", "images" (repo:tag lines) and "vol_<name>".
+
+STATE="${FAKE_DOCKER_STATE:?FAKE_DOCKER_STATE is not set}"
+echo "docker $*" >> "$STATE/docker.log"
+
+case "$1" in
+    -v | --version)
+        echo "Docker version 27.3.1, build ce12230"
+        ;;
+    info)
+        [ -f "$STATE/running" ] || { echo "Cannot connect to the Docker daemon" >&2; exit 1; }
+        case "$*" in
+            *MemTotal*) echo "${FAKE_DOCKER_MEM:-17179869184}" ;;
+            *NCPU*) echo "${FAKE_DOCKER_CPU:-8}" ;;
+        esac
+        ;;
+    compose)
+        shift
+        case "$1" in
+            version) echo "2.40.0" ;;
+            *)
+                case " $* " in
+                    *" config "*) echo "    image: onlyoffice/apps:4.0.1" ;;
+                esac
+                ;;
+        esac
+        ;;
+    ps)
+        [ -f "$STATE/container" ] && echo "abc123"
+        ;;
+    inspect)
+        [ -f "$STATE/container" ] || exit 1
+        # the data mount of the container comes from the last "docker run -v <dir>:/var/www/onlyoffice/Data"
+        case "$*" in
+            *Mounts*) cat "$STATE/mount_source" 2>/dev/null ;;
+            *.Id*) echo "abc123def456789" ;;
+        esac
+        ;;
+    network)
+        case "$2" in
+            ls) [ -f "$STATE/network" ] && printf 'NETWORK ID   NAME\nabc123       onlyoffice\n' ;;
+            inspect) [ -f "$STATE/network" ] || exit 1 ;;
+            create) touch "$STATE/network"; echo "abc123" ;;
+        esac
+        ;;
+    images)
+        # the repo:tag format lists every image, the tag-only format lists the tags of the image given as the last argument
+        case "$*" in
+            *Repository*) cat "$STATE/images" 2>/dev/null ;;
+            *)
+                IMAGE="${!#}"
+                grep "^${IMAGE}:" "$STATE/images" 2>/dev/null | sed "s|^[^:]*:||"
+                ;;
+        esac
+        ;;
+    image)
+        exit 1
+        ;;
+    pull)
+        echo "$2" >> "$STATE/images"
+        ;;
+    volume)
+        case "$2" in
+            inspect) [ -f "$STATE/vol_${!#}" ] || exit 1; echo "/var/lib/docker/volumes/${!#}/_data" ;;
+            create) touch "$STATE/vol_${!#}" ;;
+        esac
+        ;;
+    run)
+        # a helper container with --rm leaves nothing behind
+        case "$*" in
+            *--rm*) ;;
+            *)
+                touch "$STATE/container"
+                for ARG in "$@"; do
+                    case "$ARG" in
+                        *:/var/www/onlyoffice/Data) echo "${ARG%:/var/www/onlyoffice/Data}" > "$STATE/mount_source" ;;
+                    esac
+                done
+                ;;
+        esac
+        ;;
+    rm)
+        rm -f "$STATE/container"
+        ;;
+esac
+exit 0

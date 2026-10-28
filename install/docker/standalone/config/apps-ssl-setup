@@ -2,6 +2,20 @@
 
 set -e
 
+# macOS: the script needs bash 4+ and GNU tools, take them from Homebrew when run directly (keep this block bash 3.2 compatible)
+if [[ "$OSTYPE" == darwin* ]] && { [ "${BASH_VERSINFO[0]}" -lt 4 ] || ! chmod --version >/dev/null 2>&1; }; then
+  BREW_BIN=$(PATH="$PATH:/opt/homebrew/bin:/usr/local/bin" command -v brew) || true
+  [ -n "$BREW_BIN" ] || { echo "Homebrew is required on macOS, see https://brew.sh" >&2; exit 1; }
+  BREW_PREFIX=$("$BREW_BIN" --prefix) || true
+  [ -n "$BREW_PREFIX" ] || { echo "Could not resolve the Homebrew prefix" >&2; exit 1; }
+  for FORMULA in bash coreutils gnu-sed; do
+    [ -d "$BREW_PREFIX/opt/$FORMULA" ] || { echo "Install the Homebrew formula first: brew install $FORMULA" >&2; exit 1; }
+    [ "$FORMULA" = "bash" ] || PATH="$BREW_PREFIX/opt/$FORMULA/libexec/gnubin:$PATH"
+  done
+  export PATH="$BREW_PREFIX/bin:$PATH"
+  [ "${BASH_VERSINFO[0]}" -ge 4 ] || exec "$BREW_PREFIX/bin/bash" "$0" "$@"
+fi
+
 PRODUCT="apps"
 LEGACY_PRODUCT="docspace"
 CONTAINER_NAME="onlyoffice-apps"
@@ -19,6 +33,15 @@ LOG_FILE="/var/log/${PRODUCT}-renew-letsencrypt.log"
 LETSENCRYPT_ENABLE="false"
 NO_START="false"
 WORK_DIR=""
+RENEW_NETWORK_ARGS=(--network host)
+
+if [[ "$OSTYPE" == darwin* ]]; then
+  # Docker Desktop shares only the user files, so the renewal script and its log stay under the base directory and run from launchd
+  CRON_FILE="${DOCKERCOMPOSE}/certs/${PRODUCT}-renew-letsencrypt"
+  LOG_FILE="${DOCKERCOMPOSE}/certs/${PRODUCT}-renew-letsencrypt.log"
+  LAUNCHD_LABEL="com.onlyoffice.${PRODUCT}-renew-letsencrypt"
+  LAUNCHD_PLIST="${HOME}/Library/LaunchAgents/${LAUNCHD_LABEL}.plist"
+fi
 
 trap 'rm -rf "${WORK_DIR}"' EXIT
 
@@ -82,11 +105,74 @@ create_certbot_args() {
   WEBROOT_VOLUME=$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/letsencrypt"}}{{.Name}}{{end}}{{end}}' "${CONTAINER_NAME}" 2>/dev/null || true)
   WEBROOT_VOLUME="${WEBROOT_VOLUME:-$(basename "${DOCKERCOMPOSE}")_webroot_path}"
 
+  if [[ "$OSTYPE" == darwin* ]]; then
+    # /var/lib and /var/log of the Mac are not shared with Docker Desktop, so Certbot keeps its work and log directories next to its storage
+    mkdir -p "${LETSENCRYPT}-work" "${LETSENCRYPT}-log"
+    CERTBOT_DOCKER_ARGS=(--rm
+      -v "${LETSENCRYPT}:/etc/letsencrypt"
+      -v "${LETSENCRYPT}-work:/var/lib/letsencrypt"
+      -v "${LETSENCRYPT}-log:/var/log/letsencrypt"
+      -v "${WEBROOT_VOLUME}:/letsencrypt")
+    return 0
+  fi
+
   CERTBOT_DOCKER_ARGS=(--rm
     -v "${LETSENCRYPT}:/etc/letsencrypt"
     -v /var/lib/letsencrypt:/var/lib/letsencrypt
     -v /var/log:/var/log
     -v "${WEBROOT_VOLUME}:/letsencrypt")
+}
+
+# The weekly renewal is a cron.weekly script on Linux and a launchd agent on macOS.
+remove_renew_job() {
+  if [[ "$OSTYPE" == darwin* ]]; then
+    launchctl bootout "gui/$(id -u)/${LAUNCHD_LABEL}" >/dev/null 2>&1 || launchctl unload "${LAUNCHD_PLIST}" >/dev/null 2>&1 || true
+    rm -f "${LAUNCHD_PLIST}"
+  fi
+  rm -f "${CRON_FILE}"
+}
+
+create_renew_job_macos() {
+  local DOCKER_BIN
+  DOCKER_BIN=$(command -v docker)
+  # Docker Desktop publishes ports itself, host networking would stay inside its VM; only the standalone authenticator listens on port 80
+  grep -qE '^authenticator[[:space:]]*=[[:space:]]*standalone' "${LETSENCRYPT}/renewal/${CERT_NAME}.conf" 2>/dev/null && RENEW_NETWORK_ARGS=(-p 80:80)
+
+  create_certbot_args
+  mkdir -p "$(dirname "${CRON_FILE}")" "$(dirname "${LAUNCHD_PLIST}")"
+  cat > "${CRON_FILE}" <<END
+#!/bin/bash
+# ${PRODUCT} Renew Let's Encrypt SSL Certificates (standalone deployment mode, macOS)
+[ ! -e "${DOCKERCOMPOSE}/.docs-restore/apps-stopped" ] || exit 0
+echo "[\$(date '+%F %T')] START ${CRON_FILE}" >> "${LOG_FILE}"
+$(declare -p CERTBOT_DOCKER_ARGS)
+$(declare -p RENEW_NETWORK_ARGS)
+"${DOCKER_BIN}" run "\${CERTBOT_DOCKER_ARGS[@]}" "\${RENEW_NETWORK_ARGS[@]}" certbot/certbot renew 2>&1 | tee -a "${LOG_FILE}"
+[ ! -e "${DOCKERCOMPOSE}/.docs-restore/apps-stopped" ] || exit 0
+install -m 644 "${LETSENCRYPT}/live/${CERT_NAME}/fullchain.pem" "${CERTS_DIR}/fullchain.pem"
+install -m 600 "${LETSENCRYPT}/live/${CERT_NAME}/privkey.pem" "${CERTS_DIR}/privkey.pem"
+"${DOCKER_BIN}" exec ${CONTAINER_NAME} /usr/local/openresty/bin/openresty -s reload
+END
+  chmod 700 "${CRON_FILE}"
+
+  # Every Sunday at 03:00; launchd runs a missed job when the Mac wakes up, Docker Desktop has to be running
+  cat > "${LAUNCHD_PLIST}" <<END
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>${LAUNCHD_LABEL}</string>
+  <key>ProgramArguments</key><array><string>/bin/bash</string><string>${CRON_FILE}</string></array>
+  <key>EnvironmentVariables</key><dict><key>PATH</key><string>$(dirname "${DOCKER_BIN}"):/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string></dict>
+  <key>StartCalendarInterval</key><dict><key>Weekday</key><integer>0</integer><key>Hour</key><integer>3</integer><key>Minute</key><integer>0</integer></dict>
+  <key>StandardOutPath</key><string>${LOG_FILE}</string>
+  <key>StandardErrorPath</key><string>${LOG_FILE}</string>
+</dict>
+</plist>
+END
+  launchctl bootout "gui/$(id -u)/${LAUNCHD_LABEL}" >/dev/null 2>&1 || true
+  launchctl bootstrap "gui/$(id -u)" "${LAUNCHD_PLIST}" >/dev/null 2>&1 || launchctl load -w "${LAUNCHD_PLIST}" >/dev/null 2>&1 \
+    || { echo "Warning: could not register ${LAUNCHD_PLIST} with launchd; the Let's Encrypt certificate will not renew automatically. Run ${CRON_FILE} to renew it manually." >&2; return 1; }
 }
 
 create_renew_script() {
@@ -193,7 +279,8 @@ fi
 
 [[ -z "$1" || "$1" == "-h" || "$1" == "--help" ]] && help
 
-[ "$(id -u)" -eq 0 ] || { echo "Error: run this script as root." && exit 1; }
+# On macOS the installer runs as the user: Docker Desktop is per user and shares the files as that user
+[[ "$OSTYPE" == darwin* ]] || [ "$(id -u)" -eq 0 ] || { echo "Error: run this script as root." && exit 1; }
 command -v docker >/dev/null 2>&1 || { echo "Error: docker is not installed." && exit 1; }
 command -v openssl >/dev/null 2>&1 || { echo "Error: openssl is not installed." && exit 1; }
 check_docker_compose || { echo "docker compose not installed or outdated version" && exit 1; }
@@ -235,7 +322,8 @@ case $1 in
   ;;
   -d | --default )
     echo "Return to the default proxy configuration..."
-    rm -f "${CRON_FILE}" "${CERTS_DIR}/fullchain.pem" "${CERTS_DIR}/privkey.pem"
+    remove_renew_job
+    rm -f "${CERTS_DIR}/fullchain.pem" "${CERTS_DIR}/privkey.pem"
 
     for PARAMETER in CERTIFICATE_PATH CERTIFICATE_KEY_PATH APP_CORE_SERVER_ROOT SSL_MODE SSL_DOMAIN SSL_CERT_PATH SSL_KEY_PATH; do
       set_env_parameter "$PARAMETER" ""
@@ -287,8 +375,13 @@ case $1 in
           --cert-name "$CERT_NAME" --non-interactive --agree-tos --email "$MAIL" \
           "${DOMAIN_ARGS[@]}"
       else
-        ss -lnt sport = :80 2>/dev/null | grep -q LISTEN && { echo "Error: port 80 is in use. Let's Encrypt requires it for verification, so free it and retry." >&2; exit 1; }
-        docker run "${CERTBOT_DOCKER_ARGS[@]}" --network host \
+        if [[ "$OSTYPE" == darwin* ]]; then
+          lsof -nP -iTCP:80 -sTCP:LISTEN >/dev/null 2>&1 && { echo "Error: port 80 is in use. Let's Encrypt requires it for verification, so free it and retry." >&2; exit 1; }
+          RENEW_NETWORK_ARGS=(-p 80:80)
+        else
+          ss -lnt sport = :80 2>/dev/null | grep -q LISTEN && { echo "Error: port 80 is in use. Let's Encrypt requires it for verification, so free it and retry." >&2; exit 1; }
+        fi
+        docker run "${CERTBOT_DOCKER_ARGS[@]}" "${RENEW_NETWORK_ARGS[@]}" \
           certbot/certbot certonly \
           --expand --standalone --http-01-port 80 --key-type rsa \
           --cert-name "$CERT_NAME" --non-interactive --agree-tos --email "$MAIL" \
@@ -311,7 +404,12 @@ esac
 install -d -m 755 "${CERTS_DIR}"
 install -m 644 "$CERTIFICATE_PEM" "${CERTS_DIR}/fullchain.pem"
 # Keep the private key group-readable, not world-readable.
-install -m 640 -o 0 -g "${APP_GID}" "$PRIVATEKEY_PEM" "${CERTS_DIR}/privkey.pem"
+if [[ "$OSTYPE" == darwin* ]]; then
+  # The user cannot make root the owner, Docker Desktop shares the file with the container as the user
+  install -m 600 "$PRIVATEKEY_PEM" "${CERTS_DIR}/privkey.pem"
+else
+  install -m 640 -o 0 -g "${APP_GID}" "$PRIVATEKEY_PEM" "${CERTS_DIR}/privkey.pem"
+fi
 
 # Not a secret and reusable across certificates; the container picks it up from the certs mount instead of generating it on start.
 if [ ! -f "${CERTS_DIR}/dhparam.pem" ]; then
@@ -337,9 +435,9 @@ if [[ "${LETSENCRYPT_ENABLE}" = "true" ]]; then
   RENEWAL_CONF="${LETSENCRYPT}/renewal/${CERT_NAME}.conf"
   # Manual (DNS-01) certificates cannot be renewed unattended.
   if grep -qE '^authenticator[[:space:]]*=[[:space:]]*manual' "${RENEWAL_CONF}" 2>/dev/null; then
-    rm -f "${CRON_FILE}"
+    remove_renew_job
     echo "Note: wildcard certificates are not renewed automatically; rerun this script before the certificate expires."
-  elif create_renew_script; then
+  elif { [[ "$OSTYPE" == darwin* ]] && create_renew_job_macos; } || { [[ "$OSTYPE" != darwin* ]] && create_renew_script; }; then
     # Run the dry-run in the background: certbot may pause for minutes to avoid overloading the CA.
     echo "Checking Let's Encrypt renewal on the host in the background (certbot may pause for a few minutes to avoid overloading the CA; the result is written to ${LOG_FILE})..."
     (
@@ -348,7 +446,7 @@ if [[ "${LETSENCRYPT_ENABLE}" = "true" ]]; then
         [ "${NO_START}" = "true" ] && sleep 15
         wait_for_webroot || { echo "Warning: ${CONTAINER_NAME} does not answer on port 80; the renewal check is skipped."; exit 0; }
       fi
-      if docker run "${CERTBOT_DOCKER_ARGS[@]}" --network host certbot/certbot renew --dry-run >/dev/null; then
+      if docker run "${CERTBOT_DOCKER_ARGS[@]}" "${RENEW_NETWORK_ARGS[@]}" certbot/certbot renew --dry-run >/dev/null; then
         echo "Let's Encrypt host renewal check: OK"
       else
         echo "Warning: host-side Let's Encrypt renewal dry-run failed; check ${CRON_FILE}."
@@ -358,7 +456,7 @@ if [[ "${LETSENCRYPT_ENABLE}" = "true" ]]; then
   fi
 else
   # A leftover renewal job would overwrite the provided certificate with the Let's Encrypt one.
-  rm -f "${CRON_FILE}"
+  remove_renew_job
 
   if openssl verify -untrusted "$CERTIFICATE_PEM" "$CERTIFICATE_PEM" >/dev/null 2>&1; then
     set_docs_trust false

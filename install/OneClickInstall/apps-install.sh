@@ -41,7 +41,9 @@ LOCAL_SCRIPTS="false"
 PRODUCT="apps"
 LEGACY_PRODUCT="docspace"
 PRODUCT_SYSNAME="onlyoffice"
-PRODUCT_NAME="${PRODUCT_SYSNAME^^} Apps"
+# Upper-case spelling without bash 4 expansion: this wrapper runs under bash 3.2 on macOS
+PRODUCT_ORG="ONLYOFFICE"
+PRODUCT_NAME="${PRODUCT_ORG} Apps"
 FILE_NAME="$(basename "$0")"
 ENABLE_LOGGING="true"
 
@@ -85,6 +87,8 @@ while [ "$1" != "" ]; do
 done
 
 root_checking () {
+	# Docker Desktop runs per user, root is refused by the macOS block at the top
+	[[ "$OSTYPE" == darwin* ]] && return 0
 	[[ $EUID -eq 0 ]] || { echo "To perform this action you must be logged in with root rights"; exit 1; }
 }
 
@@ -184,19 +188,25 @@ if [ -n "$USER_DOCKER" ] && [ -n "$DOCKER" ] && [ "$USER_DOCKER" != "$DOCKER" ];
     reject_method_override
 fi
 
+# Only the Docker installation is available on macOS
+if [[ "$OSTYPE" == darwin* ]]; then
+    [ "$USER_DOCKER" == "false" ] && { echo "Only the Docker installation is available on macOS." >&2; exit 1; }
+    DOCKER="true"
+fi
+
 [ -z "$DOCKER" ] && read_installation_method
 
 # Detect legacy installs.
 if [[ "${DOCKER}" == "true" ]] && [[ ${DOCKER_TAG} =~ ^([0-9]+\.[0-9]+\.[0-9]+)(\.[0-9]+)?$ ]]; then
-  TAG="v${BASH_REMATCH[1]}"; LATEST_TAG=$(curl -s "https://api.github.com/repos/${PRODUCT_SYSNAME^^}/${LEGACY_PRODUCT}/releases/latest" | grep -Po '"tag_name":\s*"\K[^"]+')
-  if [[ "${TAG}" != "${LATEST_TAG}" ]] && curl -sfI "https://github.com/${PRODUCT_SYSNAME^^}/${LEGACY_PRODUCT}-buildtools/releases/tag/${TAG}-server" >/dev/null; then
+  TAG="v${BASH_REMATCH[1]}"; LATEST_TAG=$(curl -s "https://api.github.com/repos/${PRODUCT_ORG}/${LEGACY_PRODUCT}/releases/latest" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')
+  if [[ "${TAG}" != "${LATEST_TAG}" ]] && curl -sfI "https://github.com/${PRODUCT_ORG}/${LEGACY_PRODUCT}-buildtools/releases/tag/${TAG}-server" >/dev/null; then
 	>&2 echo "Warning: legacy install detected (v${BASH_REMATCH[1]}) — compatibility issues or unforeseen errors may occur."
     PARAMETERS+=(-gb "${TAG}-server"); GIT_BRANCH="${TAG}-server"
   fi
 fi
 
 DOWNLOAD_URL_PREFIX="https://download.${PRODUCT_SYSNAME}.com/${PRODUCT}"
-[ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${PRODUCT_SYSNAME^^}/${LEGACY_PRODUCT}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
+[ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${PRODUCT_ORG}/${LEGACY_PRODUCT}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
 
 if [ "$DOCKER" == "true" ]; then
     SCRIPT_NAME="install-Docker.sh"
@@ -214,7 +224,12 @@ if [ "$LOCAL_SCRIPTS" != "true" ]; then
     bash -n "${SCRIPT_NAME}" || { echo "Downloaded ${SCRIPT_NAME} has invalid Bash syntax" >&2; exit 1; }
 fi
 
-if [ "$ENABLE_LOGGING" = "true" ]; then
+if [ "$ENABLE_LOGGING" = "true" ] && [[ "$OSTYPE" == darwin* ]]; then
+    # BSD script has no -c option, so the log is written by tee
+    LOG_FILE="OneClick${SCRIPT_NAME%.sh}_$(date +%Y%m%d_%H%M%S).log"
+    bash "${SCRIPT_NAME}" "${PARAMETERS[@]}" 2>&1 | tee "${LOG_FILE}"
+    EXIT_CODE=${PIPESTATUS[0]}
+elif [ "$ENABLE_LOGGING" = "true" ]; then
     command -v script >/dev/null 2>&1 || { command -v dnf >/dev/null 2>&1 && dnf -y install util-linux-script; }
     if command -v script >/dev/null 2>&1; then
         LOG_FILE="OneClick${SCRIPT_NAME%.sh}_$(date +%Y%m%d_%H%M%S).log"
