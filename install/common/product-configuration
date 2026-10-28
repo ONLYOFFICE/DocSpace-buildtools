@@ -216,7 +216,8 @@ establish_mysql_conn(){
 		}
 	fi
 
-	if $PACKAGE_MANAGER mysql-server >/dev/null 2>&1 || $PACKAGE_MANAGER mysql-community-server >/dev/null 2>&1; then
+	if $PACKAGE_MANAGER mysql-server >/dev/null 2>&1 || $PACKAGE_MANAGER mysql-community-server >/dev/null 2>&1 \
+		|| $PACKAGE_MANAGER percona-server-server >/dev/null 2>&1; then
 		change_mysql_config
 	fi
 
@@ -247,7 +248,7 @@ docs_owns_dependency() {
 }
 
 change_mysql_config(){
-	docs_owns_dependency mysql-server mysql-community-server && return 0
+	docs_owns_dependency mysql-server mysql-community-server percona-server-server && return 0
 	if [ "$DIST" = "RedHat" ]; then
 		CNF_PATH="/etc/my.cnf"
 		CNF_SERVICE_PATH="/usr/lib/systemd/system/mysqld.service"
@@ -845,7 +846,8 @@ install_json
 product_configuration
 migrate_environment_settings
 
-if $PACKAGE_MANAGER mysql-client >/dev/null 2>&1 || $PACKAGE_MANAGER mysql-community-client >/dev/null 2>&1; then
+if $PACKAGE_MANAGER mysql-client >/dev/null 2>&1 || $PACKAGE_MANAGER mysql-community-client >/dev/null 2>&1 \
+	|| $PACKAGE_MANAGER percona-server-client >/dev/null 2>&1; then
 	input_db_params
 	establish_mysql_conn || exit $?
 fi

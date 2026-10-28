@@ -69,7 +69,7 @@ if [ -f "/etc/${package_sysname}/documentserver/nginx/ds.conf.apps.bak" ] \
 	rm -f -- /etc/apt/preferences.d/00onlyoffice-docs-*.pref
 	mapfile -t DOCS_RUNTIME_PACKAGES < <(dpkg-query -W -f='${db:Status-Status}\t${binary:Package}\n' \
 		| awk '$1 == "installed" {print $2}' \
-		| grep -E "^${package_sysname}-documentserver(-de|-ee)?(:|$)|^(nginx|nodejs|mysql|postgresql|redis|valkey|rabbitmq|erlang|ffmpeg)(-|:|$)")
+		| grep -E "^${package_sysname}-documentserver(-de|-ee)?(:|$)|^(nginx|nodejs|mysql|percona-server|postgresql|redis|valkey|rabbitmq|erlang|ffmpeg)(-|:|$)")
 	if [ "${#DOCS_RUNTIME_PACKAGES[@]}" -eq 0 ]; then
 		echo "Cannot preserve Docs dependencies: no matching installed packages found. Check the saved Docs state before retrying." >&2
 		exit 1
@@ -141,37 +141,63 @@ elif [ "$DIST" = "debian" ]; then
 	DEBIAN_FRONTEND=noninteractive dpkg --force-confnew -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
 fi
 
-MYSQL_REPO_VERSION="$(curl -fsSL https://dev.mysql.com/downloads/repo/apt/ | grep -oP '(?<=mysql-apt-config_)[0-9.]+-[0-9]+(?=_all\.deb)' | head -n1)"
-MYSQL_PACKAGE_NAME="mysql-apt-config_${MYSQL_REPO_VERSION}_all.deb"
 MYSQL_SERVER_HOST=${MYSQL_SERVER_HOST:-"localhost"}
 MYSQL_SERVER_PORT=${MYSQL_SERVER_PORT:-"3306"}
 MYSQL_SERVER_DB_NAME=${MYSQL_SERVER_DB_NAME:-"${package_sysname}"}
 MYSQL_SERVER_USER=${MYSQL_SERVER_USER:-"root"}
 
-if ! dpkg -l | grep -q "mysql-server"; then
-	MYSQL_FIRST_TIME_INSTALL="true"
-	MYSQL_SERVER_PASS=${MYSQL_SERVER_PASS:-"$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)"}
+MYSQL_PACKAGES=(mysql-server mysql-client)
+if [ "$DIST" = "debian" ] && [ "$ARCH" = "arm64" ]; then
+	# Debian has no native Oracle MySQL packages for arm64; use Percona MySQL 8.4.
+	# Reuse an existing MySQL installation instead of switching its provider.
+	if package_installed percona-server-server || { ! package_installed mysql-server && ! package_installed mysql-community-server; }; then
+		MYSQL_PACKAGES=(percona-server-server percona-server-client)
+		export PERCONA_TELEMETRY_DISABLE=1
+		if ! package_installed percona-server-server; then
+			if dpkg-query -W -f='${db:Status-Status}\n' 'mariadb-server*' 2>/dev/null | grep -qx installed; then
+				echo "ERROR: MariaDB is already installed. Automatic replacement with Percona MySQL is not supported." >&2
+				exit 1
+			fi
+			curl -fsSLO --retry 3 --retry-delay 2 https://repo.percona.com/apt/percona-release_latest.generic_all.deb
+			apt-get "${DOCS_APT_OPTIONS[@]}" install -yq gnupg2 lsb-release ca-certificates ./percona-release_latest.generic_all.deb
+			rm -f percona-release_latest.generic_all.deb
+			percona-release enable ps-84-lts release --scheme https
 
-	# Set up MySQL 8.4 package (arm64 uses the distro package, the Oracle repo has no arm64 build).
-	if [ "$ARCH" = "amd64" ]; then
+			MYSQL_FIRST_TIME_INSTALL="true"
+			MYSQL_SERVER_PASS=${MYSQL_SERVER_PASS:-"$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)"}
+			echo percona-server-server percona-server-server/root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+			echo percona-server-server percona-server-server/re-root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+		fi
+	fi
+else
+	MYSQL_REPO_VERSION="$(curl -fsSL https://dev.mysql.com/downloads/repo/apt/ | grep -oP '(?<=mysql-apt-config_)[0-9.]+-[0-9]+(?=_all\.deb)' | head -n1)"
+	MYSQL_PACKAGE_NAME="mysql-apt-config_${MYSQL_REPO_VERSION}_all.deb"
+
+	if ! dpkg -l | grep -q "mysql-server"; then
+		MYSQL_FIRST_TIME_INSTALL="true"
+		MYSQL_SERVER_PASS=${MYSQL_SERVER_PASS:-"$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)"}
+
+		# Set up MySQL 8.4 package (arm64 uses the distro package, the Oracle repo has no arm64 build).
+		if [ "$ARCH" = "amd64" ]; then
+			curl -fsSLO "https://repo.mysql.com/${MYSQL_PACKAGE_NAME}"
+			echo "mysql-apt-config mysql-apt-config/repo-codename  select  ${DISTRIB_CODENAME/resolute/noble}" | debconf-set-selections
+			echo "mysql-apt-config mysql-apt-config/repo-distro  select  $DIST" | debconf-set-selections
+			echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.4-lts" | debconf-set-selections
+			DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
+			rm -f "${MYSQL_PACKAGE_NAME}"
+		fi
+
+		echo mysql-community-server mysql-community-server/root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+		echo mysql-community-server mysql-community-server/re-root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+		echo mysql-community-server mysql-server/default-auth-override select "Use Strong Password Encryption (RECOMMENDED)" | debconf-set-selections
+		echo mysql-server mysql-server/root_password password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+		echo mysql-server mysql-server/root_password_again password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+
+	elif [ "${PRESERVE_DOCS}" = false ] && dpkg -l | grep -q "mysql-apt-config" && [ "$(apt-cache policy mysql-apt-config | awk 'NR==2{print $2}')" != "${MYSQL_REPO_VERSION}" ]; then
 		curl -fsSLO "https://repo.mysql.com/${MYSQL_PACKAGE_NAME}"
-		echo "mysql-apt-config mysql-apt-config/repo-codename  select  ${DISTRIB_CODENAME/resolute/noble}" | debconf-set-selections
-		echo "mysql-apt-config mysql-apt-config/repo-distro  select  $DIST" | debconf-set-selections
-		echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.4-lts" | debconf-set-selections
 		DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
 		rm -f "${MYSQL_PACKAGE_NAME}"
 	fi
-
-	echo mysql-community-server mysql-community-server/root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
-	echo mysql-community-server mysql-community-server/re-root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
-	echo mysql-community-server mysql-server/default-auth-override select "Use Strong Password Encryption (RECOMMENDED)" | debconf-set-selections
-	echo mysql-server mysql-server/root_password password "${MYSQL_SERVER_PASS}" | debconf-set-selections
-	echo mysql-server mysql-server/root_password_again password "${MYSQL_SERVER_PASS}" | debconf-set-selections
-
-elif [ "${PRESERVE_DOCS}" = false ] && dpkg -l | grep -q "mysql-apt-config" && [ "$(apt-cache policy mysql-apt-config | awk 'NR==2{print $2}')" != "${MYSQL_REPO_VERSION}" ]; then
-	curl -fsSLO "https://repo.mysql.com/${MYSQL_PACKAGE_NAME}"
-	DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
-	rm -f "${MYSQL_PACKAGE_NAME}"
 fi
 
 if [ "$DIST" = "ubuntu" ] && { [ "${PRESERVE_DOCS}" = false ] || ! package_installed redis-server; }; then
@@ -207,8 +233,7 @@ apt-get "${DOCS_APT_OPTIONS[@]}" install -o DPkg::options::="${DPKG_CONF_OPTION}
 				nodejs \
 				gcc \
 				make \
-				mysql-server \
-				mysql-client \
+				"${MYSQL_PACKAGES[@]}" \
 				redis-server \
 				rabbitmq-server \
 				temurin-${JAVA_VERSION}-jre \

@@ -162,9 +162,8 @@ DIST=$(echo "$DIST" | tr '[:upper:]' '[:lower:]' | xargs)
 DISTRIB_CODENAME=$(echo "$DISTRIB_CODENAME" | tr '[:upper:]' '[:lower:]' | xargs)
 [ "$DIST" = "debian" ] && REV="${REV%%.*}"
 
-# MySQL 8.4 has no arm64 build in the Oracle repo and Debian ships only MariaDB.
-if [ "$ARCH" = "arm64" ] && [ "$DIST" != "ubuntu" ]; then
-    echo "${product_name} on architecture '$ARCH' is supported only on Ubuntu (detected '${DIST}'). Please use a Docker installation."
+if [ "$ARCH" = "arm64" ] && [[ "$DIST" != "ubuntu" && "$DIST" != "debian" ]]; then
+    echo "${product_name} on architecture '$ARCH' is supported only on Debian and Ubuntu (detected '${DIST}'). Please use a Docker installation."
     exit 1
 fi
 
