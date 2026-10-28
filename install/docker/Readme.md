@@ -39,7 +39,8 @@ install/docker/
 │   │   ├── docker-identity-entrypoint.sh
 │   │   ├── docker-migration-entrypoint.sh
 │   │   ├── docker-healthchecks-entrypoint.sh
-│   │   ├── bin-share-docker-entrypoint.sh / wait-bin-share-docker-entrypoint.sh
+│   │   ├── docker-standalone-entrypoint.sh
+│   │   ├── docker-bin-share-entrypoint.sh / docker-wait-bin-share-entrypoint.sh
 │   │   └── prepare-nginx-router.sh
 │   ├── dev/                  #   local-dev-only Compose overlays (build.backend.docker.py)
 │   │   ├── db.dev.yml            #   MySQL dev overrides (exposed ports)
@@ -47,8 +48,10 @@ install/docker/
 │   │   ├── apps.overcome.yml     #   local-dev overrides
 │   │   ├── dnsmasq.yml           #   local DNS for development
 │   │   └── build-identity.yml    #   ASC.Identity (Java) build
-│   └── stack/supervisor/     #   supervisor configs baked into the image
-└── community/                # single-container community edition stack
+│   └── supervisor/            #   supervisor configs baked into images
+│       ├── stack/                 #   apps-stack.yml services (dotnet/node/java)
+│       └── standalone.conf        #   standalone image
+└── standalone/               # single-container (standalone) stack
 ```
 
 ### Production Compose files
@@ -84,11 +87,11 @@ bash install/OneClickInstall/install-Docker.sh -dm stack
 > Prefer the installer for production. The manual Compose commands below are for
 > custom setups and for understanding how the pieces fit together.
 
-## Community edition
+## Standalone deployment
 
 A lightweight, single-container ONLYOFFICE Apps solution you bring up with a single
 `docker compose` command — no extra infrastructure to wire up. See
-[`community/`](community/README.md).
+[`standalone/`](standalone/README.md).
 
 ## Configuration
 
@@ -114,6 +117,11 @@ Review these before the first start:
 
 Compose is **modular** - files are combined with `-f`. Run all commands from
 `install/docker/` so that `.env` is picked up.
+
+Before direct Compose runs, set these blank secrets in `.env`:
+`MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`, `RABBIT_PASSWORD`, and
+`DOCUMENT_SERVER_JWT_SECRET`. The OneClickInstall Docker installer generates
+them automatically, but plain `docker compose` uses `.env` as-is.
 
 **Modular** (individual application services):
 
@@ -164,6 +172,55 @@ config/apps-ssl-setup --default
 > docker compose up -d        # then just use plain compose commands
 > ```
 
+### OpenTelemetry (router)
+
+The `onlyoffice-router` container can push distributed traces and
+trace-correlated request logs straight to an external OpenTelemetry Collector
+over OTLP/HTTP (none is bundled). Disabled by default; enable via `.env`:
+
+| Variable | Purpose |
+|----------|---------|
+| `OTEL_TRACES_ENABLED` | `true` enables tracing (spans to `<endpoint>/v1/traces`) |
+| `OTEL_LOGS_ENABLED` | `true` enables request logs (records to `<endpoint>/v1/logs`) |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP/HTTP collector base URL, e.g. `http://otel-collector:4318` |
+| `OTEL_SERVICE_NAME` | `service.name` resource attribute (default `onlyoffice-router`) |
+| `OTEL_EXPORTER_OTLP_HEADERS` | Extra export headers, `key1=value1,key2=value2` |
+| `OTEL_TRACE_STATIC_ASSETS` | `true` also reports static assets (off by default, see below) |
+
+The hooks run for every location the router serves, so static assets are
+filtered out: a single page load pulls in hundreds of chunks, fonts and images
+that would bury the API traces and overflow the log queue. A failing asset is
+still reported, since broken app chunks are a routine router problem. Set
+`OTEL_TRACE_STATIC_ASSETS=true` to report them all.
+
+Both signals are batched in the background and never block request
+processing; the `traceparent` header is propagated to the upstream DocSpace
+services. With both flags on, each log record carries the `traceId`/`spanId`
+of the request's server span.
+
+The filtered nginx access log is written to `/var/log/nginx/access.log` for
+Fluent Bit regardless of OpenTelemetry settings. Successful static asset and
+liveness check requests are omitted.
+
+Collector side — a single `otlp` receiver covers both pipelines:
+
+```yaml
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [...]
+    logs:
+      receivers: [otlp]
+      exporters: [...]
+```
+
 ## Building images
 
 Images are built with **buildx bake** from the `build/` definition. The build
@@ -192,11 +249,11 @@ Build groups: `default` (all), `dotnet-services`, `node-services`, `java-service
 
 ## Process management
 
-Supervisor configs baked into the image, under `build/stack/supervisor/`:
+Supervisor configs baked into the images, under `build/supervisor/`:
 
 | File | Purpose |
 |------|---------|
-| `supervisord.conf` | Supervisor daemon settings |
-| `dotnet_services.conf` | .NET service management |
-| `node_services.conf` | Node.js service management |
-| `java_services.conf` | Java service management |
+| `stack/dotnet_services.conf` | Supervisor daemon settings + .NET service management |
+| `stack/node_services.conf` | Node.js service management |
+| `stack/java_services.conf` | Java service management |
+| `standalone.conf` | Supervisor daemon + all services, for the single-container standalone image |

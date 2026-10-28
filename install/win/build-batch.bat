@@ -11,6 +11,7 @@ xcopy "buildtools\install\win\opensearch-%opensearch_version%\plugins\opensearch
 xcopy "buildtools\install\win\opensearch-%opensearch_version%\plugins\opensearch-job-scheduler" "buildtools\install\win\OpenSearch\plugins\opensearch-job-scheduler" /s /y /b /i
 xcopy "buildtools\install\win\opensearch-%opensearch_version%\plugins\opensearch-index-management" "buildtools\install\win\OpenSearch\plugins\opensearch-index-management" /s /y /b /i
 xcopy "buildtools\install\win\opensearch-%opensearch_version%\plugins\opensearch-knn" "buildtools\install\win\OpenSearch\plugins\opensearch-knn" /s /y /b /i
+xcopy "buildtools\install\win\opensearch-%opensearch_version%\plugins\opensearch-neural-search" "buildtools\install\win\OpenSearch\plugins\opensearch-neural-search" /s /y /b /i
 rmdir buildtools\install\win\opensearch-%opensearch_version%\plugins /s /q
 xcopy "buildtools\install\win\opensearch-%opensearch_version%" "buildtools\install\win\OpenSearch" /s /y /b /i
 rmdir buildtools\install\win\opensearch-%opensearch_version% /s /q
@@ -44,8 +45,8 @@ copy buildtools\install\win\WinSW.NET4.exe "buildtools\install\win\OpenResty\too
 copy buildtools\install\win\tools\OpenResty.xml "buildtools\install\win\OpenResty\tools\OpenResty.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\Socket.IO.exe" /y
 copy buildtools\install\win\tools\Socket.IO.xml "buildtools\install\win\Files\tools\Socket.IO.xml" /y
-copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\NewAi.exe" /y
-copy buildtools\install\win\tools\NewAi.xml "buildtools\install\win\Files\tools\NewAi.xml" /y
+copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\AI.Chat.exe" /y
+copy buildtools\install\win\tools\AI.Chat.xml "buildtools\install\win\Files\tools\AI.Chat.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\SsoAuth.exe" /y
 copy buildtools\install\win\tools\SsoAuth.xml "buildtools\install\win\Files\tools\SsoAuth.xml" /y
 copy buildtools\install\win\WinSW3.0.0.exe "buildtools\install\win\Files\tools\DocEditor.exe" /y

@@ -219,7 +219,7 @@ map $SERVICE_AI $ai_service_url {
     default $SERVICE_AI;
 }
 
-map $SERVICE_NEW_AI $new_ai_service_url {
+map $SERVICE_AI_CHAT $ai_chat_service_url {
     volatile;
 
     ""          "http://127.0.0.1:9837";
@@ -227,7 +227,7 @@ map $SERVICE_NEW_AI $new_ai_service_url {
     "~^\\s*$"   "http://127.0.0.1:9837";
     "undefined" "http://127.0.0.1:9837";
 
-    default $SERVICE_NEW_AI;
+    default $SERVICE_AI_CHAT;
 }
 
 map $SERVICE_PLUGINS $plugins_service_url {

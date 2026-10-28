@@ -53,7 +53,16 @@ RES_QUESTIONS="In case you have any questions contact us via http://support.only
 RES_MARIADB="To continue the installation, you need to remove MariaDB"
 INSTALL_FLUENT_BIT="true"
 
+require_value() {
+    [ -n "${2-}" ] || { echo "Error: Missing value for ${1}" >&2; exit 1; }
+}
+
 while [ "$1" != "" ]; do
+    case "$1" in
+        -h | -? | --help ) ;;
+        -* ) require_value "$1" "$2" ;;
+    esac
+
 	case $1 in
         -u | --update )                     [ -n "$2" ] && UPDATE=$2 && shift ;;
         -uni | --uninstall )                [ -n "$2" ] && UNINSTALL=$2 && shift ;;
@@ -119,12 +128,23 @@ validate_bool --installfluentbit "$INSTALL_FLUENT_BIT"
 DOWNLOAD_URL_PREFIX="https://download.onlyoffice.com/${product}"
 [ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${legacy_product}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
 
+source_remote_script() {
+    local SCRIPT_PATH="$1"
+    local SCRIPT_TMP
+
+    SCRIPT_TMP="$(mktemp)"
+    curl -fsSL --retry 3 --retry-delay 2 "${DOWNLOAD_URL_PREFIX}/${SCRIPT_PATH}" -o "${SCRIPT_TMP}" || { rm -f "${SCRIPT_TMP}"; return 1; }
+    bash -n "${SCRIPT_TMP}" || { rm -f "${SCRIPT_TMP}"; return 1; }
+    source "${SCRIPT_TMP}"
+    rm -f "${SCRIPT_TMP}"
+}
+
 # Run uninstall if requested
 if [ "${UNINSTALL}" == "true" ]; then
     if [ "${LOCAL_SCRIPTS}" == "true" ]; then
         source install-RedHat/uninstall.sh
     else
-        source <(curl -fsSL "${DOWNLOAD_URL_PREFIX}"/install-RedHat/uninstall.sh)
+        source_remote_script install-RedHat/uninstall.sh
     fi
     exit 0
 fi
@@ -144,8 +164,8 @@ if [ "$LOCAL_SCRIPTS" = "true" ]; then
 	source install-RedHat/install-preq.sh
 	source install-RedHat/install-app.sh
 else
-	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/install-RedHat/tools.sh)
-	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/common/check-ports.sh)
-	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/install-RedHat/install-preq.sh)
-	source <(curl -sS "${DOWNLOAD_URL_PREFIX}"/install-RedHat/install-app.sh)
+	source_remote_script install-RedHat/tools.sh
+	source_remote_script common/check-ports.sh
+	source_remote_script install-RedHat/install-preq.sh
+	source_remote_script install-RedHat/install-app.sh
 fi

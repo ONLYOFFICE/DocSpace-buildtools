@@ -46,13 +46,27 @@ cat<<EOF
 
 EOF
 
+run_remote_bash() {
+	local URL="$1"
+	shift
+	local SCRIPT_TMP
+
+	SCRIPT_TMP="$(mktemp)"
+	curl -fsSL --retry 3 --retry-delay 2 "${URL}" -o "${SCRIPT_TMP}" || { rm -f "${SCRIPT_TMP}"; return 1; }
+	bash -n "${SCRIPT_TMP}" || { rm -f "${SCRIPT_TMP}"; return 1; }
+	bash "${SCRIPT_TMP}" "$@"
+	local EXIT_CODE=$?
+	rm -f "${SCRIPT_TMP}"
+	return "${EXIT_CODE}"
+}
+
 hold_package_version
 
 if [ "$DIST" = "debian" ] && [ "$(apt-cache search ttf-mscorefonts-installer | wc -l)" -eq 0 ]; then
 		echo "deb http://deb.debian.org/debian/ $DISTRIB_CODENAME main contrib" >> /etc/apt/sources.list
 fi
 
-# Temporary workaround extend apt-sequoia policy until 2027-02-01 (OpenResty/OpenSearch)
+# Temporary OpenResty/OpenSearch apt-sequoia policy extension until 2027-02-01.
 if [ "$DISTRIB_CODENAME" = "trixie" ]; then
     install -D /usr/share/apt/default-sequoia.config /etc/crypto-policies/back-ends/apt-sequoia.config
     sed -i 's/2026-02-01/2027-02-01/' /etc/crypto-policies/back-ends/apt-sequoia.config
@@ -68,24 +82,24 @@ dpkg -l | grep -q "debconf-utils" || apt-get install -yq debconf-utils
 command -v locale-gen &>/dev/null || apt-get install -yq locales
 locale-gen en_US.UTF-8
 
-# add opensearch repo
+# Add OpenSearch repo.
 curl -fsSL https://artifacts.opensearch.org/publickeys/opensearch-release.pgp | gpg --dearmor --batch --yes -o /usr/share/keyrings/opensearch-keyring
 echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch/3.x/apt stable main" > /etc/apt/sources.list.d/opensearch-3.x.list
 OPENSEARCH_VERSION="3.5.0"
 export OPENSEARCH_INITIAL_ADMIN_PASSWORD="$(echo "${package_sysname}!A1")"
 
-#add opensearch dashboards repo
+# Add OpenSearch Dashboards repo.
 if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then
 	curl -fsSL https://artifacts.opensearch.org/publickeys/opensearch-release.pgp | gpg --dearmor --batch --yes -o /usr/share/keyrings/opensearch-keyring
 	echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/3.x/apt stable main" > /etc/apt/sources.list.d/opensearch-dashboards-3.x.list
 	DASHBOARDS_VERSION="3.5.0"
 fi
 
-# add nodejs repo
+# Add Node.js repo.
 NODE_VERSION="24"
-curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash -
+run_remote_bash "https://deb.nodesource.com/setup_${NODE_VERSION}.x"
 
-#add dotnet repo
+# Add .NET repo.
 if [ "$DIST" = "ubuntu" ]; then
     add-apt-repository -y ppa:dotnet/backports
 elif [ "$DIST" = "debian" ]; then
@@ -96,16 +110,17 @@ fi
 
 MYSQL_REPO_VERSION="$(curl -fsSL https://dev.mysql.com/downloads/repo/apt/ | grep -oP '(?<=mysql-apt-config_)[0-9.]+-[0-9]+(?=_all\.deb)' | head -n1)"
 MYSQL_PACKAGE_NAME="mysql-apt-config_${MYSQL_REPO_VERSION}_all.deb"
-if ! dpkg -l | grep -q "mysql-server"; then
+MYSQL_SERVER_HOST=${MYSQL_SERVER_HOST:-"localhost"}
+MYSQL_SERVER_PORT=${MYSQL_SERVER_PORT:-"3306"}
+MYSQL_SERVER_DB_NAME=${MYSQL_SERVER_DB_NAME:-"${package_sysname}"}
+MYSQL_SERVER_USER=${MYSQL_SERVER_USER:-"root"}
 
-	MYSQL_SERVER_HOST=${MYSQL_SERVER_HOST:-"localhost"}
-	MYSQL_SERVER_PORT=${MYSQL_SERVER_PORT:-"3306"}
-	MYSQL_SERVER_DB_NAME=${MYSQL_SERVER_DB_NAME:-"${package_sysname}"}
-	MYSQL_SERVER_USER=${MYSQL_SERVER_USER:-"root"}
+if ! dpkg -l | grep -q "mysql-server"; then
+	MYSQL_FIRST_TIME_INSTALL="true"
 	MYSQL_SERVER_PASS=${MYSQL_SERVER_PASS:-"$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)"}
 
-	# setup mysql 8.4 package
-	curl -fsSLO http://repo.mysql.com/"${MYSQL_PACKAGE_NAME}"
+	# Set up MySQL 8.4 package.
+	curl -fsSLO "https://repo.mysql.com/${MYSQL_PACKAGE_NAME}"
 	echo "mysql-apt-config mysql-apt-config/repo-codename  select  ${DISTRIB_CODENAME/resolute/noble}" | debconf-set-selections
 	echo "mysql-apt-config mysql-apt-config/repo-distro  select  $DIST" | debconf-set-selections
 	echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.4-lts" | debconf-set-selections
@@ -119,7 +134,7 @@ if ! dpkg -l | grep -q "mysql-server"; then
 	echo mysql-server mysql-server/root_password_again password "${MYSQL_SERVER_PASS}" | debconf-set-selections
 
 elif dpkg -l | grep -q "mysql-apt-config" && [ "$(apt-cache policy mysql-apt-config | awk 'NR==2{print $2}')" != "${MYSQL_REPO_VERSION}" ]; then
-	curl -fsSLO http://repo.mysql.com/${MYSQL_PACKAGE_NAME}
+	curl -fsSLO "https://repo.mysql.com/${MYSQL_PACKAGE_NAME}"
 	DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
 	rm -f "${MYSQL_PACKAGE_NAME}"
 fi
@@ -130,20 +145,20 @@ if [ "$DIST" = "ubuntu" ]; then
 fi
 
 curl -fsSL https://openresty.org/package/pubkey.gpg | gpg --batch --yes --dearmor -o /usr/share/keyrings/openresty.gpg
-# Temporary workaround Debian 13 (trixie) and Ubuntu 26.04 (resolute) use previous LTS codename for OpenResty
+# Temporary OpenResty codename fallback for Debian 13 and Ubuntu 26.04.
 OPENRESTY_CODENAME=$([ "${DISTRIB_CODENAME}" = "trixie" ] && echo "bookworm" || echo "${DISTRIB_CODENAME/resolute/noble}")
 echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/$DIST ${OPENRESTY_CODENAME} $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
 
-#add java repo
+# Add Java repo.
 curl -fsSL https://packages.adoptium.net/artifactory/api/gpg/key/public | gpg --batch --yes --dearmor -o /usr/share/keyrings/adoptium.gpg
 echo "deb [signed-by=/usr/share/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb $DISTRIB_CODENAME main" | tee /etc/apt/sources.list.d/adoptium.list
 chmod 644 /usr/share/keyrings/adoptium.gpg
 JAVA_VERSION="25"
 
-# setup msttcorefonts
+# Set up msttcorefonts.
 echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | debconf-set-selections
 
-# install
+# Install packages.
 apt-get -y update
 apt-get install -o DPkg::options::="--force-confnew" -yq \
 				expect \
@@ -162,10 +177,10 @@ if [ "$INSTALLATION_TYPE" != "community" ]; then
 	apt-get install -yq postgresql
 fi
 
-# Temporary fallback aspnetcore-runtime-10.0 on Debian 11 and Ubuntu 24.04
+# Temporary aspnetcore-runtime-10.0 fallback for Debian 11 and Ubuntu 24.04.
 DOTNET_VERSION="10.0"; DOTNET_PKG="aspnetcore-runtime-${DOTNET_VERSION}"
 if ! apt-get install -yq "${DOTNET_PKG}"; then
-  curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel "${DOTNET_VERSION}" --runtime aspnetcore --install-dir /usr/share/dotnet
+  run_remote_bash "https://dot.net/v1/dotnet-install.sh" --channel "${DOTNET_VERSION}" --runtime aspnetcore --install-dir /usr/share/dotnet
   ln -sf /usr/share/dotnet/dotnet /usr/bin/dotnet
 
   DOTNET_RUNTIME_VERSION=$(dotnet --list-runtimes | awk '$1 == "Microsoft.AspNetCore.App" {print $2}' | sort -V | tail -1)
@@ -199,4 +214,3 @@ if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then
 	apt-get -y update
 	apt-get install -o DPkg::options::="--force-confnew" -yq opensearch-dashboards="${DASHBOARDS_VERSION}" fluent-bit
 fi
-

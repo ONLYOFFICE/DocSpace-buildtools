@@ -109,15 +109,15 @@ BuildArch:      noarch
 The service which provides two-way communication between a web browser
 and the server.
 
-%package        newai
-Provides:       %{legacy_product}-newai = %{version}-%{release}
-Obsoletes:      %{legacy_product}-newai < %{version}-%{release}
-Summary:        NewAi
+%package        ai-chat
+Provides:       %{legacy_product}-ai-chat = %{version}-%{release}
+Obsoletes:      %{legacy_product}-ai-chat < %{version}-%{release}
+Summary:        AI Chat
 Requires:       %name-common  = %version-%release
 Requires:       nodejs >= %{node_version}.0
 AutoReqProv:    no
 BuildArch:      noarch
-%description    newai
+%description    ai-chat
 The service which provides AI chat features and MCP tool integrations.
 
 %package        studio
@@ -310,7 +310,8 @@ Requires:       aspnetcore-runtime-%{dotnet_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    telegram
-The service which is used for receiving %{product_name} notifications via Telegram.
+The service which is used for receiving %{product_name}
+notifications via Telegram.
 
 %package        ai
 Provides:       %{legacy_product}-ai = %{version}-%{release}

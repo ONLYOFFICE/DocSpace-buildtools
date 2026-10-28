@@ -48,7 +48,6 @@ check_archives:
 	wait; \
 	tar -xf ${SOURCE_PATH}/document-formats.tar.gz --wildcards --strip-components=1 -C ${BUILDTOOLS_PATH}/config/document-formats '*/onlyoffice-docs-formats.json' \
 		|| { echo "Error: failed to extract onlyoffice-docs-formats.json from document-formats.tar.gz"; exit 1; }; \
-	$(call extract_archive,${SOURCE_PATH}/ui-kit.tar.gz,ui-kit,-C ${CLIENT_PATH}/libs); \
 	echo "Source archives check passed."
 
 override_dh_auto_build: check_archives
@@ -61,7 +60,7 @@ override_dh_auto_build: check_archives
 	grep -q "Attribution-ShareAlike 4.0" ${CURDIR}/debian/copyright || \
 		awk 'NF==0{print " ."} NF>0{print " " $$0}' ${BUILDTOOLS_PATH}/install/common/LICENSE-CC-BY-SA >> ${CURDIR}/debian/copyright
 
-	for i in ${PACKAGE_NAME} $$(ls ${CURDIR}/debian/*.install | grep -oP 'debian/\K.*' | grep -o '^[^.]*'); do \
+	for i in ${PACKAGE_NAME} {{legacy_product}} $$(ls ${CURDIR}/debian/*.install | grep -oP 'debian/\K.*' | grep -o '^[^.]*'); do \
 		cp ${CURDIR}/debian/source/lintian-overrides ${CURDIR}/debian/$$i.lintian-overrides; \
 	done
 

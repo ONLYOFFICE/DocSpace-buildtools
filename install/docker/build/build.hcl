@@ -60,11 +60,11 @@ target "onlyoffice-socket" {
   tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-socket:${DOCKER_TAG}"]
 }
 
-target "onlyoffice-newai" {
+target "onlyoffice-ai-chat" {
   context    = "build"
   dockerfile = "${DOCKERFILE}"
-  target     = "newai"
-  tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-newai:${DOCKER_TAG}"]
+  target     = "ai-chat"
+  tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-ai-chat:${DOCKER_TAG}"]
 }
 
 target "onlyoffice-studio-notify" {
@@ -221,10 +221,10 @@ target "onlyoffice-node-services" {
   tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}-node:${DOCKER_TAG}"]
 }
 
-target "onlyoffice-community" {
+target "onlyoffice-standalone" {
   context    = "build"
   dockerfile = "${DOCKERFILE}"
-  target     = "community"
+  target     = "standalone"
   tags       = ["${REPO}/${DOCKER_IMAGE_PREFIX}:${DOCKER_TAG}"]
   args = {
     DEPLOY_ARGS = "deploy:preview"
@@ -258,13 +258,13 @@ group "default" {
     "onlyoffice-router",
     "onlyoffice-sdk",
     "onlyoffice-socket",
-    "onlyoffice-newai",
+    "onlyoffice-ai-chat",
     "onlyoffice-ssoauth",
     "onlyoffice-studio",
     "onlyoffice-studio-notify",
     "onlyoffice-telegram",
     "onlyoffice-wait-bin-share",
-    "onlyoffice-community",
+    "onlyoffice-standalone",
   ]
 }
 
@@ -301,7 +301,7 @@ group "node-services" {
     "onlyoffice-login",
     "onlyoffice-router",
     "onlyoffice-socket",
-    "onlyoffice-newai",
+    "onlyoffice-ai-chat",
     "onlyoffice-ssoauth",
   ]
 }
@@ -314,9 +314,9 @@ group "java-services" {
   ]
 }
 
-group "community-services" {
+group "standalone-services" {
   targets = [
-    "onlyoffice-community",
+    "onlyoffice-standalone",
   ]
 }
 

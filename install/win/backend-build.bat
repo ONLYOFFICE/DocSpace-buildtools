@@ -16,8 +16,8 @@ pushd %~1
     call yarn install --frozen-lockfile
   popd
 
-  echo "== Build ASC.NewAi =="
-  pushd common\ASC.NewAi
+  echo "== Build ASC.AI.Chat =="
+  pushd common\ASC.AI.Chat
     call yarn install --frozen-lockfile
   popd
 

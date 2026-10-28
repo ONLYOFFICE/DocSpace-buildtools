@@ -56,8 +56,13 @@ jobs:
       build_all: ${{ steps.set-matrix.outputs.build_all }}
     steps:
       - name: Checkout repository 
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
         run: |
-          git clone https://${{ secrets.GITEA_TOKEN }}@${{ secrets.GITEA_HOST }}/${{ github.repository }} -b ${{ github.ref_name }} --single-branch --depth=1
+          git config --global 'credential.https://${{ secrets.GITEA_HOST }}.helper' "store --file=${RUNNER_TEMP}/gitea-credentials"
+          [[ "$GITEA_TOKEN" == *:* ]] || GITEA_TOKEN+=":"
+          printf 'url=https://%s@%s\n\n' "$GITEA_TOKEN" '${{ secrets.GITEA_HOST }}' | git credential approve
+          git clone https://${{ secrets.GITEA_HOST }}/${{ github.repository }} -b ${{ github.ref_name }} --single-branch --depth=1
           cd "${GITHUB_REPOSITORY#*/}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -96,10 +101,15 @@ jobs:
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     steps:
       - name: Checkout code
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
         run: |
+          git config --global 'credential.https://${{ secrets.GITEA_HOST }}.helper' "store --file=${RUNNER_TEMP}/gitea-credentials"
+          [[ "$GITEA_TOKEN" == *:* ]] || GITEA_TOKEN+=":"
+          printf 'url=https://%s@%s\n\n' "$GITEA_TOKEN" '${{ secrets.GITEA_HOST }}' | git credential approve
           WORKSPACE_DIR=$(mountpoint -q /mnt && echo "/mnt" || echo "${GITHUB_WORKSPACE}")
           [ "$WORKSPACE_DIR" = "/mnt" ] && sudo chown $(whoami):$(whoami) /mnt 2>/dev/null || true
-          cd "${WORKSPACE_DIR}" && git clone https://${{ secrets.GITEA_TOKEN }}@${{ secrets.GITEA_HOST }}/${{ github.repository }} -b ${{ github.ref_name }} --single-branch --depth=1
+          cd "${WORKSPACE_DIR}" && git clone https://${{ secrets.GITEA_HOST }}/${{ github.repository }} -b ${{ github.ref_name }} --single-branch --depth=1
           echo "BUILD_WORKSPACE=${WORKSPACE_DIR}/${GITHUB_REPOSITORY#*/}" >> $GITHUB_ENV
 
       - name: Import GPG
@@ -126,10 +136,14 @@ jobs:
           JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | head -1)
           sudo update-alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && sudo update-alternatives --set java "$JAVA_PATH"
           echo "JAVA_HOME=$(dirname $(dirname "$JAVA_PATH"))" >> $GITHUB_ENV
-          sudo npm install -g json pnpm
+          sudo npm install -g json
+          # pnpm version comes from client/package.json "packageManager"; do not `corepack prepare pnpm@latest --activate`, it pins nothing.
+          sudo bash -c 'command -v corepack >/dev/null || npm install -g corepack'
+          sudo corepack enable
           if [[ "${{ matrix.packageType }}" == "rpm" ]]; then
             sudo apt install -y python3-rpm python3-pip
-            sudo pip install rpmlint
+            sudo python3 -m pip install --upgrade pip
+            sudo python3 -m pip install rpmlint
           else
             sudo apt install -y build-essential lintian dh-make
             DPKG_SIG_VERSION=$(wget -qO- https://archive.ubuntu.com/ubuntu/pool/universe/d/dpkg-sig/ | grep -oP '(?<=href=")dpkg-sig_[^"]+_all\.deb' | sort -Vr | head -1)

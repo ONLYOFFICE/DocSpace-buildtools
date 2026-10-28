@@ -124,9 +124,9 @@ install_json() {
 
 json_configuration() {
 	local JSON_FILE="$1" FIELD_PATH="$2" FIELD_VALUE="$3"
-	${JSON} "$JSON_FILE" -e \
+	JSON_FIELD_VALUE="$FIELD_VALUE" ${JSON} "$JSON_FILE" -e \
 	"var p='$FIELD_PATH'.split('.'),k=p.pop(),o=p.reduce((a,x)=>(a[x]??={}),this);
-	o[k] = $( [[ $FIELD_VALUE =~ ^(\{.*\}|\[.*\])$ ]] && printf %s "$FIELD_VALUE" || printf "'%s'" "$FIELD_VALUE")" >/dev/null 2>&1
+	o[k] = $( [[ $FIELD_VALUE =~ ^(\{.*\}|\[.*\])$ ]] && printf %s "$FIELD_VALUE" || printf %s 'process.env.JSON_FIELD_VALUE')" >/dev/null 2>&1
 }
 
 env_configuration() {
@@ -297,36 +297,7 @@ setup_openresty(){
 	sed -i "s!\(^worker_processes\).*;!\1 ${NGINX_WORKER_PROCESSES:-$(grep -c '^processor' /proc/cpuinfo)};!" "${OPENRESTY_CONF}"
 	sed -i "s!\(worker_connections\).*;!\1 ${NGINX_WORKER_CONNECTIONS:-$(ulimit -n)};!" "${OPENRESTY_CONF}"
 
-	NGINX_DEFAULT_SITE_WARNED=false
-	warn_default_site(){
-		# break out of the unterminated "Configuring openresty... " progress line before the first warning
-		[ "$NGINX_DEFAULT_SITE_WARNED" = false ] && { echo; NGINX_DEFAULT_SITE_WARNED=true; }
-		echo "Warning: $1" >&2
-	}
-
 	if [ "$DIST" = "RedHat" ]; then
-		NGINX_NEEDS_RELOAD=false
-		# Remove default nginx settings [error] port 80 is already in use
-		if [ -f /etc/nginx/nginx.conf ] && grep -q "server {" /etc/nginx/nginx.conf; then
-			# fix Bug 81918 - Remove default server block without dropping conf.d includes
-			[ -f /etc/nginx/nginx.conf.bak ] || cp -f /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
-			warn_default_site "removed default server block from /etc/nginx/nginx.conf to free port 80 for openresty (backup: /etc/nginx/nginx.conf.bak)"
-			awk '/^[[:space:]]*server[[:space:]]*\{/&&!done{done=1;d=1;next}d{d+=gsub(/\{/,"{")-gsub(/\}/,"}");if(d<=0)d=0;next}1' \
-				/etc/nginx/nginx.conf > /etc/nginx/nginx.conf.tmp && mv -f /etc/nginx/nginx.conf.tmp /etc/nginx/nginx.conf
-			NGINX_NEEDS_RELOAD=true
-		fi
-
-		# nginx.org RPM packages ship conf.d/default.conf, which also listens on port 80 and conflicts with openresty
-		if [ -f /etc/nginx/conf.d/default.conf ]; then
-			warn_default_site "disabled /etc/nginx/conf.d/default.conf to free port 80 for openresty (renamed to default.conf.disabled)"
-			[ -f /etc/nginx/conf.d/default.conf.disabled ] && rm -f /etc/nginx/conf.d/default.conf || mv -f /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf.disabled
-			NGINX_NEEDS_RELOAD=true
-		fi
-
-		if [ "$NGINX_NEEDS_RELOAD" = true ] && systemctl is-active --quiet nginx; then
-			systemctl reload nginx
-		fi
-
 		shopt -s nocasematch
 		if command -v getenforce >/dev/null 2>&1; then
 			case "$(getenforce)" in
@@ -355,13 +326,6 @@ setup_openresty(){
 		if ! id "nginx" >/dev/null 2>&1; then
 			rm -rf /var/log/nginx/* /var/cache/nginx/*
 			useradd -s /bin/false nginx
-		fi
-
-		# Debian nginx package enables sites-enabled/default, which also listens on port 80 and conflicts with openresty
-		if [ -e /etc/nginx/sites-enabled/default ]; then
-			warn_default_site "disabled /etc/nginx/sites-enabled/default to free port 80 for openresty (was -> $(readlink -f /etc/nginx/sites-enabled/default))"
-			rm -f /etc/nginx/sites-enabled/default
-			systemctl is-active --quiet nginx && systemctl reload nginx
 		fi
 	fi
 
@@ -392,12 +356,23 @@ setup_docs() {
 
 	if [ $1 == "LOCAL_DOCS_SERVER" ]; then
 		DS_CONF_DIR="/etc/${PACKAGE_SYSNAME}/documentserver"
+		DOCUMENT_SERVER_HOST="127.0.0.1"
+		sed -e 's/listen 0\.0\.0\.0:/listen 127.0.0.1:/' -i "${DS_CONF_DIR}/nginx/ds.conf"
+		if [ -f /proc/net/if_inet6 ] && ip -6 addr show lo 2>/dev/null | grep -q '::1'; then
+			sed -e 's/listen \[::\]:/listen [::1]:/' -i "${DS_CONF_DIR}/nginx/ds.conf"
+		else
+			# IPv6 loopback isn't available on this host — an unconditional rewrite to [::1] would fail
+			# nginx's bind() and take the whole master process down, including the IPv4 listener
+			sed -e '/listen \[::\]:/d' -i "${DS_CONF_DIR}/nginx/ds.conf"
+		fi
 		DOCUMENT_SERVER_PORT=$(grep -oP '(?<=:)\d+(?=[\s;])' ${DS_CONF_DIR}/nginx/ds.conf | head -1)
 		: "${DOCUMENT_SERVER_PORT:=8083}"
 		: "${DOCUMENT_SERVER_JWT_SECRET:=$(json -f ${DS_CONF_DIR}/local.json services.CoAuthoring.secret.inbox.string 2>/dev/null)}"
 		: "${DOCUMENT_SERVER_JWT_HEADER:=$(json -f ${DS_CONF_DIR}/local.json services.CoAuthoring.token.inbox.header 2>/dev/null)}"
+		json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.server.host" "127.0.0.1"
 
 		if [ "${ENVIRONMENT}" != "community" ]; then
+			json_configuration "${DS_CONF_DIR}/local.json" "adminPanel.host" "127.0.0.1"
 			json_configuration "${DS_CONF_DIR}/local.json" "rabbitmq" "{ url: '${RABBITMQ_URI}' }"
 			json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis" "{ host: '${REDIS_HOST}', port: '${REDIS_PORT}' }"
 			json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis.options" "{
@@ -405,26 +380,37 @@ setup_docs() {
 				${REDIS_PASS:+password: '${REDIS_PASS}',}
 				${REDIS_DB:+database: '${REDIS_DB}',}
 			}"
-			chown ds:ds ${DS_CONF_DIR}/local.json
 		fi
 		
+		chown ds:ds ${DS_CONF_DIR}/local.json
+		mkdir -p /etc/systemd/system/ds-metrics.service.d
+		printf '[Service]\nEnvironment=DS_METRICS_HOST=127.0.0.1\n' > /etc/systemd/system/ds-metrics.service.d/bind.conf
+		systemctl daemon-reload
 		usermod -aG ${PACKAGE_SYSNAME} ds
 		chmod g+rwxs /var/www/${PACKAGE_SYSNAME}/Data
+		systemctl is-active --quiet nginx && systemctl reload nginx
 		systemctl restart ds-converter ds-docservice ds-metrics
+		if [ "${ENVIRONMENT}" != "community" ] && systemctl cat ds-adminpanel.service >/dev/null 2>&1; then
+			systemctl restart ds-adminpanel
+		fi
 	elif [ $1 == "EXTERNAL_DOCS_SERVER" ]; then
 		APP_HOST=$(curl -s -4 ifconfig.me)
 		: "${DOCUMENT_SERVER_JWT_SECRET:=$(json -f "${USER_CONF}" services.CoAuthoring.secret.inbox.string 2>/dev/null)}"
 		: "${DOCUMENT_SERVER_JWT_HEADER:=$(json -f "${USER_CONF}" services.CoAuthoring.token.inbox.header 2>/dev/null)}"
 	fi
 
-	local _ds_url="${DOCUMENT_SERVER_URL_EXTERNAL:-http://$APP_HOST:$DOCUMENT_SERVER_PORT}"
+	local _ds_url="${DOCUMENT_SERVER_URL_EXTERNAL:-http://$DOCUMENT_SERVER_HOST:$DOCUMENT_SERVER_PORT}"
 	sed "/~\* \^\/ds-vpath\/ {/,/}/s|\(proxy_pass \).*;|\1${_ds_url};|" -i "${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}.conf"
 	json_configuration "${USER_CONF}" "files.docservice.url.internal"  "${_ds_url}"
 	json_configuration "${USER_CONF}" "files.docservice.secret.value"  "${DOCUMENT_SERVER_JWT_SECRET}"
 	json_configuration "${USER_CONF}" "files.docservice.secret.header" "${DOCUMENT_SERVER_JWT_HEADER:-"AuthorizationJwt"}"
 	json_configuration "${USER_CONF}" "files.docservice.url.public"    "${DOCUMENT_SERVER_URL_EXTERNAL:-"/ds-vpath/"}"
-	json_configuration "${USER_CONF}" "files.docservice.url.portal"    "http://${APP_HOST}:${APP_PORT}"
+	# Stays http:// here even when inheriting a cert - apps-ssl-setup below only flips it to https:// once it has actually configured openresty with it, not before.
+	json_configuration "${USER_CONF}" "files.docservice.url.portal" "http://${APP_HOST}:${APP_PORT}"
 	
+	local _ds_public="${DOCUMENT_SERVER_URL_EXTERNAL:-"/ds-vpath"}"
+	json_configuration "${APP_DIR}/externalresources.${ENVIRONMENT}.json" "externalresources.adminpanel.default.domain" "${_ds_public%/}/admin"
+
 	echo "OK"
 }
 
@@ -546,13 +532,13 @@ setup_redis() {
 	echo -n "Configuring redis... "
 	: "${REDIS_HOST:=$(json -f "${APP_DIR}/redis.${ENVIRONMENT}.json" Redis.Hosts.0.Host 2>/dev/null)}"
 	: "${REDIS_PORT:=$(json -f "${APP_DIR}/redis.${ENVIRONMENT}.json" Redis.Hosts.0.Port 2>/dev/null)}"
-	: "${REDIS_USER:=$(json -f "${APP_DIR}/redis.${ENVIRONMENT}.json" Redis.Hosts.UserName 2>/dev/null)}"
-	: "${REDIS_PASS:=$(json -f "${APP_DIR}/redis.${ENVIRONMENT}.json" Redis.Hosts.Password 2>/dev/null)}"
-	: "${REDIS_DB:=$(json -f "${APP_DIR}/redis.${ENVIRONMENT}.json" Redis.Hosts.Database 2>/dev/null)}"
+	: "${REDIS_USER:=$(json -f "${APP_DIR}/redis.${ENVIRONMENT}.json" Redis.User 2>/dev/null)}"
+	: "${REDIS_PASS:=$(json -f "${APP_DIR}/redis.${ENVIRONMENT}.json" Redis.Password 2>/dev/null)}"
+	: "${REDIS_DB:=$(json -f "${APP_DIR}/redis.${ENVIRONMENT}.json" Redis.Database 2>/dev/null)}"
 	: "${REDIS_HOST:=127.0.0.1}" "${REDIS_PORT:=6379}" "${REDIS_DB:=0}"
 
 	json_configuration "${APP_DIR}/redis.${ENVIRONMENT}.json" "Redis.Hosts" "[{ Host: \"${REDIS_HOST}\", Port: \"${REDIS_PORT}\" }]"
-	[[ -n "${REDIS_USER}" ]] && json_configuration "${APP_DIR}/redis.${ENVIRONMENT}.json" "Redis.UserName" "${REDIS_USER}"
+	[[ -n "${REDIS_USER}" ]] && json_configuration "${APP_DIR}/redis.${ENVIRONMENT}.json" "Redis.User" "${REDIS_USER}"
 	[[ -n "${REDIS_PASS}" ]] && json_configuration "${APP_DIR}/redis.${ENVIRONMENT}.json" "Redis.Password" "${REDIS_PASS}"
 	[[ -n "${REDIS_DB}" ]] && json_configuration "${APP_DIR}/redis.${ENVIRONMENT}.json" "Redis.Database" "${REDIS_DB}"
 
@@ -635,6 +621,73 @@ generate_key() {
 	chmod -R 600 ${APP_DIR}/.private
 }
 
+# Fill missing or empty keys of the target settings file from the source one, limited to the listed dotted keys if any
+fill_missing_settings() {
+	local TARGET_FILE="$1" SOURCE_FILE="$2"
+	shift 2
+	[ -f "$TARGET_FILE" ] && [ -f "$SOURCE_FILE" ] || return 0
+
+	node -e '
+		const fs = require("fs");
+		const [targetPath, sourcePath, ...keptKeys] = process.argv.slice(1);
+		const isObject = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+		const isMissing = (value) => value === undefined || value === null || value === "";
+		const fill = (target, source) => {
+			for (const key of Object.keys(source)) {
+				if (isMissing(target[key])) target[key] = source[key];
+				else if (isObject(target[key]) && isObject(source[key])) fill(target[key], source[key]);
+			}
+		};
+		const pick = (source, dottedKey) => {
+			const keys = dottedKey.split(".");
+			let value = source;
+			for (const key of keys) value = isObject(value) ? value[key] : undefined;
+			if (value === undefined) return {};
+			return keys.reduceRight((nested, key) => ({ [key]: nested }), value);
+		};
+		try {
+			const target = JSON.parse(fs.readFileSync(targetPath, "utf8"));
+			const source = JSON.parse(fs.readFileSync(sourcePath, "utf8"));
+			if (keptKeys.length === 0) fill(target, source);
+			else keptKeys.forEach((dottedKey) => fill(target, pick(source, dottedKey)));
+			fs.writeFileSync(targetPath, JSON.stringify(target, null, 2) + "\n");
+		} catch (error) {
+			console.log(error.message);
+			process.exit(1);
+		}
+	' "$TARGET_FILE" "$SOURCE_FILE" "$@"
+}
+
+# Carry over the state that cannot be re-derived when the environment changes (e.g. CE to DE update)
+migrate_environment_settings() {
+	local PREVIOUS_ENVIRONMENT="" CANDIDATE_FILE CANDIDATE SETTINGS_NAME FAILURE_REASON FAILED_FILES=""
+
+	# Runs only until the new environment has its database connection configured
+	[ -z "$(json -f "${USER_CONF}" ConnectionStrings.default.connectionString 2>/dev/null)" ] || return 0
+
+	# The previous environment is the newest configured one other than the current
+	for CANDIDATE_FILE in "$APP_DIR"/appsettings.*.json; do
+		CANDIDATE=${CANDIDATE_FILE##*/appsettings.}
+		CANDIDATE=${CANDIDATE%.json}
+		[ "$CANDIDATE" != "$ENVIRONMENT" ] || continue
+		[ -n "$(json -f "$CANDIDATE_FILE" ConnectionStrings.default.connectionString 2>/dev/null)" ] || continue
+		if [ -z "$PREVIOUS_ENVIRONMENT" ] || [ "$APP_DIR/appsettings.$CANDIDATE.json" -nt "$APP_DIR/appsettings.$PREVIOUS_ENVIRONMENT.json" ]; then
+			PREVIOUS_ENVIRONMENT="$CANDIDATE"
+		fi
+	done
+	[ -n "$PREVIOUS_ENVIRONMENT" ] || return 0
+
+	echo -n "Migrating ${PREVIOUS_ENVIRONMENT} settings to ${ENVIRONMENT}... "
+	command -v node >/dev/null 2>&1 || { echo "WARNING: node not found, settings were not carried over"; return 0; }
+
+	FAILURE_REASON=$(fill_missing_settings "$USER_CONF" "$APP_DIR/appsettings.$PREVIOUS_ENVIRONMENT.json" ConnectionStrings.default.connectionString) || FAILED_FILES+=" appsettings (${FAILURE_REASON})"
+	for SETTINGS_NAME in redis rabbitmq elastic; do
+		FAILURE_REASON=$(fill_missing_settings "$APP_DIR/$SETTINGS_NAME.$ENVIRONMENT.json" "$APP_DIR/$SETTINGS_NAME.$PREVIOUS_ENVIRONMENT.json") || FAILED_FILES+=" ${SETTINGS_NAME} (${FAILURE_REASON})"
+	done
+
+	[ -z "$FAILED_FILES" ] && echo "OK" || echo "WARNING: failed to carry over:${FAILED_FILES}"
+}
+
 product_configuration(){
 	echo -n "Configuring ${PRODUCT}... "
 
@@ -653,6 +706,12 @@ product_configuration(){
 			chmod o-rwx "$APP_DIR/${FILE}"
 		fi
 	done
+
+	# The environment file is created once, so keep its license link in sync with the template on upgrade
+	if [ -f "$APP_DIR/externalresources.$ENVIRONMENT.json.template" ]; then
+		LICENSE_LINK=$(json -f "$APP_DIR/externalresources.$ENVIRONMENT.json.template" externalresources.common.default.entries.license 2>/dev/null) || LICENSE_LINK=""
+		[ -n "$LICENSE_LINK" ] && json_configuration "$APP_DIR/externalresources.$ENVIRONMENT.json" "externalresources.common.default.entries.license" "$LICENSE_LINK"
+	fi
 
 	[ -f "$APP_DIR/systemd.env" ] || touch "$APP_DIR/systemd.env"
 	chmod o-rwx "$APP_DIR/systemd.env"
@@ -699,7 +758,7 @@ stop_services() {
 	echo "OK"
 }
 
-SERVICES=(login api socket newai studio-notify notify \
+SERVICES=(login api socket ai-chat studio-notify notify \
 people-server files files-worker studio backup api-system \
 clear-events backup-worker ssoauth doceditor healthchecks \
 identity-authorization identity-api sdk management telegram ai ai-worker mcp)
@@ -713,7 +772,12 @@ if command -v yum >/dev/null 2>&1; then
 	${PACKAGE_MANAGER} valkey &>/dev/null && REDIS_PACKAGE="valkey" || true
 elif command -v apt >/dev/null 2>&1; then
 	DIST="Debian"
-	PACKAGE_MANAGER="dpkg -s"
+	# plain `dpkg -s` still succeeds for a package that was removed but not purged (its config
+	# files remain), so every ${PACKAGE_MANAGER} check needs the actual package status instead
+	pkg_installed() {
+		dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q "^install ok installed"
+	}
+	PACKAGE_MANAGER="pkg_installed"
 	MYSQL_PACKAGE="mysql"
 	REDIS_PACKAGE="redis-server"
 fi
@@ -721,6 +785,7 @@ fi
 stop_services
 install_json
 product_configuration
+migrate_environment_settings
 
 if $PACKAGE_MANAGER mysql-client >/dev/null 2>&1 || $PACKAGE_MANAGER mysql-community-client >/dev/null 2>&1; then
 	input_db_params
@@ -786,6 +851,16 @@ if $PACKAGE_MANAGER openresty >/dev/null 2>&1; then
 fi
 
 restart_services
+
+# Runs after restart_services, not inside setup_openresty() above - apps-ssl-setup's mappeddomain update needs tenants_tenants, which migrations create there.
+if [[ -n "${INHERIT_SSL_DOMAIN}" ]] && $PACKAGE_MANAGER openresty >/dev/null 2>&1; then
+	if "/usr/bin/${PRODUCT}-ssl-setup" -f "${INHERIT_SSL_DOMAIN}" "${INHERIT_SSL_CERT}" "${INHERIT_SSL_KEY}"; then
+		# Services above started with the http:// url.portal restart_services() left them with - apps-ssl-setup only restarts openresty, so bounce them now that it flipped url.portal to https.
+		systemctl restart "${SERVICES_LIST[@]}"
+	else
+		echo "WARNING: failed to apply the inherited HTTPS certificate; ${PACKAGE_SYSNAME^^} Apps stays on http://${APP_HOST}:${APP_PORT}." >&2
+	fi
+fi
 
 # Truncate MySQL DB to make opensearch work with updated app. Strictly after restart_services ()
 if $PACKAGE_MANAGER opensearch >/dev/null 2>&1; then

@@ -9,7 +9,7 @@ on:
     paths:
       - 'config/**'
       - 'install/docker/build/Dockerfile'
-      - 'install/docker/build/*entrypoint*.*'
+      - 'install/docker/build/entrypoints/**'
   workflow_dispatch:
 
 jobs:
@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Check out the code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v5
 
       - name: Dispatch Action
         env:

@@ -27,7 +27,7 @@ PUBLISH_ARGS='-c Release --self-contained false -p:DebugType=None -p:DebugSymbol
 dotnet publish common/Tools/ASC.Migration.Runner/ASC.Migration.Runner.csproj $PUBLISH_ARGS -o ${PUBLISH_DIR}/services/ASC.Migration.Runner/service/ && \
 dotnet publish ASC.Web.slnx $PUBLISH_ARGS -p:PublishProfile=ReleaseProfile && \
 cd "${SERVER_PATH}/common/ASC.Socket.IO" && yarn install --immutable && mv -f ${SERVER_PATH}/common/ASC.Socket.IO ${PUBLISH_DIR}/services/
-cd "${SERVER_PATH}/common/ASC.NewAi" && yarn install --immutable && mv -f ${SERVER_PATH}/common/ASC.NewAi ${PUBLISH_DIR}/services/
+cd "${SERVER_PATH}/common/ASC.AI.Chat" && yarn install --immutable && mv -f ${SERVER_PATH}/common/ASC.AI.Chat ${PUBLISH_DIR}/services/
 cd "${SERVER_PATH}/common/ASC.SsoAuth" && yarn install --immutable && mv -f ${SERVER_PATH}/common/ASC.SsoAuth ${PUBLISH_DIR}/services/
 cd "${SERVER_PATH}/common/ASC.Identity" && mkdir -p ${PUBLISH_DIR}/services/{ASC.Identity.Registration,ASC.Identity.Authorization}
 mvn -B dependency:go-offline -Dorg.slf4j.simpleLogger.defaultLogLevel=warn
@@ -40,15 +40,20 @@ echo "::notice::Backend build completed in $((BACKEND_END_TIMER - BACKEND_START_
 
 # MCP build
 cd "${BUILD_PATH}/mcp"
+# The mcp repo has no packageManager field; pin pnpm to the version from its mise.toml
+MCP_PNPM_VERSION=$(sed -nE 's/^pnpm *=[^0-9]*([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' mise.toml 2>/dev/null || true)
+[ -n "${MCP_PNPM_VERSION}" ] || { MCP_PNPM_VERSION=10.11.0; echo "::warning::pnpm version not found in mcp mise.toml, using ${MCP_PNPM_VERSION}"; }
+corepack prepare "pnpm@${MCP_PNPM_VERSION}" --activate
 # Allow postinstall scripts for MCP deps: esbuild and unrs-resolver
-pnpm install --frozen-lockfile --dangerously-allow-all-builds && pnpm build-app
+pnpm install --frozen-lockfile --dangerously-allow-all-builds
+pnpm build-app
 mkdir -p "${PUBLISH_DIR}/services/ASC.AI.MCP/service"
 cp -a bin "${PUBLISH_DIR}/services/ASC.AI.MCP/service/"
 
 # Deleting unused files
-rm -rf ${PUBLISH_DIR}/services/{ASC.Socket.IO,ASC.NewAi,ASC.SsoAuth}/.yarn
-rm -f ${PUBLISH_DIR}/services/{ASC.Socket.IO,ASC.NewAi,ASC.SsoAuth}/{.yarnrc.yml,yarn.lock}
-rm -f ${PUBLISH_DIR}/services/ASC.NewAi/onlyoffice-ai-chat-*.tgz
+rm -rf ${PUBLISH_DIR}/services/{ASC.Socket.IO,ASC.AI.Chat,ASC.SsoAuth}/.yarn
+rm -f ${PUBLISH_DIR}/services/{ASC.Socket.IO,ASC.AI.Chat,ASC.SsoAuth}/{.yarnrc.yml,yarn.lock}
+rm -f ${PUBLISH_DIR}/services/ASC.AI.Chat/{onlyoffice-ai-chat-*.tgz,.prettierrc.json,.prettierignore,README.md,Dockerfile,Procfile}
 find ${PUBLISH_DIR} -type d -name "runtimes" | \
 while IFS= read -r RUNTIMES_DIR; do \
      find "$RUNTIMES_DIR" -mindepth 1 -maxdepth 1 -type d ! -name "linux-x64" ! -name "linux-arm64" -exec rm -rf {} \; ; \
@@ -56,7 +61,7 @@ done
 find ${PUBLISH_DIR} -depth -type f -regex '.*\(eslintrc.*\|npmignore\|gitignore\|gitattributes\|gitmodules\|un~\|DS_Store\)' -exec rm -f {} \;
 find ${BUILDTOOLS_PATH}/config -type f -regex '.*\.\(test\|dev\)\..*' -delete
 rm -f ${BUILDTOOLS_PATH}/config/nginx/onlyoffice-{login,management}.conf
-find ${PUBLISH_DIR}/web ${PUBLISH_DIR}/services/{ASC.SsoAuth,ASC.Socket.IO,ASC.NewAi} -type f \( -name "*.js.map" -o -name "*.css.map" \) -delete
+find ${PUBLISH_DIR}/web ${PUBLISH_DIR}/services/{ASC.SsoAuth,ASC.Socket.IO,ASC.AI.Chat} -type f \( -name "*.js.map" -o -name "*.css.map" \) -delete
 
 # Renaming files
 find ${BUILDTOOLS_PATH}/install/common -type f -exec rename -f -v "s/product([^\/]*)$/${PRODUCT}\$1/g" {} ';'
@@ -97,9 +102,7 @@ sed -e 's_etc/nginx_etc/openresty_g' \
     -i ${BUILDTOOLS_PATH}/config/nginx/*.conf ${BUILDTOOLS_PATH}/config/nginx/includes/*.conf
 sed -E 's_(http://)[^:]+(:5601)_\1localhost\2_g' -i ${BUILDTOOLS_PATH}/config/nginx/onlyoffice.conf
 sed -e 's/\$router_host/127.0.0.1/g' \
-    -e 's/this_host/http_host/g' \
     -e 's_includes_/etc/openresty/includes_g' \
-    -e '/quic\|alt-svc/Id' \
     -i ${BUILDTOOLS_PATH}/install/docker/config/nginx/proxy/onlyoffice-proxy*.conf
 sed -e '/.pid/d' \
     -e '/temp_path/d' \

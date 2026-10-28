@@ -84,10 +84,10 @@
 /usr/lib/systemd/system/%{product}-socket.service
 %dir %{buildpath}/services/
 
-%files newai
+%files ai-chat
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
-%{buildpath}/services/ASC.NewAi/
-/usr/lib/systemd/system/%{product}-newai.service
+%{buildpath}/services/ASC.AI.Chat/
+/usr/lib/systemd/system/%{product}-ai-chat.service
 %dir %{buildpath}/services/
 
 %files studio
