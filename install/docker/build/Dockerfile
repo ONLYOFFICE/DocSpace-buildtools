@@ -7,7 +7,8 @@ ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:10.0"
 ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:10.0-noble"
 ARG BUSYBOX_VERSION="1.37"
 ARG PYTHON_VERSION="3.12-slim"
-ARG NODE_VERSION="24.16-trixie-slim"
+ARG NODE_PATCH_VERSION="24.22.1"
+ARG NODE_VERSION="${NODE_PATCH_VERSION}-trixie-slim"
 ARG OPENRESTY_VERSION="1.31.1.1-2"
 ARG PLUGIN_NODE_TYPES_VERSION="18.19.0"
 ARG JAVA_VERSION="25"
@@ -661,6 +662,7 @@ FROM dotnetrun AS standalone
 USER root
 
 ARG DEBIAN_FRONTEND=noninteractive
+ARG NODE_PATCH_VERSION
 
 ENV DNS_NAMESERVER=127.0.0.11 \
     COUNT_WORKER_CONNECTIONS=1024 \
@@ -706,7 +708,7 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/proxy/letsencrypt.conf /etc/nginx/includes/letsencrypt.conf
 
 # nodejs static and dynamic files
-COPY --from=node:24-bookworm-slim /usr/local/bin/node /usr/local/bin/node
+COPY --from=node:${NODE_PATCH_VERSION}-bookworm-slim /usr/local/bin/node /usr/local/bin/node
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/ ${BUILD_PATH}/
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/static ${BUILD_PATH}/build
 COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Socket.IO ${SRC_PATH}/publish/services/ASC.Socket.IO
