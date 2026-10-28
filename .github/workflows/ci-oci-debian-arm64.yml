@@ -1,0 +1,173 @@
+name: OCI Debian ARM64
+
+on:
+  workflow_call:
+    inputs:
+      apps_version:
+        description: "Exact Apps DEB version published to 4testing"
+        type: string
+        required: true
+      docs_version:
+        description: "Exact Docs Developer DEB version (version-build)"
+        type: string
+        required: false
+        default: "10.0.0-156"
+    secrets:
+      LICENSE_ENTERPRISE:
+        required: false
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  install:
+    name: "Debian ${{ matrix.version }} ARM64: Docs + Apps"
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 100
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - version: "11"
+            suite: bullseye
+            mirror: https://archive.debian.org/debian
+          - version: "12"
+            suite: bookworm
+            mirror: https://deb.debian.org/debian
+          - version: "13"
+            suite: trixie
+            mirror: https://deb.debian.org/debian
+    env:
+      APPS_VERSION: ${{ inputs.apps_version }}
+      DOCS_VERSION: ${{ inputs.docs_version }}
+      DEBIAN_VERSION: ${{ matrix.version }}
+      DEBIAN_SUITE: ${{ matrix.suite }}
+      DEBIAN_MIRROR: ${{ matrix.mirror }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Validate versions and architecture
+        run: |
+          echo "ROOTFS=$RUNNER_TEMP/apps-debian-rootfs" >> "$GITHUB_ENV"
+          echo "LOG_DIR=$RUNNER_TEMP/debian-arm64-logs" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/debian-arm64-logs"
+          bash .github/scripts/test-debian-arm64.sh validate "$DOCS_VERSION" "$APPS_VERSION"
+          test "$(dpkg --print-architecture)" = arm64
+
+      - name: Prepare runner
+        run: |
+          # Keep Docker for the browser tests and swap for the database/search services.
+          sudo CLEAN_DOCKER=0 CLEAN_SWAP=0 CLEAN_LOGS=0 bash .github/scripts/free-disk-space-linux.sh
+          sudo apt-get update
+          sudo apt-get install -y debootstrap debian-archive-keyring systemd-container gnupg python3-venv
+          sudo sysctl -w vm.max_map_count=1048576
+          # nspawn shares the runner network so the existing browser tests can use localhost.
+          sudo systemctl stop mysql postgresql nginx apache2 redis-server rabbitmq-server 2>/dev/null || true
+
+      - name: Bootstrap Debian
+        timeout-minutes: 20
+        run: |
+          # Ubuntu's keyring may predate the selected Debian release.
+          curl -fsSL "https://ftp-master.debian.org/keys/archive-key-${DEBIAN_VERSION}.asc" \
+            | gpg --dearmor --batch --yes -o "$RUNNER_TEMP/debian-archive.gpg"
+          sudo debootstrap --arch=arm64 --variant=minbase --components=main,contrib \
+            --keyring="$RUNNER_TEMP/debian-archive.gpg" \
+            --include=systemd-sysv,dbus,ca-certificates,curl,gnupg,iproute2,procps,lsb-release,locales,sudo,debconf-utils \
+            "$DEBIAN_SUITE" "$ROOTFS" "$DEBIAN_MIRROR" 2>&1 | tee "$LOG_DIR/bootstrap.log"
+          printf 'deb [check-valid-until=no] %s %s main contrib\n' "$DEBIAN_MIRROR" "$DEBIAN_SUITE" \
+            | sudo tee "$ROOTFS/etc/apt/sources.list"
+          echo '127.0.1.1 apps-debian' | sudo tee -a "$ROOTFS/etc/hosts"
+          sudo systemctl --root="$ROOTFS" mask apt-daily.timer apt-daily-upgrade.timer
+
+      - name: Boot Debian with systemd
+        timeout-minutes: 5
+        run: |
+          sudo systemd-run --unit=apps-debian --service-type=exec \
+            --property=Delegate=yes --property=KillMode=mixed --property=TasksMax=infinity \
+            /usr/bin/systemd-nspawn --boot --keep-unit --machine=apps-debian \
+            --directory="$ROOTFS" --console=read-only --resolv-conf=copy-host \
+            --bind-ro="$GITHUB_WORKSPACE:/workspace"
+          for _ in $(seq 1 60); do
+            if timeout 5s sudo systemctl --machine=apps-debian is-active --quiet dbus.service; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Debian systemd did not become ready" >&2
+          exit 1
+
+      - name: Install standalone Docs
+        timeout-minutes: 25
+        run: |
+          sudo systemd-run --machine=apps-debian --wait --pipe --collect \
+            /bin/bash /workspace/.github/scripts/test-debian-arm64.sh docs "$DOCS_VERSION" "$APPS_VERSION" \
+            2>&1 | tee "$LOG_DIR/docs-install.log"
+
+      - name: Add Apps to Docs
+        timeout-minutes: 45
+        run: |
+          sudo systemd-run --machine=apps-debian --wait --pipe --collect \
+            /bin/bash /workspace/.github/scripts/test-debian-arm64.sh apps "$DOCS_VERSION" "$APPS_VERSION" \
+            2>&1 | tee "$LOG_DIR/apps-install.log"
+
+      - name: Check packages and services
+        timeout-minutes: 10
+        run: |
+          sudo systemd-run --machine=apps-debian --wait --pipe --collect \
+            /bin/bash /workspace/.github/scripts/test-debian-arm64.sh verify "$DOCS_VERSION" "$APPS_VERSION" \
+            2>&1 | tee "$LOG_DIR/healthcheck.log"
+
+      - name: Smoke test
+        timeout-minutes: 20
+        env:
+          LICENSE: ${{ secrets.LICENSE_ENTERPRISE }}
+          SERVER_URL: http://localhost
+          SELENIUM_REMOTE_URL: http://localhost:4444
+          SMOKE_SUMMARY_TITLE: "Debian ${{ matrix.version }} ARM64"
+        run: |
+          export SMOKE_SUMMARY_FILE="$GITHUB_STEP_SUMMARY"
+          python3 -m venv "$RUNNER_TEMP/smoke-venv"
+          "$RUNNER_TEMP/smoke-venv/bin/pip" install -r tests/smoke/requirements.txt
+          docker run -d --name apps-ci-selenium --network host --shm-size 2g selenium/standalone-chromium:latest
+          timeout 90 bash -c 'until curl -fsS http://localhost:4444/status | grep -qE "\"ready\":\s*true"; do sleep 2; done'
+          "$RUNNER_TEMP/smoke-venv/bin/python" -m pytest tests/smoke/smoke_test.py -v -s \
+            --junitxml="$LOG_DIR/smoke.xml" 2>&1 | tee "$LOG_DIR/smoke.log"
+
+      - name: Collect diagnostics
+        if: always()
+        timeout-minutes: 5
+        env:
+          ROOTFS: ${{ runner.temp }}/apps-debian-rootfs
+          LOG_DIR: ${{ runner.temp }}/debian-arm64-logs
+        run: |
+          mkdir -p "$LOG_DIR"
+          # Read diagnostics as root, but write the log files as the runner user.
+          # shellcheck disable=SC2024
+          {
+            sudo journalctl -u apps-debian --no-pager > "$LOG_DIR/container.log" || true
+            sudo systemd-run --machine=apps-debian --wait --pipe --collect \
+              /bin/bash /workspace/.github/scripts/test-debian-arm64.sh logs \
+              > "$LOG_DIR/services.log" 2>&1 || true
+            sudo cat "$ROOTFS/debootstrap/debootstrap.log" > "$LOG_DIR/debootstrap.log" 2>/dev/null || true
+            docker logs apps-ci-selenium > "$LOG_DIR/selenium.log" 2>&1 || true
+          }
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debian-${{ matrix.version }}-arm64-install
+          path: ${{ runner.temp }}/debian-arm64-logs
+          retention-days: 7
+
+      - name: Stop test environment
+        if: always()
+        run: |
+          docker rm -f apps-ci-selenium 2>/dev/null || true
+          sudo systemctl stop apps-debian.service || true

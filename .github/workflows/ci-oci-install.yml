@@ -36,9 +36,31 @@ on:
         type: boolean
         description: "Use 4testing packages"
         default: false
+      debian_arm64_only:
+        type: boolean
+        description: "Only test adding Apps to Docs on Debian 11/12/13 ARM64 (4testing)"
+        default: false
+      apps_version:
+        type: string
+        description: "Exact Apps DEB version for the Debian ARM64 test"
+        required: false
+      docs_version:
+        type: string
+        description: "Exact Docs Developer DEB version for the Debian ARM64 test"
+        default: "10.0.0-156"
 
 jobs:
+  debian-arm64:
+    if: github.event_name == 'workflow_dispatch' && inputs.debian_arm64_only
+    uses: ./.github/workflows/ci-oci-debian-arm64.yml
+    with:
+      apps_version: ${{ inputs.apps_version }}
+      docs_version: ${{ inputs.docs_version }}
+    secrets:
+      LICENSE_ENTERPRISE: ${{ secrets.LICENSE_ENTERPRISE }}
+
   prepare:
+    if: github.event_name != 'workflow_dispatch' || !inputs.debian_arm64_only
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -310,7 +332,7 @@ jobs:
     name: "${{ matrix.name }}"
     runs-on: ${{ matrix.runner }}
     needs: prepare
-    # The Vagrant jobs above are x86 only, so ARM is tested natively on GitHub-hosted arm64 runners. Ubuntu only: the installer rejects arm64 on Debian.
+    # This matrix covers Ubuntu ARM64; the debian-arm64 job covers Debian in nspawn.
     if: needs.prepare.outputs.has_arm == 'true'
     env:
       VER: ${{ needs.prepare.outputs.docs_version }}
