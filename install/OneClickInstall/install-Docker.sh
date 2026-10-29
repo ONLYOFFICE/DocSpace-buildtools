@@ -272,7 +272,7 @@ uninstall() {
         done
     fi
 
-	is_macos || remove_swap "${SWAPFILE}" "/${LEGACY_PRODUCT}_swapfile"
+	remove_swap "${SWAPFILE}" "/${LEGACY_PRODUCT}_swapfile"
 
 	if [ "${RESTORE_DOCS}" = true ]; then
 		restore_document_server_container || return 1
