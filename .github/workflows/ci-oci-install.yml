@@ -4,6 +4,18 @@ on:
   schedule:
     - cron: "00 20 * * 0"
 
+  push:
+    branches:
+      - "hotfix/**"
+      - "release/**"
+    paths:
+      - ".github/workflows/ci-oci-install.yml"
+      - "install/OneClickInstall/install-Debian*"
+      - "install/OneClickInstall/install-Debian*/**"
+      - "install/OneClickInstall/install-RedHat*"
+      - "install/OneClickInstall/install-RedHat*/**"
+      - "install/OneClickInstall/common/**"
+
   workflow_dispatch:
     inputs:
       distros:
@@ -104,6 +116,10 @@ jobs:
           [[ "${{ github.event_name }}" == "schedule" ]] && \
             for os in $(jq -r 'keys[]' <<< "$OS_MAP"); do os_set["$os"]=1; done
 
+          # For push runs, use one DEB and one RPM distro
+          [[ "${{ github.event_name }}" == "push" ]] && \
+            for os in ubuntu2404 centos9S; do os_set["$os"]=1; done
+
           # Build the list in defined order
           all=$(jq -c -n --argjson map "$OS_MAP" --arg order "$OS_ORDER" \
             --argjson list "$(printf '%s\n' "${!os_set[@]}" | jq -R . | jq -s .)" \
@@ -160,6 +176,7 @@ jobs:
           find install/OneClickInstall tests -type f -name "*.sh" ! -path "install/OneClickInstall/install-Docker.sh" \
             | xargs shellcheck --exclude="$(awk '!/^#|^$/ {print $1}' tests/lint/sc_ignore | paste -sd ",")" --severity=warning | tee sc_output || true
           awk '/\(warning\):/ {w++} /\(error\):/ {e++} END {if (w+e) printf "::warning ::ShellCheck: %d warnings, %d errors\n", w+0, e+0}' sc_output
+          ! grep -q '(error):' sc_output || { echo "::error ::ShellCheck found errors"; exit 1; }
 
       - name: Boot VM
         id: boot
