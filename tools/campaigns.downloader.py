@@ -4,7 +4,7 @@ import requests
 import shutil
 
 rd = os.path.dirname(os.path.abspath(__file__))
-dir = os.path.abspath(os.path.join(rd, ".."))
+dir = os.path.abspath(os.path.join(rd, "..", ".."))
 publicDir = os.path.join(dir, "client/public")
 g = Github()
 repo = g.get_repo("ONLYOFFICE/ASC.Web.Campaigns")

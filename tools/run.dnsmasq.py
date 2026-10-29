@@ -6,7 +6,7 @@ import subprocess
 
 
 rd = os.path.dirname(os.path.abspath(__file__))
-dir = os.path.abspath(os.path.join(rd, ".."))
+dir = os.path.abspath(os.path.join(rd, "..", ".."))
 dockerDir = os.path.join(dir, "buildtools", "install", "docker")
 
 print("Run local dns server")

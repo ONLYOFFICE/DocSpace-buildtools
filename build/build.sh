@@ -11,7 +11,7 @@ echo ""
 rd="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 echo "Run script directory:" $rd
 
-dir=$(builtin cd $rd/../; pwd)
+dir=$(builtin cd $rd/../../; pwd)
 echo "Root directory:" $dir
 
 pushd $dir

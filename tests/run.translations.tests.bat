@@ -9,7 +9,7 @@ if "%errorlevel%" == "9009" (
 
 @echo ON
 
-PUSHD %~dp0\..
+PUSHD %~dp0\..\..
 
 set root=%cd%
 

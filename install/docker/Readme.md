@@ -43,7 +43,7 @@ install/docker/
 │   │   ├── docker-standalone-entrypoint.sh
 │   │   ├── docker-bin-share-entrypoint.sh / docker-wait-bin-share-entrypoint.sh
 │   │   └── prepare-nginx-router.sh
-│   ├── dev/                  #   local-dev-only Compose overlays (build.backend.docker.py)
+│   ├── dev/                  #   local-dev-only Compose overlays (build/build.backend.docker.py)
 │   │   ├── db.dev.yml            #   MySQL dev overrides (exposed ports)
 │   │   ├── apps.profiles.yml     #   local-dev application stack
 │   │   ├── apps.overcome.yml     #   local-dev overrides

@@ -4,7 +4,7 @@ import os, sys
 import subprocess
 
 rd = os.path.dirname(os.path.abspath(__file__))
-root_dir = os.path.abspath(os.path.join(rd, ".."))
+root_dir = os.path.abspath(os.path.join(rd, "..", ".."))
 docker_dir = os.path.join(root_dir, "buildtools", "install", "docker")
 
 containers = subprocess.check_output(["docker", "ps", "-aq", "-f", "name=^onlyoffice"], encoding='utf-8').strip().split()

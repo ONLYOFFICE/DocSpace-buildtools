@@ -1,4 +1,4 @@
-PUSHD %~dp0..
+PUSHD %~dp0..\..
 
 cd client
 

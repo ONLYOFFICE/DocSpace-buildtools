@@ -23,5 +23,5 @@ if '%errorlevel%' NEQ '0' (
     exit /B 1
 
 :gotAdmin
-    CD /D "%~dp0"
+    CD /D "%~dp0.."
 :--------------------------------------  

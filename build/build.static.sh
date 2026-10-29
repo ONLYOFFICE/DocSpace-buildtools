@@ -16,10 +16,10 @@ fi
 
 # Get the directory where the script is located
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PARENT_FOLDER="$(dirname "$SCRIPT_DIR")"
+PARENT_FOLDER="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
 # Change to script directory
-cd "$SCRIPT_DIR"
+cd "$SCRIPT_DIR/.."
 
 pushd "$PARENT_FOLDER" > /dev/null
 

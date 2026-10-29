@@ -1,12 +1,12 @@
 @echo off
 
-for %%i in ("%~dp0..") do set "parentFolder=%%~fi"
+for %%i in ("%~dp0..\..") do set "parentFolder=%%~fi"
 
-cd /D "%~dp0"
-call runasadmin.bat "%~dpnx0"
+cd /D "%~dp0.."
+call tools\runasadmin.bat "%~dpnx0"
 
 if %errorlevel% == 0 (
-PUSHD %~dp0..
+PUSHD %~dp0..\..
 
 cd client
 

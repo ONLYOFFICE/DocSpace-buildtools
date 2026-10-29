@@ -32,7 +32,7 @@ def check_image(image_name):
 
 
 rd = os.path.dirname(os.path.abspath(__file__))
-dir = os.path.abspath(os.path.join(rd, ".."))
+dir = os.path.abspath(os.path.join(rd, "..", ".."))
 dockerDir = os.path.join(dir, "buildtools", "install", "docker")
 devAppSettings = os.path.join(
     dir, "buildtools", "config", "appsettings.dev.json")

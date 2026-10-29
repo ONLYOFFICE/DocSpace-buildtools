@@ -6,7 +6,7 @@ if ($PSversionMajor -lt 7 -or $PSversionMinor -lt 2) {
   exit
 }
 
-$RootDir = Split-Path -Parent $PSScriptRoot
+$RootDir = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 
 Write-Host "Run Document server" -ForegroundColor Green
 $DOCUMENT_SERVER_IMAGE_NAME = "onlyoffice/documentserver-de:latest"

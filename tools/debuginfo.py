@@ -6,7 +6,7 @@ from git import Repo
 from datetime import datetime, timedelta, timezone
 
 rd = os.path.dirname(os.path.abspath(__file__))
-root_dir = os.path.abspath(os.path.join(rd, ".."))
+root_dir = os.path.abspath(os.path.join(rd, "..", ".."))
 
 CLIENT = "client"
 SERVER = "server"

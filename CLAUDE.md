@@ -10,15 +10,15 @@ ONLYOFFICE Apps Build Tools — build scripts, Docker configurations, installati
 
 ```bash
 # Build
-./build.sh                          # Full backend + frontend build (Linux)
-./build.backend.sh                  # Backend only
-./build.backend.docker.py           # Backend via Docker
-./build.static.sh                   # Static assets
+./build/build.sh                    # Full backend + frontend build (Linux)
+./build/build.backend.sh            # Backend only
+./build/build.backend.docker.py     # Backend via Docker
+./build/build.static.sh             # Static assets
 
 # Database migrations
-./runMigrations.sh                  # Linux
-runMigrations.bat                   # Windows
-runMigrations.standalone.bat        # Windows (standalone mode)
+./migrations/runMigrations.sh       # Linux
+migrations/runMigrations.bat        # Windows
+migrations/runMigrations.standalone.bat  # Windows (standalone mode)
 
 # Service lifecycle (dev)
 ./start/start.sh                    # Start all services
@@ -37,8 +37,8 @@ bash install/OneClickInstall/install-Debian.sh        # Debian/Ubuntu
 bash install/OneClickInstall/install-RedHat.sh        # RHEL/CentOS
 
 # Translation tests
-./run.translations.tests.py
-./run.backend.translations.tests.sh
+./tests/run.translations.tests.py
+./tests/run.backend.translations.tests.sh
 ```
 
 ## Project Structure
@@ -72,7 +72,7 @@ install/
         docker-standalone-entrypoint.sh
         docker-bin-share-entrypoint.sh / docker-wait-bin-share-entrypoint.sh
         prepare-nginx-router.sh
-      dev/                  — Local-dev-only Compose overlays (build.backend.docker.py):
+      dev/                  — Local-dev-only Compose overlays (build/build.backend.docker.py):
         db.dev.yml            — MySQL dev overrides (exposed ports)
         apps.profiles.yml     — Profile-based configs (local dev)
         apps.overcome.yml     — Local dev overrides
@@ -107,8 +107,10 @@ run/                        — Per-service launch scripts (~15 services, .bat +
                               WebApi, Files, People, Notify, Backup, AI, Identity, etc.
 scripts/                    — Service startup: identity, socketio, ssoauth, webdav (.sh + .bat)
 start/                      — Dev lifecycle: start/stop/restart (.sh + .bat + .py)
-tests/                      — lint/, vagrant/
-tools/                      — check.sh
+build/                      — Build and deploy scripts: build*.sh/.bat, build.backend.docker.py, buildAndDeploy, publish
+migrations/                 — runMigrations*.sh/.bat, createMigrations.bat
+tests/                      — lint/, smoke/, vagrant/ + run.*tests*.{sh,bat,py}, run.e2e.*.bat
+tools/                      — runasadmin.bat, debuginfo.py, requirements.txt, run.dnsmasq.py, clear.backend.docker.py, campaigns.downloader.py, check.sh
 .github/workflows/          — GitHub Actions workflows (see CI/CD section)
 ```
 

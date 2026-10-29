@@ -21,7 +21,7 @@ def main():
 
     # Get the root directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    root_dir = os.path.abspath(os.path.join(script_dir, ".."))
+    root_dir = os.path.abspath(os.path.join(script_dir, "..", ".."))
 
     # Change to the tests directory
     tests_dir = os.path.join(root_dir, "client", "common", "tests")

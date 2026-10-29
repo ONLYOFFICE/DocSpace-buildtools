@@ -6,22 +6,20 @@ echo "##########################################################"
 
 echo.
 
-PUSHD %~dp0
-call runasadmin.bat "%~dpnx0"
+cd /D "%~dp0.."
+call tools\runasadmin.bat "%~dpnx0"
 
 if %errorlevel% == 0 (
 
-call start\stop.bat nopause
 
-echo "FRONT-END (for start run command 'pnpm start' inside the root folder)"
-call build.frontend.bat nopause
+echo "FRONT-END static"
+call build\build.static.bat nopause
 
 echo "BACK-END"
-call build.backend.bat nopause
-
-call start\start.bat nopause
+call build\build.backend.bat nopause
 
 echo.
 
 pause
+
 )
