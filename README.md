@@ -26,7 +26,6 @@ This repository contains the **build, deployment, and infrastructure** tooling f
 - [Database Migrations](#database-migrations)
 - [CI/CD](#cicd)
   - [GitHub Actions](#github-actions)
-  - [Jenkins](#jenkins)
 - [Licensing](#licensing)
 
 ## Project Structure
@@ -51,8 +50,7 @@ buildtools/
 │   ├── common/                # Shared build and packaging scripts
 │   ├── win/                   # Windows Advanced Installer projects
 │   ├── deb/                   # Debian package metadata
-│   ├── rpm/                   # RPM package metadata
-│   └── snap/                  # Snap package configuration
+│   └── rpm/                   # RPM package metadata
 ├── run/                        # Per-service executables (28 services, .bat)
 ├── scripts/                    # Service startup scripts (identity, socketio, sso, webdav)
 ├── start/                      # Service lifecycle (start.sh, stop.sh, restart.sh)
@@ -61,8 +59,7 @@ buildtools/
 ├── .github/workflows/          # GitHub Actions (12 workflows)
 ├── build*.sh, build*.bat       # Platform-specific build scripts
 ├── run*.sh, run*.bat           # Test and migration runners
-├── *.py                        # Python orchestration utilities
-└── Jenkinsfile                 # Jenkins pipeline
+└── *.py                        # Python orchestration utilities
 ```
 
 ## Installation
@@ -213,13 +210,6 @@ Docker-based migrations are handled by `migration-runner.yml` Compose service.
 |----------|---------|
 | `rebuild-boxes.yml` | VM box rebuilding |
 | `readme-update.yml` | Documentation automation |
-
-### Jenkins
-
-`Jenkinsfile` defines a declarative pipeline with:
-- Parallel Unix/Windows build stages
-- Automated testing
-- Telegram notifications
 
 ## The standalone (single-container) topology
 

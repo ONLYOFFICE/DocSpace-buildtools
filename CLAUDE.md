@@ -52,7 +52,6 @@ config/                     — Application configuration (~30 JSON + nginx)
   redis.json / rabbitmq.json / elastic.json / socket.json / notify.json
   nlog.config               — Structured logging (NLog)
   dnsmasq.conf              — DNS for local dev
-  radicale.*                — CalDAV/CardDAV server configs
   nginx/                    — Nginx configs + includes/ + sites-enabled/
   document-formats/         — Document format definitions (git submodule)
 
@@ -103,7 +102,6 @@ install/
   win/                      — Windows installer (Advanced Installer .aip, WinSW, Nginx, OpenSearch)
   deb/                      — Debian package metadata
   rpm/                      — RPM spec files
-  snap/                     — Snap package config
 
 run/                        — Per-service launch scripts (~15 services, .bat + .xml)
                               WebApi, Files, People, Notify, Backup, AI, Identity, etc.
@@ -112,7 +110,6 @@ start/                      — Dev lifecycle: start/stop/restart (.sh + .bat + 
 tests/                      — lint/, vagrant/
 tools/                      — check.sh
 .github/workflows/          — GitHub Actions workflows (see CI/CD section)
-Jenkinsfile                 — Jenkins declarative pipeline
 ```
 
 ## Docker Compose Architecture
