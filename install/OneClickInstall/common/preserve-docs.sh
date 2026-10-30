@@ -77,7 +77,7 @@ prepare_docs_install() {
 		if [ ! -f "${DS_BACKUP_FILE}" ]; then
 			stat -Lc '%u %g %a' "/var/www/${package_sysname}/Data" > "${DS_CONF_FILE}.apps.data-access.bak.tmp"
 			mv -f -- "${DS_CONF_FILE}.apps.data-access.bak.tmp" "${DS_CONF_FILE}.apps.data-access.bak"
-			for PACKAGE_NAME in mysql-server mysql-community-server redis-server redis valkey rabbitmq-server; do
+			for PACKAGE_NAME in mysql-server mysql-community-server percona-server-server redis-server redis valkey rabbitmq-server; do
 				if package_installed "${PACKAGE_NAME}"; then
 					printf '%s\n' "${PACKAGE_NAME}"
 				fi
@@ -471,7 +471,8 @@ restore_docs_data_access() {
         chown "${DATA_UID}:${DATA_GID}" "${DATA_DIR}" || return 1
         chmod "${DATA_MODE}" "${DATA_DIR}" || return 1
     elif [ ! -d "${DATA_DIR}" ]; then
-        mkdir -p -m 755 -- "${DATA_DIR}" || return 1
+        mkdir -p -- "${DATA_DIR}" || return 1
+        chmod 755 "${DATA_DIR}" || return 1
         chown ds:ds "${DATA_DIR}" || return 1
     fi
     if [ -f "${BACKUP}" ]; then

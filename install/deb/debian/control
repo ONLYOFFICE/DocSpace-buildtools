@@ -54,7 +54,7 @@ Provides: {{legacy_product}}-common
 Replaces: {{legacy_product}}-common
 Breaks: {{legacy_product}}-common (<< {{package_header_tag_version}})
 Depends: adduser, ${misc:Depends}, ${shlibs:Depends}
-Recommends: default-mysql-client
+Recommends: default-mysql-client | percona-server-client
 Description: {{package_name}}-common
 	A package containing configs and scripts.
 

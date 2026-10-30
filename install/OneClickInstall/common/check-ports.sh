@@ -84,7 +84,7 @@ get_required_ports() {
 		DEPENDENCY_PORTS+=("${PORT}")
 	}
 
-	add_dependency_port "${MYSQL_SERVER_PORT:-3306}" mysql-server mysql-community-server
+	add_dependency_port "${MYSQL_SERVER_PORT:-3306}" mysql-server mysql-community-server percona-server-server
 	add_dependency_port "${ELK_PORT:-9200}" opensearch
 
 	if [ "$DOCUMENT_SERVER_INSTALLED" != "true" ]; then

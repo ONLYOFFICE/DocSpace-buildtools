@@ -49,6 +49,7 @@ hold_package_version() {
 		# Leave the holds and update policy of Docs dependencies unchanged.
 		for i in "${!pkgs[@]}"; do
 			for dependency in "${DOCS_RUNTIME_PACKAGES[@]}"; do
+				# shellcheck disable=SC2053 # Unquoted on purpose: pkgs entries are glob patterns.
 				if [[ "${dependency%%:*}" == ${pkgs[i]} ]]; then
 					unset 'pkgs[i]'
 					break
@@ -142,9 +143,8 @@ DIST=$(echo "$DIST" | tr '[:upper:]' '[:lower:]' | xargs)
 DISTRIB_CODENAME=$(echo "$DISTRIB_CODENAME" | tr '[:upper:]' '[:lower:]' | xargs)
 [ "$DIST" = "debian" ] && REV="${REV%%.*}"
 
-# MySQL 8.4 has no arm64 build in the Oracle repo and Debian ships only MariaDB.
-if [ "$ARCH" = "arm64" ] && [ "$DIST" != "ubuntu" ]; then
-    echo "${product_name} on architecture '$ARCH' is supported only on Ubuntu (detected '${DIST}'). Please use a Docker installation."
+if [ "$ARCH" = "arm64" ] && [[ "$DIST" != "ubuntu" && "$DIST" != "debian" ]]; then
+    echo "${product_name} on architecture '$ARCH' is supported only on Debian and Ubuntu (detected '${DIST}'). Please use a Docker installation."
     exit 1
 fi
 

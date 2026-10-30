@@ -213,7 +213,7 @@ JAVA_VERSION=25
 JAVA_PKG=$([ "$DIST" = "fedora" ] && [ "$REV" -ge 44 ] && echo "jre-${JAVA_VERSION}-headless" || echo "java-${JAVA_VERSION}-openjdk-headless")
 DOTNET_VERSION="10.0"
 PREREQUISITE_PACKAGES=(
-	python3 nodejs aspnetcore-runtime-${DOTNET_VERSION} opensearch-${OPENSEARCH_VERSION}
+	python3 nodejs "aspnetcore-runtime-${DOTNET_VERSION}" "opensearch-${OPENSEARCH_VERSION}"
 	mysql-community-server rabbitmq-server "${REDIS_PACKAGE}" SDL2 expect "${JAVA_PKG}"
 )
 [ "$DIST" = fedora ] || PREREQUISITE_PACKAGES+=(epel-release)
