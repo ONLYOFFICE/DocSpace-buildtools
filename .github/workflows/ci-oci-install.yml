@@ -273,7 +273,7 @@ jobs:
           OS: ${{ matrix.os }}
           RAM: 8192
           CPU: 3
-          USE_4TESTING: ${{ github.event.inputs.testing }}
+          USE_4TESTING: ${{ github.event_name == 'push' || github.event.inputs.testing == 'true' }}
         run: |
           set -eux
           cd tests/vagrant
@@ -364,7 +364,7 @@ jobs:
     if: needs.prepare.outputs.has_arm == 'true'
     env:
       VER: ${{ needs.prepare.outputs.docs_version }}
-      USE_4TESTING: ${{ github.event.inputs.testing }}
+      USE_4TESTING: ${{ github.event_name == 'push' || github.event.inputs.testing == 'true' }}
       DEBIAN_VERSION: ${{ matrix.debian }}
       # the tests/vagrant scripts expect the VM layout: scripts and build.sh in /home/vagrant
       INSTALL_DIR: /home/vagrant
