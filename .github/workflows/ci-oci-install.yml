@@ -15,6 +15,8 @@ on:
       - "install/OneClickInstall/install-RedHat*"
       - "install/OneClickInstall/install-RedHat*/**"
       - "install/OneClickInstall/common/**"
+      - "tests/arm/**"
+      - "!**/*.md"
 
   workflow_dispatch:
     inputs:
@@ -62,6 +64,12 @@ jobs:
       has_arm: ${{ steps.set-matrix.outputs.has_arm }}
       docs_version: ${{ steps.get-docs-version.outputs.version }}
     steps:
+      - name: Checkout push history
+        if: github.event_name == 'push'
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
       - name: Get latest Docs test repo version
         id: get-docs-version
         env:
@@ -77,6 +85,7 @@ jobs:
       - name: Set matrix names
         id: set-matrix
         env:
+          PUSH_BEFORE: ${{ github.event.before }}
           OS_ORDER: rhel9 centos9S centos10S fedora43 fedora44 debian11 debian12 debian13 ubuntu2204 ubuntu2404 ubuntu2604 debian11-arm debian12-arm debian13-arm ubuntu2204-arm ubuntu2404-arm ubuntu2604-arm
           OS_MAP: |
             {
@@ -122,9 +131,23 @@ jobs:
           [[ "${{ github.event_name }}" == "schedule" ]] && \
             for os in $(jq -r 'keys[]' <<< "$OS_MAP"); do os_set["$os"]=1; done
 
-          # For push runs, use one DEB and one RPM distro
-          [[ "${{ github.event_name }}" == "push" ]] && \
-            for os in ubuntu2404 centos9S; do os_set["$os"]=1; done
+          # Select representative distros from all changes in this push.
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            # A missing base commit (e.g. a new branch) runs all push checks.
+            changed_files=$(git diff --name-only --no-renames "$PUSH_BEFORE" "$GITHUB_SHA") || changed_files=all
+            while IFS= read -r path; do
+              case "$path" in
+                *.md) continue ;;
+                install/OneClickInstall/install-Debian*) push_distros="ubuntu2404 ubuntu2404-arm debian12-arm" ;;
+                install/OneClickInstall/install-RedHat*) push_distros="centos9S" ;;
+                tests/arm/*) push_distros="ubuntu2404-arm debian12-arm" ;;
+                all|.github/workflows/ci-oci-install.yml|install/OneClickInstall/common/*)
+                  push_distros="ubuntu2404 ubuntu2404-arm debian12-arm centos9S" ;;
+                *) continue ;;
+              esac
+              for os in $push_distros; do os_set["$os"]=1; done
+            done <<< "$changed_files"
+          fi
 
           # Build the list in defined order
           all=$(jq -c -n --argjson map "$OS_MAP" --arg order "$OS_ORDER" \
