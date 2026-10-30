@@ -126,7 +126,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-socket
 Replaces: {{legacy_product}}-socket
 Breaks: {{legacy_product}}-socket (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_min_version}}~), ${misc:Depends}, ${shlibs:Depends}
 Recommends: redis-server
 Description: {{package_name}}-socket
 	The service which provides two-way communication between a web browser
@@ -138,7 +138,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-ai-chat
 Replaces: {{legacy_product}}-ai-chat
 Breaks: {{legacy_product}}-ai-chat (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_min_version}}~), ${misc:Depends}, ${shlibs:Depends}
 Description: {{package_name}}-ai-chat
 	The service which provides AI chat features and MCP tool integrations.
 
@@ -205,7 +205,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-ssoauth
 Replaces: {{legacy_product}}-ssoauth
 Breaks: {{legacy_product}}-ssoauth (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_min_version}}~), ${misc:Depends}, ${shlibs:Depends}
 Description: {{package_name}}-ssoauth
 	The service responsible for enabling and configuring 
 	SAML-based single sign-on (SSO) authentication to provide a more quick, 
@@ -280,7 +280,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-doceditor
 Replaces: {{legacy_product}}-doceditor
 Breaks: {{legacy_product}}-doceditor (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_min_version}}~), ${misc:Depends}, ${shlibs:Depends}
 Description: {{package_name}}-doceditor
 	The service which allows interaction with documentserver.
 
@@ -290,7 +290,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-login
 Replaces: {{legacy_product}}-login
 Breaks: {{legacy_product}}-login (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_min_version}}~), ${misc:Depends}, ${shlibs:Depends}
 Description: {{package_name}}-login
 	The service which is used for logging users and displaying the wizard.
 
@@ -320,7 +320,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-sdk
 Replaces: {{legacy_product}}-sdk
 Breaks: {{legacy_product}}-sdk (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_min_version}}~), ${misc:Depends}, ${shlibs:Depends}
 Description: {{package_name}}-sdk
 	The service which allows integrating {{product_name}} into your own web
 	application by using JavaScript SDK.
@@ -331,7 +331,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-management
 Replaces: {{legacy_product}}-management
 Breaks: {{legacy_product}}-management (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_min_version}}~), ${misc:Depends}, ${shlibs:Depends}
 Description: {{package_name}}-management
 	The service responsible for creating and managing several spaces.
 
@@ -375,7 +375,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-mcp
 Replaces: {{legacy_product}}-mcp
 Breaks: {{legacy_product}}-mcp (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_version}}~), ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), nodejs (>= {{node_min_version}}~), ${misc:Depends}, ${shlibs:Depends}
 Description: {{package_name}}-mcp
 	The server that operates using the Model Context Protocol, which provides
 	AI with functionality for working in {{product_name}}.
