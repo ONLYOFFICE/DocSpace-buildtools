@@ -167,7 +167,7 @@ jobs:
             echo "has_arm=$(jq 'map(select(.distr == "arm")) | length > 0' <<< "$all")"
           } >> $GITHUB_OUTPUT
 
-  vagrant-up:
+  amd64-install:
     name: "${{ matrix.name }}"
     runs-on: ubuntu-22.04
     needs: prepare
@@ -356,7 +356,7 @@ jobs:
           vagrant destroy --force || true
           vagrant global-status --prune || true
 
-  arm-install:
+  arm64-install:
     name: "${{ matrix.name }}"
     runs-on: ${{ matrix.runner }}
     needs: prepare
