@@ -77,7 +77,7 @@ prepare_docs_install() {
 		if [ ! -f "${DS_BACKUP_FILE}" ]; then
 			stat -Lc '%u %g %a' "/var/www/${package_sysname}/Data" > "${DS_CONF_FILE}.apps.data-access.bak.tmp"
 			mv -f -- "${DS_CONF_FILE}.apps.data-access.bak.tmp" "${DS_CONF_FILE}.apps.data-access.bak"
-			for PACKAGE_NAME in mysql-server mysql-community-server redis-server redis valkey rabbitmq-server; do
+			for PACKAGE_NAME in mysql-server mysql-community-server percona-server-server redis-server redis valkey rabbitmq-server; do
 				if package_installed "${PACKAGE_NAME}"; then
 					printf '%s\n' "${PACKAGE_NAME}"
 				fi

@@ -23,8 +23,11 @@ on:
         description: Select distros (only without deb/rpm flags)
         default: |
           debian11,
+          debian11-arm,
           debian12,
+          debian12-arm,
           debian13,
+          debian13-arm,
           ubuntu2204,
           ubuntu2204-arm,
           ubuntu2404,
@@ -74,7 +77,7 @@ jobs:
       - name: Set matrix names
         id: set-matrix
         env:
-          OS_ORDER: rhel9 centos9S centos10S fedora43 fedora44 debian11 debian12 debian13 ubuntu2204 ubuntu2404 ubuntu2604 ubuntu2204-arm ubuntu2404-arm ubuntu2604-arm
+          OS_ORDER: rhel9 centos9S centos10S fedora43 fedora44 debian11 debian12 debian13 ubuntu2204 ubuntu2404 ubuntu2604 debian11-arm debian12-arm debian13-arm ubuntu2204-arm ubuntu2404-arm ubuntu2604-arm
           OS_MAP: |
             {
               "rhel9":      ["RHEL 9",       "generic",    "rhel9"],
@@ -88,6 +91,9 @@ jobs:
               "ubuntu2204": ["Ubuntu 22.04", "onlyoffice", "base-ubuntu2204"],
               "ubuntu2404": ["Ubuntu 24.04", "onlyoffice", "base-ubuntu2404"],
               "ubuntu2604": ["Ubuntu 26.04", "onlyoffice", "base-ubuntu2604"],
+              "debian11-arm": ["Debian 11 ARM", "arm", "ubuntu-24.04-arm", "11"],
+              "debian12-arm": ["Debian 12 ARM", "arm", "ubuntu-24.04-arm", "12"],
+              "debian13-arm": ["Debian 13 ARM", "arm", "ubuntu-24.04-arm", "13"],
               "ubuntu2204-arm": ["Ubuntu 22.04 ARM", "arm", "ubuntu-22.04-arm"],
               "ubuntu2404-arm": ["Ubuntu 24.04 ARM", "arm", "ubuntu-24.04-arm"],
               "ubuntu2604-arm": ["Ubuntu 26.04 ARM", "arm", "ubuntu-26.04-arm"]
@@ -123,12 +129,14 @@ jobs:
           # Build the list in defined order
           all=$(jq -c -n --argjson map "$OS_MAP" --arg order "$OS_ORDER" \
             --argjson list "$(printf '%s\n' "${!os_set[@]}" | jq -R . | jq -s .)" \
-            '[($order | split(" "))[] | select(. as $k | $list[] == $k) | {name: $map[.][0], os: ($map[.][2] // .), distr: $map[.][1]}]')
+            '[($order | split(" "))[] | select(. as $k | $list[] == $k) |
+              {name: $map[.][0], os: ($map[.][2] // .), distr: $map[.][1]} +
+              (if $map[.][3] then {debian: $map[.][3]} else {} end)]')
 
           # Entries with distr "arm" run natively on arm64 runners (os holds the runner label), the rest in Vagrant VMs
           {
             echo "matrix=$(jq -c '{include: map(select(.distr != "arm"))}' <<< "$all")"
-            echo "arm_matrix=$(jq -c '{include: map(select(.distr == "arm") | {name, runner: .os})}' <<< "$all")"
+            echo "arm_matrix=$(jq -c '{include: map(select(.distr == "arm") | {name, runner: .os} + (if has("debian") then {debian} else {} end))}' <<< "$all")"
             echo "has_x86=$(jq 'map(select(.distr != "arm")) | length > 0' <<< "$all")"
             echo "has_arm=$(jq 'map(select(.distr == "arm")) | length > 0' <<< "$all")"
           } >> $GITHUB_OUTPUT
@@ -327,11 +335,12 @@ jobs:
     name: "${{ matrix.name }}"
     runs-on: ${{ matrix.runner }}
     needs: prepare
-    # The Vagrant jobs above are x86 only, so ARM is tested natively on GitHub-hosted arm64 runners. Ubuntu only: the installer rejects arm64 on Debian.
+    # Ubuntu runs on the ARM host; Debian uses a systemd-nspawn guest.
     if: needs.prepare.outputs.has_arm == 'true'
     env:
       VER: ${{ needs.prepare.outputs.docs_version }}
       USE_4TESTING: ${{ github.event.inputs.testing }}
+      DEBIAN_VERSION: ${{ matrix.debian }}
       # the tests/vagrant scripts expect the VM layout: scripts and build.sh in /home/vagrant
       INSTALL_DIR: /home/vagrant
     strategy:
@@ -343,6 +352,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Prepare runner
+        if: matrix.debian == ''
         run: |
           set -eux
           # Selenium needs docker, so keep it and the packages
@@ -355,11 +365,18 @@ jobs:
           sudo rm -rf /var/lib/mysql /etc/mysql /var/lib/postgresql
           df -h /
 
+      - name: Boot Debian
+        if: matrix.debian != ''
+        timeout-minutes: 25
+        run: bash tests/arm/debian.sh boot
+
       - name: Install
         id: install
         timeout-minutes: 55
         run: |
           set -eux
+
+          if [[ -n "$DEBIAN_VERSION" ]]; then exec bash tests/arm/debian.sh install; fi
 
           # Local scripts from this checkout: the released apps-install.sh has no ARM support
           if [[ "$USE_4TESTING" == "true" ]]; then
@@ -376,11 +393,15 @@ jobs:
           sudo bash -c 'cd "$1" && shift && bash "$@"' _ "$INSTALL_DIR" "$GITHUB_WORKSPACE/tests/vagrant/install.sh" "${ARGS[@]}"
 
       - name: Health check
-        run: sudo bash -c 'cd "$1" && bash "$2" healthcheck' _ "$INSTALL_DIR" "$GITHUB_WORKSPACE/tests/vagrant/post-install.sh"
+        run: |
+          if [[ -n "$DEBIAN_VERSION" ]]; then exec bash tests/arm/debian.sh healthcheck; fi
+          sudo bash -c 'cd "$1" && bash "$2" healthcheck' _ "$INSTALL_DIR" "$GITHUB_WORKSPACE/tests/vagrant/post-install.sh"
 
       - name: External ports
         continue-on-error: true
-        run: sudo bash -c 'cd "$1" && bash "$2" external-ports' _ "$INSTALL_DIR" "$GITHUB_WORKSPACE/tests/vagrant/post-install.sh"
+        run: |
+          if [[ -n "$DEBIAN_VERSION" ]]; then exec bash tests/arm/debian.sh external-ports; fi
+          sudo bash -c 'cd "$1" && bash "$2" external-ports' _ "$INSTALL_DIR" "$GITHUB_WORKSPACE/tests/vagrant/post-install.sh"
 
       - name: Smoke test
         timeout-minutes: 20
@@ -401,8 +422,16 @@ jobs:
       - name: Uninstall
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         timeout-minutes: 25
-        run: sudo bash -c 'cd "$1" && bash "$2" uninstall' _ "$INSTALL_DIR" "$GITHUB_WORKSPACE/tests/vagrant/post-install.sh"
+        run: |
+          if [[ -n "$DEBIAN_VERSION" ]]; then exec bash tests/arm/debian.sh uninstall; fi
+          sudo bash -c 'cd "$1" && bash "$2" uninstall' _ "$INSTALL_DIR" "$GITHUB_WORKSPACE/tests/vagrant/post-install.sh"
 
       - name: Collect logs
         if: always()
-        run: sudo bash -c 'cd "$1" && bash "$2" logs' _ "$INSTALL_DIR" "$GITHUB_WORKSPACE/tests/vagrant/post-install.sh" || true
+        run: |
+          if [[ -n "$DEBIAN_VERSION" ]]; then exec bash tests/arm/debian.sh logs; fi
+          sudo bash -c 'cd "$1" && bash "$2" logs' _ "$INSTALL_DIR" "$GITHUB_WORKSPACE/tests/vagrant/post-install.sh" || true
+
+      - name: Stop Debian
+        if: always() && matrix.debian != ''
+        run: bash tests/arm/debian.sh cleanup
