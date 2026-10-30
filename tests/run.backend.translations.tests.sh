@@ -3,7 +3,7 @@
 rd="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 echo "Run script directory:" $dir
 
-dir=$(builtin cd $rd/../../; pwd)
+dir=$(builtin cd "$rd/../../" || exit; pwd)
 
 echo "Root directory:" $dir
 

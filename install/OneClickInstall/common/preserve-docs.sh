@@ -471,7 +471,8 @@ restore_docs_data_access() {
         chown "${DATA_UID}:${DATA_GID}" "${DATA_DIR}" || return 1
         chmod "${DATA_MODE}" "${DATA_DIR}" || return 1
     elif [ ! -d "${DATA_DIR}" ]; then
-        mkdir -p -m 755 -- "${DATA_DIR}" || return 1
+        mkdir -p -- "${DATA_DIR}" || return 1
+        chmod 755 "${DATA_DIR}" || return 1
         chown ds:ds "${DATA_DIR}" || return 1
     fi
     if [ -f "${BACKUP}" ]; then

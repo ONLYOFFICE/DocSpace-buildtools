@@ -49,6 +49,7 @@ hold_package_version() {
 		# Leave the holds and update policy of Docs dependencies unchanged.
 		for i in "${!pkgs[@]}"; do
 			for dependency in "${DOCS_RUNTIME_PACKAGES[@]}"; do
+				# shellcheck disable=SC2053 # Unquoted on purpose: pkgs entries are glob patterns.
 				if [[ "${dependency%%:*}" == ${pkgs[i]} ]]; then
 					unset 'pkgs[i]'
 					break
