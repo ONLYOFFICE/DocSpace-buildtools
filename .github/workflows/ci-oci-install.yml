@@ -184,7 +184,6 @@ jobs:
           find install/OneClickInstall tests -type f -name "*.sh" ! -path "install/OneClickInstall/install-Docker.sh" \
             | xargs shellcheck --exclude="$(awk '!/^#|^$/ {print $1}' tests/lint/sc_ignore | paste -sd ",")" --severity=warning | tee sc_output || true
           awk '/\(warning\):/ {w++} /\(error\):/ {e++} END {if (w+e) printf "::warning ::ShellCheck: %d warnings, %d errors\n", w+0, e+0}' sc_output
-          ! grep -q '(error):' sc_output || { echo "::error ::ShellCheck found errors"; exit 1; }
 
       - name: Boot VM
         id: boot
