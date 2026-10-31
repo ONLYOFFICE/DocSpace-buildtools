@@ -152,7 +152,8 @@ if [ "$DIST" = "debian" ] && [ "$ARCH" = "arm64" ]; then
 	if package_installed percona-server-server; then
 		MYSQL_PACKAGES=(percona-server-server percona-server-client)
 		export PERCONA_TELEMETRY_DISABLE=1
-	elif package_installed mysql-server || package_installed mysql-community-server; then
+	elif ! dpkg-query -W -f='${db:Status-Status}\n' 'mariadb-server*' 2>/dev/null | grep -qx installed \
+		&& { package_installed mysql-server || package_installed mysql-community-server; }; then
 		MYSQL_PACKAGES=(mysql-server mysql-client)
 	else
 		if dpkg-query -W -f='${db:Status-Status}\n' 'mariadb-server*' 2>/dev/null | grep -qx installed; then
