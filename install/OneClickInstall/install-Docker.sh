@@ -280,6 +280,7 @@ uninstall() {
         if [ -z "${CURRENT_DEPLOYMENT_MODE}" ] && [ "${DEPLOYMENT_MODE_SET}" != true ] && \
             [ ! -f "${BASE_DIR}/docker-compose.yml" ]; then
             DEPLOYMENT_MODE=microservices
+            [ ! -s "${BASE_DIR}/.docs-restore/deployment-mode" ] || DEPLOYMENT_MODE=$(<"${BASE_DIR}/.docs-restore/deployment-mode")
             select_deployment_mode
         fi
         echo "Removing Apps and restoring Docs; keeping Apps data and configuration."
@@ -1556,6 +1557,7 @@ start_installation () {
 	# Also clear this when a resumed installation is detected as an update.
 	if [ "${INSTALL_PRODUCT}" = true ] && [ -d "${BASE_DIR}/.docs-restore" ]; then
 		rm -f "${BASE_DIR}/.docs-restore/apps-stopped" || exit 1
+		echo "${DEPLOYMENT_MODE}" > "${BASE_DIR}/.docs-restore/deployment-mode" || exit 1
 	fi
 
 	echo ""
