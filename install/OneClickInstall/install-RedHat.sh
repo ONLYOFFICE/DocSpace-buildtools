@@ -142,8 +142,10 @@ source_remote_script() {
 # Run uninstall if requested
 if [ "${UNINSTALL}" == "true" ]; then
     if [ "${LOCAL_SCRIPTS}" == "true" ]; then
+        source common/swap.sh
         source install-RedHat/uninstall.sh
     else
+        source_remote_script common/swap.sh
         source_remote_script install-RedHat/uninstall.sh
     fi
     exit 0
@@ -161,11 +163,28 @@ END
 if [ "$LOCAL_SCRIPTS" = "true" ]; then
 	source install-RedHat/tools.sh
 	source common/check-ports.sh
-	source install-RedHat/install-preq.sh
-	source install-RedHat/install-app.sh
+	source common/swap.sh
+	source common/preserve-docs.sh
 else
 	source_remote_script install-RedHat/tools.sh
 	source_remote_script common/check-ports.sh
+	source_remote_script common/swap.sh
+	source_remote_script common/preserve-docs.sh
+fi
+
+prepare_docs_install
+if [ "$UPDATE" != "true" ] || [ "${PRODUCT_INSTALLED}" = false ] || [ "${RESUME_DOCS_INSTALL}" = true ]; then
+	get_required_ports
+	prepare_docs_nginx
+	check_ports
+	# Product configuration may adjust the Docs binding after these checks.
+	DOCS_RECONFIGURED=true
+fi
+
+if [ "$LOCAL_SCRIPTS" = "true" ]; then
+	source install-RedHat/install-preq.sh
+	source install-RedHat/install-app.sh
+else
 	source_remote_script install-RedHat/install-preq.sh
 	source_remote_script install-RedHat/install-app.sh
 fi

@@ -14,6 +14,11 @@ CERT_NAME="${PRODUCT}"
 OPENRESTY="/etc/openresty/conf.d"
 WEBROOT_PATH="/var/www/onlyoffice/${PRODUCT}"
 CONFIG_DIR="/etc/onlyoffice/${PRODUCT}"
+DOCS_NGINX_CONF="${CONFIG_DIR%/*}/documentserver/nginx/ds.conf"
+PRESERVE_DOCS=false
+if [ -f "${DOCS_NGINX_CONF}.apps.bak" ] || [ -f "${DOCS_NGINX_CONF}.ssl.bak" ]; then
+  PRESERVE_DOCS=true
+fi
 DHPARAM_PATH=${DHPARAM_PATH:-"/etc/ssl/certs/dhparam.pem"}
 SYSTEMD_DIR=$(dirname $($(command -v dpkg-query &> /dev/null && echo "dpkg-query -L" || echo "rpm -ql") ${PACKAGE_NAME}-api | grep systemd/system/))
 ENVIRONMENT=$(grep -oP 'ENVIRONMENT=\K.*' "${CONFIG_DIR}/systemd.env")
@@ -130,13 +135,19 @@ case $1 in
       ${MYSQL[@]} -e "UPDATE tenants_tenants SET mappeddomain='NULL' WHERE alias='localhost';"
     fi
     
-    NODE_EXTRA_CA_CERTS_FILES=$(grep -l "NODE_EXTRA_CA_CERTS" ${CONFIG_DIR}/systemd.env ${SYSTEMD_DIR}/ds-*.service || true)
+    if [ "${PRESERVE_DOCS}" = true ]; then
+      NODE_EXTRA_CA_CERTS_FILES=$(grep -l "NODE_EXTRA_CA_CERTS" ${CONFIG_DIR}/systemd.env || true)
+    else
+      NODE_EXTRA_CA_CERTS_FILES=$(grep -l "NODE_EXTRA_CA_CERTS" ${CONFIG_DIR}/systemd.env ${SYSTEMD_DIR}/ds-*.service || true)
+    fi
     if [ -n "${NODE_EXTRA_CA_CERTS_FILES}" ]; then
       sed -i '/NODE_EXTRA_CA_CERTS/d' ${NODE_EXTRA_CA_CERTS_FILES}
       systemctl daemon-reload
       { grep -l "ExecStart=/usr/bin/node" ${SYSTEMD_DIR}/${PRODUCT}-*.service 2>/dev/null
-        find ${SYSTEMD_DIR} -name "ds-*.service" ! -name "ds-example.service" 2>/dev/null
-      } | xargs -I % basename % | xargs systemctl restart
+        if [ "${PRESERVE_DOCS}" = false ]; then
+          find ${SYSTEMD_DIR} -name "ds-*.service" ! -name "ds-example.service" 2>/dev/null
+        fi
+      } | xargs -r -I % basename % | xargs -r systemctl restart
     fi
 
     echo "OK"
@@ -209,8 +220,20 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
         echo "${INHERITED_CERT_NAME} renews via DNS-01 (wildcard); its renewal stays manual." >&2
       else
         # "reconfigure" switches the authenticator for the next renewal without forcing one now.
+        if { grep -qF "${CERTIFICATE_FILE}" "${DOCS_NGINX_CONF}.apps.bak" 2>/dev/null \
+            || grep -qF "${CERTIFICATE_FILE}" "${DOCS_NGINX_CONF}.ssl.bak" 2>/dev/null; } \
+            && ! grep -qE '/var/www/onlyoffice/(apps|docspace)' "${INHERITED_RENEWAL_CONF}" 2>/dev/null; then
+          # Save only the inherited Docs renewal state, before Apps changes it.
+          for FILE in "${INHERITED_RENEWAL_CONF}" /etc/cron.d/letsencrypt /usr/bin/letsencrypt_cron.sh; do
+            BACKUP_FILE="${DOCS_NGINX_CONF}.apps.$(basename "${FILE}").bak"
+            if [ -f "${FILE}" ] && [ ! -f "${BACKUP_FILE}" ]; then
+              cp -pL -- "${FILE}" "${BACKUP_FILE}.tmp"
+              mv -f -- "${BACKUP_FILE}.tmp" "${BACKUP_FILE}"
+            fi
+          done
+        fi
         mkdir -p "${WEBROOT_PATH}/.well-known/acme-challenge"
-        if certbot reconfigure --cert-name "${INHERITED_CERT_NAME}" --webroot -w "${WEBROOT_PATH}" >/var/log/le-takeover.log 2>&1; then
+        if certbot reconfigure --cert-name "${INHERITED_CERT_NAME}" --webroot -w "${WEBROOT_PATH}" --non-interactive >/var/log/le-takeover.log 2>&1; then
           mkdir -p /etc/letsencrypt/renewal-hooks/deploy
           printf '#!/bin/sh\nsystemctl reload openresty\n' > /etc/letsencrypt/renewal-hooks/deploy/onlyoffice-apps-openresty
           chmod 0755 /etc/letsencrypt/renewal-hooks/deploy/onlyoffice-apps-openresty
@@ -252,21 +275,28 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
       
       #Checking whether the certificate is self-signed
       if [[ -n "$CERTIFICATE_SUBJECT" && -n "$CERTIFICATE_ISSUER" && "$CERTIFICATE_SUBJECT" == "$CERTIFICATE_ISSUER" ]]; then
-        chmod o+rx $(dirname "$CERTIFICATE_FILE")
-        chmod 644 ${CERTIFICATE_FILE} ${PRIVATEKEY_FILE}
+        APPS_CA_CERTIFICATE="${CONFIG_DIR}/selfsigned-ca.pem"
+        cp -fL -- "${CERTIFICATE_FILE}" "${APPS_CA_CERTIFICATE}"
+        chmod 0644 "${APPS_CA_CERTIFICATE}"
         grep -q "NODE_EXTRA_CA_CERTS" ${CONFIG_DIR}/systemd.env && \
-          sed -i "s!\(NODE_EXTRA_CA_CERTS=\).*!\1${CERTIFICATE_FILE}!" ${CONFIG_DIR}/systemd.env || \
-          echo "NODE_EXTRA_CA_CERTS=${CERTIFICATE_FILE}" >> ${CONFIG_DIR}/systemd.env
-        for SYSTEMD_NODE_FILE in ${SYSTEMD_DIR}/ds-*.service; do
-          [[ ${SYSTEMD_NODE_FILE} == *"ds-example"* || ! -f ${SYSTEMD_NODE_FILE} ]] && continue
-          grep -q "NODE_EXTRA_CA_CERTS" ${SYSTEMD_NODE_FILE} && \
-            sed -i "s!\(NODE_EXTRA_CA_CERTS=\).*!\1${CERTIFICATE_FILE}!" ${SYSTEMD_NODE_FILE} || \
-            sed -i "/ExecStart=/i Environment=NODE_EXTRA_CA_CERTS=${CERTIFICATE_FILE}" ${SYSTEMD_NODE_FILE}
-        done
+          sed -i "s!\(NODE_EXTRA_CA_CERTS=\).*!\1${APPS_CA_CERTIFICATE}!" ${CONFIG_DIR}/systemd.env || \
+          echo "NODE_EXTRA_CA_CERTS=${APPS_CA_CERTIFICATE}" >> ${CONFIG_DIR}/systemd.env
+        if [ "${PRESERVE_DOCS}" = false ]; then
+          chmod o+rx $(dirname "$CERTIFICATE_FILE")
+          chmod 644 ${CERTIFICATE_FILE}
+          for SYSTEMD_NODE_FILE in ${SYSTEMD_DIR}/ds-*.service; do
+            [[ ${SYSTEMD_NODE_FILE} == *"ds-example"* || ! -f ${SYSTEMD_NODE_FILE} ]] && continue
+            grep -q "NODE_EXTRA_CA_CERTS" ${SYSTEMD_NODE_FILE} && \
+              sed -i "s!\(NODE_EXTRA_CA_CERTS=\).*!\1${CERTIFICATE_FILE}!" ${SYSTEMD_NODE_FILE} || \
+              sed -i "/ExecStart=/i Environment=NODE_EXTRA_CA_CERTS=${CERTIFICATE_FILE}" ${SYSTEMD_NODE_FILE}
+          done
+        fi
         systemctl daemon-reload
         { grep -l "ExecStart=/usr/bin/node" ${SYSTEMD_DIR}/${PRODUCT}-*.service 2>/dev/null
-          find ${SYSTEMD_DIR} -name "ds-*.service" ! -name "ds-example.service" 2>/dev/null
-        } | xargs -I % basename % | xargs systemctl restart
+          if [ "${PRESERVE_DOCS}" = false ]; then
+            find ${SYSTEMD_DIR} -name "ds-*.service" ! -name "ds-example.service" 2>/dev/null
+          fi
+        } | xargs -r -I % basename % | xargs -r systemctl restart
       fi
     fi
 

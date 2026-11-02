@@ -345,6 +345,36 @@ sudo bash apps-install.sh docker \
   --deployment-mode microservices
 ```
 
+## 🔄 Installing over ONLYOFFICE Docs and rolling back
+
+If standalone ONLYOFFICE Docs is already installed, the installer reuses it instead of deploying a second Document Server.
+
+### Packages (DEB/RPM)
+
+Docs (`onlyoffice-documentserver`, `-de` or `-ee`) is detected automatically. Before changing anything, the installer saves a snapshot of its nginx configuration, Let's Encrypt renewal settings and `Data` permissions. Then:
+
+- If Docs uses a port required by Apps, it is moved to another one (`8083` by default).
+- If Docs serves HTTPS with a valid certificate, Apps takes it over and Docs switches to plain HTTP on `127.0.0.1:8083`.
+- If the installation fails, Docs is restored automatically; re-run the installer to finish.
+
+**Rolling back to standalone Docs:**
+
+```bash
+sudo bash apps-install.sh package --uninstall true
+```
+
+Answer "N" to "Also uninstall ONLYOFFICE Docs?" to keep Docs: the snapshot is restored before the Apps packages are removed. After a clean installation without a snapshot, a standard Docs HTTP configuration is made accessible on its existing port (`8083` by default); HTTPS configured in Apps is not transferred to Docs. If the configuration cannot be restored or is unsupported, the script stops before removing any packages.
+
+### Docker
+
+For Docs installed with `docker run`, the installer keeps the original container stopped with automatic restart disabled. Apps uses a copy of its main data. Run this command to restore Docs and keep Apps data and settings for reinstallation:
+
+```bash
+sudo bash apps-install.sh docker --uninstall true
+```
+
+Keep the original container, its data and the `/app/onlyoffice/.docs-restore` directory. `docker container prune` deletes the saved container. Additional custom mounts remain shared with Apps. Automatic restoration requires the installer to have saved the original container. Older installations need a backup or VM snapshot. Fresh Apps installations keep the usual uninstall options.
+
 ## 🖥 System Requirements
 
 | Resource   | Minimum              |
@@ -367,13 +397,29 @@ The installation scripts support the following operating systems, which are **re
 - CentOS 10S
 - Fedora 43
 - Fedora 44
-- Debian 11
-- Debian 12
-- Debian 13
+- Debian 11 (x86_64, ARM64)
+- Debian 12 (x86_64, ARM64)
+- Debian 13 (x86_64, ARM64)
 - Ubuntu 22.04 (x86_64, ARM64)
 - Ubuntu 24.04 (x86_64, ARM64)
 - Ubuntu 26.04 (x86_64, ARM64)
 <!-- OS-SUPPORT-LIST-END -->
+
+## 🍎 macOS
+
+Apps can be installed in Docker on macOS (Apple Silicon and Intel) with [Docker Desktop](https://docs.docker.com/desktop/setup/install/mac-install/). The DEB/RPM installation is not available.
+
+- Run the script **without** `sudo`: Docker Desktop works per user.
+- [Homebrew](https://brew.sh) is required. The script installs `bash`, `coreutils`, `findutils`, `gnu-sed`, `grep`, `gnu-tar` and `jq` with it and re-runs itself under the Homebrew `bash`.
+- Docker Desktop is installed with Homebrew when it is missing (accept its license agreement in the window that opens) and started automatically when it is not running. CPU and memory are taken from its limits (Settings > Resources): at least 4 cores and 8 GB RAM.
+- Configuration files are stored in `~/onlyoffice`; the directory must be shared with Docker Desktop (the home directory is by default).
+- Data is kept in Docker volumes by default. With `--volumesdir <DIR>` it is kept in the directory instead: the owner of its subdirectories is set from a helper container, because on the Mac a user cannot give files to another owner; the directory must be shared with Docker Desktop.
+- HTTPS works only in the standalone deployment mode, with your own certificate (`--certfile`, `--certkeyfile`, `--certdomain`) or with Let's Encrypt (`--letsencryptdomain`, `--letsencryptmail`). For Let's Encrypt the domain must point to the Mac and ports 80 and 443 must be reachable from the Internet. The certificate is renewed weekly (Sunday, 03:00) by the launchd agent `~/Library/LaunchAgents/com.onlyoffice.apps-renew-letsencrypt.plist`, which needs the Mac awake and Docker Desktop running.
+- An existing Document Server container started with `docker run` is adopted like on Linux; its data is copied between Docker volumes by a helper container.
+
+```bash
+bash apps-install.sh docker
+```
 
 ## 📚 Additional Resources
 

@@ -102,12 +102,13 @@ run_installer() {
   local PATCHED_SCRIPT; PATCHED_SCRIPT=$(mktemp --suffix=.sh)
   cp "${GITHUB_WORKSPACE}/install/OneClickInstall/install-Docker.sh" "$PATCHED_SCRIPT"
 
-  local INSTALL_CMD="sudo bash $PATCHED_SCRIPT -skiphc true -noni true -gb $GITHUB_REF_NAME $*"
+  # compose prints every layer of a pull as a separate line when the output is not a terminal, and sudo drops the variable without env
+  local INSTALL_CMD="sudo env COMPOSE_PROGRESS=quiet bash $PATCHED_SCRIPT -skiphc true -noni true -gb $GITHUB_REF_NAME $*"
   [ "${IS_4TESTING:-true}" != "false" ] && \
     INSTALL_CMD="$INSTALL_CMD -s 4testing- -un $DOCKERHUB_USERNAME_PAT -p $DOCKERHUB_TOKEN_PAT"
   [ -n "${DOCKER_TAG:-}" ] && INSTALL_CMD="$INSTALL_CMD -dsv $DOCKER_TAG"
 
-  sed -i -e "1i set -x" -e "/DOCKER_COMPOSE.*up -d/ s/$/ --quiet-pull/" "$PATCHED_SCRIPT"
+  sed -i "1i set -x" "$PATCHED_SCRIPT"
 
   eval "$INSTALL_CMD" || exit $?
   wait_for_containers
@@ -309,7 +310,7 @@ install_previous() {
   # the latest release still ships under the DocSpace name
   curl -fsSL --retry 3 --retry-delay 2 "https://download.onlyoffice.com/docspace/install-Docker.sh" -o "$OLD_SCRIPT" || \
     { echo "::error::Could not download the released install-Docker.sh."; return 1; }
-  sudo bash "$OLD_SCRIPT" "${ARGS[@]}" || { echo "::error::The released installer failed."; return 1; }
+  sudo env COMPOSE_PROGRESS=quiet bash "$OLD_SCRIPT" "${ARGS[@]}" || { echo "::error::The released installer failed."; return 1; }
   wait_for_containers
 
   local IMAGE

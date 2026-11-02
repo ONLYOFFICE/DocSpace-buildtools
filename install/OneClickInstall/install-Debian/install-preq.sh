@@ -60,6 +60,36 @@ run_remote_bash() {
 	return "${EXIT_CODE}"
 }
 
+PRESERVE_DOCS=false
+DOCS_APT_OPTIONS=()
+if [ -f "/etc/${package_sysname}/documentserver/nginx/ds.conf.apps.bak" ] \
+	|| [ -f "/etc/${package_sysname}/documentserver/nginx/ds.conf.ssl.bak" ]; then
+	PRESERVE_DOCS=true
+	# Restrict this install only; leave holds on Docs dependencies unchanged.
+	rm -f -- /etc/apt/preferences.d/00onlyoffice-docs-*.pref
+	mapfile -t DOCS_RUNTIME_PACKAGES < <(dpkg-query -W -f='${db:Status-Status}\t${binary:Package}\n' \
+		| awk '$1 == "installed" {print $2}' \
+		| grep -E "^${package_sysname}-documentserver(-de|-ee)?(:|$)|^percona-server-(server|client|common)(:|$)|^(nginx|nodejs|mysql|postgresql|redis|valkey|rabbitmq|erlang|ffmpeg)(-|:|$)")
+	if [ "${#DOCS_RUNTIME_PACKAGES[@]}" -eq 0 ]; then
+		echo "Cannot preserve Docs dependencies: no matching installed packages found. Check the saved Docs state before retrying." >&2
+		exit 1
+	fi
+	DOCS_RUNTIME_DEPENDENCIES=$(apt-cache depends --installed --recurse --no-recommends --no-suggests \
+		--no-conflicts --no-breaks --no-replaces --no-enhances "${DOCS_RUNTIME_PACKAGES[@]}")
+	mapfile -t DOCS_RUNTIME_PACKAGES < <(printf '%s\n' "${DOCS_RUNTIME_PACKAGES[@]}" "${DOCS_RUNTIME_DEPENDENCIES}" \
+		| awk '/^[^[:space:]<]/ {print $1}' | sort -u)
+	# apt-cache can include uninstalled alternatives; dpkg-query returns 1 for missing packages.
+	DOCS_INSTALLED_PACKAGES=$(dpkg-query -W -f='${db:Status-Status}\t${binary:Package}\t${Version}\n' "${DOCS_RUNTIME_PACKAGES[@]}") || [ "$?" -eq 1 ]
+	# Remote repository setup scripts run apt too, so use a temporary native pin file.
+	DOCS_APT_PREFERENCES=$(mktemp /etc/apt/preferences.d/00onlyoffice-docs-XXXXXX.pref)
+	while IFS=$'\t' read -r PACKAGE_STATUS PACKAGE_NAME PACKAGE_VERSION; do
+		[ "${PACKAGE_STATUS}" = installed ] || continue
+		printf 'Package: %s\nPin: version %s\nPin-Priority: 1001\n\nPackage: %s\nPin: version *\nPin-Priority: -1\n\n' \
+			"${PACKAGE_NAME}" "${PACKAGE_VERSION}" "${PACKAGE_NAME}" >> "${DOCS_APT_PREFERENCES}"
+	done <<< "${DOCS_INSTALLED_PACKAGES}"
+	[ ! -f /etc/apt/preferences ] || cat /etc/apt/preferences >> "${DOCS_APT_PREFERENCES}"
+	DOCS_APT_OPTIONS=(-o "Dir::Etc::preferences=${DOCS_APT_PREFERENCES}" --no-remove)
+fi
 hold_package_version
 
 if [ "$DIST" = "debian" ] && [ "$(apt-cache search ttf-mscorefonts-installer | wc -l)" -eq 0 ]; then
@@ -78,14 +108,15 @@ if [ -n "$PRODUCT_VERSION" ] && ! apt-cache madison "$package" | awk '{print $3}
   echo "Requested ${product_name} version ${PRODUCT_VERSION} not found in repository."; exit 1
 fi
 
-dpkg -l | grep -q "debconf-utils" || apt-get install -yq debconf-utils
-command -v locale-gen &>/dev/null || apt-get install -yq locales
+dpkg -l | grep -q "debconf-utils" || apt-get "${DOCS_APT_OPTIONS[@]}" install -yq debconf-utils
+command -v locale-gen &>/dev/null || apt-get "${DOCS_APT_OPTIONS[@]}" install -yq locales
 locale-gen en_US.UTF-8
 
 # Add OpenSearch repo.
 curl -fsSL https://artifacts.opensearch.org/publickeys/opensearch-release.pgp | gpg --dearmor --batch --yes -o /usr/share/keyrings/opensearch-keyring
 echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch/3.x/apt stable main" > /etc/apt/sources.list.d/opensearch-3.x.list
 OPENSEARCH_VERSION="3.5.0"
+export OPENSEARCH_JAVA_HOME="${OPENSEARCH_JAVA_HOME:-/usr/share/opensearch/jdk}"
 export OPENSEARCH_INITIAL_ADMIN_PASSWORD="$(echo "${package_sysname}!A1")"
 
 # Add OpenSearch Dashboards repo.
@@ -97,7 +128,9 @@ fi
 
 # Add Node.js repo.
 NODE_VERSION="24"
-run_remote_bash "https://deb.nodesource.com/setup_${NODE_VERSION}.x"
+if [ "${PRESERVE_DOCS}" = false ] || ! package_installed nodejs; then
+	run_remote_bash "https://deb.nodesource.com/setup_${NODE_VERSION}.x"
+fi
 
 # Add .NET repo.
 if [ "$DIST" = "ubuntu" ]; then
@@ -108,40 +141,68 @@ elif [ "$DIST" = "debian" ]; then
 	DEBIAN_FRONTEND=noninteractive dpkg --force-confnew -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
 fi
 
-MYSQL_REPO_VERSION="$(curl -fsSL https://dev.mysql.com/downloads/repo/apt/ | grep -oP '(?<=mysql-apt-config_)[0-9.]+-[0-9]+(?=_all\.deb)' | head -n1)"
-MYSQL_PACKAGE_NAME="mysql-apt-config_${MYSQL_REPO_VERSION}_all.deb"
 MYSQL_SERVER_HOST=${MYSQL_SERVER_HOST:-"localhost"}
 MYSQL_SERVER_PORT=${MYSQL_SERVER_PORT:-"3306"}
 MYSQL_SERVER_DB_NAME=${MYSQL_SERVER_DB_NAME:-"${package_sysname}"}
 MYSQL_SERVER_USER=${MYSQL_SERVER_USER:-"root"}
 
-if ! dpkg -l | grep -q "mysql-server"; then
-	MYSQL_FIRST_TIME_INSTALL="true"
-	MYSQL_SERVER_PASS=${MYSQL_SERVER_PASS:-"$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)"}
+MYSQL_PACKAGES=(mysql-server mysql-client)
+if [ "$DIST" = "debian" ] && [ "$ARCH" = "arm64" ]; then
+	# Oracle's Debian repository has no arm64 packages.
+	if package_installed percona-server-server; then
+		MYSQL_PACKAGES=(percona-server-server percona-server-client)
+		export PERCONA_TELEMETRY_DISABLE=1
+	elif package_installed mysql-server || package_installed mysql-community-server; then
+		MYSQL_PACKAGES=(mysql-server mysql-client)
+	else
+		if dpkg-query -W -f='${db:Status-Status}\n' 'mariadb-server*' 2>/dev/null | grep -qx installed; then
+			echo "ERROR: MariaDB server packages are installed. Automatic replacement with Percona is not supported." >&2
+			exit 1
+		fi
+		MYSQL_PACKAGES=(percona-server-server percona-server-client)
+		export PERCONA_TELEMETRY_DISABLE=1
+		curl -fsSLO --retry 3 --retry-delay 2 https://repo.percona.com/apt/percona-release_latest.generic_all.deb
+		apt-get "${DOCS_APT_OPTIONS[@]}" install -yq gnupg2 lsb-release ca-certificates ./percona-release_latest.generic_all.deb
+		rm -f percona-release_latest.generic_all.deb
+		percona-release enable ps-84-lts release --scheme https
 
-	# Set up MySQL 8.4 package (arm64 uses the distro package, the Oracle repo has no arm64 build).
-	if [ "$ARCH" = "amd64" ]; then
+		MYSQL_FIRST_TIME_INSTALL="true"
+		MYSQL_SERVER_PASS=${MYSQL_SERVER_PASS:-"$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)"}
+		echo percona-server-server percona-server-server/root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+		echo percona-server-server percona-server-server/re-root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+	fi
+else
+	MYSQL_REPO_VERSION="$(curl -fsSL https://dev.mysql.com/downloads/repo/apt/ | grep -oP '(?<=mysql-apt-config_)[0-9.]+-[0-9]+(?=_all\.deb)' | head -n1)"
+	MYSQL_PACKAGE_NAME="mysql-apt-config_${MYSQL_REPO_VERSION}_all.deb"
+
+	if ! dpkg -l | grep -q "mysql-server"; then
+		MYSQL_FIRST_TIME_INSTALL="true"
+		MYSQL_SERVER_PASS=${MYSQL_SERVER_PASS:-"$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)"}
+
+		# Set up MySQL 8.4 package (arm64 uses the distro package, the Oracle repo has no arm64 build).
+		if [ "$ARCH" = "amd64" ]; then
+			curl -fsSLO "https://repo.mysql.com/${MYSQL_PACKAGE_NAME}"
+			echo "mysql-apt-config mysql-apt-config/repo-codename  select  ${DISTRIB_CODENAME/resolute/noble}" | debconf-set-selections
+			echo "mysql-apt-config mysql-apt-config/repo-distro  select  $DIST" | debconf-set-selections
+			echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.4-lts" | debconf-set-selections
+			DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
+			rm -f "${MYSQL_PACKAGE_NAME}"
+		fi
+
+		echo mysql-community-server mysql-community-server/root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+		echo mysql-community-server mysql-community-server/re-root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+		echo mysql-community-server mysql-server/default-auth-override select "Use Strong Password Encryption (RECOMMENDED)" | debconf-set-selections
+		echo mysql-server mysql-server/root_password password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+		echo mysql-server mysql-server/root_password_again password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+
+	elif [ "${PRESERVE_DOCS}" = false ] && dpkg -l | grep -q "mysql-apt-config" && [ "$(apt-cache policy mysql-apt-config | awk 'NR==2{print $2}')" != "${MYSQL_REPO_VERSION}" ]; then
 		curl -fsSLO "https://repo.mysql.com/${MYSQL_PACKAGE_NAME}"
-		echo "mysql-apt-config mysql-apt-config/repo-codename  select  ${DISTRIB_CODENAME/resolute/noble}" | debconf-set-selections
-		echo "mysql-apt-config mysql-apt-config/repo-distro  select  $DIST" | debconf-set-selections
-		echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.4-lts" | debconf-set-selections
 		DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
 		rm -f "${MYSQL_PACKAGE_NAME}"
 	fi
-
-	echo mysql-community-server mysql-community-server/root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
-	echo mysql-community-server mysql-community-server/re-root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
-	echo mysql-community-server mysql-server/default-auth-override select "Use Strong Password Encryption (RECOMMENDED)" | debconf-set-selections
-	echo mysql-server mysql-server/root_password password "${MYSQL_SERVER_PASS}" | debconf-set-selections
-	echo mysql-server mysql-server/root_password_again password "${MYSQL_SERVER_PASS}" | debconf-set-selections
-
-elif dpkg -l | grep -q "mysql-apt-config" && [ "$(apt-cache policy mysql-apt-config | awk 'NR==2{print $2}')" != "${MYSQL_REPO_VERSION}" ]; then
-	curl -fsSLO "https://repo.mysql.com/${MYSQL_PACKAGE_NAME}"
-	DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
-	rm -f "${MYSQL_PACKAGE_NAME}"
 fi
 
-if [ "$DIST" = "ubuntu" ]; then
+if [ "$DIST" = "ubuntu" ] && { [ "${PRESERVE_DOCS}" = false ] || ! package_installed redis-server; }; then
 	curl -fsSL https://packages.redis.io/gpg | gpg --batch --yes --dearmor -o /usr/share/keyrings/redis.gpg
 	echo "deb [signed-by=/usr/share/keyrings/redis.gpg] https://packages.redis.io/deb ${DISTRIB_CODENAME} main" | tee /etc/apt/sources.list.d/redis.list
 fi
@@ -163,26 +224,30 @@ echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select tr
 
 # Install packages.
 apt-get -y update
-apt-get install -o DPkg::options::="--force-confnew" -yq \
+# Preserve existing dependency configs when adopting Docs, including during upgrades.
+DPKG_CONF_OPTION="--force-confnew"
+if [ "${PRESERVE_DOCS}" = true ]; then
+	DPKG_CONF_OPTION="--force-confold"
+fi
+apt-get "${DOCS_APT_OPTIONS[@]}" install -o DPkg::options::="${DPKG_CONF_OPTION}" -yq \
 				expect \
 				nano \
 				nodejs \
 				gcc \
 				make \
-				mysql-server \
-				mysql-client \
+				"${MYSQL_PACKAGES[@]}" \
 				redis-server \
 				rabbitmq-server \
 				temurin-${JAVA_VERSION}-jre \
 				ffmpeg 
 
-if [ "$INSTALLATION_TYPE" != "community" ]; then
+if [ "$INSTALLATION_TYPE" != "community" ] && [ "${PRESERVE_DOCS}" = false ]; then
 	apt-get install -yq postgresql
 fi
 
 # Temporary aspnetcore-runtime-10.0 fallback for Debian 11 and Ubuntu 24.04.
 DOTNET_VERSION="10.0"; DOTNET_PKG="aspnetcore-runtime-${DOTNET_VERSION}"
-if ! apt-get install -yq "${DOTNET_PKG}"; then
+if ! apt-get "${DOCS_APT_OPTIONS[@]}" install -yq "${DOTNET_PKG}"; then
   run_remote_bash "https://dot.net/v1/dotnet-install.sh" --channel "${DOTNET_VERSION}" --runtime aspnetcore --install-dir /usr/share/dotnet
   ln -sf /usr/share/dotnet/dotnet /usr/bin/dotnet
 
@@ -198,7 +263,7 @@ if ! apt-get install -yq "${DOTNET_PKG}"; then
 fi
 
 if ! dpkg -l | grep -q "opensearch"; then
-	apt-get install -yq opensearch=${OPENSEARCH_VERSION}
+	apt-get "${DOCS_APT_OPTIONS[@]}" install -yq opensearch=${OPENSEARCH_VERSION}
 else
 	ELASTIC_PLUGIN="/usr/share/opensearch/bin/opensearch-plugin"
 	if dpkg --compare-versions "$(dpkg-query -W -f='${Version}\n' opensearch 2>/dev/null || true)" ne "$OPENSEARCH_VERSION"; then
@@ -215,5 +280,5 @@ if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then
 	curl -fsSL https://packages.fluentbit.io/fluentbit.key | gpg --dearmor > /usr/share/keyrings/fluentbit-keyring.gpg
 	echo "deb [signed-by=/usr/share/keyrings/fluentbit-keyring.gpg] https://packages.fluentbit.io/$DIST/$DISTRIB_CODENAME $DISTRIB_CODENAME main" | tee /etc/apt/sources.list.d/fluent-bit.list
 	apt-get -y update
-	apt-get install -o DPkg::options::="--force-confnew" -yq opensearch-dashboards="${DASHBOARDS_VERSION}" fluent-bit
+	apt-get "${DOCS_APT_OPTIONS[@]}" install -o DPkg::options::="--force-confnew" -yq opensearch-dashboards="${DASHBOARDS_VERSION}" fluent-bit
 fi

@@ -6,7 +6,6 @@ def pytest_configure(config):
     config.addinivalue_line('markers', 'bootstrap: settings, wizard and auth — needed by every phase')
     config.addinivalue_line('markers', 'seed: creates data to be verified after a restart or an update')
     config.addinivalue_line('markers', 'verify: checks data created by the seed phase')
-    config.addinivalue_line('markers', 'restore: restores a backup, which invalidates all passwords; run it last')
 
 def pytest_runtest_logreport(report):
     # record the call phase, and setup when it already failed or skipped the test

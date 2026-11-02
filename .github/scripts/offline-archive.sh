@@ -74,7 +74,9 @@ create() {
 
   echo "Measuring on-disk image size for the disk-space check..."
   local DOCKER_ROOT_DIR; DOCKER_ROOT_DIR=$(docker info -f '{{.DockerRootDir}}')
-  local DOCKER_SPACE_MB; DOCKER_SPACE_MB=$(du -sm "${DOCKER_ROOT_DIR}" | awk '{print $1}')
+  local DOCKER_SPACE_MB; DOCKER_SPACE_MB=$(sudo du -sm "${DOCKER_ROOT_DIR}" | awk '{print $1}')
+  # Docker root is root-only, an unreadable dir yields a near-zero size
+  [ "${DOCKER_SPACE_MB:-0}" -ge 1024 ] || { echo "Unexpected Docker disk usage: ${DOCKER_SPACE_MB:-empty} MB" >&2; exit 1; }
   sed -i "s~\(REQUIRED_DOCKER_SPACE_MB=\)\"[^\"]*\"~\1\"${DOCKER_SPACE_MB}\"~g" \
     "${INSTALL_PATH}/common/offline-self-extracting.sh"
 
@@ -95,7 +97,7 @@ build() {
   local ARTIFACT_NAME="4testing-offline-apps-installation${SUFFIX}.sh"
 
   tar -cf "${INSTALL_PATH}/offline-apps.tar" \
-    -C "${INSTALL_PATH}/OneClickInstall" install-Docker-args.sh install-Docker-docs.sh install-Docker.sh \
+    -C "${INSTALL_PATH}/OneClickInstall" install-Docker-args.sh install-Docker-docs.sh install-Docker.sh common/swap.sh \
     -C "${INSTALL_PATH}" docker-static docker-standalone.tar.gz apps_images.tar.xz docs_images.tar.xz
 
   local TEMP_BYTES; TEMP_BYTES=$(stat -c%s "${INSTALL_PATH}/docker-standalone.tar.gz" \

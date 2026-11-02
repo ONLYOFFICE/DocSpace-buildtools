@@ -1,7 +1,7 @@
 @echo off
 
 PUSHD %~dp0..
-call runasadmin.bat "%~dpnx0"
+call tools\runasadmin.bat "%~dpnx0"
 
 POPD
 

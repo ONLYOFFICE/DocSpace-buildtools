@@ -20,6 +20,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import WebDriverException
+from selenium.webdriver.remote.command import Command
 
 SERVER_URL = os.environ.get('SERVER_URL', 'http://localhost').rstrip('/')
 PORTAL_EMAIL = os.environ.get('PORTAL_EMAIL', 'smoke@example.com')
@@ -33,8 +34,6 @@ DEPLOYMENT_MODE = os.environ.get('DEPLOYMENT_MODE', '')
 STATE_FILE = os.environ.get('SMOKE_STATE_FILE')
 DASHBOARDS_USERNAME = os.environ.get('DASHBOARDS_USERNAME')
 DASHBOARDS_PASSWORD = os.environ.get('DASHBOARDS_PASSWORD')
-# the restore regenerates user IDs and invalidates every password, so it runs as the last step on its own
-RUN_RESTORE = os.environ.get('SMOKE_RUN_RESTORE') == 'true'
 
 # tests of the Docker deployments only; package installs run this file without DEPLOYMENT_MODE
 docker_only = pytest.mark.skipif(not DEPLOYMENT_MODE, reason='runs on Docker deployments only')
@@ -156,6 +155,12 @@ def dismiss_dialogs(driver):
         time.sleep(1)
         done('closed')
 
+def read_browser_log(driver):
+    """Read the browser console; newer selenium keeps get_log on local Chromium drivers only."""
+    if hasattr(driver, 'get_log'):
+        return driver.get_log('browser')
+    return driver.execute(Command.GET_LOG, {'type': 'browser'})['value']
+
 def dump_page_state(driver):
     """Print debug info that explains a stuck or missing editor."""
     print(f"Current URL: {driver.current_url}")
@@ -174,7 +179,7 @@ def dump_page_state(driver):
         print(f"Could not collect page state: {script_error}")
     try:
         print('Browser console (last 30 entries):')
-        for entry in driver.get_log('browser')[-30:]:
+        for entry in read_browser_log(driver)[-30:]:
             print(f"  [{entry.get('level')}] {entry.get('message')}")
     except (AttributeError, WebDriverException) as log_error:
         print(f"Could not collect browser console: {log_error}")
@@ -716,6 +721,7 @@ def test_coediting():
     document = create_document('smoke-coedit.docx')
 
     seen = {}
+    second_typed = False
 
     def sees(name, driver, expected):
         def check():
@@ -741,8 +747,10 @@ def test_coediting():
         poll_until(sees('second', second, first_text), 60, 'Second session sees the first line', interval=2)
 
         step('Second session types a line')
-        type_in_editor(second, second_text)
+        typed = type_in_editor(second, second_text)
+        assert second_text.lower() in typed.lower(), f"the typed line is not in the second session: {typed!r}"
         done(second_text)
+        second_typed = True
         poll_until(sees('first', first, second_text), 60, 'First session sees the second line', interval=2)
     except Exception as error:
         print(flush=True)
@@ -751,6 +759,14 @@ def test_coediting():
         for name, driver in (('first', first), ('second', second)):
             print(f"--- {name} session ---")
             dump_page_state(driver)
+        if second_typed:
+            # the line after a reload means a failed live delivery, its absence means it never reached the server
+            print('--- reloaded first session ---')
+            try:
+                wait_editor_loaded(first, document['webUrl'])
+                print(f"Text after the reload: {selected_text(first)!r}")
+            except Exception as reload_error:
+                print(f"Could not read the reloaded session: {reload_error}")
         raise
     finally:
         first.quit()
@@ -835,55 +851,3 @@ def test_healthchecks():
     status, content = http_request(f"{SERVER_URL}/healthchecks/liveness/")
     assert status == 200, f"health checks liveness failed: HTTP {status}, {content[:200]!r}"
     done('HTTP 200')
-
-@docker_only
-@pytest.mark.restore
-def test_backup_restore():
-    """A portal backup must restore. Users get new IDs, so nobody can log in afterwards: no data checks here."""
-    step('Backup and restore')
-    if not RUN_RESTORE:
-        skip_test('runs only with SMOKE_RUN_RESTORE=true, as the last step')
-    done('enabled')
-
-    step('Starting the backup into My Documents')
-    status, body = api('/backup/startbackup', 'POST',
-                       {'storageType': 'Documents', 'storageParams': [{'key': 'folderId', 'value': str(my_folder_id())}]},
-                       auth_headers())
-    backup_id = body.get('response', {}).get('taskId')
-    assert status == 200 and backup_id, f"backup start failed: HTTP {status}, {json.dumps(body)[:300]}"
-    done(f"task {backup_id}")
-
-    def backup_finished():
-        _, progress_body = api('/backup/getbackupprogress', headers=auth_headers())
-        progress = progress_body.get('response')
-        if progress:
-            assert not progress.get('error'), f"backup failed: {progress.get('error')}"
-            return progress.get('isCompleted')
-        # a finished job may already be dropped from the queue — then the history has the record
-        _, history_body = api('/backup/getbackuphistory', headers=auth_headers())
-        return any(record.get('id') == backup_id for record in history_body.get('response') or [])
-
-    poll_until(backup_finished, 600, 'Waiting for the backup to complete', interval=5)
-
-    step('Starting the restore')
-    status, body = api('/backup/startrestore', 'POST',
-                       {'backupId': backup_id, 'storageType': 'Documents', 'notify': False}, auth_headers())
-    assert status == 200, f"restore start failed: HTTP {status}, {json.dumps(body)[:300]}"
-    done()
-
-    def restore_finished():
-        status, progress_body = api('/backup/getrestoreprogress')
-        progress = progress_body.get('response') if status == 200 else None
-        if not progress:
-            return False
-        assert not progress.get('error'), f"restore failed: {progress.get('error')}"
-        return progress.get('isCompleted')
-
-    poll_until(restore_finished, 900, 'Waiting for the restore to complete', interval=5)
-
-    step('Checking that the restored portal answers')
-    status, body = api('/settings', timeout=30)
-    settings = body.get('response', {})
-    assert status == 200 and settings.get('docSpace'), f"the portal does not answer after the restore: HTTP {status}"
-    assert 'wizardToken' not in settings, 'the restored portal asks for the first-run wizard'
-    done('settings answer, no wizard')

@@ -79,6 +79,8 @@ jobs:
             --include="${{ env.PRODUCT }}-developer-install.sh" \
             --include="${{ env.PRODUCT }}-enterprise-install.sh" \
             --include="common/check-ports.sh" \
+            --include="common/preserve-docs.sh" \
+            --include="common/swap.sh" \
             --include="install-RedHat.sh" \
             --include="install-RedHat/*" \
             --include="install-Debian.sh" \

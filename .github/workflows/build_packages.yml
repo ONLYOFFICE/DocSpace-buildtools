@@ -56,8 +56,13 @@ jobs:
       build_all: ${{ steps.set-matrix.outputs.build_all }}
     steps:
       - name: Checkout repository 
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
         run: |
-          git clone https://${{ secrets.GITEA_TOKEN }}@${{ secrets.GITEA_HOST }}/${{ github.repository }} -b ${{ github.ref_name }} --single-branch --depth=1
+          git config --global 'credential.https://${{ secrets.GITEA_HOST }}.helper' "store --file=${RUNNER_TEMP}/gitea-credentials"
+          [[ "$GITEA_TOKEN" == *:* ]] || GITEA_TOKEN+=":"
+          printf 'url=https://%s@%s\n\n' "$GITEA_TOKEN" '${{ secrets.GITEA_HOST }}' | git credential approve
+          git clone https://${{ secrets.GITEA_HOST }}/${{ github.repository }} -b ${{ github.ref_name }} --single-branch --depth=1
           cd "${GITHUB_REPOSITORY#*/}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -96,10 +101,15 @@ jobs:
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
     steps:
       - name: Checkout code
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
         run: |
+          git config --global 'credential.https://${{ secrets.GITEA_HOST }}.helper' "store --file=${RUNNER_TEMP}/gitea-credentials"
+          [[ "$GITEA_TOKEN" == *:* ]] || GITEA_TOKEN+=":"
+          printf 'url=https://%s@%s\n\n' "$GITEA_TOKEN" '${{ secrets.GITEA_HOST }}' | git credential approve
           WORKSPACE_DIR=$(mountpoint -q /mnt && echo "/mnt" || echo "${GITHUB_WORKSPACE}")
           [ "$WORKSPACE_DIR" = "/mnt" ] && sudo chown $(whoami):$(whoami) /mnt 2>/dev/null || true
-          cd "${WORKSPACE_DIR}" && git clone https://${{ secrets.GITEA_TOKEN }}@${{ secrets.GITEA_HOST }}/${{ github.repository }} -b ${{ github.ref_name }} --single-branch --depth=1
+          cd "${WORKSPACE_DIR}" && git clone https://${{ secrets.GITEA_HOST }}/${{ github.repository }} -b ${{ github.ref_name }} --single-branch --depth=1
           echo "BUILD_WORKSPACE=${WORKSPACE_DIR}/${GITHUB_REPOSITORY#*/}" >> $GITHUB_ENV
 
       - name: Import GPG

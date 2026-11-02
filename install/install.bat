@@ -3,7 +3,7 @@
 chcp 65001 > nul
 
 PUSHD %~dp0..
-call runasadmin.bat "%~dpnx0"
+call tools\runasadmin.bat "%~dpnx0"
 
 if %errorlevel% == 0 (
 	PUSHD %~dp0..\..

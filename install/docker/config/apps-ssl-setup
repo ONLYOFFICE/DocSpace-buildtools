@@ -84,12 +84,14 @@ create_renew_script() {
         echo '#' >> ${CRON_FILE}
         echo "# ${PRODUCT} Renew Let's Encrypt SSL Certificates" >> ${CRON_FILE}
         echo "" >> ${CRON_FILE}
+        echo "[ ! -e '${DOCKERCOMPOSE}/.docs-restore/apps-stopped' ] || exit 0" >> ${CRON_FILE}
         echo "echo \"[\$(date '+%F %T')] START /etc/cron.weekly/${PRODUCT}-renew-letsencrypt\" >> \"/var/log/${PRODUCT}-renew-letsencrypt.log\"" >> ${CRON_FILE}
         echo "$(command -v docker) run --rm \\" >> ${CRON_FILE}
         echo "    -v /etc/letsencrypt:/etc/letsencrypt \\" >> ${CRON_FILE}
         echo "    -v /var/lib/letsencrypt:/var/lib/letsencrypt \\" >> ${CRON_FILE}
         echo "    -v onlyoffice_webroot_path:$WEBROOT_PATH \\" >> ${CRON_FILE}
         echo "    certbot/certbot renew -v --force-renewal 2>&1 | tee -a /var/log/${PRODUCT}-renew-letsencrypt.log" >> ${CRON_FILE}
+        echo "[ ! -e '${DOCKERCOMPOSE}/.docs-restore/apps-stopped' ] || exit 0" >> ${CRON_FILE}
         echo "$(echo "$(command -v ${DOCKER_COMPOSE%% *})${DOCKER_COMPOSE#${DOCKER_COMPOSE%% *}}") -f ${DOCKERCOMPOSE}/proxy-ssl.yml up -d --force-recreate" >> ${CRON_FILE}
         chmod a+x "${CRON_FILE}"
     else

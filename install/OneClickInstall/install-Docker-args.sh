@@ -269,6 +269,10 @@ validate_bool_or_pull --installredis "$INSTALL_REDIS"
 validate_bool_or_pull --installelastic "$INSTALL_ELASTICSEARCH"
 validate_bool_or_pull --installfluentbit "$INSTALL_FLUENT_BIT"
 
+if [[ "$OSTYPE" == darwin* ]]; then
+    { [ -z "${CERTIFICATE_PATH}${CERTIFICATE_KEY_PATH}${LETS_ENCRYPT_DOMAIN}${LETS_ENCRYPT_MAIL}" ] || [ -z "${DEPLOYMENT_MODE}" ] || [ "${DEPLOYMENT_MODE}" = "standalone" ]; } || { echo "Error: HTTPS options (--certfile, --certkeyfile, --letsencryptdomain, --letsencryptmail) are supported on macOS only in the standalone deployment mode." >&2; exit 1; }
+fi
+
 if [ -n "$VOLUMES_DIR" ]; then
     [[ "$VOLUMES_DIR" != /* ]] && VOLUMES_DIR="$(cd "$(dirname "$VOLUMES_DIR")" && pwd)/$(basename "$VOLUMES_DIR")"
     [ -d "$VOLUMES_DIR" ] || { echo "Error: Volumes directory not found: ${VOLUMES_DIR}" >&2; exit 1; }
