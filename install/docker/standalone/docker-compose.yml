@@ -61,6 +61,7 @@ services:
       # Manual Compose installs use local storage; install-Docker.sh points this at its persistent Certbot directory so Apps sees the same renewal configuration.
       - ${LETSENCRYPT_CONFIG_DIR:-./config/nginx/ssl/letsencrypt}:/etc/letsencrypt
       - ./config/nginx/certs:/etc/nginx/certs:ro
+      #- ${CONFIG_OVERRIDE}:/app/onlyoffice/config/appsettings.${INSTALLATION_TYPE}.json:ro
     ports:
       - "${EXTERNAL_PORT:-80}:80"
       - "${EXTERNAL_PORT_HTTPS:-443}:443"

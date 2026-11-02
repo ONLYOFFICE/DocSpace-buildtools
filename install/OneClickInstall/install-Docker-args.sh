@@ -115,6 +115,7 @@ while [ "$1" != "" ]; do
         -vd      | --volumesdir          ) [ -n "$2" ] && VOLUMES_DIR="$2"                                                        && shift ;;
         -cf      | --certfile            ) [ -n "$2" ] && CERTIFICATE_PATH="$2"                                                   && shift ;;
         -ckf     | --certkeyfile         ) [ -n "$2" ] && CERTIFICATE_KEY_PATH="$2"                                               && shift ;;
+        -co      | --configoverride      ) [ -n "$2" ] && CONFIG_OVERRIDE="$2"                                                    && shift ;;
         -h | -? | --help )
             help_opt() { printf "    %-22s %-14s %s\n" "$@"; }
             help_note() { printf "%42s%s\n" "" "$1"; }
@@ -215,6 +216,10 @@ while [ "$1" != "" ]; do
             help_opt "--certkeyfile"         "<path>"         "Path to SSL key (used with --certfile)"
 
             echo
+            echo "CONFIGURATION:"
+            help_opt "--configoverride"      "<path>"         "Host file or directory mounted as appsettings.<edition>.json into the ${PRODUCT_NAME} containers"
+
+            echo
             echo "DEPRECATED (still accepted, use the ${PRODUCT_NAME} options above instead):"
             echo "  --installdocspace, --docspaceversion, --docspacehost"
             exit 0
@@ -277,6 +282,11 @@ if [ -n "$VOLUMES_DIR" ]; then
     [[ "$VOLUMES_DIR" != /* ]] && VOLUMES_DIR="$(cd "$(dirname "$VOLUMES_DIR")" && pwd)/$(basename "$VOLUMES_DIR")"
     [ -d "$VOLUMES_DIR" ] || { echo "Error: Volumes directory not found: ${VOLUMES_DIR}" >&2; exit 1; }
     [[ "${VOLUMES_DIR%/}/" == "${BASE_DIR%/}/"* ]] && { echo "Warning: Please change the volumes directory, as $BASE_DIR will be removed during an update."; exit 1; }
+fi
+
+if [ -n "$CONFIG_OVERRIDE" ]; then
+    CONFIG_OVERRIDE="$(realpath -m "$CONFIG_OVERRIDE")" || { echo "Error: failed to resolve --configoverride path." >&2; exit 1; }
+    [[ "${CONFIG_OVERRIDE%/}/" == "${BASE_DIR%/}/"* ]] && { echo "Warning: Please change the config override path, as $BASE_DIR will be removed during an update."; exit 1; }
 fi
 
 if [ -n "$CERTIFICATE_PATH" ]; then
