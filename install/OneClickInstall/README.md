@@ -393,8 +393,8 @@ The installation scripts support the following operating systems, which are **re
 
 <!-- OS-SUPPORT-LIST-START -->
 - RHEL 9
-- CentOS 9S
-- CentOS 10S
+- CentOS 9S (x86_64, ARM64)
+- CentOS 10S (x86_64, ARM64)
 - Fedora 43
 - Fedora 44
 - Debian 11 (x86_64, ARM64)
