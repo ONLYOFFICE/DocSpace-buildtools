@@ -546,7 +546,7 @@ setup_dashboards() {
 	echo -n "Configuring dashboards... "
 
 	DASHBOARDS_CONF_PATH="/etc/opensearch-dashboards/opensearch_dashboards.yml"
-	: "${DASHBOARDS_PASSWORD:=$(generate_key "dashboards-password" 20)}"
+	DASHBOARDS_PASSWORD=$(generate_key "dashboards-password" 20 "${DASHBOARDS_PASSWORD:-}")
 
 	# configure login&pass for Dashboards, used by Nginx HTTP Basic Authentication
 	echo "${DASHBOARDS_USERNAME:-"onlyoffice"}:$(openssl passwd -6 -stdin <<< "${DASHBOARDS_PASSWORD}")" > /etc/openresty/.htpasswd_dashboards
