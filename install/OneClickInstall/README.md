@@ -410,7 +410,7 @@ The installation scripts support the following operating systems, which are **re
 
 ## 🍎 macOS
 
-Apps can be installed in Docker on macOS (Apple Silicon only) with [Docker Desktop](https://docs.docker.com/desktop/setup/install/mac-install/). The DEB/RPM installation is not available.
+Apps can be installed in Docker on macOS (Apple Silicon and Intel) with [Docker Desktop](https://docs.docker.com/desktop/setup/install/mac-install/). The DEB/RPM installation is not available.
 
 - Run the script **without** `sudo`: Docker Desktop works per user.
 - [Homebrew](https://brew.sh) is required. The script installs `bash`, `coreutils`, `findutils`, `gnu-sed`, `grep`, `gnu-tar` and `jq` with it and re-runs itself under the Homebrew `bash`.
