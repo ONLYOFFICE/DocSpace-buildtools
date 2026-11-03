@@ -89,6 +89,7 @@ sudo bash <script-name> package -h
 | `--username`            | `<USER>`                                  | -                         | Registry login                 |
 | `--password`            | `<PASS>`                                  | -                         | Registry password              |
 | `--volumesdir`          | `<DIR>`                                   | `/var/lib/docker/volumes` | Host dir for Docker volumes    |
+| `--configoverride`      | `<PATH>`                                  | -                         | Host file (or directory) mounted as `appsettings.<edition>.json` into the ONLYOFFICE Apps containers |
 
 #### ONLYOFFICE Apps Core
 | Flag                    | Value placeholder                         | Default value             | Description                    |
@@ -114,6 +115,8 @@ You can switch topology on an existing install with `--update true --deployment-
 MySQL/OpenSearch/Document Server are reused as-is (no data loss), only the app layer is replaced.
 Not all Docker-specific flags apply in `standalone` mode (e.g. `--installrabbitmq`/`--installredis`
 are ignored, since that topology has no separate Redis/RabbitMQ containers).
+
+`--configoverride` works in every topology: the file is created if it does not exist (`{}` for Community, a copy of the image's `appsettings.<edition>.json` for Enterprise and Developer) and is mounted into all ONLYOFFICE Apps containers (`docker-compose.yml` in `standalone`, `apps-stack.yml` in `stack`, `apps.yml` and `notify.yml` in `microservices`). Its values take priority over the built-in `appsettings.json`, and the setting is kept in `.env`, so it survives `--update`. Keep the file outside the installation directory, since that directory is replaced on update. Arrays are merged by index with the built-in ones: to remove an entry of a built-in array, replace it with a duplicate of another entry instead of shortening the list.
 
 #### Document Server (ONLYOFFICE Docs)
 | Flag                    | Value placeholder           | Default value                  | Description                             |
@@ -393,8 +396,8 @@ The installation scripts support the following operating systems, which are **re
 
 <!-- OS-SUPPORT-LIST-START -->
 - RHEL 9
-- CentOS 9S
-- CentOS 10S
+- CentOS 9S (x86_64, ARM64)
+- CentOS 10S (x86_64, ARM64)
 - Fedora 43
 - Fedora 44
 - Debian 11 (x86_64, ARM64)

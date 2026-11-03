@@ -424,7 +424,9 @@ update_configs() {
         -e "this.files.docservice.secret.header=process.env.DOCUMENT_SERVER_JWT_HEADER" \
         -e "this.files.docservice.url.portal=process.env.APP_URL_PORTAL" \
         -e "this.core.notify.postman='services'" \
-        -e "this.ai.mcp[0].endpoint=process.env.MCP_ENDPOINT"
+        -e "this.ai.mcp[0].endpoint=process.env.MCP_ENDPOINT" \
+        -e "this.ai.documentAgent.url=process.env.DOCUMENT_AGENT_URL||''" \
+        -e "this.ai.documentAgent.token=process.env.DOCUMENT_AGENT_TOKEN||''"
 
     # Same forwarded-headers trust as docker-entrypoint.py: this container's own network and loopback, plus APP_KNOWN_NETWORKS/APP_KNOWN_PROXIES.
     export KNOWN_NETWORKS_JSON KNOWN_PROXIES_JSON
