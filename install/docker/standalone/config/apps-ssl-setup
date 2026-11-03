@@ -5,7 +5,14 @@ set -e
 # macOS: the script needs bash 4+ and GNU tools, take them from Homebrew when run directly (keep this block bash 3.2 compatible)
 if [[ "$OSTYPE" == darwin* ]] && { [ "${BASH_VERSINFO[0]}" -lt 4 ] || ! chmod --version >/dev/null 2>&1; }; then
   BREW_BIN=$(PATH="$PATH:/opt/homebrew/bin:/usr/local/bin" command -v brew) || true
-  [ -n "$BREW_BIN" ] || { echo "Homebrew is required on macOS, see https://brew.sh" >&2; exit 1; }
+  if [ -z "$BREW_BIN" ]; then
+    echo "Homebrew is required on macOS, see https://brew.sh" >&2
+    # Rosetta also reports x86_64, so the hardware is asked about Apple Silicon
+    if [ "$(uname -m)" = "x86_64" ] && [ "$(sysctl -n hw.optional.arm64 2>/dev/null)" != "1" ]; then
+      echo "On Intel Macs the Homebrew installer refuses to run, because Homebrew no longer supports Intel: install it manually" >&2
+    fi
+    exit 1
+  fi
   BREW_PREFIX=$("$BREW_BIN" --prefix) || true
   [ -n "$BREW_PREFIX" ] || { echo "Could not resolve the Homebrew prefix" >&2; exit 1; }
   for FORMULA in bash coreutils gnu-sed; do

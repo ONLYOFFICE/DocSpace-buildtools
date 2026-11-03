@@ -39,7 +39,14 @@
 if [[ "$OSTYPE" == darwin* ]]; then
     [ "$EUID" -eq 0 ] && { echo "On macOS, run this script without sudo" >&2; exit 1; }
     BREW_BIN=$(PATH="$PATH:/opt/homebrew/bin:/usr/local/bin" command -v brew)
-    [ -n "$BREW_BIN" ] || { echo "Homebrew is required on macOS, see https://brew.sh" >&2; exit 1; }
+    if [ -z "$BREW_BIN" ]; then
+        echo "Homebrew is required on macOS, see https://brew.sh" >&2
+        # Rosetta also reports x86_64, so the hardware is asked about Apple Silicon
+        if [ "$(uname -m)" = "x86_64" ] && [ "$(sysctl -n hw.optional.arm64 2>/dev/null)" != "1" ]; then
+            echo "On Intel Macs the Homebrew installer refuses to run, because Homebrew no longer supports Intel: install it manually" >&2
+        fi
+        exit 1
+    fi
     BREW_PREFIX=$("$BREW_BIN" --prefix)
     [ -n "$BREW_PREFIX" ] || { echo "Could not resolve the Homebrew prefix" >&2; exit 1; }
     MISSING_FORMULAE=()
