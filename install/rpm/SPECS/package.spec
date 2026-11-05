@@ -11,6 +11,8 @@ The service which handles API requests related to backup.
 
 %package        common
 Provides:       %{legacy_product}-common = %{version}-%{release}
+Provides:       user(%{package_sysname})
+Provides:       group(%{package_sysname})
 Obsoletes:      %{legacy_product}-common < %{version}-%{release}
 Summary:        Common
 BuildArch:      noarch

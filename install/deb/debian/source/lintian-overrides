@@ -1,10 +1,8 @@
-# Ignoring node_modules errors due to lack of ability to influence them.
-# A single "*" spans multiple path segments here (confirmed on the real CI lintian
-# version with a reproduction of pnpm's nested node_modules/.pnpm/.../node_modules/*
-# layout), so this stays scoped instead of matching package-wide.
-embedded-javascript-library var/www/{{package_sysname}}/{{product}}/*/node_modules/*
+# Ignoring bundled node_modules findings; "*" spans nested paths.
+# Verified with lintian 2.129.0ubuntu2.1: JS uses "please use <package> [path]", static binaries use "[path]".
+embedded-javascript-library * [var/www/{{package_sysname}}/{{product}}/*/node_modules/*]
 unusual-interpreter */node_modules/*
-statically-linked-binary var/www/{{package_sysname}}/{{product}}/*/node_modules/*
+statically-linked-binary [var/www/{{package_sysname}}/{{product}}/*/node_modules/*]
 
 # The use of the /var/www directory is caused by its past history as the default document root
 dir-or-file-in-var-www
@@ -69,7 +67,4 @@ unknown-java-class-version
 
 # dpkg-sig appends a _gpgorigin member when signing the .deb; lintian flags this as an unexpected/misplaced ar member, but it's how our packages are signed in CI
 misplaced-extra-member-in-deb
-
-# Ignoring errors due to lack of ability to influence them (alpine-librdkafka.so is the musl/Alpine-targeted build bundled by the same NuGet package as the glibc one; confirmed still an active check on the lintian version the CI runner actually installs, unlike a newer lintian we mistakenly tested against)
-library-not-linked-against-libc
 

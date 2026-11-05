@@ -1,6 +1,10 @@
 # Ignoring node_modules errors due to lack of ability to influence them
 addFilter(r'node_modules')
 
+# rpmlint 2.10.0 does not recognize RPM 6 key fingerprints.
+# Keep strict rpmkeys verification before upload: this also filters real no-signature errors.
+addFilter(r'E: no-signature$')
+
 # The bundled Node.js CLI entrypoint uses the standard `#!/usr/bin/env node` shebang; hardcoding an absolute interpreter path would break the upstream npm packaging convention
 addFilter(r'E: env-script-interpreter')
 
