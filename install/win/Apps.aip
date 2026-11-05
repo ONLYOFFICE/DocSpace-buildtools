@@ -340,7 +340,7 @@
     <ATTRIBUTE name="CurrentFeature" value="MainFeature"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiFilesComponent">
-    <ROW File="AI.Chat.exe" Component_="AI.Chat.exe" FileName="AICHAT~1.EXE|AI.Chat.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\AI.Chat.exe" SelfReg="false"/>
+    <ROW File="AI.Chat.exe" Component_="AI.Chat.exe" FileName="AICHAT~1.EXE|AI.Chat.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\AI.Chat.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.Files.exe" Component_="ASC.Files.exe" FileName="ASCFIL~1.EXE|ASC.Files.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\products\ASC.Files\server\ASC.Files.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.People.exe" Component_="ASC.People.exe" FileName="ASCPEO~1.EXE|ASC.People.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\products\ASC.People\server\ASC.People.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.ApiSystem.exe" Component_="ASC.ApiSystem.exe" FileName="ASCAPI~1.EXE|ASC.ApiSystem.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.ApiSystem\service\ASC.ApiSystem.exe" SelfReg="false" DigSign="true"/>
@@ -366,7 +366,7 @@
     <ROW File="ASC.TelegramService.exe" Component_="ASC.TelegramService.exe" FileName="ASCTEL~1.EXE|ASC.TelegramService.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\services\ASC.TelegramService\service\ASC.TelegramService.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.AI.exe" Component_="ASC.AI.exe" FileName="ASCAI~1.EXE|ASC.AI.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\products\ASC.AI\server\ASC.AI.exe" SelfReg="false" DigSign="true"/>
     <ROW File="ASC.AI.Worker.exe" Component_="ASC.AI.Worker.exe" FileName="ASCAIS~1.EXE|ASC.AI.Worker.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\products\ASC.AI\service\ASC.AI.Worker.exe" SelfReg="false" DigSign="true"/>
-    <ROW File="MCP.exe" Component_="MCP.exe" FileName="MCP.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\MCP.exe" SelfReg="false"/>
+    <ROW File="MCP.exe" Component_="MCP.exe" FileName="MCP.exe" Version="65535.65535.65535.65535" Attributes="0" SourcePath="Files\tools\MCP.exe" SelfReg="false" DigSign="true"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.BootstrOptComponent">
     <ROW BootstrOptKey="GlobalOptions" DownloadFolder="[AppDataFolder][|Manufacturer]\[|ProductName]\prerequisites" Options="2"/>
