@@ -431,7 +431,8 @@ setup_docs() {
 				${REDIS_DB:+database: process.env.REDIS_DB,}
 			}"
 			fi
-			chown ds:ds ${DS_CONF_DIR}/local.json
+			chown root:ds ${DS_CONF_DIR}/local.json
+			chmod 0640 ${DS_CONF_DIR}/local.json
 			mkdir -p /etc/systemd/system/ds-metrics.service.d
 			printf '[Service]\nEnvironment=DS_METRICS_HOST=127.0.0.1\n' > /etc/systemd/system/ds-metrics.service.d/bind.conf
 			systemctl daemon-reload
