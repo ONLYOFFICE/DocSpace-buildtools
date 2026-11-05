@@ -1308,6 +1308,17 @@
     <ROW Action="MigrateProductRegistry" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="98"/>
     <ROW Action="AI_DATA_SETTER_43" Condition="NOT Installed" Sequence="949"/>
     <ROW Action="ApplyInstalledDocumentServerSettings" Condition="NOT Installed" Sequence="950"/>
+    <ROW Action="AI_DATA_SETTER_35" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( JWT_ENABLED = &quot;true&quot; AND DOCUMENT_SERVER_JWT_SECRET = &quot; &quot; )" Sequence="1102"/>
+    <ROW Action="SetDocumentServerJWTSecretProp" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( JWT_ENABLED = &quot;true&quot; AND DOCUMENT_SERVER_JWT_SECRET = &quot; &quot; )" Sequence="1103"/>
+    <ROW Action="Set_DS_JWT_ENABLED" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( JWT_ENABLED = &quot;true&quot; )" Sequence="1104"/>
+    <ROW Action="Set_DS_JWT_HEADER" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( JWT_ENABLED = &quot;true&quot; )" Sequence="1105"/>
+    <ROW Action="Set_DS_JWT_SECRET" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( JWT_ENABLED = &quot;true&quot; AND DOCUMENT_SERVER_JWT_SECRET = &quot; &quot; )" Sequence="1106"/>
+    <ROW Action="AI_DATA_SETTER_36" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( MACHINE_KEY = &quot; &quot; )" Sequence="1107"/>
+    <ROW Action="SetMachineKey" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( MACHINE_KEY = &quot; &quot; )" Sequence="1108"/>
+    <ROW Action="AI_DATA_SETTER_37" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( DASHBOARDS_PWD = &quot; &quot; )" Sequence="1109"/>
+    <ROW Action="SetDashboardsPwd" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( DASHBOARDS_PWD = &quot; &quot; )" Sequence="1110"/>
+    <ROW Action="AI_DATA_SETTER_41" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( IDENTITY_ENCRYPTION_SECRET = &quot; &quot; )" Sequence="1111"/>
+    <ROW Action="SetIdentityEncryptionSecret" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( IDENTITY_ENCRYPTION_SECRET = &quot; &quot; )" Sequence="1112"/>
     <ROW Action="AI_DOWNGRADE" Condition="AI_NEWERPRODUCTFOUND AND (UILevel &lt;&gt; 5)" Sequence="210"/>
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>
     <ROW Action="AI_STORE_LOCATION" Condition="(Not Installed) OR REINSTALL" Sequence="1501"/>
