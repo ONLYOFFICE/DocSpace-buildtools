@@ -58,6 +58,28 @@ ARG         XVID_SHA256SUM="4e9fd62728885855bc5007fe1be58df42e5e274497591fec3724
 ARG         LIBBLURAY_SHA256SUM="a3dd452239b100dc9da0d01b30e1692693e2a332a7d29917bf84bb10ea7c0b42 libbluray-1.1.2.tar.bz2"
 ARG         LIBZMQ_SHA256SUM="02ecc88466ae38cf2c8d79f09cfd2675ba299a439680b64ade733e26a349edeb v4.3.2.tar.gz"
 ARG         LIBARIBB24_SHA256SUM="f61560738926e57f9173510389634d8c06cabedfa857db4b28fb7704707ff128 v1.0.3.tar.gz"
+ARG         VMAF_SHA256="e7fc00ae1322a7eccfcf6d4f1cdf9c67eec8058709887c8c6c3795c617326f77"
+ARG         OPENCOREAMR_SHA256="2c006cb9d5f651bfb5e60156dbff6af3c9d35c7bbcc9015308c0aff1e14cd341"
+ARG         X264_SHA256="67eeb5d1cadcceb3196bb1fa3a0262843755f0b079476334e88eccb8234a3f3e"
+ARG         X265_SHA256="544d147bf146f8994a7bf8521ed878c93067ea1c7c6e93ab602389be3117eaaf"
+ARG         VPX_SHA256="86df18c694e1c06cc8f83d2d816e9270747a0ce6abe316e93a4f4095689373f6"
+ARG         WEBP_SHA256="3d47b48c40ed6476e8047b2ddb81d93835e0ca1b8d3e8c679afbb3004dd564b1"
+ARG         LAME_SHA256="ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e"
+ARG         FDKAAC_SHA256="ff53d1d01cacc29c071e23192dfefa93bdbeaf775fc5d296259b4859d0306b79"
+ARG         OPENJPEG_SHA256="4ce77b6ef538ef090d9bde1d5eeff8b3069ab56c4906f083475517c2c023dfa7"
+ARG         FONTCONFIG_SHA256="668293fcc4b3c59765cdee5cee05941091c0879edcc24dfec5455ef83912e45c"
+ARG         KVAZAAR_SHA256="213edca448f127f9c6d194cdfd21593d10331f9061d95751424e1001bae60b5d"
+ARG         XORG_MACROS_SHA256="9225c45c3de60faf971979a55a5536f3562baa4b6f02246c23e98ac0c09a75b7"
+ARG         XPROTO_SHA256="6d755eaae27b45c5cc75529a12855fed5de5969b367ed05003944cf901ed43c7"
+ARG         XAU_SHA256="1f123d8304b082ad63a9e89376400a3b1d4c29e67e3ea07b3f659cccca690eea"
+ARG         LIBPTHREAD_STUBS_SHA256="50d5686b79019ccea08bcbd7b02fe5a40634abcfd4146b6e75c6420cc170e9d9"
+ARG         XCBPROTO_SHA256="0698e8f596e4c0dbad71d3dc754d95eb0edbb42df5464e0f782621216fa33ba7"
+ARG         LIBXCB_SHA256="f09a76971437780a602303170fd51b5f7474051722bc39d566a272d2c4bde1b5"
+ARG         LIBXML2_SHA256="8a4ddd706419c210b30b8978a51388937fd9362c34fc9a3d69e4fcc6f8055ee0"
+ARG         LIBSRT_SHA256="e80ca1cd0711b9c70882c12ec365cda1ba852e1ce8acd43161a21a04de0cbf14"
+ARG         FFMPEG_SHA256="47d062731c9f66a78380e35a19aac77cebceccd1c7cc309b9c82343ffc430c3d"
+ARG         AOM_COMMIT="d14c5bb4f336ef1842046089849dee4a301fbbf0"
+ARG         LIBPNG_COMMIT="3e753eb8b2d19c7eb72c81a722a0eeb45b98cabe"
 
 
 ARG         LD_LIBRARY_PATH=/opt/ffmpeg/lib
@@ -99,6 +121,7 @@ RUN \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
         curl -sLO https://github.com/Netflix/vmaf/archive/v${LIBVMAF_VERSION}.tar.gz && \
+        echo "${VMAF_SHA256}  v${LIBVMAF_VERSION}.tar.gz" | sha256sum --check && \
         tar -xz --strip-components=1 -f v${LIBVMAF_VERSION}.tar.gz && \
         cd /tmp/vmaf/libvmaf && \
         meson build --buildtype release --prefix=${PREFIX} && \
@@ -116,8 +139,9 @@ RUN \
         DIR=/tmp/opencore-amr && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
-        curl -sL https://sourceforge.net/projects/opencore-amr/files/opencore-amr/opencore-amr-${OPENCOREAMR_VERSION}.tar.gz/download | \
-        tar -zx --strip-components=1 && \
+        curl -sL https://sourceforge.net/projects/opencore-amr/files/opencore-amr/opencore-amr-${OPENCOREAMR_VERSION}.tar.gz/download -o src.tar && \
+        echo "${OPENCOREAMR_SHA256}  src.tar" | sha256sum --check && \
+        tar -x --strip-components=1 -f src.tar && \
         ./configure --prefix="${PREFIX}" --enable-shared  && \
         make && \
         make install && \
@@ -127,8 +151,9 @@ RUN \
         DIR=/tmp/x264 && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
-        curl -sL https://download.videolan.org/pub/videolan/x264/snapshots/x264-snapshot-${X264_VERSION}.tar.bz2 | \
-        tar -jx --strip-components=1 && \
+        curl -sL https://download.videolan.org/pub/videolan/x264/snapshots/x264-snapshot-${X264_VERSION}.tar.bz2 -o src.tar && \
+        echo "${X264_SHA256}  src.tar" | sha256sum --check && \
+        tar -x --strip-components=1 -f src.tar && \
         ./configure --prefix="${PREFIX}" --enable-shared --enable-pic --disable-cli && \
         make && \
         make install && \
@@ -138,9 +163,10 @@ RUN \
         DIR=/tmp/x265 && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
-        curl -sL https://github.com/videolan/x265/archive/refs/tags/${X265_VERSION}.tar.gz | \
-        tar -zx && \
-        cd x265-${X265_VERSION}/buildtools/linux && \
+        curl -sL https://github.com/videolan/x265/archive/refs/tags/${X265_VERSION}.tar.gz -o src.tar && \
+        echo "${X265_SHA256}  src.tar" | sha256sum --check && \
+        tar -x -f src.tar && \
+        cd x265-${X265_VERSION}/build/linux && \
         sed -i "/-DEXTRA_LIB/ s/$/ -DCMAKE_INSTALL_PREFIX=\${PREFIX}/" multilib.sh && \
         sed -i "/^cmake/ s/$/ -DENABLE_CLI=OFF/" multilib.sh && \
         ./multilib.sh && \
@@ -200,8 +226,9 @@ RUN \
         DIR=/tmp/vpx && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
-        curl -sL https://codeload.github.com/webmproject/libvpx/tar.gz/v${VPX_VERSION} | \
-        tar -zx --strip-components=1 && \
+        curl -sL https://codeload.github.com/webmproject/libvpx/tar.gz/v${VPX_VERSION} -o src.tar && \
+        echo "${VPX_SHA256}  src.tar" | sha256sum --check && \
+        tar -x --strip-components=1 -f src.tar && \
         ./configure --prefix="${PREFIX}" --enable-vp8 --enable-vp9 --enable-vp9-highbitdepth --enable-pic --enable-shared \
         --disable-debug --disable-examples --disable-docs --disable-install-bins  && \
         make && \
@@ -212,8 +239,9 @@ RUN \
         DIR=/tmp/vebp && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
-        curl -sL https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-${WEBP_VERSION}.tar.gz | \
-        tar -zx --strip-components=1 && \
+        curl -sL https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-${WEBP_VERSION}.tar.gz -o src.tar && \
+        echo "${WEBP_SHA256}  src.tar" | sha256sum --check && \
+        tar -x --strip-components=1 -f src.tar && \
         ./configure --prefix="${PREFIX}" --enable-shared  && \
         make && \
         make install && \
@@ -223,8 +251,9 @@ RUN \
         DIR=/tmp/lame && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
-        curl -sL https://sourceforge.net/projects/lame/files/lame/${LAME_VERSION}/lame-${LAME_VERSION}.tar.gz/download | \
-        tar -zx --strip-components=1 && \
+        curl -sL https://sourceforge.net/projects/lame/files/lame/${LAME_VERSION}/lame-${LAME_VERSION}.tar.gz/download -o src.tar && \
+        echo "${LAME_SHA256}  src.tar" | sha256sum --check && \
+        tar -x --strip-components=1 -f src.tar && \
         ./configure --prefix="${PREFIX}" --bindir="${PREFIX}/bin" --enable-shared --enable-nasm --disable-frontend && \
         make && \
         make install && \
@@ -237,7 +266,7 @@ RUN \
         curl -sLO http://downloads.xvid.org/downloads/xvidcore-${XVID_VERSION}.tar.gz && \
         echo ${XVID_SHA256SUM} | sha256sum --check && \
         tar -zx -f xvidcore-${XVID_VERSION}.tar.gz && \
-        cd xvidcore/buildtools/generic && \
+        cd xvidcore/build/generic && \
         ./configure --prefix="${PREFIX}" --bindir="${PREFIX}/bin" && \
         make && \
         make install && \
@@ -247,8 +276,9 @@ RUN \
         DIR=/tmp/fdk-aac && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
-        curl -sL https://github.com/mstorsjo/fdk-aac/archive/v${FDKAAC_VERSION}.tar.gz | \
-        tar -zx --strip-components=1 && \
+        curl -sL https://github.com/mstorsjo/fdk-aac/archive/v${FDKAAC_VERSION}.tar.gz -o src.tar && \
+        echo "${FDKAAC_SHA256}  src.tar" | sha256sum --check && \
+        tar -x --strip-components=1 -f src.tar && \
         autoreconf -fiv && \
         ./configure --prefix="${PREFIX}" --enable-shared --datadir="${DIR}" && \
         make && \
@@ -259,8 +289,9 @@ RUN \
         DIR=/tmp/openjpeg && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
-        curl -sL https://github.com/uclouvain/openjpeg/archive/v${OPENJPEG_VERSION}.tar.gz | \
-        tar -zx --strip-components=1 && \
+        curl -sL https://github.com/uclouvain/openjpeg/archive/v${OPENJPEG_VERSION}.tar.gz -o src.tar && \
+        echo "${OPENJPEG_SHA256}  src.tar" | sha256sum --check && \
+        tar -x --strip-components=1 -f src.tar && \
         cmake -DBUILD_THIRDPARTY:BOOL=ON -DCMAKE_INSTALL_PREFIX="${PREFIX}" . && \
         make && \
         make install && \
@@ -294,7 +325,7 @@ RUN  \
         DIR=/tmp/fribidi && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
-        curl -sLO https://codeload.github.com/fribidi/fribidi/tar.gz/${FRIBIDI_VERSION} && \
+        curl -sL https://codeload.github.com/fribidi/fribidi/tar.gz/${FRIBIDI_VERSION} -o ${FRIBIDI_VERSION}.tar.gz && \
         echo ${FRIBIDI_SHA256SUM} | sha256sum --check && \
         tar -zx --strip-components=1 -f ${FRIBIDI_VERSION}.tar.gz && \
         sed -i 's/^SUBDIRS =.*/SUBDIRS=gen.tab charset lib bin/' Makefile.am && \
@@ -309,6 +340,7 @@ RUN  \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
         curl -sLO https://www.freedesktop.org/software/fontconfig/release/fontconfig-${FONTCONFIG_VERSION}.tar.bz2 && \
+        echo "${FONTCONFIG_SHA256}  fontconfig-${FONTCONFIG_VERSION}.tar.bz2" | sha256sum --check && \
         tar -jx --strip-components=1 -f fontconfig-${FONTCONFIG_VERSION}.tar.bz2 && \
         ./configure --prefix="${PREFIX}" --disable-static --enable-shared && \
         make && \
@@ -319,7 +351,7 @@ RUN  \
         DIR=/tmp/libass && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
-        curl -sLO https://codeload.github.com/libass/libass/tar.gz/${LIBASS_VERSION} && \
+        curl -sL https://codeload.github.com/libass/libass/tar.gz/${LIBASS_VERSION} -o ${LIBASS_VERSION}.tar.gz && \
         echo ${LIBASS_SHA256SUM} | sha256sum --check && \
         tar -zx --strip-components=1 -f ${LIBASS_VERSION}.tar.gz && \
         ./autogen.sh && \
@@ -333,6 +365,7 @@ RUN \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
         curl -sLO https://github.com/ultravideo/kvazaar/archive/v${KVAZAAR_VERSION}.tar.gz && \
+        echo "${KVAZAAR_SHA256}  v${KVAZAAR_VERSION}.tar.gz" | sha256sum --check && \
         tar -zx --strip-components=1 -f v${KVAZAAR_VERSION}.tar.gz && \
         ./autogen.sh && \
         ./configure --prefix="${PREFIX}" --disable-static --enable-shared && \
@@ -342,7 +375,8 @@ RUN \
 
 RUN \
         DIR=/tmp/aom && \
-        git clone --branch ${AOM_VERSION} --depth 1 https://aomedia.googlesource.com/aom ${DIR} ; \
+        git clone --branch ${AOM_VERSION} --depth 1 https://aomedia.googlesource.com/aom ${DIR} && \
+        test "$(git -C ${DIR} rev-parse HEAD)" = "${AOM_COMMIT}" && \
         cd ${DIR} ; \
         rm -rf CMakeCache.txt CMakeFiles ; \
         mkdir -p ./aom_build ; \
@@ -358,6 +392,7 @@ RUN \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
         curl -sLO https://www.x.org/archive//individual/util/util-macros-${XORG_MACROS_VERSION}.tar.gz && \
+        echo "${XORG_MACROS_SHA256}  util-macros-${XORG_MACROS_VERSION}.tar.gz" | sha256sum --check && \
         tar -zx --strip-components=1 -f util-macros-${XORG_MACROS_VERSION}.tar.gz && \
         ./configure --srcdir=${DIR} --prefix="${PREFIX}" && \
         make && \
@@ -369,6 +404,7 @@ RUN \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
         curl -sLO https://www.x.org/archive/individual/proto/xproto-${XPROTO_VERSION}.tar.gz && \
+        echo "${XPROTO_SHA256}  xproto-${XPROTO_VERSION}.tar.gz" | sha256sum --check && \
         tar -zx --strip-components=1 -f xproto-${XPROTO_VERSION}.tar.gz && \
         ./configure --srcdir=${DIR} --prefix="${PREFIX}" && \
         make && \
@@ -380,6 +416,7 @@ RUN \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
         curl -sLO https://www.x.org/archive/individual/lib/libXau-${XAU_VERSION}.tar.gz && \
+        echo "${XAU_SHA256}  libXau-${XAU_VERSION}.tar.gz" | sha256sum --check && \
         tar -zx --strip-components=1 -f libXau-${XAU_VERSION}.tar.gz && \
         ./configure --srcdir=${DIR} --prefix="${PREFIX}" && \
         make && \
@@ -391,6 +428,7 @@ RUN \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
         curl -sLO https://xcb.freedesktop.org/dist/libpthread-stubs-${LIBPTHREAD_STUBS_VERSION}.tar.gz && \
+        echo "${LIBPTHREAD_STUBS_SHA256}  libpthread-stubs-${LIBPTHREAD_STUBS_VERSION}.tar.gz" | sha256sum --check && \
         tar -zx --strip-components=1 -f libpthread-stubs-${LIBPTHREAD_STUBS_VERSION}.tar.gz && \
         ./configure --prefix="${PREFIX}" && \
         make && \
@@ -402,6 +440,7 @@ RUN \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
         curl -sLO https://xcb.freedesktop.org/dist/xcb-proto-${XCBPROTO_VERSION}.tar.gz && \
+        echo "${XCBPROTO_SHA256}  xcb-proto-${XCBPROTO_VERSION}.tar.gz" | sha256sum --check && \
         tar -zx --strip-components=1 -f xcb-proto-${XCBPROTO_VERSION}.tar.gz && \
         ACLOCAL_PATH="${PREFIX}/share/aclocal" ./autogen.sh && \
         ./configure --prefix="${PREFIX}" && \
@@ -414,6 +453,7 @@ RUN \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
         curl -sLO https://xcb.freedesktop.org/dist/libxcb-${LIBXCB_VERSION}.tar.gz && \
+        echo "${LIBXCB_SHA256}  libxcb-${LIBXCB_VERSION}.tar.gz" | sha256sum --check && \
         tar -zx --strip-components=1 -f libxcb-${LIBXCB_VERSION}.tar.gz && \
         ACLOCAL_PATH="${PREFIX}/share/aclocal" ./autogen.sh && \
         ./configure --prefix="${PREFIX}" --disable-static --enable-shared && \
@@ -426,8 +466,9 @@ RUN \
         DIR=/tmp/libxml2 && \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
-        curl -sL https://github.com/GNOME/libxml2/archive/refs/tags/v${LIBXML2_VERSION}.tar.gz | \
-        tar -xz --strip-components=1 && \
+        curl -sL https://github.com/GNOME/libxml2/archive/refs/tags/v${LIBXML2_VERSION}.tar.gz -o src.tar && \
+        echo "${LIBXML2_SHA256}  src.tar" | sha256sum --check && \
+        tar -x --strip-components=1 -f src.tar && \
         ./autogen.sh --prefix="${PREFIX}" --with-ftp=no --with-http=no --with-python=no && \
         make && \
         make install && \
@@ -467,6 +508,7 @@ RUN \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
         curl -sLO https://github.com/Haivision/srt/archive/v${LIBSRT_VERSION}.tar.gz && \
+        echo "${LIBSRT_SHA256}  v${LIBSRT_VERSION}.tar.gz" | sha256sum --check && \
         tar -xz --strip-components=1 -f v${LIBSRT_VERSION}.tar.gz && \
         cmake -DCMAKE_INSTALL_PREFIX="${PREFIX}" . && \
         make && \
@@ -479,6 +521,7 @@ RUN \
         mkdir -p ${DIR} && \
         cd ${DIR} && \
         git clone https://git.code.sf.net/p/libpng/code ${DIR} -b v${LIBPNG_VERSION} --depth 1 && \
+        test "$(git -C ${DIR} rev-parse HEAD)" = "${LIBPNG_COMMIT}" && \
         ./autogen.sh && \
         ./configure --prefix="${PREFIX}" && \
         make check && \
@@ -503,6 +546,7 @@ RUN \
 RUN  \
         DIR=/tmp/ffmpeg && mkdir -p ${DIR} && cd ${DIR} && \
         curl -sLO https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.bz2 && \
+        echo "${FFMPEG_SHA256}  ffmpeg-${FFMPEG_VERSION}.tar.bz2" | sha256sum --check && \
         tar -jx --strip-components=1 -f ffmpeg-${FFMPEG_VERSION}.tar.bz2 && \
         ./configure     --disable-debug  --disable-doc    --disable-ffplay   --enable-shared --enable-gpl  --extra-libs=-ldl && \
         make ;  make install
