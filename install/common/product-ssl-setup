@@ -148,7 +148,7 @@ case $1 in
     [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ] && systemctl restart openresty || service openresty restart
     json -I -f ${USER_CONF} -e "this.files.docservice.url.portal = \"http://localhost:80\""
     json -I -f ${USER_CONF} -e "delete this.core['server-root']"
-    chown onlyoffice:onlyoffice ${USER_CONF}
+    chown root:onlyoffice ${USER_CONF} && chmod 640 ${USER_CONF}
     
     read_connection_string
     if [ -z "$(mysql_exec -N -s -e "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1")" ]; then
@@ -233,7 +233,7 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
     sed -i "s~\(ssl_certificate \).*;~\1${CERTIFICATE_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
     sed -i "s~\(ssl_certificate_key \).*;~\1${PRIVATEKEY_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
     sed -i "s~\(ssl_dhparam \).*;~\1${DHPARAM_PATH};~g" ${OPENRESTY}/onlyoffice-proxy.conf
-    chown onlyoffice:onlyoffice ${USER_CONF}
+    chown root:onlyoffice ${USER_CONF} && chmod 640 ${USER_CONF}
 
     # A cert handed to us via -f may still renew through Docs' own --nginx authenticator - re-point it at our webroot instead.
     INHERITED_CERT_NAME=""
