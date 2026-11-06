@@ -14,6 +14,8 @@ ARG PLUGIN_NODE_TYPES_VERSION="18.19.0"
 ARG JAVA_VERSION="25"
 ARG JAVA_RUN_VERSION="${JAVA_VERSION}-jre"
 ARG MAVEN_VERSION="3.9-eclipse-temurin-${JAVA_VERSION}"
+# Released MCP server, pinned by version and digest; pass a 4testing image here to try a pre-release build
+ARG MCP_IMAGE="onlyoffice/docspace-mcp:3.4.0@sha256:0771f715a95a0b0008d7883b959a0322b3c3b02381b577bb35a56abceccc2f5a"
 
 # Image resources
 FROM --platform=$BUILDPLATFORM python:${PYTHON_VERSION} AS src
@@ -657,7 +659,7 @@ CMD ["supervisord", "-n"]
 
 FROM node:${NODE_PATCH_VERSION}-bookworm-slim AS node-bin
 
-FROM onlyoffice/4testing-docspace-mcp:latest AS mcp
+FROM ${MCP_IMAGE} AS mcp
 
 ## Image standalone ##
 FROM dotnetrun AS standalone
@@ -676,7 +678,8 @@ RUN set -eux; \
         gettext-base supervisor libcap2-bin certbot; \
     curl -fsSL https://github.com/trentm/json/raw/master/lib/json.js -o /usr/local/bin/json && chmod +x /usr/local/bin/json; \
     wget -qO- https://openresty.org/package/pubkey.gpg | gpg --dearmor -o /usr/share/keyrings/openresty.gpg; \
-    echo "deb [arch=$TARGETARCH signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/$([ "$TARGETARCH" = arm64 ] && echo arm64/)ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") main" > /etc/apt/sources.list.d/openresty.list; \
+    [ "$(gpg --show-keys --with-colons /usr/share/keyrings/openresty.gpg | awk -F: '/^fpr:/ {print $10; exit}')" = "E52218E7087897DC6DEA6D6D97DB7443D5EDEB74" ] || exit 1; \
+    echo "deb [arch=$TARGETARCH signed-by=/usr/share/keyrings/openresty.gpg] https://openresty.org/package/$([ "$TARGETARCH" = arm64 ] && echo arm64/)ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") main" > /etc/apt/sources.list.d/openresty.list; \
     apt-get update && apt-get install -y --no-install-recommends openresty; \
     # let the unprivileged onlyoffice user bind :80, then prepare nginx dirs
     setcap 'cap_net_bind_service=+ep' /usr/local/openresty/nginx/sbin/nginx; \

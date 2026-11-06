@@ -208,10 +208,12 @@ if [ "$DIST" = "ubuntu" ] && { [ "${PRESERVE_DOCS}" = false ] || ! package_insta
 fi
 
 curl -fsSL https://openresty.org/package/pubkey.gpg | gpg --batch --yes --dearmor -o /usr/share/keyrings/openresty.gpg
+# The repository is trusted only through this key, so refuse a key with any other fingerprint
+[ "$(gpg --show-keys --with-colons /usr/share/keyrings/openresty.gpg | awk -F: '/^fpr:/ {print $10; exit}')" = "E52218E7087897DC6DEA6D6D97DB7443D5EDEB74" ] || { echo "ERROR: unexpected OpenResty signing key" >&2; exit 1; }
 # Temporary OpenResty codename fallback for Debian 13 and Ubuntu 26.04.
 OPENRESTY_CODENAME=$([ "${DISTRIB_CODENAME}" = "trixie" ] && echo "bookworm" || echo "${DISTRIB_CODENAME/resolute/noble}")
 OPENRESTY_REPO_PATH="${DIST}"; [ "$ARCH" = "arm64" ] && OPENRESTY_REPO_PATH="arm64/${DIST}"
-echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/${OPENRESTY_REPO_PATH} ${OPENRESTY_CODENAME} $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
+echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] https://openresty.org/package/${OPENRESTY_REPO_PATH} ${OPENRESTY_CODENAME} $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
 
 # Add Java repo.
 curl -fsSL https://packages.adoptium.net/artifactory/api/gpg/key/public | gpg --batch --yes --dearmor -o /usr/share/keyrings/adoptium.gpg
