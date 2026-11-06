@@ -16,4 +16,4 @@ then
     PARAMETERS=""
 fi
 
-dotnet ASC.Migration.Runner.dll ${PARAMETERS}
+exec dotnet ASC.Migration.Runner.dll ${PARAMETERS}
