@@ -82,7 +82,7 @@ check_hardware () {
 
 	AVAILABLE_DISK_SPACE=$(df -Pm / | awk 'NR == 2 { print $4 }')
 	TOTAL_MEMORY=$(free --mega | awk '/^Mem:/ { print $2 }')
-	CPU_CORES_NUMBER=$(nproc)
+	CPU_CORES_NUMBER=$(nproc --all)
 
 	local requirements_not_met=""
 
