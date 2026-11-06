@@ -681,8 +681,8 @@ RUN set -eux; \
     # let the unprivileged onlyoffice user bind :80, then prepare nginx dirs
     setcap 'cap_net_bind_service=+ep' /usr/local/openresty/nginx/sbin/nginx; \
     mkdir -p /var/log/nginx /var/log/openresty /var/log/supervisor /etc/nginx/conf.d /etc/nginx/includes /etc/nginx/templates /etc/letsencrypt /letsencrypt; \
-    # /etc/ssl/certs (created by ca-certificates, owned by root) needs to be writable by onlyoffice too: the entrypoint generates dhparam.pem there at runtime, and onlyoffice-proxy-ssl.conf requires it.
-    chown -R onlyoffice:onlyoffice /etc/nginx /var/log/nginx /var/log/openresty /var/log/supervisor /usr/local/openresty /etc/letsencrypt /letsencrypt /etc/ssl/certs; \
+    # The entrypoint runs as root and generates dhparam.pem itself, so /etc/ssl/certs and the openresty binaries stay root-owned; onlyoffice only writes the nginx logs under /usr/local/openresty
+    chown -R onlyoffice:onlyoffice /etc/nginx /var/log/nginx /var/log/openresty /var/log/supervisor /etc/letsencrypt /letsencrypt /usr/local/openresty/nginx/logs; \
     # onlyoffice-document-server shares app_data/log_data with this container (docker-compose.yml) and owns its own Data dir as "ds", gid 102 in its own image - confirmed live. It only chowns that directory's own inode (not recursively), never its mode, so membership here plus the entrypoint's one-time chmod g+w survives any number of its restarts, no ongoing fixup needed. Keep gid 102 in sync if onlyoffice/documentserver's own "ds" group ever changes.
     groupadd -g 102 dsdata && usermod -aG 102 onlyoffice; \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb /tmp/*

@@ -612,16 +612,21 @@ main() {
     setup_nginx_ssl
     log "🌐 Initializing nginx..." && /nginx/docker-entrypoint.sh
 
+    # onlyoffice owns the nginx configuration and logs; the openresty binaries, its Lua libraries and the CA bundle stay with root, so nothing root runs here can be replaced from the onlyoffice account; /etc/nginx/certs is skipped because it is a read-only bind mount
+    find /etc/nginx /var/log/nginx /var/log/openresty -path /etc/nginx/certs -prune -o -exec chown -h onlyoffice:onlyoffice {} +
+    chown -hR root:root /usr/local/openresty /etc/ssl/certs
+    chown -h onlyoffice:onlyoffice /usr/local/openresty/nginx/logs
+
+    # The config is writable by onlyoffice, so it is never parsed by root: openresty -t runs as onlyoffice
+    run_as_onlyoffice() { setpriv --reuid=onlyoffice --regid=onlyoffice --init-groups "$@"; }
+
     # The Dockerfile already strips quic/http3 at build time when this openresty build lacks it; this is a second check in case that detection was wrong - better HTTPS without HTTP/3 than openresty crash-looping.
-    if ! /usr/local/openresty/bin/openresty -t >/tmp/nginx-t.log 2>&1 && grep -qi 'quic\|http/3\|http3' /tmp/nginx-t.log; then
+    if ! run_as_onlyoffice /usr/local/openresty/bin/openresty -t >/tmp/nginx-t.log 2>&1 && grep -qi 'quic\|http/3\|http3' /tmp/nginx-t.log; then
         log "openresty -t failed on HTTP/3, retrying without it:"
         cat /tmp/nginx-t.log
         sed -i -e '/quic/d' -e '/alt-svc/d' /etc/nginx/conf.d/onlyoffice-proxy.conf
-        /usr/local/openresty/bin/openresty -t
+        run_as_onlyoffice /usr/local/openresty/bin/openresty -t
     fi
-
-    # Everything above ran as root and can leave nginx/openresty's own files root-owned: the router's init scripts (prepare-nginx-router.sh's sed -i) rewrite conf.d files, and openresty -t itself creates its configured error_log if missing - confirmed live, both broke openresty (runs as onlyoffice below) with "Permission denied" until fixed here, right before it starts. /etc/nginx/certs is excluded: it's the read-only certs bind mount (docker-compose.yml), chown there fails the whole command (EROFS) - the certs are already world-readable (644), so onlyoffice doesn't need to own them anyway.
-    find /etc/nginx /var/log/nginx /var/log/openresty /usr/local/openresty -path /etc/nginx/certs -prune -o -exec chown -h onlyoffice:onlyoffice {} +
 
     # openresty -t above (as root) also creates the *_temp dirs owned by nobody:root mode 700, so onlyoffice workers fail to buffer large request bodies (chunked upload -> 500, "open() /tmp/client_temp/... failed (13: Permission denied)")
     find /tmp -maxdepth 1 \( -name client_temp -o -name proxy_temp_path -o -name fastcgi_temp -o -name uwsgi_temp -o -name scgi_temp \) -exec chown -hR onlyoffice:onlyoffice {} +
