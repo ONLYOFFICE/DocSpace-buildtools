@@ -1199,7 +1199,6 @@ install_product () {
 		fi
 
 		reconfigure ENV_EXTENSION "${ENV_EXTENSION}"
-		reconfigure IDENTITY_PROFILE "${IDENTITY_PROFILE:-"prod,server"}"
 		reconfigure APP_CORE_MACHINEKEY "${APP_CORE_MACHINEKEY}"
 		reconfigure IDENTITY_ENCRYPTION_SECRET "${IDENTITY_ENCRYPTION_SECRET}"
 		reconfigure APP_CORE_BASE_DOMAIN "${APP_CORE_BASE_DOMAIN}"
