@@ -24,6 +24,28 @@ SYSTEMD_DIR=$(dirname $($(command -v dpkg-query &> /dev/null && echo "dpkg-query
 ENVIRONMENT=$(grep -oP 'ENVIRONMENT=\K.*' "${CONFIG_DIR}/systemd.env")
 USER_CONF="${CONFIG_DIR}/appsettings.${ENVIRONMENT}.json"
 
+# Read only the needed keys of the connection string into plain variables: the file belongs to the service user, so its content is never exported or evaluated
+read_connection_string() {
+  local item key value
+  Server="" Port="" User_ID="" Password="" Database=""
+  IFS=';' read -ra CONN_ITEM <<< "$(json -f "$USER_CONF" ConnectionStrings.default.connectionString)"
+  for item in "${CONN_ITEM[@]}"; do
+    key="${item%%=*}"; value="${item#*=}"; key="${key// /_}"
+    case "$key" in
+      Server) Server="$value" ;;
+      Port) Port="$value" ;;
+      User_ID) User_ID="$value" ;;
+      Password) Password="$value" ;;
+      Database) Database="$value" ;;
+    esac
+  done
+}
+
+# The password goes through the environment of this one command instead of the command line
+mysql_exec() {
+  MYSQL_PWD="$Password" mysql -h"$Server" -P"${Port:-3306}" -u"$User_ID" "$Database" "$@"
+}
+
 # Check if configuration files are present
 if [ ! -f "${OPENRESTY}/onlyoffice-proxy-ssl.conf.template" -a ! -f "${OPENRESTY}/onlyoffice-proxy.conf.template" ]; then
  echo "Error: proxy configuration file not found." && exit 1
@@ -128,11 +150,9 @@ case $1 in
     json -I -f ${USER_CONF} -e "delete this.core['server-root']"
     chown onlyoffice:onlyoffice ${USER_CONF}
     
-    IFS=';' read -ra CONN_ITEM <<< "$(json -f "$USER_CONF" ConnectionStrings.default.connectionString)"; 
-    for ITEM in "${CONN_ITEM[@]}"; do KEY="${ITEM%%=*}"; VAL="${ITEM#*=}"; KEY="${KEY// /_}"; export "$KEY=$VAL"; done
-    MYSQL=(mysql -h"$Server" -P"${Port:-3306}" -u"$User_ID" "-p$Password" "$Database")
-    if [ -z "$(${MYSQL[@]} -N -s -e "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1")" ]; then
-      ${MYSQL[@]} -e "UPDATE tenants_tenants SET mappeddomain='NULL' WHERE alias='localhost';"
+    read_connection_string
+    if [ -z "$(mysql_exec -N -s -e "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1")" ]; then
+      mysql_exec -e "UPDATE tenants_tenants SET mappeddomain='NULL' WHERE alias='localhost';"
     fi
     
     if [ "${PRESERVE_DOCS}" = true ]; then
@@ -301,11 +321,9 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
     fi
 
     # fix Bug 75803 - In the "What's new..." email, the portal domain comes as localhost
-    IFS=';' read -ra CONN_ITEM <<< "$(json -f "$USER_CONF" ConnectionStrings.default.connectionString)"; 
-    for ITEM in "${CONN_ITEM[@]}"; do KEY="${ITEM%%=*}"; VAL="${ITEM#*=}"; KEY="${KEY// /_}"; export "$KEY=$VAL"; done
-    MYSQL=(mysql -h"$Server" -P"${Port:-3306}" -u"$User_ID" "-p$Password" "$Database")
-    if [[ "${INHERIT_SSL_INTERNAL_PORTAL}" != "true" ]] && [ -z "$(${MYSQL[@]} -N -s -e "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1")" ]; then
-      ${MYSQL[@]} -e "UPDATE tenants_tenants SET mappeddomain='${DOMAIN}' WHERE alias='localhost';"
+    read_connection_string
+    if [[ "${INHERIT_SSL_INTERNAL_PORTAL}" != "true" ]] && [ -z "$(mysql_exec -N -s -e "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1")" ]; then
+      mysql_exec -e "UPDATE tenants_tenants SET mappeddomain='${DOMAIN}' WHERE alias='localhost';"
     fi
 
     [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ] && systemctl restart openresty || service openresty restart
