@@ -130,11 +130,20 @@ install_json() {
 	fi
 }
 
+# The value is always a plain string handed over through the environment, never part of the JavaScript that is run
 json_configuration() {
 	local JSON_FILE="$1" FIELD_PATH="$2" FIELD_VALUE="$3"
 	JSON_FIELD_VALUE="$FIELD_VALUE" ${JSON} "$JSON_FILE" -e \
 	"var p='$FIELD_PATH'.split('.'),k=p.pop(),o=p.reduce((a,x)=>(a[x]??={}),this);
-	o[k] = $( [[ $FIELD_VALUE =~ ^(\{.*\}|\[.*\])$ ]] && printf %s "$FIELD_VALUE" || printf %s 'process.env.JSON_FIELD_VALUE')" >/dev/null 2>&1
+	o[k] = process.env.JSON_FIELD_VALUE" >/dev/null 2>&1
+}
+
+# FIELD_CODE is a JavaScript literal fixed in this script; any variable data it needs is read from process.env
+json_configuration_literal() {
+	local JSON_FILE="$1" FIELD_PATH="$2" FIELD_CODE="$3"
+	${JSON} "$JSON_FILE" -e \
+	"var p='$FIELD_PATH'.split('.'),k=p.pop(),o=p.reduce((a,x)=>(a[x]??={}),this);
+	o[k] = $FIELD_CODE" >/dev/null 2>&1
 }
 
 env_configuration() {
@@ -426,9 +435,9 @@ setup_docs() {
 
 			if [ "${ENVIRONMENT}" != "community" ]; then
 				json_configuration "${DS_CONF_DIR}/local.json" "adminPanel.host" "127.0.0.1"
-				RABBITMQ_URI="${RABBITMQ_URI}" json_configuration "${DS_CONF_DIR}/local.json" "rabbitmq" "{ url: process.env.RABBITMQ_URI }"
-				REDIS_HOST="${REDIS_HOST}" REDIS_PORT="${REDIS_PORT}" json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis" "{ host: process.env.REDIS_HOST, port: process.env.REDIS_PORT }"
-				REDIS_USER="${REDIS_USER}" REDIS_PASS="${REDIS_PASS}" REDIS_DB="${REDIS_DB}" json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis.options" "{
+				RABBITMQ_URI="${RABBITMQ_URI}" json_configuration_literal "${DS_CONF_DIR}/local.json" "rabbitmq" "{ url: process.env.RABBITMQ_URI }"
+				REDIS_HOST="${REDIS_HOST}" REDIS_PORT="${REDIS_PORT}" json_configuration_literal "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis" "{ host: process.env.REDIS_HOST, port: process.env.REDIS_PORT }"
+				REDIS_USER="${REDIS_USER}" REDIS_PASS="${REDIS_PASS}" REDIS_DB="${REDIS_DB}" json_configuration_literal "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis.options" "{
 				${REDIS_USER:+username: process.env.REDIS_USER,}
 				${REDIS_PASS:+password: process.env.REDIS_PASS,}
 				${REDIS_DB:+database: process.env.REDIS_DB,}
@@ -599,7 +608,7 @@ setup_redis() {
 	: "${REDIS_DB:=$(json -f "${APP_DIR}/redis.${ENVIRONMENT}.json" Redis.Database 2>/dev/null)}"
 	: "${REDIS_HOST:=127.0.0.1}" "${REDIS_PORT:=6379}" "${REDIS_DB:=0}"
 
-	json_configuration "${APP_DIR}/redis.${ENVIRONMENT}.json" "Redis.Hosts" "[{ Host: \"${REDIS_HOST}\", Port: \"${REDIS_PORT}\" }]"
+	REDIS_HOST="${REDIS_HOST}" REDIS_PORT="${REDIS_PORT}" json_configuration_literal "${APP_DIR}/redis.${ENVIRONMENT}.json" "Redis.Hosts" "[{ Host: process.env.REDIS_HOST, Port: process.env.REDIS_PORT }]"
 	[[ -n "${REDIS_USER}" ]] && json_configuration "${APP_DIR}/redis.${ENVIRONMENT}.json" "Redis.User" "${REDIS_USER}"
 	[[ -n "${REDIS_PASS}" ]] && json_configuration "${APP_DIR}/redis.${ENVIRONMENT}.json" "Redis.Password" "${REDIS_PASS}"
 	[[ -n "${REDIS_DB}" ]] && json_configuration "${APP_DIR}/redis.${ENVIRONMENT}.json" "Redis.Database" "${REDIS_DB}"
