@@ -125,6 +125,8 @@ REDIS_PORT=""
 REDIS_USER_NAME=""
 REDIS_PASSWORD=""
 
+BACKUP_BEFORE_UPDATE="false"
+
 RABBIT_PROTOCOL=""
 RABBIT_HOST=""
 RABBIT_PORT=""
@@ -1259,6 +1261,44 @@ install_product () {
 }
 
 # Remove the previous app layer while keeping shared dependencies.
+backup_before_update () {
+	[ "${UPDATE}" = "true" ] && [ -f "${BASE_DIR}/.env" ] || return 0
+
+	local BACKUP_ROOT="${BASE_DIR%/}.backup"
+	local BACKUP_DIR="${BACKUP_ROOT}/$(date +%Y%m%d-%H%M%S)"
+	local MYSQL_CONTAINER="${PACKAGE_SYSNAME}-mysql-server"
+
+	# The refresh in download_files removes the old .env and compose files, so keep a private copy outside of the installer directory
+	echo -n "Saving the current configuration to ${BACKUP_DIR}..."
+	if ( umask 077; mkdir -p "${BACKUP_DIR}" \
+		&& find "${BASE_DIR}" -maxdepth 1 -type f -exec cp -p {} "${BACKUP_DIR}/" \; \
+		&& { [ ! -d "${BASE_DIR}/config" ] || cp -a "${BASE_DIR}/config" "${BACKUP_DIR}/"; } ); then
+		echo "OK"
+		# Keep the three newest copies
+		ls -1dt "${BACKUP_ROOT}"/*/ 2>/dev/null | tail -n +4 | xargs -r rm -rf
+	else
+		echo "FAILED"
+		echo "Warning: the configuration backup was not created, the update continues." >&2
+	fi
+
+	[ "${BACKUP_BEFORE_UPDATE}" = "true" ] || return 0
+
+	if [ -z "$(docker ps -q --filter "name=${MYSQL_CONTAINER}")" ]; then
+		echo "Warning: the bundled MySQL container is not running, the database backup is skipped." >&2
+		return 0
+	fi
+
+	echo -n "Dumping the ${PRODUCT_NAME} database to ${BACKUP_DIR}/mysql.sql.gz..."
+	if ( umask 077; docker exec "${MYSQL_CONTAINER}" sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqldump -uroot --single-transaction --routines --triggers --no-tablespaces --databases "$MYSQL_DATABASE"' \
+		| gzip > "${BACKUP_DIR}/mysql.sql.gz"; [ "${PIPESTATUS[0]}" -eq 0 ] ); then
+		echo "OK"
+	else
+		echo "FAILED"
+		rm -f "${BACKUP_DIR}/mysql.sql.gz"
+		echo "Warning: the database backup was not created, the update continues." >&2
+	fi
+}
+
 teardown_previous_deployment_mode () {
 	echo "Switching deployment mode from ${CURRENT_DEPLOYMENT_MODE} to ${DEPLOYMENT_MODE}; removing the previous app layer (MySQL/OpenSearch/Document Server are kept)..."
 
@@ -1562,6 +1602,8 @@ start_installation () {
 	set_secrets
 
 	set_mysql_params
+
+	backup_before_update
 
 	if [ -n "${CURRENT_DEPLOYMENT_MODE}" ] && [ "${CURRENT_DEPLOYMENT_MODE}" != "${DEPLOYMENT_MODE}" ]; then
 		teardown_previous_deployment_mode
