@@ -13,4 +13,9 @@ sed -i "s~\(redis_user =\).*~\1 \"$REDIS_USER\"~" /etc/nginx/conf.d/onlyoffice.c
 sed -i "s~\(redis_pass =\).*~\1 \"$REDIS_PASSWORD\"~" /etc/nginx/conf.d/onlyoffice.conf
 sed -i "s~\(redis_db =\).*~\1 $REDIS_DB~" /etc/nginx/conf.d/onlyoffice.conf
 sed -i "s~\(\"wrongPortalNameUrl\":\).*,~\1 \"${WRONG_PORTAL_NAME_URL}\",~g" /var/www/public/scripts/config.json
-echo "${DASHBOARDS_USERNAME:-onlyoffice}:$(openssl passwd -6 -stdin <<< "${DASHBOARDS_PASSWORD:-onlyoffice}")" > /etc/nginx/.htpasswd_dashboards
+# Without DASHBOARDS_PASSWORD the login is locked with a random password nobody knows, instead of a guessable default
+if [ -z "${DASHBOARDS_PASSWORD:-}" ]; then
+    echo "DASHBOARDS_PASSWORD is empty: /dashboards stays locked until it is set" >&2
+    DASHBOARDS_PASSWORD=$(openssl rand -hex 32)
+fi
+echo "${DASHBOARDS_USERNAME:-onlyoffice}:$(openssl passwd -6 -stdin <<< "$DASHBOARDS_PASSWORD")" > /etc/nginx/.htpasswd_dashboards
