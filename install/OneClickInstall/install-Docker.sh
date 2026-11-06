@@ -302,8 +302,8 @@ uninstall() {
     if [ "${DEPLOYMENT_MODE}" = "standalone" ]; then
         echo "Uninstallation of ${PRODUCT_NAME} (standalone)..."
 
-        [ "${RESTORE_DOCS}" = true ] || read -p "Also remove data volumes (mysql, opensearch, documents)? (Y/n): " REMOVE_DATA_SERVICES
-        [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]] && DOWN_ARGS+=(-v)
+        [ "${RESTORE_DOCS}" = true ] || read -p "Also remove data volumes (mysql, opensearch, documents)? (y/N): " REMOVE_DATA_SERVICES
+        [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)$ ]] && DOWN_ARGS+=(-v)
         if [ "${RESTORE_DOCS}" != true ]; then
             # A background certbot renewal check (see apps-ssl-setup) may still hold the webroot volume.
             docker ps -aq --filter "ancestor=certbot/certbot" --filter "volume=${COMPOSE_PROJECT_NAME:-$PACKAGE_SYSNAME}_webroot_path" | xargs -r docker rm -f >/dev/null
@@ -313,9 +313,9 @@ uninstall() {
             [ "${RESTORE_DOCS}" != true ] || return 1
         }
     else
-        [ "${RESTORE_DOCS}" = true ] || read -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " REMOVE_DATA_SERVICES
+        [ "${RESTORE_DOCS}" = true ] || read -p "Uninstall all dependencies (mysql, opensearch and others)? (y/N): " REMOVE_DATA_SERVICES
 
-        if [ "${RESTORE_DOCS}" = true ] || [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]]; then
+        if [ "${RESTORE_DOCS}" = true ] || [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)$ ]]; then
             SERVICES+=("db" "rabbitmq" "redis" "opensearch" "dashboards" "fluent")
             [ "${RESTORE_DOCS}" = true ] || DOWN_ARGS+=(-v)
         fi
@@ -352,7 +352,7 @@ uninstall() {
 	fi
 
 	echo -e "Uninstallation of $PRODUCT_NAME" \
-		"$( [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]] && echo "and all dependencies" ) \e[32mcompleted.\e[0m"
+		"$( [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)$ ]] && echo "and all dependencies" ) \e[32mcompleted.\e[0m"
 }
 
 is_macos () {
