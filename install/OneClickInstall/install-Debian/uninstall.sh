@@ -54,10 +54,10 @@ if [ "${#PACKAGES_TO_UNINSTALL[@]}" -eq 0 ] \
 fi
 
 # Ask to uninstall dependencies
-read -r -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " DEP_CHOICE
+read -r -p "Uninstall all dependencies (mysql, opensearch and others)? (y/N): " DEP_CHOICE
 DEP_CHOICE=${DEP_CHOICE,,}
 
-if [[ "$DEP_CHOICE" =~ ^(y|yes|)$ ]]; then
+if [[ "$DEP_CHOICE" =~ ^(y|yes)$ ]]; then
     UNINSTALL_DEPENDENCIES=true
 fi
 
