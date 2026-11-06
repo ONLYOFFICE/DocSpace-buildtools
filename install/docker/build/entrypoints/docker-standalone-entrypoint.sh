@@ -53,6 +53,8 @@ APP_KNOWN_NETWORKS=${APP_KNOWN_NETWORKS:-""}
 CERTBOT_DIRS=(--config-dir /etc/letsencrypt --work-dir /tmp/letsencrypt --logs-dir /var/log/onlyoffice/letsencrypt)
 
 export MYSQL_PWD="$MYSQL_PASSWORD"
+# No service needs the MySQL root password, so the supervised processes must not inherit it
+unset MYSQL_ROOT_PASSWORD
 MYSQL_ARGS=(-h "$MYSQL_HOST" -P "$MYSQL_PORT" -u "$MYSQL_USER")
 export CONNECTION_STRING="Server=${MYSQL_HOST};Port=${MYSQL_PORT};Database=${MYSQL_DATABASE};User ID=${MYSQL_USER};Password=${MYSQL_PASSWORD}"
 
