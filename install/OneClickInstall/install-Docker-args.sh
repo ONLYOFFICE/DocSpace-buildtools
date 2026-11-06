@@ -49,7 +49,7 @@ require_value() {
 
 while [ "$1" != "" ]; do
     case "$1" in
-        -h | -? | --help ) ;;
+        -h | '-?' | --help ) ;;
         -* ) require_value "$1" "$2" ;;
     esac
 
