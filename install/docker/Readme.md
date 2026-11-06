@@ -121,15 +121,17 @@ Review these before the first start:
 
 | Variable | Purpose |
 |----------|---------|
-| `APP_CORE_MACHINEKEY` | Internal services shared secret |
+| `APP_CORE_MACHINEKEY` | Internal services shared secret (required, no default) |
+| `IDENTITY_ENCRYPTION_SECRET` | Identity encryption secret (required, no default) |
 | `DOCUMENT_SERVER_JWT_SECRET` | Document Server JWT secret |
 | `DOCUMENT_SERVER_JWT_HEADER` | Document Server JWT header name |
 | `EXTERNAL_PORT` · `EXTERNAL_PORT_HTTPS` | Published HTTP / HTTPS ports |
 | `REGISTRY` · `DOCKER_TAG` | Image registry prefix and tag |
 
 > [!IMPORTANT]
-> Change `APP_CORE_MACHINEKEY` and `DOCUMENT_SERVER_JWT_SECRET` from their
-> defaults before exposing the instance to a network.
+> `APP_CORE_MACHINEKEY` and `IDENTITY_ENCRYPTION_SECRET` ship empty and the
+> services refuse to start until they are set to unique values. Change
+> `DOCUMENT_SERVER_JWT_SECRET` from its default before exposing the instance to a network.
 
 ## Running with Docker Compose
 
@@ -137,7 +139,8 @@ Compose is **modular** - files are combined with `-f`. Run all commands from
 `install/docker/` so that `.env` is picked up.
 
 Before direct Compose runs, set these blank secrets in `.env`:
-`MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`, `RABBIT_PASSWORD`, and
+`MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`, `RABBIT_PASSWORD`,
+`APP_CORE_MACHINEKEY`, `IDENTITY_ENCRYPTION_SECRET`, and
 `DOCUMENT_SERVER_JWT_SECRET`. The OneClickInstall Docker installer generates
 them automatically, but plain `docker compose` uses `.env` as-is.
 

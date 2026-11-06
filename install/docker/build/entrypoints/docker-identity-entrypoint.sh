@@ -25,4 +25,13 @@ if [ "$1" = "supervisord" ]; then
     exec "$@"
 fi
 
+# Refuse to start without real secrets or with the sample values that shipped in .env
+for secret_name in SPRING_APPLICATION_SIGNATURE_SECRET SPRING_APPLICATION_ENCRYPTION_SECRET; do
+    secret_value="${!secret_name}"
+    if [ -z "$secret_value" ] || [ "$secret_value" = "your_core_machinekey" ] || [ "$secret_value" = "your_secret_key" ]; then
+        echo "$secret_name must be set to a unique value" >&2
+        exit 1
+    fi
+done
+
 java -jar ${BUILD_PATH}/services/${SPRING_APPLICATION_NAME}/app.jar
