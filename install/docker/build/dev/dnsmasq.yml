@@ -7,8 +7,8 @@ services:
       - "5380"
       - "53"
     ports:
-      - 53:53/udp
-      - 5380:8080
+      - 127.0.0.1:53:53/udp
+      - 127.0.0.1:5380:8080
     environment:
       - HTTP_USER=foo
       - HTTP_PASS=bar
