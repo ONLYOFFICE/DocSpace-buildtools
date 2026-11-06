@@ -28,7 +28,7 @@ def help():
 
 
 def check_image(image_name):
-    return subprocess.check_output(["docker", "images", "--format", "'{{.Repository}}:{{.Tag}}'"], shell=True, text=True).__contains__(image_name)
+    return image_name in subprocess.check_output(["docker", "images", "--format", "{{.Repository}}:{{.Tag}}"], text=True).split()
 
 
 rd = os.path.dirname(os.path.abspath(__file__))
