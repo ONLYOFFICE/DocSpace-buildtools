@@ -1,4 +1,4 @@
-FROM        ubuntu:20.04 AS base
+FROM        ubuntu:22.04 AS base
 ENV DEBIAN_FRONTEND="noninteractive"
 ENV TZ="Etc/UTC"
 
@@ -21,8 +21,8 @@ ENV FFMPEG_VERSION=6.0 \
     LIBASS_VERSION=0.13.7 \
     LIBPTHREAD_STUBS_VERSION=0.4 \
     LIBVIDSTAB_VERSION=1.1.0 \
-    LIBXCB_VERSION=1.13.1 \
-    XCBPROTO_VERSION=1.13 \
+    LIBXCB_VERSION=1.15 \
+    XCBPROTO_VERSION=1.15.2 \
     OGG_VERSION=1.3.2 \
     OPENCOREAMR_VERSION=0.1.5 \
     OPUS_VERSION=1.2 \
@@ -73,8 +73,8 @@ ARG         XORG_MACROS_SHA256="9225c45c3de60faf971979a55a5536f3562baa4b6f02246c
 ARG         XPROTO_SHA256="6d755eaae27b45c5cc75529a12855fed5de5969b367ed05003944cf901ed43c7"
 ARG         XAU_SHA256="1f123d8304b082ad63a9e89376400a3b1d4c29e67e3ea07b3f659cccca690eea"
 ARG         LIBPTHREAD_STUBS_SHA256="50d5686b79019ccea08bcbd7b02fe5a40634abcfd4146b6e75c6420cc170e9d9"
-ARG         XCBPROTO_SHA256="0698e8f596e4c0dbad71d3dc754d95eb0edbb42df5464e0f782621216fa33ba7"
-ARG         LIBXCB_SHA256="f09a76971437780a602303170fd51b5f7474051722bc39d566a272d2c4bde1b5"
+ARG         XCBPROTO_SHA256="6b1ed9cd7cf35e37913eeecca37e5b85b14903002942b3e332f321335c27a8eb"
+ARG         LIBXCB_SHA256="1cb65df8543a69ec0555ac696123ee386321dfac1964a3da39976c9a05ad724d"
 ARG         LIBXML2_SHA256="8a4ddd706419c210b30b8978a51388937fd9362c34fc9a3d69e4fcc6f8055ee0"
 ARG         LIBSRT_SHA256="e80ca1cd0711b9c70882c12ec365cda1ba852e1ce8acd43161a21a04de0cbf14"
 ARG         FFMPEG_SHA256="47d062731c9f66a78380e35a19aac77cebceccd1c7cc309b9c82343ffc430c3d"
@@ -107,7 +107,7 @@ RUN      buildDeps="autoconf \
                     nasm \
                     perl \
                     pkg-config \
-                    python \
+                    python-is-python3 \
                     libssl-dev \
                     yasm \
                     zlib1g-dev" && \
