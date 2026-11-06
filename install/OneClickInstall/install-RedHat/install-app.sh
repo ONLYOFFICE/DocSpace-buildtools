@@ -112,19 +112,21 @@ if [ "${MYSQL_FIRST_TIME_INSTALL}" = "true" ]; then
 		sleep 1
 	done
 
-	if ! mysql "-u$MYSQL_SERVER_USER" "-p$MYSQL_TEMPORARY_ROOT_PASS" -e ";" >/dev/null 2>&1; then
-		if [ -z "$MYSQL_TEMPORARY_ROOT_PASS" ]; then
-		   MYSQL="mysql --connect-expired-password -u$MYSQL_SERVER_USER -D mysql"
-		else
-		   MYSQL="mysql --connect-expired-password -u$MYSQL_SERVER_USER -p${MYSQL_TEMPORARY_ROOT_PASS} -D mysql"
-		   MYSQL_ROOT_PASS=$(echo "$MYSQL_TEMPORARY_ROOT_PASS" | sed -e 's/;/%/g' -e 's/=/%/g')
+	if ! MYSQL_PWD="$MYSQL_TEMPORARY_ROOT_PASS" mysql "-u$MYSQL_SERVER_USER" -e ";" >/dev/null 2>&1; then
+		MYSQL=(mysql --connect-expired-password -u"$MYSQL_SERVER_USER" -D mysql)
+		if [ -n "$MYSQL_TEMPORARY_ROOT_PASS" ]; then
+			# The temporary password stays in /var/log/mysqld.log, so root gets a new random password instead of keeping it (the fixed prefix satisfies the default password policy, and avoids ; and = that break connection strings)
+			MYSQL_ROOT_PASS=${MYSQL_ROOT_PASS:-"Aa1_$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 20)"}
+			# The client reads the password from the environment, so it never appears in a command line
+			export MYSQL_PWD="$MYSQL_TEMPORARY_ROOT_PASS"
 		fi
 
-		MYSQL_AUTHENTICATION_PLUGIN=$($MYSQL -e "SHOW VARIABLES LIKE 'default_authentication_plugin';" -s | awk '{print $2}')
+		MYSQL_AUTHENTICATION_PLUGIN=$("${MYSQL[@]}" -e "SHOW VARIABLES LIKE 'default_authentication_plugin';" -s | awk '{print $2}')
 		MYSQL_AUTHENTICATION_PLUGIN=${MYSQL_AUTHENTICATION_PLUGIN:-caching_sha2_password}
 
-		$MYSQL -e "ALTER USER '${MYSQL_SERVER_USER}'@'localhost' IDENTIFIED WITH ${MYSQL_AUTHENTICATION_PLUGIN} BY '${MYSQL_ROOT_PASS}'" >/dev/null 2>&1 || \
-		$MYSQL -e "UPDATE user SET plugin='${MYSQL_AUTHENTICATION_PLUGIN}', authentication_string=PASSWORD('${MYSQL_ROOT_PASS}') WHERE user='${MYSQL_SERVER_USER}' and host='localhost';"
+		"${MYSQL[@]}" -e "ALTER USER '${MYSQL_SERVER_USER}'@'localhost' IDENTIFIED WITH ${MYSQL_AUTHENTICATION_PLUGIN} BY '${MYSQL_ROOT_PASS}'" >/dev/null 2>&1 || \
+		"${MYSQL[@]}" -e "UPDATE user SET plugin='${MYSQL_AUTHENTICATION_PLUGIN}', authentication_string=PASSWORD('${MYSQL_ROOT_PASS}') WHERE user='${MYSQL_SERVER_USER}' and host='localhost';"
+		unset MYSQL_PWD
 
 		systemctl restart mysqld
 	fi
