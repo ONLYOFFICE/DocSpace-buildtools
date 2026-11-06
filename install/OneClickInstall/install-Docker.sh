@@ -812,6 +812,13 @@ set_secrets () {
 	IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-$(get_random_str 12)}"
 }
 
+set_rabbitmq_password () {
+	# A fresh install gives the bundled RabbitMQ its own password; an update keeps the one it already runs with,
+	# because the broker takes the password only when its data is first created
+	[ -z "${RABBIT_HOST}" ] && [ "${INSTALL_RABBITMQ}" = "true" ] && [ "${UPDATE}" != "true" ] || return 0
+	RABBIT_PASSWORD="${RABBIT_PASSWORD:-$(get_random_str 20)}"
+}
+
 set_mysql_params () {
 	MYSQL_PASSWORD="${MYSQL_PASSWORD:-$(get_env_parameter "MYSQL_PASSWORD" "${CONTAINER_NAME}")}"
 	MYSQL_PASSWORD="${MYSQL_PASSWORD:-$(get_random_str 20)}"
@@ -1533,6 +1540,9 @@ services_check_connection () {
 		reconfigure RABBIT_USER_NAME "${RABBIT_USER_NAME}"
 		reconfigure RABBIT_PASSWORD "${RABBIT_PASSWORD}"
 		reconfigure RABBIT_VIRTUAL_HOST "${RABBIT_VIRTUAL_HOST:-/}"
+	else
+		# The bundled RabbitMQ: pass its password on to the services (reconfigure skips an empty value)
+		reconfigure RABBIT_PASSWORD "${RABBIT_PASSWORD}"
 	fi
 	if [[ ! -z "$REDIS_HOST" ]]; then
 		establish_conn ${REDIS_HOST} "${REDIS_PORT:-6379}" "Redis"
@@ -1600,6 +1610,8 @@ start_installation () {
 	set_jwt_header
 
 	set_secrets
+
+	set_rabbitmq_password
 
 	set_mysql_params
 
