@@ -33,7 +33,7 @@ services:
     user: "${UID}:${GID}"
     restart: always
     ports:
-      - "${IDENTITY_AUTHORIZATION_SERVER_PORT}:${IDENTITY_AUTHORIZATION_SERVER_PORT}"
+      - "127.0.0.1:${IDENTITY_AUTHORIZATION_SERVER_PORT}:${IDENTITY_AUTHORIZATION_SERVER_PORT}"
     environment:
       <<: *x-common-environment
       SERVER_PORT: ${IDENTITY_AUTHORIZATION_SERVER_PORT}
