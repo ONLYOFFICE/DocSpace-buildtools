@@ -795,8 +795,11 @@ set_secrets () {
 	APP_CORE_MACHINEKEY="${APP_CORE_MACHINEKEY:-$(get_env_parameter "APP_CORE_MACHINEKEY" "${CONTAINER_NAME}")}"
 	[ "$UPDATE" != "true" ] && APP_CORE_MACHINEKEY="${APP_CORE_MACHINEKEY:-$(get_random_str 12)}"
 	IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-$(get_env_parameter "IDENTITY_ENCRYPTION_SECRET" "${IDENTITY_CONTAINER_NAME}")}"
-	# (DS v3.1.0) Legacy update fallback for the encryption key.
-	[ "${UPDATE}" = "true" ] && IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-"secret"}"
+	# A new key would make everything Identity has already encrypted unreadable, so an update must not invent one
+	if [ -z "${IDENTITY_ENCRYPTION_SECRET}" ] && [ "${UPDATE}" = "true" ] && [ -n "$(docker ps -aqf "name=${IDENTITY_CONTAINER_NAME}" 2>/dev/null)" ]; then
+		echo "Error: cannot read the Identity encryption secret of the installed product; set IDENTITY_ENCRYPTION_SECRET and run the update again." >&2
+		exit 1
+	fi
 	IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-$(get_random_str 12)}"
 }
 
