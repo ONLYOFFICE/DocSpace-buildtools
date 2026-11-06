@@ -593,7 +593,7 @@ main() {
     # Runs before the chown below, so the Studio tree it creates ends up owned by onlyoffice
     maintain_plugins
     # app_data/log_data are shared with onlyoffice-document-server, which re-chowns its own Data dir's inode to its "ds" user on every one of its own restarts (confirmed live, not recursive - only this one entry). onlyoffice is in Docs' group (Dockerfile), so chmod g+w here survives that indefinitely; skips Docs' own wopi keys, its private signing material.
-    find /app/onlyoffice/data \( -name wopi_private.key -o -name wopi_public.key \) -prune -o -exec chown onlyoffice:onlyoffice {} +
+    find /app/onlyoffice/data \( -name wopi_private.key -o -name wopi_public.key \) -prune -o -exec chown -h onlyoffice:onlyoffice {} +
     chmod g+w /app/onlyoffice/data
     chown onlyoffice:onlyoffice /var/log/onlyoffice
     chmod g+w /var/log/onlyoffice
@@ -617,10 +617,10 @@ main() {
     fi
 
     # Everything above ran as root and can leave nginx/openresty's own files root-owned: the router's init scripts (prepare-nginx-router.sh's sed -i) rewrite conf.d files, and openresty -t itself creates its configured error_log if missing - confirmed live, both broke openresty (runs as onlyoffice below) with "Permission denied" until fixed here, right before it starts. /etc/nginx/certs is excluded: it's the read-only certs bind mount (docker-compose.yml), chown there fails the whole command (EROFS) - the certs are already world-readable (644), so onlyoffice doesn't need to own them anyway.
-    find /etc/nginx /var/log/nginx /var/log/openresty /usr/local/openresty -path /etc/nginx/certs -prune -o -exec chown onlyoffice:onlyoffice {} +
+    find /etc/nginx /var/log/nginx /var/log/openresty /usr/local/openresty -path /etc/nginx/certs -prune -o -exec chown -h onlyoffice:onlyoffice {} +
 
     # openresty -t above (as root) also creates the *_temp dirs owned by nobody:root mode 700, so onlyoffice workers fail to buffer large request bodies (chunked upload -> 500, "open() /tmp/client_temp/... failed (13: Permission denied)")
-    find /tmp -maxdepth 1 \( -name client_temp -o -name proxy_temp_path -o -name fastcgi_temp -o -name uwsgi_temp -o -name scgi_temp \) -exec chown -R onlyoffice:onlyoffice {} +
+    find /tmp -maxdepth 1 \( -name client_temp -o -name proxy_temp_path -o -name fastcgi_temp -o -name uwsgi_temp -o -name scgi_temp \) -exec chown -hR onlyoffice:onlyoffice {} +
 
     log "✅ Initialization complete - starting supervisord"
     log "=================================="
