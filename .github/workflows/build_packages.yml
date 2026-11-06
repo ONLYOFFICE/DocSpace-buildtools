@@ -62,7 +62,7 @@ jobs:
           git config --global 'credential.https://${{ secrets.GITEA_HOST }}.helper' "store --file=${RUNNER_TEMP}/gitea-credentials"
           [[ "$GITEA_TOKEN" == *:* ]] || GITEA_TOKEN+=":"
           printf 'url=https://%s@%s\n\n' "$GITEA_TOKEN" '${{ secrets.GITEA_HOST }}' | git credential approve
-          git clone https://${{ secrets.GITEA_HOST }}/${{ github.repository }} -b ${{ github.ref_name }} --single-branch --depth=1
+          git clone https://${{ secrets.GITEA_HOST }}/${{ github.repository }} -b "${GITHUB_REF_NAME}" --single-branch --depth=1
           cd "${GITHUB_REPOSITORY#*/}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -88,7 +88,7 @@ jobs:
           git add ../deb/debian/changelog ../rpm/SPECS/changelog.spec
           if ! git diff --cached --quiet; then
             git commit -m "Update packages changelogs"
-            git push origin HEAD:${{ github.ref_name }}
+            git push origin "HEAD:${GITHUB_REF_NAME}"
           else
             echo "No changes in changelog files" 
           fi
@@ -109,7 +109,7 @@ jobs:
           printf 'url=https://%s@%s\n\n' "$GITEA_TOKEN" '${{ secrets.GITEA_HOST }}' | git credential approve
           WORKSPACE_DIR=$(mountpoint -q /mnt && echo "/mnt" || echo "${GITHUB_WORKSPACE}")
           [ "$WORKSPACE_DIR" = "/mnt" ] && sudo chown $(whoami):$(whoami) /mnt 2>/dev/null || true
-          cd "${WORKSPACE_DIR}" && git clone https://${{ secrets.GITEA_HOST }}/${{ github.repository }} -b ${{ github.ref_name }} --single-branch --depth=1
+          cd "${WORKSPACE_DIR}" && git clone https://${{ secrets.GITEA_HOST }}/${{ github.repository }} -b "${GITHUB_REF_NAME}" --single-branch --depth=1
           echo "BUILD_WORKSPACE=${WORKSPACE_DIR}/${GITHUB_REPOSITORY#*/}" >> $GITHUB_ENV
 
       - name: Import GPG
@@ -222,7 +222,7 @@ jobs:
           [[ "${{ needs.prepare.outputs.build_all }}" == "true" ]] && deb_build="true" && rpm_build="true"
 
           gh api --method POST /repos/${{ github.repository }}/actions/workflows/85067971/dispatches \
-            -f ref='${{ github.ref_name }}' \
+            -f ref="${GITHUB_REF_NAME}" \
             -f inputs[deb_build]="${deb_build}" \
             -f inputs[rpm_build]="${rpm_build}" \
             -f inputs[testing]="true"

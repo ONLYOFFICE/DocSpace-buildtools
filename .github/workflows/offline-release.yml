@@ -23,10 +23,10 @@ jobs:
           GH_TOKEN: ${{ secrets.TOKEN }}
           WORKFLOW_FILE: ci-oci-docker-install.yml
         run: |
-          echo "Dispatching workflow #${WORKFLOW_FILE} on ${{ github.repository }} (ref=${{ github.ref_name }})"
-          gh workflow run "${WORKFLOW_FILE}" --repo "${{ github.repository }}" --ref "${{ github.ref_name }}" --field offline=true --field testing=false && sleep 10
+          echo "Dispatching workflow #${WORKFLOW_FILE} on ${GITHUB_REPOSITORY} (ref=${GITHUB_REF_NAME})"
+          gh workflow run "${WORKFLOW_FILE}" --repo "${GITHUB_REPOSITORY}" --ref "${GITHUB_REF_NAME}" --field offline=true --field testing=false && sleep 10
 
-          RUN_ID=$(gh run list  --repo "${{ github.repository }}" --workflow "${WORKFLOW_FILE}" --branch "${{ github.ref_name }}" \
+          RUN_ID=$(gh run list  --repo "${GITHUB_REPOSITORY}" --workflow "${WORKFLOW_FILE}" --branch "${GITHUB_REF_NAME}" \
               --json databaseId,status | jq -r '.[] | select(.status == "queued" or .status == "in_progress" ) | .databaseId' | head -n1) 
           [ -z "$RUN_ID" ] && { echo "::error::[FAILED] Could not find a queued/in_progress run."; exit 1; }
 

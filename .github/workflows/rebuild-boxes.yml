@@ -37,9 +37,10 @@ jobs:
       - name: Build matrix from input
         id: mk
         shell: bash
+        env:
+          OS_INPUT: ${{ github.event.inputs.os-name }}
         run: |
           set -euo pipefail
-          OS_INPUT="${{ github.event.inputs.os-name }}"
 
           MAP=$(cat <<'JSON'
           {

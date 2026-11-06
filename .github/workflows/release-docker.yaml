@@ -69,13 +69,14 @@ jobs:
           DOCKER_TAG: ${{ github.event.inputs.release_version }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME_PAT }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN_PAT }}
+          DOCKER_REPOSITORY: ${{ github.event.inputs.repo }}
         run: |
-          echo "Waiting for images with tag ${{ env.DOCKER_TAG }} to appear on Docker Hub..."
-          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/docker-images-availability.sh \
-            | sudo GITHUB_REPOSITORY=${{ github.repository }} BRANCH=${{ github.ref_name }} DOCKER_REPOSITORY=${{ github.event.inputs.repo }} DOCKER_PREFIX=apps DOCKER_TAG=${{ env.DOCKER_TAG }} DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME} DOCKERHUB_TOKEN=${DOCKERHUB_TOKEN} bash
+          echo "Waiting for images with tag ${DOCKER_TAG} to appear on Docker Hub..."
+          curl -fsSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/refs/heads/${GITHUB_REF_NAME}/.github/scripts/docker-images-availability.sh" \
+            | sudo GITHUB_REPOSITORY="${GITHUB_REPOSITORY}" BRANCH="${GITHUB_REF_NAME}" DOCKER_REPOSITORY="${DOCKER_REPOSITORY}" DOCKER_PREFIX=apps DOCKER_TAG="${DOCKER_TAG}" DOCKERHUB_USERNAME="${DOCKERHUB_USERNAME}" DOCKERHUB_TOKEN="${DOCKERHUB_TOKEN}" bash
 
       - name: Trigger offline release
         env:
           GH_TOKEN: ${{ secrets.TOKEN }}
         run: |
-          gh workflow run "offline-release.yml" --repo "${{ github.repository }}" --ref "${{ github.ref_name }}" --field trigger=true
+          gh workflow run "offline-release.yml" --repo "${GITHUB_REPOSITORY}" --ref "${GITHUB_REF_NAME}" --field trigger=true
