@@ -22,6 +22,7 @@ HIDE_SETTINGS=[\n\"Monitoring\",\n\"LdapSettings\",\n\"DocService\",\n\"MailServ
 MYSQL_CONTAINER_NAME=${MYSQL_CONTAINER_NAME:-"localhost"}
 MYSQL_HOST=${MYSQL_HOST:-${MYSQL_CONTAINER_NAME}}
 MYSQL_PORT=${MYSQL_PORT:-"3306"}
+export MYSQL_SSL_MODE=${MYSQL_SSL_MODE:-"none"}
 # ASC.Identity (Java) reads this; computed here rather than left to docker-compose.yml's own interpolation, which doesn't nest ${} inside a default anywhere else in the codebase.
 export JDBC_URL="${MYSQL_HOST}:${MYSQL_PORT}"
 MYSQL_DATABASE=${MYSQL_DATABASE:-"onlyoffice_apps"}
@@ -414,7 +415,7 @@ update_configs() {
 
     # Main appsettings (connection, core, document server, misc)
     ${JSON} "${PATH_TO_CONF}/appsettings.json" \
-        -e "this.ConnectionStrings.default.connectionString=process.env.CONNECTION_STRING+';Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;ConnectionReset=false;AllowPublicKeyRetrieval=true'" \
+        -e "this.ConnectionStrings.default.connectionString=process.env.CONNECTION_STRING+';Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode='+process.env.MYSQL_SSL_MODE+';ConnectionReset=false;AllowPublicKeyRetrieval=true'" \
         -e "this.core['base-domain']=process.env.APP_CORE_BASE_DOMAIN" \
         -e "this.core.machinekey=process.env.APP_CORE_MACHINEKEY" \
         -e "this.files.docservice.url.public=process.env.DOCUMENT_SERVER_URL_PUBLIC" \
@@ -461,7 +462,7 @@ update_configs() {
 
     # API system (connection + core)
     ${JSON} "${PATH_TO_CONF}/apisystem.json" \
-        -e "this.ConnectionStrings.default.connectionString=process.env.CONNECTION_STRING+';Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;ConnectionReset=false;AllowPublicKeyRetrieval=true'" \
+        -e "this.ConnectionStrings.default.connectionString=process.env.CONNECTION_STRING+';Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode='+process.env.MYSQL_SSL_MODE+';ConnectionReset=false;AllowPublicKeyRetrieval=true'" \
         -e "this.core['base-domain']=process.env.APP_CORE_BASE_DOMAIN" \
         -e "this.core.machinekey=process.env.APP_CORE_MACHINEKEY" \
 	-e "this.core.notify.postman='services'"
