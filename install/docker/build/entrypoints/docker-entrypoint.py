@@ -1,4 +1,4 @@
-import json, sys, os, re, time, requests, threading, shutil, fileinput, subprocess
+import json, sys, os, re, time, requests, threading, shutil, fileinput, subprocess, signal
 from jsonpath_ng.ext import parse
 from netaddr import IPNetwork
 
@@ -65,7 +65,7 @@ DISABLE_VALIDATE_TOKEN = os.environ.get("DISABLE_VALIDATE_TOKEN") or "false"
 
 CERTIFICATE_PATH = os.environ.get("CERTIFICATE_PATH")
 CERTIFICATE_PARAM = "NODE_EXTRA_CA_CERTS=" + CERTIFICATE_PATH + " " if CERTIFICATE_PATH and os.path.exists(CERTIFICATE_PATH) else ""
-TLS_REJECT_UNAUTHORIZED = "NODE_TLS_REJECT_UNAUTHORIZED=1" if os.getenv("NODE_TLS_REJECT_UNAUTHORIZED", "").lower() in ("1","true","enable") else "";
+TLS_REJECT_UNAUTHORIZED = "NODE_TLS_REJECT_UNAUTHORIZED=1 " if os.getenv("NODE_TLS_REJECT_UNAUTHORIZED", "").lower() in ("1","true","enable") else ""
 
 DOCUMENT_CONTAINER_NAME = os.environ.get("DOCUMENT_CONTAINER_NAME") or "onlyoffice-document-server"
 DOCUMENT_SERVER_JWT_SECRET = require_env("DOCUMENT_SERVER_JWT_SECRET")
@@ -125,16 +125,31 @@ class RunServices:
 
     def RunService(self, RUN_FILE, ENV_EXTENSION="none", LOG_FILE=None):
         if LOG_FILE and RUN_FILE.endswith(".dll"):
-            cmd = (f"dotnet {RUN_FILE} --urls={URLS}{self.SERVICE_PORT} --'$STORAGE_ROOT'={APP_STORAGE_ROOT}"
+            cmd = (f"exec dotnet {RUN_FILE} --urls={URLS}{self.SERVICE_PORT} --'$STORAGE_ROOT'={APP_STORAGE_ROOT}"
                    f" --pathToConf={self.PATH_TO_CONF} --log:dir={LOG_DIR} --log:name={LOG_FILE}"
                    f" core:products:folder=/var/www/products/ core:products:subfolder=server {CORE_EVENT_BUS}")
             if ENV_EXTENSION != "none":
                 cmd += f" --ENVIRONMENT={ENV_EXTENSION}"
         else:
-            cmd = f"{TLS_REJECT_UNAUTHORIZED}{CERTIFICATE_PARAM}node {RUN_FILE} --app.port={self.SERVICE_PORT} --app.appsettings={self.PATH_TO_CONF}"
+            cmd = f"exec env {TLS_REJECT_UNAUTHORIZED}{CERTIFICATE_PARAM}node {RUN_FILE} --app.port={self.SERVICE_PORT} --app.appsettings={self.PATH_TO_CONF}"
             if ENV_EXTENSION != "none":
                 cmd += f" --app.environment={ENV_EXTENSION}"
-        subprocess.call(cmd, shell=True)
+        # The shell replaces itself with the service (exec), so the process waited for below is the service itself.
+        # PID 1 ignores a signal that has no handler, so the stop signals are passed on to the service's process group
+        service = subprocess.Popen(cmd, shell=True, start_new_session=True)
+
+        def forward_signal(signal_number, frame):
+            try:
+                os.killpg(service.pid, signal_number)
+            except ProcessLookupError:
+                pass
+
+        for signal_number in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGQUIT):
+            signal.signal(signal_number, forward_signal)
+
+        exit_code = service.wait()
+        # A service killed by a signal is reported the way a shell does it
+        sys.exit(128 - exit_code if exit_code < 0 else exit_code)
 
 
 def openJsonFile(filePath):
