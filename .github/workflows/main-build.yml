@@ -40,6 +40,9 @@ env:
   DOCKER_IMAGE_PREFIX: "4testing-apps"
   DOCKERFILE: "Dockerfile"
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: ${{ matrix.service }} (${{ matrix.branch }})

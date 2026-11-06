@@ -24,6 +24,9 @@ on:
           ubuntu2404,
           ubuntu2604
 
+permissions:
+  contents: read
+
 jobs:
   prepare:
     runs-on: ubuntu-latest
