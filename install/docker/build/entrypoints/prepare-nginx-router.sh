@@ -6,13 +6,20 @@ REDIS_USER=${REDIS_USER:-""}
 REDIS_PASSWORD=${REDIS_PASSWORD:-""}
 REDIS_DB=${REDIS_DB:-"0"}
 
+# Escape a value for a Lua or JSON string that is written through sed with "~" as the delimiter
+escape_for_sed() { printf '%s' "$1" | sed -e 's/[\\"]/\\&/g' -e 's/[\\&~]/\\&/g'; }
+REDIS_HOST_ESCAPED=$(escape_for_sed "$REDIS_HOST")
+REDIS_USER_ESCAPED=$(escape_for_sed "$REDIS_USER")
+REDIS_PASSWORD_ESCAPED=$(escape_for_sed "$REDIS_PASSWORD")
+WRONG_PORTAL_NAME_URL_ESCAPED=$(escape_for_sed "$WRONG_PORTAL_NAME_URL")
+
 envsubst '$MAP_HASH_BUCKET_SIZE,$COUNT_WORKER_CONNECTIONS' < /etc/nginx/nginx.conf.template > /usr/local/openresty/nginx/conf/nginx.conf
-sed -i "s~\(redis_host =\).*~\1 \"$REDIS_HOST\"~" /etc/nginx/conf.d/onlyoffice.conf
+sed -i "s~\(redis_host =\).*~\1 \"$REDIS_HOST_ESCAPED\"~" /etc/nginx/conf.d/onlyoffice.conf
 sed -i "s~\(redis_port =\).*~\1 $REDIS_PORT~" /etc/nginx/conf.d/onlyoffice.conf
-sed -i "s~\(redis_user =\).*~\1 \"$REDIS_USER\"~" /etc/nginx/conf.d/onlyoffice.conf
-sed -i "s~\(redis_pass =\).*~\1 \"$REDIS_PASSWORD\"~" /etc/nginx/conf.d/onlyoffice.conf
+sed -i "s~\(redis_user =\).*~\1 \"$REDIS_USER_ESCAPED\"~" /etc/nginx/conf.d/onlyoffice.conf
+sed -i "s~\(redis_pass =\).*~\1 \"$REDIS_PASSWORD_ESCAPED\"~" /etc/nginx/conf.d/onlyoffice.conf
 sed -i "s~\(redis_db =\).*~\1 $REDIS_DB~" /etc/nginx/conf.d/onlyoffice.conf
-sed -i "s~\(\"wrongPortalNameUrl\":\).*,~\1 \"${WRONG_PORTAL_NAME_URL}\",~g" /var/www/public/scripts/config.json
+sed -i "s~\(\"wrongPortalNameUrl\":\).*,~\1 \"${WRONG_PORTAL_NAME_URL_ESCAPED}\",~g" /var/www/public/scripts/config.json
 # Without DASHBOARDS_PASSWORD the login is locked with a random password nobody knows, instead of a guessable default
 if [ -z "${DASHBOARDS_PASSWORD:-}" ]; then
     echo "DASHBOARDS_PASSWORD is empty: /dashboards stays locked until it is set" >&2
