@@ -262,7 +262,7 @@ ENTRYPOINT ["/bin/bash", "/usr/bin/docker-identity-entrypoint.sh"]
 ## Nginx router otel lua dependencies ##
 # Built on the -fat flavour of the same OpenResty release the router runs, so
 # the native pb.so is linked against the LuaJIT ABI that ships at runtime.
-FROM openresty/openresty:${OPENRESTY_VERSION}-bullseye-fat AS otel-build
+FROM openresty/openresty:${OPENRESTY_VERSION}-bookworm-fat AS otel-build
 # Git tags and the luarocks registry are both mutable, so every dependency is
 # fetched as a tarball and checked against a pinned sha256 before it is used.
 # Refresh a checksum with: curl -sL <url> | sha256sum
@@ -298,7 +298,7 @@ RUN set -eu; \
     rm -rf /tmp/*
 
 ## Nginx image ##
-FROM openresty/openresty:${OPENRESTY_VERSION}-bullseye AS router
+FROM openresty/openresty:${OPENRESTY_VERSION}-bookworm AS router
 ARG SRC_PATH
 ARG BUILD_PATH
 ARG COUNT_WORKER_CONNECTIONS=1024
