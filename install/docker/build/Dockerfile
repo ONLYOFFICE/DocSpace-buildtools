@@ -674,7 +674,7 @@ RUN set -eux; \
     apt-get install -y --no-install-recommends \
         mysql-client ca-certificates wget gnupg \
         gettext-base supervisor libcap2-bin certbot; \
-    curl -fsSL https://github.com/trentm/json/raw/master/lib/json.js -o /usr/local/bin/json && chmod +x /usr/local/bin/json; \
+    curl -fsSL https://raw.githubusercontent.com/trentm/json/a8baa02b5d6fc5f0c16521372ee89674a4706d82/lib/json.js -o /usr/local/bin/json && echo "811b93d71309041da77761ffdbb7a20d4a56e6a842823d0727262252f14461fb  /usr/local/bin/json" | sha256sum -c - && chmod +x /usr/local/bin/json || exit 1; \
     wget -qO- https://openresty.org/package/pubkey.gpg | gpg --dearmor -o /usr/share/keyrings/openresty.gpg; \
     echo "deb [arch=$TARGETARCH signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/$([ "$TARGETARCH" = arm64 ] && echo arm64/)ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") main" > /etc/apt/sources.list.d/openresty.list; \
     apt-get update && apt-get install -y --no-install-recommends openresty; \
