@@ -56,6 +56,18 @@ package_installed() {
 	fi
 }
 
+# Prints the installed package matching a name or glob on DEB, or a name or provided capability on RPM
+dependency_installed() {
+	local MATCHED
+	if command -v dpkg-query >/dev/null 2>&1; then
+		MATCHED=$(dpkg-query -W -f='${Package} ${db:Status-Status}\n' "$1" 2>/dev/null | awk '$2 == "installed" { print $1; exit }')
+	else
+		MATCHED=$(rpm -q --whatprovides --qf '%{NAME}\n' "$1" 2>/dev/null) || return 1
+		MATCHED=${MATCHED%%$'\n'*}
+	fi
+	[ -n "${MATCHED}" ] && echo "${MATCHED}"
+}
+
 get_required_ports() {
 	if ! command -v ss >/dev/null 2>&1; then
 		if command -v dpkg >/dev/null 2>&1; then
@@ -73,11 +85,11 @@ get_required_ports() {
 	)
 	DEPENDENCY_PORTS=()
 	add_dependency_port() {
-		local PORT="$1" PACKAGE_NAME
+		local PORT="$1" PACKAGE_NAME INSTALLED_NAME
 		shift
 		for PACKAGE_NAME in "$@"; do
-			if package_installed "${PACKAGE_NAME}"; then
-				echo "${PACKAGE_NAME} $RES_APP_INSTALLED"
+			if INSTALLED_NAME=$(dependency_installed "${PACKAGE_NAME}"); then
+				echo "${INSTALLED_NAME} $RES_APP_INSTALLED"
 				return 0
 			fi
 		done
@@ -90,7 +102,11 @@ get_required_ports() {
 	if [ "$DOCUMENT_SERVER_INSTALLED" != "true" ]; then
 		DEPENDENCY_PORTS+=("${DS_PORT:-8083}" 8000)
 		# Debian and RPM distros use different PostgreSQL server package names.
-		add_dependency_port 5432 "$(command -v dpkg-query >/dev/null 2>&1 && echo postgresql || echo postgresql-server)"
+		if command -v dpkg-query >/dev/null 2>&1; then
+			add_dependency_port 5432 postgresql 'postgresql-[0-9]*'
+		else
+			add_dependency_port 5432 postgresql-server
+		fi
 		add_dependency_port "${RABBITMQ_PORT:-5672}" rabbitmq-server
 		add_dependency_port "${REDIS_PORT:-6379}" redis-server "${REDIS_PACKAGE:-redis}"
 	fi
