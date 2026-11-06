@@ -310,7 +310,8 @@ install_previous() {
   # the latest release still ships under the DocSpace name
   curl -fsSL --retry 3 --retry-delay 2 "https://download.onlyoffice.com/docspace/install-Docker.sh" -o "$OLD_SCRIPT" || \
     { echo "::error::Could not download the released install-Docker.sh."; return 1; }
-  sudo env COMPOSE_PROGRESS=quiet bash "$OLD_SCRIPT" "${ARGS[@]}" || { echo "::error::The released installer failed."; return 1; }
+  # The released script is the final DocSpace one and asks for confirmation, which has to be given up front without a terminal
+  sudo env COMPOSE_PROGRESS=quiet DOCSPACE_LEGACY_CONFIRMED=true bash "$OLD_SCRIPT" "${ARGS[@]}" || { echo "::error::The released installer failed."; return 1; }
   wait_for_containers
 
   local IMAGE
