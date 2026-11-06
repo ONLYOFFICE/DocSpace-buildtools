@@ -45,6 +45,9 @@ env:
   IS_4TESTING: ${{ github.event.inputs.testing }}
   DOCKER_TAG: ${{ github.event.inputs.tag }}
 
+permissions:
+  contents: read
+
 jobs:
   Setup:
     runs-on: ubuntu-latest

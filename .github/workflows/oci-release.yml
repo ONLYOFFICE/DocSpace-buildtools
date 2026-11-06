@@ -15,6 +15,9 @@ on:
 env:
   PRODUCT: apps
 
+permissions:
+  contents: read
+
 jobs:
   release:
     name: Scripts release

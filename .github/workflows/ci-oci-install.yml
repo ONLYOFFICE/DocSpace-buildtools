@@ -56,6 +56,9 @@ on:
         description: "Use 4testing packages"
         default: false
 
+permissions:
+  contents: read
+
 jobs:
   prepare:
     runs-on: ubuntu-latest

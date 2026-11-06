@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: '0 20 * * *' # Every day at 20:00 UTC
 
+permissions:
+  contents: read
+
 jobs:
   trigger-builds:
     runs-on: ubuntu-latest
