@@ -54,8 +54,14 @@ make_swap () {
 		return 0
 	fi
 
-	# fallocate may produce a file with holes that swapon rejects, so fall back to dd
-	if enable_swap_file "${SWAPFILE}" fallocate || enable_swap_file "${SWAPFILE}" dd; then
+	# fallocate may produce a file with holes that swapon rejects, so fall back to dd; status 2 means swapon is not permitted here
+	local STATUS=0
+	enable_swap_file "${SWAPFILE}" fallocate || STATUS=$?
+	if [ "${STATUS}" -eq 1 ]; then
+		STATUS=0
+		enable_swap_file "${SWAPFILE}" dd || STATUS=$?
+	fi
+	if [ "${STATUS}" -eq 0 ]; then
 		awk -v swapfile="${SWAPFILE}" '$1 == swapfile && $3 == "swap" { found = 1 } END { exit !found }' /etc/fstab || echo "${SWAPFILE} none swap sw 0 0" >> /etc/fstab
 		echo "Swap file ${SWAPFILE} (6 GB) was created and enabled"
 	else
@@ -78,7 +84,12 @@ enable_swap_file () {
 		dd if=/dev/zero of="${SWAPFILE}" bs=1MiB count=6144 status=none
 	fi || return 1
 
-	chmod 600 "${SWAPFILE}" && mkswap "${SWAPFILE}" >/dev/null && swapon "${SWAPFILE}"
+	chmod 600 "${SWAPFILE}" && mkswap "${SWAPFILE}" >/dev/null || return 1
+
+	local SWAPON_ERROR
+	SWAPON_ERROR=$(swapon "${SWAPFILE}" 2>&1) && return 0
+	[[ "${SWAPON_ERROR}" == *"not permitted"* ]] && return 2
+	return 1
 }
 
 # Disables and deletes the given swap files and drops their /etc/fstab entries
