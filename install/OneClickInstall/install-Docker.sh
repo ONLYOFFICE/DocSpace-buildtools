@@ -744,6 +744,11 @@ get_env_parameter () {
 }
 
 get_tag_from_registry () {
+	# Keep credentials and the registry token out of the xtrace log
+	local XTRACE_STATE=""
+	[[ $- == *x* ]] && XTRACE_STATE="on"
+	set +x
+
 	if [[ -n ${REGISTRY_URL} ]]; then
 		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
 			CREDENTIALS=$(echo -n "$USERNAME:$PASSWORD" | base64)
@@ -768,6 +773,8 @@ get_tag_from_registry () {
 	fi
 
 	mapfile -t TAGS_RESP < <(curl -s -H "${AUTH_HEADER}" -X GET "${REGISTRY_TAGS_URL}" | jq -r "${JQ_FILTER}" | grep -v -x "latest")
+
+	if [ -n "${XTRACE_STATE}" ]; then set -x; fi
 }
 
 get_available_version () {
