@@ -71,7 +71,7 @@ jobs:
     steps:
       - name: Checkout push history
         if: github.event_name == 'push'
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
 
@@ -190,7 +190,7 @@ jobs:
           curl -fsSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/refs/heads/${GITHUB_REF_NAME}/.github/scripts/free-disk-space-linux.sh" | sudo VBOX_SAFE=1 bash
 
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Install tools
         run: |
@@ -381,7 +381,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Prepare runner
         if: matrix.guest == ''

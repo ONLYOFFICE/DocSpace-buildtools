@@ -99,10 +99,10 @@ jobs:
           curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/free-disk-space-linux.sh | sudo VBOX_SAFE=1 bash
 
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: 'Download hcp CLI'
-        uses: 'hashicorp/hcp-setup-action@v0'
+        uses: 'hashicorp/hcp-setup-action@fa6934c14c661dfbe9b6cf9c47ddb41759d625aa' # v0
         with:
           version: 'latest'
 
@@ -119,7 +119,7 @@ jobs:
           curl -fsSL "https://download.virtualbox.org/virtualbox/7.1.12/virtualbox-7.1_7.1.12-169651~Ubuntu~jammy_amd64.deb" -o /tmp/vbox.deb && sudo apt-get install -y /tmp/vbox.deb
 
       - name: Rebuild boxes
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3
         with:
           max_attempts: 2
           timeout_minutes: 90
