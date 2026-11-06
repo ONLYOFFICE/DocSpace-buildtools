@@ -310,7 +310,10 @@ ENV DNS_NAMESERVER=127.0.0.11 \
 RUN mkdir -p /var/log/nginx/ && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
-    chown -R onlyoffice:onlyoffice /etc/nginx/ /var/ /usr/ /run/ /var/log/nginx/
+    # onlyoffice owns only what the start scripts rewrite (configuration directories, the generated nginx.conf, logs, /run); the binaries and libraries stay with root
+    for path in /etc/nginx /etc/nginx/conf.d /etc/nginx/nginx.conf /run /var/log/nginx /var/cache/nginx /usr/local/openresty/nginx/conf/nginx.conf /usr/local/openresty/nginx/logs; do \
+        [ ! -e "$path" ] || chown onlyoffice:onlyoffice "$path"; \
+    done
 
 # copy static services files and config values 
 COPY --from=src --chown=onlyoffice:onlyoffice /etc/nginx/conf.d /etc/nginx/conf.d
@@ -356,7 +359,7 @@ RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.
     sed -i 's/http:\/\/172.*/$document_server;/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i '/client_body_temp_path/ i \ \ \ \ $MAP_HASH_BUCKET_SIZE' /etc/nginx/nginx.conf.template && \
     sed -i 's/\(worker_connections\).*;/\1 $COUNT_WORKER_CONNECTIONS;/' /etc/nginx/nginx.conf.template && \
-    sed -i -e '/^user/s/^/#/' -e 's#/tmp/nginx.pid#nginx.pid#' -e 's#/etc/nginx/mime.types#mime.types#' /etc/nginx/nginx.conf.template
+    sed -i -e '/^user/s/^/#/' -e 's#/etc/nginx/mime.types#mime.types#' /etc/nginx/nginx.conf.template
 
 USER onlyoffice
 
@@ -749,7 +752,7 @@ RUN set -eux; \
     { /usr/local/openresty/bin/openresty -V 2>&1 | grep -q http_v3_module || sed -i -e '/quic/d' -e "/alt-svc/d" /app/onlyoffice/template/nginx/onlyoffice-proxy-ssl.conf; } && \
     sed -i '/client_body_temp_path/ i \ \ \ \ $MAP_HASH_BUCKET_SIZE' /etc/nginx/nginx.conf.template && \
     sed -i 's/\(worker_connections\).*;/\1 $COUNT_WORKER_CONNECTIONS;/' /etc/nginx/nginx.conf.template && \
-    sed -i -e '/^user/s/^/#/' -e 's#/tmp/nginx.pid#nginx.pid#' -e 's#/etc/nginx/mime.types#mime.types#' /etc/nginx/nginx.conf.template && \
+    sed -i -e '/^user/s/^/#/' -e 's#/etc/nginx/mime.types#mime.types#' /etc/nginx/nginx.conf.template && \
     echo '{ "Redis": {} }' > /app/onlyoffice/config/redis.json && \
     echo '{ "RabbitMQ": {} }' > /app/onlyoffice/config/rabbitmq.json
     # Note: redis.json / rabbitmq.json are baked as empty objects in the image
