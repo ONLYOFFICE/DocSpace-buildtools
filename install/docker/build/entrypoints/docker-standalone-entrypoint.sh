@@ -456,8 +456,8 @@ update_configs() {
     [ -n "${APP_CORE_SERVER_ROOT}" ] && ${JSON} "${PATH_TO_CONF}/appsettings.json" -e "this.core['server-root']=process.env.APP_CORE_SERVER_ROOT"
 
     # Docs Admin Panel link
-    ${JSON} "${PATH_TO_CONF}/externalresources.json" \
-        -e "this.externalresources.adminpanel.default.domain=\"${DOCUMENT_SERVER_URL_PUBLIC%/}/admin\""
+    DOCS_ADMIN_URL="${DOCUMENT_SERVER_URL_PUBLIC%/}/admin" ${JSON} "${PATH_TO_CONF}/externalresources.json" \
+        -e "this.externalresources.adminpanel.default.domain=process.env.DOCS_ADMIN_URL"
 
     # API system (connection + core)
     ${JSON} "${PATH_TO_CONF}/apisystem.json" \
@@ -474,9 +474,12 @@ update_configs() {
         -e "this.elastic.Threads=process.env.ELK_THREADS"
 
     # OAuth redirect
-    sed -i -E "s!\"https://service\.teamlab\.info/oauth2\.aspx\"!\"${OAUTH_REDIRECT_URL}\"!g" "${PATH_TO_CONF}/autofac.consumers.json"
+    # Values below are escaped for a JSON string that is written through sed with "!" as the delimiter
+    oauth_redirect_escaped=$(printf '%s' "${OAUTH_REDIRECT_URL}" | sed -e 's/[\\"]/\\&/g' -e 's/[\\&!]/\\&/g')
+    runner_connection_escaped=$(printf '%s' "${CONNECTION_STRING};Command Timeout=${COMMAND_TIMEOUT}" | sed -e 's/[\\"]/\\&/g' -e 's/[\\&!]/\\&/g')
+    sed -i -E "s!\"https://service\.teamlab\.info/oauth2\.aspx\"!\"${oauth_redirect_escaped}\"!g" "${PATH_TO_CONF}/autofac.consumers.json"
     # Migration runner connection string
-    sed -i -E "s!(\"ConnectionString\").*!\1: \"${CONNECTION_STRING//!/\\!};Command Timeout=${COMMAND_TIMEOUT}\"!g" "${BACKEND_PATH}/appsettings.runner.json"
+    sed -i -E "s!(\"ConnectionString\").*!\1: \"${runner_connection_escaped}\"!g" "${BACKEND_PATH}/appsettings.runner.json"
 
     log "✅ Configuration files updated"
 }

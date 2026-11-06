@@ -9,7 +9,10 @@ COMMAND_TIMEOUT=${COMMAND_TIMEOUT:-"200"}
 MIGRATION_TYPE=${MIGRATION_TYPE:-"STANDALONE"}
 PARAMETERS="standalone=true"
 
-sed -i "s!\"ConnectionString\".*!\"ConnectionString\": \"Server=${MYSQL_HOST};Port=${MYSQL_PORT};Database=${MYSQL_DATABASE};User ID=${MYSQL_USER};Password=${MYSQL_PASSWORD};Command Timeout=${COMMAND_TIMEOUT}\"!g" ./appsettings.runner.json
+# Escape the value for a JSON string that is written through sed with "!" as the delimiter
+CONNECTION_STRING="Server=${MYSQL_HOST};Port=${MYSQL_PORT};Database=${MYSQL_DATABASE};User ID=${MYSQL_USER};Password=${MYSQL_PASSWORD};Command Timeout=${COMMAND_TIMEOUT}"
+CONNECTION_STRING_ESCAPED=$(printf '%s' "$CONNECTION_STRING" | sed -e 's/[\\"]/\\&/g' -e 's/[\\&!]/\\&/g')
+sed -i "s!\"ConnectionString\".*!\"ConnectionString\": \"${CONNECTION_STRING_ESCAPED}\"!g" ./appsettings.runner.json
 
 if [[ ${MIGRATION_TYPE} == "SAAS" ]]
 then
