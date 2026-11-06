@@ -61,12 +61,15 @@ DS_COMMON_NAME=${DS_COMMON_NAME:-ds}
 setup_postgres_db() {
 	DS_DB_NAME=${DS_DB_NAME:-$DS_COMMON_NAME}
 	DS_DB_USER=${DS_DB_USER:-$DS_COMMON_NAME}
-	DS_DB_PWD=${DS_DB_PWD:-$DS_COMMON_NAME}
 
 	if ! su - postgres -s /bin/bash -c "psql -lqt" | cut -d \| -f 1 | grep -q "${DS_DB_NAME}"; then
+		# A new Docs database gets its own password instead of the well-known default
+		DS_DB_PWD=${DS_DB_PWD:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 24)}
 		su - postgres -s /bin/bash -c "psql -c \"CREATE USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';\""
 		su - postgres -s /bin/bash -c "psql -c \"CREATE DATABASE ${DS_DB_NAME} OWNER ${DS_DB_USER};\""
 	fi
+	# An existing database keeps the password it was created with
+	DS_DB_PWD=${DS_DB_PWD:-$DS_COMMON_NAME}
 }
 
 if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ] && [ "${PRESERVE_DOCS}" = false ]; then
