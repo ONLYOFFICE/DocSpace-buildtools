@@ -156,7 +156,11 @@ env_configuration() {
 }
 
 restart_services() {
-	chown -R ${PACKAGE_SYSNAME}:${PACKAGE_SYSNAME} $APP_DIR $PRODUCT_DIR $LOG_DIR
+	chown -R ${PACKAGE_SYSNAME}:${PACKAGE_SYSNAME} $PRODUCT_DIR $LOG_DIR
+	# The services read their configuration but do not write it: root keeps it, so a compromised service cannot change what the root-run scripts read later
+	chown -R root:${PACKAGE_SYSNAME} $APP_DIR
+	find $APP_DIR -path "$APP_DIR/.private" -prune -o -type d -exec chmod 750 {} +
+	find $APP_DIR -path "$APP_DIR/.private" -prune -o -type f -exec chmod 640 {} +
 	local SNAPSHOT="/etc/${PACKAGE_SYSNAME}/documentserver/nginx/ds.conf" DATA_DIR="/var/www/${PACKAGE_SYSNAME}/Data" DATA_GROUP DATA_UID DATA_GID DATA_MODE
 	if [ "${PRESERVE_DOCS}" = true ]; then
 		# RPM also changes this directory's owner; restore it before granting Apps access.
