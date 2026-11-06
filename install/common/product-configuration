@@ -845,6 +845,8 @@ product_configuration(){
 	env_configuration "$APP_DIR/systemd.env" DOCSPACE_HOST "127.0.0.1"
 	env_configuration "$APP_DIR/systemd.env" DOCSPACE_PORT "5158"
 
+	# A machinekey handed over through the environment is stored the way the --machinekey option stores it
+	[ -z "${CORE_MACHINEKEY:-}" ] || echo "${CORE_MACHINEKEY}" > "$APP_DIR/.private/machinekey"
 	: "${CORE_MACHINEKEY:=$(generate_key "machinekey")}"
 	json_configuration "${USER_CONF}" "core.machinekey" "${CORE_MACHINEKEY}"
 	json_configuration "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core.machinekey" "${CORE_MACHINEKEY}"

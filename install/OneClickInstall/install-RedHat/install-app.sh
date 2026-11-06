@@ -210,7 +210,7 @@ fi
 if [ "$PRODUCT_INSTALLED" = "false" ]; then
 	[[ ${PRODUCT_VERSION} =~ ^[0-9]+(\.[0-9]+){3}$ ]] && PRODUCT_VERSION="${PRODUCT_VERSION%.*}-${PRODUCT_VERSION##*.}"
 	${package_manager} "${DOCS_RPM_OPTIONS[@]}" install -y "${package}${PRODUCT_VERSION:+-${PRODUCT_VERSION}}" --best "${APPS_ERASING_OPTIONS[@]}" $TESTING_REPO
-	"${product}"-configuration -mysqlh "${MYSQL_SERVER_HOST}" -mysqlport "${MYSQL_SERVER_PORT}" -mysqld "${MYSQL_SERVER_DB_NAME}" -mysqlu "${MYSQL_SERVER_USER}" -mysqlp "${MYSQL_ROOT_PASS}"
+	DB_PWD="${MYSQL_ROOT_PASS}" "${product}"-configuration -mysqlh "${MYSQL_SERVER_HOST}" -mysqlport "${MYSQL_SERVER_PORT}" -mysqld "${MYSQL_SERVER_DB_NAME}" -mysqlu "${MYSQL_SERVER_USER}"
 elif ! rpm -q "${package}" >/dev/null 2>&1; then # (DS v4.0.0) take over an installation made before the rename to ONLYOFFICE Apps
 	[[ ${PRODUCT_VERSION} =~ ^[0-9]+(\.[0-9]+){3}$ ]] && PRODUCT_VERSION="${PRODUCT_VERSION%.*}-${PRODUCT_VERSION##*.}"
 	${package_manager} "${DOCS_RPM_OPTIONS[@]}" install -y "${package}${PRODUCT_VERSION:+-${PRODUCT_VERSION}}" --best "${APPS_ERASING_OPTIONS[@]}" $TESTING_REPO
