@@ -78,7 +78,7 @@
           "managingusers": "/docspace/administration/docspace-managing-users.aspx",
           "oauth": "/docspace/configuration/docspace-developer-tools-settings.aspx#oauth_block",
           "passwordstrength": "/docspace/configuration/docspace-security-settings.aspx#passwordstrengthsettings_block",
-          "renaming": "/docspace/configuration/docspace-customization-settings.aspx#docspacerenaming_block",
+          "renaming": "/docspace/configuration/configuring-workspace-settings/docspace-customization-settings#workspacerenaming_block",
           "sessionlifetime": "/docspace/configuration/docspace-security-settings.aspx#sessionlifetime_block",
           "settings": "/docspace/configuration",
           "storagemanagement": "/docspace/configuration/docspace-storage-management-settings.aspx",
