@@ -133,8 +133,9 @@ check_file_format() {
 
 db() { 
   eval "$(grep -E '(PRODUCT|CONTAINER_PREFIX|NETWORK_NAME|MYSQL_HOST|MYSQL_CONTAINER_NAME|MYSQL_PORT|MYSQL_USER|MYSQL_PASSWORD|MYSQL_DATABASE)=' "${DOCKERCOMPOSE}/.env" | tr -d '\r')"
-  docker run --rm --network="${NETWORK_NAME}" mysql:"$(docker images --format '{{.Tag}}' mysql | head -n1 || echo latest)" \
-      mysql -h"${MYSQL_HOST:-$MYSQL_CONTAINER_NAME}" -P"${MYSQL_PORT:-3306}" -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DATABASE}" "$@"
+  # The password reaches the client through the environment, so it is not part of any command line
+  MYSQL_PWD="${MYSQL_PASSWORD}" docker run --rm -e MYSQL_PWD --network="${NETWORK_NAME}" mysql:"$(docker images --format '{{.Tag}}' mysql | head -n1 || echo latest)" \
+      mysql -h"${MYSQL_HOST:-$MYSQL_CONTAINER_NAME}" -P"${MYSQL_PORT:-3306}" -u"${MYSQL_USER}" "${MYSQL_DATABASE}" "$@"
 }
 
 check_docker_compose() {
