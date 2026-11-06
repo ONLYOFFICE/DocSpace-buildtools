@@ -31,6 +31,17 @@ MYSQL_PORT = os.environ.get("MYSQL_PORT") or "3306"
 MYSQL_DATABASE = os.environ.get("MYSQL_DATABASE") or "onlyoffice"
 MYSQL_USER = os.environ.get("MYSQL_USER") or "onlyoffice_user"
 MYSQL_PASSWORD = require_env("MYSQL_PASSWORD")
+
+
+def connection_value(value):
+    # A semicolon or a quote would split the connection string, so such a value is quoted (a doubled quote is a literal one)
+    if any(char in value for char in ';"\''):
+        return '"' + value.replace('"', '""') + '"'
+    return value
+
+
+MYSQL_USER_CS = connection_value(MYSQL_USER)
+MYSQL_PASSWORD_CS = connection_value(MYSQL_PASSWORD)
 MYSQL_SSL_MODE = os.environ.get("MYSQL_SSL_MODE") or "none"
 if MYSQL_SSL_MODE.lower() not in ("none", "preferred", "required", "verifyca", "verifyfull"):
     raise RuntimeError("MYSQL_SSL_MODE must be one of none, preferred, required, verifyca, verifyfull")
@@ -329,7 +340,7 @@ def check_docs_connection(wait=True):
 
 filePath = "/app/onlyoffice/config/appsettings.json"
 jsonData = openJsonFile(filePath)
-updateJsonData(jsonData,"$.ConnectionStrings.default.connectionString", "Server="+ MYSQL_CONNECTION_HOST +";Port="+ MYSQL_PORT +";Database="+ MYSQL_DATABASE +";User ID="+ MYSQL_USER +";Password="+ MYSQL_PASSWORD +";Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode="+ MYSQL_SSL_MODE +";ConnectionReset=false;AllowPublicKeyRetrieval=true",)
+updateJsonData(jsonData,"$.ConnectionStrings.default.connectionString", "Server="+ MYSQL_CONNECTION_HOST +";Port="+ MYSQL_PORT +";Database="+ MYSQL_DATABASE +";User ID="+ MYSQL_USER_CS +";Password="+ MYSQL_PASSWORD_CS +";Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode="+ MYSQL_SSL_MODE +";ConnectionReset=false;AllowPublicKeyRetrieval=true",)
 updateJsonData(jsonData,"$.core.server-root", APP_CORE_SERVER_ROOT)
 updateJsonData(jsonData,"$.core.base-domain", APP_CORE_BASE_DOMAIN)
 updateJsonData(jsonData,"$.core.machinekey", APP_CORE_MACHINEKEY)
@@ -368,7 +379,7 @@ if jsonData:
 
 filePath = "/app/onlyoffice/config/apisystem.json"
 jsonData = openJsonFile(filePath)
-updateJsonData(jsonData, "$.ConnectionStrings.default.connectionString", "Server="+ MYSQL_CONNECTION_HOST +";Port="+ MYSQL_PORT +";Database="+ MYSQL_DATABASE +";User ID="+ MYSQL_USER +";Password="+ MYSQL_PASSWORD +";Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode="+ MYSQL_SSL_MODE +";ConnectionReset=false;AllowPublicKeyRetrieval=true",)
+updateJsonData(jsonData, "$.ConnectionStrings.default.connectionString", "Server="+ MYSQL_CONNECTION_HOST +";Port="+ MYSQL_PORT +";Database="+ MYSQL_DATABASE +";User ID="+ MYSQL_USER_CS +";Password="+ MYSQL_PASSWORD_CS +";Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode="+ MYSQL_SSL_MODE +";ConnectionReset=false;AllowPublicKeyRetrieval=true",)
 updateJsonData(jsonData,"$.core.base-domain", APP_CORE_BASE_DOMAIN)
 updateJsonData(jsonData,"$.core.machinekey", APP_CORE_MACHINEKEY)
 writeJsonFile(filePath, jsonData)
@@ -433,7 +444,7 @@ writeJsonFile(filePath, jsonData)
 filePath = os.path.join(BUILD_PATH, "services", "ASC.Migration.Runner", "service", "appsettings.runner.json")
 if os.path.isfile(filePath):
     jsonData = openJsonFile(filePath)
-    conn_str = f"Server={MYSQL_CONNECTION_HOST};Port={MYSQL_PORT};Database={MYSQL_DATABASE};User ID={MYSQL_USER};Password={MYSQL_PASSWORD};Command Timeout=100"
+    conn_str = f"Server={MYSQL_CONNECTION_HOST};Port={MYSQL_PORT};Database={MYSQL_DATABASE};User ID={MYSQL_USER_CS};Password={MYSQL_PASSWORD_CS};Command Timeout=100"
     updateJsonData(jsonData, "$.options.Providers[0].ConnectionString", conn_str)
     updateJsonData(jsonData, "$.options.TeamlabsiteProviders[0].ConnectionString", conn_str)
     writeJsonFile(filePath, jsonData)

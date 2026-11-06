@@ -10,7 +10,13 @@ MIGRATION_TYPE=${MIGRATION_TYPE:-"STANDALONE"}
 PARAMETERS="standalone=true"
 
 # Escape the value for a JSON string that is written through sed with "!" as the delimiter
-CONNECTION_STRING="Server=${MYSQL_HOST};Port=${MYSQL_PORT};Database=${MYSQL_DATABASE};User ID=${MYSQL_USER};Password=${MYSQL_PASSWORD};Command Timeout=${COMMAND_TIMEOUT}"
+# A semicolon or a quote would split the connection string, so such a value is quoted (a doubled quote is a literal one)
+quote_connection_value() {
+    local value="$1"
+    if [[ "$value" == *[\;\"\']* ]]; then value="\"${value//\"/\"\"}\""; fi
+    printf '%s' "$value"
+}
+CONNECTION_STRING="Server=${MYSQL_HOST};Port=${MYSQL_PORT};Database=${MYSQL_DATABASE};User ID=$(quote_connection_value "${MYSQL_USER}");Password=$(quote_connection_value "${MYSQL_PASSWORD}");Command Timeout=${COMMAND_TIMEOUT}"
 CONNECTION_STRING_ESCAPED=$(printf '%s' "$CONNECTION_STRING" | sed -e 's/[\\"]/\\&/g' -e 's/[\\&!]/\\&/g')
 sed -i "s!\"ConnectionString\".*!\"ConnectionString\": \"${CONNECTION_STRING_ESCAPED}\"!g" ./appsettings.runner.json
 

@@ -56,7 +56,13 @@ export MYSQL_PWD="$MYSQL_PASSWORD"
 # No service needs the MySQL root password, so the supervised processes must not inherit it
 unset MYSQL_ROOT_PASSWORD
 MYSQL_ARGS=(-h "$MYSQL_HOST" -P "$MYSQL_PORT" -u "$MYSQL_USER")
-export CONNECTION_STRING="Server=${MYSQL_HOST};Port=${MYSQL_PORT};Database=${MYSQL_DATABASE};User ID=${MYSQL_USER};Password=${MYSQL_PASSWORD}"
+# A semicolon or a quote would split the connection string, so such a value is quoted (a doubled quote is a literal one)
+quote_connection_value() {
+    local value="$1"
+    if [[ "$value" == *[\;\"\']* ]]; then value="\"${value//\"/\"\"}\""; fi
+    printf '%s' "$value"
+}
+export CONNECTION_STRING="Server=${MYSQL_HOST};Port=${MYSQL_PORT};Database=${MYSQL_DATABASE};User ID=$(quote_connection_value "${MYSQL_USER}");Password=$(quote_connection_value "${MYSQL_PASSWORD}")"
 
 SSL_MODE=${SSL_MODE:-"none"}
 SSL_DOMAIN=${SSL_DOMAIN:-""}
