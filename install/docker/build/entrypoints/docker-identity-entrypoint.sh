@@ -34,4 +34,4 @@ for secret_name in SPRING_APPLICATION_SIGNATURE_SECRET SPRING_APPLICATION_ENCRYP
     fi
 done
 
-java -jar ${BUILD_PATH}/services/${SPRING_APPLICATION_NAME}/app.jar
+exec java -jar ${BUILD_PATH}/services/${SPRING_APPLICATION_NAME}/app.jar

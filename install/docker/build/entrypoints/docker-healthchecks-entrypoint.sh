@@ -57,4 +57,4 @@ sed -i "s!localhost:5157!${AI_HOST}!g" ${PATH_TO_CONF}/appsettings.json
 sed -i "s!localhost:5124!${AI_WORKER_HOST}!g" ${PATH_TO_CONF}/appsettings.json
 sed -i "s!localhost:9837!${AI_CHAT_HOST}!g" ${PATH_TO_CONF}/appsettings.json
      
-dotnet ${RUN_DLL} --urls=${URLS} 
+exec dotnet ${RUN_DLL} --urls=${URLS} 
