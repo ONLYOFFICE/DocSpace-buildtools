@@ -27,7 +27,7 @@
 %license %{_datadir}/licenses/%{name}/LICENSE
 %license %{_datadir}/licenses/%{name}/LICENSE-CC-BY-SA
 %{_var}/log/%{package_sysname}/%{product}/
-%dir %{_sysconfdir}/%{package_sysname}/
+%dir %attr(755, root, root) %{_sysconfdir}/%{package_sysname}/
 %dir %{_sysconfdir}/%{package_sysname}/%{product}/
 %dir %{_sysconfdir}/%{package_sysname}/%{product}/.private/
 %dir %{_var}/log/%{package_sysname}/
@@ -59,7 +59,7 @@
 %config %{_sysconfdir}/openresty/html/*
 %attr(744, root, root) %{_bindir}/%{product}-ssl-setup
 %config %{_sysconfdir}/%{package_sysname}/%{product}/openresty/nginx.conf.template
-%dir %{_sysconfdir}/%{package_sysname}/
+%dir %attr(755, root, root) %{_sysconfdir}/%{package_sysname}/
 %dir %{_sysconfdir}/%{package_sysname}/%{product}/
 %dir %{_sysconfdir}/%{package_sysname}/%{product}/openresty/
 %{buildpath}/public/
