@@ -117,7 +117,8 @@ curl -fsSL https://artifacts.opensearch.org/publickeys/opensearch-release.pgp | 
 echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch/3.x/apt stable main" > /etc/apt/sources.list.d/opensearch-3.x.list
 OPENSEARCH_VERSION="3.5.0"
 export OPENSEARCH_JAVA_HOME="${OPENSEARCH_JAVA_HOME:-/usr/share/opensearch/jdk}"
-export OPENSEARCH_INITIAL_ADMIN_PASSWORD="$(echo "${package_sysname}!A1")"
+# Only the package scripts need it (the security plugin is removed afterwards); the fixed prefix satisfies the password policy
+export OPENSEARCH_INITIAL_ADMIN_PASSWORD="Aa1!$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 16)"
 
 # Add OpenSearch Dashboards repo.
 if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then
