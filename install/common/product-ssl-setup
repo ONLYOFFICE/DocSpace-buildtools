@@ -180,6 +180,10 @@ case $1 in
       DOMAINS=$2
       DOMAIN=${DOMAINS%%,*}; DOMAIN=${DOMAIN#\*\.}
       [[ ,$DOMAINS, == *,$DOMAIN,* ]] || DOMAINS+=",${DOMAIN}"
+      # The domains end up in certbot arguments, SQL and URLs, so only plain host names are accepted
+      for CHECK_DOMAIN in ${DOMAINS//,/ }; do
+        [[ ${CHECK_DOMAIN#\*\.} =~ ^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$ ]] || { echo "Error: domain name '${CHECK_DOMAIN}' is incorrect." >&2; exit 1; }
+      done
       LETSENCRYPT_ENABLE="true"
 
       # Install certbot if not already installed
