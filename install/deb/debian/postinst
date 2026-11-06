@@ -29,7 +29,8 @@ case "$1" in
 
 		[ -n "$APP_HOST" ] && args+=(-ash "$APP_HOST")
 		[ -n "$APP_PORT" ] && args+=(-asp "$APP_PORT")
-		[ -n "$CORE_MACHINEKEY" ] && args+=(-mk "$CORE_MACHINEKEY")
+		# Secrets travel through the environment of the configuration script, not through its command line
+		[ -z "$CORE_MACHINEKEY" ] || export CORE_MACHINEKEY
 
 		# --- Database ---
 		db_get_answer db-host
@@ -45,7 +46,7 @@ case "$1" in
 
 		if [ -n "$DB_HOST" ] && [ -n "$DB_NAME" ] && [ -n "$DB_USER" ] && [ -n "$DB_PORT" ]; then
 			args+=(-mysqlh "$DB_HOST" -mysqld "$DB_NAME" -mysqlu "$DB_USER" -mysqlport "$DB_PORT")
-			[ -n "$DB_PWD" ] && args+=(-mysqlp "$DB_PWD")
+			[ -z "$DB_PWD" ] || export DB_PWD
 		elif [ -n "$DB_HOST$DB_NAME$DB_USER$DB_PWD$DB_PORT" ]; then
 			echo "Warning: not all database parameters are set, skipping DB config"
 		fi
@@ -65,7 +66,7 @@ case "$1" in
 		if [ -n "$REDIS_HOST" ] && [ -n "$REDIS_PORT" ]; then
 			args+=(-rdh "$REDIS_HOST" -rdp "$REDIS_PORT")
 			[ -n "$REDIS_USER" ] && args+=(-rdu "$REDIS_USER")
-			[ -n "$REDIS_PWD" ] && args+=(-rdpw "$REDIS_PWD")
+			[ -z "$REDIS_PWD" ] || export REDIS_PASS="$REDIS_PWD"
 			[ -n "$REDIS_DB" ] && args+=(-rdb "$REDIS_DB")
 		elif [ -n "$REDIS_HOST$REDIS_PORT$REDIS_USER$REDIS_PWD$REDIS_DB" ]; then
 			echo "Warning: not all Redis parameters are set, skipping Redis config"
@@ -86,7 +87,7 @@ case "$1" in
 		if [ -n "$RABBITMQ_HOST" ] && [ -n "$RABBITMQ_PORT" ] && [ -n "$RABBITMQ_USER" ]; then
 			args+=(-rbh "$RABBITMQ_HOST" -rbp "$RABBITMQ_PORT" -rbu "$RABBITMQ_USER")
 			[ -n "$RABBITMQ_SCHEME" ] && args+=(-rbpr "$RABBITMQ_SCHEME")
-			[ -n "$RABBITMQ_PASSWORD" ] && args+=(-rbpw "$RABBITMQ_PASSWORD")
+			[ -z "$RABBITMQ_PASSWORD" ] || export RABBITMQ_PASSWORD
 		elif [ -n "$RABBITMQ_HOST$RABBITMQ_PORT$RABBITMQ_USER$RABBITMQ_PASSWORD$RABBITMQ_SCHEME" ]; then
 			echo "Warning: not all RabbitMQ parameters are set, skipping RabbitMQ config"
 		fi
@@ -115,7 +116,8 @@ case "$1" in
 
 		if [ -n "$DOCUMENT_SERVER_URL_EXTERNAL" ]; then
 			if [ -n "$DOCUMENT_SERVER_JWT_SECRET" ] && [ -n "$DOCUMENT_SERVER_JWT_HEADER" ]; then
-				args+=(-docsurl "$DOCUMENT_SERVER_URL_EXTERNAL" -js "$DOCUMENT_SERVER_JWT_SECRET" -jh "$DOCUMENT_SERVER_JWT_HEADER")
+				args+=(-docsurl "$DOCUMENT_SERVER_URL_EXTERNAL" -jh "$DOCUMENT_SERVER_JWT_HEADER")
+				export DOCUMENT_SERVER_JWT_SECRET
 			else
 				echo "Warning: Docs URL is set, but JWT secret/header are missing - skipping Docs config"
 			fi
