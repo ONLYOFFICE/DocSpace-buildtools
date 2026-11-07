@@ -148,9 +148,9 @@ jobs:
           TAG_PREFIX=$(printf '%s' "$TAG_PREFIX" | LC_ALL=C sed 's/[^a-zA-Z0-9_.-]/-/g; s/^[.-]/_/; s/^$/build/' | cut -c1-100)
           DOCKER_TAG="${TAG_PREFIX}.${GITHUB_RUN_NUMBER}"
 
-          sudo GITHUB_REPOSITORY="${GITHUB_REPOSITORY}" BRANCH="${BUILDTOOLS_BRANCH}" \
-            DOCKER_REPOSITORY=${{ env.REPO }} DOCKER_PREFIX=${{ env.DOCKER_IMAGE_PREFIX }} DOCKER_TAG=$DOCKER_TAG \
-            DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME} DOCKERHUB_TOKEN=${DOCKERHUB_TOKEN} \
+          # sudo keeps the exported variables by name, so the token never appears in its arguments
+          export BRANCH="${BUILDTOOLS_BRANCH}" DOCKER_REPOSITORY="${{ env.REPO }}" DOCKER_PREFIX="${{ env.DOCKER_IMAGE_PREFIX }}" DOCKER_TAG
+          sudo --preserve-env=GITHUB_REPOSITORY,BRANCH,DOCKER_REPOSITORY,DOCKER_PREFIX,DOCKER_TAG,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN \
             bash .github/scripts/docker-images-availability.sh
 
           gh workflow run "ci-oci-docker-install.yml" --repo "${GITHUB_REPOSITORY}" --ref "${BUILDTOOLS_BRANCH}" --field offline=false --field testing=true --field tag="$DOCKER_TAG"

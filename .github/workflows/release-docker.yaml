@@ -75,8 +75,10 @@ jobs:
           DOCKER_REPOSITORY: ${{ github.event.inputs.repo }}
         run: |
           echo "Waiting for images with tag ${DOCKER_TAG} to appear on Docker Hub..."
+          # sudo keeps the exported variables by name, so the token never appears in its arguments
+          export BRANCH="${GITHUB_REF_NAME}" DOCKER_PREFIX=apps
           curl -fsSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/refs/heads/${GITHUB_REF_NAME}/.github/scripts/docker-images-availability.sh" \
-            | sudo GITHUB_REPOSITORY="${GITHUB_REPOSITORY}" BRANCH="${GITHUB_REF_NAME}" DOCKER_REPOSITORY="${DOCKER_REPOSITORY}" DOCKER_PREFIX=apps DOCKER_TAG="${DOCKER_TAG}" DOCKERHUB_USERNAME="${DOCKERHUB_USERNAME}" DOCKERHUB_TOKEN="${DOCKERHUB_TOKEN}" bash
+            | sudo --preserve-env=GITHUB_REPOSITORY,BRANCH,DOCKER_REPOSITORY,DOCKER_PREFIX,DOCKER_TAG,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN bash
 
       - name: Trigger offline release
         env:
