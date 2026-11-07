@@ -28,6 +28,11 @@ on:
         description: 'Trigger offline release'
         required: false
         default: true
+      overwrite_existing_tag:
+        type: boolean
+        description: 'Replace a release tag that already holds a different image'
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -36,7 +41,13 @@ jobs:
   docker-release:
     name: "Release Docker"
     runs-on: ubuntu-latest
+    environment: release
     steps:
+    - name: Check the release branch
+      run: |
+        # Only a stable branch may publish release images
+        [[ "${GITHUB_REF_NAME}" == master || "${GITHUB_REF_NAME}" == release/* || "${GITHUB_REF_NAME}" == hotfix/* ]] || { echo "::error::A release can be started only from master, release/* or hotfix/*, not from ${GITHUB_REF_NAME}"; exit 1 ; }
+
     - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       with:
         repository: 'ONLYOFFICE/DocSpace-buildtools'
@@ -57,6 +68,7 @@ jobs:
         DOCKER_USERNAME_PAT: ${{ secrets.DOCKERHUB_USERNAME_PAT }}
         DOCKER_TOKEN_PAT: ${{ secrets.DOCKERHUB_TOKEN_PAT }}
         SERVICES_FILTER: ${{ github.event.inputs.services_filter }}
+        ALLOW_TAG_OVERWRITE: ${{ github.event.inputs.overwrite_existing_tag }}
       run: |
         chmod +x ${GITHUB_WORKSPACE}/.github/scripts/release-docker.sh
         ${GITHUB_WORKSPACE}/.github/scripts/release-docker.sh

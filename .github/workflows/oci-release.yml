@@ -22,11 +22,17 @@ jobs:
   release:
     name: Scripts release
     runs-on: ubuntu-latest
+    environment: release
     env:
       DOCKER_DIR: "${{ github.workspace }}/install/docker"
       STANDALONE_DIR: "${{ github.workspace }}/install/docker/standalone"
       SCRIPT_DIR: "${{ github.workspace }}/install/OneClickInstall"
     steps:
+      - name: Check the release branch
+        run: |
+          # Only master may publish the installers that users run with curl | bash
+          [[ "${GITHUB_REF_NAME}" == master ]] || { echo "::error::The installers can be released only from master, not from ${GITHUB_REF_NAME}"; exit 1; }
+
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
