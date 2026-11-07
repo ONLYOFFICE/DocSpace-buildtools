@@ -60,10 +60,12 @@ function hub_login() {
   local USERNAME="${1}" PASSWORD="${2}" OUT_VAR="${3}"
   local RESPONSE TOKEN
 
-  RESPONSE=$(curl -sSL \
+  # The credentials reach curl through a pipe, never through its arguments
+  RESPONSE=$(jq -n --arg username "${USERNAME}" --arg password "${PASSWORD}" '{username: $username, password: $password}' \
+    | curl -sSL \
     -X POST \
     -H "Content-Type: application/json" \
-    -d "{\"username\":\"${USERNAME}\",\"password\":\"${PASSWORD}\"}" \
+    -d @- \
     "https://hub.docker.com/v2/users/login/" 2>/dev/null)
 
   TOKEN=$(echo "${RESPONSE}" | jq -r '.token // empty' 2>/dev/null) || true

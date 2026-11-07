@@ -86,6 +86,8 @@ jobs:
 
       - name: Changelog generation
         run: |
+          # The push is the last use of the token file
+          trap 'rm -f "${RUNNER_TEMP}/gitea-credentials"' EXIT
           cd ${GITHUB_REPOSITORY#*/}/install/common
           bash changelog.sh deb; bash changelog.sh rpm
           git add ../deb/debian/changelog ../rpm/SPECS/changelog.spec
@@ -110,6 +112,8 @@ jobs:
           git config --global 'credential.https://${{ secrets.GITEA_HOST }}.helper' "store --file=${RUNNER_TEMP}/gitea-credentials"
           [[ "$GITEA_TOKEN" == *:* ]] || GITEA_TOKEN+=":"
           printf 'url=https://%s@%s\n\n' "$GITEA_TOKEN" '${{ secrets.GITEA_HOST }}' | git credential approve
+          # The token file is needed only for the clone and must not stay on the runner while dependencies are installed
+          trap 'rm -f "${RUNNER_TEMP}/gitea-credentials"' EXIT
           WORKSPACE_DIR=$(mountpoint -q /mnt && echo "/mnt" || echo "${GITHUB_WORKSPACE}")
           [ "$WORKSPACE_DIR" = "/mnt" ] && sudo chown $(whoami):$(whoami) /mnt 2>/dev/null || true
           cd "${WORKSPACE_DIR}" && git clone https://${{ secrets.GITEA_HOST }}/${{ github.repository }} -b "${GITHUB_REF_NAME}" --single-branch --depth=1
@@ -157,36 +161,63 @@ jobs:
 
       - name: Sign DEB Packages
         if: matrix.packageType == 'deb'
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PRIVATE_KEY_PASS }}
         run: |
+          # The passphrase goes through a private file, so it never appears in a command line
+          PASSPHRASE_FILE=$(mktemp); trap 'rm -f "$PASSPHRASE_FILE"' EXIT
+          printf '%s' "$GPG_PASSPHRASE" > "$PASSPHRASE_FILE"
           dpkg-sig --sign origin \
-            --gpg-options "--pinentry-mode loopback --passphrase ${{ secrets.GPG_PRIVATE_KEY_PASS }}" \
+            --gpg-options "--pinentry-mode loopback --passphrase-file ${PASSPHRASE_FILE}" \
             --batch ${BUILD_WORKSPACE}/install/*.deb
 
       - name: Sign RPM Packages
         if: matrix.packageType == 'rpm'
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PRIVATE_KEY_PASS }}
+          GPG_KEY_NAME: ${{ secrets.GPG_KEY_NAME }}
         run: |
+          # The passphrase goes through a private file, so it never appears in a command line
+          PASSPHRASE_FILE=$(mktemp); trap 'rm -f "$PASSPHRASE_FILE"' EXIT
+          printf '%s' "$GPG_PASSPHRASE" > "$PASSPHRASE_FILE"
           gpg --export --armor > gpgkey.pub && sudo rpm --import gpgkey.pub
           rpmsign -D "__gpg /usr/bin/gpg" \
               -D "_gpg_path $HOME/.gnupg" \
-              -D "_gpg_name ${{ secrets.GPG_KEY_NAME }}" \
-              -D "_gpg_sign_cmd_extra_args --pinentry-mode loopback --passphrase ${{ secrets.GPG_PRIVATE_KEY_PASS }}" \
+              -D "_gpg_name ${GPG_KEY_NAME}" \
+              -D "_gpg_sign_cmd_extra_args --pinentry-mode loopback --passphrase-file ${PASSPHRASE_FILE}" \
               --addsign --rpmv4 ${BUILD_WORKSPACE}/install/rpm/SPECS/RPMS/noarch/*.rpm 
           rpmkeys -D "_pkgverify_level all" --checksig --verbose ${BUILD_WORKSPACE}/install/rpm/SPECS/RPMS/noarch/*.rpm
 
       - name: Upload DEB Packages
         if: matrix.packageType == 'deb'
+        env:
+          REPO_LOGIN: ${{ secrets.REPO_LOGIN }}
+          REPO_PASS: ${{ secrets.REPO_PASS }}
+          REPO_URL: ${{ secrets.REPO_URL_4TESTING_DEB }}
         run: |
+          # curl reads the credentials from a private config file, so they never appear in a command line
+          CURL_AUTH_FILE=$(mktemp); trap 'rm -f "$CURL_AUTH_FILE"' EXIT
+          printf 'user = "%s"\n' "$(printf '%s:%s' "$REPO_LOGIN" "$REPO_PASS" | sed 's/[\\"]/\\&/g')" > "$CURL_AUTH_FILE"
+          export CURL_AUTH_FILE REPO_URL
           find "${BUILD_WORKSPACE}/install" -name "*.${{ matrix.packageType }}" | xargs -P4 -I{} bash -c '
             curl -sS --fail --retry 10 --retry-delay 10 --connect-timeout 60 --max-time 180 -H "Content-Type: multipart/form-data" \
-              -u "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" --data-binary "@$1" "${{ secrets.REPO_URL_4TESTING_DEB }}" \
+              -K "$CURL_AUTH_FILE" --data-binary "@$1" "$REPO_URL" \
             && echo -e "\e[32m[Success] $(basename "$1")\e[0m" || echo "::warning:: [Uploading errors] $(basename "$1")"' _ {}
 
       - name: Upload RPM Packages
         if: matrix.packageType == 'rpm'
+        env:
+          REPO_LOGIN: ${{ secrets.REPO_LOGIN }}
+          REPO_PASS: ${{ secrets.REPO_PASS }}
+          REPO_URL: ${{ secrets.REPO_URL_4TESTING_RPM }}
         run: |
+          # curl reads the credentials from a private config file, so they never appear in a command line
+          CURL_AUTH_FILE=$(mktemp); trap 'rm -f "$CURL_AUTH_FILE"' EXIT
+          printf 'user = "%s"\n' "$(printf '%s:%s' "$REPO_LOGIN" "$REPO_PASS" | sed 's/[\\"]/\\&/g')" > "$CURL_AUTH_FILE"
+          export CURL_AUTH_FILE REPO_URL
           find "${BUILD_WORKSPACE}/install/rpm/SPECS/RPMS/noarch" -name "*.${{ matrix.packageType }}" | xargs -P4 -I{} bash -c '
             curl -sS --fail --retry 10 --retry-delay 10 --connect-timeout 60 --max-time 180 \
-              -u "${{ secrets.REPO_LOGIN }}:${{ secrets.REPO_PASS }}" --upload-file "$1" "${{ secrets.REPO_URL_4TESTING_RPM}}/$(basename $1)" \
+              -K "$CURL_AUTH_FILE" --upload-file "$1" "$REPO_URL/$(basename $1)" \
             && echo -e "\e[32m[Success] $(basename "$1")\e[0m" || echo "::warning:: [Uploading errors] $(basename "$1")"' _ {}
 
       - name: Checking the DEB package for errors
