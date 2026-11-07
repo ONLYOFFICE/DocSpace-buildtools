@@ -16,7 +16,13 @@ jobs:
   release:
     name: Upload offline self-extracting archive
     runs-on: ubuntu-latest
+    environment: release
     steps:
+      - name: Check the release branch
+        run: |
+          # Only a stable branch may publish the offline archive
+          [[ "${GITHUB_REF_NAME}" == master || "${GITHUB_REF_NAME}" == release/* || "${GITHUB_REF_NAME}" == hotfix/* ]] || { echo "::error::A release can be started only from master, release/* or hotfix/*, not from ${GITHUB_REF_NAME}"; exit 1 ; }
+
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
@@ -26,12 +32,19 @@ jobs:
           GH_TOKEN: ${{ secrets.TOKEN }}
           WORKFLOW_FILE: ci-oci-docker-install.yml
         run: |
+          DISPATCH_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "ARCHIVE_BUILD_STARTED=${DISPATCH_TIME}" >> "$GITHUB_ENV"
           echo "Dispatching workflow #${WORKFLOW_FILE} on ${GITHUB_REPOSITORY} (ref=${GITHUB_REF_NAME})"
-          gh workflow run "${WORKFLOW_FILE}" --repo "${GITHUB_REPOSITORY}" --ref "${GITHUB_REF_NAME}" --field offline=true --field testing=false && sleep 10
+          gh workflow run "${WORKFLOW_FILE}" --repo "${GITHUB_REPOSITORY}" --ref "${GITHUB_REF_NAME}" --field offline=true --field testing=false
 
-          RUN_ID=$(gh run list  --repo "${GITHUB_REPOSITORY}" --workflow "${WORKFLOW_FILE}" --branch "${GITHUB_REF_NAME}" \
-              --json databaseId,status | jq -r '.[] | select(.status == "queued" or .status == "in_progress" ) | .databaseId' | head -n1) 
-          [ -z "$RUN_ID" ] && { echo "::error::[FAILED] Could not find a queued/in_progress run."; exit 1; }
+          # Only the run created by this dispatch is accepted, not any other active run of the workflow
+          FIND_DEADLINE=$((SECONDS + 120))
+          until RUN_ID=$(gh run list --repo "${GITHUB_REPOSITORY}" --workflow "${WORKFLOW_FILE}" --branch "${GITHUB_REF_NAME}" \
+              --event workflow_dispatch --created ">=${DISPATCH_TIME}" --json databaseId,createdAt \
+              --jq 'sort_by(.createdAt) | .[0].databaseId // empty') && [ -n "$RUN_ID" ]; do
+            [ "$SECONDS" -lt "$FIND_DEADLINE" ] || { echo "::error::[FAILED] Could not find the run started by this dispatch."; exit 1; }
+            sleep 5
+          done
 
           echo "Monitoring run #${RUN_ID}..."
           if gh run watch "${RUN_ID}" --repo "${{ github.repository }}" --interval 60 --exit-status; then
@@ -54,6 +67,21 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_OCI }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_OCI }}
           aws-region: us-east-1
+
+      - name: Verify the 4testing archives are fresh
+        if: ${{ env.ARCHIVE_BUILD_STARTED != '' }}
+        env:
+          BUCKET_URL: ${{ secrets.AWS_BUCKET_URL_OCI }}
+        run: |
+          # The release copies the 4testing objects, so each one must have been written after this release started its build
+          BUCKET_PATH="${BUCKET_URL#s3://}"
+          BUCKET="${BUCKET_PATH%%/*}"
+          KEY_PREFIX="${BUCKET_PATH#"$BUCKET"}"; KEY_PREFIX="${KEY_PREFIX#/}"; KEY_PREFIX="${KEY_PREFIX%/}"
+          for NAME in "${ARTIFACT_NAME}" "${ARTIFACT_ARM_NAME}"; do
+            MODIFIED=$(aws s3api head-object --bucket "$BUCKET" --key "${KEY_PREFIX:+$KEY_PREFIX/}offline/4testing-${NAME}" --query LastModified --output text)
+            [ "$(date -u -d "$MODIFIED" +%s)" -ge "$(date -u -d "$ARCHIVE_BUILD_STARTED" +%s)" ] \
+              || { echo "::error::4testing-${NAME} was last written at ${MODIFIED}, before the build started at ${ARCHIVE_BUILD_STARTED}"; exit 1; }
+          done
 
       - name: Upload offline self-extracting archive (latest)
         run: |
