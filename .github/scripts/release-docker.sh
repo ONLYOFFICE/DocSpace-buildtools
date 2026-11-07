@@ -169,7 +169,10 @@ function release_service() {
    # If specifyed tag look like 2.5.1.1 it will release like 3 different tags: 2.5.1 2.5.1.1 latest
    # The latest tag is skipped when a newer line (ex. 2.6.0) is already published, so a hotfix of an old line cannot roll it back
    local -a release_tags=(--tag "${service_release_tag}:${RELEASE_VERSION%.*}" --tag "${service_release_tag}:${RELEASE_VERSION}")
-   if is_newest_release_line "${service_release_tag}" "${RELEASE_VERSION%.*}"; then
+   # The line is the N.N.N part: a three-part version is its own line, compared against the N.N.N tags already published
+   local release_line="${RELEASE_VERSION}"
+   [[ "${RELEASE_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] && release_line="${RELEASE_VERSION%.*}"
+   if is_newest_release_line "${service_release_tag}" "${release_line}"; then
      release_tags+=(--tag "${service_release_tag}:latest")
    else
      gha_notice "${service_release_tag}:latest is not moved (a newer line is published or the tags cannot be read)"

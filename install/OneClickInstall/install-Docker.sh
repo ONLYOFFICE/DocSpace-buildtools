@@ -692,7 +692,8 @@ prepare_docker_desktop () {
 
 docker_login() {
     if [[ -n "$USERNAME" && -n "$PASSWORD" ]]; then
-        echo "$PASSWORD" | docker login "$REGISTRY_URL" --username "$USERNAME" --password-stdin || { echo "Docker authentication failed"; exit 1; }
+        # A here-string is not printed by xtrace, unlike the arguments of echo
+        docker login "$REGISTRY_URL" --username "$USERNAME" --password-stdin <<< "$PASSWORD" || { echo "Docker authentication failed"; exit 1; }
     fi
 }
 
@@ -764,8 +765,9 @@ get_tag_from_registry () {
 		JQ_FILTER='.tags | join("\n")'
 	else
 		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
-			CREDENTIALS="{\"username\":\"$USERNAME\",\"password\":\"$PASSWORD\"}"
-			TOKEN=$(curl -s -H "Content-Type: application/json" -X POST -d "$CREDENTIALS" https://hub.docker.com/v2/users/login/ | jq -r '.token')
+			# jq escapes the credentials and curl reads them from stdin, so they are never part of a command line
+			TOKEN=$(jq -n --arg username "$USERNAME" --arg password "$PASSWORD" '{username: $username, password: $password}' \
+				| curl -s -H "Content-Type: application/json" -X POST -d @- https://hub.docker.com/v2/users/login/ | jq -r '.token')
 			AUTH_HEADER="Authorization: JWT $TOKEN"
 			sleep 1
 		fi
@@ -1267,13 +1269,14 @@ install_product () {
 	fi
 }
 
-# Remove the previous app layer while keeping shared dependencies.
 backup_before_update () {
 	[ "${UPDATE}" = "true" ] && [ -f "${BASE_DIR}/.env" ] || return 0
 
 	local BACKUP_ROOT="${BASE_DIR%/}.backup"
 	local BACKUP_DIR="${BACKUP_ROOT}/$(date +%Y%m%d-%H%M%S)"
-	local MYSQL_CONTAINER="${PACKAGE_SYSNAME}-mysql-server"
+	local MYSQL_CONTAINER
+	MYSQL_CONTAINER=$(get_env_parameter "MYSQL_CONTAINER_NAME" | sed "s/\${CONTAINER_PREFIX}/${PACKAGE_SYSNAME}-/g")
+	MYSQL_CONTAINER="${MYSQL_CONTAINER:-${PACKAGE_SYSNAME}-mysql-server}"
 
 	# The refresh in download_files removes the old .env and compose files, so keep a private copy outside of the installer directory
 	echo -n "Saving the current configuration to ${BACKUP_DIR}..."
@@ -1297,7 +1300,7 @@ backup_before_update () {
 
 	echo -n "Dumping the ${PRODUCT_NAME} database to ${BACKUP_DIR}/mysql.sql.gz..."
 	if ( umask 077; docker exec "${MYSQL_CONTAINER}" sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqldump -uroot --single-transaction --routines --triggers --no-tablespaces --databases "$MYSQL_DATABASE"' \
-		| gzip > "${BACKUP_DIR}/mysql.sql.gz"; [ "${PIPESTATUS[0]}" -eq 0 ] ); then
+		| gzip > "${BACKUP_DIR}/mysql.sql.gz"; [ "${PIPESTATUS[*]}" = "0 0" ] ); then
 		echo "OK"
 	else
 		echo "FAILED"
@@ -1306,6 +1309,7 @@ backup_before_update () {
 	fi
 }
 
+# Remove the previous app layer while keeping shared dependencies.
 teardown_previous_deployment_mode () {
 	echo "Switching deployment mode from ${CURRENT_DEPLOYMENT_MODE} to ${DEPLOYMENT_MODE}; removing the previous app layer (MySQL/OpenSearch/Document Server are kept)..."
 
