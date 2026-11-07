@@ -25,12 +25,14 @@ if [ "$1" = "supervisord" ]; then
     exec "$@"
 fi
 
-# Refuse to start without real secrets or with the sample values that shipped in .env
+# Refuse to start without secrets; the sample values that shipped in .env only get a warning, as changing them makes encrypted data unreadable
 for secret_name in SPRING_APPLICATION_SIGNATURE_SECRET SPRING_APPLICATION_ENCRYPTION_SECRET; do
     secret_value="${!secret_name}"
-    if [ -z "$secret_value" ] || [ "$secret_value" = "your_core_machinekey" ] || [ "$secret_value" = "your_secret_key" ]; then
+    if [ -z "$secret_value" ]; then
         echo "$secret_name must be set to a unique value" >&2
         exit 1
+    elif [ "$secret_value" = "your_core_machinekey" ] || [ "$secret_value" = "your_secret_key" ]; then
+        echo "WARNING: $secret_name still has its public sample value; set a unique value for new installations" >&2
     fi
 done
 

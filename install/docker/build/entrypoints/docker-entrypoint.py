@@ -50,9 +50,9 @@ MYSQL_CONNECTION_HOST = MYSQL_HOST if MYSQL_HOST else MYSQL_CONTAINER_NAME
 APP_CORE_SERVER_ROOT = os.environ.get("APP_CORE_SERVER_ROOT") or None
 APP_CORE_BASE_DOMAIN = os.environ.get("APP_CORE_BASE_DOMAIN", "localhost")
 APP_CORE_MACHINEKEY = require_env("APP_CORE_MACHINEKEY")
-# Refuse the publicly known sample values that shipped in .env and the base configs
+# Only warn about the publicly known sample values: changing the key of a running installation makes the data it encrypted unreadable
 if APP_CORE_MACHINEKEY in ("your_core_machinekey", "1123askdasjklasbnd"):
-    raise RuntimeError("APP_CORE_MACHINEKEY must be changed from its sample value")
+    print("WARNING: APP_CORE_MACHINEKEY still has its public sample value; set a unique key for new installations", file=sys.stderr)
 APP_URL_PORTAL = os.environ.get("APP_URL_PORTAL") or "http://" + ROUTER_HOST + ":8092"
 OAUTH_REDIRECT_URL = os.environ.get("OAUTH_REDIRECT_URL") or None
 APP_STORAGE_ROOT = os.environ.get("APP_STORAGE_ROOT") or BASE_DIR + "/data/"

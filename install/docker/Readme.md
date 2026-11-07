@@ -130,7 +130,9 @@ Review these before the first start:
 
 > [!IMPORTANT]
 > `APP_CORE_MACHINEKEY` and `IDENTITY_ENCRYPTION_SECRET` ship empty and the
-> services refuse to start until they are set to unique values. Change
+> services refuse to start until they are set to unique values. An existing
+> installation that still uses the old sample values only gets a warning in the
+> logs, because changing these secrets makes already encrypted data unreadable. Change
 > `DOCUMENT_SERVER_JWT_SECRET` from its default before exposing the instance to a network.
 
 ## Running with Docker Compose
