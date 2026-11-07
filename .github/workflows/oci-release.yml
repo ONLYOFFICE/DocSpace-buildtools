@@ -30,8 +30,8 @@ jobs:
     steps:
       - name: Check the release branch
         run: |
-          # Only master may publish the installers that users run with curl | bash
-          [[ "${GITHUB_REF_NAME}" == master ]] || { echo "::error::The installers can be released only from master, not from ${GITHUB_REF_NAME}"; exit 1; }
+          # Only a stable branch may publish the installers that users run with curl | bash
+          [[ "${GITHUB_REF_NAME}" == master || "${GITHUB_REF_NAME}" == release/* || "${GITHUB_REF_NAME}" == hotfix/* ]] || { echo "::error::The installers can be released only from master, release/* or hotfix/*, not from ${GITHUB_REF_NAME}"; exit 1; }
 
       - name: Checkout
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
