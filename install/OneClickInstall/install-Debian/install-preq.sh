@@ -182,7 +182,7 @@ else
 		# Set up MySQL 8.4 package (arm64 uses the distro package, the Oracle repo has no arm64 build).
 		if [ "$ARCH" = "amd64" ]; then
 			curl -fsSLO "https://repo.mysql.com/${MYSQL_PACKAGE_NAME}"
-			echo "mysql-apt-config mysql-apt-config/repo-codename  select  $DISTRIB_CODENAME" | debconf-set-selections
+			echo "mysql-apt-config mysql-apt-config/repo-codename  select  ${DISTRIB_CODENAME/resolute/noble}" | debconf-set-selections
 			echo "mysql-apt-config mysql-apt-config/repo-distro  select  $DIST" | debconf-set-selections
 			echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.4-lts" | debconf-set-selections
 			DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
