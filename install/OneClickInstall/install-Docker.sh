@@ -1072,7 +1072,9 @@ setup_custom_config () {
 			rm -f "${CONFIG_OVERRIDE}"; echo "Error: failed to seed ${CONFIG_OVERRIDE} from the image." >&2; exit 1
 		fi
 	fi
-	sed -i 's|^\(\s*\)#\(-\s*${CONFIG_OVERRIDE}:\)|\1\2|' $(printf '%s\n' "${APP_COMPOSE_FILES[@]}" | grep -v '^-f$')
+	for compose_file in "${APP_COMPOSE_FILES[@]}"; do
+		[ "${compose_file}" = "-f" ] || sed -i 's|^\(\s*\)#\(-\s*${CONFIG_OVERRIDE}:\)|\1\2|' "${compose_file}"
+	done
 }
 
 install_mysql_server () {
