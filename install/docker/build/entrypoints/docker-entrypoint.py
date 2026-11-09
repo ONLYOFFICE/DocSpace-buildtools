@@ -136,18 +136,26 @@ class RunServices:
                 cmd += f" --app.environment={ENV_EXTENSION}"
         # The shell replaces itself with the service (exec), so the process waited for below is the service itself.
         # PID 1 ignores a signal that has no handler, so the stop signals are passed on to the service's process group
-        service = subprocess.Popen(cmd, shell=True, start_new_session=True)
+        state = {"service": None, "pending": []}
 
         def forward_signal(signal_number, frame):
+            if state["service"] is None:
+                state["pending"].append(signal_number)
+                return
             try:
-                os.killpg(service.pid, signal_number)
+                os.killpg(state["service"].pid, signal_number)
             except ProcessLookupError:
                 pass
 
+        # The handlers are installed before the service starts, so a stop signal that arrives meanwhile is kept and passed on
         for signal_number in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGQUIT):
             signal.signal(signal_number, forward_signal)
 
-        exit_code = service.wait()
+        state["service"] = subprocess.Popen(cmd, shell=True, start_new_session=True)
+        for signal_number in state["pending"]:
+            forward_signal(signal_number, None)
+
+        exit_code = state["service"].wait()
         # A service killed by a signal is reported the way a shell does it
         sys.exit(128 - exit_code if exit_code < 0 else exit_code)
 
