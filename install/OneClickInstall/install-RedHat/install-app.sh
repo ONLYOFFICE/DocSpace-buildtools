@@ -93,7 +93,7 @@ if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ] && [ "${P
 		DOCUMENT_SERVER_INSTALLED="false" RECONFIGURE_PRODUCT="true"
 	elif config_dir_held_by_older_package; then
 		# Docs 10.0.3+ declares /etc/onlyoffice as root:root, which conflicts with the owner an older Apps or DocSpace package recorded, so Docs is updated after the Apps packages replace it
-		DS_UPDATE_DEFERRED="true"
+		DS_UPDATE_DEFERRED="true" RECONFIGURE_PRODUCT="true"
 	else
 		${package_manager} -y update "${ds_pkg_installed_name}"
 	fi
@@ -256,7 +256,14 @@ elif [[ "${PRODUCT_CHECK_UPDATE}" -eq "${UPDATE_AVAILABLE_CODE}" || "${RECONFIGU
 fi
 
 if [ "${DS_UPDATE_DEFERRED}" = "true" ]; then
-	${package_manager} -y update "${ds_pkg_installed_name}"
+	# The Apps step may not have replaced the package that holds the directory, so the update is skipped rather than failing the whole run
+	if config_dir_held_by_older_package; then
+		echo "WARNING: /etc/${package_sysname} is still held by an older package, ${ds_pkg_installed_name} is not updated; update ${package} first and run the installer again" >&2
+	else
+		${package_manager} -y update "${ds_pkg_installed_name}"
+		# The Docs package resets the owner of the shared Data directory, so Apps is configured again, as it would be after a Docs update in the usual order
+		"${product}"-configuration
+	fi
 fi
 
 echo ""
