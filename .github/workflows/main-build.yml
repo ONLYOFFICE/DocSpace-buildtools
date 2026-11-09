@@ -40,6 +40,9 @@ env:
   DOCKER_IMAGE_PREFIX: "4testing-apps"
   DOCKERFILE: "Dockerfile"
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: ${{ matrix.service }} (${{ matrix.branch }})
@@ -59,12 +62,12 @@ jobs:
         service: [dotnet, node, java, standalone]
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ env.BUILDTOOLS_BRANCH }}
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
 
       - name: Setup BuildKit with /mnt support
         run: |
@@ -75,7 +78,7 @@ jobs:
           docker buildx inspect --bootstrap
 
       - name: Login to DockerHub
-        uses: docker/login-action@v4
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -129,7 +132,7 @@ jobs:
         branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches || format('[{0}]', toJSON(github.ref_name))) }}
     steps:
       - name: Checkout ${{ matrix.branch }}
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ env.BUILDTOOLS_BRANCH }}
 
@@ -145,9 +148,9 @@ jobs:
           TAG_PREFIX=$(printf '%s' "$TAG_PREFIX" | LC_ALL=C sed 's/[^a-zA-Z0-9_.-]/-/g; s/^[.-]/_/; s/^$/build/' | cut -c1-100)
           DOCKER_TAG="${TAG_PREFIX}.${GITHUB_RUN_NUMBER}"
 
-          sudo GITHUB_REPOSITORY="${GITHUB_REPOSITORY}" BRANCH="${BUILDTOOLS_BRANCH}" \
-            DOCKER_REPOSITORY=${{ env.REPO }} DOCKER_PREFIX=${{ env.DOCKER_IMAGE_PREFIX }} DOCKER_TAG=$DOCKER_TAG \
-            DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME} DOCKERHUB_TOKEN=${DOCKERHUB_TOKEN} \
+          # sudo keeps the exported variables by name, so the token never appears in its arguments
+          export BRANCH="${BUILDTOOLS_BRANCH}" DOCKER_REPOSITORY="${{ env.REPO }}" DOCKER_PREFIX="${{ env.DOCKER_IMAGE_PREFIX }}" DOCKER_TAG
+          sudo --preserve-env=GITHUB_REPOSITORY,BRANCH,DOCKER_REPOSITORY,DOCKER_PREFIX,DOCKER_TAG,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN \
             bash .github/scripts/docker-images-availability.sh
 
           gh workflow run "ci-oci-docker-install.yml" --repo "${GITHUB_REPOSITORY}" --ref "${BUILDTOOLS_BRANCH}" --field offline=false --field testing=true --field tag="$DOCKER_TAG"

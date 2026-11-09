@@ -15,17 +15,26 @@ on:
 env:
   PRODUCT: apps
 
+permissions:
+  contents: read
+
 jobs:
   release:
     name: Scripts release
     runs-on: ubuntu-latest
+    environment: release
     env:
       DOCKER_DIR: "${{ github.workspace }}/install/docker"
       STANDALONE_DIR: "${{ github.workspace }}/install/docker/standalone"
       SCRIPT_DIR: "${{ github.workspace }}/install/OneClickInstall"
     steps:
+      - name: Check the release branch
+        run: |
+          # Only a stable branch may publish the installers that users run with curl | bash
+          [[ "${GITHUB_REF_NAME}" == master || "${GITHUB_REF_NAME}" == release/* || "${GITHUB_REF_NAME}" == hotfix/* ]] || { echo "::error::The installers can be released only from master, release/* or hotfix/*, not from ${GITHUB_REF_NAME}"; exit 1; }
+
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Creating additional scripts
         run: |
@@ -60,7 +69,7 @@ jobs:
             docker-compose.yml .env config
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v6.0.0
+        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6.0.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_OCI }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_OCI }}

@@ -103,14 +103,16 @@ run_installer() {
   cp "${GITHUB_WORKSPACE}/install/OneClickInstall/install-Docker.sh" "$PATCHED_SCRIPT"
 
   # compose prints every layer of a pull as a separate line when the output is not a terminal, and sudo drops the variable without env
-  local INSTALL_CMD="sudo env COMPOSE_PROGRESS=quiet bash $PATCHED_SCRIPT -skiphc true -noni true -gb $GITHUB_REF_NAME $*"
+  # The mode arguments are split on whitespace only, so nothing in them is ever evaluated by the shell
+  local MODE_ARGS; read -r -a MODE_ARGS <<< "$*"
+  local INSTALL_ARGS=(-skiphc true -noni true -gb "$GITHUB_REF_NAME" "${MODE_ARGS[@]}")
   [ "${IS_4TESTING:-true}" != "false" ] && \
-    INSTALL_CMD="$INSTALL_CMD -s 4testing- -un $DOCKERHUB_USERNAME_PAT -p $DOCKERHUB_TOKEN_PAT"
-  [ -n "${DOCKER_TAG:-}" ] && INSTALL_CMD="$INSTALL_CMD -dsv $DOCKER_TAG"
+    INSTALL_ARGS+=(-s 4testing- -un "$DOCKERHUB_USERNAME_PAT" -p "$DOCKERHUB_TOKEN_PAT")
+  [ -n "${DOCKER_TAG:-}" ] && INSTALL_ARGS+=(-dsv "$DOCKER_TAG")
 
   sed -i "1i set -x" "$PATCHED_SCRIPT"
 
-  eval "$INSTALL_CMD" || exit $?
+  sudo env COMPOSE_PROGRESS=quiet bash "$PATCHED_SCRIPT" "${INSTALL_ARGS[@]}" || exit $?
   wait_for_containers
 }
 
