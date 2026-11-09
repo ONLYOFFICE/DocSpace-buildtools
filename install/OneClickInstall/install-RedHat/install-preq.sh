@@ -163,6 +163,9 @@ if [ "${PRESERVE_DOCS_MYSQL}" = false ]; then
 		rpmkeys -D "_pkgverify_level all" --checksig "${MYSQL_REPO_TMP}/${MYSQL_REPO_PACKAGE}" >/dev/null \
 			|| { rm -rf "${MYSQL_REPO_TMP}"; echo "ERROR: ${MYSQL_REPO_PACKAGE} is not signed with the MySQL key" >&2; exit 1; }
 		yum "${DOCS_RPM_OPTIONS[@]}" install -y "${MYSQL_REPO_TMP}/${MYSQL_REPO_PACKAGE}" || true
+	else
+		# Not fatal: an already installed release package still provides the repository checked below
+		echo "WARNING: ${MYSQL_REPO_PACKAGE} could not be downloaded from repo.mysql.com" >&2
 	fi
 	rm -rf "${MYSQL_REPO_TMP}"
 	yum-config-manager --disable 'mysql*' >/dev/null 2>&1 || true
