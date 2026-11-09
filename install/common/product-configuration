@@ -299,7 +299,7 @@ establish_mysql_conn(){
 	env_configuration "$APP_DIR/systemd.env" JDBC_USER_NAME "$DB_USER"
 	env_configuration "$APP_DIR/systemd.env" JDBC_PASSWORD "$DB_PWD"
 
-	# Escaped for a JSON string written through sed with "&" as the delimiter (a quoted password brings double quotes)
+	# Two escaping layers: JSON (backslash, quote), then the sed replacement (backslash, "&"), which sed itself removes when writing
 	local RUNNER_CONNECTION_STRING
 	RUNNER_CONNECTION_STRING=$(printf '%s' "${CONNECTION_STRING}" | sed -e 's/[\\"]/\\&/g' -e 's/[\\&]/\\&/g')
 	sed "s&\(\"ConnectionString\":\).*&\1 \"${RUNNER_CONNECTION_STRING}\"&" -i $PRODUCT_DIR/services/ASC.Migration.Runner/appsettings.runner.json
