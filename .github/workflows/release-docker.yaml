@@ -28,18 +28,32 @@ on:
         description: 'Trigger offline release'
         required: false
         default: true
+      overwrite_existing_tag:
+        type: boolean
+        description: 'Replace a release tag that already holds a different image'
+        required: false
+        default: false
+
+permissions:
+  contents: read
 
 jobs:
   docker-release:
     name: "Release Docker"
     runs-on: ubuntu-latest
+    environment: release
     steps:
-    - uses: actions/checkout@v5
+    - name: Check the release branch
+      run: |
+        # Only a stable branch may publish release images
+        [[ "${GITHUB_REF_NAME}" == master || "${GITHUB_REF_NAME}" == release/* || "${GITHUB_REF_NAME}" == hotfix/* ]] || { echo "::error::A release can be started only from master, release/* or hotfix/*, not from ${GITHUB_REF_NAME}"; exit 1 ; }
+
+    - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       with:
         repository: 'ONLYOFFICE/DocSpace-buildtools'
 
     - name: Login to DockerHub
-      uses: docker/login-action@v4
+      uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -54,6 +68,7 @@ jobs:
         DOCKER_USERNAME_PAT: ${{ secrets.DOCKERHUB_USERNAME_PAT }}
         DOCKER_TOKEN_PAT: ${{ secrets.DOCKERHUB_TOKEN_PAT }}
         SERVICES_FILTER: ${{ github.event.inputs.services_filter }}
+        ALLOW_TAG_OVERWRITE: ${{ github.event.inputs.overwrite_existing_tag }}
       run: |
         chmod +x ${GITHUB_WORKSPACE}/.github/scripts/release-docker.sh
         ${GITHUB_WORKSPACE}/.github/scripts/release-docker.sh
@@ -69,13 +84,16 @@ jobs:
           DOCKER_TAG: ${{ github.event.inputs.release_version }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME_PAT }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN_PAT }}
+          DOCKER_REPOSITORY: ${{ github.event.inputs.repo }}
         run: |
-          echo "Waiting for images with tag ${{ env.DOCKER_TAG }} to appear on Docker Hub..."
-          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/docker-images-availability.sh \
-            | sudo GITHUB_REPOSITORY=${{ github.repository }} BRANCH=${{ github.ref_name }} DOCKER_REPOSITORY=${{ github.event.inputs.repo }} DOCKER_PREFIX=apps DOCKER_TAG=${{ env.DOCKER_TAG }} DOCKERHUB_USERNAME=${DOCKERHUB_USERNAME} DOCKERHUB_TOKEN=${DOCKERHUB_TOKEN} bash
+          echo "Waiting for images with tag ${DOCKER_TAG} to appear on Docker Hub..."
+          # sudo keeps the exported variables by name, so the token never appears in its arguments
+          export BRANCH="${GITHUB_REF_NAME}" DOCKER_PREFIX=apps
+          curl -fsSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/refs/heads/${GITHUB_REF_NAME}/.github/scripts/docker-images-availability.sh" \
+            | sudo --preserve-env=GITHUB_REPOSITORY,BRANCH,DOCKER_REPOSITORY,DOCKER_PREFIX,DOCKER_TAG,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN bash
 
       - name: Trigger offline release
         env:
           GH_TOKEN: ${{ secrets.TOKEN }}
         run: |
-          gh workflow run "offline-release.yml" --repo "${{ github.repository }}" --ref "${{ github.ref_name }}" --field trigger=true
+          gh workflow run "offline-release.yml" --repo "${GITHUB_REPOSITORY}" --ref "${GITHUB_REF_NAME}" --field trigger=true

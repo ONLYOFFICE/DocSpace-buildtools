@@ -56,6 +56,9 @@ on:
         description: "Use 4testing packages"
         default: false
 
+permissions:
+  contents: read
+
 jobs:
   prepare:
     runs-on: ubuntu-latest
@@ -68,7 +71,7 @@ jobs:
     steps:
       - name: Checkout push history
         if: github.event_name == 'push'
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
 
@@ -88,6 +91,7 @@ jobs:
         id: set-matrix
         env:
           PUSH_BEFORE: ${{ github.event.before }}
+          DISTROS_INPUT: ${{ github.event.inputs.distros }}
           OS_ORDER: rhel9 centos9S centos10S fedora43 fedora44 debian11 debian12 debian13 ubuntu2204 ubuntu2404 ubuntu2604 centos9S-arm centos10S-arm debian11-arm debian12-arm debian13-arm ubuntu2204-arm ubuntu2404-arm ubuntu2604-arm
           OS_MAP: |
             {
@@ -116,7 +120,6 @@ jobs:
 
           # Handle individual distro selection
           if [[ "${{ github.event.inputs.deb_build }}" != "true" && "${{ github.event.inputs.rpm_build }}" != "true" ]]; then
-            DISTROS_INPUT="${{ github.event.inputs.distros }}"
             for os in ${DISTROS_INPUT//,/ }; do
               os_trimmed="$(echo "$os" | xargs)"
               [[ -n "$os_trimmed" ]] && os_set["$os_trimmed"]=1
@@ -184,10 +187,10 @@ jobs:
     steps:
       - name: Free Disk Space
         run: |
-          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/free-disk-space-linux.sh | sudo VBOX_SAFE=1 bash
+          curl -fsSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/refs/heads/${GITHUB_REF_NAME}/.github/scripts/free-disk-space-linux.sh" | sudo VBOX_SAFE=1 bash
 
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Install tools
         run: |
@@ -378,7 +381,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Prepare runner
         if: matrix.guest == ''
