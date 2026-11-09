@@ -376,7 +376,7 @@ RUN \
 RUN \
         DIR=/tmp/aom && \
         git clone --branch ${AOM_VERSION} --depth 1 https://aomedia.googlesource.com/aom ${DIR} && \
-        test "$(git -C ${DIR} rev-parse HEAD)" = "${AOM_COMMIT}" && \
+        test "$(git -C ${DIR} rev-parse HEAD)" = "${AOM_COMMIT}" || exit 1 ; \
         cd ${DIR} ; \
         rm -rf CMakeCache.txt CMakeFiles ; \
         mkdir -p ./aom_build ; \
