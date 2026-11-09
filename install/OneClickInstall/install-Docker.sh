@@ -1287,7 +1287,10 @@ backup_before_update () {
 		ls -1dt "${BACKUP_ROOT}"/*/ 2>/dev/null | tail -n +4 | xargs -r rm -rf
 	else
 		echo "FAILED"
-		echo "Warning: the configuration backup was not created, the update continues." >&2
+		# A partial copy is removed so it never counts as one of the kept backups
+		rm -rf "${BACKUP_DIR}"
+		echo "Warning: the backup was not created, the update continues." >&2
+		return 0
 	fi
 
 	[ "${BACKUP_BEFORE_UPDATE}" = "true" ] || return 0
