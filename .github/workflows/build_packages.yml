@@ -188,36 +188,31 @@ jobs:
               --addsign --rpmv4 ${BUILD_WORKSPACE}/install/rpm/SPECS/RPMS/noarch/*.rpm 
           rpmkeys -D "_pkgverify_level all" --checksig --verbose ${BUILD_WORKSPACE}/install/rpm/SPECS/RPMS/noarch/*.rpm
 
-      - name: Upload DEB Packages
-        if: matrix.packageType == 'deb'
+      - name: Upload packages
         env:
           REPO_LOGIN: ${{ secrets.REPO_LOGIN }}
           REPO_PASS: ${{ secrets.REPO_PASS }}
-          REPO_URL: ${{ secrets.REPO_URL_4TESTING_DEB }}
+          REPO_URL_DEB: ${{ secrets.REPO_URL_4TESTING_DEB }}
+          REPO_URL_RPM: ${{ secrets.REPO_URL_4TESTING_RPM }}
+          PACKAGE_TYPE: ${{ matrix.packageType }}
         run: |
           # curl reads the credentials from a private config file, so they never appear in a command line
           CURL_AUTH_FILE=$(mktemp); trap 'rm -f "$CURL_AUTH_FILE"' EXIT
           printf 'user = "%s"\n' "$(printf '%s:%s' "$REPO_LOGIN" "$REPO_PASS" | sed 's/[\\"]/\\&/g')" > "$CURL_AUTH_FILE"
-          export CURL_AUTH_FILE REPO_URL
-          find "${BUILD_WORKSPACE}/install" -name "*.${{ matrix.packageType }}" | xargs -P4 -I{} bash -c '
-            curl -sS --fail --retry 10 --retry-delay 10 --connect-timeout 60 --max-time 180 -H "Content-Type: multipart/form-data" \
-              -K "$CURL_AUTH_FILE" --data-binary "@$1" "$REPO_URL" \
-            && echo -e "\e[32m[Success] $(basename "$1")\e[0m" || echo "::warning:: [Uploading errors] $(basename "$1")"' _ {}
-
-      - name: Upload RPM Packages
-        if: matrix.packageType == 'rpm'
-        env:
-          REPO_LOGIN: ${{ secrets.REPO_LOGIN }}
-          REPO_PASS: ${{ secrets.REPO_PASS }}
-          REPO_URL: ${{ secrets.REPO_URL_4TESTING_RPM }}
-        run: |
-          # curl reads the credentials from a private config file, so they never appear in a command line
-          CURL_AUTH_FILE=$(mktemp); trap 'rm -f "$CURL_AUTH_FILE"' EXIT
-          printf 'user = "%s"\n' "$(printf '%s:%s' "$REPO_LOGIN" "$REPO_PASS" | sed 's/[\\"]/\\&/g')" > "$CURL_AUTH_FILE"
-          export CURL_AUTH_FILE REPO_URL
-          find "${BUILD_WORKSPACE}/install/rpm/SPECS/RPMS/noarch" -name "*.${{ matrix.packageType }}" | xargs -P4 -I{} bash -c '
-            curl -sS --fail --retry 10 --retry-delay 10 --connect-timeout 60 --max-time 180 \
-              -K "$CURL_AUTH_FILE" --upload-file "$1" "$REPO_URL/$(basename $1)" \
+          if [ "$PACKAGE_TYPE" = "deb" ]; then
+            PACKAGES_DIR="${BUILD_WORKSPACE}/install" REPO_URL="$REPO_URL_DEB"
+          else
+            PACKAGES_DIR="${BUILD_WORKSPACE}/install/rpm/SPECS/RPMS/noarch" REPO_URL="$REPO_URL_RPM"
+          fi
+          export CURL_AUTH_FILE REPO_URL PACKAGE_TYPE
+          find "$PACKAGES_DIR" -name "*.${PACKAGE_TYPE}" | xargs -P4 -I{} bash -c '
+            # The DEB repository takes a form upload to its URL, the RPM repository a PUT of the file under its own name
+            if [ "$PACKAGE_TYPE" = "deb" ]; then
+              UPLOAD_ARGS=(-H "Content-Type: multipart/form-data" --data-binary "@$1" "$REPO_URL")
+            else
+              UPLOAD_ARGS=(--upload-file "$1" "$REPO_URL/$(basename "$1")")
+            fi
+            curl -sS --fail --retry 10 --retry-delay 10 --connect-timeout 60 --max-time 180 -K "$CURL_AUTH_FILE" "${UPLOAD_ARGS[@]}" \
             && echo -e "\e[32m[Success] $(basename "$1")\e[0m" || echo "::warning:: [Uploading errors] $(basename "$1")"' _ {}
 
       - name: Checking the DEB package for errors
