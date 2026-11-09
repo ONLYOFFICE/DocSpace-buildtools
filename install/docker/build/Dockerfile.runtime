@@ -3,7 +3,7 @@ ARG BUILD_PATH="/var/www"
 ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:10.0"
 ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:10.0"
 
-FROM alpine:latest AS base
+FROM alpine:3.22 AS base
 ARG SRC_PATH
 ARG BUILD_PATH
 
@@ -80,7 +80,7 @@ COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config /app/onlyo
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
 
-FROM openresty/openresty:focal AS router
+FROM openresty/openresty:1.31.1.1-2-bookworm AS router
 ARG SRC_PATH
 ARG BUILD_PATH
 ARG COUNT_WORKER_CONNECTIONS=1024
