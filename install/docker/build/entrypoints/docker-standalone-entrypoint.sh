@@ -622,7 +622,8 @@ main() {
 
     # onlyoffice owns the nginx configuration and logs; the openresty binaries, its Lua libraries and the CA bundle stay with root, so nothing root runs here can be replaced from the onlyoffice account; /etc/nginx/certs is skipped because it is a read-only bind mount
     find /etc/nginx /var/log/nginx /var/log/openresty -path /etc/nginx/certs -prune -o -exec chown -h onlyoffice:onlyoffice {} +
-    chown -hR root:root /usr/local/openresty /etc/ssl/certs
+    # Only entries that are not root-owned are changed: a blanket chown -R would copy the whole tree up into the container layer on every start
+    find /usr/local/openresty /etc/ssl/certs -path /usr/local/openresty/nginx/logs -prune -o \( ! -user root -o ! -group root \) -exec chown -h root:root {} +
     chown -h onlyoffice:onlyoffice /usr/local/openresty/nginx/logs
 
     # The config is writable by onlyoffice, so it is never parsed by root: openresty -t runs as onlyoffice

@@ -158,7 +158,7 @@ $(declare -p RENEW_NETWORK_ARGS)
 [ ! -e "${DOCKERCOMPOSE}/.docs-restore/apps-stopped" ] || exit 0
 install -m 644 "${LETSENCRYPT}/live/${CERT_NAME}/fullchain.pem" "${CERTS_DIR}/fullchain.pem"
 install -m 600 "${LETSENCRYPT}/live/${CERT_NAME}/privkey.pem" "${CERTS_DIR}/privkey.pem"
-"${DOCKER_BIN}" exec ${CONTAINER_NAME} /usr/local/openresty/bin/openresty -s reload
+"${DOCKER_BIN}" exec -u onlyoffice ${CONTAINER_NAME} /usr/local/openresty/bin/openresty -s reload
 END
   chmod 700 "${CRON_FILE}"
 
@@ -200,7 +200,7 @@ $(command -v docker) run "\${CERTBOT_DOCKER_ARGS[@]}" --network host certbot/cer
 [ ! -e "${DOCKERCOMPOSE}/.docs-restore/apps-stopped" ] || exit 0
 install -m 644 "${LETSENCRYPT}/live/${CERT_NAME}/fullchain.pem" "${CERTS_DIR}/fullchain.pem"
 install -m 640 -o 0 -g "${APP_GID}" "${LETSENCRYPT}/live/${CERT_NAME}/privkey.pem" "${CERTS_DIR}/privkey.pem"
-$(command -v docker) exec ${CONTAINER_NAME} /usr/local/openresty/bin/openresty -s reload
+$(command -v docker) exec -u onlyoffice ${CONTAINER_NAME} /usr/local/openresty/bin/openresty -s reload
 END
   chmod a+x "${CRON_FILE}"
 }
