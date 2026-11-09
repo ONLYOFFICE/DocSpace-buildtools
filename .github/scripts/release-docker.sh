@@ -102,7 +102,7 @@ function hub_tag_digest() {
 
 # The latest tag moves only when the released line is not older than the newest line already published
 function is_newest_release_line() {
-  local image="${1}" release_line="${2}" body status names=""
+  local image="${1}" release_line="${2}" body status names="" page_names
   local url="https://hub.docker.com/v2/repositories/${image}/tags/?page_size=100"
   # Every page is read: the newest line is not guaranteed to be among the most recently updated tags
   while [[ -n "${url}" ]]; do
@@ -111,8 +111,10 @@ function is_newest_release_line() {
     body="${body%$'\n'*}"
     [[ "${status}" == "404" && -z "${names}" ]] && return 0
     [[ "${status}" == "200" ]] || return 1
-    names+=$(jq -r '.results[].name' <<< "${body}")$'\n'
-    url=$(jq -r '.next // empty' <<< "${body}")
+    # An unreadable page fails the check instead of leaving a partial tag list
+    page_names=$(jq -r '.results[].name' <<< "${body}") || return 1
+    names+="${page_names}"$'\n'
+    url=$(jq -r '.next // empty' <<< "${body}") || return 1
   done
   local newest
   newest=$(grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' <<< "${names}" | sort -V | tail -n 1 || true)
