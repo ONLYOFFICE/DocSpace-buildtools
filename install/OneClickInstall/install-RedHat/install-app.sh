@@ -261,6 +261,8 @@ if [ "${DS_UPDATE_DEFERRED}" = "true" ]; then
 		echo "WARNING: /etc/${package_sysname} is still held by an older package, ${ds_pkg_installed_name} is not updated; update ${package} first and run the installer again" >&2
 	else
 		${package_manager} -y update "${ds_pkg_installed_name}"
+		# The Docs package resets the owner of the shared Data directory, so Apps is configured again, as it would be after a Docs update in the usual order
+		"${product}"-configuration
 	fi
 fi
 
