@@ -153,11 +153,12 @@ if [ "${PRESERVE_DOCS_MYSQL}" = false ]; then
 	MYSQL_REPO_VERSION="$(curl -fsSL https://repo.mysql.com | grep -oP "mysql84-community-release-${MYSQL_DISTR_NAME}${MYSQL_REPO_REV}-\K.*" | grep -o '^[^.]*' | sort -n | tail -n1)"
 	MYSQL_REPO_PACKAGE="mysql84-community-release-${MYSQL_DISTR_NAME}${MYSQL_REPO_REV}-${MYSQL_REPO_VERSION}.noarch.rpm"
 	# The release package is installed only with a valid signature of the MySQL key, which is pinned by its checksum
-	MYSQL_KEY_SHA256="d11149d51dfc5ad854be7b0b510ed1489cdfd24dc630543b9ffec717435e2025"
+	# RPM-GPG-KEY-mysql-2025 is the 2023 key (BCA43417C3B485DD128EC6D4B7B3B788A8D3785C) with its expiry moved to 2027-10-23; the -2023 file expired in 2025 and Sequoia-based rpm (EL10, Fedora) rejects it
+	MYSQL_KEY_SHA256="a4bcd9f16a53cc763f87b9955dbcdced33c7aa90296b157eb6ceef0f156f4327"
 	MYSQL_REPO_TMP=$(mktemp -d)
-	curl -fsSL -o "${MYSQL_REPO_TMP}/RPM-GPG-KEY-mysql-2023" https://repo.mysql.com/RPM-GPG-KEY-mysql-2023 \
-		&& echo "${MYSQL_KEY_SHA256}  ${MYSQL_REPO_TMP}/RPM-GPG-KEY-mysql-2023" | sha256sum -c - >/dev/null \
-		&& rpm --import "${MYSQL_REPO_TMP}/RPM-GPG-KEY-mysql-2023" \
+	curl -fsSL -o "${MYSQL_REPO_TMP}/RPM-GPG-KEY-mysql-2025" https://repo.mysql.com/RPM-GPG-KEY-mysql-2025 \
+		&& echo "${MYSQL_KEY_SHA256}  ${MYSQL_REPO_TMP}/RPM-GPG-KEY-mysql-2025" | sha256sum -c - >/dev/null \
+		&& rpm --import "${MYSQL_REPO_TMP}/RPM-GPG-KEY-mysql-2025" \
 		|| { rm -rf "${MYSQL_REPO_TMP}"; echo "ERROR: the MySQL signing key could not be downloaded or does not match its checksum" >&2; exit 1; }
 	if curl -fsSL -o "${MYSQL_REPO_TMP}/${MYSQL_REPO_PACKAGE}" "https://repo.mysql.com/${MYSQL_REPO_PACKAGE}"; then
 		rpmkeys -D "_pkgverify_level all" --checksig "${MYSQL_REPO_TMP}/${MYSQL_REPO_PACKAGE}" >/dev/null \
