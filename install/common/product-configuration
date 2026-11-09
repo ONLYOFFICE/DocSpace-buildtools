@@ -162,7 +162,7 @@ restart_services() {
 	# Only the root-run scripts use the secrets in .private, so the service group gets no access to it
 	if [ -d "$APP_DIR/.private" ]; then
 		chown -R root:root "$APP_DIR/.private"
-		chmod 700 "$APP_DIR/.private"
+		find "$APP_DIR/.private" -type d -exec chmod 700 {} +
 		find "$APP_DIR/.private" -type f -exec chmod 600 {} +
 	fi
 	find $APP_DIR -path "$APP_DIR/.private" -prune -o -type d -exec chmod 750 {} +
