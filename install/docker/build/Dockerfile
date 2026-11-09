@@ -256,6 +256,7 @@ RUN apt-get -y update && \
     rm -rf /var/lib/apt/lists/* /tmp/*
 
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-identity-entrypoint.sh /usr/bin/docker-identity-entrypoint.sh
+COPY --from=src ${SRC_PATH}/buildtools/install/docker/build/entrypoints/entrypoint-functions.sh /usr/bin/entrypoint-functions.sh
 USER onlyoffice
 ENTRYPOINT ["/bin/bash", "/usr/bin/docker-identity-entrypoint.sh"]
 
@@ -543,6 +544,7 @@ FROM dotnetrun AS onlyoffice-migration-runner
 WORKDIR ${BUILD_PATH}/services/ASC.Migration.Runner/
 
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-migration-entrypoint.sh /usr/bin/docker-migration-entrypoint.sh
+COPY --from=src ${SRC_PATH}/buildtools/install/docker/build/entrypoints/entrypoint-functions.sh /usr/bin/entrypoint-functions.sh
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Migration.Runner/service/ .
 
 ENTRYPOINT ["/bin/bash", "/usr/bin/docker-migration-entrypoint.sh"]
@@ -695,6 +697,8 @@ RUN set -eux; \
 
 # Services config + entrypoint + supervisor config
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-standalone-entrypoint.sh /docker-entrypoint.sh
+# Root-owned, as the entrypoint that sources it runs as root
+COPY --from=src ${SRC_PATH}/buildtools/install/docker/build/entrypoints/entrypoint-functions.sh /usr/bin/entrypoint-functions.sh
 # COPY --chown=onlyoffice:onlyoffice entrypoints/docker-standalone-entrypoint.sh /docker-entrypoint.sh
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/supervisor/standalone.conf /etc/supervisor/conf.d/supervisord.conf
 # COPY --chown=onlyoffice:onlyoffice supervisor/standalone.conf /etc/supervisor/conf.d/supervisord.conf

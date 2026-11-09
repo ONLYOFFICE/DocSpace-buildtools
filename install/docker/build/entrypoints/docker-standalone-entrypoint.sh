@@ -1,6 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
+source /usr/bin/entrypoint-functions.sh
+
 # Default values
 PATH_TO_CONF=${PATH_TO_CONF:-"/app/onlyoffice/config"}
 SRC_PATH=${SRC_PATH:-"/app/onlyoffice/src"}
@@ -26,14 +28,7 @@ export MYSQL_SSL_MODE=${MYSQL_SSL_MODE:-"none"}
 # ASC.Identity (Java) reads this; computed here rather than left to docker-compose.yml's own interpolation, which doesn't nest ${} inside a default anywhere else in the codebase.
 export JDBC_URL="${MYSQL_HOST}:${MYSQL_PORT}"
 # Only the modes that enforce TLS reach Connector/J, so none and preferred keep its default behaviour
-JDBC_SSL_MODE=""
-case "${MYSQL_SSL_MODE,,}" in
-    none|preferred) ;;
-    required) JDBC_SSL_MODE="REQUIRED" ;;
-    verifyca) JDBC_SSL_MODE="VERIFY_CA" ;;
-    verifyfull) JDBC_SSL_MODE="VERIFY_IDENTITY" ;;
-    *) echo "MYSQL_SSL_MODE must be one of none, preferred, required, verifyca, verifyfull" >&2; exit 1 ;;
-esac
+JDBC_SSL_MODE=$(jdbc_ssl_mode "${MYSQL_SSL_MODE}") || exit 1
 [ -z "${JDBC_SSL_MODE}" ] || export JDBC_PARAMETERS="${JDBC_PARAMETERS:+${JDBC_PARAMETERS}&}sslMode=${JDBC_SSL_MODE}"
 MYSQL_DATABASE=${MYSQL_DATABASE:-"onlyoffice_apps"}
 MYSQL_USER=${MYSQL_USER:-"onlyoffice_user"}
@@ -66,12 +61,6 @@ export MYSQL_PWD="$MYSQL_PASSWORD"
 # No service needs the MySQL root password, so the supervised processes must not inherit it
 unset MYSQL_ROOT_PASSWORD
 MYSQL_ARGS=(-h "$MYSQL_HOST" -P "$MYSQL_PORT" -u "$MYSQL_USER")
-# A semicolon or a quote would split the connection string, so such a value is quoted (a doubled quote is a literal one)
-quote_connection_value() {
-    local value="$1"
-    if [[ "$value" == *[\;\"\']* ]]; then value="\"${value//\"/\"\"}\""; fi
-    printf '%s' "$value"
-}
 export CONNECTION_STRING="Server=${MYSQL_HOST};Port=${MYSQL_PORT};Database=${MYSQL_DATABASE};User ID=$(quote_connection_value "${MYSQL_USER}");Password=$(quote_connection_value "${MYSQL_PASSWORD}")"
 
 SSL_MODE=${SSL_MODE:-"none"}

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source /usr/bin/entrypoint-functions.sh
+
 export SPRING_APPLICATION_NAME="${1}"
 
 export JDBC_URL="${MYSQL_HOST:-$MYSQL_CONTAINER_NAME}${MYSQL_HOST:+:$MYSQL_PORT}"
@@ -8,16 +10,8 @@ export JDBC_USER_NAME=${MYSQL_USER:-"onlyoffice_user"}
 export JDBC_PASSWORD=${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set}
 
 # Only the modes that enforce TLS reach Connector/J, so none and preferred keep its default behaviour
-JDBC_SSL_MODE=""
-MYSQL_SSL_MODE="${MYSQL_SSL_MODE:-none}"
-case "${MYSQL_SSL_MODE,,}" in
-    none|preferred) ;;
-    required) JDBC_SSL_MODE="REQUIRED" ;;
-    verifyca) JDBC_SSL_MODE="VERIFY_CA" ;;
-    verifyfull) JDBC_SSL_MODE="VERIFY_IDENTITY" ;;
-    *) echo "MYSQL_SSL_MODE must be one of none, preferred, required, verifyca, verifyfull" >&2; exit 1 ;;
-esac
-[ -n "${JDBC_SSL_MODE}" ] && export JDBC_PARAMETERS="${JDBC_PARAMETERS:+${JDBC_PARAMETERS}&}sslMode=${JDBC_SSL_MODE}"
+JDBC_SSL_MODE=$(jdbc_ssl_mode "${MYSQL_SSL_MODE:-none}") || exit 1
+[ -z "${JDBC_SSL_MODE}" ] || export JDBC_PARAMETERS="${JDBC_PARAMETERS:+${JDBC_PARAMETERS}&}sslMode=${JDBC_SSL_MODE}"
 
 export REDIS_HOST=${REDIS_HOST:-${REDIS_CONTAINER_NAME}}
 export REDIS_PORT=${REDIS_PORT:-"6379"}
