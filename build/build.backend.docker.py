@@ -266,25 +266,27 @@ if skip_build == False:
         shutil.copyfile(DOCKER_ENTRYPOINT_PATH,
                         os.path.join(dst, DOCKER_ENTRYPOINT))
 
-    print("== Add docker-migration-entrypoint.sh to ASC.Migration.Runner ==")
-    file_path = os.path.join(dir, "server", "common", "Tools", "ASC.Migration.Runner",
-                             bin_dir, "docker-migration-entrypoint.sh")
-    src_file_path = os.path.join(
-        dir, "buildtools", "install", "docker", "build", "entrypoints", "docker-migration-entrypoint.sh")
-
     WINDOWS_LINE_ENDING = b'\r\n'
     UNIX_LINE_ENDING = b'\n'
 
-    with open(src_file_path, 'rb') as open_file:
-        content = open_file.read()
+    # The entrypoint sources the shared helpers from its own directory
+    for entrypoint_file in ("docker-migration-entrypoint.sh", "entrypoint-functions.sh"):
+        print(f"== Add {entrypoint_file} to ASC.Migration.Runner ==")
+        file_path = os.path.join(dir, "server", "common", "Tools", "ASC.Migration.Runner",
+                                 bin_dir, entrypoint_file)
+        src_file_path = os.path.join(
+            dir, "buildtools", "install", "docker", "build", "entrypoints", entrypoint_file)
 
-    content = content.replace(WINDOWS_LINE_ENDING, UNIX_LINE_ENDING)
+        with open(src_file_path, 'rb') as open_file:
+            content = open_file.read()
 
-    with open(file_path, 'wb') as open_file:
-        open_file.write(content)
+        content = content.replace(WINDOWS_LINE_ENDING, UNIX_LINE_ENDING)
 
-    st = os.stat(file_path)
-    os.chmod(file_path, st.st_mode | stat.S_IEXEC)
+        with open(file_path, 'wb') as open_file:
+            open_file.write(content)
+
+        st = os.stat(file_path)
+        os.chmod(file_path, st.st_mode | stat.S_IEXEC)
 
 # sys.exit()
 

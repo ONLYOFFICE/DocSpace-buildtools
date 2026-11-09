@@ -1,6 +1,7 @@
 #!/bin/bash
 
-source /usr/bin/entrypoint-functions.sh
+# The helpers sit next to this script: /usr/bin in the image, the service directory in the local development build
+source "$(dirname "${BASH_SOURCE[0]}")/entrypoint-functions.sh"
 
 MYSQL_HOST=${MYSQL_HOST:-${MYSQL_CONTAINER_NAME}}
 MYSQL_PORT=${MYSQL_PORT:-"3306"}

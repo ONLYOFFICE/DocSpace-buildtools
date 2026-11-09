@@ -1,6 +1,7 @@
 #!/bin/bash
 
-source /usr/bin/entrypoint-functions.sh
+# The helpers sit next to this script in the image
+source "$(dirname "${BASH_SOURCE[0]}")/entrypoint-functions.sh"
 
 export SPRING_APPLICATION_NAME="${1}"
 
