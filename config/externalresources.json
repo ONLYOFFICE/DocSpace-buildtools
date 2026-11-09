@@ -74,7 +74,7 @@
           "ipsecurity": "/docspace/configuration/configuring-workspace-settings/docspace-security-settings#ipsecurity_block",
           "language": "/docspace/configuration/docspace-customization-settings.aspx#languageandtimezonesettings_block",
           "ldap": "/docspace/configuration/docspace-integration-settings.aspx#ldapsettings_block",
-          "login": "/docspace/configuration/docspace-security-settings.aspx#bruteforceprotectionsettings_block",
+          "login": "/docspace/configuration/configuring-workspace-settings/docspace-security-settings#bruteforceprotection_block",
           "managingusers": "/docspace/administration/docspace-managing-users.aspx",
           "oauth": "/docspace/configuration/docspace-developer-tools-settings.aspx#oauth_block",
           "passwordstrength": "/docspace/configuration/configuring-workspace-settings/docspace-security-settings#passwordstrength_block",
