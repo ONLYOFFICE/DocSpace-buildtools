@@ -20,7 +20,7 @@ services:
     container_name: ${IDENTITY_AUTHORIZATION_CONTAINER_NAME}
     restart: always
     ports:
-      - 8080:8080
+      - 127.0.0.1:8080:8080
     environment:
       <<: *x-common-environment
       SPRING_PROFILES_ACTIVE: dev
