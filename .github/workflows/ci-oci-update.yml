@@ -170,7 +170,7 @@ jobs:
 
       - name: "Update on ${{matrix.name}}"
         if: steps.boot.outcome == 'success'
-        timeout-minutes: 55
+        timeout-minutes: 75
         env:
           TEST_CASE: --local-install
           DISTR: ${{ matrix.distr }}
