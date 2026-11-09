@@ -57,11 +57,16 @@ DS_COMMON_NAME=${DS_COMMON_NAME:-ds}
 setup_postgres_db() {
 	DS_DB_NAME=${DS_DB_NAME:-$DS_COMMON_NAME}
 	DS_DB_USER=${DS_DB_USER:-$DS_COMMON_NAME}
-	DS_DB_PWD=${DS_DB_PWD:-$DS_COMMON_NAME}
 
 	if ! su - postgres -s /bin/bash -c "psql -lqt" | cut -d \| -f 1 | grep -q "${DS_DB_NAME}"; then
+		# A new Docs database gets its own password instead of the well-known default
+		DS_DB_PWD=${DS_DB_PWD:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 24)}
 		su - postgres -s /bin/bash -c "psql -c \"CREATE USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';\""
 		su - postgres -s /bin/bash -c "psql -c \"CREATE DATABASE ${DS_DB_NAME} OWNER ${DS_DB_USER};\""
+	elif [ -z "${DS_DB_PWD}" ]; then
+		# A kept database may hold a random password stored nowhere, so the Docs installed now sets a fresh one
+		DS_DB_PWD=$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 24)
+		su - postgres -s /bin/bash -c "psql -c \"ALTER USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';\""
 	fi
 
 	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/db-pwd select "$DS_DB_PWD" | debconf-set-selections
@@ -103,8 +108,8 @@ if [ "${MYSQL_FIRST_TIME_INSTALL}" != "true" ] && [ "$PRODUCT_INSTALLED" = "fals
 	done
 
 	MYSQL_ARGS=(--connect-expired-password -h "${MYSQL_PROBE_HOST}" -P "${MYSQL_SERVER_PORT}" -u "${MYSQL_SERVER_USER}")
-	[ -n "${MYSQL_SERVER_PASS}" ] && MYSQL_ARGS+=("-p${MYSQL_SERVER_PASS}")
-	if ! mysql "${MYSQL_ARGS[@]}" -e ";" >/dev/null 2>&1; then
+	# The password reaches the client through the environment, so it never appears in a command line; an empty one is not set at all, as before
+	if ! { if [ -n "${MYSQL_SERVER_PASS}" ]; then MYSQL_PWD="${MYSQL_SERVER_PASS}" mysql "${MYSQL_ARGS[@]}" -e ";"; else mysql "${MYSQL_ARGS[@]}" -e ";"; fi; } >/dev/null 2>&1; then
 		echo "ERROR: cannot connect to MySQL at ${MYSQL_PROBE_HOST}:${MYSQL_SERVER_PORT} as '${MYSQL_SERVER_USER}'." >&2
 		echo "Pass a working password in the MYSQL_SERVER_PASS environment variable, or remove MySQL and run the installer again." >&2
 		echo "Note: a '${MYSQL_SERVER_USER}' user authenticated by unix socket cannot be used, the product connects over TCP." >&2

@@ -118,20 +118,32 @@ done
 install_json() {
 	if ! command -v json >/dev/null 2>&1; then
 		echo -n "Install json package... "
-		if curl -fsSL "https://github.com/trentm/json/raw/master/lib/json.js" -o /usr/bin/json && [ -s /usr/bin/json ]; then
+		# Pinned to a commit and verified, so a change of the upstream branch can never reach a root-run script
+		local JSON_JS_URL="https://raw.githubusercontent.com/trentm/json/a8baa02b5d6fc5f0c16521372ee89674a4706d82/lib/json.js"
+		local JSON_JS_SHA256="811b93d71309041da77761ffdbb7a20d4a56e6a842823d0727262252f14461fb"
+		if curl -fsSL "${JSON_JS_URL}" -o /usr/bin/json && [ -s /usr/bin/json ] && echo "${JSON_JS_SHA256}  /usr/bin/json" | sha256sum -c - >/dev/null 2>&1; then
 			chmod 755 /usr/bin/json
 			command -v json >/dev/null 2>&1 && echo "OK" || { echo "ERROR: install failed"; return 1; }
 		else
-			echo "ERROR: download failed"; rm -f /usr/bin/json; return 1
+			echo "ERROR: download or checksum verification failed"; rm -f /usr/bin/json; return 1
 		fi
 	fi
 }
 
+# The value is always a plain string handed over through the environment, never part of the JavaScript that is run
 json_configuration() {
 	local JSON_FILE="$1" FIELD_PATH="$2" FIELD_VALUE="$3"
 	JSON_FIELD_VALUE="$FIELD_VALUE" ${JSON} "$JSON_FILE" -e \
 	"var p='$FIELD_PATH'.split('.'),k=p.pop(),o=p.reduce((a,x)=>(a[x]??={}),this);
-	o[k] = $( [[ $FIELD_VALUE =~ ^(\{.*\}|\[.*\])$ ]] && printf %s "$FIELD_VALUE" || printf %s 'process.env.JSON_FIELD_VALUE')" >/dev/null 2>&1
+	o[k] = process.env.JSON_FIELD_VALUE" >/dev/null 2>&1
+}
+
+# FIELD_CODE is a JavaScript literal fixed in this script; any variable data it needs is read from process.env
+json_configuration_literal() {
+	local JSON_FILE="$1" FIELD_PATH="$2" FIELD_CODE="$3"
+	${JSON} "$JSON_FILE" -e \
+	"var p='$FIELD_PATH'.split('.'),k=p.pop(),o=p.reduce((a,x)=>(a[x]??={}),this);
+	o[k] = $FIELD_CODE" >/dev/null 2>&1
 }
 
 env_configuration() {
@@ -144,7 +156,17 @@ env_configuration() {
 }
 
 restart_services() {
-	chown -R ${PACKAGE_SYSNAME}:${PACKAGE_SYSNAME} $APP_DIR $PRODUCT_DIR $LOG_DIR
+	chown -R ${PACKAGE_SYSNAME}:${PACKAGE_SYSNAME} $PRODUCT_DIR $LOG_DIR
+	# The services read their configuration but do not write it: root keeps it, so a compromised service cannot change what the root-run scripts read later
+	chown -R root:${PACKAGE_SYSNAME} $APP_DIR
+	# Only the root-run scripts use the secrets in .private, so the service group gets no access to it
+	if [ -d "$APP_DIR/.private" ]; then
+		chown -R root:root "$APP_DIR/.private"
+		find "$APP_DIR/.private" -type d -exec chmod 700 {} +
+		find "$APP_DIR/.private" -type f -exec chmod 600 {} +
+	fi
+	find $APP_DIR -path "$APP_DIR/.private" -prune -o -type d -exec chmod 750 {} +
+	find $APP_DIR -path "$APP_DIR/.private" -prune -o -type f -exec chmod 640 {} +
 	local SNAPSHOT="/etc/${PACKAGE_SYSNAME}/documentserver/nginx/ds.conf" DATA_DIR="/var/www/${PACKAGE_SYSNAME}/Data" DATA_GROUP DATA_UID DATA_GID DATA_MODE
 	if [ "${PRESERVE_DOCS}" = true ]; then
 		# RPM also changes this directory's owner; restore it before granting Apps access.
@@ -178,11 +200,11 @@ restart_services() {
 input_db_params(){
 	CONNECTION_STRING=$(json -f "${USER_CONF}" ConnectionStrings.default.connectionString 2>/dev/null)
 	if [[ -n "$CONNECTION_STRING" ]]; then
-		DB_HOST=${DB_HOST:-$(grep -oP 'Server=\K[^;]*'   <<<"$CONNECTION_STRING" || :)}
-		DB_PORT=${DB_PORT:-$(grep -oP 'Port=\K[^;]*'     <<<"$CONNECTION_STRING" || :)}
-		DB_NAME=${DB_NAME:-$(grep -oP 'Database=\K[^;]*' <<<"$CONNECTION_STRING" || :)}
-		DB_USER=${DB_USER:-$(grep -oP 'User ID=\K[^;]*'  <<<"$CONNECTION_STRING" || :)}
-		DB_PWD=${DB_PWD:-$(grep -oP 'Password=\K[^;]*'  <<<"$CONNECTION_STRING" || :)}
+		DB_HOST=${DB_HOST:-$(connection_string_value 'Server')}
+		DB_PORT=${DB_PORT:-$(connection_string_value 'Port')}
+		DB_NAME=${DB_NAME:-$(connection_string_value 'Database')}
+		DB_USER=${DB_USER:-$(connection_string_value 'User ID')}
+		DB_PWD=${DB_PWD:-$(connection_string_value 'Password')}
 	fi
 
 	if [[ -t 0 ]]; then
@@ -195,8 +217,57 @@ input_db_params(){
 		: "${DB_HOST:=localhost}" "${DB_PORT:=3306}" "${DB_NAME:=${PACKAGE_SYSNAME}}" "${DB_USER:=root}" "${DB_PWD:=}"
 	fi
 
-	CONNECTION_STRING="Server=$DB_HOST;Port=$DB_PORT;Database=$DB_NAME;User ID=$DB_USER;Password=$DB_PWD;Pooling=true; \
+	build_connection_string
+}
+
+# Reads one key of CONNECTION_STRING the way quote_connection_value writes it (a quoted value may hold a semicolon)
+connection_string_value() {
+	local value
+	value=$(grep -oP "(^|;)\\s*$1=\\K(\"([^\"]|\"\")*\"|[^;]*)" <<< "$CONNECTION_STRING" | head -n1) || return 0
+	if [[ "$value" == \"*\" ]]; then value="${value:1:${#value}-2}"; value="${value//\"\"/\"}"; fi
+	printf '%s' "$value"
+}
+
+# A semicolon or a quote would split the connection string, so such a value is quoted (a doubled quote is a literal one)
+quote_connection_value() {
+	local value="$1"
+	if [[ "$value" == *[\;\"\']* ]]; then value="\"${value//\"/\"\"}\""; fi
+	printf '%s' "$value"
+}
+
+build_connection_string() {
+	CONNECTION_STRING="Server=$DB_HOST;Port=$DB_PORT;Database=$DB_NAME;User ID=$(quote_connection_value "$DB_USER");Password=$(quote_connection_value "$DB_PWD");Pooling=true; \
 Character Set=utf8; AutoEnlist=false; SSL Mode=none;AllowPublicKeyRetrieval=true;Connection Timeout=30;Maximum Pool Size=300"
+}
+
+# The application gets its own user that can only reach its own database; the administrative account is used here and nowhere else
+create_application_db_user() {
+	local APP_DB_USER APP_DB_PWD APP_DB_HOSTS HOST SQL=""
+	if ! [[ "${DB_NAME}" =~ ^[A-Za-z0-9_]+$ ]]; then
+		echo "Warning: the database name '${DB_NAME}' is not a plain identifier, the application keeps using the administrative database user." >&2
+		return 0
+	fi
+	# Named after the database, so installations sharing a MySQL server never reset each other's password
+	APP_DB_USER="${DB_NAME:0:27}_user"
+	# The fixed prefix satisfies the default password policy of MySQL
+	APP_DB_PWD="Aa1_$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 24)"
+	case "${DB_HOST}" in
+		localhost|127.0.0.1|::1) APP_DB_HOSTS=(localhost 127.0.0.1) ;;
+		*) APP_DB_HOSTS=('%') ;;
+	esac
+	for HOST in "${APP_DB_HOSTS[@]}"; do
+		SQL+="CREATE USER IF NOT EXISTS '${APP_DB_USER}'@'${HOST}' IDENTIFIED BY '${APP_DB_PWD}'; "
+		SQL+="ALTER USER '${APP_DB_USER}'@'${HOST}' IDENTIFIED BY '${APP_DB_PWD}'; "
+		SQL+="GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${APP_DB_USER}'@'${HOST}'; "
+	done
+	# The statements go through stdin, so the new password never appears in a command line
+	if $MYSQL <<< "${SQL}FLUSH PRIVILEGES;" >/dev/null 2>&1; then
+		DB_USER="${APP_DB_USER}"
+		DB_PWD="${APP_DB_PWD}"
+		build_connection_string
+	else
+		echo "Warning: could not create the ${APP_DB_USER} database user, the application keeps using the administrative database user." >&2
+	fi
 }
 
 establish_mysql_conn(){
@@ -204,7 +275,7 @@ establish_mysql_conn(){
 	command -v mysql >/dev/null 2>&1 || { echo "MySQL client not found"; exit 1; }
 
 	MYSQL="mysql -P${DB_PORT} -h${DB_HOST} -u${DB_USER}"
-	[ -n "${DB_PWD}" ] && MYSQL="${MYSQL} -p${DB_PWD}"
+	[ -z "${DB_PWD}" ] || export MYSQL_PWD="${DB_PWD}"
 
 	if ! $MYSQL -e ";" >/dev/null 2>&1; then
 		systemctl start "${MYSQL_PACKAGE}"
@@ -221,6 +292,8 @@ establish_mysql_conn(){
 		change_mysql_config
 	fi
 
+	[ "${DB_USER}" != "root" ] || create_application_db_user
+
 	json_configuration "${USER_CONF}" "ConnectionStrings.default.connectionString" "${CONNECTION_STRING}"
 	json_configuration "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "ConnectionStrings.default.connectionString" "${CONNECTION_STRING}"
 	json_configuration "${USER_CONF}" "migration.enabled" "true"
@@ -230,7 +303,10 @@ establish_mysql_conn(){
 	env_configuration "$APP_DIR/systemd.env" JDBC_USER_NAME "$DB_USER"
 	env_configuration "$APP_DIR/systemd.env" JDBC_PASSWORD "$DB_PWD"
 
-	sed "s&\(\"ConnectionString\":\).*&\1 \"$(printf "%q" "${CONNECTION_STRING}")\"&" -i $PRODUCT_DIR/services/ASC.Migration.Runner/appsettings.runner.json
+	# Two escaping layers: JSON (backslash, quote), then the sed replacement (backslash, "&"), which sed itself removes when writing
+	local RUNNER_CONNECTION_STRING
+	RUNNER_CONNECTION_STRING=$(printf '%s' "${CONNECTION_STRING}" | sed -e 's/[\\"]/\\&/g' -e 's/[\\&]/\\&/g')
+	sed "s&\(\"ConnectionString\":\).*&\1 \"${RUNNER_CONNECTION_STRING}\"&" -i $PRODUCT_DIR/services/ASC.Migration.Runner/appsettings.runner.json
 
 	echo "OK"
 }
@@ -423,9 +499,9 @@ setup_docs() {
 
 			if [ "${ENVIRONMENT}" != "community" ]; then
 				json_configuration "${DS_CONF_DIR}/local.json" "adminPanel.host" "127.0.0.1"
-				RABBITMQ_URI="${RABBITMQ_URI}" json_configuration "${DS_CONF_DIR}/local.json" "rabbitmq" "{ url: process.env.RABBITMQ_URI }"
-				REDIS_HOST="${REDIS_HOST}" REDIS_PORT="${REDIS_PORT}" json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis" "{ host: process.env.REDIS_HOST, port: process.env.REDIS_PORT }"
-				REDIS_USER="${REDIS_USER}" REDIS_PASS="${REDIS_PASS}" REDIS_DB="${REDIS_DB}" json_configuration "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis.options" "{
+				RABBITMQ_URI="${RABBITMQ_URI}" json_configuration_literal "${DS_CONF_DIR}/local.json" "rabbitmq" "{ url: process.env.RABBITMQ_URI }"
+				REDIS_HOST="${REDIS_HOST}" REDIS_PORT="${REDIS_PORT}" json_configuration_literal "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis" "{ host: process.env.REDIS_HOST, port: process.env.REDIS_PORT }"
+				REDIS_USER="${REDIS_USER}" REDIS_PASS="${REDIS_PASS}" REDIS_DB="${REDIS_DB}" json_configuration_literal "${DS_CONF_DIR}/local.json" "services.CoAuthoring.redis.options" "{
 				${REDIS_USER:+username: process.env.REDIS_USER,}
 				${REDIS_PASS:+password: process.env.REDIS_PASS,}
 				${REDIS_DB:+database: process.env.REDIS_DB,}
@@ -597,7 +673,7 @@ setup_redis() {
 	: "${REDIS_DB:=$(json -f "${APP_DIR}/redis.${ENVIRONMENT}.json" Redis.Database 2>/dev/null)}"
 	: "${REDIS_HOST:=127.0.0.1}" "${REDIS_PORT:=6379}" "${REDIS_DB:=0}"
 
-	json_configuration "${APP_DIR}/redis.${ENVIRONMENT}.json" "Redis.Hosts" "[{ Host: \"${REDIS_HOST}\", Port: \"${REDIS_PORT}\" }]"
+	REDIS_HOST="${REDIS_HOST}" REDIS_PORT="${REDIS_PORT}" json_configuration_literal "${APP_DIR}/redis.${ENVIRONMENT}.json" "Redis.Hosts" "[{ Host: process.env.REDIS_HOST, Port: process.env.REDIS_PORT }]"
 	[[ -n "${REDIS_USER}" ]] && json_configuration "${APP_DIR}/redis.${ENVIRONMENT}.json" "Redis.User" "${REDIS_USER}"
 	[[ -n "${REDIS_PASS}" ]] && json_configuration "${APP_DIR}/redis.${ENVIRONMENT}.json" "Redis.Password" "${REDIS_PASS}"
 	[[ -n "${REDIS_DB}" ]] && json_configuration "${APP_DIR}/redis.${ENVIRONMENT}.json" "Redis.Database" "${REDIS_DB}"
@@ -789,6 +865,8 @@ product_configuration(){
 	env_configuration "$APP_DIR/systemd.env" DOCSPACE_HOST "127.0.0.1"
 	env_configuration "$APP_DIR/systemd.env" DOCSPACE_PORT "5158"
 
+	# A machinekey handed over through the environment is stored the way the --machinekey option stores it
+	[ -z "${CORE_MACHINEKEY:-}" ] || echo "${CORE_MACHINEKEY}" > "$APP_DIR/.private/machinekey"
 	: "${CORE_MACHINEKEY:=$(generate_key "machinekey")}"
 	json_configuration "${USER_CONF}" "core.machinekey" "${CORE_MACHINEKEY}"
 	json_configuration "${APP_DIR}/apisystem.${ENVIRONMENT}.json" "core.machinekey" "${CORE_MACHINEKEY}"
