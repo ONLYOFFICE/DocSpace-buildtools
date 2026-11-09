@@ -25,6 +25,16 @@ MYSQL_PORT=${MYSQL_PORT:-"3306"}
 export MYSQL_SSL_MODE=${MYSQL_SSL_MODE:-"none"}
 # ASC.Identity (Java) reads this; computed here rather than left to docker-compose.yml's own interpolation, which doesn't nest ${} inside a default anywhere else in the codebase.
 export JDBC_URL="${MYSQL_HOST}:${MYSQL_PORT}"
+# Only the modes that enforce TLS reach Connector/J, so none and preferred keep its default behaviour
+JDBC_SSL_MODE=""
+case "${MYSQL_SSL_MODE,,}" in
+    none|preferred) ;;
+    required) JDBC_SSL_MODE="REQUIRED" ;;
+    verifyca) JDBC_SSL_MODE="VERIFY_CA" ;;
+    verifyfull) JDBC_SSL_MODE="VERIFY_IDENTITY" ;;
+    *) echo "MYSQL_SSL_MODE must be one of none, preferred, required, verifyca, verifyfull" >&2; exit 1 ;;
+esac
+[ -z "${JDBC_SSL_MODE}" ] || export JDBC_PARAMETERS="${JDBC_PARAMETERS:+${JDBC_PARAMETERS}&}sslMode=${JDBC_SSL_MODE}"
 MYSQL_DATABASE=${MYSQL_DATABASE:-"onlyoffice_apps"}
 MYSQL_USER=${MYSQL_USER:-"onlyoffice_user"}
 MYSQL_PASSWORD=${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set}
