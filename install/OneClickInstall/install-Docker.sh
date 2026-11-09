@@ -770,8 +770,8 @@ get_tag_from_registry () {
 		JQ_FILTER='.tags | join("\n")'
 	else
 		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
-			# The builtin printf feeds the credentials to jq and curl through pipes, so no process gets them as arguments
-			TOKEN=$(printf '%s\n%s\n' "$USERNAME" "$PASSWORD" | jq -Rn '[inputs] | {username: .[0], password: .[1]}' \
+			# jq reads the credentials from its environment and curl from a pipe, so no process gets them as arguments
+			TOKEN=$(HUB_USERNAME="$USERNAME" HUB_PASSWORD="$PASSWORD" jq -n '{username: env.HUB_USERNAME, password: env.HUB_PASSWORD}' \
 				| curl -s -H "Content-Type: application/json" -X POST -d @- https://hub.docker.com/v2/users/login/ | jq -r '.token')
 			AUTH_HEADER="Authorization: JWT $TOKEN"
 			sleep 1
