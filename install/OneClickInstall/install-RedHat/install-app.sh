@@ -74,18 +74,20 @@ setup_postgres_db() {
 	fi
 }
 
-# True when a package other than Docs still records /etc/onlyoffice with an owner other than root:root
+# True when a package other than Docs still records /etc/onlyoffice with an owner other than root:root; the packages are left in CONFIG_DIR_HOLDERS
 config_dir_held_by_older_package() {
 	local CONFIG_DIR="/etc/${package_sysname}" OWNERS OWNER
+	CONFIG_DIR_HOLDERS=""
 	OWNERS=$(rpm -qf --qf '%{NAME}\n' "${CONFIG_DIR}" 2>/dev/null) || return 1
 	for OWNER in ${OWNERS}; do
 		[[ "${OWNER}" == "${package_sysname}"-documentserver* ]] && continue
-		rpm -q --dump "${OWNER}" | awk -v dir="${CONFIG_DIR}" '$1 == dir && ($6 != "root" || $7 != "root") { found = 1 } END { exit !found }' && return 0
+		rpm -q --dump "${OWNER}" | awk -v dir="${CONFIG_DIR}" '$1 == dir && ($6 != "root" || $7 != "root") { found = 1 } END { exit !found }' \
+			&& CONFIG_DIR_HOLDERS+="${CONFIG_DIR_HOLDERS:+ }${OWNER}"
 	done
-	return 1
+	[ -n "${CONFIG_DIR_HOLDERS}" ]
 }
 
-DS_UPDATE_DEFERRED="false"
+DS_UPDATE_DEFERRED="false" DS_UPDATE_SKIPPED="false"
 if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ] && [ "${PRESERVE_DOCS}" = false ]; then
 	ds_pkg_installed_name=$(rpm -qa --qf '%{NAME}\n' | grep "${package_sysname}"-documentserver)
 	if [ -n "${ds_pkg_installed_name}" ] && [ "${ds_pkg_installed_name}" != "${ds_pkg_name}" ]; then
@@ -231,10 +233,10 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
 			--databasehost "${DS_DB_HOST:-localhost}"
 			--databasename "$DS_DB_NAME"
 			--databaseuser "$DS_DB_USER"
-			--databasepassword "$DS_DB_PWD"
 		)
 	fi
-	documentserver-configure.sh "${ds_configure_args[@]}"
+	# documentserver-configure.sh takes the database password from DB_PWD when it is not given as an argument, which keeps it off the command line
+	DB_PWD="${DS_DB_PWD}" documentserver-configure.sh "${ds_configure_args[@]}"
 fi
 
 if [ "$MAKESWAP" == "true" ]; then
@@ -257,13 +259,21 @@ elif [[ "${PRODUCT_CHECK_UPDATE}" -eq "${UPDATE_AVAILABLE_CODE}" || "${RECONFIGU
 fi
 
 if [ "${DS_UPDATE_DEFERRED}" = "true" ]; then
-	# The Apps step may not have replaced the package that holds the directory, so the update is skipped rather than failing the whole run
+	# The Apps step may not have replaced the package that holds the directory, so the update is skipped rather than failing halfway
 	if config_dir_held_by_older_package; then
-		echo "WARNING: /etc/${package_sysname} is still held by an older package, ${ds_pkg_installed_name} is not updated; update ${package} first and run the installer again" >&2
+		DS_UPDATE_SKIPPED="true"
 	else
 		${package_manager} -y update "${ds_pkg_installed_name}"
 	fi
 	"${product}"-configuration
+fi
+
+# Everything else is installed and configured; the run still ends with an error so that an unapplied Docs update is not reported as success
+if [ "${DS_UPDATE_SKIPPED}" = "true" ]; then
+	echo "" >&2
+	echo "ERROR: ${ds_pkg_installed_name} was not updated: /etc/${package_sysname} is still held with a non-root owner by ${CONFIG_DIR_HOLDERS}." >&2
+	echo "Update or remove ${CONFIG_DIR_HOLDERS} and run the installer again to update ${ds_pkg_installed_name}." >&2
+	exit 1
 fi
 
 echo ""
