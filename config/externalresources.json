@@ -82,7 +82,7 @@
           "sessionlifetime": "/docspace/configuration/docspace-security-settings.aspx#sessionlifetime_block",
           "settings": "/docspace/configuration",
           "storagemanagement": "/docspace/configuration/docspace-storage-management-settings.aspx",
-          "trusteddomain": "/docspace/configuration/docspace-security-settings.aspx#trustedmaildomainsettings_block",
+          "trusteddomain": "/docspace/configuration/configuring-workspace-settings/docspace-security-settings#trustedmaildomains_block",
           "twofactorauthentication": "/docspace/configuration/docspace-two-factor-authentication.aspx",
           "userguides": "/userguides/docspace-index.aspx",
           "welcomepage": "/docspace/configuration/docspace-customization-settings.aspx#welcomepagesettings_block",
