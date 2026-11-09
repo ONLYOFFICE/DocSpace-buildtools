@@ -77,7 +77,7 @@
           "login": "/docspace/configuration/docspace-security-settings.aspx#bruteforceprotectionsettings_block",
           "managingusers": "/docspace/administration/docspace-managing-users.aspx",
           "oauth": "/docspace/configuration/docspace-developer-tools-settings.aspx#oauth_block",
-          "passwordstrength": "/docspace/configuration/docspace-security-settings.aspx#passwordstrengthsettings_block",
+          "passwordstrength": "/docspace/configuration/configuring-workspace-settings/docspace-security-settings#passwordstrength_block",
           "renaming": "/docspace/configuration/configuring-workspace-settings/docspace-customization-settings#workspacerenaming_block",
           "sessionlifetime": "/docspace/configuration/docspace-security-settings.aspx#sessionlifetime_block",
           "settings": "/docspace/configuration",
