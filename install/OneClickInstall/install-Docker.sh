@@ -256,13 +256,18 @@ detect_current_deployment_mode () {
 	fi
 }
 
+# The pre-update backups hold copies of .env and database dumps, so they go together with the installation directory
+remove_local_data () {
+	rm -rf "${BASE_DIR:?}" "${BASE_DIR%/}.backup" || echo "Failed to remove directory $BASE_DIR."
+}
+
 # Without Docker Desktop on macOS there is no container or volume, only the local files are left
 uninstall_local_files () {
 	echo "Docker is not installed, only the local files in ${BASE_DIR} are removed."
 	remove_apps_renewal_job
 	read -p "Keep configuration and Docs data for reinstallation? (Y/n): " KEEP_DATA
 	if [[ ! "${KEEP_DATA,,}" =~ ^(y|yes)?$ ]]; then
-		rm -rf "$BASE_DIR" || echo "Failed to remove directory $BASE_DIR."
+		remove_local_data
 	fi
 	echo -e "Uninstallation of $PRODUCT_NAME \e[32mcompleted.\e[0m"
 }
@@ -347,7 +352,7 @@ uninstall() {
 
 	if ! docker network inspect "${NETWORK_NAME}" >/dev/null 2>&1 && [[ -d "$BASE_DIR" ]]; then
 		if [[ ! "${KEEP_DATA,,}" =~ ^(y|yes)?$ ]]; then
-			rm -rf "$BASE_DIR" || echo "Failed to remove directory $BASE_DIR."
+			remove_local_data
 		fi
 	fi
 
@@ -765,8 +770,8 @@ get_tag_from_registry () {
 		JQ_FILTER='.tags | join("\n")'
 	else
 		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
-			# jq escapes the credentials and curl reads them from stdin, so they are never part of a command line
-			TOKEN=$(jq -n --arg username "$USERNAME" --arg password "$PASSWORD" '{username: $username, password: $password}' \
+			# The builtin printf feeds the credentials to jq and curl through pipes, so no process gets them as arguments
+			TOKEN=$(printf '%s\n%s\n' "$USERNAME" "$PASSWORD" | jq -Rn '[inputs] | {username: .[0], password: .[1]}' \
 				| curl -s -H "Content-Type: application/json" -X POST -d @- https://hub.docker.com/v2/users/login/ | jq -r '.token')
 			AUTH_HEADER="Authorization: JWT $TOKEN"
 			sleep 1
