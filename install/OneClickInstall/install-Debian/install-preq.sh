@@ -173,8 +173,14 @@ if [ "$DIST" = "debian" ] && [ "$ARCH" = "arm64" ]; then
 		echo percona-server-server percona-server-server/re-root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
 	fi
 else
-	MYSQL_REPO_VERSION="$(curl -fsSL https://dev.mysql.com/downloads/repo/apt/ | grep -oP '(?<=mysql-apt-config_)[0-9.]+-[0-9]+(?=_all\.deb)' | head -n1)"
+	# The repository package is pinned and verified by checksum; update the version and the sha256 of the file on repo.mysql.com together
+	MYSQL_REPO_VERSION="0.8.40-1"
+	MYSQL_REPO_SHA256="41a796dd6ea681aef4675d3b0b27924873d4f9777e524facf7693eabdf232e93"
 	MYSQL_PACKAGE_NAME="mysql-apt-config_${MYSQL_REPO_VERSION}_all.deb"
+	download_mysql_repo_package() {
+		curl -fsSLO "https://repo.mysql.com/${MYSQL_PACKAGE_NAME}"
+		echo "${MYSQL_REPO_SHA256}  ${MYSQL_PACKAGE_NAME}" | sha256sum -c - >/dev/null || { rm -f "${MYSQL_PACKAGE_NAME}"; echo "ERROR: ${MYSQL_PACKAGE_NAME} does not match the pinned checksum" >&2; exit 1; }
+	}
 
 	if ! dpkg -l | grep -q "mysql-server"; then
 		MYSQL_FIRST_TIME_INSTALL="true"
@@ -182,7 +188,7 @@ else
 
 		# Set up MySQL 8.4 package (arm64 uses the distro package, the Oracle repo has no arm64 build).
 		if [ "$ARCH" = "amd64" ]; then
-			curl -fsSLO "https://repo.mysql.com/${MYSQL_PACKAGE_NAME}"
+			download_mysql_repo_package
 			echo "mysql-apt-config mysql-apt-config/repo-codename  select  $DISTRIB_CODENAME" | debconf-set-selections
 			echo "mysql-apt-config mysql-apt-config/repo-distro  select  $DIST" | debconf-set-selections
 			echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.4-lts" | debconf-set-selections
@@ -196,8 +202,8 @@ else
 		echo mysql-server mysql-server/root_password password "${MYSQL_SERVER_PASS}" | debconf-set-selections
 		echo mysql-server mysql-server/root_password_again password "${MYSQL_SERVER_PASS}" | debconf-set-selections
 
-	elif [ "${PRESERVE_DOCS}" = false ] && dpkg -l | grep -q "mysql-apt-config" && [ "$(apt-cache policy mysql-apt-config | awk 'NR==2{print $2}')" != "${MYSQL_REPO_VERSION}" ]; then
-		curl -fsSLO "https://repo.mysql.com/${MYSQL_PACKAGE_NAME}"
+	elif [ "${PRESERVE_DOCS}" = false ] && dpkg -l | grep -q "mysql-apt-config" && dpkg --compare-versions "$(apt-cache policy mysql-apt-config | awk 'NR==2{print $2}')" lt "${MYSQL_REPO_VERSION}"; then
+		download_mysql_repo_package
 		DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
 		rm -f "${MYSQL_PACKAGE_NAME}"
 	fi

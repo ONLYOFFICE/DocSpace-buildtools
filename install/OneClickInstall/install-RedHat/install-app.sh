@@ -61,11 +61,16 @@ DS_COMMON_NAME=${DS_COMMON_NAME:-ds}
 setup_postgres_db() {
 	DS_DB_NAME=${DS_DB_NAME:-$DS_COMMON_NAME}
 	DS_DB_USER=${DS_DB_USER:-$DS_COMMON_NAME}
-	DS_DB_PWD=${DS_DB_PWD:-$DS_COMMON_NAME}
 
 	if ! su - postgres -s /bin/bash -c "psql -lqt" | cut -d \| -f 1 | grep -q "${DS_DB_NAME}"; then
+		# A new Docs database gets its own password instead of the well-known default
+		DS_DB_PWD=${DS_DB_PWD:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 24)}
 		su - postgres -s /bin/bash -c "psql -c \"CREATE USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';\""
 		su - postgres -s /bin/bash -c "psql -c \"CREATE DATABASE ${DS_DB_NAME} OWNER ${DS_DB_USER};\""
+	elif [ -z "${DS_DB_PWD}" ]; then
+		# A kept database may hold a random password stored nowhere, so the Docs installed now sets a fresh one
+		DS_DB_PWD=$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 24)
+		su - postgres -s /bin/bash -c "psql -c \"ALTER USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';\""
 	fi
 }
 
@@ -83,6 +88,8 @@ MYSQL_SERVER_HOST=${MYSQL_SERVER_HOST:-"localhost"}
 MYSQL_SERVER_DB_NAME=${MYSQL_SERVER_DB_NAME:-"${package_sysname}"}
 MYSQL_SERVER_USER=${MYSQL_SERVER_USER:-"root"}
 MYSQL_SERVER_PORT=${MYSQL_SERVER_PORT:-3306}
+# Root-only file with the root password this installer set; it outlives the package, so a reinstall can reconnect
+MYSQL_ROOT_PASS_FILE="/etc/${package_sysname}/${product}/.private/mysql-root-password"
 
 # Probe MySQL over TCP, like the product does.
 MYSQL_PROBE_HOST=$([ "${MYSQL_SERVER_HOST}" = "localhost" ] && echo "127.0.0.1" || echo "${MYSQL_SERVER_HOST}")
@@ -90,8 +97,12 @@ MYSQL_PROBE_HOST=$([ "${MYSQL_SERVER_HOST}" = "localhost" ] && echo "127.0.0.1" 
 # Empty $1 means "try without a password".
 mysql_root_connects() {
 	local MYSQL_ARGS=(--connect-expired-password -h "${MYSQL_PROBE_HOST}" -P "${MYSQL_SERVER_PORT}" -u "${MYSQL_SERVER_USER}")
-	[ -n "$1" ] && MYSQL_ARGS+=("-p$1")
-	mysql "${MYSQL_ARGS[@]}" -e ";" >/dev/null 2>&1
+	# The password reaches the client through the environment, so it never appears in a command line
+	if [ -n "$1" ]; then
+		MYSQL_PWD="$1" mysql "${MYSQL_ARGS[@]}" -e ";" >/dev/null 2>&1
+	else
+		mysql "${MYSQL_ARGS[@]}" -e ";" >/dev/null 2>&1
+	fi
 }
 
 # A refused password still proves the server is up.
@@ -112,21 +123,29 @@ if [ "${MYSQL_FIRST_TIME_INSTALL}" = "true" ]; then
 		sleep 1
 	done
 
-	if ! mysql "-u$MYSQL_SERVER_USER" "-p$MYSQL_TEMPORARY_ROOT_PASS" -e ";" >/dev/null 2>&1; then
-		if [ -z "$MYSQL_TEMPORARY_ROOT_PASS" ]; then
-		   MYSQL="mysql --connect-expired-password -u$MYSQL_SERVER_USER -D mysql"
-		else
-		   MYSQL="mysql --connect-expired-password -u$MYSQL_SERVER_USER -p${MYSQL_TEMPORARY_ROOT_PASS} -D mysql"
-		   MYSQL_ROOT_PASS=$(echo "$MYSQL_TEMPORARY_ROOT_PASS" | sed -e 's/;/%/g' -e 's/=/%/g')
+	if ! MYSQL_PWD="$MYSQL_TEMPORARY_ROOT_PASS" mysql "-u$MYSQL_SERVER_USER" -e ";" >/dev/null 2>&1; then
+		MYSQL=(mysql --connect-expired-password -u"$MYSQL_SERVER_USER" -D mysql)
+		if [ -n "$MYSQL_TEMPORARY_ROOT_PASS" ]; then
+			# The temporary password stays in /var/log/mysqld.log, so root gets a new random password instead of keeping it (the fixed prefix satisfies the default password policy, and avoids ; and = that break connection strings)
+			MYSQL_ROOT_PASS=${MYSQL_ROOT_PASS:-"Aa1_$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 20)"}
+			# The client reads the password from the environment, so it never appears in a command line
+			export MYSQL_PWD="$MYSQL_TEMPORARY_ROOT_PASS"
 		fi
 
-		MYSQL_AUTHENTICATION_PLUGIN=$($MYSQL -e "SHOW VARIABLES LIKE 'default_authentication_plugin';" -s | awk '{print $2}')
+		MYSQL_AUTHENTICATION_PLUGIN=$("${MYSQL[@]}" -e "SHOW VARIABLES LIKE 'default_authentication_plugin';" -s | awk '{print $2}')
 		MYSQL_AUTHENTICATION_PLUGIN=${MYSQL_AUTHENTICATION_PLUGIN:-caching_sha2_password}
 
-		$MYSQL -e "ALTER USER '${MYSQL_SERVER_USER}'@'localhost' IDENTIFIED WITH ${MYSQL_AUTHENTICATION_PLUGIN} BY '${MYSQL_ROOT_PASS}'" >/dev/null 2>&1 || \
-		$MYSQL -e "UPDATE user SET plugin='${MYSQL_AUTHENTICATION_PLUGIN}', authentication_string=PASSWORD('${MYSQL_ROOT_PASS}') WHERE user='${MYSQL_SERVER_USER}' and host='localhost';"
+		"${MYSQL[@]}" -e "ALTER USER '${MYSQL_SERVER_USER}'@'localhost' IDENTIFIED WITH ${MYSQL_AUTHENTICATION_PLUGIN} BY '${MYSQL_ROOT_PASS}'" >/dev/null 2>&1 || \
+		"${MYSQL[@]}" -e "UPDATE user SET plugin='${MYSQL_AUTHENTICATION_PLUGIN}', authentication_string=PASSWORD('${MYSQL_ROOT_PASS}') WHERE user='${MYSQL_SERVER_USER}' and host='localhost';"
+		unset MYSQL_PWD
 
 		systemctl restart mysqld
+
+		if [ -n "${MYSQL_ROOT_PASS}" ]; then
+			install -d -m 700 -o root -g root "$(dirname "${MYSQL_ROOT_PASS_FILE}")"
+			( umask 077; printf '%s\n' "${MYSQL_ROOT_PASS}" > "${MYSQL_ROOT_PASS_FILE}" )
+			echo "The MySQL root password is saved in ${MYSQL_ROOT_PASS_FILE}"
+		fi
 	fi
 elif [ "$PRODUCT_INSTALLED" = "false" ]; then
 	# MySQL predates this run, so its root password was not set here.
@@ -142,8 +161,11 @@ elif [ "$PRODUCT_INSTALLED" = "false" ]; then
 	if [ -z "${MYSQL_ROOT_PASS}" ] || ! mysql_root_connects "${MYSQL_ROOT_PASS}"; then
 		# Earlier installers derived this from MySQL's temporary password.
 		MYSQL_RECOVERED_PASS=$(grep "temporary password" /var/log/mysqld.log 2>/dev/null | tail -1 | rev | cut -d " " -f 1 | rev | sed -e 's/;/%/g' -e 's/=/%/g')
+		MYSQL_SAVED_PASS=$(head -n 1 "${MYSQL_ROOT_PASS_FILE}" 2>/dev/null)
 
-		if mysql_root_connects ""; then
+		if [ -n "${MYSQL_SAVED_PASS}" ] && mysql_root_connects "${MYSQL_SAVED_PASS}"; then
+			MYSQL_ROOT_PASS="${MYSQL_SAVED_PASS}"
+		elif mysql_root_connects ""; then
 			MYSQL_ROOT_PASS=""
 		elif [ -n "${MYSQL_RECOVERED_PASS}" ] && mysql_root_connects "${MYSQL_RECOVERED_PASS}"; then
 			MYSQL_ROOT_PASS="${MYSQL_RECOVERED_PASS}"
@@ -208,7 +230,7 @@ fi
 if [ "$PRODUCT_INSTALLED" = "false" ]; then
 	[[ ${PRODUCT_VERSION} =~ ^[0-9]+(\.[0-9]+){3}$ ]] && PRODUCT_VERSION="${PRODUCT_VERSION%.*}-${PRODUCT_VERSION##*.}"
 	${package_manager} "${DOCS_RPM_OPTIONS[@]}" install -y "${package}${PRODUCT_VERSION:+-${PRODUCT_VERSION}}" --best "${APPS_ERASING_OPTIONS[@]}" $TESTING_REPO
-	"${product}"-configuration -mysqlh "${MYSQL_SERVER_HOST}" -mysqlport "${MYSQL_SERVER_PORT}" -mysqld "${MYSQL_SERVER_DB_NAME}" -mysqlu "${MYSQL_SERVER_USER}" -mysqlp "${MYSQL_ROOT_PASS}"
+	DB_PWD="${MYSQL_ROOT_PASS}" "${product}"-configuration -mysqlh "${MYSQL_SERVER_HOST}" -mysqlport "${MYSQL_SERVER_PORT}" -mysqld "${MYSQL_SERVER_DB_NAME}" -mysqlu "${MYSQL_SERVER_USER}"
 elif ! rpm -q "${package}" >/dev/null 2>&1; then # (DS v4.0.0) take over an installation made before the rename to ONLYOFFICE Apps
 	[[ ${PRODUCT_VERSION} =~ ^[0-9]+(\.[0-9]+){3}$ ]] && PRODUCT_VERSION="${PRODUCT_VERSION%.*}-${PRODUCT_VERSION##*.}"
 	${package_manager} "${DOCS_RPM_OPTIONS[@]}" install -y "${package}${PRODUCT_VERSION:+-${PRODUCT_VERSION}}" --best "${APPS_ERASING_OPTIONS[@]}" $TESTING_REPO

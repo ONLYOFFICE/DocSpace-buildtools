@@ -81,11 +81,11 @@ Type: string
 _Description: RabbitMQ username:
 
 Template: {{package_name}}/rabbitmq-password
-Type: string
+Type: password
 _Description: RabbitMQ user password:
 
 Template: {{package_name}}/machinekey
-Type: string
+Type: password
 _Description: Machine key for encryption:
 
 Template: {{package_name}}/jwt-header
@@ -93,5 +93,5 @@ Type: string
 _Description: JWT header name:
 
 Template: {{package_name}}/jwt-secret
-Type: string
+Type: password
 _Description: JWT secret key:
