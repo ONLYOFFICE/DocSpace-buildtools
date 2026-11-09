@@ -91,7 +91,7 @@ if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ] && [ "${P
 	if [ -n "${ds_pkg_installed_name}" ] && [ "${ds_pkg_installed_name}" != "${ds_pkg_name}" ]; then
 		"${package_manager}" -y remove "${ds_pkg_installed_name}" --setopt=clean_requirements_on_remove=false
 		DOCUMENT_SERVER_INSTALLED="false" RECONFIGURE_PRODUCT="true"
-	elif config_dir_held_by_older_package; then
+	elif [ "${PRODUCT_INSTALLED}" = "true" ] && config_dir_held_by_older_package; then
 		# Docs 10.0.3+ declares /etc/onlyoffice as root:root, which conflicts with the owner an older Apps or DocSpace package recorded, so Docs is updated after the Apps packages replace it
 		DS_UPDATE_DEFERRED="true" RECONFIGURE_PRODUCT="true"
 	else
@@ -249,10 +249,11 @@ if [ "$PRODUCT_INSTALLED" = "false" ]; then
 elif ! rpm -q "${package}" >/dev/null 2>&1; then # (DS v4.0.0) take over an installation made before the rename to ONLYOFFICE Apps
 	[[ ${PRODUCT_VERSION} =~ ^[0-9]+(\.[0-9]+){3}$ ]] && PRODUCT_VERSION="${PRODUCT_VERSION%.*}-${PRODUCT_VERSION##*.}"
 	${package_manager} "${DOCS_RPM_OPTIONS[@]}" install -y "${package}${PRODUCT_VERSION:+-${PRODUCT_VERSION}}" --best "${APPS_ERASING_OPTIONS[@]}" $TESTING_REPO
-	"${product}"-configuration
+	# With a deferred Docs update the configuration runs once, after Docs, since the Docs package resets the owner of the shared Data directory
+	[ "${DS_UPDATE_DEFERRED}" = "true" ] || "${product}"-configuration
 elif [[ "${PRODUCT_CHECK_UPDATE}" -eq "${UPDATE_AVAILABLE_CODE}" || "${RECONFIGURE_PRODUCT}" = "true" ]]; then
 	${package_manager} "${DOCS_RPM_OPTIONS[@]}" -y update "${package}" --best "${APPS_ERASING_OPTIONS[@]}" $TESTING_REPO
-	"${product}"-configuration
+	[ "${DS_UPDATE_DEFERRED}" = "true" ] || "${product}"-configuration
 fi
 
 if [ "${DS_UPDATE_DEFERRED}" = "true" ]; then
@@ -261,9 +262,8 @@ if [ "${DS_UPDATE_DEFERRED}" = "true" ]; then
 		echo "WARNING: /etc/${package_sysname} is still held by an older package, ${ds_pkg_installed_name} is not updated; update ${package} first and run the installer again" >&2
 	else
 		${package_manager} -y update "${ds_pkg_installed_name}"
-		# The Docs package resets the owner of the shared Data directory, so Apps is configured again, as it would be after a Docs update in the usual order
-		"${product}"-configuration
 	fi
+	"${product}"-configuration
 fi
 
 echo ""
