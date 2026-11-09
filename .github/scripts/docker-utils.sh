@@ -190,7 +190,28 @@ smoke_test() {
     export DASHBOARDS_USERNAME DASHBOARDS_PASSWORD
   fi
 
-  python3 -m pytest tests/smoke/smoke_test.py -v -s "$@"
+  wait_font_generation
+  python3 -m pytest tests/smoke/smoke_test.py -v -s "$@" || { print_document_server_logs; return 1; }
+}
+
+# Document Server restarts docservice when its background font generation ends, which drops editor sessions opened before
+wait_font_generation() {
+  local DEADLINE=$((SECONDS + 600))
+  pgrep -f documentserver-generate-allfonts >/dev/null || return 0
+  echo "Waiting for the Document Server font generation..."
+  while pgrep -f documentserver-generate-allfonts >/dev/null; do
+    [ "$SECONDS" -lt "$DEADLINE" ] || { echo "::warning::Document Server font generation is still running; editor tests may fail."; return 0; }
+    sleep 5
+  done
+}
+
+print_document_server_logs() {
+  local CONTAINER
+  while IFS= read -r CONTAINER; do
+    echo "::group::Logs for container $CONTAINER"
+    docker logs --tail 200 "$CONTAINER" 2>&1
+    echo "::endgroup::"
+  done < <(docker ps --all --format '{{.Names}}' | grep -E -- '-document-server$' || true)
 }
 
 restart_services() {
