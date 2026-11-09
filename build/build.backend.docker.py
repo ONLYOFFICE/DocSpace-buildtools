@@ -28,7 +28,7 @@ def help():
 
 
 def check_image(image_name):
-    return subprocess.check_output(["docker", "images", "--format", "'{{.Repository}}:{{.Tag}}'"], shell=True, text=True).__contains__(image_name)
+    return image_name in subprocess.check_output(["docker", "images", "--format", "{{.Repository}}:{{.Tag}}"], text=True).split()
 
 
 rd = os.path.dirname(os.path.abspath(__file__))
@@ -237,7 +237,7 @@ if skip_build == False:
     for service in BACKEND_NODEJS_SERVICES:
         # print(f"== Build {service} project ==")
         src = os.path.join(dir, "server", "common", service)
-        subprocess.run(["yarn", "install"], cwd=src, shell=True)
+        subprocess.run(["yarn", "install"], cwd=src, shell=(os.name == "nt"))
         print(f"== Add docker-entrypoint.py to {service}")
         shutil.copyfile(DOCKER_ENTRYPOINT_PATH,
                         os.path.join(src, DOCKER_ENTRYPOINT))

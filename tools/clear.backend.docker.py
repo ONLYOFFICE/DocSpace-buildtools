@@ -35,10 +35,6 @@ if containers or images:
     identity_command = f"docker compose -f {os.path.join(docker_dir, 'identity.yml')} down --volumes"
     subprocess.run(identity_command, shell=True)
 
-    print("Remove docker volumes")
-    volumes_command = f"docker volume prune -fa"
-    subprocess.run(volumes_command, shell=True)
-
     print("Remove docker base images (onlyoffice/4testing-apps)")
     subprocess.run(['docker', 'rmi', '-f'] + images, check=True)
 
