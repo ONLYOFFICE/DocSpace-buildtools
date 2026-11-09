@@ -102,13 +102,20 @@ function hub_tag_digest() {
 
 # The latest tag moves only when the released line is not older than the newest line already published
 function is_newest_release_line() {
-  local image="${1}" release_line="${2}" body status newest
-  body=$(curl -sSL -w $'\n%{http_code}' "https://hub.docker.com/v2/repositories/${image}/tags/?page_size=100") || return 1
-  status="${body##*$'\n'}"
-  body="${body%$'\n'*}"
-  [[ "${status}" == "404" ]] && return 0
-  [[ "${status}" == "200" ]] || return 1
-  newest=$(jq -r '.results[].name' <<< "${body}" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)
+  local image="${1}" release_line="${2}" body status names=""
+  local url="https://hub.docker.com/v2/repositories/${image}/tags/?page_size=100"
+  # Every page is read: the newest line is not guaranteed to be among the most recently updated tags
+  while [[ -n "${url}" ]]; do
+    body=$(curl -sSL -w $'\n%{http_code}' "${url}") || return 1
+    status="${body##*$'\n'}"
+    body="${body%$'\n'*}"
+    [[ "${status}" == "404" && -z "${names}" ]] && return 0
+    [[ "${status}" == "200" ]] || return 1
+    names+=$(jq -r '.results[].name' <<< "${body}")$'\n'
+    url=$(jq -r '.next // empty' <<< "${body}")
+  done
+  local newest
+  newest=$(grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' <<< "${names}" | sort -V | tail -n 1 || true)
   [[ -z "${newest}" || "$(printf '%s\n%s\n' "${newest}" "${release_line}" | sort -V | tail -n 1)" == "${release_line}" ]]
 }
 
@@ -168,10 +175,11 @@ function release_service() {
 
    # If specifyed tag look like 2.5.1.1 it will release like 3 different tags: 2.5.1 2.5.1.1 latest
    # The latest tag is skipped when a newer line (ex. 2.6.0) is already published, so a hotfix of an old line cannot roll it back
-   local -a release_tags=(--tag "${service_release_tag}:${RELEASE_VERSION%.*}" --tag "${service_release_tag}:${RELEASE_VERSION}")
    # The line is the N.N.N part: a three-part version is its own line, compared against the N.N.N tags already published
    local release_line="${RELEASE_VERSION}"
    [[ "${RELEASE_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] && release_line="${RELEASE_VERSION%.*}"
+   local -a release_tags=(--tag "${service_release_tag}:${release_line}")
+   [[ "${release_line}" != "${RELEASE_VERSION}" ]] && release_tags+=(--tag "${service_release_tag}:${RELEASE_VERSION}")
    if is_newest_release_line "${service_release_tag}" "${release_line}"; then
      release_tags+=(--tag "${service_release_tag}:latest")
    else
