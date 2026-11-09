@@ -74,11 +74,26 @@ setup_postgres_db() {
 	fi
 }
 
+# True when a package other than Docs still records /etc/onlyoffice with an owner other than root:root
+config_dir_held_by_older_package() {
+	local CONFIG_DIR="/etc/${package_sysname}" OWNERS OWNER
+	OWNERS=$(rpm -qf --qf '%{NAME}\n' "${CONFIG_DIR}" 2>/dev/null) || return 1
+	for OWNER in ${OWNERS}; do
+		[[ "${OWNER}" == "${package_sysname}"-documentserver* ]] && continue
+		rpm -q --dump "${OWNER}" | awk -v dir="${CONFIG_DIR}" '$1 == dir && ($6 != "root" || $7 != "root") { found = 1 } END { exit !found }' && return 0
+	done
+	return 1
+}
+
+DS_UPDATE_DEFERRED="false"
 if [ "$UPDATE" = "true" ] && [ "$DOCUMENT_SERVER_INSTALLED" = "true" ] && [ "${PRESERVE_DOCS}" = false ]; then
 	ds_pkg_installed_name=$(rpm -qa --qf '%{NAME}\n' | grep "${package_sysname}"-documentserver)
 	if [ -n "${ds_pkg_installed_name}" ] && [ "${ds_pkg_installed_name}" != "${ds_pkg_name}" ]; then
 		"${package_manager}" -y remove "${ds_pkg_installed_name}" --setopt=clean_requirements_on_remove=false
 		DOCUMENT_SERVER_INSTALLED="false" RECONFIGURE_PRODUCT="true"
+	elif config_dir_held_by_older_package; then
+		# Docs 10.0.3+ declares /etc/onlyoffice as root:root, which conflicts with the owner an older Apps or DocSpace package recorded, so Docs is updated after the Apps packages replace it
+		DS_UPDATE_DEFERRED="true"
 	else
 		${package_manager} -y update "${ds_pkg_installed_name}"
 	fi
@@ -238,6 +253,10 @@ elif ! rpm -q "${package}" >/dev/null 2>&1; then # (DS v4.0.0) take over an inst
 elif [[ "${PRODUCT_CHECK_UPDATE}" -eq "${UPDATE_AVAILABLE_CODE}" || "${RECONFIGURE_PRODUCT}" = "true" ]]; then
 	${package_manager} "${DOCS_RPM_OPTIONS[@]}" -y update "${package}" --best "${APPS_ERASING_OPTIONS[@]}" $TESTING_REPO
 	"${product}"-configuration
+fi
+
+if [ "${DS_UPDATE_DEFERRED}" = "true" ]; then
+	${package_manager} -y update "${ds_pkg_installed_name}"
 fi
 
 echo ""
