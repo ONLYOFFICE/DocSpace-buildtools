@@ -231,10 +231,10 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
 			--databasehost "${DS_DB_HOST:-localhost}"
 			--databasename "$DS_DB_NAME"
 			--databaseuser "$DS_DB_USER"
-			--databasepassword "$DS_DB_PWD"
 		)
 	fi
-	documentserver-configure.sh "${ds_configure_args[@]}"
+	# documentserver-configure.sh takes the database password from DB_PWD when it is not given as an argument, which keeps it off the command line
+	DB_PWD="${DS_DB_PWD}" documentserver-configure.sh "${ds_configure_args[@]}"
 fi
 
 if [ "$MAKESWAP" == "true" ]; then
