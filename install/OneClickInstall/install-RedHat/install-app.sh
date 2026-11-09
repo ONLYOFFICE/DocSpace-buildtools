@@ -88,6 +88,8 @@ MYSQL_SERVER_HOST=${MYSQL_SERVER_HOST:-"localhost"}
 MYSQL_SERVER_DB_NAME=${MYSQL_SERVER_DB_NAME:-"${package_sysname}"}
 MYSQL_SERVER_USER=${MYSQL_SERVER_USER:-"root"}
 MYSQL_SERVER_PORT=${MYSQL_SERVER_PORT:-3306}
+# Root-only file with the root password this installer set; it outlives the package, so a reinstall can reconnect
+MYSQL_ROOT_PASS_FILE="/etc/${package_sysname}/${product}/.private/mysql-root-password"
 
 # Probe MySQL over TCP, like the product does.
 MYSQL_PROBE_HOST=$([ "${MYSQL_SERVER_HOST}" = "localhost" ] && echo "127.0.0.1" || echo "${MYSQL_SERVER_HOST}")
@@ -134,6 +136,12 @@ if [ "${MYSQL_FIRST_TIME_INSTALL}" = "true" ]; then
 		unset MYSQL_PWD
 
 		systemctl restart mysqld
+
+		if [ -n "${MYSQL_ROOT_PASS}" ]; then
+			install -d -m 700 -o root -g root "$(dirname "${MYSQL_ROOT_PASS_FILE}")"
+			( umask 077; printf '%s\n' "${MYSQL_ROOT_PASS}" > "${MYSQL_ROOT_PASS_FILE}" )
+			echo "The MySQL root password is saved in ${MYSQL_ROOT_PASS_FILE}"
+		fi
 	fi
 elif [ "$PRODUCT_INSTALLED" = "false" ]; then
 	# MySQL predates this run, so its root password was not set here.
@@ -149,8 +157,11 @@ elif [ "$PRODUCT_INSTALLED" = "false" ]; then
 	if [ -z "${MYSQL_ROOT_PASS}" ] || ! mysql_root_connects "${MYSQL_ROOT_PASS}"; then
 		# Earlier installers derived this from MySQL's temporary password.
 		MYSQL_RECOVERED_PASS=$(grep "temporary password" /var/log/mysqld.log 2>/dev/null | tail -1 | rev | cut -d " " -f 1 | rev | sed -e 's/;/%/g' -e 's/=/%/g')
+		MYSQL_SAVED_PASS=$(head -n 1 "${MYSQL_ROOT_PASS_FILE}" 2>/dev/null)
 
-		if mysql_root_connects ""; then
+		if [ -n "${MYSQL_SAVED_PASS}" ] && mysql_root_connects "${MYSQL_SAVED_PASS}"; then
+			MYSQL_ROOT_PASS="${MYSQL_SAVED_PASS}"
+		elif mysql_root_connects ""; then
 			MYSQL_ROOT_PASS=""
 		elif [ -n "${MYSQL_RECOVERED_PASS}" ] && mysql_root_connects "${MYSQL_RECOVERED_PASS}"; then
 			MYSQL_ROOT_PASS="${MYSQL_RECOVERED_PASS}"
