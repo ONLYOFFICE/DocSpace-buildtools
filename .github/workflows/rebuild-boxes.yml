@@ -96,7 +96,7 @@ jobs:
     steps:
       - name: Free Disk Space
         run: |
-          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/${{ github.ref_name }}/.github/scripts/free-disk-space-linux.sh | sudo VBOX_SAFE=1 bash
+          curl -fsSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/refs/heads/${GITHUB_REF_NAME}/.github/scripts/free-disk-space-linux.sh" | sudo VBOX_SAFE=1 bash
 
       - name: Checkout code
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
