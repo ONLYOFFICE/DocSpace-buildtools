@@ -194,11 +194,11 @@ restart_services() {
 input_db_params(){
 	CONNECTION_STRING=$(json -f "${USER_CONF}" ConnectionStrings.default.connectionString 2>/dev/null)
 	if [[ -n "$CONNECTION_STRING" ]]; then
-		DB_HOST=${DB_HOST:-$(grep -oP 'Server=\K[^;]*'   <<<"$CONNECTION_STRING" || :)}
-		DB_PORT=${DB_PORT:-$(grep -oP 'Port=\K[^;]*'     <<<"$CONNECTION_STRING" || :)}
-		DB_NAME=${DB_NAME:-$(grep -oP 'Database=\K[^;]*' <<<"$CONNECTION_STRING" || :)}
-		DB_USER=${DB_USER:-$(grep -oP 'User ID=\K[^;]*'  <<<"$CONNECTION_STRING" || :)}
-		DB_PWD=${DB_PWD:-$(grep -oP 'Password=\K[^;]*'  <<<"$CONNECTION_STRING" || :)}
+		DB_HOST=${DB_HOST:-$(connection_string_value 'Server')}
+		DB_PORT=${DB_PORT:-$(connection_string_value 'Port')}
+		DB_NAME=${DB_NAME:-$(connection_string_value 'Database')}
+		DB_USER=${DB_USER:-$(connection_string_value 'User ID')}
+		DB_PWD=${DB_PWD:-$(connection_string_value 'Password')}
 	fi
 
 	if [[ -t 0 ]]; then
@@ -212,6 +212,14 @@ input_db_params(){
 	fi
 
 	build_connection_string
+}
+
+# Reads one key of CONNECTION_STRING the way quote_connection_value writes it (a quoted value may hold a semicolon)
+connection_string_value() {
+	local value
+	value=$(grep -oP "(^|;)\\s*$1=\\K(\"([^\"]|\"\")*\"|[^;]*)" <<< "$CONNECTION_STRING" | head -n1) || return 0
+	if [[ "$value" == \"*\" ]]; then value="${value:1:${#value}-2}"; value="${value//\"\"/\"}"; fi
+	printf '%s' "$value"
 }
 
 # A semicolon or a quote would split the connection string, so such a value is quoted (a doubled quote is a literal one)
@@ -228,11 +236,13 @@ Character Set=utf8; AutoEnlist=false; SSL Mode=none;AllowPublicKeyRetrieval=true
 
 # The application gets its own user that can only reach its own database; the administrative account is used here and nowhere else
 create_application_db_user() {
-	local APP_DB_USER="${PACKAGE_SYSNAME}_user" APP_DB_PWD APP_DB_HOSTS HOST SQL=""
+	local APP_DB_USER APP_DB_PWD APP_DB_HOSTS HOST SQL=""
 	if ! [[ "${DB_NAME}" =~ ^[A-Za-z0-9_]+$ ]]; then
 		echo "Warning: the database name '${DB_NAME}' is not a plain identifier, the application keeps using the administrative database user." >&2
 		return 0
 	fi
+	# Named after the database, so installations sharing a MySQL server never reset each other's password
+	APP_DB_USER="${DB_NAME:0:27}_user"
 	# The fixed prefix satisfies the default password policy of MySQL
 	APP_DB_PWD="Aa1_$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 24)"
 	case "${DB_HOST}" in
@@ -287,7 +297,10 @@ establish_mysql_conn(){
 	env_configuration "$APP_DIR/systemd.env" JDBC_USER_NAME "$DB_USER"
 	env_configuration "$APP_DIR/systemd.env" JDBC_PASSWORD "$DB_PWD"
 
-	sed "s&\(\"ConnectionString\":\).*&\1 \"$(printf "%q" "${CONNECTION_STRING}")\"&" -i $PRODUCT_DIR/services/ASC.Migration.Runner/appsettings.runner.json
+	# Escaped for a JSON string written through sed with "&" as the delimiter (a quoted password brings double quotes)
+	local RUNNER_CONNECTION_STRING
+	RUNNER_CONNECTION_STRING=$(printf '%s' "${CONNECTION_STRING}" | sed -e 's/[\\"]/\\&/g' -e 's/[\\&]/\\&/g')
+	sed "s&\(\"ConnectionString\":\).*&\1 \"${RUNNER_CONNECTION_STRING}\"&" -i $PRODUCT_DIR/services/ASC.Migration.Runner/appsettings.runner.json
 
 	echo "OK"
 }
