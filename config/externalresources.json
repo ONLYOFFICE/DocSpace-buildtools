@@ -71,7 +71,7 @@
           "enterpriseinstallscript": "/docspace/installation/docspace-enterprise-install-script.aspx",
           "enterpriseinstallwindows": "/docspace/installation/docspace-enterprise-install-windows.aspx",
           "integrationsettings": "/docspace/configuration/docspace-integration-settings.aspx#thirdpartyserviceintegration_block",
-          "ipsecurity": "/docspace/configuration/docspace-security-settings.aspx#ipsecuritysettings_block",
+          "ipsecurity": "/docspace/configuration/configuring-workspace-settings/docspace-security-settings#ipsecurity_block",
           "language": "/docspace/configuration/docspace-customization-settings.aspx#languageandtimezonesettings_block",
           "ldap": "/docspace/configuration/docspace-integration-settings.aspx#ldapsettings_block",
           "login": "/docspace/configuration/docspace-security-settings.aspx#bruteforceprotectionsettings_block",
