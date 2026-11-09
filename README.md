@@ -151,7 +151,6 @@ Two separate nginx roles, each with its own config directory.
 - `docker-entrypoint.d/20-envsubst-on-templates.sh` — Processes `*.template` files with `envsubst`
 - `docker-entrypoint.d/30-tune-worker-processes.sh` — Auto-tunes worker processes
 - `templates/upstream.conf.template` — Static upstream definitions
-- `templates/onlyoffice-upstream-map.conf.template` — Dynamic service URL maps (reads `SERVICE_*` env vars)
 
 **Proxy** (`install/docker/config/nginx/proxy/`) — mounted into the proxy container at runtime via `proxy.yml`:
 - `onlyoffice-proxy.conf` — HTTP reverse proxy: forwards all traffic to the router on port 8092
