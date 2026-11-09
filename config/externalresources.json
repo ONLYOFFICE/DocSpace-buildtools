@@ -39,7 +39,7 @@
         "entries": {
           "accessrights": "/docspace/getting-started.aspx#AccessRights_block",
           "administrationguides": "/docspace/configuration/docspace-developer-tools-settings.aspx#webhooks_block",
-          "administratormessage": "/docspace/configuration/docspace-security-settings.aspx#administratormessagesettings_block",
+          "administratormessage": "/docspace/configuration/configuring-workspace-settings/docspace-security-settings#administratormessage_block",
           "aisettings": "/docspace/configuration/docspace-ai-settings.aspx",
           "aiprovidersettings": "/docspace/configuration/docspace-ai-settings.aspx#aiprovidersettings_block",
           "mcpserverssettings": "/docspace/configuration/docspace-ai-settings.aspx#mcpserverssettings_block",
