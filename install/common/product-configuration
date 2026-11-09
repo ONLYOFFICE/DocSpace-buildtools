@@ -158,7 +158,7 @@ env_configuration() {
 restart_services() {
 	chown -R ${PACKAGE_SYSNAME}:${PACKAGE_SYSNAME} $PRODUCT_DIR $LOG_DIR
 	# The services read their configuration but do not write it: root keeps it, so a compromised service cannot change what the root-run scripts read later
-	find $APP_DIR -path "$APP_DIR/.private" -prune -o -exec chown root:${PACKAGE_SYSNAME} {} +
+	chown -R root:${PACKAGE_SYSNAME} $APP_DIR
 	# Only the root-run scripts use the secrets in .private, so the service group gets no access to it
 	[ ! -d "$APP_DIR/.private" ] || chown -R root:root "$APP_DIR/.private"
 	find $APP_DIR -path "$APP_DIR/.private" -prune -o -type d -exec chmod 750 {} +
