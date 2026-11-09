@@ -88,7 +88,7 @@
           "welcomepage": "/docspace/configuration/docspace-customization-settings.aspx#welcomepagesettings_block",
           "docspacemanagingrooms": "/docspace/administration/docspace-managing-rooms.aspx",
           "customfilter": "/docspace/administration/managing-files/docspace-managing-documents-files#managingdocuments_block:~:text=Enable%20custom%20filter",
-          "limiteddevtools": "/docspace/configuration/docspace-security-settings.aspx#limiteddevelopertoolsaccess_block",
+          "limiteddevtools": "/docspace/configuration/configuring-workspace-settings/docspace-security-settings#developertoolsvisibility_block",
           "encryption": "/docspace/configuration/docspace-encryption-at-rest.aspx",
           "docspacefaq": "/docspace/faq.aspx",
           "configureDeepLink": "/docspace/configuration/docspace-customization-settings.aspx#сonfiguredeeplink_block",
