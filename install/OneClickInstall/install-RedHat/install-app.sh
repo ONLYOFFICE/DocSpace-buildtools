@@ -97,8 +97,12 @@ MYSQL_PROBE_HOST=$([ "${MYSQL_SERVER_HOST}" = "localhost" ] && echo "127.0.0.1" 
 # Empty $1 means "try without a password".
 mysql_root_connects() {
 	local MYSQL_ARGS=(--connect-expired-password -h "${MYSQL_PROBE_HOST}" -P "${MYSQL_SERVER_PORT}" -u "${MYSQL_SERVER_USER}")
-	[ -n "$1" ] && MYSQL_ARGS+=("-p$1")
-	mysql "${MYSQL_ARGS[@]}" -e ";" >/dev/null 2>&1
+	# The password reaches the client through the environment, so it never appears in a command line
+	if [ -n "$1" ]; then
+		MYSQL_PWD="$1" mysql "${MYSQL_ARGS[@]}" -e ";" >/dev/null 2>&1
+	else
+		mysql "${MYSQL_ARGS[@]}" -e ";" >/dev/null 2>&1
+	fi
 }
 
 # A refused password still proves the server is up.
