@@ -151,7 +151,20 @@ if [ "${PRESERVE_DOCS_MYSQL}" = false ]; then
 	MYSQL_LTS_MAJOR="8.4"
 	MYSQL_LTS_REPO="mysql-${MYSQL_LTS_MAJOR}-lts-community"
 	MYSQL_REPO_VERSION="$(curl -fsSL https://repo.mysql.com | grep -oP "mysql84-community-release-${MYSQL_DISTR_NAME}${MYSQL_REPO_REV}-\K.*" | grep -o '^[^.]*' | sort -n | tail -n1)"
-	yum "${DOCS_RPM_OPTIONS[@]}" install -y https://repo.mysql.com/mysql84-community-release-"${MYSQL_DISTR_NAME}""${MYSQL_REPO_REV}"-"${MYSQL_REPO_VERSION}".noarch.rpm || true
+	MYSQL_REPO_PACKAGE="mysql84-community-release-${MYSQL_DISTR_NAME}${MYSQL_REPO_REV}-${MYSQL_REPO_VERSION}.noarch.rpm"
+	# The release package is installed only with a valid signature of the MySQL key, which is pinned by its checksum
+	MYSQL_KEY_SHA256="d11149d51dfc5ad854be7b0b510ed1489cdfd24dc630543b9ffec717435e2025"
+	MYSQL_REPO_TMP=$(mktemp -d)
+	curl -fsSL -o "${MYSQL_REPO_TMP}/RPM-GPG-KEY-mysql-2023" https://repo.mysql.com/RPM-GPG-KEY-mysql-2023 \
+		&& echo "${MYSQL_KEY_SHA256}  ${MYSQL_REPO_TMP}/RPM-GPG-KEY-mysql-2023" | sha256sum -c - >/dev/null \
+		&& rpm --import "${MYSQL_REPO_TMP}/RPM-GPG-KEY-mysql-2023" \
+		|| { rm -rf "${MYSQL_REPO_TMP}"; echo "ERROR: the MySQL signing key could not be downloaded or does not match its checksum" >&2; exit 1; }
+	if curl -fsSL -o "${MYSQL_REPO_TMP}/${MYSQL_REPO_PACKAGE}" "https://repo.mysql.com/${MYSQL_REPO_PACKAGE}"; then
+		rpmkeys -D "_pkgverify_level all" --checksig "${MYSQL_REPO_TMP}/${MYSQL_REPO_PACKAGE}" >/dev/null \
+			|| { rm -rf "${MYSQL_REPO_TMP}"; echo "ERROR: ${MYSQL_REPO_PACKAGE} is not signed with the MySQL key" >&2; exit 1; }
+		yum "${DOCS_RPM_OPTIONS[@]}" install -y "${MYSQL_REPO_TMP}/${MYSQL_REPO_PACKAGE}" || true
+	fi
+	rm -rf "${MYSQL_REPO_TMP}"
 	yum-config-manager --disable 'mysql*' >/dev/null 2>&1 || true
 	yum-config-manager --enable "${MYSQL_LTS_REPO}" >/dev/null 2>&1 || { echo "ERROR: failed to enable ${MYSQL_LTS_REPO} repo" >&2; exit 1; }
 	[ "$DIST" = "fedora" ] && sed -i "s/\$releasever/${MYSQL_REPO_REV}/g" /etc/yum.repos.d/mysql-community*.repo
