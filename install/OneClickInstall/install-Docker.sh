@@ -706,7 +706,7 @@ create_network () {
 	NETWORK_EXIST=$(docker network ls | awk '{print $2;}' | { grep -x ${NETWORK_NAME} || true; })
 
 	if [[ -z ${NETWORK_EXIST} ]]; then
-		docker network create --driver bridge ${NETWORK_NAME}
+		docker network create --driver bridge ${NETWORK_NAME} >/dev/null
 	fi
 }
 
