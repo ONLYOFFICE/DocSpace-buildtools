@@ -201,8 +201,31 @@ def wait_for_js(driver, script, timeout, description):
     fail(f"timeout after {timeout}s")
     raise AssertionError(f"Timed out waiting for {description}")
 
+def wait_document_server(timeout=300):
+    """Wait until Document Server answers its health check through the proxy."""
+    def healthy():
+        status, body = http_request(f"{SERVER_URL}/ds-vpath/healthcheck", timeout=10)
+        return status == 200 and b'true' in body
+    try:
+        if healthy():
+            return
+    except (urllib.error.URLError, OSError):
+        pass
+    poll_until(healthy, timeout, 'Waiting for the Document Server health check')
+
+def socket_errors(driver):
+    """Console errors of failed Document Server connections since the previous console read."""
+    try:
+        entries = read_browser_log(driver)
+    except (AttributeError, WebDriverException):
+        return []
+    return [entry.get('message', '') for entry in entries
+            if entry.get('level') == 'SEVERE' and 'WebSocket' in entry.get('message', '')
+            and 'ds-vpath' in entry.get('message', '')]
+
 def wait_editor_loaded(driver, web_url):
-    """Open an editor page with the auth cookie and wait until the document renders."""
+    """Open an editor page with the auth cookie and wait until the document renders and connects."""
+    wait_document_server()
     driver.get(SERVER_URL)
     driver.add_cookie({'name': 'asc_auth_key', 'value': state['token']})
 
@@ -211,23 +234,36 @@ def wait_editor_loaded(driver, web_url):
     attempts = 3
     for attempt in range(1, attempts + 1):
         step(f"Editor: {web_url}" + (f" (attempt {attempt})" if attempt > 1 else ""))
+        # drop console entries of earlier pages so only this load is checked
+        socket_errors(driver)
         driver.get(web_url)
         WebDriverWait(driver, 60).until(EC.frame_to_be_available_and_switch_to_it((By.TAG_NAME, 'iframe')))
         done('iframe ok')
 
         step('Loading document in the editor')
         start = time.time()
+        loaded = False
         while time.time() - start < editor_timeout:
             try:
                 if driver.execute_script(LOAD_COMPLETE_JS):
-                    done(f"done in {time.time() - start:.1f}s")
-                    return
+                    loaded = True
+                    break
             except WebDriverException:
                 pass
             time.sleep(1)
-        fail(f"not loaded within {editor_timeout}s" + (", reloading" if attempt < attempts else ""))
+        if not loaded:
+            fail(f"not loaded within {editor_timeout}s" + (", reloading" if attempt < attempts else ""))
+            continue
+        # the page renders without a Document Server session too, so a failed socket only shows in the console
+        time.sleep(2)
+        errors = socket_errors(driver)
+        if errors:
+            fail(f"Document Server connection failed: {errors[-1][-160:]}" + (", reloading" if attempt < attempts else ""))
+            continue
+        done(f"done in {time.time() - start:.1f}s")
+        return
     dump_page_state(driver)
-    raise AssertionError(f"Editor did not load in {attempts} attempts of {editor_timeout}s")
+    raise AssertionError(f"Editor did not load and connect in {attempts} attempts of {editor_timeout}s")
 
 def password_hash():
     hash_params = state['settings']['passwordHash']
@@ -388,6 +424,21 @@ def type_in_editor(driver, text, attempts=3):
         # the editor capitalizes the first letter of a sentence
         if text.lower() in content.lower():
             break
+    return content
+
+def type_in_document(driver, web_url, text, description, reloads=1):
+    """Type into an open editor, reloading it when the keys never reach the document; returns the document text."""
+    content = ''
+    for attempt in range(reloads + 1):
+        step(description + (' after a reload' if attempt else ''))
+        content = type_in_editor(driver, text)
+        if text.lower() in content.lower():
+            done(text)
+            return content
+        fail(f"not in the document (text: {content!r})" + (", reloading the editor" if attempt < reloads else ""))
+        if attempt < reloads:
+            wait_editor_loaded(driver, web_url)
+            dismiss_dialogs(driver)
     return content
 
 @pytest.mark.bootstrap
@@ -565,19 +616,8 @@ def test_editor():
         wait_editor_loaded(driver, state['file']['webUrl'])
         dismiss_dialogs(driver)
 
-        step('Typing test text')
-        type_in_editor(driver, TEST_TEXT)
-        done()
-
-        step('Verifying the text reached the document')
-        ActionChains(driver).key_down(Keys.CONTROL).send_keys('a').key_up(Keys.CONTROL).perform()
-        time.sleep(1)
-        selected = driver.execute_script(SELECTED_TEXT_JS)
-        if not (selected and TEST_TEXT in selected):
-            fail(f"not found (selection: {selected!r})")
-        assert selected and TEST_TEXT in selected, \
-            f"Typed text not found in the document (selection: {selected!r})"
-        done('found')
+        typed = type_in_document(driver, state['file']['webUrl'], TEST_TEXT, 'Typing test text')
+        assert TEST_TEXT.lower() in typed.lower(), f"Typed text not found in the document (text: {typed!r})"
 
         ActionChains(driver).key_down(Keys.CONTROL).send_keys('s').key_up(Keys.CONTROL).perform()
         wait_for_js(driver, NOT_MODIFIED_JS, 30, 'Saving document (Ctrl+S)')
@@ -735,21 +775,17 @@ def test_coediting():
     try:
         wait_editor_loaded(first, document['webUrl'])
         dismiss_dialogs(first)
-        step('First session types a line')
-        typed = type_in_editor(first, first_text)
+        typed = type_in_document(first, document['webUrl'], first_text, 'First session types a line')
         assert first_text.lower() in typed.lower(), f"the typed line is not in the first session: {typed!r}"
         # a save would start a new document session; let the changes reach Document Server instead
         time.sleep(5)
-        done(first_text)
 
         wait_editor_loaded(second, document['webUrl'])
         dismiss_dialogs(second)
         poll_until(sees('second', second, first_text), 60, 'Second session sees the first line', interval=2)
 
-        step('Second session types a line')
-        typed = type_in_editor(second, second_text)
+        typed = type_in_document(second, document['webUrl'], second_text, 'Second session types a line')
         assert second_text.lower() in typed.lower(), f"the typed line is not in the second session: {typed!r}"
-        done(second_text)
         second_typed = True
         poll_until(sees('first', first, second_text), 60, 'First session sees the second line', interval=2)
     except Exception as error:

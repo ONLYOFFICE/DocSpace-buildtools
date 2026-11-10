@@ -133,8 +133,9 @@ check_file_format() {
 
 db() { 
   eval "$(grep -E '(PRODUCT|CONTAINER_PREFIX|NETWORK_NAME|MYSQL_HOST|MYSQL_CONTAINER_NAME|MYSQL_PORT|MYSQL_USER|MYSQL_PASSWORD|MYSQL_DATABASE)=' "${DOCKERCOMPOSE}/.env" | tr -d '\r')"
-  docker run --rm --network="${NETWORK_NAME}" mysql:"$(docker images --format '{{.Tag}}' mysql | head -n1 || echo latest)" \
-      mysql -h"${MYSQL_HOST:-$MYSQL_CONTAINER_NAME}" -P"${MYSQL_PORT:-3306}" -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DATABASE}" "$@"
+  # The password reaches the client through the environment, so it is not part of any command line
+  MYSQL_PWD="${MYSQL_PASSWORD}" docker run --rm -e MYSQL_PWD --network="${NETWORK_NAME}" mysql:"$(docker images --format '{{.Tag}}' mysql | head -n1 || echo latest)" \
+      mysql -h"${MYSQL_HOST:-$MYSQL_CONTAINER_NAME}" -P"${MYSQL_PORT:-3306}" -u"${MYSQL_USER}" "${MYSQL_DATABASE}" "$@"
 }
 
 check_docker_compose() {
@@ -144,6 +145,21 @@ check_docker_compose() {
     awk -F. -v R="$COMPOSE_REQ" 'NF>=3{exit !($1*1e6+$2*1e3+$3>=R)}' <<<"${VERSION%%[^0-9.]*}" && return 0
   done
   return 1
+}
+
+# Recreating the app tier while ASC.Migration.Runner runs leaves tables without their __EFMigrationsHistory rows, and the queries below need the finished schema.
+wait_for_migration() {
+  local CONTAINER="onlyoffice-migration-runner" STATE WAITING="false" DEADLINE=$((SECONDS + 1800))
+  if [ "$APPS_COMPOSE_FILE" = "apps-stack.yml" ]; then
+    CONTAINER="${DOTNET_CONTAINER_NAME:-onlyoffice-dotnet-services}"
+  fi
+  while STATE=$(docker inspect -f '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{end}}' "${CONTAINER}" 2>/dev/null); do
+    [ "${STATE}" = "running starting" ] || { [ "${STATE%% *}" = "running" ] && docker top "${CONTAINER}" 2>/dev/null | grep -qF "ASC.Migration.Runner"; } || break
+    [ "${SECONDS}" -lt "${DEADLINE}" ] || { echo; echo "Error: the ${CONTAINER} database migration is still running; run this script again once it has finished." >&2; return 1; }
+    [ "${WAITING}" = "true" ] || { echo -n "Waiting for the ${CONTAINER} database migration to finish..."; WAITING="true"; }
+    sleep 5
+  done
+  [ "${WAITING}" = "false" ] || echo "OK"
 }
 
 check_docker_compose || { echo "docker compose not installed or outdated version"; exit 1; }
@@ -174,6 +190,7 @@ case $1 in
   ;;
   -d | --default )
     echo "Return to the default proxy configuration..."
+    wait_for_migration || exit 1
     if [ -z "$(awk -F '=' '/^\s*DOCUMENT_SERVER_URL_EXTERNAL/{gsub(/^[[:space:]]*"|"[[:space:]]*$/, "", $2); print $2}' ${DOCKERCOMPOSE}/.env)" ]; then
       sed "s#\(APP_URL_PORTAL=\).*#\1\"http://onlyoffice-router:8092\"#g" -i ${DOCKERCOMPOSE}/.env
     else
@@ -271,6 +288,7 @@ case $1 in
   ;;
 esac
 
+wait_for_migration || exit 1
 [[ ! -f "${DHPARAM_PATH}" ]] && openssl dhparam -out ${DHPARAM_PATH} 2048
 CERTIFICATE_FILE="${CERTIFICATE_FILE:-"${LETSENCRYPT}/${CERT_NAME}/fullchain.pem"}"
 PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${CERT_NAME}/privkey.pem"}"

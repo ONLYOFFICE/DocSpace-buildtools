@@ -24,6 +24,34 @@ SYSTEMD_DIR=$(dirname $($(command -v dpkg-query &> /dev/null && echo "dpkg-query
 ENVIRONMENT=$(grep -oP 'ENVIRONMENT=\K.*' "${CONFIG_DIR}/systemd.env")
 USER_CONF="${CONFIG_DIR}/appsettings.${ENVIRONMENT}.json"
 
+# Read only the needed keys of the connection string into plain variables: the file belongs to the service user, so its content is never exported or evaluated
+read_connection_string() {
+  local rest key value
+  # A value product-configuration quoted may hold a semicolon, and a doubled quote inside it is a literal one
+  local item_pattern='^[[:space:];]*([^=;]+)=("([^"]|"")*"|[^;]*);?(.*)$'
+  Server="" Port="" User_ID="" Password="" Database=""
+  rest="$(json -f "$USER_CONF" ConnectionStrings.default.connectionString)"
+  while [[ -n "$rest" && "$rest" =~ $item_pattern ]]; do
+    key="${BASH_REMATCH[1]// /_}"; value="${BASH_REMATCH[2]}"; rest="${BASH_REMATCH[4]}"
+    if [[ "$value" == \"*\" ]]; then value="${value:1:${#value}-2}"; value="${value//\"\"/\"}"; fi
+    case "$key" in
+      Server) Server="$value" ;;
+      Port) Port="$value" ;;
+      User_ID) User_ID="$value" ;;
+      Password) Password="$value" ;;
+      Database) Database="$value" ;;
+    esac
+  done
+}
+
+# A plain host name; the top-level label may also be an IDN in punycode (xn--...)
+DOMAIN_PATTERN='^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+([a-zA-Z]{2,63}|xn--[a-zA-Z0-9-]{1,59})$'
+
+# The password goes through the environment of this one command instead of the command line
+mysql_exec() {
+  MYSQL_PWD="$Password" mysql -h"$Server" -P"${Port:-3306}" -u"$User_ID" "$Database" "$@"
+}
+
 # Check if configuration files are present
 if [ ! -f "${OPENRESTY}/onlyoffice-proxy-ssl.conf.template" -a ! -f "${OPENRESTY}/onlyoffice-proxy.conf.template" ]; then
  echo "Error: proxy configuration file not found." && exit 1
@@ -99,7 +127,7 @@ case $1 in
       DOMAIN=$2
       CERTIFICATE_FILE=$3
 
-      [[ $DOMAIN =~ ^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$ ]] || { echo "Error: domain name '$DOMAIN' is incorrect." >&2; exit 1; }
+      [[ $DOMAIN =~ ${DOMAIN_PATTERN} ]] || { echo "Error: domain name '$DOMAIN' is incorrect." >&2; exit 1; }
       if [[ "$CERTIFICATE_FILE" =~ \.(p12|pfx)$ ]]; then
         echo "Using PKCS#12 file for SSL configuration..."
         openssl pkcs12 -in "$CERTIFICATE_FILE" -info -noout -passin pass: >/dev/null 2>&1 || read -rsp "Enter password: " PFX_PASSWORD
@@ -126,13 +154,11 @@ case $1 in
     [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ] && systemctl restart openresty || service openresty restart
     json -I -f ${USER_CONF} -e "this.files.docservice.url.portal = \"http://localhost:80\""
     json -I -f ${USER_CONF} -e "delete this.core['server-root']"
-    chown onlyoffice:onlyoffice ${USER_CONF}
+    chown root:onlyoffice ${USER_CONF} && chmod 640 ${USER_CONF}
     
-    IFS=';' read -ra CONN_ITEM <<< "$(json -f "$USER_CONF" ConnectionStrings.default.connectionString)"; 
-    for ITEM in "${CONN_ITEM[@]}"; do KEY="${ITEM%%=*}"; VAL="${ITEM#*=}"; KEY="${KEY// /_}"; export "$KEY=$VAL"; done
-    MYSQL=(mysql -h"$Server" -P"${Port:-3306}" -u"$User_ID" "-p$Password" "$Database")
-    if [ -z "$(${MYSQL[@]} -N -s -e "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1")" ]; then
-      ${MYSQL[@]} -e "UPDATE tenants_tenants SET mappeddomain='NULL' WHERE alias='localhost';"
+    read_connection_string
+    if [ -z "$(mysql_exec -N -s -e "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1")" ]; then
+      mysql_exec -e "UPDATE tenants_tenants SET mappeddomain='NULL' WHERE alias='localhost';"
     fi
     
     if [ "${PRESERVE_DOCS}" = true ]; then
@@ -160,6 +186,11 @@ case $1 in
       DOMAINS=$2
       DOMAIN=${DOMAINS%%,*}; DOMAIN=${DOMAIN#\*\.}
       [[ ,$DOMAINS, == *,$DOMAIN,* ]] || DOMAINS+=",${DOMAIN}"
+      # The domains end up in certbot arguments, SQL and URLs, so only plain host names are accepted (split without pathname expansion)
+      IFS=',' read -ra CHECK_DOMAINS <<< "${DOMAINS}"
+      for CHECK_DOMAIN in "${CHECK_DOMAINS[@]}"; do
+        [[ ${CHECK_DOMAIN#\*\.} =~ ${DOMAIN_PATTERN} ]] || { echo "Error: domain name '${CHECK_DOMAIN}' is incorrect." >&2; exit 1; }
+      done
       LETSENCRYPT_ENABLE="true"
 
       # Install certbot if not already installed
@@ -209,7 +240,7 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
     sed -i "s~\(ssl_certificate \).*;~\1${CERTIFICATE_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
     sed -i "s~\(ssl_certificate_key \).*;~\1${PRIVATEKEY_FILE};~g" ${OPENRESTY}/onlyoffice-proxy.conf
     sed -i "s~\(ssl_dhparam \).*;~\1${DHPARAM_PATH};~g" ${OPENRESTY}/onlyoffice-proxy.conf
-    chown onlyoffice:onlyoffice ${USER_CONF}
+    chown root:onlyoffice ${USER_CONF} && chmod 640 ${USER_CONF}
 
     # A cert handed to us via -f may still renew through Docs' own --nginx authenticator - re-point it at our webroot instead.
     INHERITED_CERT_NAME=""
@@ -301,11 +332,9 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
     fi
 
     # fix Bug 75803 - In the "What's new..." email, the portal domain comes as localhost
-    IFS=';' read -ra CONN_ITEM <<< "$(json -f "$USER_CONF" ConnectionStrings.default.connectionString)"; 
-    for ITEM in "${CONN_ITEM[@]}"; do KEY="${ITEM%%=*}"; VAL="${ITEM#*=}"; KEY="${KEY// /_}"; export "$KEY=$VAL"; done
-    MYSQL=(mysql -h"$Server" -P"${Port:-3306}" -u"$User_ID" "-p$Password" "$Database")
-    if [[ "${INHERIT_SSL_INTERNAL_PORTAL}" != "true" ]] && [ -z "$(${MYSQL[@]} -N -s -e "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1")" ]; then
-      ${MYSQL[@]} -e "UPDATE tenants_tenants SET mappeddomain='${DOMAIN}' WHERE alias='localhost';"
+    read_connection_string
+    if [[ "${INHERIT_SSL_INTERNAL_PORTAL}" != "true" ]] && [ -z "$(mysql_exec -N -s -e "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1")" ]; then
+      mysql_exec -e "UPDATE tenants_tenants SET mappeddomain='${DOMAIN}' WHERE alias='localhost';"
     fi
 
     [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ] && systemctl restart openresty || service openresty restart

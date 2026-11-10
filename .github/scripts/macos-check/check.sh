@@ -18,7 +18,7 @@ chmod +x "${FAKE_BIN}/docker" "${FAKE_BIN}/open"
 INSTALL_DIR="${WORK_DIR}/oci"
 mkdir -p "${INSTALL_DIR}"
 cp "${SCRIPTS_DIR}"/{apps-install,install-Docker,install-Docker-args,install-Docker-docs}.sh "${INSTALL_DIR}/"
-mkdir -p "${INSTALL_DIR}/common" && cp "${SCRIPTS_DIR}/common/swap.sh" "${INSTALL_DIR}/common/"
+mkdir -p "${INSTALL_DIR}/common" && cp "${SCRIPTS_DIR}"/common/{swap,logging}.sh "${INSTALL_DIR}/common/"
 ( cd "${REPO_DIR}/install/docker/standalone" && tar -czf "${INSTALL_DIR}/docker-standalone.tar.gz" .env docker-compose.yml config )
 
 # Every scenario gets its own HOME and fake Docker state, so nothing leaks between them
@@ -116,10 +116,21 @@ expect_no_log " up -d"
 end_scenario
 
 new_scenario "Low Docker Desktop resources"
-FAKE_DOCKER_MEM=3000000000 FAKE_DOCKER_CPU=2 run_wrapper "${BASE_ARGS[@]}"
+rm -f "${INSTALL_DIR}"/OneClick*.log
+FAKE_DOCKER_MEM=3000000000 FAKE_DOCKER_CPU=2 run_wrapper "${BASE_ARGS[@]}" -js check-secret
 expect_rc 1
 expect_output "of RAM (available: 3000 MB)"
 expect_output "Settings > Resources"
+# A failed run keeps the log, headed by the masked command line and the host summary
+LOG_FILE=$(ls "${INSTALL_DIR}"/OneClick*.log 2> /dev/null | head -n 1)
+if [ -z "${LOG_FILE}" ]; then
+    fail "no log file after a failed install"
+else
+    grep -qE '^Command: .* -js \*\*\*' "${LOG_FILE}" || fail "the log has no masked command line"
+    grep -q '^OS: macOS' "${LOG_FILE}" || fail "the log has no host summary"
+    grep -q 'check-secret' "${LOG_FILE}" && fail "the secret reached the log"
+    grep -qF "of RAM (available: 3000 MB)" "${LOG_FILE}" || fail "the installer output is not in the log"
+fi
 end_scenario
 
 new_scenario "Running under sudo is refused"

@@ -26,7 +26,7 @@ migrations/runMigrations.standalone.bat  # Windows (standalone mode)
 ./start/restart.sh                  # Restart all services
 
 # Docker Compose (from install/docker/)
-# Set MYSQL_ROOT_PASSWORD, MYSQL_PASSWORD, RABBIT_PASSWORD, and DOCUMENT_SERVER_JWT_SECRET in .env first.
+# Set MYSQL_ROOT_PASSWORD, MYSQL_PASSWORD, RABBIT_PASSWORD, APP_CORE_MACHINEKEY, IDENTITY_ENCRYPTION_SECRET, and DOCUMENT_SERVER_JWT_SECRET in .env first.
 docker compose -f apps.yml -f db.yml -f redis.yml -f rabbitmq.yml up -d
 docker compose -f apps-stack.yml up -d  # Full stack shortcut
 
@@ -117,7 +117,7 @@ tools/                      — runasadmin.bat, debuginfo.py, requirements.txt, 
 ## Docker Compose Architecture
 
 Compose is **modular** — compose files are combined with `-f`. The `install/docker/.env` has ~200 variables covering all services.
-For direct Compose runs, fill `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`, `RABBIT_PASSWORD`, and `DOCUMENT_SERVER_JWT_SECRET` in `.env` before starting bundled dependencies. `install-Docker.sh` generates these automatically.
+For direct Compose runs, fill `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`, `RABBIT_PASSWORD`, `APP_CORE_MACHINEKEY`, `IDENTITY_ENCRYPTION_SECRET`, and `DOCUMENT_SERVER_JWT_SECRET` in `.env` before starting bundled dependencies. `install-Docker.sh` generates these automatically.
 
 Key compose combinations:
 ```bash

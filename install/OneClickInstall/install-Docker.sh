@@ -39,7 +39,14 @@
 if [[ "$OSTYPE" == darwin* ]]; then
     [ "$EUID" -eq 0 ] && { echo "On macOS, run this script without sudo" >&2; exit 1; }
     BREW_BIN=$(PATH="$PATH:/opt/homebrew/bin:/usr/local/bin" command -v brew)
-    [ -n "$BREW_BIN" ] || { echo "Homebrew is required on macOS, see https://brew.sh" >&2; exit 1; }
+    if [ -z "$BREW_BIN" ]; then
+        echo "Homebrew is required on macOS, see https://brew.sh" >&2
+        # Rosetta also reports x86_64, so the hardware is asked about Apple Silicon
+        if [ "$(uname -m)" = "x86_64" ] && [ "$(sysctl -n hw.optional.arm64 2>/dev/null)" != "1" ]; then
+            echo "On Intel Macs the Homebrew installer refuses to run, because Homebrew no longer supports Intel: install it manually" >&2
+        fi
+        exit 1
+    fi
     BREW_PREFIX=$("$BREW_BIN" --prefix)
     [ -n "$BREW_PREFIX" ] || { echo "Could not resolve the Homebrew prefix" >&2; exit 1; }
     MISSING_FORMULAE=()
@@ -117,6 +124,8 @@ REDIS_HOST=""
 REDIS_PORT=""
 REDIS_USER_NAME=""
 REDIS_PASSWORD=""
+
+BACKUP_BEFORE_UPDATE="false"
 
 RABBIT_PROTOCOL=""
 RABBIT_HOST=""
@@ -247,13 +256,18 @@ detect_current_deployment_mode () {
 	fi
 }
 
+# The pre-update backups hold copies of .env and database dumps, so they go together with the installation directory
+remove_local_data () {
+	rm -rf "${BASE_DIR:?}" "${BASE_DIR%/}.backup" || echo "Failed to remove directory $BASE_DIR."
+}
+
 # Without Docker Desktop on macOS there is no container or volume, only the local files are left
 uninstall_local_files () {
 	echo "Docker is not installed, only the local files in ${BASE_DIR} are removed."
 	remove_apps_renewal_job
 	read -p "Keep configuration and Docs data for reinstallation? (Y/n): " KEEP_DATA
 	if [[ ! "${KEEP_DATA,,}" =~ ^(y|yes)?$ ]]; then
-		rm -rf "$BASE_DIR" || echo "Failed to remove directory $BASE_DIR."
+		remove_local_data
 	fi
 	echo -e "Uninstallation of $PRODUCT_NAME \e[32mcompleted.\e[0m"
 }
@@ -293,8 +307,8 @@ uninstall() {
     if [ "${DEPLOYMENT_MODE}" = "standalone" ]; then
         echo "Uninstallation of ${PRODUCT_NAME} (standalone)..."
 
-        [ "${RESTORE_DOCS}" = true ] || read -p "Also remove data volumes (mysql, opensearch, documents)? (Y/n): " REMOVE_DATA_SERVICES
-        [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]] && DOWN_ARGS+=(-v)
+        [ "${RESTORE_DOCS}" = true ] || read -p "Also remove data volumes (mysql, opensearch, documents)? (y/N): " REMOVE_DATA_SERVICES
+        [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)$ ]] && DOWN_ARGS+=(-v)
         if [ "${RESTORE_DOCS}" != true ]; then
             # A background certbot renewal check (see apps-ssl-setup) may still hold the webroot volume.
             docker ps -aq --filter "ancestor=certbot/certbot" --filter "volume=${COMPOSE_PROJECT_NAME:-$PACKAGE_SYSNAME}_webroot_path" | xargs -r docker rm -f >/dev/null
@@ -304,9 +318,9 @@ uninstall() {
             [ "${RESTORE_DOCS}" != true ] || return 1
         }
     else
-        [ "${RESTORE_DOCS}" = true ] || read -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " REMOVE_DATA_SERVICES
+        [ "${RESTORE_DOCS}" = true ] || read -p "Uninstall all dependencies (mysql, opensearch and others)? (y/N): " REMOVE_DATA_SERVICES
 
-        if [ "${RESTORE_DOCS}" = true ] || [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]]; then
+        if [ "${RESTORE_DOCS}" = true ] || [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)$ ]]; then
             SERVICES+=("db" "rabbitmq" "redis" "opensearch" "dashboards" "fluent")
             [ "${RESTORE_DOCS}" = true ] || DOWN_ARGS+=(-v)
         fi
@@ -338,12 +352,12 @@ uninstall() {
 
 	if ! docker network inspect "${NETWORK_NAME}" >/dev/null 2>&1 && [[ -d "$BASE_DIR" ]]; then
 		if [[ ! "${KEEP_DATA,,}" =~ ^(y|yes)?$ ]]; then
-			rm -rf "$BASE_DIR" || echo "Failed to remove directory $BASE_DIR."
+			remove_local_data
 		fi
 	fi
 
 	echo -e "Uninstallation of $PRODUCT_NAME" \
-		"$( [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)?$ ]] && echo "and all dependencies" ) \e[32mcompleted.\e[0m"
+		"$( [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)$ ]] && echo "and all dependencies" ) \e[32mcompleted.\e[0m"
 }
 
 is_macos () {
@@ -467,7 +481,7 @@ check_hardware () {
 	else
 		AVAILABLE_DISK_SPACE=$(df -Pm / | awk 'NR == 2 { print $4 }')
 		TOTAL_MEMORY=$(free --mega | awk '/^Mem:/ { print $2 }')
-		CPU_CORES_NUMBER=$(nproc)
+		CPU_CORES_NUMBER=$(nproc --all)
 	fi
 
 	local requirements_not_met=""
@@ -683,7 +697,8 @@ prepare_docker_desktop () {
 
 docker_login() {
     if [[ -n "$USERNAME" && -n "$PASSWORD" ]]; then
-        echo "$PASSWORD" | docker login "$REGISTRY_URL" --username "$USERNAME" --password-stdin || { echo "Docker authentication failed"; exit 1; }
+        # A here-string is not printed by xtrace, unlike the arguments of echo
+        docker login "$REGISTRY_URL" --username "$USERNAME" --password-stdin <<< "$PASSWORD" || { echo "Docker authentication failed"; exit 1; }
     fi
 }
 
@@ -691,7 +706,7 @@ create_network () {
 	NETWORK_EXIST=$(docker network ls | awk '{print $2;}' | { grep -x ${NETWORK_NAME} || true; })
 
 	if [[ -z ${NETWORK_EXIST} ]]; then
-		docker network create --driver bridge ${NETWORK_NAME}
+		docker network create --driver bridge ${NETWORK_NAME} >/dev/null
 	fi
 }
 
@@ -737,6 +752,11 @@ get_env_parameter () {
 }
 
 get_tag_from_registry () {
+	# Keep credentials and the registry token out of the xtrace log
+	local XTRACE_STATE=""
+	[[ $- == *x* ]] && XTRACE_STATE="on"
+	set +x
+
 	if [[ -n ${REGISTRY_URL} ]]; then
 		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
 			CREDENTIALS=$(echo -n "$USERNAME:$PASSWORD" | base64)
@@ -750,8 +770,9 @@ get_tag_from_registry () {
 		JQ_FILTER='.tags | join("\n")'
 	else
 		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
-			CREDENTIALS="{\"username\":\"$USERNAME\",\"password\":\"$PASSWORD\"}"
-			TOKEN=$(curl -s -H "Content-Type: application/json" -X POST -d "$CREDENTIALS" https://hub.docker.com/v2/users/login/ | jq -r '.token')
+			# jq reads the credentials from its environment and curl from a pipe, so no process gets them as arguments
+			TOKEN=$(HUB_USERNAME="$USERNAME" HUB_PASSWORD="$PASSWORD" jq -n '{username: env.HUB_USERNAME, password: env.HUB_PASSWORD}' \
+				| curl -s -H "Content-Type: application/json" -X POST -d @- https://hub.docker.com/v2/users/login/ | jq -r '.token')
 			AUTH_HEADER="Authorization: JWT $TOKEN"
 			sleep 1
 		fi
@@ -761,6 +782,8 @@ get_tag_from_registry () {
 	fi
 
 	mapfile -t TAGS_RESP < <(curl -s -H "${AUTH_HEADER}" -X GET "${REGISTRY_TAGS_URL}" | jq -r "${JQ_FILTER}" | grep -v -x "latest")
+
+	if [ -n "${XTRACE_STATE}" ]; then set -x; fi
 }
 
 get_available_version () {
@@ -788,9 +811,19 @@ set_secrets () {
 	APP_CORE_MACHINEKEY="${APP_CORE_MACHINEKEY:-$(get_env_parameter "APP_CORE_MACHINEKEY" "${CONTAINER_NAME}")}"
 	[ "$UPDATE" != "true" ] && APP_CORE_MACHINEKEY="${APP_CORE_MACHINEKEY:-$(get_random_str 12)}"
 	IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-$(get_env_parameter "IDENTITY_ENCRYPTION_SECRET" "${IDENTITY_CONTAINER_NAME}")}"
-	# (DS v3.1.0) Legacy update fallback for the encryption key.
-	[ "${UPDATE}" = "true" ] && IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-"secret"}"
+	# A new key would make everything Identity has already encrypted unreadable, so an update must not invent one
+	if [ -z "${IDENTITY_ENCRYPTION_SECRET}" ] && [ "${UPDATE}" = "true" ] && [ -n "$(docker ps -aqf "name=${IDENTITY_CONTAINER_NAME}" 2>/dev/null)" ]; then
+		echo "Error: cannot read the Identity encryption secret of the installed product; set IDENTITY_ENCRYPTION_SECRET and run the update again." >&2
+		exit 1
+	fi
 	IDENTITY_ENCRYPTION_SECRET="${IDENTITY_ENCRYPTION_SECRET:-$(get_random_str 12)}"
+}
+
+set_rabbitmq_password () {
+	# A fresh install gives the bundled RabbitMQ its own password; an update keeps the one it already runs with,
+	# because the broker takes the password only when its data is first created
+	[ -z "${RABBIT_HOST}" ] && [ "${INSTALL_RABBITMQ}" = "true" ] && [ "${UPDATE}" != "true" ] || return 0
+	RABBIT_PASSWORD="${RABBIT_PASSWORD:-$(get_random_str 20)}"
 }
 
 set_mysql_params () {
@@ -1065,7 +1098,9 @@ setup_custom_config () {
 			rm -f "${CONFIG_OVERRIDE}"; echo "Error: failed to seed ${CONFIG_OVERRIDE} from the image." >&2; exit 1
 		fi
 	fi
-	sed -i 's|^\(\s*\)#\(-\s*${CONFIG_OVERRIDE}:\)|\1\2|' $(printf '%s\n' "${APP_COMPOSE_FILES[@]}" | grep -v '^-f$')
+	for compose_file in "${APP_COMPOSE_FILES[@]}"; do
+		[ "${compose_file}" = "-f" ] || sed -i 's|^\(\s*\)#\(-\s*${CONFIG_OVERRIDE}:\)|\1\2|' "${compose_file}"
+	done
 }
 
 install_mysql_server () {
@@ -1152,6 +1187,27 @@ install_fluent_bit () {
 	fi
 }
 
+# Waits for the container that runs ASC.Migration.Runner (healthy for standalone/stack, exit code 0 for migration-runner): a restart mid-migration breaks the schema for good.
+wait_for_migration () {
+	local CONTAINER="$1" STATE RESULT RUNNER_SEEN="" DEADLINE=$((SECONDS + 1800))
+	echo -n "Waiting for database migration to complete..."
+	while [ "${SECONDS}" -lt "${DEADLINE}" ]; do
+		STATE=$(docker inspect -f '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{end}}' "${CONTAINER}" 2>/dev/null) || break
+		if [ "${STATE%% *}" = "running" ] && docker top "${CONTAINER}" 2>/dev/null | grep -qF "ASC.Migration.Runner"; then
+			RUNNER_SEEN=${SECONDS}
+		# The services start only after the migration, so a health check that turned unhealthy during a long one gets five minutes to recover
+		elif [ "${STATE}" != "running starting" ] && { [ "${STATE}" != "running unhealthy" ] || [ -z "${RUNNER_SEEN}" ] || [ $((SECONDS - RUNNER_SEEN)) -ge 300 ]; }; then
+			break
+		fi
+		sleep 5
+	done
+	RESULT=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}} {{.State.ExitCode}}{{end}}' "${CONTAINER}" 2>/dev/null)
+	case "${RESULT}" in
+		"healthy" | "exited 0") echo "OK" ;;
+		*) echo "FAILED"; echo "Warning: ${CONTAINER} is ${RESULT:-missing}; check 'docker logs ${CONTAINER}'." >&2 ;;
+	esac
+}
+
 install_product () {
 	if [ "$INSTALL_PRODUCT" == "true" ]; then
 		if [ "${UPDATE}" = "true" ]; then
@@ -1183,7 +1239,6 @@ install_product () {
 		fi
 
 		reconfigure ENV_EXTENSION "${ENV_EXTENSION}"
-		reconfigure IDENTITY_PROFILE "${IDENTITY_PROFILE:-"prod,server"}"
 		reconfigure APP_CORE_MACHINEKEY "${APP_CORE_MACHINEKEY}"
 		reconfigure IDENTITY_ENCRYPTION_SECRET "${IDENTITY_ENCRYPTION_SECRET}"
 		reconfigure APP_CORE_BASE_DOMAIN "${APP_CORE_BASE_DOMAIN}"
@@ -1200,12 +1255,12 @@ install_product () {
 		if [ "${DEPLOYMENT_MODE}" = "stack" ]; then
 			${DOCKER_COMPOSE} -f "${BASE_DIR}/apps-stack.yml" up -d
 			${DOCKER_COMPOSE} -f "${BASE_DIR}/proxy.yml" up -d
+			wait_for_migration "${CONTAINER_NAME}"
 		else
 			${DOCKER_COMPOSE} -f "${BASE_DIR}/migration-runner.yml" up -d
 
-			if [[ -n $(docker ps -q --filter "name=${PACKAGE_SYSNAME}-migration-runner") ]]; then
-				echo -n "Waiting for database migration to complete..."
-				[ "$(timeout 60 docker wait "${PACKAGE_SYSNAME}-migration-runner")" = "0" ] && echo "OK" || echo "FAILED"
+			if [[ -n $(docker ps -aq --filter "name=^${PACKAGE_SYSNAME}-migration-runner$") ]]; then
+				wait_for_migration "${PACKAGE_SYSNAME}-migration-runner"
 			fi
 
 			compose_with_document_server_mounts "${COMPOSE_FILES[@]}" up -d
@@ -1239,6 +1294,49 @@ install_product () {
 		fi
 	elif [ "$INSTALL_PRODUCT" == "pull" ]; then
 		compose_with_document_server_mounts "${COMPOSE_FILES[@]}" pull
+	fi
+}
+
+backup_before_update () {
+	[ "${UPDATE}" = "true" ] && [ -f "${BASE_DIR}/.env" ] || return 0
+
+	local BACKUP_ROOT="${BASE_DIR%/}.backup"
+	local BACKUP_DIR="${BACKUP_ROOT}/$(date +%Y%m%d-%H%M%S)"
+	local MYSQL_CONTAINER
+	MYSQL_CONTAINER=$(get_env_parameter "MYSQL_CONTAINER_NAME" | sed "s/\${CONTAINER_PREFIX}/${PACKAGE_SYSNAME}-/g")
+	MYSQL_CONTAINER="${MYSQL_CONTAINER:-${PACKAGE_SYSNAME}-mysql-server}"
+
+	# The refresh in download_files removes the old .env and compose files, so keep a private copy outside of the installer directory
+	echo -n "Saving the current configuration to ${BACKUP_DIR}..."
+	if ( umask 077; mkdir -p "${BACKUP_DIR}" \
+		&& find "${BASE_DIR}" -maxdepth 1 -type f -exec cp -p {} "${BACKUP_DIR}/" \; \
+		&& { [ ! -d "${BASE_DIR}/config" ] || cp -a "${BASE_DIR}/config" "${BACKUP_DIR}/"; } ); then
+		echo "OK"
+		# Keep the three newest copies
+		ls -1dt "${BACKUP_ROOT}"/*/ 2>/dev/null | tail -n +4 | xargs -r rm -rf
+	else
+		echo "FAILED"
+		# A partial copy is removed so it never counts as one of the kept backups
+		rm -rf "${BACKUP_DIR}"
+		echo "Warning: the backup was not created, the update continues." >&2
+		return 0
+	fi
+
+	[ "${BACKUP_BEFORE_UPDATE}" = "true" ] || return 0
+
+	if [ -z "$(docker ps -q --filter "name=${MYSQL_CONTAINER}")" ]; then
+		echo "Warning: the bundled MySQL container is not running, the database backup is skipped." >&2
+		return 0
+	fi
+
+	echo -n "Dumping the ${PRODUCT_NAME} database to ${BACKUP_DIR}/mysql.sql.gz..."
+	if ( umask 077; docker exec "${MYSQL_CONTAINER}" sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqldump -uroot --single-transaction --routines --triggers --no-tablespaces --databases "$MYSQL_DATABASE"' \
+		| gzip > "${BACKUP_DIR}/mysql.sql.gz"; [ "${PIPESTATUS[*]}" = "0 0" ] ); then
+		echo "OK"
+	else
+		echo "FAILED"
+		rm -f "${BACKUP_DIR}/mysql.sql.gz"
+		echo "Warning: the database backup was not created, the update continues." >&2
 	fi
 }
 
@@ -1354,6 +1452,8 @@ install_standalone () {
 		# The inherited Docs HTTPS is stripped only once the outcome of the Apps start is known.
 		[ "${SSL_REQUESTED}" = "false" ] || finish_https_takeover "$(( SSL_STATUS != 0 ? SSL_STATUS : UP_STATUS ))"
 		[ "${UP_STATUS}" -eq 0 ] || exit "${UP_STATUS}"
+
+		wait_for_migration "${CONTAINER_NAME}"
 
 		chown_app_volumes || exit 1
 		finish_document_server_migration || exit 1
@@ -1477,6 +1577,9 @@ services_check_connection () {
 		reconfigure RABBIT_USER_NAME "${RABBIT_USER_NAME}"
 		reconfigure RABBIT_PASSWORD "${RABBIT_PASSWORD}"
 		reconfigure RABBIT_VIRTUAL_HOST "${RABBIT_VIRTUAL_HOST:-/}"
+	else
+		# The bundled RabbitMQ: pass its password on to the services (reconfigure skips an empty value)
+		reconfigure RABBIT_PASSWORD "${RABBIT_PASSWORD}"
 	fi
 	if [[ ! -z "$REDIS_HOST" ]]; then
 		establish_conn ${REDIS_HOST} "${REDIS_PORT:-6379}" "Redis"
@@ -1545,7 +1648,11 @@ start_installation () {
 
 	set_secrets
 
+	set_rabbitmq_password
+
 	set_mysql_params
+
+	backup_before_update
 
 	if [ -n "${CURRENT_DEPLOYMENT_MODE}" ] && [ "${CURRENT_DEPLOYMENT_MODE}" != "${DEPLOYMENT_MODE}" ]; then
 		teardown_previous_deployment_mode

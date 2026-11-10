@@ -117,7 +117,8 @@ curl -fsSL https://artifacts.opensearch.org/publickeys/opensearch-release.pgp | 
 echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch/3.x/apt stable main" > /etc/apt/sources.list.d/opensearch-3.x.list
 OPENSEARCH_VERSION="3.5.0"
 export OPENSEARCH_JAVA_HOME="${OPENSEARCH_JAVA_HOME:-/usr/share/opensearch/jdk}"
-export OPENSEARCH_INITIAL_ADMIN_PASSWORD="$(echo "${package_sysname}!A1")"
+# Only the package scripts need it (the security plugin is removed afterwards); the fixed prefix satisfies the password policy
+export OPENSEARCH_INITIAL_ADMIN_PASSWORD="Aa1!$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 16)"
 
 # Add OpenSearch Dashboards repo.
 if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then
@@ -172,8 +173,14 @@ if [ "$DIST" = "debian" ] && [ "$ARCH" = "arm64" ]; then
 		echo percona-server-server percona-server-server/re-root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
 	fi
 else
-	MYSQL_REPO_VERSION="$(curl -fsSL https://dev.mysql.com/downloads/repo/apt/ | grep -oP '(?<=mysql-apt-config_)[0-9.]+-[0-9]+(?=_all\.deb)' | head -n1)"
+	# The repository package is pinned and verified by checksum; update the version and the sha256 of the file on repo.mysql.com together
+	MYSQL_REPO_VERSION="0.8.40-1"
+	MYSQL_REPO_SHA256="41a796dd6ea681aef4675d3b0b27924873d4f9777e524facf7693eabdf232e93"
 	MYSQL_PACKAGE_NAME="mysql-apt-config_${MYSQL_REPO_VERSION}_all.deb"
+	download_mysql_repo_package() {
+		curl -fsSLO "https://repo.mysql.com/${MYSQL_PACKAGE_NAME}"
+		echo "${MYSQL_REPO_SHA256}  ${MYSQL_PACKAGE_NAME}" | sha256sum -c - >/dev/null || { rm -f "${MYSQL_PACKAGE_NAME}"; echo "ERROR: ${MYSQL_PACKAGE_NAME} does not match the pinned checksum" >&2; exit 1; }
+	}
 
 	if ! dpkg -l | grep -q "mysql-server"; then
 		MYSQL_FIRST_TIME_INSTALL="true"
@@ -181,8 +188,8 @@ else
 
 		# Set up MySQL 8.4 package (arm64 uses the distro package, the Oracle repo has no arm64 build).
 		if [ "$ARCH" = "amd64" ]; then
-			curl -fsSLO "https://repo.mysql.com/${MYSQL_PACKAGE_NAME}"
-			echo "mysql-apt-config mysql-apt-config/repo-codename  select  ${DISTRIB_CODENAME/resolute/noble}" | debconf-set-selections
+			download_mysql_repo_package
+			echo "mysql-apt-config mysql-apt-config/repo-codename  select  $DISTRIB_CODENAME" | debconf-set-selections
 			echo "mysql-apt-config mysql-apt-config/repo-distro  select  $DIST" | debconf-set-selections
 			echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.4-lts" | debconf-set-selections
 			DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
@@ -195,8 +202,8 @@ else
 		echo mysql-server mysql-server/root_password password "${MYSQL_SERVER_PASS}" | debconf-set-selections
 		echo mysql-server mysql-server/root_password_again password "${MYSQL_SERVER_PASS}" | debconf-set-selections
 
-	elif [ "${PRESERVE_DOCS}" = false ] && dpkg -l | grep -q "mysql-apt-config" && [ "$(apt-cache policy mysql-apt-config | awk 'NR==2{print $2}')" != "${MYSQL_REPO_VERSION}" ]; then
-		curl -fsSLO "https://repo.mysql.com/${MYSQL_PACKAGE_NAME}"
+	elif [ "${PRESERVE_DOCS}" = false ] && dpkg -l | grep -q "mysql-apt-config" && dpkg --compare-versions "$(apt-cache policy mysql-apt-config | awk 'NR==2{print $2}')" lt "${MYSQL_REPO_VERSION}"; then
+		download_mysql_repo_package
 		DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
 		rm -f "${MYSQL_PACKAGE_NAME}"
 	fi
@@ -208,10 +215,12 @@ if [ "$DIST" = "ubuntu" ] && { [ "${PRESERVE_DOCS}" = false ] || ! package_insta
 fi
 
 curl -fsSL https://openresty.org/package/pubkey.gpg | gpg --batch --yes --dearmor -o /usr/share/keyrings/openresty.gpg
+# The repository is trusted only through this key, so refuse a key with any other fingerprint
+[ "$(gpg --show-keys --with-colons /usr/share/keyrings/openresty.gpg | awk -F: '/^fpr:/ {print $10; exit}')" = "E52218E7087897DC6DEA6D6D97DB7443D5EDEB74" ] || { echo "ERROR: unexpected OpenResty signing key" >&2; exit 1; }
 # Temporary OpenResty codename fallback for Debian 13 and Ubuntu 26.04.
 OPENRESTY_CODENAME=$([ "${DISTRIB_CODENAME}" = "trixie" ] && echo "bookworm" || echo "${DISTRIB_CODENAME/resolute/noble}")
 OPENRESTY_REPO_PATH="${DIST}"; [ "$ARCH" = "arm64" ] && OPENRESTY_REPO_PATH="arm64/${DIST}"
-echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/${OPENRESTY_REPO_PATH} ${OPENRESTY_CODENAME} $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
+echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] https://openresty.org/package/${OPENRESTY_REPO_PATH} ${OPENRESTY_CODENAME} $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
 
 # Add Java repo.
 curl -fsSL https://packages.adoptium.net/artifactory/api/gpg/key/public | gpg --batch --yes --dearmor -o /usr/share/keyrings/adoptium.gpg
