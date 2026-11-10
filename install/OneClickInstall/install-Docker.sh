@@ -1187,6 +1187,27 @@ install_fluent_bit () {
 	fi
 }
 
+# Waits for the container that runs ASC.Migration.Runner (healthy for standalone/stack, exit code 0 for migration-runner): a restart mid-migration breaks the schema for good.
+wait_for_migration () {
+	local CONTAINER="$1" STATE RESULT RUNNER_SEEN="" DEADLINE=$((SECONDS + 1800))
+	echo -n "Waiting for database migration to complete..."
+	while [ "${SECONDS}" -lt "${DEADLINE}" ]; do
+		STATE=$(docker inspect -f '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{end}}' "${CONTAINER}" 2>/dev/null) || break
+		if [ "${STATE%% *}" = "running" ] && docker top "${CONTAINER}" 2>/dev/null | grep -qF "ASC.Migration.Runner"; then
+			RUNNER_SEEN=${SECONDS}
+		# The services start only after the migration, so a health check that turned unhealthy during a long one gets five minutes to recover
+		elif [ "${STATE}" != "running starting" ] && { [ "${STATE}" != "running unhealthy" ] || [ -z "${RUNNER_SEEN}" ] || [ $((SECONDS - RUNNER_SEEN)) -ge 300 ]; }; then
+			break
+		fi
+		sleep 5
+	done
+	RESULT=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}} {{.State.ExitCode}}{{end}}' "${CONTAINER}" 2>/dev/null)
+	case "${RESULT}" in
+		"healthy" | "exited 0") echo "OK" ;;
+		*) echo "FAILED"; echo "Warning: ${CONTAINER} is ${RESULT:-missing}; check 'docker logs ${CONTAINER}'." >&2 ;;
+	esac
+}
+
 install_product () {
 	if [ "$INSTALL_PRODUCT" == "true" ]; then
 		if [ "${UPDATE}" = "true" ]; then
@@ -1234,12 +1255,12 @@ install_product () {
 		if [ "${DEPLOYMENT_MODE}" = "stack" ]; then
 			${DOCKER_COMPOSE} -f "${BASE_DIR}/apps-stack.yml" up -d
 			${DOCKER_COMPOSE} -f "${BASE_DIR}/proxy.yml" up -d
+			wait_for_migration "${CONTAINER_NAME}"
 		else
 			${DOCKER_COMPOSE} -f "${BASE_DIR}/migration-runner.yml" up -d
 
-			if [[ -n $(docker ps -q --filter "name=${PACKAGE_SYSNAME}-migration-runner") ]]; then
-				echo -n "Waiting for database migration to complete..."
-				[ "$(timeout 60 docker wait "${PACKAGE_SYSNAME}-migration-runner")" = "0" ] && echo "OK" || echo "FAILED"
+			if [[ -n $(docker ps -aq --filter "name=^${PACKAGE_SYSNAME}-migration-runner$") ]]; then
+				wait_for_migration "${PACKAGE_SYSNAME}-migration-runner"
 			fi
 
 			compose_with_document_server_mounts "${COMPOSE_FILES[@]}" up -d
@@ -1431,6 +1452,8 @@ install_standalone () {
 		# The inherited Docs HTTPS is stripped only once the outcome of the Apps start is known.
 		[ "${SSL_REQUESTED}" = "false" ] || finish_https_takeover "$(( SSL_STATUS != 0 ? SSL_STATUS : UP_STATUS ))"
 		[ "${UP_STATUS}" -eq 0 ] || exit "${UP_STATUS}"
+
+		wait_for_migration "${CONTAINER_NAME}"
 
 		chown_app_volumes || exit 1
 		finish_document_server_migration || exit 1
