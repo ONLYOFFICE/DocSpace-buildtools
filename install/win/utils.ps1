@@ -513,7 +513,8 @@ function SyncDocumentServerDbPassword {
     $DocsDb = (Get-Content -LiteralPath $LocalJson -Raw | ConvertFrom-Json).services.CoAuthoring.sql
     if ($DocsDb.dbUser -ne $DbUser -or $DocsDb.dbPass -eq $DbPwd) { return }
 
-    $Content = [IO.File]::ReadAllText($LocalJson) -replace '("dbPass"\s*:\s*")[^"]*', "`${1}$DbPwd"
+    $JsonPwd = (ConvertTo-Json $DbPwd -Compress) -replace '^"|"$', ''
+    $Content = [regex]::Replace([IO.File]::ReadAllText($LocalJson), '("dbPass"\s*:\s*")[^"]*', { param($Match) $Match.Groups[1].Value + $JsonPwd })
     [IO.File]::WriteAllText($LocalJson, $Content, (New-Object Text.UTF8Encoding($false)))
 
     $Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry64')
@@ -889,7 +890,11 @@ function MoveConfigs {
     if ((Test-Path $ConfigSslFile) -and ($SslCertPath) -and ($SslCertKeyPath)) {
         Set-Location $SslScriptDir
         $PsCommand = "& '$SslScriptPath' -f $DomainName $SslCertPath $SslCertKeyPath"
-        Invoke-Expression $PsCommand
+        try {
+            Invoke-Expression $PsCommand
+        } catch {
+            Write-Warning "SSL setup skipped: $($_.Exception.Message)"
+        }
     } else {
         Write-Output "SSL script not executed. Missing paths or ConfigSslFile."
     }

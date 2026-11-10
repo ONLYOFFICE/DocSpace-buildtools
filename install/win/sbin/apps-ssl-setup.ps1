@@ -86,8 +86,7 @@ function Assert-ValidList {
   )
   foreach ($item in $List -split ',') {
     if ($item -cnotmatch $Pattern) {
-      Write-Error "Error: $Kind '$item' is incorrect."
-      exit 1
+      throw "Error: $Kind '$item' is incorrect."
     }
   }
 }
