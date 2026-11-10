@@ -318,7 +318,7 @@ replace_csp_lua() {
 	if ngx.req.get_method() ~= "GET"
 	   or not accept
 	   or not string.find(accept, "html")
-	   or ngx.re.match(ngx.var.request_uri, "ds-vpath|/api/")
+	   or ngx.re.match(ngx.var.request_uri, "ds-vpath|/api/|/static/html-frame/")
 	then
 		return
 	end
