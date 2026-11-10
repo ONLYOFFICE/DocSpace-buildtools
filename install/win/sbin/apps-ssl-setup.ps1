@@ -194,8 +194,7 @@ if ( $args.Count -ge 2 ) {
       }
 
     } catch {
-      Write-Error $_.Exception.Message
-      exit 1
+      throw $_.Exception.Message
     }
 
     $ssl_cert = $ssl_cert.Replace('\', '/')
