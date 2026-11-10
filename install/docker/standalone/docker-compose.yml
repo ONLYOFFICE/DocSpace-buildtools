@@ -19,7 +19,9 @@ x-service: &x-service-base
     MYSQL_CONTAINER_NAME: ${MYSQL_CONTAINER_NAME}
     MYSQL_HOST: ${MYSQL_HOST}
     MYSQL_PORT: ${MYSQL_PORT}
-    MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    MYSQL_SSL_MODE: ${MYSQL_SSL_MODE:-none}
+    # Empty on purpose: env_file passes the whole .env, and the application container has no use for the MySQL root password
+    MYSQL_ROOT_PASSWORD: ""
     MYSQL_DATABASE: ${MYSQL_DATABASE}
     MYSQL_USER: ${MYSQL_USER}
     MYSQL_PASSWORD: ${MYSQL_PASSWORD}
@@ -61,6 +63,7 @@ services:
       # Manual Compose installs use local storage; install-Docker.sh points this at its persistent Certbot directory so Apps sees the same renewal configuration.
       - ${LETSENCRYPT_CONFIG_DIR:-./config/nginx/ssl/letsencrypt}:/etc/letsencrypt
       - ./config/nginx/certs:/etc/nginx/certs:ro
+      #- ${CONFIG_OVERRIDE}:/app/onlyoffice/config/appsettings.${INSTALLATION_TYPE}.json:ro
     ports:
       - "${EXTERNAL_PORT:-80}:80"
       - "${EXTERNAL_PORT_HTTPS:-443}:443"

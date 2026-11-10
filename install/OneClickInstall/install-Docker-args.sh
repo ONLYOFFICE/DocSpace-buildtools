@@ -49,12 +49,13 @@ require_value() {
 
 while [ "$1" != "" ]; do
     case "$1" in
-        -h | -? | --help ) ;;
+        -h | '-?' | --help ) ;;
         -* ) require_value "$1" "$2" ;;
     esac
 
     case "$1" in
         -u       | --update              ) [ -n "$2" ] && UPDATE=$2                                                               && shift ;;
+        -bk      | --backup              ) [ -n "$2" ] && BACKUP_BEFORE_UPDATE=$2                                                  && shift ;;
         -reg     | --registry            ) [ -n "$2" ] && REGISTRY_URL=$2                                                         && shift ;;
         -un      | --username            ) [ -n "$2" ] && USERNAME=$2                                                             && shift ;;
         -p       | --password            ) [ -n "$2" ] && PASSWORD=$2                                                             && shift ;;
@@ -115,7 +116,8 @@ while [ "$1" != "" ]; do
         -vd      | --volumesdir          ) [ -n "$2" ] && VOLUMES_DIR="$2"                                                        && shift ;;
         -cf      | --certfile            ) [ -n "$2" ] && CERTIFICATE_PATH="$2"                                                   && shift ;;
         -ckf     | --certkeyfile         ) [ -n "$2" ] && CERTIFICATE_KEY_PATH="$2"                                               && shift ;;
-        -h | -? | --help )
+        -co      | --configoverride      ) [ -n "$2" ] && CONFIG_OVERRIDE="$2"                                                    && shift ;;
+        -h | '-?' | --help )
             help_opt() { printf "    %-22s %-14s %s\n" "$@"; }
             help_note() { printf "%42s%s\n" "" "$1"; }
 
@@ -129,6 +131,7 @@ while [ "$1" != "" ]; do
             echo "INSTALL / UPGRADE MODE:"
             help_opt "--installationtype"    "<edition>"      "Edition to install: community, developer, enterprise (default: enterprise)"
             help_opt "--update"              "<true|false>"   "true to upgrade existing components"
+            help_opt "--backup"              "<true|false>"   "true to also dump the bundled MySQL database before an update (the configuration is always saved)"
             help_opt "--uninstall"           "<true|false>"   "true to remove existing ${PRODUCT_NAME} (containers, volumes, configs)"
             help_opt "--noninteractive"      "<true|false>"   "true to auto-confirm prompts (default: false)"
 
@@ -215,6 +218,10 @@ while [ "$1" != "" ]; do
             help_opt "--certkeyfile"         "<path>"         "Path to SSL key (used with --certfile)"
 
             echo
+            echo "CONFIGURATION:"
+            help_opt "--configoverride"      "<path>"         "Host file or directory mounted as appsettings.<edition>.json into the ${PRODUCT_NAME} containers"
+
+            echo
             echo "DEPRECATED (still accepted, use the ${PRODUCT_NAME} options above instead):"
             echo "  --installdocspace, --docspaceversion, --docspacehost"
             exit 0
@@ -253,6 +260,7 @@ validate_bool_or_pull() {
 }
 
 validate_bool --update "$UPDATE"
+validate_bool --backup "$BACKUP_BEFORE_UPDATE"
 validate_bool --uninstall "$UNINSTALL"
 validate_bool --noninteractive "$NON_INTERACTIVE"
 validate_bool --skiphardwarecheck "$SKIP_HARDWARE_CHECK"
@@ -269,10 +277,19 @@ validate_bool_or_pull --installredis "$INSTALL_REDIS"
 validate_bool_or_pull --installelastic "$INSTALL_ELASTICSEARCH"
 validate_bool_or_pull --installfluentbit "$INSTALL_FLUENT_BIT"
 
+if [[ "$OSTYPE" == darwin* ]]; then
+    { [ -z "${CERTIFICATE_PATH}${CERTIFICATE_KEY_PATH}${LETS_ENCRYPT_DOMAIN}${LETS_ENCRYPT_MAIL}" ] || [ -z "${DEPLOYMENT_MODE}" ] || [ "${DEPLOYMENT_MODE}" = "standalone" ]; } || { echo "Error: HTTPS options (--certfile, --certkeyfile, --letsencryptdomain, --letsencryptmail) are supported on macOS only in the standalone deployment mode." >&2; exit 1; }
+fi
+
 if [ -n "$VOLUMES_DIR" ]; then
     [[ "$VOLUMES_DIR" != /* ]] && VOLUMES_DIR="$(cd "$(dirname "$VOLUMES_DIR")" && pwd)/$(basename "$VOLUMES_DIR")"
     [ -d "$VOLUMES_DIR" ] || { echo "Error: Volumes directory not found: ${VOLUMES_DIR}" >&2; exit 1; }
     [[ "${VOLUMES_DIR%/}/" == "${BASE_DIR%/}/"* ]] && { echo "Warning: Please change the volumes directory, as $BASE_DIR will be removed during an update."; exit 1; }
+fi
+
+if [ -n "$CONFIG_OVERRIDE" ]; then
+    CONFIG_OVERRIDE="$(realpath -m "$CONFIG_OVERRIDE")" || { echo "Error: failed to resolve --configoverride path." >&2; exit 1; }
+    [[ "${CONFIG_OVERRIDE%/}/" == "${BASE_DIR%/}/"* ]] && { echo "Warning: Please change the config override path, as $BASE_DIR will be removed during an update."; exit 1; }
 fi
 
 if [ -n "$CERTIFICATE_PATH" ]; then

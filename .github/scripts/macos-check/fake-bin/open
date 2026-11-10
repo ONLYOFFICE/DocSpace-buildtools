@@ -1,0 +1,8 @@
+#!/bin/bash
+# Fake open: starting Docker Desktop makes the fake daemon answer.
+
+STATE="${FAKE_DOCKER_STATE:?FAKE_DOCKER_STATE is not set}"
+echo "open $*" >> "$STATE/docker.log"
+
+{ [ "$1" = "-a" ] && [ "$2" = "Docker" ]; } || [ "$1" = "/Applications/Docker.app" ] && touch "$STATE/running"
+exit 0

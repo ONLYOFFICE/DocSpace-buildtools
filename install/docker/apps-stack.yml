@@ -43,7 +43,7 @@ x-service: &x-service-base
     MYSQL_DATABASE: ${MYSQL_DATABASE}
     MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     MYSQL_PORT: ${MYSQL_PORT}
-    MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    MYSQL_SSL_MODE: ${MYSQL_SSL_MODE:-none}
     MYSQL_USER: ${MYSQL_USER}
     NODE_CONTAINER_NAME: ${NODE_CONTAINER_NAME}
     NODE_OPTIONS: ${NODE_OPTIONS}
@@ -65,6 +65,8 @@ x-service: &x-service-base
     ROUTER_HOST: ${ROUTER_HOST}
     API_HOST: ${API_HOST}
     AI_SERVICE_URL: http://${DOTNET_CONTAINER_NAME}:${SERVICE_AI_PORT}
+    AI__DOCUMENT_AGENT__URL: ${DOCUMENT_AGENT_URL}
+    AI__DOCUMENT_AGENT__TOKEN: ${DOCUMENT_AGENT_TOKEN}
     SERVICE_AI_PORT: ${SERVICE_AI_PORT}
     SERVICE_AI_WORKER_PORT: ${SERVICE_AI_WORKER_PORT}
     SERVICE_API_PORT: ${SERVICE_API_PORT}
@@ -93,6 +95,7 @@ x-service: &x-service-base
   volumes:
     - ${VOLUMES_DIR:+${VOLUMES_DIR}/}app_data:/app/onlyoffice/data
     - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
+    #- ${CONFIG_OVERRIDE}:/app/onlyoffice/config/appsettings.${INSTALLATION_TYPE}.json:ro
 
 services:
   onlyoffice-dotnet-services:

@@ -89,6 +89,7 @@ sudo bash <script-name> package -h
 | `--username`            | `<USER>`                                  | -                         | Registry login                 |
 | `--password`            | `<PASS>`                                  | -                         | Registry password              |
 | `--volumesdir`          | `<DIR>`                                   | `/var/lib/docker/volumes` | Host dir for Docker volumes    |
+| `--configoverride`      | `<PATH>`                                  | -                         | Host file (or directory) mounted as `appsettings.<edition>.json` into the ONLYOFFICE Apps containers |
 
 #### ONLYOFFICE Apps Core
 | Flag                    | Value placeholder                         | Default value             | Description                    |
@@ -114,6 +115,8 @@ You can switch topology on an existing install with `--update true --deployment-
 MySQL/OpenSearch/Document Server are reused as-is (no data loss), only the app layer is replaced.
 Not all Docker-specific flags apply in `standalone` mode (e.g. `--installrabbitmq`/`--installredis`
 are ignored, since that topology has no separate Redis/RabbitMQ containers).
+
+`--configoverride` works in every topology: the file is created if it does not exist (`{}` for Community, a copy of the image's `appsettings.<edition>.json` for Enterprise and Developer) and is mounted into all ONLYOFFICE Apps containers (`docker-compose.yml` in `standalone`, `apps-stack.yml` in `stack`, `apps.yml` and `notify.yml` in `microservices`). Its values take priority over the built-in `appsettings.json`, and the setting is kept in `.env`, so it survives `--update`. Keep the file outside the installation directory, since that directory is replaced on update. Arrays are merged by index with the built-in ones: to remove an entry of a built-in array, replace it with a duplicate of another entry instead of shortening the list.
 
 #### Document Server (ONLYOFFICE Docs)
 | Flag                    | Value placeholder           | Default value                  | Description                             |
@@ -367,10 +370,13 @@ Answer "N" to "Also uninstall ONLYOFFICE Docs?" to keep Docs: the snapshot is re
 
 ### Docker
 
-A Docs container started with `docker run` (not from a Compose project) is attached instead of deploying a new one, with its image tag, data and HTTPS certificate. The original container is kept until the replacement is healthy and restored if the installation fails.
+For Docs installed with `docker run`, the installer keeps the original container stopped with automatic restart disabled. Apps uses a copy of its main data. Run this command to restore Docs and keep Apps data and settings for reinstallation:
 
-> [!NOTE]
-> Unlike packages, `--uninstall true` does not recreate the original Docs container. To keep the Docs data, answer "Y" to "Keep configuration and Docs data for reinstallation?" and "n" to removing the data volumes.
+```bash
+sudo bash apps-install.sh docker --uninstall true
+```
+
+Keep the original container, its data and the `/app/onlyoffice/.docs-restore` directory. `docker container prune` deletes the saved container. Additional custom mounts remain shared with Apps. Automatic restoration requires the installer to have saved the original container. Older installations need a backup or VM snapshot. Fresh Apps installations keep the usual uninstall options.
 
 ## 🖥 System Requirements
 
@@ -390,17 +396,33 @@ The installation scripts support the following operating systems, which are **re
 
 <!-- OS-SUPPORT-LIST-START -->
 - RHEL 9
-- CentOS 9S
-- CentOS 10S
+- CentOS 9S (x86_64, ARM64)
+- CentOS 10S (x86_64, ARM64)
 - Fedora 43
 - Fedora 44
-- Debian 11
-- Debian 12
-- Debian 13
+- Debian 11 (x86_64, ARM64)
+- Debian 12 (x86_64, ARM64)
+- Debian 13 (x86_64, ARM64)
 - Ubuntu 22.04 (x86_64, ARM64)
 - Ubuntu 24.04 (x86_64, ARM64)
 - Ubuntu 26.04 (x86_64, ARM64)
 <!-- OS-SUPPORT-LIST-END -->
+
+## 🍎 macOS
+
+Apps can be installed in Docker on macOS (Apple Silicon and Intel) with [Docker Desktop](https://docs.docker.com/desktop/setup/install/mac-install/). The DEB/RPM installation is not available.
+
+- Run the script **without** `sudo`: Docker Desktop works per user.
+- [Homebrew](https://brew.sh) is required. The script installs `bash`, `coreutils`, `findutils`, `gnu-sed`, `grep`, `gnu-tar` and `jq` with it and re-runs itself under the Homebrew `bash`.
+- Docker Desktop is installed with Homebrew when it is missing (accept its license agreement in the window that opens) and started automatically when it is not running. CPU and memory are taken from its limits (Settings > Resources): at least 4 cores and 8 GB RAM.
+- Configuration files are stored in `~/onlyoffice`; the directory must be shared with Docker Desktop (the home directory is by default).
+- Data is kept in Docker volumes by default. With `--volumesdir <DIR>` it is kept in the directory instead: the owner of its subdirectories is set from a helper container, because on the Mac a user cannot give files to another owner; the directory must be shared with Docker Desktop.
+- HTTPS works only in the standalone deployment mode, with your own certificate (`--certfile`, `--certkeyfile`, `--certdomain`) or with Let's Encrypt (`--letsencryptdomain`, `--letsencryptmail`). For Let's Encrypt the domain must point to the Mac and ports 80 and 443 must be reachable from the Internet. The certificate is renewed weekly (Sunday, 03:00) by the launchd agent `~/Library/LaunchAgents/com.onlyoffice.apps-renew-letsencrypt.plist`, which needs the Mac awake and Docker Desktop running.
+- An existing Document Server container started with `docker run` is adopted like on Linux; its data is copied between Docker volumes by a helper container.
+
+```bash
+bash apps-install.sh docker
+```
 
 ## 📚 Additional Resources
 

@@ -41,7 +41,9 @@ LOCAL_SCRIPTS="false"
 PRODUCT="apps"
 LEGACY_PRODUCT="docspace"
 PRODUCT_SYSNAME="onlyoffice"
-PRODUCT_NAME="${PRODUCT_SYSNAME^^} Apps"
+# Upper-case spelling without bash 4 expansion: this wrapper runs under bash 3.2 on macOS
+PRODUCT_ORG="ONLYOFFICE"
+PRODUCT_NAME="${PRODUCT_ORG} Apps"
 FILE_NAME="$(basename "$0")"
 ENABLE_LOGGING="true"
 
@@ -58,7 +60,7 @@ done
 
 while [ "$1" != "" ]; do
     case "$1" in
-        -h | -? | --help | docker | package ) ;;
+        -h | '-?' | --help | docker | package ) ;;
         -* ) require_value "$1" "$2" ;;
     esac
 
@@ -69,7 +71,7 @@ while [ "$1" != "" ]; do
         -av | --appsversion | -dsv | --docspaceversion ) [ -n "$2" ] && PARAMETERS+=("${1}") && DOCKER_TAG=$2 && PRODUCT_VERSION=$2 && shift ;;
         docker ) DOCKER="true"; shift ; continue ;;
         package ) DOCKER="false"; shift ; continue ;;
-        -h | -? | --help )
+        -h | '-?' | --help )
             if [ -z "$DOCKER" ]; then
                 echo "Run 'bash $FILE_NAME docker' to install Docker version of application."
                 echo "Run 'bash $FILE_NAME package' to install DEB/RPM version."
@@ -85,6 +87,8 @@ while [ "$1" != "" ]; do
 done
 
 root_checking () {
+	# Docker Desktop runs per user, root is refused by the macOS block at the top
+	[[ "$OSTYPE" == darwin* ]] && return 0
 	[[ $EUID -eq 0 ]] || { echo "To perform this action you must be logged in with root rights"; exit 1; }
 }
 
@@ -184,19 +188,25 @@ if [ -n "$USER_DOCKER" ] && [ -n "$DOCKER" ] && [ "$USER_DOCKER" != "$DOCKER" ];
     reject_method_override
 fi
 
+# Only the Docker installation is available on macOS
+if [[ "$OSTYPE" == darwin* ]]; then
+    [ "$USER_DOCKER" == "false" ] && { echo "Only the Docker installation is available on macOS." >&2; exit 1; }
+    DOCKER="true"
+fi
+
 [ -z "$DOCKER" ] && read_installation_method
 
 # Detect legacy installs.
 if [[ "${DOCKER}" == "true" ]] && [[ ${DOCKER_TAG} =~ ^([0-9]+\.[0-9]+\.[0-9]+)(\.[0-9]+)?$ ]]; then
-  TAG="v${BASH_REMATCH[1]}"; LATEST_TAG=$(curl -s "https://api.github.com/repos/${PRODUCT_SYSNAME^^}/${LEGACY_PRODUCT}/releases/latest" | grep -Po '"tag_name":\s*"\K[^"]+')
-  if [[ "${TAG}" != "${LATEST_TAG}" ]] && curl -sfI "https://github.com/${PRODUCT_SYSNAME^^}/${LEGACY_PRODUCT}-buildtools/releases/tag/${TAG}-server" >/dev/null; then
+  TAG="v${BASH_REMATCH[1]}"; LATEST_TAG=$(curl -s "https://api.github.com/repos/${PRODUCT_ORG}/${LEGACY_PRODUCT}/releases/latest" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')
+  if [[ "${TAG}" != "${LATEST_TAG}" ]] && curl -sfI "https://github.com/${PRODUCT_ORG}/${LEGACY_PRODUCT}-buildtools/releases/tag/${TAG}-server" >/dev/null; then
 	>&2 echo "Warning: legacy install detected (v${BASH_REMATCH[1]}) — compatibility issues or unforeseen errors may occur."
     PARAMETERS+=(-gb "${TAG}-server"); GIT_BRANCH="${TAG}-server"
   fi
 fi
 
 DOWNLOAD_URL_PREFIX="https://download.${PRODUCT_SYSNAME}.com/${PRODUCT}"
-[ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${PRODUCT_SYSNAME^^}/${LEGACY_PRODUCT}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
+[ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/${PRODUCT_ORG}/${LEGACY_PRODUCT}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
 
 if [ "$DOCKER" == "true" ]; then
     SCRIPT_NAME="install-Docker.sh"
@@ -214,22 +224,31 @@ if [ "$LOCAL_SCRIPTS" != "true" ]; then
     bash -n "${SCRIPT_NAME}" || { echo "Downloaded ${SCRIPT_NAME} has invalid Bash syntax" >&2; exit 1; }
 fi
 
+# The log is optional: when the logging helpers cannot be loaded, the installation runs without it
 if [ "$ENABLE_LOGGING" = "true" ]; then
-    command -v script >/dev/null 2>&1 || { command -v dnf >/dev/null 2>&1 && dnf -y install util-linux-script; }
-    if command -v script >/dev/null 2>&1; then
-        LOG_FILE="OneClick${SCRIPT_NAME%.sh}_$(date +%Y%m%d_%H%M%S).log"
-        touch "${LOG_FILE}" || { echo "Failed to create log file"; exit 1; }
-        printf -v SCRIPT_COMMAND '%q ' bash "${SCRIPT_NAME}" "${PARAMETERS[@]}"
-        script -q -e "${LOG_FILE}" -c "${SCRIPT_COMMAND}"
-        EXIT_CODE=${PIPESTATUS[0]}
+    LOGGING_SCRIPT="common/logging.sh"
+    if [ "$LOCAL_SCRIPTS" = "true" ]; then
+        source "${LOGGING_SCRIPT}" || ENABLE_LOGGING="false"
     else
-        bash "${SCRIPT_NAME}" "${PARAMETERS[@]}" || EXIT_CODE=$?
+        # A temporary file instead of source <(...): bash 3.2 on macOS reads nothing from process substitution in source
+        LOGGING_SCRIPT_TMP=$(mktemp)
+        if curl -fsSL --retry 3 --retry-delay 2 "${DOWNLOAD_URL_PREFIX}/${LOGGING_SCRIPT}" -o "${LOGGING_SCRIPT_TMP}" && bash -n "${LOGGING_SCRIPT_TMP}"; then
+            source "${LOGGING_SCRIPT_TMP}"
+        else
+            echo "Warning: failed to load ${LOGGING_SCRIPT}, the installation runs without a log" >&2
+            ENABLE_LOGGING="false"
+        fi
+        rm -f "${LOGGING_SCRIPT_TMP}"
     fi
+fi
+
+if [ "$ENABLE_LOGGING" = "true" ]; then
+    run_with_log "${SCRIPT_NAME}" "${PARAMETERS[@]}"
 else
     bash "${SCRIPT_NAME}" "${PARAMETERS[@]}" || EXIT_CODE=$?
 fi
 
 [ "$LOCAL_SCRIPTS" != "true" ] && rm "${SCRIPT_NAME}"
-[ "$ENABLE_LOGGING" = "true" ] && { [ "${EXIT_CODE:-0}" -eq 0 ] && rm -f "$LOG_FILE" || echo -e "\033[0;31mAn error occurred while executing the script. Log saved to: $LOG_FILE\033[0m"; }
+[ "$ENABLE_LOGGING" = "true" ] && finish_log
 
 exit ${EXIT_CODE:-0}

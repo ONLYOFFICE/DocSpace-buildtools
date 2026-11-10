@@ -69,7 +69,7 @@ if [ -f "/etc/${package_sysname}/documentserver/nginx/ds.conf.apps.bak" ] \
 	rm -f -- /etc/apt/preferences.d/00onlyoffice-docs-*.pref
 	mapfile -t DOCS_RUNTIME_PACKAGES < <(dpkg-query -W -f='${db:Status-Status}\t${binary:Package}\n' \
 		| awk '$1 == "installed" {print $2}' \
-		| grep -E "^${package_sysname}-documentserver(-de|-ee)?(:|$)|^(nginx|nodejs|mysql|postgresql|redis|valkey|rabbitmq|erlang|ffmpeg)(-|:|$)")
+		| grep -E "^${package_sysname}-documentserver(-de|-ee)?(:|$)|^percona-server-(server|client|common)(:|$)|^(nginx|nodejs|mysql|postgresql|redis|valkey|rabbitmq|erlang|ffmpeg)(-|:|$)")
 	if [ "${#DOCS_RUNTIME_PACKAGES[@]}" -eq 0 ]; then
 		echo "Cannot preserve Docs dependencies: no matching installed packages found. Check the saved Docs state before retrying." >&2
 		exit 1
@@ -117,7 +117,8 @@ curl -fsSL https://artifacts.opensearch.org/publickeys/opensearch-release.pgp | 
 echo "deb [signed-by=/usr/share/keyrings/opensearch-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch/3.x/apt stable main" > /etc/apt/sources.list.d/opensearch-3.x.list
 OPENSEARCH_VERSION="3.5.0"
 export OPENSEARCH_JAVA_HOME="${OPENSEARCH_JAVA_HOME:-/usr/share/opensearch/jdk}"
-export OPENSEARCH_INITIAL_ADMIN_PASSWORD="$(echo "${package_sysname}!A1")"
+# Only the package scripts need it (the security plugin is removed afterwards); the fixed prefix satisfies the password policy
+export OPENSEARCH_INITIAL_ADMIN_PASSWORD="Aa1!$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 16)"
 
 # Add OpenSearch Dashboards repo.
 if [ "${INSTALL_FLUENT_BIT}" == "true" ]; then
@@ -141,37 +142,71 @@ elif [ "$DIST" = "debian" ]; then
 	DEBIAN_FRONTEND=noninteractive dpkg --force-confnew -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
 fi
 
-MYSQL_REPO_VERSION="$(curl -fsSL https://dev.mysql.com/downloads/repo/apt/ | grep -oP '(?<=mysql-apt-config_)[0-9.]+-[0-9]+(?=_all\.deb)' | head -n1)"
-MYSQL_PACKAGE_NAME="mysql-apt-config_${MYSQL_REPO_VERSION}_all.deb"
 MYSQL_SERVER_HOST=${MYSQL_SERVER_HOST:-"localhost"}
 MYSQL_SERVER_PORT=${MYSQL_SERVER_PORT:-"3306"}
 MYSQL_SERVER_DB_NAME=${MYSQL_SERVER_DB_NAME:-"${package_sysname}"}
 MYSQL_SERVER_USER=${MYSQL_SERVER_USER:-"root"}
 
-if ! dpkg -l | grep -q "mysql-server"; then
-	MYSQL_FIRST_TIME_INSTALL="true"
-	MYSQL_SERVER_PASS=${MYSQL_SERVER_PASS:-"$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)"}
+MYSQL_PACKAGES=(mysql-server mysql-client)
+if [ "$DIST" = "debian" ] && [ "$ARCH" = "arm64" ]; then
+	# Oracle's Debian repository has no arm64 packages.
+	if package_installed percona-server-server; then
+		MYSQL_PACKAGES=(percona-server-server percona-server-client)
+		export PERCONA_TELEMETRY_DISABLE=1
+	elif package_installed mysql-server || package_installed mysql-community-server; then
+		MYSQL_PACKAGES=(mysql-server mysql-client)
+	else
+		if dpkg-query -W -f='${db:Status-Status}\n' 'mariadb-server*' 2>/dev/null | grep -qx installed; then
+			echo "ERROR: MariaDB server packages are installed. Automatic replacement with Percona is not supported." >&2
+			exit 1
+		fi
+		MYSQL_PACKAGES=(percona-server-server percona-server-client)
+		export PERCONA_TELEMETRY_DISABLE=1
+		curl -fsSLO --retry 3 --retry-delay 2 https://repo.percona.com/apt/percona-release_latest.generic_all.deb
+		apt-get "${DOCS_APT_OPTIONS[@]}" install -yq gnupg2 lsb-release ca-certificates ./percona-release_latest.generic_all.deb
+		rm -f percona-release_latest.generic_all.deb
+		percona-release enable ps-84-lts release --scheme https
 
-	# Set up MySQL 8.4 package (arm64 uses the distro package, the Oracle repo has no arm64 build).
-	if [ "$ARCH" = "amd64" ]; then
+		MYSQL_FIRST_TIME_INSTALL="true"
+		MYSQL_SERVER_PASS=${MYSQL_SERVER_PASS:-"$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)"}
+		echo percona-server-server percona-server-server/root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+		echo percona-server-server percona-server-server/re-root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+	fi
+else
+	# The repository package is pinned and verified by checksum; update the version and the sha256 of the file on repo.mysql.com together
+	MYSQL_REPO_VERSION="0.8.40-1"
+	MYSQL_REPO_SHA256="41a796dd6ea681aef4675d3b0b27924873d4f9777e524facf7693eabdf232e93"
+	MYSQL_PACKAGE_NAME="mysql-apt-config_${MYSQL_REPO_VERSION}_all.deb"
+	download_mysql_repo_package() {
 		curl -fsSLO "https://repo.mysql.com/${MYSQL_PACKAGE_NAME}"
-		echo "mysql-apt-config mysql-apt-config/repo-codename  select  ${DISTRIB_CODENAME/resolute/noble}" | debconf-set-selections
-		echo "mysql-apt-config mysql-apt-config/repo-distro  select  $DIST" | debconf-set-selections
-		echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.4-lts" | debconf-set-selections
+		echo "${MYSQL_REPO_SHA256}  ${MYSQL_PACKAGE_NAME}" | sha256sum -c - >/dev/null || { rm -f "${MYSQL_PACKAGE_NAME}"; echo "ERROR: ${MYSQL_PACKAGE_NAME} does not match the pinned checksum" >&2; exit 1; }
+	}
+
+	if ! dpkg -l | grep -q "mysql-server"; then
+		MYSQL_FIRST_TIME_INSTALL="true"
+		MYSQL_SERVER_PASS=${MYSQL_SERVER_PASS:-"$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 12)"}
+
+		# Set up MySQL 8.4 package (arm64 uses the distro package, the Oracle repo has no arm64 build).
+		if [ "$ARCH" = "amd64" ]; then
+			download_mysql_repo_package
+			echo "mysql-apt-config mysql-apt-config/repo-codename  select  $DISTRIB_CODENAME" | debconf-set-selections
+			echo "mysql-apt-config mysql-apt-config/repo-distro  select  $DIST" | debconf-set-selections
+			echo "mysql-apt-config mysql-apt-config/select-server  select  mysql-8.4-lts" | debconf-set-selections
+			DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
+			rm -f "${MYSQL_PACKAGE_NAME}"
+		fi
+
+		echo mysql-community-server mysql-community-server/root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+		echo mysql-community-server mysql-community-server/re-root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+		echo mysql-community-server mysql-server/default-auth-override select "Use Strong Password Encryption (RECOMMENDED)" | debconf-set-selections
+		echo mysql-server mysql-server/root_password password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+		echo mysql-server mysql-server/root_password_again password "${MYSQL_SERVER_PASS}" | debconf-set-selections
+
+	elif [ "${PRESERVE_DOCS}" = false ] && dpkg -l | grep -q "mysql-apt-config" && dpkg --compare-versions "$(apt-cache policy mysql-apt-config | awk 'NR==2{print $2}')" lt "${MYSQL_REPO_VERSION}"; then
+		download_mysql_repo_package
 		DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
 		rm -f "${MYSQL_PACKAGE_NAME}"
 	fi
-
-	echo mysql-community-server mysql-community-server/root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
-	echo mysql-community-server mysql-community-server/re-root-pass password "${MYSQL_SERVER_PASS}" | debconf-set-selections
-	echo mysql-community-server mysql-server/default-auth-override select "Use Strong Password Encryption (RECOMMENDED)" | debconf-set-selections
-	echo mysql-server mysql-server/root_password password "${MYSQL_SERVER_PASS}" | debconf-set-selections
-	echo mysql-server mysql-server/root_password_again password "${MYSQL_SERVER_PASS}" | debconf-set-selections
-
-elif [ "${PRESERVE_DOCS}" = false ] && dpkg -l | grep -q "mysql-apt-config" && [ "$(apt-cache policy mysql-apt-config | awk 'NR==2{print $2}')" != "${MYSQL_REPO_VERSION}" ]; then
-	curl -fsSLO "https://repo.mysql.com/${MYSQL_PACKAGE_NAME}"
-	DEBIAN_FRONTEND=noninteractive dpkg -i "${MYSQL_PACKAGE_NAME}"
-	rm -f "${MYSQL_PACKAGE_NAME}"
 fi
 
 if [ "$DIST" = "ubuntu" ] && { [ "${PRESERVE_DOCS}" = false ] || ! package_installed redis-server; }; then
@@ -180,10 +215,12 @@ if [ "$DIST" = "ubuntu" ] && { [ "${PRESERVE_DOCS}" = false ] || ! package_insta
 fi
 
 curl -fsSL https://openresty.org/package/pubkey.gpg | gpg --batch --yes --dearmor -o /usr/share/keyrings/openresty.gpg
+# The repository is trusted only through this key, so refuse a key with any other fingerprint
+[ "$(gpg --show-keys --with-colons /usr/share/keyrings/openresty.gpg | awk -F: '/^fpr:/ {print $10; exit}')" = "E52218E7087897DC6DEA6D6D97DB7443D5EDEB74" ] || { echo "ERROR: unexpected OpenResty signing key" >&2; exit 1; }
 # Temporary OpenResty codename fallback for Debian 13 and Ubuntu 26.04.
 OPENRESTY_CODENAME=$([ "${DISTRIB_CODENAME}" = "trixie" ] && echo "bookworm" || echo "${DISTRIB_CODENAME/resolute/noble}")
 OPENRESTY_REPO_PATH="${DIST}"; [ "$ARCH" = "arm64" ] && OPENRESTY_REPO_PATH="arm64/${DIST}"
-echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/${OPENRESTY_REPO_PATH} ${OPENRESTY_CODENAME} $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
+echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] https://openresty.org/package/${OPENRESTY_REPO_PATH} ${OPENRESTY_CODENAME} $([ "$DIST" = "ubuntu" ] && echo "main" || echo "openresty" )" | tee /etc/apt/sources.list.d/openresty.list
 
 # Add Java repo.
 curl -fsSL https://packages.adoptium.net/artifactory/api/gpg/key/public | gpg --batch --yes --dearmor -o /usr/share/keyrings/adoptium.gpg
@@ -207,8 +244,7 @@ apt-get "${DOCS_APT_OPTIONS[@]}" install -o DPkg::options::="${DPKG_CONF_OPTION}
 				nodejs \
 				gcc \
 				make \
-				mysql-server \
-				mysql-client \
+				"${MYSQL_PACKAGES[@]}" \
 				redis-server \
 				rabbitmq-server \
 				temurin-${JAVA_VERSION}-jre \

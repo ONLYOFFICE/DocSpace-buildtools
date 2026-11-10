@@ -54,10 +54,10 @@ if [ "${#PACKAGES_TO_UNINSTALL[@]}" -eq 0 ] \
 fi
 
 # Ask to uninstall dependencies
-read -r -p "Uninstall all dependencies (mysql, opensearch and others)? (Y/n): " DEP_CHOICE
+read -r -p "Uninstall all dependencies (mysql, opensearch and others)? (y/N): " DEP_CHOICE
 DEP_CHOICE=${DEP_CHOICE,,}
 
-if [[ "$DEP_CHOICE" =~ ^(y|yes|)$ ]]; then
+if [[ "$DEP_CHOICE" =~ ^(y|yes)$ ]]; then
     UNINSTALL_DEPENDENCIES=true
 fi
 
@@ -79,7 +79,12 @@ DEPENDENCIES=(
 if [ "$UNINSTALL_DEPENDENCIES" = true ]; then
     # Docs may use either PostgreSQL or MySQL, including a pre-existing database.
     if [ "${KEEP_DOCS}" = false ]; then
-        DEPENDENCIES+=(nodejs mysql-server mysql-client postgresql redis-server rabbitmq-server ffmpeg)
+        DEPENDENCIES+=(nodejs postgresql redis-server rabbitmq-server ffmpeg)
+        for MYSQL_PACKAGE in mysql-{server,client} mysql-community-{server,client} percona-server-{server,client,common}; do
+            if [ "$(dpkg-query -W -f='${db:Status-Status}' "${MYSQL_PACKAGE}" 2>/dev/null)" = installed ]; then
+                DEPENDENCIES+=("${MYSQL_PACKAGE}")
+            fi
+        done
         mapfile -t -O "${#PACKAGES_TO_UNINSTALL[@]}" PACKAGES_TO_UNINSTALL < <(dpkg-query -W -f='${Package}\n' | grep -E "^postgresql(-[0-9]+)?(-.*)?$")
     fi
     PACKAGES_TO_UNINSTALL+=( "${DEPENDENCIES[@]}" )
@@ -119,12 +124,7 @@ rm -f -- "/etc/${package_sysname}/documentserver/nginx/ds.conf".{apps.bak,ssl.ba
     "/etc/${package_sysname}/documentserver/nginx/ds.conf".apps.*.bak
 
 # Uninstall swap file if it exists
-for SWAPFILE_NAME in "${product}" "${legacy_product}"; do
-    if swapon --show | grep -q "/${SWAPFILE_NAME}_swapfile"; then
-        swapoff "/${SWAPFILE_NAME}_swapfile"
-        rm -f "/${SWAPFILE_NAME}_swapfile"
-    fi
-done
+remove_swap "/${product}_swapfile" "/${legacy_product}_swapfile"
 
 echo -e "Uninstallation of ${product_name}" \
          "$( [ "$UNINSTALL_DEPENDENCIES" = true ] && echo "and all dependencies" ) \e[32mcompleted.\e[0m"

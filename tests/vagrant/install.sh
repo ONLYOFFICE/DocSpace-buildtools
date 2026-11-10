@@ -2,6 +2,7 @@
 
 set -e
 
+# Vagrant and the ARM workflow run this script as root.
 while [ "$1" != "" ]; do
 	case $1 in
     -ds  | --download-scripts  ) [ -n "$2" ] && DOWNLOAD_SCRIPTS="$2"      && shift ;;
@@ -27,7 +28,7 @@ check_hw() {
 
 add-repo-deb() {
   echo "deb [signed-by=/usr/share/keyrings/onlyoffice.gpg] https://nexus.onlyoffice.com/repository/4testing-debian stable main" | \
-  sudo tee /etc/apt/sources.list.d/onlyoffice4testing.list
+  tee /etc/apt/sources.list.d/onlyoffice4testing.list
   curl -fsSL https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE | \
   gpg --batch --yes --dearmor -o /usr/share/keyrings/onlyoffice.gpg
 }
@@ -45,7 +46,7 @@ END
 
 add-repo-deb-docs() {
   echo "deb [trusted=yes] https://s3.eu-west-1.amazonaws.com/repo-doc-onlyoffice-com/repo/debian stable ${VER}" | \
-  sudo tee /etc/apt/sources.list.d/onlyoffice-dev.list
+  tee /etc/apt/sources.list.d/onlyoffice-dev.list
 }
 
 add-repo-rpm-docs() {
@@ -54,14 +55,14 @@ add-repo-rpm-docs() {
 }
 
 prepare_vm() {
-  # Debian 11 reached EOL on 2026-08-31 - repoint apt to the archive and security snapshot mirrors
+  # Debian 11 reached EOL on 2026-08-31 - repoint apt to the archive mirrors
   if grep -q '^VERSION_CODENAME=bullseye$' /etc/os-release 2>/dev/null; then
     sed -Ei \
-      -e 's#https?://(security|deb)\.debian\.org/debian-security#https://snapshot.debian.org/archive/debian-security/20260901T000000Z#g' \
+      -e 's#https?://(security|deb)\.debian\.org/debian-security#https://archive.debian.org/debian-security#g' \
       -e 's#https?://deb\.debian\.org/debian#https://archive.debian.org/debian#g' \
       -e '/archive\.debian\.org\/debian/ { / contrib/! s/$/ contrib/; }' \
-      -e '/(archive\.debian\.org\/debian|snapshot\.debian\.org\/archive\/debian-security)/ { /check-valid-until=no/! s|^(deb(-src)?) \[|\1 [check-valid-until=no |; }' \
-      -e '/(archive\.debian\.org\/debian|snapshot\.debian\.org\/archive\/debian-security)/ { /check-valid-until=no/! s|^(deb(-src)?) |\1 [check-valid-until=no] |; }' \
+      -e '/archive\.debian\.org\/debian/ { /check-valid-until=no/! s|^(deb(-src)?) \[|\1 [check-valid-until=no |; }' \
+      -e '/archive\.debian\.org\/debian/ { /check-valid-until=no/! s|^(deb(-src)?) |\1 [check-valid-until=no] |; }' \
       /etc/apt/sources.list
   fi
 
@@ -96,7 +97,7 @@ case $ID in
       fi
 
       if [ "$ID" = "rhel" ] && [ "${VERSION_ID%%.*}" = "9" ]; then
-          cat <<'EOF' | sudo tee /etc/yum.repos.d/centos-stream-9.repo
+          cat <<'EOF' | tee /etc/yum.repos.d/centos-stream-9.repo
 [centos9s-baseos]
 name=CentOS Stream 9 - BaseOS
 baseurl=http://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os/
@@ -146,7 +147,7 @@ esac
   rm -rf /home/vagrant/*
   [ -d /tmp/apps ] && mv /tmp/apps/* /home/vagrant
 
-  echo '127.0.0.1 host4test' | sudo tee -a /etc/hosts
+  echo '127.0.0.1 host4test' | tee -a /etc/hosts
   echo "${COLOR_GREEN}[OK] PREPARE_VM: Hostname was setting up${COLOR_RESET}"
 }
 

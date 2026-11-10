@@ -12,6 +12,9 @@ on:
       - 'install/docker/build/entrypoints/**'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
 
   select-branches:
@@ -19,7 +22,7 @@ jobs:
 
     steps:
       - name: Check out the code
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Dispatch Action
         env:

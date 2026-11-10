@@ -21,15 +21,15 @@
 
 %files common
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
-%config %attr(640, %{package_sysname}, %{package_sysname}) %{_sysconfdir}/%{package_sysname}/%{product}/*.*
-%dir %attr(750, %{package_sysname}, %{package_sysname}) %{_sysconfdir}/%{package_sysname}/%{product}/document-formats/
-%config %attr(640, %{package_sysname}, %{package_sysname}) %{_sysconfdir}/%{package_sysname}/%{product}/document-formats/onlyoffice-docs-formats.json
+%config %attr(640, root, %{package_sysname}) %{_sysconfdir}/%{package_sysname}/%{product}/*.*
+%dir %attr(750, root, %{package_sysname}) %{_sysconfdir}/%{package_sysname}/%{product}/document-formats/
+%config %attr(640, root, %{package_sysname}) %{_sysconfdir}/%{package_sysname}/%{product}/document-formats/onlyoffice-docs-formats.json
 %license %{_datadir}/licenses/%{name}/LICENSE
 %license %{_datadir}/licenses/%{name}/LICENSE-CC-BY-SA
 %{_var}/log/%{package_sysname}/%{product}/
-%dir %{_sysconfdir}/%{package_sysname}/
-%dir %{_sysconfdir}/%{package_sysname}/%{product}/
-%dir %{_sysconfdir}/%{package_sysname}/%{product}/.private/
+%dir %attr(755, root, root) %{_sysconfdir}/%{package_sysname}/
+%dir %attr(750, root, %{package_sysname}) %{_sysconfdir}/%{package_sysname}/%{product}/
+%dir %attr(700, root, root) %{_sysconfdir}/%{package_sysname}/%{product}/.private/
 %dir %{_var}/log/%{package_sysname}/
 
 %files files-worker
@@ -58,10 +58,10 @@
 %config %{_sysconfdir}/openresty/conf.d/*
 %config %{_sysconfdir}/openresty/html/*
 %attr(744, root, root) %{_bindir}/%{product}-ssl-setup
-%config %{_sysconfdir}/%{package_sysname}/%{product}/openresty/nginx.conf.template
-%dir %{_sysconfdir}/%{package_sysname}/
-%dir %{_sysconfdir}/%{package_sysname}/%{product}/
-%dir %{_sysconfdir}/%{package_sysname}/%{product}/openresty/
+%config %attr(640, root, %{package_sysname}) %{_sysconfdir}/%{package_sysname}/%{product}/openresty/nginx.conf.template
+%dir %attr(755, root, root) %{_sysconfdir}/%{package_sysname}/
+%dir %attr(750, root, %{package_sysname}) %{_sysconfdir}/%{package_sysname}/%{product}/
+%dir %attr(750, root, %{package_sysname}) %{_sysconfdir}/%{package_sysname}/%{product}/openresty/
 %{buildpath}/public/
 %{buildpath}/client/
 

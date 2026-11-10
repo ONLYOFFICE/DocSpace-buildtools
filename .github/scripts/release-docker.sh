@@ -60,10 +60,12 @@ function hub_login() {
   local USERNAME="${1}" PASSWORD="${2}" OUT_VAR="${3}"
   local RESPONSE TOKEN
 
-  RESPONSE=$(curl -sSL \
+  # The credentials reach curl through a pipe, never through its arguments
+  RESPONSE=$(jq -n --arg username "${USERNAME}" --arg password "${PASSWORD}" '{username: $username, password: $password}' \
+    | curl -sSL \
     -X POST \
     -H "Content-Type: application/json" \
-    -d "{\"username\":\"${USERNAME}\",\"password\":\"${PASSWORD}\"}" \
+    -d @- \
     "https://hub.docker.com/v2/users/login/" 2>/dev/null)
 
   TOKEN=$(echo "${RESPONSE}" | jq -r '.token // empty' 2>/dev/null) || true
@@ -82,6 +84,41 @@ function get_hub_jwt() {
     exit 1
   fi
   hub_login "${DOCKER_USERNAME_PAT}" "${DOCKER_TOKEN_PAT}" HUB_JWT || { gha_error "Docker Hub login failed: ${_HUB_LOGIN_ERROR}"; exit 1; }
+}
+
+# Prints the digest of a tag, nothing when the tag does not exist, and fails when Docker Hub cannot be read
+function hub_tag_digest() {
+  local image="${1}" tag="${2}" body status
+  body=$(curl -sSL -w $'\n%{http_code}' -H "Authorization: JWT ${HUB_JWT}" \
+    "https://hub.docker.com/v2/repositories/${image}/tags/${tag}/") || return 1
+  status="${body##*$'\n'}"
+  body="${body%$'\n'*}"
+  case "${status}" in
+    200) jq -r '.digest // empty' <<< "${body}" ;;
+    404) ;;
+    *) return 1 ;;
+  esac
+}
+
+# The latest tag moves only when the released line is not older than the newest line already published
+function is_newest_release_line() {
+  local image="${1}" release_line="${2}" body status names="" page_names
+  local url="https://hub.docker.com/v2/repositories/${image}/tags/?page_size=100"
+  # Every page is read: the newest line is not guaranteed to be among the most recently updated tags
+  while [[ -n "${url}" ]]; do
+    body=$(curl -sSL -w $'\n%{http_code}' "${url}") || return 1
+    status="${body##*$'\n'}"
+    body="${body%$'\n'*}"
+    [[ "${status}" == "404" && -z "${names}" ]] && return 0
+    [[ "${status}" == "200" ]] || return 1
+    # An unreadable page fails the check instead of leaving a partial tag list
+    page_names=$(jq -r '.results[].name' <<< "${body}") || return 1
+    names+="${page_names}"$'\n'
+    url=$(jq -r '.next // empty' <<< "${body}") || return 1
+  done
+  local newest
+  newest=$(grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' <<< "${names}" | sort -V | tail -n 1 || true)
+  [[ -z "${newest}" || "$(printf '%s\n%s\n' "${newest}" "${release_line}" | sort -V | tail -n 1)" == "${release_line}" ]]
 }
 
 function make_repo_public() {
@@ -124,15 +161,38 @@ function release_service() {
      return
    fi
 
+   # A published version is immutable: it may be released again only with the same image or when the overwrite is requested
+   local existing_digest source_digest
+   if ! existing_digest=$(hub_tag_digest "${service_release_tag}" "${RELEASE_VERSION}"); then
+     gha_error "Cannot read ${service_release_tag}:${RELEASE_VERSION} on Docker Hub, the release is stopped"
+     return
+   fi
+   if [[ -n "${existing_digest}" && "${ALLOW_TAG_OVERWRITE:-false}" != "true" ]]; then
+     source_digest=$(hub_tag_digest "${service_source_tag%:*}" "${service_source_tag##*:}") || source_digest=""
+     if [[ "${existing_digest}" != "${source_digest}" ]]; then
+       gha_error "${service_release_tag}:${RELEASE_VERSION} already holds another image; run with overwrite_existing_tag to replace it"
+       return
+     fi
+   fi
+
    # If specifyed tag look like 2.5.1.1 it will release like 3 different tags: 2.5.1 2.5.1.1 latest
+   # The latest tag is skipped when a newer line (ex. 2.6.0) is already published, so a hotfix of an old line cannot roll it back
+   # The line is the N.N.N part: a three-part version is its own line, compared against the N.N.N tags already published
+   local release_line="${RELEASE_VERSION}"
+   [[ "${RELEASE_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] && release_line="${RELEASE_VERSION%.*}"
+   local -a release_tags=(--tag "${service_release_tag}:${release_line}")
+   [[ "${release_line}" != "${RELEASE_VERSION}" ]] && release_tags+=(--tag "${service_release_tag}:${RELEASE_VERSION}")
+   if is_newest_release_line "${service_release_tag}" "${release_line}"; then
+     release_tags+=(--tag "${service_release_tag}:latest")
+   else
+     gha_notice "${service_release_tag}:latest is not moved (a newer line is published or the tags cannot be read)"
+   fi
+
    # Make new image manifest and push it to stable images repository
    local STATUS=0
    local attempt
    for attempt in 1 2 3; do
-     docker buildx imagetools create --tag "${service_release_tag}:${RELEASE_VERSION%.*}" \
-                                     --tag "${service_release_tag}:${RELEASE_VERSION}" \
-                                     --tag "${service_release_tag}:latest" \
-                                     "${service_source_tag}" && STATUS=0 && break
+     docker buildx imagetools create "${release_tags[@]}" "${service_source_tag}" && STATUS=0 && break
      STATUS=$?
      [[ ${attempt} -lt 3 ]] && gha_warning "imagetools create failed (attempt ${attempt}/3), retrying in 10s..." && sleep 10
    done

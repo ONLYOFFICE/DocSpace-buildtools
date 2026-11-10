@@ -1,4 +1,10 @@
 %changelog
+* Tue Nov 03 2026 %{packager} - 4.0.1
+  - Updated Node.js to v24.22.1 due to vulnerabilities
+    (CVE-2026-105481, CVE-2026-105482, CVE-2026-105483,
+    CVE-2026-106069, CVE-2026-106072, CVE-2026-106073,
+    CVE-2026-106074, CVE-2026-111497)
+
 * Mon Oct 12 2026 %{packager} - 4.0.0
   - Rebranded ONLYOFFICE DocSpace to ONLYOFFICE Apps: - Replaced
     the product logo with the ONLYOFFICE logo - Renamed the

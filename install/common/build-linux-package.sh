@@ -6,7 +6,7 @@ set -xeo pipefail
 #
 # Expects in env: BRANCH_BUILDTOOLS, BRANCH_CLIENT, BRANCH_SERVER,
 # and either GITHUB_RUN_NUMBER or BUILD_NUMBER.
-# PACKAGE_SYSNAME/PRODUCT/LEGACY_PRODUCT/SOURCE_REPO/NODE_VERSION/JAVA_VERSION/
+# PACKAGE_SYSNAME/PRODUCT/LEGACY_PRODUCT/SOURCE_REPO/NODE_VERSION/NODE_MIN_VERSION/JAVA_VERSION/
 # DOTNET_VERSION/OPENSEARCH_VERSION can be overridden via env; otherwise the defaults below apply.
 # Set SKIP_DEB_BUILDDEPS_CHECK=true where nodejs/dotnet/java aren't installed as
 # system packages (e.g. nvm-based agents), so dpkg-checkbuilddeps doesn't false-positive.
@@ -23,6 +23,7 @@ PRODUCT="${PRODUCT:-Apps}"
 LEGACY_PRODUCT="${LEGACY_PRODUCT:-docspace}"
 SOURCE_REPO="${SOURCE_REPO:-DocSpace}"
 NODE_VERSION="${NODE_VERSION:-24}"
+NODE_MIN_VERSION="${NODE_MIN_VERSION:-24.22.1}"
 JAVA_VERSION="${JAVA_VERSION:-25}"
 DOTNET_VERSION="${DOTNET_VERSION:-10.0}"
 OPENSEARCH_VERSION="${OPENSEARCH_VERSION:-3.5.0}"
@@ -65,7 +66,7 @@ if [[ "$PACKAGE_TYPE" == "deb" ]]; then
   fi
 
   rename -f -v "s/product([^\/]*)$/${PACKAGE_SYSNAME}-${PRODUCT,,}\$1/g" debian/*
-  find debian/ -type f -exec sed -i -e "s/{{package_name}}/${PACKAGE_SYSNAME}-${PRODUCT,,}/g" -e "s/{{package_sysname}}/${PACKAGE_SYSNAME}/g" -e "s/{{product}}/${PRODUCT,,}/g" -e "s/{{product_name}}/${PACKAGE_SYSNAME^^} ${PRODUCT}/g" -e "s/{{legacy_product}}/${LEGACY_PRODUCT}/g" -e "s/{{package_header_tag_version}}/${PRODUCT_VERSION}.${RUN_NUMBER}/g" -e "s/{{node_version}}/${NODE_VERSION}/g" -e "s/{{java_version}}/${JAVA_VERSION}/g" -e "s/{{dotnet_version}}/${DOTNET_VERSION}/g" -e "s/{{opensearch_version}}/${OPENSEARCH_VERSION}/g" {} +
+  find debian/ -type f -exec sed -i -e "s/{{package_name}}/${PACKAGE_SYSNAME}-${PRODUCT,,}/g" -e "s/{{package_sysname}}/${PACKAGE_SYSNAME}/g" -e "s/{{product}}/${PRODUCT,,}/g" -e "s/{{product_name}}/${PACKAGE_SYSNAME^^} ${PRODUCT}/g" -e "s/{{legacy_product}}/${LEGACY_PRODUCT}/g" -e "s/{{package_header_tag_version}}/${PRODUCT_VERSION}.${RUN_NUMBER}/g" -e "s/{{node_version}}/${NODE_VERSION}/g" -e "s/{{node_min_version}}/${NODE_MIN_VERSION}/g" -e "s/{{java_version}}/${JAVA_VERSION}/g" -e "s/{{dotnet_version}}/${DOTNET_VERSION}/g" -e "s/{{opensearch_version}}/${OPENSEARCH_VERSION}/g" {} +
   yq -r '.files[] | .name as $n | "cat <<EOF > debian/\($n)\n" + .content + "\nEOF"' debian/files-bundle.yaml | bash
 
   export DEB_BUILD_OPTIONS="parallel=$(nproc)"
@@ -95,6 +96,7 @@ elif [[ "$PACKAGE_TYPE" == "rpm" ]]; then
            -D "version ${PRODUCT_VERSION}" \
            -D "release ${RUN_NUMBER}" \
            -D "node_version ${NODE_VERSION}" \
+           -D "node_min_version ${NODE_MIN_VERSION}" \
            -D "java_version ${JAVA_VERSION}" \
            -D "dotnet_version ${DOTNET_VERSION}" -ba product.spec
 fi

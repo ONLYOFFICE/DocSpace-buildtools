@@ -28,23 +28,25 @@ subprocess.run(["dotnet", "build", os.path.join(SRC_PATH, "server", "ASC.Web.sln
 print("== Build ASC.Migrations.slnx ==")
 subprocess.run(["dotnet", "build", os.path.join(SRC_PATH, "server", "ASC.Migrations.slnx"), "-o", os.path.join(BUILD_PATH, "services", "ASC.Migration.Runner", "service")])
 
-print("== Add docker-migration-entrypoint.sh to ASC.Migration.Runner ==")
-file_path = os.path.join(BUILD_PATH, "services", "ASC.Migration.Runner", "service", "docker-migration-entrypoint.sh")
-src_file_path = os.path.join(SRC_PATH, "buildtools", "install", "docker", "build", "entrypoints", "docker-migration-entrypoint.sh")
-
 WINDOWS_LINE_ENDING = b'\r\n'
 UNIX_LINE_ENDING = b'\n'
 
-with open(src_file_path, 'rb') as open_file:
-    content = open_file.read()
-    
-content = content.replace(WINDOWS_LINE_ENDING, UNIX_LINE_ENDING)
+# The entrypoint sources the shared helpers from its own directory
+for entrypoint_file in ("docker-migration-entrypoint.sh", "entrypoint-functions.sh"):
+    print(f"== Add {entrypoint_file} to ASC.Migration.Runner ==")
+    file_path = os.path.join(BUILD_PATH, "services", "ASC.Migration.Runner", "service", entrypoint_file)
+    src_file_path = os.path.join(SRC_PATH, "buildtools", "install", "docker", "build", "entrypoints", entrypoint_file)
 
-with open(file_path, 'wb') as open_file:
-    open_file.write(content)
+    with open(src_file_path, 'rb') as open_file:
+        content = open_file.read()
 
-st = os.stat(file_path)
-os.chmod(file_path, st.st_mode | stat.S_IEXEC)
+    content = content.replace(WINDOWS_LINE_ENDING, UNIX_LINE_ENDING)
+
+    with open(file_path, 'wb') as open_file:
+        open_file.write(content)
+
+    st = os.stat(file_path)
+    os.chmod(file_path, st.st_mode | stat.S_IEXEC)
 
 format = "tar"
 

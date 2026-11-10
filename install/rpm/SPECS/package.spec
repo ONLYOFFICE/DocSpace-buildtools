@@ -11,6 +11,8 @@ The service which handles API requests related to backup.
 
 %package        common
 Provides:       %{legacy_product}-common = %{version}-%{release}
+Provides:       user(%{package_sysname})
+Provides:       group(%{package_sysname})
 Obsoletes:      %{legacy_product}-common < %{version}-%{release}
 Summary:        Common
 BuildArch:      noarch
@@ -102,7 +104,7 @@ Provides:       %{legacy_product}-socket = %{version}-%{release}
 Obsoletes:      %{legacy_product}-socket < %{version}-%{release}
 Summary:        Socket
 Requires:       %name-common  = %version-%release
-Requires:       nodejs >= %{node_version}.0
+Requires:       nodejs >= %{node_min_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    socket
@@ -114,7 +116,7 @@ Provides:       %{legacy_product}-ai-chat = %{version}-%{release}
 Obsoletes:      %{legacy_product}-ai-chat < %{version}-%{release}
 Summary:        AI Chat
 Requires:       %name-common  = %version-%release
-Requires:       nodejs >= %{node_version}.0
+Requires:       nodejs >= %{node_min_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    ai-chat
@@ -161,7 +163,7 @@ Provides:       %{legacy_product}-ssoauth = %{version}-%{release}
 Obsoletes:      %{legacy_product}-ssoauth < %{version}-%{release}
 Summary:        Ssoauth
 Requires:       %name-common  = %version-%release
-Requires:       nodejs >= %{node_version}.0
+Requires:       nodejs >= %{node_min_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    ssoauth
@@ -227,7 +229,7 @@ Provides:       %{legacy_product}-doceditor = %{version}-%{release}
 Obsoletes:      %{legacy_product}-doceditor < %{version}-%{release}
 Summary:        Doceditor
 Requires:       %name-common  = %version-%release
-Requires:       nodejs >= %{node_version}.0
+Requires:       nodejs >= %{node_min_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    doceditor
@@ -251,7 +253,7 @@ Provides:       %{legacy_product}-login = %{version}-%{release}
 Obsoletes:      %{legacy_product}-login < %{version}-%{release}
 Summary:        Login
 Requires:       %name-common  = %version-%release
-Requires:       nodejs >= %{node_version}.0
+Requires:       nodejs >= %{node_min_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    login
@@ -283,7 +285,7 @@ Provides:       %{legacy_product}-sdk = %{version}-%{release}
 Obsoletes:      %{legacy_product}-sdk < %{version}-%{release}
 Summary:        Sdk
 Requires:       %name-common = %version-%release
-Requires:       nodejs >= %{node_version}.0
+Requires:       nodejs >= %{node_min_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description sdk
@@ -295,7 +297,7 @@ Provides:       %{legacy_product}-management = %{version}-%{release}
 Obsoletes:      %{legacy_product}-management < %{version}-%{release}
 Summary:        Management
 Requires:       %name-common  = %version-%release
-Requires:       nodejs >= %{node_version}.0
+Requires:       nodejs >= %{node_min_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    management
@@ -343,7 +345,7 @@ Provides:       %{legacy_product}-mcp = %{version}-%{release}
 Obsoletes:      %{legacy_product}-mcp < %{version}-%{release}
 Summary:        MCP
 Requires:       %name-common  = %version-%release
-Requires:       nodejs >= %{node_version}.0
+Requires:       nodejs >= %{node_min_version}
 AutoReqProv:    no
 BuildArch:      noarch
 %description    mcp

@@ -7,12 +7,15 @@ ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:10.0"
 ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:10.0-noble"
 ARG BUSYBOX_VERSION="1.37"
 ARG PYTHON_VERSION="3.12-slim"
-ARG NODE_VERSION="24.16-trixie-slim"
+ARG NODE_PATCH_VERSION="24.22.1"
+ARG NODE_VERSION="${NODE_PATCH_VERSION}-trixie-slim"
 ARG OPENRESTY_VERSION="1.31.1.1-2"
 ARG PLUGIN_NODE_TYPES_VERSION="18.19.0"
 ARG JAVA_VERSION="25"
 ARG JAVA_RUN_VERSION="${JAVA_VERSION}-jre"
 ARG MAVEN_VERSION="3.9-eclipse-temurin-${JAVA_VERSION}"
+# Released MCP server, pinned by version and digest; pass a 4testing image here to try a pre-release build
+ARG MCP_IMAGE="onlyoffice/docspace-mcp:3.4.0@sha256:0771f715a95a0b0008d7883b959a0322b3c3b02381b577bb35a56abceccc2f5a"
 
 # Image resources
 FROM --platform=$BUILDPLATFORM python:${PYTHON_VERSION} AS src
@@ -83,8 +86,8 @@ RUN --mount=type=secret,id=github_token,env=GITHUB_TOKEN <<EOF
     sed -i "s/\"number\".*,/\"number\": \"${PRODUCT_VERSION}.${BUILD_NUMBER}\",/g" /app/onlyoffice/config/appsettings.json
 #    sed -e 's/#//' -i /etc/nginx/conf.d/onlyoffice.conf
     if [[ "${DEBUG_INFO,,}" =~ ^(true|1|yes)$ ]]; then
-        pip install --no-cache-dir -r ${SRC_PATH}/buildtools/requirements.txt --break-system-packages && \
-        python3 ${SRC_PATH}/buildtools/debuginfo.py && \
+        pip install --no-cache-dir -r ${SRC_PATH}/buildtools/tools/requirements.txt --break-system-packages && \
+        python3 ${SRC_PATH}/buildtools/tools/debuginfo.py && \
         pip cache purge
     fi
     find ${SRC_PATH}/buildtools/install/docker -name "*.sh" -exec chmod +x {} +
@@ -253,13 +256,14 @@ RUN apt-get -y update && \
     rm -rf /var/lib/apt/lists/* /tmp/*
 
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-identity-entrypoint.sh /usr/bin/docker-identity-entrypoint.sh
+COPY --from=src ${SRC_PATH}/buildtools/install/docker/build/entrypoints/entrypoint-functions.sh /usr/bin/entrypoint-functions.sh
 USER onlyoffice
 ENTRYPOINT ["/bin/bash", "/usr/bin/docker-identity-entrypoint.sh"]
 
 ## Nginx router otel lua dependencies ##
 # Built on the -fat flavour of the same OpenResty release the router runs, so
 # the native pb.so is linked against the LuaJIT ABI that ships at runtime.
-FROM openresty/openresty:${OPENRESTY_VERSION}-bullseye-fat AS otel-build
+FROM openresty/openresty:${OPENRESTY_VERSION}-bookworm-fat AS otel-build
 # Git tags and the luarocks registry are both mutable, so every dependency is
 # fetched as a tarball and checked against a pinned sha256 before it is used.
 # Refresh a checksum with: curl -sL <url> | sha256sum
@@ -295,7 +299,7 @@ RUN set -eu; \
     rm -rf /tmp/*
 
 ## Nginx image ##
-FROM openresty/openresty:${OPENRESTY_VERSION}-bullseye AS router
+FROM openresty/openresty:${OPENRESTY_VERSION}-bookworm AS router
 ARG SRC_PATH
 ARG BUILD_PATH
 ARG COUNT_WORKER_CONNECTIONS=1024
@@ -307,7 +311,10 @@ ENV DNS_NAMESERVER=127.0.0.11 \
 RUN mkdir -p /var/log/nginx/ && \
     addgroup --system --gid 107 onlyoffice && \
     adduser -uid 104 --quiet --home /var/www/onlyoffice --system --gid 107 onlyoffice && \
-    chown -R onlyoffice:onlyoffice /etc/nginx/ /var/ /usr/ /run/ /var/log/nginx/
+    # onlyoffice owns only what the start scripts rewrite (configuration directories, the generated nginx.conf, logs, /run); the binaries and libraries stay with root
+    for path in /etc/nginx /etc/nginx/conf.d /etc/nginx/nginx.conf /run /var/log/nginx /var/cache/nginx /usr/local/openresty/nginx/conf/nginx.conf /usr/local/openresty/nginx/logs; do \
+        [ ! -e "$path" ] || chown onlyoffice:onlyoffice "$path"; \
+    done
 
 # copy static services files and config values 
 COPY --from=src --chown=onlyoffice:onlyoffice /etc/nginx/conf.d /etc/nginx/conf.d
@@ -353,7 +360,7 @@ RUN sed -i 's/127.0.0.1:5010/$service_api_system/' /etc/nginx/conf.d/onlyoffice.
     sed -i 's/http:\/\/172.*/$document_server;/' /etc/nginx/conf.d/onlyoffice.conf && \
     sed -i '/client_body_temp_path/ i \ \ \ \ $MAP_HASH_BUCKET_SIZE' /etc/nginx/nginx.conf.template && \
     sed -i 's/\(worker_connections\).*;/\1 $COUNT_WORKER_CONNECTIONS;/' /etc/nginx/nginx.conf.template && \
-    sed -i -e '/^user/s/^/#/' -e 's#/tmp/nginx.pid#nginx.pid#' -e 's#/etc/nginx/mime.types#mime.types#' /etc/nginx/nginx.conf.template
+    sed -i -e '/^user/s/^/#/' -e 's#/etc/nginx/mime.types#mime.types#' /etc/nginx/nginx.conf.template
 
 USER onlyoffice
 
@@ -537,6 +544,7 @@ FROM dotnetrun AS onlyoffice-migration-runner
 WORKDIR ${BUILD_PATH}/services/ASC.Migration.Runner/
 
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-migration-entrypoint.sh /usr/bin/docker-migration-entrypoint.sh
+COPY --from=src ${SRC_PATH}/buildtools/install/docker/build/entrypoints/entrypoint-functions.sh /usr/bin/entrypoint-functions.sh
 COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Migration.Runner/service/ .
 
 ENTRYPOINT ["/bin/bash", "/usr/bin/docker-migration-entrypoint.sh"]
@@ -654,7 +662,9 @@ COPY --from=build-java --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/service
 
 CMD ["supervisord", "-n"]
 
-FROM onlyoffice/4testing-docspace-mcp:latest AS mcp
+FROM node:${NODE_PATCH_VERSION}-bookworm-slim AS node-bin
+
+FROM ${MCP_IMAGE} AS mcp
 
 ## Image standalone ##
 FROM dotnetrun AS standalone
@@ -671,21 +681,24 @@ RUN set -eux; \
     apt-get install -y --no-install-recommends \
         mysql-client ca-certificates wget gnupg \
         gettext-base supervisor libcap2-bin certbot; \
-    curl -fsSL https://github.com/trentm/json/raw/master/lib/json.js -o /usr/local/bin/json && chmod +x /usr/local/bin/json; \
+    curl -fsSL https://raw.githubusercontent.com/trentm/json/a8baa02b5d6fc5f0c16521372ee89674a4706d82/lib/json.js -o /usr/local/bin/json && echo "811b93d71309041da77761ffdbb7a20d4a56e6a842823d0727262252f14461fb  /usr/local/bin/json" | sha256sum -c - && chmod +x /usr/local/bin/json || exit 1; \
     wget -qO- https://openresty.org/package/pubkey.gpg | gpg --dearmor -o /usr/share/keyrings/openresty.gpg; \
-    echo "deb [arch=$TARGETARCH signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/$([ "$TARGETARCH" = arm64 ] && echo arm64/)ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") main" > /etc/apt/sources.list.d/openresty.list; \
+    [ "$(gpg --show-keys --with-colons /usr/share/keyrings/openresty.gpg | awk -F: '/^fpr:/ {print $10; exit}')" = "E52218E7087897DC6DEA6D6D97DB7443D5EDEB74" ] || exit 1; \
+    echo "deb [arch=$TARGETARCH signed-by=/usr/share/keyrings/openresty.gpg] https://openresty.org/package/$([ "$TARGETARCH" = arm64 ] && echo arm64/)ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") main" > /etc/apt/sources.list.d/openresty.list; \
     apt-get update && apt-get install -y --no-install-recommends openresty; \
     # let the unprivileged onlyoffice user bind :80, then prepare nginx dirs
     setcap 'cap_net_bind_service=+ep' /usr/local/openresty/nginx/sbin/nginx; \
     mkdir -p /var/log/nginx /var/log/openresty /var/log/supervisor /etc/nginx/conf.d /etc/nginx/includes /etc/nginx/templates /etc/letsencrypt /letsencrypt; \
-    # /etc/ssl/certs (created by ca-certificates, owned by root) needs to be writable by onlyoffice too: the entrypoint generates dhparam.pem there at runtime, and onlyoffice-proxy-ssl.conf requires it.
-    chown -R onlyoffice:onlyoffice /etc/nginx /var/log/nginx /var/log/openresty /var/log/supervisor /usr/local/openresty /etc/letsencrypt /letsencrypt /etc/ssl/certs; \
+    # The entrypoint runs as root and generates dhparam.pem itself, so /etc/ssl/certs and the openresty binaries stay root-owned; onlyoffice only writes the nginx logs under /usr/local/openresty
+    chown -R onlyoffice:onlyoffice /etc/nginx /var/log/nginx /var/log/openresty /var/log/supervisor /etc/letsencrypt /letsencrypt /usr/local/openresty/nginx/logs; \
     # onlyoffice-document-server shares app_data/log_data with this container (docker-compose.yml) and owns its own Data dir as "ds", gid 102 in its own image - confirmed live. It only chowns that directory's own inode (not recursively), never its mode, so membership here plus the entrypoint's one-time chmod g+w survives any number of its restarts, no ongoing fixup needed. Keep gid 102 in sync if onlyoffice/documentserver's own "ds" group ever changes.
     groupadd -g 102 dsdata && usermod -aG 102 onlyoffice; \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb /tmp/*
 
 # Services config + entrypoint + supervisor config
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-standalone-entrypoint.sh /docker-entrypoint.sh
+# The entrypoint and every script it runs stay root-owned: they run as root, so the onlyoffice account must not be able to change them
+COPY --from=src ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-standalone-entrypoint.sh /docker-entrypoint.sh
+COPY --from=src ${SRC_PATH}/buildtools/install/docker/build/entrypoints/entrypoint-functions.sh /usr/bin/entrypoint-functions.sh
 # COPY --chown=onlyoffice:onlyoffice entrypoints/docker-standalone-entrypoint.sh /docker-entrypoint.sh
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/supervisor/standalone.conf /etc/supervisor/conf.d/supervisord.conf
 # COPY --chown=onlyoffice:onlyoffice supervisor/standalone.conf /etc/supervisor/conf.d/supervisord.conf
@@ -695,10 +708,10 @@ COPY --from=src --exclude=onlyoffice-login.conf --exclude=onlyoffice-management.
 COPY --from=src --chown=onlyoffice:onlyoffice /etc/nginx/includes /etc/nginx/includes
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/config/nginx/html /etc/nginx/html
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/campaigns/src/campaigns ${BUILD_PATH}/public/campaigns
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/docker-entrypoint.d /docker-entrypoint.d
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/docker-entrypoint.sh /nginx/docker-entrypoint.sh
+COPY --from=src ${SRC_PATH}/buildtools/install/docker/config/nginx/router/docker-entrypoint.d /docker-entrypoint.d
+COPY --from=src ${SRC_PATH}/buildtools/install/docker/config/nginx/router/docker-entrypoint.sh /nginx/docker-entrypoint.sh
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/nginx.conf.template /etc/nginx/nginx.conf.template
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/entrypoints/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
+COPY --from=src ${SRC_PATH}/buildtools/install/docker/build/entrypoints/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/templates/standalone-upstream.conf.template /etc/nginx/templates/upstream.conf.template
 # Same front-proxy configs the microservices proxy container and the DEB/RPM packages use; the RUN below adapts them the way packages-build.sh does.
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/proxy/onlyoffice-proxy.conf /app/onlyoffice/template/nginx/onlyoffice-proxy.conf
@@ -706,7 +719,7 @@ COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/doc
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/proxy/letsencrypt.conf /etc/nginx/includes/letsencrypt.conf
 
 # nodejs static and dynamic files
-COPY --from=node:24-bookworm-slim /usr/local/bin/node /usr/local/bin/node
+COPY --from=node-bin /usr/local/bin/node /usr/local/bin/node
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/web/ ${BUILD_PATH}/
 COPY --from=build-node --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish/static ${BUILD_PATH}/build
 COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server/common/ASC.Socket.IO ${SRC_PATH}/publish/services/ASC.Socket.IO
@@ -743,7 +756,7 @@ RUN set -eux; \
     { /usr/local/openresty/bin/openresty -V 2>&1 | grep -q http_v3_module || sed -i -e '/quic/d' -e "/alt-svc/d" /app/onlyoffice/template/nginx/onlyoffice-proxy-ssl.conf; } && \
     sed -i '/client_body_temp_path/ i \ \ \ \ $MAP_HASH_BUCKET_SIZE' /etc/nginx/nginx.conf.template && \
     sed -i 's/\(worker_connections\).*;/\1 $COUNT_WORKER_CONNECTIONS;/' /etc/nginx/nginx.conf.template && \
-    sed -i -e '/^user/s/^/#/' -e 's#/tmp/nginx.pid#nginx.pid#' -e 's#/etc/nginx/mime.types#mime.types#' /etc/nginx/nginx.conf.template && \
+    sed -i -e '/^user/s/^/#/' -e 's#/etc/nginx/mime.types#mime.types#' /etc/nginx/nginx.conf.template && \
     echo '{ "Redis": {} }' > /app/onlyoffice/config/redis.json && \
     echo '{ "RabbitMQ": {} }' > /app/onlyoffice/config/rabbitmq.json
     # Note: redis.json / rabbitmq.json are baked as empty objects in the image

@@ -58,7 +58,7 @@ require_value() {
 
 while [ "$1" != "" ]; do
     case "$1" in
-        -h | -? | --help ) ;;
+        -h | '-?' | --help ) ;;
         -* ) require_value "$1" "$2" ;;
     esac
 
@@ -71,13 +71,13 @@ while [ "$1" != "" ]; do
         -gb | --gitbranch )                 [ -n "$2" ] && GIT_BRANCH=$2 && shift ;;
         -ifb | --installfluentbit )         [ -n "$2" ] && INSTALL_FLUENT_BIT=$2 && shift ;;
         -av | --appsversion | -dsv | --docspaceversion ) [ -n "$2" ] && PRODUCT_VERSION=$2 && shift ;;
-        -du | --dashboardsusername )        [ -n "$2" ] && DASHBOARDS_USERNAME=$2 && shift ;;
-        -dp | --dashboardspassword )        [ -n "$2" ] && DASHBOARDS_PASSWORD=$2 && shift ;;
+        -du | --dashboardsusername )        [ -n "$2" ] && export DASHBOARDS_USERNAME=$2 && shift ;;
+        -dp | --dashboardspassword )        [ -n "$2" ] && export DASHBOARDS_PASSWORD=$2 && shift ;;
         -ls | --localscripts )              [ -n "$2" ] && LOCAL_SCRIPTS=$2 && shift ;;
         -skiphc | --skiphardwarecheck )     [ -n "$2" ] && SKIP_HARDWARE_CHECK=$2 && shift ;;
         -it | --installationtype | --installation_type ) [ -n "$2" ] && INSTALLATION_TYPE="${2,,}" && shift ;;
         -ms | --makeswap )                  [ -n "$2" ] && MAKESWAP=$2 && shift ;;
-        -h | -? | --help )
+        -h | '-?' | --help )
             echo "  Usage $0 [PARAMETER] [[PARAMETER], ...]"
             echo "    Parameters:"
             echo "      -it, --installationtype           installation type (community|developer|enterprise)"
@@ -125,14 +125,14 @@ validate_bool --installfluentbit "$INSTALL_FLUENT_BIT"
 [ -n "$DS_JWT_ENABLED" ] && validate_bool --jwtenabled "$DS_JWT_ENABLED"
 
 # Pause apt auto-updates to avoid dpkg lock contention.
-APT_TIMERS_TO_RESTORE=()
-for _apt_timer in apt-daily.timer apt-daily-upgrade.timer; do
-    systemctl is-active --quiet "${_apt_timer}" && APT_TIMERS_TO_RESTORE+=("${_apt_timer}")
+APT_UNITS_TO_RESTORE=()
+for _apt_unit in apt-daily.timer apt-daily-upgrade.timer unattended-upgrades.service; do
+    systemctl is-active --quiet "${_apt_unit}" && APT_UNITS_TO_RESTORE+=("${_apt_unit}")
 done
 systemctl stop apt-daily.timer apt-daily-upgrade.timer apt-daily.service apt-daily-upgrade.service unattended-upgrades.service >/dev/null 2>&1 || true
 finish_debian_install() {
     [ -z "${DOCS_APT_PREFERENCES:-}" ] || rm -f -- "${DOCS_APT_PREFERENCES}"
-    [ ${#APT_TIMERS_TO_RESTORE[@]} -eq 0 ] || systemctl start "${APT_TIMERS_TO_RESTORE[@]}" >/dev/null 2>&1 || true
+    [ ${#APT_UNITS_TO_RESTORE[@]} -eq 0 ] || systemctl start "${APT_UNITS_TO_RESTORE[@]}" >/dev/null 2>&1 || true
 }
 trap finish_debian_install EXIT
 
@@ -152,27 +152,33 @@ DOWNLOAD_URL_PREFIX="https://download.onlyoffice.com/${product}"
 [ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${legacy_product}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
 
 source_remote_script() {
-    local SCRIPT_PATH="$1"
-    local SCRIPT_TMP
+    local SCRIPT_BODY
 
-    SCRIPT_TMP="$(mktemp)"
-    curl -fsSL --retry 3 --retry-delay 2 "${DOWNLOAD_URL_PREFIX}/${SCRIPT_PATH}" -o "${SCRIPT_TMP}" || { rm -f "${SCRIPT_TMP}"; return 1; }
-    bash -n "${SCRIPT_TMP}" || { rm -f "${SCRIPT_TMP}"; return 1; }
-    source "${SCRIPT_TMP}"
-    rm -f "${SCRIPT_TMP}"
+    SCRIPT_BODY=$(curl -fsSL --retry 3 --retry-delay 2 "${DOWNLOAD_URL_PREFIX}/$1") || { echo "Error: failed to download $1" >&2; return 1; }
+    bash -n <<< "${SCRIPT_BODY}" || { echo "Error: downloaded $1 is not a valid script" >&2; return 1; }
+    source <(printf '%s\n' "${SCRIPT_BODY}")
 }
 
 if [ "${UNINSTALL}" == "true" ]; then
     if [ "${LOCAL_SCRIPTS}" == "true" ]; then
+        source common/swap.sh
         source install-Debian/uninstall.sh
     else
+        source_remote_script common/swap.sh
         source_remote_script install-Debian/uninstall.sh
     fi
     exit 0
 fi
 
+# Check hardware, architecture and OS support before the host is modified.
+if [ "${LOCAL_SCRIPTS}" == "true" ]; then
+	source install-Debian/tools.sh
+else
+	source_remote_script install-Debian/tools.sh
+fi
+
 # Add ONLYOFFICE repo.
-echo "deb [signed-by=/usr/share/keyrings/onlyoffice.gpg] http://download.onlyoffice.com/repo/debian squeeze main" | tee /etc/apt/sources.list.d/onlyoffice.list
+echo "deb [signed-by=/usr/share/keyrings/onlyoffice.gpg] https://download.onlyoffice.com/repo/debian squeeze main" | tee /etc/apt/sources.list.d/onlyoffice.list
 curl -fsSL https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE | gpg --batch --yes --dearmor -o /usr/share/keyrings/onlyoffice.gpg
 
 declare -x LANG="en_US.UTF-8"
@@ -180,12 +186,12 @@ declare -x LANGUAGE="en_US:en"
 declare -x LC_ALL="en_US.UTF-8"
 
 if [ "${LOCAL_SCRIPTS}" == "true" ]; then
-	source install-Debian/tools.sh
 	source common/check-ports.sh
+	source common/swap.sh
 	source common/preserve-docs.sh
 else
-	source_remote_script install-Debian/tools.sh
 	source_remote_script common/check-ports.sh
+	source_remote_script common/swap.sh
 	source_remote_script common/preserve-docs.sh
 fi
 

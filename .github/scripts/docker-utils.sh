@@ -102,14 +102,17 @@ run_installer() {
   local PATCHED_SCRIPT; PATCHED_SCRIPT=$(mktemp --suffix=.sh)
   cp "${GITHUB_WORKSPACE}/install/OneClickInstall/install-Docker.sh" "$PATCHED_SCRIPT"
 
-  local INSTALL_CMD="sudo bash $PATCHED_SCRIPT -skiphc true -noni true -gb $GITHUB_REF_NAME $*"
+  # compose prints every layer of a pull as a separate line when the output is not a terminal, and sudo drops the variable without env
+  # The mode arguments are split on whitespace only, so nothing in them is ever evaluated by the shell
+  local MODE_ARGS; read -r -a MODE_ARGS <<< "$*"
+  local INSTALL_ARGS=(-skiphc true -noni true -gb "$GITHUB_REF_NAME" "${MODE_ARGS[@]}")
   [ "${IS_4TESTING:-true}" != "false" ] && \
-    INSTALL_CMD="$INSTALL_CMD -s 4testing- -un $DOCKERHUB_USERNAME_PAT -p $DOCKERHUB_TOKEN_PAT"
-  [ -n "${DOCKER_TAG:-}" ] && INSTALL_CMD="$INSTALL_CMD -dsv $DOCKER_TAG"
+    INSTALL_ARGS+=(-s 4testing- -un "$DOCKERHUB_USERNAME_PAT" -p "$DOCKERHUB_TOKEN_PAT")
+  [ -n "${DOCKER_TAG:-}" ] && INSTALL_ARGS+=(-dsv "$DOCKER_TAG")
 
-  sed -i -e "1i set -x" -e "/DOCKER_COMPOSE.*up -d/ s/$/ --quiet-pull/" "$PATCHED_SCRIPT"
+  sed -i "1i set -x" "$PATCHED_SCRIPT"
 
-  eval "$INSTALL_CMD" || exit $?
+  sudo env COMPOSE_PROGRESS=quiet bash "$PATCHED_SCRIPT" "${INSTALL_ARGS[@]}" || exit $?
   wait_for_containers
 }
 
@@ -187,7 +190,28 @@ smoke_test() {
     export DASHBOARDS_USERNAME DASHBOARDS_PASSWORD
   fi
 
-  python3 -m pytest tests/smoke/smoke_test.py -v -s "$@"
+  wait_font_generation
+  python3 -m pytest tests/smoke/smoke_test.py -v -s "$@" || { print_document_server_logs; return 1; }
+}
+
+# Document Server restarts docservice when its background font generation ends, which drops editor sessions opened before
+wait_font_generation() {
+  local DEADLINE=$((SECONDS + 600))
+  pgrep -f documentserver-generate-allfonts >/dev/null || return 0
+  echo "Waiting for the Document Server font generation..."
+  while pgrep -f documentserver-generate-allfonts >/dev/null; do
+    [ "$SECONDS" -lt "$DEADLINE" ] || { echo "::warning::Document Server font generation is still running; editor tests may fail."; return 0; }
+    sleep 5
+  done
+}
+
+print_document_server_logs() {
+  local CONTAINER
+  while IFS= read -r CONTAINER; do
+    echo "::group::Logs for container $CONTAINER"
+    docker logs --tail 200 "$CONTAINER" 2>&1
+    echo "::endgroup::"
+  done < <(docker ps --all --format '{{.Names}}' | grep -E -- '-document-server$' || true)
 }
 
 restart_services() {
@@ -309,7 +333,8 @@ install_previous() {
   # the latest release still ships under the DocSpace name
   curl -fsSL --retry 3 --retry-delay 2 "https://download.onlyoffice.com/docspace/install-Docker.sh" -o "$OLD_SCRIPT" || \
     { echo "::error::Could not download the released install-Docker.sh."; return 1; }
-  sudo bash "$OLD_SCRIPT" "${ARGS[@]}" || { echo "::error::The released installer failed."; return 1; }
+  # The released script is the final DocSpace one and asks for confirmation, which has to be given up front without a terminal
+  sudo env COMPOSE_PROGRESS=quiet DOCSPACE_LEGACY_CONFIRMED=true bash "$OLD_SCRIPT" "${ARGS[@]}" || { echo "::error::The released installer failed."; return 1; }
   wait_for_containers
 
   local IMAGE

@@ -51,9 +51,9 @@ check_archives:
 	echo "Source archives check passed."
 
 override_dh_auto_build: check_archives
-	cd ${BUILDTOOLS_PATH}/install/common; \
-	bash systemd/build.sh -bp "${CURDIR}/debian/" -pm deb; \
-	bash plugins-build.sh ${BUILD_PATH}/plugins; \
+	cd ${BUILDTOOLS_PATH}/install/common && \
+	bash systemd/build.sh -bp "${CURDIR}/debian/" -pm deb && \
+	bash plugins-build.sh ${BUILD_PATH}/plugins && \
 	bash packages-build.sh deb ${BUILD_PATH} ${PRODUCT} "{{package_header_tag_version}}"
 	grep -q "GNU AFFERO GENERAL PUBLIC LICENSE" ${CURDIR}/debian/copyright || \
 		awk 'NF==0{print " ."} NF>0{print " " $$0}' ${BUILD_PATH}/LICENSE >> ${CURDIR}/debian/copyright

@@ -1,6 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
+source /usr/bin/entrypoint-functions.sh
+
 # Default values
 PATH_TO_CONF=${PATH_TO_CONF:-"/app/onlyoffice/config"}
 SRC_PATH=${SRC_PATH:-"/app/onlyoffice/src"}
@@ -22,11 +24,15 @@ HIDE_SETTINGS=[\n\"Monitoring\",\n\"LdapSettings\",\n\"DocService\",\n\"MailServ
 MYSQL_CONTAINER_NAME=${MYSQL_CONTAINER_NAME:-"localhost"}
 MYSQL_HOST=${MYSQL_HOST:-${MYSQL_CONTAINER_NAME}}
 MYSQL_PORT=${MYSQL_PORT:-"3306"}
+export MYSQL_SSL_MODE=${MYSQL_SSL_MODE:-"none"}
 # ASC.Identity (Java) reads this; computed here rather than left to docker-compose.yml's own interpolation, which doesn't nest ${} inside a default anywhere else in the codebase.
 export JDBC_URL="${MYSQL_HOST}:${MYSQL_PORT}"
+# Only the modes that enforce TLS reach Connector/J, so none and preferred keep its default behaviour
+JDBC_SSL_MODE=$(jdbc_ssl_mode "${MYSQL_SSL_MODE}") || exit 1
+[ -z "${JDBC_SSL_MODE}" ] || export JDBC_PARAMETERS="${JDBC_PARAMETERS:+${JDBC_PARAMETERS}&}sslMode=${JDBC_SSL_MODE}"
 MYSQL_DATABASE=${MYSQL_DATABASE:-"onlyoffice_apps"}
 MYSQL_USER=${MYSQL_USER:-"onlyoffice_user"}
-MYSQL_PASSWORD=${MYSQL_PASSWORD:-"onlyoffice_pass"}
+MYSQL_PASSWORD=${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set}
 COMMAND_TIMEOUT=${COMMAND_TIMEOUT:-"100"}
 
 ELK_CONTAINER_NAME=${ELK_CONTAINER_NAME:-"onlyoffice-opensearch"}
@@ -52,8 +58,10 @@ APP_KNOWN_NETWORKS=${APP_KNOWN_NETWORKS:-""}
 CERTBOT_DIRS=(--config-dir /etc/letsencrypt --work-dir /tmp/letsencrypt --logs-dir /var/log/onlyoffice/letsencrypt)
 
 export MYSQL_PWD="$MYSQL_PASSWORD"
+# No service needs the MySQL root password, so the supervised processes must not inherit it
+unset MYSQL_ROOT_PASSWORD
 MYSQL_ARGS=(-h "$MYSQL_HOST" -P "$MYSQL_PORT" -u "$MYSQL_USER")
-export CONNECTION_STRING="Server=${MYSQL_HOST};Port=${MYSQL_PORT};Database=${MYSQL_DATABASE};User ID=${MYSQL_USER};Password=${MYSQL_PASSWORD}"
+export CONNECTION_STRING="Server=${MYSQL_HOST};Port=${MYSQL_PORT};Database=${MYSQL_DATABASE};User ID=$(quote_connection_value "${MYSQL_USER}");Password=$(quote_connection_value "${MYSQL_PASSWORD}")"
 
 SSL_MODE=${SSL_MODE:-"none"}
 SSL_DOMAIN=${SSL_DOMAIN:-""}
@@ -414,7 +422,7 @@ update_configs() {
 
     # Main appsettings (connection, core, document server, misc)
     ${JSON} "${PATH_TO_CONF}/appsettings.json" \
-        -e "this.ConnectionStrings.default.connectionString=process.env.CONNECTION_STRING+';Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;ConnectionReset=false;AllowPublicKeyRetrieval=true'" \
+        -e "this.ConnectionStrings.default.connectionString=process.env.CONNECTION_STRING+';Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode='+process.env.MYSQL_SSL_MODE+';ConnectionReset=false;AllowPublicKeyRetrieval=true'" \
         -e "this.core['base-domain']=process.env.APP_CORE_BASE_DOMAIN" \
         -e "this.core.machinekey=process.env.APP_CORE_MACHINEKEY" \
         -e "this.files.docservice.url.public=process.env.DOCUMENT_SERVER_URL_PUBLIC" \
@@ -424,7 +432,9 @@ update_configs() {
         -e "this.files.docservice.secret.header=process.env.DOCUMENT_SERVER_JWT_HEADER" \
         -e "this.files.docservice.url.portal=process.env.APP_URL_PORTAL" \
         -e "this.core.notify.postman='services'" \
-        -e "this.ai.mcp[0].endpoint=process.env.MCP_ENDPOINT"
+        -e "this.ai.mcp[0].endpoint=process.env.MCP_ENDPOINT" \
+        -e "this.ai.documentAgent.url=process.env.DOCUMENT_AGENT_URL||''" \
+        -e "this.ai.documentAgent.token=process.env.DOCUMENT_AGENT_TOKEN||''"
 
     # Same forwarded-headers trust as docker-entrypoint.py: this container's own network and loopback, plus APP_KNOWN_NETWORKS/APP_KNOWN_PROXIES.
     export KNOWN_NETWORKS_JSON KNOWN_PROXIES_JSON
@@ -454,12 +464,12 @@ update_configs() {
     [ -n "${APP_CORE_SERVER_ROOT}" ] && ${JSON} "${PATH_TO_CONF}/appsettings.json" -e "this.core['server-root']=process.env.APP_CORE_SERVER_ROOT"
 
     # Docs Admin Panel link
-    ${JSON} "${PATH_TO_CONF}/externalresources.json" \
-        -e "this.externalresources.adminpanel.default.domain=\"${DOCUMENT_SERVER_URL_PUBLIC%/}/admin\""
+    DOCS_ADMIN_URL="${DOCUMENT_SERVER_URL_PUBLIC%/}/admin" ${JSON} "${PATH_TO_CONF}/externalresources.json" \
+        -e "this.externalresources.adminpanel.default.domain=process.env.DOCS_ADMIN_URL"
 
     # API system (connection + core)
     ${JSON} "${PATH_TO_CONF}/apisystem.json" \
-        -e "this.ConnectionStrings.default.connectionString=process.env.CONNECTION_STRING+';Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;ConnectionReset=false;AllowPublicKeyRetrieval=true'" \
+        -e "this.ConnectionStrings.default.connectionString=process.env.CONNECTION_STRING+';Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode='+process.env.MYSQL_SSL_MODE+';ConnectionReset=false;AllowPublicKeyRetrieval=true'" \
         -e "this.core['base-domain']=process.env.APP_CORE_BASE_DOMAIN" \
         -e "this.core.machinekey=process.env.APP_CORE_MACHINEKEY" \
 	-e "this.core.notify.postman='services'"
@@ -472,9 +482,12 @@ update_configs() {
         -e "this.elastic.Threads=process.env.ELK_THREADS"
 
     # OAuth redirect
-    sed -i -E "s!\"https://service\.teamlab\.info/oauth2\.aspx\"!\"${OAUTH_REDIRECT_URL}\"!g" "${PATH_TO_CONF}/autofac.consumers.json"
+    # Values below are escaped for a JSON string that is written through sed with "!" as the delimiter
+    oauth_redirect_escaped=$(printf '%s' "${OAUTH_REDIRECT_URL}" | sed -e 's/[\\"]/\\&/g' -e 's/[\\&!]/\\&/g')
+    runner_connection_escaped=$(printf '%s' "${CONNECTION_STRING};Command Timeout=${COMMAND_TIMEOUT}" | sed -e 's/[\\"]/\\&/g' -e 's/[\\&!]/\\&/g')
+    sed -i -E "s!\"https://service\.teamlab\.info/oauth2\.aspx\"!\"${oauth_redirect_escaped}\"!g" "${PATH_TO_CONF}/autofac.consumers.json"
     # Migration runner connection string
-    sed -i -E "s!(\"ConnectionString\").*!\1: \"${CONNECTION_STRING//!/\\!};Command Timeout=${COMMAND_TIMEOUT}\"!g" "${BACKEND_PATH}/appsettings.runner.json"
+    sed -i -E "s!(\"ConnectionString\").*!\1: \"${runner_connection_escaped}\"!g" "${BACKEND_PATH}/appsettings.runner.json"
 
     log "✅ Configuration files updated"
 }
@@ -591,7 +604,7 @@ main() {
     # Runs before the chown below, so the Studio tree it creates ends up owned by onlyoffice
     maintain_plugins
     # app_data/log_data are shared with onlyoffice-document-server, which re-chowns its own Data dir's inode to its "ds" user on every one of its own restarts (confirmed live, not recursive - only this one entry). onlyoffice is in Docs' group (Dockerfile), so chmod g+w here survives that indefinitely; skips Docs' own wopi keys, its private signing material.
-    find /app/onlyoffice/data \( -name wopi_private.key -o -name wopi_public.key \) -prune -o -exec chown onlyoffice:onlyoffice {} +
+    find /app/onlyoffice/data \( -name wopi_private.key -o -name wopi_public.key \) -prune -o -exec chown -h onlyoffice:onlyoffice {} +
     chmod g+w /app/onlyoffice/data
     chown onlyoffice:onlyoffice /var/log/onlyoffice
     chmod g+w /var/log/onlyoffice
@@ -606,19 +619,25 @@ main() {
     setup_nginx_ssl
     log "🌐 Initializing nginx..." && /nginx/docker-entrypoint.sh
 
+    # onlyoffice owns the nginx configuration and logs; the openresty binaries, its Lua libraries and the CA bundle stay with root, so nothing root runs here can be replaced from the onlyoffice account; /etc/nginx/certs is skipped because it is a read-only bind mount
+    find /etc/nginx /var/log/nginx /var/log/openresty -path /etc/nginx/certs -prune -o -exec chown -h onlyoffice:onlyoffice {} +
+    # Only entries that are not root-owned are changed: a blanket chown -R would copy the whole tree up into the container layer on every start
+    find /usr/local/openresty /etc/ssl/certs -path /usr/local/openresty/nginx/logs -prune -o \( ! -user root -o ! -group root \) -exec chown -h root:root {} +
+    chown -h onlyoffice:onlyoffice /usr/local/openresty/nginx/logs
+
+    # The config is writable by onlyoffice, so it is never parsed by root: openresty -t runs as onlyoffice
+    run_as_onlyoffice() { setpriv --reuid=onlyoffice --regid=onlyoffice --init-groups "$@"; }
+
     # The Dockerfile already strips quic/http3 at build time when this openresty build lacks it; this is a second check in case that detection was wrong - better HTTPS without HTTP/3 than openresty crash-looping.
-    if ! /usr/local/openresty/bin/openresty -t >/tmp/nginx-t.log 2>&1 && grep -qi 'quic\|http/3\|http3' /tmp/nginx-t.log; then
+    if ! run_as_onlyoffice /usr/local/openresty/bin/openresty -t >/tmp/nginx-t.log 2>&1 && grep -qi 'quic\|http/3\|http3' /tmp/nginx-t.log; then
         log "openresty -t failed on HTTP/3, retrying without it:"
         cat /tmp/nginx-t.log
         sed -i -e '/quic/d' -e '/alt-svc/d' /etc/nginx/conf.d/onlyoffice-proxy.conf
-        /usr/local/openresty/bin/openresty -t
+        run_as_onlyoffice /usr/local/openresty/bin/openresty -t
     fi
 
-    # Everything above ran as root and can leave nginx/openresty's own files root-owned: the router's init scripts (prepare-nginx-router.sh's sed -i) rewrite conf.d files, and openresty -t itself creates its configured error_log if missing - confirmed live, both broke openresty (runs as onlyoffice below) with "Permission denied" until fixed here, right before it starts. /etc/nginx/certs is excluded: it's the read-only certs bind mount (docker-compose.yml), chown there fails the whole command (EROFS) - the certs are already world-readable (644), so onlyoffice doesn't need to own them anyway.
-    find /etc/nginx /var/log/nginx /var/log/openresty /usr/local/openresty -path /etc/nginx/certs -prune -o -exec chown onlyoffice:onlyoffice {} +
-
     # openresty -t above (as root) also creates the *_temp dirs owned by nobody:root mode 700, so onlyoffice workers fail to buffer large request bodies (chunked upload -> 500, "open() /tmp/client_temp/... failed (13: Permission denied)")
-    find /tmp -maxdepth 1 \( -name client_temp -o -name proxy_temp_path -o -name fastcgi_temp -o -name uwsgi_temp -o -name scgi_temp \) -exec chown -R onlyoffice:onlyoffice {} +
+    find /tmp -maxdepth 1 \( -name client_temp -o -name proxy_temp_path -o -name fastcgi_temp -o -name uwsgi_temp -o -name scgi_temp \) -exec chown -hR onlyoffice:onlyoffice {} +
 
     log "✅ Initialization complete - starting supervisord"
     log "=================================="

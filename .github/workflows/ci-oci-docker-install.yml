@@ -11,9 +11,13 @@ on:
     paths:
       - ".github/workflows/ci-oci-docker-install.yml"
       - ".github/scripts/docker-utils.sh"
+      - ".github/scripts/macos-check/**"
       - "tests/smoke/**"
+      - "install/OneClickInstall/apps-install.sh"
       - "install/OneClickInstall/install-Docker*.sh"
       - "install/OneClickInstall/common/check-ports.sh"
+      - "install/OneClickInstall/common/logging.sh"
+      - "install/OneClickInstall/common/swap.sh"
       - "install/docker/**"
   workflow_dispatch:
     inputs:
@@ -41,6 +45,9 @@ on:
 env:
   IS_4TESTING: ${{ github.event.inputs.testing }}
   DOCKER_TAG: ${{ github.event.inputs.tag }}
+
+permissions:
+  contents: read
 
 jobs:
   Setup:
@@ -77,7 +84,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ github.ref_name }}
 
@@ -85,7 +92,7 @@ jobs:
         run: sudo bash .github/scripts/free-disk-space-linux.sh
 
       - name: Login to DockerHub
-        uses: docker/login-action@v4
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -153,7 +160,7 @@ jobs:
 
       - name: Configure AWS Credentials
         if: success() && github.event.inputs.offline == 'true' && matrix.mode.name == 'standalone'
-        uses: aws-actions/configure-aws-credentials@v6.0.0
+        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6.0.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_OCI }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_OCI }}
@@ -166,6 +173,21 @@ jobs:
           AWS_REST_API_ID: ${{ secrets.AWS_REST_API_ID }}
           AWS_RESOURCE_ID: ${{ secrets.AWS_RESOURCE_ID }}
         run: bash .github/scripts/offline-archive.sh upload
+
+  macOS-script-check:
+    name: OCI (macOS script check)
+    # no Docker VM: the paths that are specific to macOS run on a real runner against a fake docker
+    runs-on: macos-26
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Check the macOS paths of the installer
+        run: bash .github/scripts/macos-check/check.sh
 
   Update-OCI-Docker:
     runs-on: ${{ matrix.runner }}
@@ -181,7 +203,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ github.ref_name }}
 
@@ -189,7 +211,7 @@ jobs:
         run: sudo bash .github/scripts/free-disk-space-linux.sh
 
       - name: Login to DockerHub
-        uses: docker/login-action@v4
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}

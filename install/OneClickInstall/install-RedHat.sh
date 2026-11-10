@@ -59,7 +59,7 @@ require_value() {
 
 while [ "$1" != "" ]; do
     case "$1" in
-        -h | -? | --help ) ;;
+        -h | '-?' | --help ) ;;
         -* ) require_value "$1" "$2" ;;
     esac
 
@@ -72,13 +72,13 @@ while [ "$1" != "" ]; do
         -gb | --gitbranch )                 [ -n "$2" ] && GIT_BRANCH=$2 && shift ;;
         -ifb | --installfluentbit )         [ -n "$2" ] && INSTALL_FLUENT_BIT=$2 && shift ;;
         -av | --appsversion | -dsv | --docspaceversion ) [ -n "$2" ] && PRODUCT_VERSION=$2 && shift ;;
-        -du | --dashboardsusername )        [ -n "$2" ] && DASHBOARDS_USERNAME=$2 && shift ;;
-        -dp | --dashboardspassword )        [ -n "$2" ] && DASHBOARDS_PASSWORD=$2 && shift ;;
+        -du | --dashboardsusername )        [ -n "$2" ] && export DASHBOARDS_USERNAME=$2 && shift ;;
+        -dp | --dashboardspassword )        [ -n "$2" ] && export DASHBOARDS_PASSWORD=$2 && shift ;;
         -ls | --localscripts )              [ -n "$2" ] && LOCAL_SCRIPTS=$2 && shift ;;
         -skiphc | --skiphardwarecheck )     [ -n "$2" ] && SKIP_HARDWARE_CHECK=$2 && shift ;;
         -it | --installationtype | --installation_type ) [ -n "$2" ] && INSTALLATION_TYPE="${2,,}" && shift ;;
         -ms | --makeswap )                  [ -n "$2" ] && MAKESWAP=$2 && shift ;;
-        -h | -? | --help )
+        -h | '-?' | --help )
             echo "  Usage $0 [PARAMETER] [[PARAMETER], ...]"
             echo "    Parameters:"
             echo "      -it, --installationtype           installation type (community|developer|enterprise)"
@@ -129,42 +129,48 @@ DOWNLOAD_URL_PREFIX="https://download.onlyoffice.com/${product}"
 [ -n "$GIT_BRANCH" ] && DOWNLOAD_URL_PREFIX="https://raw.githubusercontent.com/ONLYOFFICE/${legacy_product}-buildtools/${GIT_BRANCH}/install/OneClickInstall"
 
 source_remote_script() {
-    local SCRIPT_PATH="$1"
-    local SCRIPT_TMP
+    local SCRIPT_BODY
 
-    SCRIPT_TMP="$(mktemp)"
-    curl -fsSL --retry 3 --retry-delay 2 "${DOWNLOAD_URL_PREFIX}/${SCRIPT_PATH}" -o "${SCRIPT_TMP}" || { rm -f "${SCRIPT_TMP}"; return 1; }
-    bash -n "${SCRIPT_TMP}" || { rm -f "${SCRIPT_TMP}"; return 1; }
-    source "${SCRIPT_TMP}"
-    rm -f "${SCRIPT_TMP}"
+    SCRIPT_BODY=$(curl -fsSL --retry 3 --retry-delay 2 "${DOWNLOAD_URL_PREFIX}/$1") || { echo "Error: failed to download $1" >&2; return 1; }
+    bash -n <<< "${SCRIPT_BODY}" || { echo "Error: downloaded $1 is not a valid script" >&2; return 1; }
+    source <(printf '%s\n' "${SCRIPT_BODY}")
 }
 
 # Run uninstall if requested
 if [ "${UNINSTALL}" == "true" ]; then
     if [ "${LOCAL_SCRIPTS}" == "true" ]; then
+        source common/swap.sh
         source install-RedHat/uninstall.sh
     else
+        source_remote_script common/swap.sh
         source_remote_script install-RedHat/uninstall.sh
     fi
     exit 0
 fi
 
+# Check hardware, architecture and OS support before the host is modified.
+if [ "$LOCAL_SCRIPTS" = "true" ]; then
+	source install-RedHat/tools.sh
+else
+	source_remote_script install-RedHat/tools.sh
+fi
+
 cat > /etc/yum.repos.d/onlyoffice.repo <<END
 [onlyoffice]
 name=onlyoffice repo
-baseurl=http://download.onlyoffice.com/repo/centos/main/noarch/
+baseurl=https://download.onlyoffice.com/repo/centos/main/noarch/
 gpgcheck=1
 enabled=1
 gpgkey=https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE
 END
 
 if [ "$LOCAL_SCRIPTS" = "true" ]; then
-	source install-RedHat/tools.sh
 	source common/check-ports.sh
+	source common/swap.sh
 	source common/preserve-docs.sh
 else
-	source_remote_script install-RedHat/tools.sh
 	source_remote_script common/check-ports.sh
+	source_remote_script common/swap.sh
 	source_remote_script common/preserve-docs.sh
 fi
 

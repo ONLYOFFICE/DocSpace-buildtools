@@ -26,7 +26,6 @@ This repository contains the **build, deployment, and infrastructure** tooling f
 - [Database Migrations](#database-migrations)
 - [CI/CD](#cicd)
   - [GitHub Actions](#github-actions)
-  - [Jenkins](#jenkins)
 - [Licensing](#licensing)
 
 ## Project Structure
@@ -51,18 +50,15 @@ buildtools/
 │   ├── common/                # Shared build and packaging scripts
 │   ├── win/                   # Windows Advanced Installer projects
 │   ├── deb/                   # Debian package metadata
-│   ├── rpm/                   # RPM package metadata
-│   └── snap/                  # Snap package configuration
+│   └── rpm/                   # RPM package metadata
 ├── run/                        # Per-service executables (28 services, .bat)
 ├── scripts/                    # Service startup scripts (identity, socketio, sso, webdav)
 ├── start/                      # Service lifecycle (start.sh, stop.sh, restart.sh)
-├── tests/                      # Test utilities (lint, vagrant)
-├── tools/                      # Utility scripts
-├── .github/workflows/          # GitHub Actions (12 workflows)
-├── build*.sh, build*.bat       # Platform-specific build scripts
-├── run*.sh, run*.bat           # Test and migration runners
-├── *.py                        # Python orchestration utilities
-└── Jenkinsfile                 # Jenkins pipeline
+├── build/                      # Build and deploy scripts (build*.sh/.bat, build.backend.docker.py, publish)
+├── migrations/                 # Database migration runners (runMigrations*, createMigrations)
+├── tests/                      # Test utilities (lint, smoke, vagrant) and test runners (run.*tests*)
+├── tools/                      # Utility scripts (runasadmin.bat, debuginfo.py, run.dnsmasq.py, requirements.txt)
+└── .github/workflows/          # GitHub Actions (12 workflows)
 ```
 
 ## Installation
@@ -155,7 +151,6 @@ Two separate nginx roles, each with its own config directory.
 - `docker-entrypoint.d/20-envsubst-on-templates.sh` — Processes `*.template` files with `envsubst`
 - `docker-entrypoint.d/30-tune-worker-processes.sh` — Auto-tunes worker processes
 - `templates/upstream.conf.template` — Static upstream definitions
-- `templates/onlyoffice-upstream-map.conf.template` — Dynamic service URL maps (reads `SERVICE_*` env vars)
 
 **Proxy** (`install/docker/config/nginx/proxy/`) — mounted into the proxy container at runtime via `proxy.yml`:
 - `onlyoffice-proxy.conf` — HTTP reverse proxy: forwards all traffic to the router on port 8092
@@ -170,13 +165,13 @@ Two separate nginx roles, each with its own config directory.
 
 ```bash
 # Linux/macOS
-./runMigrations.sh
+./migrations/runMigrations.sh
 
 # Windows
-runMigrations.bat
+migrations/runMigrations.bat
 
 # Windows (standalone mode)
-runMigrations.standalone.bat
+migrations/runMigrations.standalone.bat
 ```
 
 Docker-based migrations are handled by `migration-runner.yml` Compose service.
@@ -213,13 +208,6 @@ Docker-based migrations are handled by `migration-runner.yml` Compose service.
 |----------|---------|
 | `rebuild-boxes.yml` | VM box rebuilding |
 | `readme-update.yml` | Documentation automation |
-
-### Jenkins
-
-`Jenkinsfile` defines a declarative pipeline with:
-- Parallel Unix/Windows build stages
-- Automated testing
-- Telegram notifications
 
 ## The standalone (single-container) topology
 

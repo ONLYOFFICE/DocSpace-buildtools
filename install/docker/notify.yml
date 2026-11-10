@@ -16,7 +16,7 @@ x-service:
       MYSQL_CONTAINER_NAME: ${MYSQL_CONTAINER_NAME}
       MYSQL_HOST: ${MYSQL_HOST}
       MYSQL_PORT: ${MYSQL_PORT}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_SSL_MODE: ${MYSQL_SSL_MODE:-none}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
@@ -59,6 +59,7 @@ x-service:
     #- /app/onlyoffice/CommunityServer/data:/app/onlyoffice/data
     - ${VOLUMES_DIR:+${VOLUMES_DIR}/}app_data:/app/onlyoffice/data
     - ${VOLUMES_DIR:+${VOLUMES_DIR}/}log_data:/var/log/onlyoffice
+    #- ${CONFIG_OVERRIDE}:/app/onlyoffice/config/appsettings.${INSTALLATION_TYPE}.json:ro
 
 services:
   onlyoffice-notify:

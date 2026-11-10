@@ -4,38 +4,43 @@ on:
   schedule:
     - cron: '0 20 * * *' # Every day at 20:00 UTC
 
+permissions:
+  contents: read
+
 jobs:
   trigger-builds:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the code
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           fetch-depth: 0
 
       - name: List Branches
         id: list-branches
         run: |
-          echo "branches=$(git ls-remote --heads origin | grep -Po 'refs/heads/\K((release|hotfix)/v[0-9][^ ]*|develop)' | xargs)" >> $GITHUB_OUTPUT
+          echo "branches=$(git ls-remote --heads origin | grep -Po 'refs/heads/\K((release|hotfix)/v[0-9][A-Za-z0-9._/-]*|develop)' | xargs)" >> $GITHUB_OUTPUT
 
       - name: Dispatch Action main build
         env:
           GH_TOKEN: ${{ secrets.TOKEN }}
+          BRANCHES: ${{ steps.list-branches.outputs.branches }}
         run: |
-          gh api --method POST /repos/${{ github.repository }}/dispatches \
+          gh api --method POST "/repos/${GITHUB_REPOSITORY}/dispatches" \
             -f "event_type=cron-trigger-action" \
-            $(echo "${{ steps.list-branches.outputs.branches }}" | xargs -n1 printf -- '-f client_payload[branches][]=%s ')
+            $(echo "${BRANCHES}" | xargs -n1 printf -- '-f client_payload[branches][]=%s ')
 
       - name: Dispatch Action build packages
         env:
           GH_TOKEN: ${{ secrets.TOKEN }}
           WORKFLOW_FILE: build_packages.yml
+          BRANCHES: ${{ steps.list-branches.outputs.branches }}
         run: |
-          for BRANCH in ${{ steps.list-branches.outputs.branches }}; do
+          for BRANCH in ${BRANCHES}; do
             CHANGED=$(git log origin/${BRANCH} --since="24 hours ago" --pretty=format: --name-only --diff-filter=ACM | sort -u)
             [[ ! ${CHANGED} =~ install/(common|deb|rpm)/ ]] && continue
 
-            gh workflow run ${WORKFLOW_FILE} --repo "${{ github.repository }}" \
+            gh workflow run ${WORKFLOW_FILE} --repo "${GITHUB_REPOSITORY}" \
               --ref=${BRANCH} \
               --field deb_build=$([[ ${CHANGED} =~ install/(common|deb)/ ]] && echo true || echo false) \
               --field rpm_build=$([[ ${CHANGED} =~ install/(common|rpm)/ ]] && echo true || echo false) \

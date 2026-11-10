@@ -10,15 +10,15 @@ ONLYOFFICE Apps Build Tools — build scripts, Docker configurations, installati
 
 ```bash
 # Build
-./build.sh                          # Full backend + frontend build (Linux)
-./build.backend.sh                  # Backend only
-./build.backend.docker.py           # Backend via Docker
-./build.static.sh                   # Static assets
+./build/build.sh                    # Full backend + frontend build (Linux)
+./build/build.backend.sh            # Backend only
+./build/build.backend.docker.py     # Backend via Docker
+./build/build.static.sh             # Static assets
 
 # Database migrations
-./runMigrations.sh                  # Linux
-runMigrations.bat                   # Windows
-runMigrations.standalone.bat        # Windows (standalone mode)
+./migrations/runMigrations.sh       # Linux
+migrations/runMigrations.bat        # Windows
+migrations/runMigrations.standalone.bat  # Windows (standalone mode)
 
 # Service lifecycle (dev)
 ./start/start.sh                    # Start all services
@@ -26,7 +26,7 @@ runMigrations.standalone.bat        # Windows (standalone mode)
 ./start/restart.sh                  # Restart all services
 
 # Docker Compose (from install/docker/)
-# Set MYSQL_ROOT_PASSWORD, MYSQL_PASSWORD, RABBIT_PASSWORD, and DOCUMENT_SERVER_JWT_SECRET in .env first.
+# Set MYSQL_ROOT_PASSWORD, MYSQL_PASSWORD, RABBIT_PASSWORD, APP_CORE_MACHINEKEY, IDENTITY_ENCRYPTION_SECRET, and DOCUMENT_SERVER_JWT_SECRET in .env first.
 docker compose -f apps.yml -f db.yml -f redis.yml -f rabbitmq.yml up -d
 docker compose -f apps-stack.yml up -d  # Full stack shortcut
 
@@ -37,8 +37,8 @@ bash install/OneClickInstall/install-Debian.sh        # Debian/Ubuntu
 bash install/OneClickInstall/install-RedHat.sh        # RHEL/CentOS
 
 # Translation tests
-./run.translations.tests.py
-./run.backend.translations.tests.sh
+./tests/run.translations.tests.py
+./tests/run.backend.translations.tests.sh
 ```
 
 ## Project Structure
@@ -52,7 +52,6 @@ config/                     — Application configuration (~30 JSON + nginx)
   redis.json / rabbitmq.json / elastic.json / socket.json / notify.json
   nlog.config               — Structured logging (NLog)
   dnsmasq.conf              — DNS for local dev
-  radicale.*                — CalDAV/CardDAV server configs
   nginx/                    — Nginx configs + includes/ + sites-enabled/
   document-formats/         — Document format definitions (git submodule)
 
@@ -73,7 +72,7 @@ install/
         docker-standalone-entrypoint.sh
         docker-bin-share-entrypoint.sh / docker-wait-bin-share-entrypoint.sh
         prepare-nginx-router.sh
-      dev/                  — Local-dev-only Compose overlays (build.backend.docker.py):
+      dev/                  — Local-dev-only Compose overlays (build/build.backend.docker.py):
         db.dev.yml            — MySQL dev overrides (exposed ports)
         apps.profiles.yml     — Profile-based configs (local dev)
         apps.overcome.yml     — Local dev overrides
@@ -103,22 +102,22 @@ install/
   win/                      — Windows installer (Advanced Installer .aip, WinSW, Nginx, OpenSearch)
   deb/                      — Debian package metadata
   rpm/                      — RPM spec files
-  snap/                     — Snap package config
 
 run/                        — Per-service launch scripts (~15 services, .bat + .xml)
                               WebApi, Files, People, Notify, Backup, AI, Identity, etc.
 scripts/                    — Service startup: identity, socketio, ssoauth, webdav (.sh + .bat)
 start/                      — Dev lifecycle: start/stop/restart (.sh + .bat + .py)
-tests/                      — lint/, vagrant/
-tools/                      — check.sh
+build/                      — Build and deploy scripts: build*.sh/.bat, build.backend.docker.py, buildAndDeploy, publish
+migrations/                 — runMigrations*.sh/.bat, createMigrations.bat
+tests/                      — lint/, smoke/, vagrant/ + run.*tests*.{sh,bat,py}, run.e2e.*.bat
+tools/                      — runasadmin.bat, debuginfo.py, requirements.txt, run.dnsmasq.py, clear.backend.docker.py, campaigns.downloader.py, check.sh
 .github/workflows/          — GitHub Actions workflows (see CI/CD section)
-Jenkinsfile                 — Jenkins declarative pipeline
 ```
 
 ## Docker Compose Architecture
 
 Compose is **modular** — compose files are combined with `-f`. The `install/docker/.env` has ~200 variables covering all services.
-For direct Compose runs, fill `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`, `RABBIT_PASSWORD`, and `DOCUMENT_SERVER_JWT_SECRET` in `.env` before starting bundled dependencies. `install-Docker.sh` generates these automatically.
+For direct Compose runs, fill `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`, `RABBIT_PASSWORD`, `APP_CORE_MACHINEKEY`, `IDENTITY_ENCRYPTION_SECRET`, and `DOCUMENT_SERVER_JWT_SECRET` in `.env` before starting bundled dependencies. `install-Docker.sh` generates these automatically.
 
 Key compose combinations:
 ```bash
@@ -151,7 +150,7 @@ docker compose --env-file .env -f apps.yml -f build/dev/apps.overcome.yml up -d
 
 | Workflow | Purpose |
 |----------|---------|
-| `ci-oci-docker-install.yml` | OneClickInstall Docker tests: install in stack/microservices/standalone modes, smoke tests, container restart, update from the released version |
+| `ci-oci-docker-install.yml` | OneClickInstall Docker tests: install in stack/microservices/standalone modes, smoke tests, container restart, update from the released version; on macOS the `macOS-script-check` job runs `.github/scripts/macos-check/check.sh` against a fake docker (no VM, no containers) |
 | `ci-oci-install.yml` | Linux package install tests |
 | `ci-oci-update.yml` | Update mechanism tests |
 | `rebuild-boxes.yml` | Rebuild Vagrant boxes for install tests |
