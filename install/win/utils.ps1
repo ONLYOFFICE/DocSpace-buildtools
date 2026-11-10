@@ -8,10 +8,164 @@ function RandomString {
         [int]$Length
     )
     $Characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    $RandomString = -join (1..$Length | ForEach-Object {
-        $Characters[(Get-Random -Minimum 0 -Maximum $Characters.Length)]
-    })
-    return $RandomString
+    $Limit = 256 - (256 % $Characters.Length)  # bytes above it would bias the result
+    $Buffer = [byte[]]::new(1)
+    $Rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    try {
+        return -join (1..$Length | ForEach-Object {
+            do { $Rng.GetBytes($Buffer) } while ($Buffer[0] -ge $Limit)
+            $Characters[$Buffer[0] % $Characters.Length]
+        })
+    } finally {
+        $Rng.Dispose()
+    }
+}
+
+# Secret MSI properties use " " as the "not set" placeholder.
+function IsUnset {
+    param (
+        [string]$Value
+    )
+    return [string]::IsNullOrWhiteSpace($Value)
+}
+
+function IsLocalHost {
+    param (
+        [string]$HostName
+    )
+    return @('localhost', '127.0.0.1', '::1') -contains "$HostName".Trim()
+}
+
+# The package is 32-bit, so its keys live in the 32-bit registry view.
+$RegistryRoot       = 'SOFTWARE\Ascensio System SIA'
+$ProductKey         = "$RegistryRoot\ONLYOFFICE Apps"
+$DatabaseSecretsKey = "$RegistryRoot\ONLYOFFICE Apps Database"
+$AdministratorsOnlySddl = 'D:PAI(A;CI;KA;;;SY)(A;CI;KA;;;BA)'  # SYSTEM and Administrators, nothing inherited
+
+# Opens (or creates) an HKLM key and leaves access to SYSTEM and Administrators only.
+function OpenProtectedRegistryKey {
+    param (
+        [string]$SubKey,
+        [switch]$Create
+    )
+    $ReadWrite = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
+    $Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry32')
+    try {
+        $Key = if ($Create) { $Base.CreateSubKey($SubKey, $ReadWrite) } else { $Base.OpenSubKey($SubKey, $ReadWrite) }
+        if ($Key) {
+            $Acl = [System.Security.AccessControl.RegistrySecurity]::new()
+            $Acl.SetSecurityDescriptorSddlForm($AdministratorsOnlySddl, 'Access')
+            $Key.SetAccessControl($Acl)
+        }
+        return $Key
+    } finally {
+        $Base.Close()
+    }
+}
+
+# Secrets are written here, not from the Registry table: Windows Installer logs the value of every
+# registry value it writes (RegAddValue), even for properties listed in MsiHiddenProperties.
+$ProductSecrets = 'DB_PWD', 'AMQP_PWD', 'PS_DB_PWD', 'REDIS_PWD', 'DASHBOARDS_PWD', 'DOCUMENT_SERVER_JWT_SECRET', 'MACHINE_KEY', 'IDENTITY_ENCRYPTION_SECRET'
+# Kept after uninstall, as their permanent components did, so that a reinstall reuses them.
+$PermanentSecrets = 'MACHINE_KEY', 'IDENTITY_ENCRYPTION_SECRET'
+
+function StoreProductSecrets {
+    $Uninstall = (AI_GetMsiProperty REMOVE) -eq 'ALL'
+    $Key = OpenProtectedRegistryKey $ProductKey -Create:(-not $Uninstall)
+    if (-not $Key) { return }
+    try {
+        foreach ($Name in $ProductSecrets) {
+            if (-not $Uninstall) { $Key.SetValue($Name, [string](AI_GetMsiProperty $Name)) }
+            elseif ($PermanentSecrets -notcontains $Name) { $Key.DeleteValue($Name, $false) }
+        }
+    } finally {
+        $Key.Close()
+    }
+}
+
+# Superuser passwords of the bundled database servers. The key is not owned by the MSI,
+# so a reinstall can still sign in after an uninstall.
+function GetDatabaseSecret {
+    param (
+        [string]$Name
+    )
+    $Key = OpenProtectedRegistryKey $DatabaseSecretsKey
+    if ($Key) { try { return $Key.GetValue($Name) } finally { $Key.Close() } }
+}
+
+function StoreDatabaseSecret {
+    param (
+        [string]$Name,
+        [string]$Value
+    )
+    $Key = OpenProtectedRegistryKey $DatabaseSecretsKey -Create
+    try { $Key.SetValue($Name, $Value) } finally { $Key.Close() }
+}
+
+function GetMySqlOdbcDriver {
+    $Driver = Get-ChildItem 'HKLM:\SOFTWARE\ODBC\ODBCINST.INI', 'HKLM:\SOFTWARE\WOW6432Node\ODBC\ODBCINST.INI' -ErrorAction SilentlyContinue |
+        Where-Object { $_.PSChildName -like '*MySQL ODBC*' -and $_.PSChildName -notlike '*ANSI*' } |
+        Select-Object -First 1 -ExpandProperty PSChildName
+    return "$Driver"
+}
+
+# Returns $null when the server rejects the credentials.
+function OpenOdbcConnection {
+    param (
+        [string]$ConnectionString
+    )
+    $Connection = New-Object System.Data.Odbc.OdbcConnection($ConnectionString)
+    try {
+        $Connection.Open()
+        return $Connection
+    } catch {
+        $Connection.Dispose()
+        return $null
+    }
+}
+
+# Signs in with the first password that works; returns the connection and that password.
+function ConnectWithFirstPassword {
+    param (
+        [string]$ConnectionString,
+        [string[]]$Passwords
+    )
+    foreach ($Password in $Passwords | Where-Object { -not (IsUnset $_) } | Select-Object -Unique) {
+        $Connection = OpenOdbcConnection "$ConnectionString;PWD=$Password;"
+        if ($Connection) {
+            return @{ Connection = $Connection; Password = $Password }
+        }
+    }
+}
+
+function ConnectMySqlRoot {
+    param (
+        [string[]]$Passwords
+    )
+    return ConnectWithFirstPassword "DRIVER={$(GetMySqlOdbcDriver)};SERVER=127.0.0.1;PORT=$(AI_GetMsiProperty DB_PORT);USER=root" $Passwords
+}
+
+function ConnectPostgres {
+    param (
+        [string[]]$Passwords
+    )
+    return ConnectWithFirstPassword "Driver={PostgreSQL Unicode};Server=$(AI_GetMsiProperty PS_DB_HOST);Port=$(AI_GetMsiProperty PS_DB_PORT);Database=postgres;Uid=postgres" $Passwords
+}
+
+function InvokeOdbcNonQuery {
+    param (
+        $Connection,
+        [string[]]$Statements
+    )
+    $Cmd = $Connection.CreateCommand()
+    try {
+        foreach ($Statement in $Statements) {
+            $Cmd.CommandText = $Statement
+            [void]$Cmd.ExecuteNonQuery()
+        }
+    } finally {
+        $Cmd.Dispose()
+    }
 }
 
 # Helper function to replaces or add a configuration parameter in the provided content.
@@ -104,10 +258,11 @@ function ApplyInstalledDocumentServerSettings {
     catch { Write-Warning "Invalid DocumentServer version: installed=$InstalledVersion" }
     AI_SetMsiProperty DOCUMENT_SERVER_INSTALL_NONE ([string][int]$SkipDocsInstall)
 
+    # The secret DOCS_* properties are declared with a " " placeholder so they can be hidden from the log.
     if ($Value = AI_GetMsiProperty DOCS_DBHOST) { AI_SetMsiProperty PS_DB_HOST $Value }
     if ($Value = AI_GetMsiProperty DOCS_DBNAME) { AI_SetMsiProperty PS_DB_NAME $Value }
     if ($Value = AI_GetMsiProperty DOCS_DBPORT) { AI_SetMsiProperty PS_DB_PORT $Value }
-    if ($Value = AI_GetMsiProperty DOCS_DBPWD) { AI_SetMsiProperty PS_DB_PWD $Value }
+    if (-not (IsUnset ($Value = AI_GetMsiProperty DOCS_DBPWD))) { AI_SetMsiProperty PS_DB_PWD $Value }
     if ($Value = AI_GetMsiProperty DOCS_DBUSER) { AI_SetMsiProperty PS_DB_USER $Value }
     if ($Value = AI_GetMsiProperty DOCS_JWTENABLED) {
         AI_SetMsiProperty DOCUMENT_SERVER_JWT_ENABLED $Value
@@ -117,13 +272,13 @@ function ApplyInstalledDocumentServerSettings {
         AI_SetMsiProperty DOCUMENT_SERVER_JWT_HEADER $Value
         AI_SetMsiProperty JWT_HEADER $Value
     }
-    if ($Value = AI_GetMsiProperty DOCS_JWTSECRET) {
+    if (-not (IsUnset ($Value = AI_GetMsiProperty DOCS_JWTSECRET))) {
         AI_SetMsiProperty DOCUMENT_SERVER_JWT_SECRET $Value
         AI_SetMsiProperty JWT_SECRET $Value
     }
     if ($Value = AI_GetMsiProperty DOCS_RABBITMQHOST) { AI_SetMsiProperty AMQP_HOST $Value }
     if ($Value = AI_GetMsiProperty DOCS_RABBITMQPROTO) { AI_SetMsiProperty AMQP_PROTOCOL $Value }
-    if ($Value = AI_GetMsiProperty DOCS_RABBITMQPWD) { AI_SetMsiProperty AMQP_PWD $Value }
+    if (-not (IsUnset ($Value = AI_GetMsiProperty DOCS_RABBITMQPWD))) { AI_SetMsiProperty AMQP_PWD $Value }
     if ($Value = AI_GetMsiProperty DOCS_RABBITMQUSER) { AI_SetMsiProperty AMQP_USER $Value }
     if ($Value = AI_GetMsiProperty DOCS_REDISHOST) { AI_SetMsiProperty REDIS_HOST $Value }
 
@@ -183,26 +338,7 @@ function TestSqlConnection {
     $Uid      = AI_GetMsiProperty DB_USER
     $Pwd      = AI_GetMsiProperty DB_PWD
 
-    $MySqlDriver = ""
-    $Paths = @(
-        "HKLM:\SOFTWARE\ODBC\ODBCINST.INI",
-        "HKLM:\SOFTWARE\WOW6432Node\ODBC\ODBCINST.INI"
-    )
-
-    foreach ($path in $Paths) {
-        if (Test-Path $path) {
-            $keys = Get-ChildItem -Path $path -ErrorAction SilentlyContinue
-            foreach ($k in $keys) {
-                $name = $k.PSChildName
-                if ($name -like "*MySQL ODBC*" -and $name -notlike "*ANSI*") {
-                    $MySqlDriver = $name
-                    break
-                }
-            }
-        }
-        if ($MySqlDriver) { break }
-    }
-
+    $MySqlDriver = GetMySqlOdbcDriver
     AI_SetMsiProperty MYSQLODBCDRIVER $MySqlDriver
 
     $ConnectionString = "DRIVER={$MySqlDriver};SERVER=$Server;PORT=$Port;USER=$Uid;PASSWORD=$Pwd;"
@@ -225,24 +361,101 @@ function TestSqlConnection {
     }
 }
 
-# Configures MySQL settings by updating my.ini and setting the root password.
+# Superuser passwords the bundled prerequisites start with: MySQL from "MySQL Server Installer Runner.iss",
+# PostgreSQL from --superpassword in Apps.aip. SecureDatabaseSuperusers replaces them.
+$MySqlBootstrapRootPassword  = 'root'
+$PostgreSqlBootstrapPassword = 'postgres'
+$ApplicationDbUser           = 'onlyoffice_user'
+
+# The prefix satisfies the default MySQL password policy.
+function NewDatabasePassword {
+    return 'Aa1_' + (RandomString -Length 28)
+}
+
+# Gives the application its own MySQL account limited to its database.
+function CreateMySqlApplicationAccount {
+    $DbName   = AI_GetMsiProperty DB_NAME
+    $DbPwd    = AI_GetMsiProperty DB_PWD
+    $UsesRoot = (AI_GetMsiProperty DB_USER) -eq 'root'
+
+    $IsRemote      = -not (IsLocalHost (AI_GetMsiProperty DB_HOST))
+    $HasOwnAccount = -not $UsesRoot -and -not (IsUnset $DbPwd)
+    if ($IsRemote -or $HasOwnAccount) {
+        Write-Output "Using the provided MySQL account."
+        return
+    }
+    # The name is interpolated into SQL.
+    if ($DbName -notmatch '^[A-Za-z0-9_]+$') { throw "DB_NAME '$DbName' is not a plain identifier." }
+
+    $RootPasswords = @((GetDatabaseSecret MYSQL_ROOT_PWD), $MySqlBootstrapRootPassword)
+    if ($UsesRoot) { $RootPasswords = @($DbPwd) + $RootPasswords }  # an earlier installation or the command line
+
+    $Login = ConnectMySqlRoot $RootPasswords
+    if (-not $Login) {
+        Write-Output "Unable to sign in to the local MySQL server as root; the MySQL account must be entered manually."
+        return
+    }
+
+    try {
+        $AppPwd = NewDatabasePassword
+        InvokeOdbcNonQuery $Login.Connection @(foreach ($AccountHost in 'localhost', '127.0.0.1') {
+            "CREATE USER IF NOT EXISTS '$ApplicationDbUser'@'$AccountHost' IDENTIFIED BY '$AppPwd'"
+            "ALTER USER '$ApplicationDbUser'@'$AccountHost' IDENTIFIED BY '$AppPwd'"
+            "GRANT ALL PRIVILEGES ON ``$DbName``.* TO '$ApplicationDbUser'@'$AccountHost'"
+        })
+        # The configuration no longer holds the root password, so keep it for administrators.
+        StoreDatabaseSecret MYSQL_ROOT_PWD $Login.Password
+
+        AI_SetMsiProperty DB_USER $ApplicationDbUser
+        AI_SetMsiProperty DB_PWD $AppPwd
+        Write-Output "MySQL account '$ApplicationDbUser' has access to database '$DbName' only."
+    } finally {
+        $Login.Connection.Close()
+    }
+}
+
+# Replaces a bootstrap superuser password. The new one is stored first, so it can never be lost.
+function ReplaceBootstrapPassword {
+    param (
+        $Login,
+        [string]$SecretName,
+        [string]$AlterStatement  # {0} is the new password
+    )
+    if (-not $Login) { return }
+    try {
+        $Password = NewDatabasePassword
+        StoreDatabaseSecret $SecretName $Password
+        InvokeOdbcNonQuery $Login.Connection ($AlterStatement -f $Password)
+        Write-Output "The bootstrap password ($SecretName) was replaced with a random one."
+    } catch {
+        Write-Warning "Unable to replace the bootstrap password ($SecretName): $($_.Exception.Message)"
+    } finally {
+        $Login.Connection.Close()
+    }
+}
+
+# Runs after InstallFinalize, so a rolled back update never depends on a changed password.
+# Skipped while the application itself signs in as the superuser.
+function SecureDatabaseSuperusers {
+    if ((IsLocalHost (AI_GetMsiProperty DB_HOST)) -and (AI_GetMsiProperty DB_USER) -ne 'root') {
+        ReplaceBootstrapPassword (ConnectMySqlRoot $MySqlBootstrapRootPassword) MYSQL_ROOT_PWD "ALTER USER 'root'@'localhost' IDENTIFIED BY '{0}'"
+    }
+    if ((IsLocalHost (AI_GetMsiProperty PS_DB_HOST)) -and (AI_GetMsiProperty PS_DB_USER) -ne 'postgres') {
+        ReplaceBootstrapPassword (ConnectPostgres $PostgreSqlBootstrapPassword) POSTGRES_PWD "ALTER USER postgres WITH PASSWORD '{0}'"
+    }
+}
+
+# Configures MySQL settings by updating my.ini and setting up the application account.
 function MySQLConfigure {
-    $MySqlDriver = AI_GetMsiProperty MYSQLODBCDRIVER
-    $DbName      = AI_GetMsiProperty DB_NAME
-    $DbPass      = AI_GetMsiProperty DB_PWD
+    $DataDir = (AI_GetMsiProperty "ProgramFiles64Folder") + "/MySQL/MySQL Server 8.4/data"
 
-    $InstallDir = (AI_GetMsiProperty "ProgramFiles64Folder") + "/MySQL/MySQL Server 8.4"
-    $DataDir    = (AI_GetMsiProperty "ProgramFiles64Folder") + "/MySQL/MySQL Server 8.4/data"
-
-    Write-Output "MySQLConfigure: InstallDir $InstallDir"
     Write-Output "MySQLConfigure: DataDir $DataDir"
 
     try {
         $Service = Get-Service -Name "MySQL84" -ErrorAction Stop
 
         if ($Service.Status -eq 'Running') {
-            $MySqlPath = Join-Path $InstallDir "bin\mysql.exe"
-            & $MySqlPath -u root --password=$DbPass -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '$DbPass';"
+            CreateMySqlApplicationAccount
         } else {
             Write-Output "MySQL service is not running."
         }
@@ -285,6 +498,57 @@ function MySQLConfigure {
     $UpdatedLines | Set-Content -Path $IniFilePath
 }
 
+# A silent install runs the Docs prerequisite before the MSI, so Docs gets the default (empty) database
+# password. Gives the installed Docs the password of its database user and restarts its services.
+function SyncDocumentServerDbPassword {
+    param (
+        [string]$DbUser,
+        [string]$DbPwd
+    )
+    $DocsDir = GetDocumentServerInstallLocation
+    if (-not $DocsDir) { return }
+    $LocalJson = Join-Path $DocsDir 'config\local.json'
+    if (-not (Test-Path -LiteralPath $LocalJson -PathType Leaf)) { return }
+
+    $DocsDb = (Get-Content -LiteralPath $LocalJson -Raw | ConvertFrom-Json).services.CoAuthoring.sql
+    if ($DocsDb.dbUser -ne $DbUser -or $DocsDb.dbPass -eq $DbPwd) { return }
+
+    $Content = [IO.File]::ReadAllText($LocalJson) -replace '("dbPass"\s*:\s*")[^"]*', "`${1}$DbPwd"
+    [IO.File]::WriteAllText($LocalJson, $Content, (New-Object Text.UTF8Encoding($false)))
+
+    $Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry64')
+    try {
+        $Key = $Base.OpenSubKey('SOFTWARE\ONLYOFFICE\DocumentServer', $true)
+        if ($Key) { try { $Key.SetValue('DbPwd', $DbPwd) } finally { $Key.Close() } }
+    } finally {
+        $Base.Close()
+    }
+
+    Get-Service DsDocServiceSvc, DsConverterSvc -ErrorAction SilentlyContinue | Restart-Service -Force
+    Write-Output "DocumentServer now uses the password of database user '$DbUser'."
+}
+
+# For the same reason the Docs installer could not create its tables: its database user did not exist yet.
+function CreateDocumentServerSchema {
+    $DocsDir = GetDocumentServerInstallLocation
+    if (-not $DocsDir) { return }
+    $Schema = Join-Path $DocsDir 'server\schema\postgresql\createdb.sql'
+    if (-not (Test-Path -LiteralPath $Schema -PathType Leaf)) { return }
+
+    $Conn = OpenOdbcConnection "Driver={PostgreSQL Unicode};Server=$(AI_GetMsiProperty PS_DB_HOST);Port=$(AI_GetMsiProperty PS_DB_PORT);Database=$(AI_GetMsiProperty PS_DB_NAME);Uid=$(AI_GetMsiProperty PS_DB_USER);Pwd=$(AI_GetMsiProperty PS_DB_PWD)"
+    if (-not $Conn) { return }
+    try {
+        $Cmd = $Conn.CreateCommand()
+        $Cmd.CommandText = "SELECT COUNT(*) FROM pg_tables WHERE schemaname = 'public' AND tablename = 'task_result'"
+        if ([int]$Cmd.ExecuteScalar() -gt 0) { return }
+
+        InvokeOdbcNonQuery $Conn ([IO.File]::ReadAllText($Schema))
+        Write-Output "DocumentServer database tables created."
+    } finally {
+        $Conn.Close()
+    }
+}
+
 # Configures PostgreSQL by creating the database and user if they do not exist.
 function PostgreSqlConfigure {
     $DbUser = AI_GetMsiProperty PS_DB_USER
@@ -293,12 +557,17 @@ function PostgreSqlConfigure {
     $DbPort = AI_GetMsiProperty PS_DB_PORT
     $DbHost = AI_GetMsiProperty PS_DB_HOST
 
-    $Driver      = "PostgreSQL Unicode"
-    $ConnString  = "Driver={$Driver};Server=$DbHost;Port=$DbPort;Database=postgres;Uid=postgres;Pwd=postgres"
-
     try {
-        $Conn = New-Object System.Data.Odbc.OdbcConnection($ConnString)
-        $Conn.Open()
+        $Conn = (ConnectPostgres (GetDatabaseSecret POSTGRES_PWD), $PostgreSqlBootstrapPassword).Connection
+        if (-not $Conn) {
+            Write-Output "Unable to sign in to PostgreSQL as postgres; the account must be entered manually."
+            return
+        }
+
+        # No password was provided and none was taken from an installed Docs.
+        $GeneratedPwd = IsUnset $DbPwd
+        if ($GeneratedPwd) { $DbPwd = NewDatabasePassword }
+
         $Cmd = $Conn.CreateCommand()
 
         $Cmd.CommandText = "SELECT 1 FROM pg_database WHERE datname = '$DbName';"
@@ -319,6 +588,11 @@ function PostgreSqlConfigure {
             $Cmd.CommandText = "CREATE USER $DbUser WITH ENCRYPTED PASSWORD '$DbPwd';"
             $Cmd.ExecuteNonQuery()
             Write-Output "User '$DbUser' created successfully."
+        } elseif ($GeneratedPwd) {
+            # The generated password must match the existing user.
+            $Cmd.CommandText = "ALTER USER $DbUser WITH ENCRYPTED PASSWORD '$DbPwd';"
+            $Cmd.ExecuteNonQuery()
+            Write-Output "User '$DbUser' already exists; its password was replaced."
         } else {
             Write-Output "User '$DbUser' already exists."
         }
@@ -326,6 +600,10 @@ function PostgreSqlConfigure {
         $Cmd.CommandText = "GRANT ALL PRIVILEGES ON DATABASE $DbName TO $DbUser;"
         $Cmd.ExecuteNonQuery()
         Write-Output "Granted privileges on database '$DbName' to user '$DbUser'."
+
+        if ($GeneratedPwd) { AI_SetMsiProperty PS_DB_PWD $DbPwd }
+        SyncDocumentServerDbPassword $DbUser $DbPwd
+        CreateDocumentServerSchema
     }
     catch {
         Write-Output "An error occurred while configuring PostgreSQL:"
@@ -356,10 +634,10 @@ function SetMachineKey {
     }
 
     if ([string]::IsNullOrEmpty($MachineKey)) {
-        $MachineKey = RandomString -Length 16
-        Write-Output "MACHINE_KEY is set to random string: $MachineKey"
+        $MachineKey = RandomString -Length 32
+        Write-Output "MACHINE_KEY is set to a new random value."
     } else {
-        Write-Output "MACHINE_KEY is set to: $MachineKey"
+        Write-Output "MACHINE_KEY is taken from the existing configuration."
     }
 
     AI_SetMsiProperty MACHINE_KEY $MachineKey
@@ -371,16 +649,39 @@ function SetDashboardsPwd {
     AI_SetMsiProperty DASHBOARDS_PWD $DashboardsPwd
 }
 
-# Sets a random IDENTITY_ENCRYPTION_SECRET property.
-function SetIdentityEncryptionSecret {
-    $IsUpdate = AI_GetMsiProperty OLDPRODUCTS
-    $IdentityEncryptionSecret = "secret"
+# Reads the Identity encryption key from the service wrappers of the installed version.
+function GetInstalledIdentityEncryptionSecret {
+    $AppDir = AI_GetMsiProperty APPDIR
+    if (IsUnset $AppDir) { return }
 
-    if (-not $IsUpdate) {
-        $IdentityEncryptionSecret = RandomString -Length 12
+    foreach ($Name in 'Identity.Authorization.xml', 'Identity.Registration.xml') {
+        $Path = Join-Path $AppDir "tools\$Name"
+        if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { continue }
+        try {
+            $Value = ([xml](Get-Content -LiteralPath $Path -Raw)).service.env |
+                Where-Object name -eq 'SPRING_APPLICATION_ENCRYPTION_SECRET' |
+                Select-Object -First 1 -ExpandProperty value
+            # A wrapper that was never filled in still holds the {IDENTITY_ENCRYPTION_SECRET} placeholder.
+            if (-not (IsUnset $Value) -and $Value -notmatch '^\{.*\}$') { return $Value }
+        } catch {
+            Write-Warning "Unable to read $Path."
+        }
     }
+}
 
-    AI_SetMsiProperty IDENTITY_ENCRYPTION_SECRET $IdentityEncryptionSecret
+# Runs only when the registry holds no key. An update must keep the installed key: a new one would make
+# the data encrypted by Identity unreadable, so without it the update stops (AbortMissingIdentityEncryptionSecret).
+function SetIdentityEncryptionSecret {
+    if (-not (AI_GetMsiProperty OLDPRODUCTS)) {
+        AI_SetMsiProperty IDENTITY_ENCRYPTION_SECRET (RandomString -Length 32)
+        Write-Output "IDENTITY_ENCRYPTION_SECRET is set to a new random value."
+    } elseif ($InstalledSecret = GetInstalledIdentityEncryptionSecret) {
+        AI_SetMsiProperty IDENTITY_ENCRYPTION_SECRET $InstalledSecret
+        Write-Output "IDENTITY_ENCRYPTION_SECRET is taken from the installed version."
+    } else {
+        AI_SetMsiProperty IDENTITY_ENCRYPTION_SECRET_MISSING "1"
+        Write-Output "IDENTITY_ENCRYPTION_SECRET of the installed version was not found; the update is stopped."
+    }
 }
 
 # Function to set up OpenSearch.
