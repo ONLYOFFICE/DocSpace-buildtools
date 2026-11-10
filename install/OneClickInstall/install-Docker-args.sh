@@ -117,7 +117,7 @@ while [ "$1" != "" ]; do
         -cf      | --certfile            ) [ -n "$2" ] && CERTIFICATE_PATH="$2"                                                   && shift ;;
         -ckf     | --certkeyfile         ) [ -n "$2" ] && CERTIFICATE_KEY_PATH="$2"                                               && shift ;;
         -co      | --configoverride      ) [ -n "$2" ] && CONFIG_OVERRIDE="$2"                                                    && shift ;;
-        -h | -? | --help )
+        -h | '-?' | --help )
             help_opt() { printf "    %-22s %-14s %s\n" "$@"; }
             help_note() { printf "%42s%s\n" "" "$1"; }
 

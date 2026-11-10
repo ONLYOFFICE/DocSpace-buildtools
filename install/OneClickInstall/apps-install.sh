@@ -60,7 +60,7 @@ done
 
 while [ "$1" != "" ]; do
     case "$1" in
-        -h | -? | --help | docker | package ) ;;
+        -h | '-?' | --help | docker | package ) ;;
         -* ) require_value "$1" "$2" ;;
     esac
 
@@ -71,7 +71,7 @@ while [ "$1" != "" ]; do
         -av | --appsversion | -dsv | --docspaceversion ) [ -n "$2" ] && PARAMETERS+=("${1}") && DOCKER_TAG=$2 && PRODUCT_VERSION=$2 && shift ;;
         docker ) DOCKER="true"; shift ; continue ;;
         package ) DOCKER="false"; shift ; continue ;;
-        -h | -? | --help )
+        -h | '-?' | --help )
             if [ -z "$DOCKER" ]; then
                 echo "Run 'bash $FILE_NAME docker' to install Docker version of application."
                 echo "Run 'bash $FILE_NAME package' to install DEB/RPM version."

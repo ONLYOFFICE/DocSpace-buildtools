@@ -77,7 +77,7 @@ while [ "$1" != "" ]; do
         -skiphc | --skiphardwarecheck )     [ -n "$2" ] && SKIP_HARDWARE_CHECK=$2 && shift ;;
         -it | --installationtype | --installation_type ) [ -n "$2" ] && INSTALLATION_TYPE="${2,,}" && shift ;;
         -ms | --makeswap )                  [ -n "$2" ] && MAKESWAP=$2 && shift ;;
-        -h | -? | --help )
+        -h | '-?' | --help )
             echo "  Usage $0 [PARAMETER] [[PARAMETER], ...]"
             echo "    Parameters:"
             echo "      -it, --installationtype           installation type (community|developer|enterprise)"
