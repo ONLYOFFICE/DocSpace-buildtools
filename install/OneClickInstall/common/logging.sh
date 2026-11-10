@@ -36,7 +36,7 @@
  #
 
 
-# Installer output logging for apps-install.sh; keep it bash 3.2 compatible, macOS runs the wrapper under the system bash
+# Installer output logging for apps-install.sh; keep it bash 3.2 compatible (macOS runs the wrapper under the system bash) and safe under set -e
 
 # Writes the host details support asks about first; every probe is best effort
 log_environment_summary () {
@@ -80,27 +80,22 @@ start_log () {
         || { echo "Failed to create log file" >&2; exit 1; }
 }
 
-# Runs "bash <script> [parameters]" with its output saved to LOG_FILE and sets EXIT_CODE; without script(1) the run goes unlogged
+# Runs "bash <script> [parameters]" with its output saved to LOG_FILE and sets EXIT_CODE
 run_with_log () {
-    if [[ "$OSTYPE" == darwin* ]]; then
-        # BSD script has no -c option, so the log is written by tee
-        start_log "$@"
+    if [[ "$OSTYPE" != darwin* ]] && [ -t 0 ] && ! command -v script >/dev/null 2>&1 && command -v dnf >/dev/null 2>&1; then
+        dnf -y install util-linux-script || true
+    fi
+    start_log "$@"
+    # tee where script(1) does not fit: BSD script has no -c, and with piped answers script would turn stdin into a terminal
+    if [[ "$OSTYPE" == darwin* ]] || [ ! -t 0 ] || ! command -v script >/dev/null 2>&1; then
         bash "$@" 2>&1 | tee -a "${LOG_FILE}"
         EXIT_CODE=${PIPESTATUS[0]}
         return
     fi
-    command -v script >/dev/null 2>&1 || { command -v dnf >/dev/null 2>&1 && dnf -y install util-linux-script; }
-    if ! command -v script >/dev/null 2>&1; then
-        bash "$@"
-        EXIT_CODE=$?
-        return
-    fi
-    start_log "$@"
     # script writes its command into the log header, so the parameters with secrets reach it through the environment
     local OCI_COMMAND
     printf -v OCI_COMMAND '%q ' bash "$@"
-    OCI_COMMAND="${OCI_COMMAND}" script -q -e -a "${LOG_FILE}" -c 'COMMAND=$OCI_COMMAND; unset OCI_COMMAND; exec bash -c "$COMMAND"'
-    EXIT_CODE=$?
+    OCI_COMMAND="${OCI_COMMAND}" script -q -e -a "${LOG_FILE}" -c 'COMMAND=$OCI_COMMAND; unset OCI_COMMAND; exec bash -c "$COMMAND"' && EXIT_CODE=0 || EXIT_CODE=$?
 }
 
 # Removes the log after a successful run, otherwise compacts it and tells where it is
@@ -168,6 +163,8 @@ compact_log () {
                 else if (match(rest, /^[()][0-9A-Za-z]/)) rest = substr(rest, 3)
                 else rest = substr(rest, 2)
             }
+            # A status line never spans lines, so a newline ends a save that was never restored
+            if (detached) restore()
             row++; col = 0
             # Rows far above the cursor can no longer be redrawn, so they are written out to keep memory flat
             if (row - top > 1000) flush(row - 500)
