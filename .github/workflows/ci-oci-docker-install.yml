@@ -16,6 +16,7 @@ on:
       - "install/OneClickInstall/apps-install.sh"
       - "install/OneClickInstall/install-Docker*.sh"
       - "install/OneClickInstall/common/check-ports.sh"
+      - "install/OneClickInstall/common/logging.sh"
       - "install/OneClickInstall/common/swap.sh"
       - "install/docker/**"
   workflow_dispatch:

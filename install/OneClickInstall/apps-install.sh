@@ -224,27 +224,31 @@ if [ "$LOCAL_SCRIPTS" != "true" ]; then
     bash -n "${SCRIPT_NAME}" || { echo "Downloaded ${SCRIPT_NAME} has invalid Bash syntax" >&2; exit 1; }
 fi
 
-if [ "$ENABLE_LOGGING" = "true" ] && [[ "$OSTYPE" == darwin* ]]; then
-    # BSD script has no -c option, so the log is written by tee
-    LOG_FILE="OneClick${SCRIPT_NAME%.sh}_$(date +%Y%m%d_%H%M%S).log"
-    bash "${SCRIPT_NAME}" "${PARAMETERS[@]}" 2>&1 | tee "${LOG_FILE}"
-    EXIT_CODE=${PIPESTATUS[0]}
-elif [ "$ENABLE_LOGGING" = "true" ]; then
-    command -v script >/dev/null 2>&1 || { command -v dnf >/dev/null 2>&1 && dnf -y install util-linux-script; }
-    if command -v script >/dev/null 2>&1; then
-        LOG_FILE="OneClick${SCRIPT_NAME%.sh}_$(date +%Y%m%d_%H%M%S).log"
-        touch "${LOG_FILE}" || { echo "Failed to create log file"; exit 1; }
-        printf -v SCRIPT_COMMAND '%q ' bash "${SCRIPT_NAME}" "${PARAMETERS[@]}"
-        script -q -e "${LOG_FILE}" -c "${SCRIPT_COMMAND}"
-        EXIT_CODE=${PIPESTATUS[0]}
+# The log is optional: when the logging helpers cannot be loaded, the installation runs without it
+if [ "$ENABLE_LOGGING" = "true" ]; then
+    LOGGING_SCRIPT="common/logging.sh"
+    if [ "$LOCAL_SCRIPTS" = "true" ]; then
+        source "${LOGGING_SCRIPT}" || ENABLE_LOGGING="false"
     else
-        bash "${SCRIPT_NAME}" "${PARAMETERS[@]}" || EXIT_CODE=$?
+        # A temporary file instead of source <(...): bash 3.2 on macOS reads nothing from process substitution in source
+        LOGGING_SCRIPT_TMP=$(mktemp)
+        if curl -fsSL --retry 3 --retry-delay 2 "${DOWNLOAD_URL_PREFIX}/${LOGGING_SCRIPT}" -o "${LOGGING_SCRIPT_TMP}" && bash -n "${LOGGING_SCRIPT_TMP}"; then
+            source "${LOGGING_SCRIPT_TMP}"
+        else
+            echo "Warning: failed to load ${LOGGING_SCRIPT}, the installation runs without a log" >&2
+            ENABLE_LOGGING="false"
+        fi
+        rm -f "${LOGGING_SCRIPT_TMP}"
     fi
+fi
+
+if [ "$ENABLE_LOGGING" = "true" ]; then
+    run_with_log "${SCRIPT_NAME}" "${PARAMETERS[@]}"
 else
     bash "${SCRIPT_NAME}" "${PARAMETERS[@]}" || EXIT_CODE=$?
 fi
 
 [ "$LOCAL_SCRIPTS" != "true" ] && rm "${SCRIPT_NAME}"
-[ "$ENABLE_LOGGING" = "true" ] && { [ "${EXIT_CODE:-0}" -eq 0 ] && rm -f "$LOG_FILE" || echo -e "\033[0;31mAn error occurred while executing the script. Log saved to: $LOG_FILE\033[0m"; }
+[ "$ENABLE_LOGGING" = "true" ] && finish_log
 
 exit ${EXIT_CODE:-0}
