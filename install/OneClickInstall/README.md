@@ -271,7 +271,10 @@ sudo bash apps-install.sh \
 ```bash
 sudo bash apps-install.sh \
   --installdocs false \
-  --docsurl http://docs.example.com:8080
+  --docsurl http://docs.example.com:8080 \
+  --jwtsecret <Docs JWT secret> \
+  --jwtheader <Docs JWT header> \
+  --appshost <address of this server reachable from Docs>
 ```
 
 12. Use external MySQL

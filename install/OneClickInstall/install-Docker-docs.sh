@@ -384,11 +384,25 @@ set_docs_url_external () {
 	fi
 }
 
+# Without a known secret an external Docs is usable only when it does not require JWT (CommandService answers error 6 when it does).
+check_external_docs_jwt () {
+	local RESPONSE
+	RESPONSE="$(curl -s -m 10 -X POST -H "Content-Type: application/json" -d '{"c":"version"}' "${DOCUMENT_SERVER_URL_EXTERNAL%/}/coauthoring/CommandService.ashx" 2>/dev/null)"
+
+	if [[ "${RESPONSE}" =~ \"error\":\ *6 ]]; then
+		echo "Error: the external Document Server at ${DOCUMENT_SERVER_URL_EXTERNAL} requires JWT, but its secret is unknown. Pass --jwtsecret and --jwtheader." >&2
+		exit 1
+	elif [[ ! "${RESPONSE}" =~ \"error\":\ *0 ]]; then
+		echo "Warning: could not check whether the external Document Server requires JWT. If it does, pass --jwtsecret and --jwtheader." >&2
+	fi
+}
+
 set_jwt_secret () {
 	DOCUMENT_SERVER_JWT_SECRET="${DOCUMENT_SERVER_JWT_SECRET:-$(get_env_parameter "JWT_SECRET" "${PACKAGE_SYSNAME}-document-server")}"
 	DOCUMENT_SERVER_JWT_SECRET="${DOCUMENT_SERVER_JWT_SECRET:-$(get_env_parameter "DOCUMENT_SERVER_JWT_SECRET" "${CONTAINER_NAME}")}"
 	[ "${DOCUMENT_SERVER_ATTACHED}" = "true" ] && \
 		DOCUMENT_SERVER_JWT_SECRET="${DOCUMENT_SERVER_JWT_SECRET:-$(get_env_parameter "JWT_SECRET" "${DOCUMENT_SERVER_HOST}")}"
+	[[ -z ${DOCUMENT_SERVER_JWT_SECRET} && -n ${DOCUMENT_SERVER_HOST} && "${DOCUMENT_SERVER_ATTACHED}" != "true" && "${INSTALL_PRODUCT}" == "true" ]] && check_external_docs_jwt
 	DOCUMENT_SERVER_JWT_SECRET="${DOCUMENT_SERVER_JWT_SECRET:-$(get_random_str 32)}"
 }
 
