@@ -384,7 +384,7 @@ set_docs_url_external () {
 	fi
 }
 
-# Succeeds only when CommandService explicitly refuses a token signed with the secret; the header name is tried both ways unless it is given.
+# Succeeds only when CommandService answers a token signed with the secret with error 6 (token error); the header name is tried both ways unless it is given.
 is_docs_jwt_secret_rejected () {
 	local SECRET="$1" HEADER_NAME TOKEN_HEADER TOKEN_PAYLOAD TOKEN_SIGNATURE RESPONSE
 	is_command_exists openssl || return 1
@@ -396,7 +396,7 @@ is_docs_jwt_secret_rejected () {
 	for HEADER_NAME in ${DOCUMENT_SERVER_JWT_HEADER:-Authorization AuthorizationJwt}; do
 		RESPONSE="$(curl -s -m 10 -X POST -H "Content-Type: application/json" -H "${HEADER_NAME}: Bearer ${TOKEN_HEADER}.${TOKEN_PAYLOAD}.${TOKEN_SIGNATURE}" -d '{"c":"version"}' "${DOCUMENT_SERVER_URL_EXTERNAL%/}/coauthoring/CommandService.ashx" 2>/dev/null)"
 		# An accepted token or no answer proves nothing against the secret
-		[[ "${RESPONSE}" =~ \"error\":\ *[1-9] ]] || return 1
+		[[ "${RESPONSE}" =~ \"error\":\ *6([^0-9]|$) ]] || return 1
 	done
 	return 0
 }
@@ -406,23 +406,27 @@ check_external_docs_jwt () {
 	local RESPONSE
 	RESPONSE="$(curl -s -m 10 -X POST -H "Content-Type: application/json" -d '{"c":"version"}' "${DOCUMENT_SERVER_URL_EXTERNAL%/}/coauthoring/CommandService.ashx" 2>/dev/null)"
 
-	if [[ "${RESPONSE}" =~ \"error\":\ *6 ]]; then
+	if [[ "${RESPONSE}" =~ \"error\":\ *6([^0-9]|$) ]]; then
 		# Without a terminal or in non-interactive mode there is nobody to ask
 		if [ "${NON_INTERACTIVE:-false}" != "true" ] && [ -t 0 ]; then
-			local ATTEMPT
-			for ATTEMPT in 1 2 3; do
+			# Keep the typed secret out of the xtrace log
+			local _attempt XTRACE_STATE=""
+			[[ $- == *x* ]] && XTRACE_STATE="on"
+			set +x
+			for _attempt in 1 2 3; do
 				read -r -s -p "The external Document Server at ${DOCUMENT_SERVER_URL_EXTERNAL} requires JWT. Enter its secret: " DOCUMENT_SERVER_JWT_SECRET
 				echo
 				[[ -n ${DOCUMENT_SERVER_JWT_SECRET} ]] || break
 				is_docs_jwt_secret_rejected "${DOCUMENT_SERVER_JWT_SECRET}" || break
-				echo "The Document Server did not accept this secret." >&2
+				echo "The Document Server did not accept this secret (a JWT header other than Authorization and AuthorizationJwt needs --jwtheader)." >&2
 				DOCUMENT_SERVER_JWT_SECRET=""
 			done
+			if [ -n "${XTRACE_STATE}" ]; then set -x; fi
 		fi
 		[[ -n ${DOCUMENT_SERVER_JWT_SECRET} ]] && return 0
 		echo "Error: the external Document Server at ${DOCUMENT_SERVER_URL_EXTERNAL} requires JWT, but its secret is unknown. Pass --jwtsecret (and --jwtheader if it was changed there)." >&2
 		exit 1
-	elif [[ ! "${RESPONSE}" =~ \"error\":\ *0 ]]; then
+	elif [[ ! "${RESPONSE}" =~ \"error\":\ *0([^0-9]|$) ]]; then
 		echo "Warning: could not check whether the external Document Server requires JWT. If it does, pass --jwtsecret and --jwtheader." >&2
 	fi
 }
