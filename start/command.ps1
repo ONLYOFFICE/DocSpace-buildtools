@@ -1,7 +1,7 @@
 $PSversionMajor = $PSVersionTable.PSVersion | sort-object major | ForEach-Object {$_.major}
 $PSversionMinor = $PSVersionTable.PSVersion | sort-object minor | ForEach-Object {$_.minor}
 
-if ($PSversionMajor -lt 7 -or $PSversionMinor -lt 2) {
+if ($PSversionMajor -lt 7 -or ($PSversionMajor -eq 7 -and $PSversionMinor -lt 2)) {
     Write-Error "Powershell version must be greater than or equal to 7.2."
     exit
 }

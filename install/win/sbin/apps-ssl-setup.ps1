@@ -187,6 +187,12 @@ if ( $args.Count -ge 2 ) {
   else {
     $letsencrypt_mail = $args[0] -JOIN ","
     $letsencrypt_domain = $args[1] -JOIN ","
+    foreach ($domain in $letsencrypt_domain -split ',') {
+      if ($domain -notmatch '^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$') {
+        Write-Error "Error: domain name '$domain' is incorrect."
+        exit 1
+      }
+    }
     $domain_name = $letsencrypt_domain -split ',' | Select-Object -First 1
 
     [void](New-Item -ItemType "directory" -Path "${root_dir}\Logs" -Force)
@@ -233,7 +239,8 @@ if ( $args.Count -ge 2 ) {
     if ($letsencrypt_domain -and (Test-Path $letsencrypt_domain_dir))
     {
         $acl = Get-Acl -Path $letsencrypt_domain_dir
-        $acl.SetSecurityDescriptorSddlForm('O:LAG:S-1-5-21-4011186057-2202358572-2315966083-513D:PAI(A;OI;0x1200a9;;;WD)(A;;FA;;;SY)(A;OI;0x1200a9;;;LS)(A;;FA;;;BA)(A;;FA;;;LA)')
+        # SYSTEM runs OpenResty and needs the key; Administrators manage it.
+        $acl.SetSecurityDescriptorSddlForm('D:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)', [System.Security.AccessControl.AccessControlSections]::Access)
         Set-Acl -Path $acl.path -ACLObject $acl
     }
 

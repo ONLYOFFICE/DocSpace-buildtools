@@ -16,7 +16,7 @@
     <ROW Property="AMQP_HOST" Value="localhost" ValueLocId="-"/>
     <ROW Property="AMQP_PORT" Value="5672" ValueLocId="-"/>
     <ROW Property="AMQP_PROTOCOL" Value="amqp" ValueLocId="-"/>
-    <ROW Property="AMQP_PWD" Value="guest" ValueLocId="-"/>
+    <ROW Property="AMQP_PWD" Value="guest" Options="1" ValueLocId="-"/>
     <ROW Property="AMQP_USER" Value="guest" ValueLocId="-"/>
     <ROW Property="AMQP_VHOST" Value="/" ValueLocId="-"/>
     <ROW Property="APPDIR_FORWARD_SLASH" Value=" "/>
@@ -36,28 +36,29 @@
     <ROW Property="ARPURLUPDATEINFO" Value="https://www.onlyoffice.com/download-apps.aspx"/>
     <ROW Property="BASE_DOMAIN" Value="localhost"/>
     <ROW Property="COMMON_SHORTCUT_NAME" Value="ONLYOFFICE"/>
-    <ROW Property="DASHBOARDS_PWD" Value=" "/>
+    <ROW Property="DASHBOARDS_PWD" Value=" " Options="1"/>
     <ROW Property="DATABASE_MIGRATION" Value="true"/>
     <ROW Property="DB_HOST" Value="localhost"/>
     <ROW Property="DB_NAME" Value="onlyoffice"/>
     <ROW Property="DB_PORT" Value="3306"/>
-    <ROW Property="DB_PWD" Value="root"/>
+    <ROW Property="DB_PWD" Value="root" Options="1"/>
     <ROW Property="DB_USER" Value="root"/>
     <ROW Property="DOCUMENT_SERVER_HOST" Value="localhost"/>
-    <ROW Property="DOCUMENT_SERVER_JWT_SECRET" Value=" "/>
+    <ROW Property="DOCUMENT_SERVER_JWT_SECRET" Value=" " Options="1"/>
     <ROW Property="DOCUMENT_SERVER_PORT" Value="8083"/>
     <ROW Property="DOCUMENT_SERVER_URL_PUBLIC" Value="/ds-vpath"/>
     <ROW Property="DS_VERSION" Value="0.0.0.0"/>
     <ROW Property="DOMAIN_NAME" Value="localhost:80"/>
     <ROW Property="ENVIRONMENT" Value="community" MultiBuildValue="ExeBuild:enterprise#ExeBuild_1:developer"/>
     <ROW Property="Editor_Port" Value="5013"/>
-    <ROW Property="IDENTITY_ENCRYPTION_SECRET" Value=" "/>
+    <ROW Property="IDENTITY_ENCRYPTION_SECRET" Value=" " Options="1"/>
     <ROW Property="INSTALL_ROOT_FOLDER_NAME" Value="[|Manufacturer]"/>
     <ROW Property="JWT_ENABLED" Value="true"/>
     <ROW Property="JWT_HEADER" Value="AuthorizationJwt"/>
+    <ROW Property="JWT_SECRET" Value=" " Options="1"/>
     <ROW Property="LICENSE_PATH" Value=" "/>
     <ROW Property="Login_Port" Value="5011"/>
-    <ROW Property="MACHINE_KEY" Value=" "/>
+    <ROW Property="MACHINE_KEY" Value=" " Options="1"/>
     <ROW Property="MSIFASTINSTALL" MultiBuildValue="DefaultBuild:3#ExeBuild:7#ExeBuild_1:7"/>
     <ROW Property="MYSQLODBCDRIVER" Value="MySQL ODBC 8.0 Unicode Driver"/>
     <ROW Property="Manufacturer" Value="Ascensio System SIA"/>
@@ -74,7 +75,7 @@
     <ROW Property="PS_DB_HOST" Value="localhost"/>
     <ROW Property="PS_DB_NAME" Value="onlyoffice"/>
     <ROW Property="PS_DB_PORT" Value="5432"/>
-    <ROW Property="PS_DB_PWD" Value="onlyoffice"/>
+    <ROW Property="PS_DB_PWD" Value="onlyoffice" Options="1"/>
     <ROW Property="PS_DB_USER" Value="onlyoffice"/>
     <ROW Property="Prereq_IAgree" Value="No"/>
     <ROW Property="ProductCode" Value="1033:{3FABEB4A-D27F-4BA6-A40E-16BE47540727} " Type="16"/>

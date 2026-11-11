@@ -8,9 +8,20 @@ function RandomString {
         [int]$Length
     )
     $Characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    $RandomString = -join (1..$Length | ForEach-Object {
-        $Characters[(Get-Random -Minimum 0 -Maximum $Characters.Length)]
-    })
+    $Limit = 256 - (256 % $Characters.Length)  # bytes at or above the limit are skipped to keep the choice uniform
+    $Buffer = New-Object byte[] 1
+    $Generator = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    $RandomString = ''
+    try {
+        while ($RandomString.Length -lt $Length) {
+            $Generator.GetBytes($Buffer)
+            if ($Buffer[0] -lt $Limit) {
+                $RandomString += $Characters[$Buffer[0] % $Characters.Length]
+            }
+        }
+    } finally {
+        $Generator.Dispose()
+    }
     return $RandomString
 }
 
@@ -356,10 +367,10 @@ function SetMachineKey {
     }
 
     if ([string]::IsNullOrEmpty($MachineKey)) {
-        $MachineKey = RandomString -Length 16
-        Write-Output "MACHINE_KEY is set to random string: $MachineKey"
+        $MachineKey = RandomString -Length 32
+        Write-Output "MACHINE_KEY is set to a random string."
     } else {
-        Write-Output "MACHINE_KEY is set to: $MachineKey"
+        Write-Output "MACHINE_KEY is taken from the existing configuration."
     }
 
     AI_SetMsiProperty MACHINE_KEY $MachineKey
@@ -373,14 +384,10 @@ function SetDashboardsPwd {
 
 # Sets a random IDENTITY_ENCRYPTION_SECRET property.
 function SetIdentityEncryptionSecret {
-    $IsUpdate = AI_GetMsiProperty OLDPRODUCTS
-    $IdentityEncryptionSecret = "secret"
-
-    if (-not $IsUpdate) {
-        $IdentityEncryptionSecret = RandomString -Length 12
+    # An update keeps the value found in the registry.
+    if (-not (AI_GetMsiProperty OLDPRODUCTS)) {
+        AI_SetMsiProperty IDENTITY_ENCRYPTION_SECRET (RandomString -Length 32)
     }
-
-    AI_SetMsiProperty IDENTITY_ENCRYPTION_SECRET $IdentityEncryptionSecret
 }
 
 # Function to set up OpenSearch.
