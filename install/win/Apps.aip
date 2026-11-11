@@ -37,15 +37,12 @@
     <ROW Property="BASE_DOMAIN" Value="localhost"/>
     <ROW Property="COMMON_SHORTCUT_NAME" Value="ONLYOFFICE"/>
     <ROW Property="DASHBOARDS_PWD" Value=" " Options="1"/>
-    <ROW Property="DOCS_DBPWD" Value=" " Options="1"/>
-    <ROW Property="DOCS_JWTSECRET" Value=" " Options="1"/>
-    <ROW Property="DOCS_RABBITMQPWD" Value=" " Options="1"/>
     <ROW Property="DATABASE_MIGRATION" Value="true"/>
     <ROW Property="DB_HOST" Value="localhost"/>
     <ROW Property="DB_NAME" Value="onlyoffice"/>
     <ROW Property="DB_PORT" Value="3306"/>
-    <ROW Property="DB_PWD" Value=" " Options="1"/>
-    <ROW Property="DB_USER" Value="onlyoffice_user"/>
+    <ROW Property="DB_PWD" Value="root" Options="1"/>
+    <ROW Property="DB_USER" Value="root"/>
     <ROW Property="DOCUMENT_SERVER_HOST" Value="localhost"/>
     <ROW Property="DOCUMENT_SERVER_JWT_SECRET" Value=" " Options="1"/>
     <ROW Property="DOCUMENT_SERVER_PORT" Value="8083"/>
@@ -78,7 +75,7 @@
     <ROW Property="PS_DB_HOST" Value="localhost"/>
     <ROW Property="PS_DB_NAME" Value="onlyoffice"/>
     <ROW Property="PS_DB_PORT" Value="5432"/>
-    <ROW Property="PS_DB_PWD" Value=" " Options="1"/>
+    <ROW Property="PS_DB_PWD" Value="onlyoffice" Options="1"/>
     <ROW Property="PS_DB_USER" Value="onlyoffice"/>
     <ROW Property="Prereq_IAgree" Value="No"/>
     <ROW Property="ProductCode" Value="1033:{3FABEB4A-D27F-4BA6-A40E-16BE47540727} " Type="16"/>
@@ -254,10 +251,12 @@
     <ROW Component="DocumentServer" ComponentId="{9F6BB24B-F2F9-4FE5-8431-A46F38A301AD}" Directory_="APPDIR" Attributes="260" KeyPath="DocumentServer" Options="2"/>
     <ROW Component="DocumentServer.DE" ComponentId="{F0381FCD-B31D-4E19-BA87-2F1330FC48DB}" Directory_="APPDIR" Attributes="4" KeyPath="DocumentServer.DE" Options="2"/>
     <ROW Component="DocumentServer.EE" ComponentId="{F1FEAEA5-AE4B-4C94-A699-0410A6C6D1B0}" Directory_="APPDIR" Attributes="4" KeyPath="DocumentServer.EE" Options="2"/>
+    <ROW Component="IDENTITY_ENCRYPTION_SECRET" ComponentId="{A3029F44-A45C-4A29-A500-B797F45C4A7C}" Directory_="APPDIR" Attributes="20" KeyPath="IDENTITY_ENCRYPTION_SECRET"/>
     <ROW Component="Identity.Authorization.exe" ComponentId="{751E3F35-D9BE-4C73-BC3A-5653B860C9E2}" Directory_="tools_Dir" Attributes="0" KeyPath="Identity.Authorization.exe"/>
     <ROW Component="Identity.Registration.exe" ComponentId="{A831909E-FD1D-49B5-8884-C9A8540E8828}" Directory_="tools_Dir" Attributes="0" KeyPath="Identity.Registration.exe"/>
     <ROW Component="Login.exe" ComponentId="{FBE9155F-9ACD-4A1A-9198-891ED73BA202}" Directory_="tools_Dir" Attributes="0" KeyPath="Login.exe"/>
     <ROW Component="Logs" ComponentId="{6C28AF1C-0190-4DE3-A753-430496711F3C}" Directory_="Logs_Dir" Attributes="0"/>
+    <ROW Component="MACHINE_KEY" ComponentId="{61A271B4-4D82-4664-B2D2-2EB120D15DA6}" Directory_="APPDIR" Attributes="20" KeyPath="MACHINE_KEY"/>
     <ROW Component="MCP.exe" ComponentId="{BFFCA662-F186-4A20-8EC2-A375C909FA96}" Directory_="tools_Dir" Attributes="0" KeyPath="MCP.exe"/>
     <ROW Component="Management.exe" ComponentId="{A1A45797-04A8-433B-9D60-0D055FAB63CD}" Directory_="tools_Dir" Attributes="0" KeyPath="Management.exe"/>
     <ROW Component="ProdInfo" ComponentId="{5FB28D19-6A7D-4078-901F-58C2DF0DE176}" Directory_="APPDIR" Attributes="260" KeyPath="Version"/>
@@ -1144,9 +1143,6 @@
     <ROW Action="AI_VerifyPrereq" Type="1" Source="Prereq.dll" Target="VerifyPrereq"/>
     <ROW Action="DetectMySQLService" Type="1" Source="aicustact.dll" Target="DetectProcess" Options="3" AdditionalSeq="AI_DATA_SETTER_9"/>
     <ROW Action="MoveConfigs" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_40"/>
-    <ROW Action="AbortMissingIdentityEncryptionSecret" Type="19" Target="The Identity encryption key of the installed version (IDENTITY_ENCRYPTION_SECRET) was not found. A new key would make the data encrypted by the Identity service unreadable, so the update was stopped. Run the update again and pass the existing key as IDENTITY_ENCRYPTION_SECRET=value on the command line (it is the SPRING_APPLICATION_ENCRYPTION_SECRET value in tools\Identity.Authorization.xml of the installed version or its backup)."/>
-    <ROW Action="StoreProductSecrets" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_46"/>
-    <ROW Action="SecureDatabaseSuperusers" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_45"/>
     <ROW Action="MigrateProductRegistry" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_42"/>
     <ROW Action="MySQLConfigure" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_33"/>
     <ROW Action="OpenCancelUrl" Type="194" Source="viewer.exe" Target="http://www.onlyoffice.com/install-canceled.aspx" WithoutSeq="true" Options="1"/>
@@ -1157,8 +1153,6 @@
     <ROW Action="SET_SHORTCUTDIR" Type="307" Source="SHORTCUTDIR" Target="[ProgramMenuFolder][ProductName]" MultiBuildTarget="DefaultBuild:[ProgramMenuFolder][INSTALL_ROOT_FOLDER_NAME]\Apps#ExeBuild:[ProgramMenuFolder][INSTALL_ROOT_FOLDER_NAME]\Apps#ExeBuild_1:[ProgramMenuFolder][INSTALL_ROOT_FOLDER_NAME]\Apps"/>
     <ROW Action="SET_TARGETDIR_TO_APPDIR" Type="51" Source="TARGETDIR" Target="[APPDIR]"/>
     <ROW Action="SetDashboardsPwd" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_37"/>
-    <ROW Action="AI_DATA_SETTER_46" Type="51" Source="CustomActionData" Target="AEQAaQBnAGkAdABhAGwAbAB5AFMAaQBnAG4AUwBjAHIAaQBwAHQAAgAxAAEARgBsAGEAZwBzAAIAMwABAEwAYQB1AG4AYwBoAEQAaQByAAIAAQBQAGEAcgBhAG0AcwACAFMAdABvAHIAZQBQAHIAbwBkAHUAYwB0AFMAZQBjAHIAZQB0AHMAAQBTAGMAcgBpAHAAdABTAHIAYwBCAGkAbgBhAHIAeQBSAG8AdwBJAGQAAgB1AHQAaQBsAHMALgBwAHMAMQBfADE="/>
-    <ROW Action="AI_DATA_SETTER_45" Type="51" Source="CustomActionData" Target="AEQAaQBnAGkAdABhAGwAbAB5AFMAaQBnAG4AUwBjAHIAaQBwAHQAAgAxAAEARgBsAGEAZwBzAAIAMwABAEwAYQB1AG4AYwBoAEQAaQByAAIAAQBQAGEAcgBhAG0AcwACAFMAZQBjAHUAcgBlAEQAYQB0AGEAYgBhAHMAZQBTAHUAcABlAHIAdQBzAGUAcgBzAAEAUwBjAHIAaQBwAHQAUwByAGMAQgBpAG4AYQByAHkAUgBvAHcASQBkAAIAdQB0AGkAbABzAC4AcABzADEAXwAx"/>
     <ROW Action="AI_DATA_SETTER_43" Type="51" Source="CustomActionData" Target="AEYAbABhAGcAcwACADEAAQBQAGEAcgBhAG0AcwACAEEAcABwAGwAeQBJAG4AcwB0AGEAbABsAGUAZABEAG8AYwB1AG0AZQBuAHQAUwBlAHIAdgBlAHIAUwBlAHQAdABpAG4AZwBzAAEAUwBjAHIAaQBwAHQAUwByAGMAQgBpAG4AYQByAHkAUgBvAHcASQBkAAIAdQB0AGkAbABzAC4AcABzADEAXwAx"/>
     <ROW Action="ApplyInstalledDocumentServerSettings" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_43"/>
     <ROW Action="SetDocumentServerJWTSecretProp" Type="1" Source="PowerShellScriptLauncher.dll" Target="RunPowerShellFileScript" Options="134217729" AdditionalSeq="AI_DATA_SETTER_35"/>
@@ -1288,8 +1282,10 @@
     <ROW Feature_="MainFeature" Component_="icon.ico"/>
     <ROW Feature_="DocumentServer.EE" Component_="DocumentServer.EE"/>
     <ROW Feature_="DocumentServer.DE" Component_="DocumentServer.DE"/>
+    <ROW Feature_="MainFeature" Component_="MACHINE_KEY"/>
     <ROW Feature_="MainFeature" Component_="Identity.Authorization.exe"/>
     <ROW Feature_="MainFeature" Component_="Identity.Registration.exe"/>
+    <ROW Feature_="MainFeature" Component_="IDENTITY_ENCRYPTION_SECRET"/>
     <ROW Feature_="Sdk" Component_="config_1"/>
     <ROW Feature_="Sdk" Component_="Sdk.exe"/>
     <ROW Feature_="Management" Component_="Management.exe"/>
@@ -1324,7 +1320,6 @@
     <ROW Action="SetDashboardsPwd" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( DASHBOARDS_PWD = &quot; &quot; )" Sequence="1110"/>
     <ROW Action="AI_DATA_SETTER_41" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( IDENTITY_ENCRYPTION_SECRET = &quot; &quot; )" Sequence="1111"/>
     <ROW Action="SetIdentityEncryptionSecret" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( IDENTITY_ENCRYPTION_SECRET = &quot; &quot; )" Sequence="1112"/>
-    <ROW Action="AbortMissingIdentityEncryptionSecret" Condition="IDENTITY_ENCRYPTION_SECRET_MISSING = &quot;1&quot;" Sequence="1113"/>
     <ROW Action="AI_DOWNGRADE" Condition="AI_NEWERPRODUCTFOUND AND (UILevel &lt;&gt; 5)" Sequence="210"/>
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>
     <ROW Action="AI_STORE_LOCATION" Condition="(Not Installed) OR REINSTALL" Sequence="1501"/>
@@ -1409,10 +1404,6 @@
     <ROW Action="AI_DATA_SETTER_15" Condition="(VersionNT64 &gt;= 500) AND (REMOVE=&quot;ALL&quot;)" Sequence="1701"/>
     <ROW Action="StopOpenResty" Condition="( NOT Installed )" Sequence="6602"/>
     <ROW Action="AI_DATA_SETTER_23" Condition="( NOT Installed )" Sequence="6601"/>
-    <ROW Action="AI_DATA_SETTER_45" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="6609"/>
-    <ROW Action="SecureDatabaseSuperusers" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="6610"/>
-    <ROW Action="AI_DATA_SETTER_46" Condition="NOT UPGRADINGPRODUCTCODE" Sequence="6611"/>
-    <ROW Action="StoreProductSecrets" Condition="NOT UPGRADINGPRODUCTCODE" Sequence="6612"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstallUISequenceComponent">
     <ROW Action="AI_DATA_SETTER_42" Condition="REMOVE &lt;&gt; &quot;ALL&quot;" Sequence="97"/>
@@ -1449,7 +1440,6 @@
     <ROW Action="SetDocumentServerJWTSecretProp" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( JWT_ENABLED = &quot;true&quot; AND DOCUMENT_SERVER_JWT_SECRET = &quot; &quot; )" Sequence="1106"/>
     <ROW Action="AI_DATA_SETTER_35" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( JWT_ENABLED = &quot;true&quot; AND DOCUMENT_SERVER_JWT_SECRET = &quot; &quot; )" Sequence="1105"/>
     <ROW Action="SetIdentityEncryptionSecret" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( IDENTITY_ENCRYPTION_SECRET = &quot; &quot; )" Sequence="1115"/>
-    <ROW Action="AbortMissingIdentityEncryptionSecret" Condition="IDENTITY_ENCRYPTION_SECRET_MISSING = &quot;1&quot;" Sequence="1116"/>
     <ROW Action="AI_DATA_SETTER_41" Condition="( ( NOT Installed ) OR ( Installed AND REMOVE &lt;&gt; &quot;ALL&quot; AND AI_INSTALL_MODE &lt;&gt; &quot;Remove&quot; ) ) AND ( IDENTITY_ENCRYPTION_SECRET = &quot; &quot; )" Sequence="1114"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiLaunchConditionsComponent">
@@ -1519,6 +1509,7 @@
     <ROW Registry="AI_ExePath" Root="-1" Key="Software\Caphyon\Advanced Installer\LZMA\[ProductCode]\[ProductVersion]" Name="AI_ExePath" Value="[AI_SETUPEXEPATH]" Component_="AI_ExePath"/>
     <ROW Registry="AMQP_HOST" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="AMQP_HOST" Value="[AMQP_HOST]" Component_="APPDIR"/>
     <ROW Registry="AMQP_PORT" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="AMQP_PORT" Value="[AMQP_PORT]" Component_="APPDIR"/>
+    <ROW Registry="AMQP_PWD" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="AMQP_PWD" Value="[AMQP_PWD]" Component_="APPDIR"/>
     <ROW Registry="AMQP_USER" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="AMQP_USER" Value="[AMQP_USER]" Component_="APPDIR"/>
     <ROW Registry="AMQP_VHOST" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="AMQP_VHOST" Value="[AMQP_VHOST]" Component_="APPDIR"/>
     <ROW Registry="AdvancedInstaller" Root="-1" Key="Software\Caphyon\Advanced Installer" Name="\"/>
@@ -1526,12 +1517,15 @@
     <ROW Registry="Comments" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="Comments" Value="[ARPCOMMENTS]" Component_="AI_CustomARPName"/>
     <ROW Registry="Contact" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="Contact" Value="[ARPCONTACT]" Component_="AI_CustomARPName"/>
     <ROW Registry="CurrentVersion" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion" Name="\"/>
+    <ROW Registry="DASHBOARDS_PWD" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="DASHBOARDS_PWD" Value="[DASHBOARDS_PWD]" Component_="APPDIR"/>
     <ROW Registry="DB_HOST" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="DB_HOST" Value="[DB_HOST]" Component_="APPDIR"/>
     <ROW Registry="DB_NAME" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="DB_NAME" Value="[DB_NAME]" Component_="APPDIR"/>
     <ROW Registry="DB_PORT" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="DB_PORT" Value="[DB_PORT]" Component_="APPDIR"/>
+    <ROW Registry="DB_PWD" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="DB_PWD" Value="[DB_PWD]" Component_="APPDIR"/>
     <ROW Registry="DB_USER" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="DB_USER" Value="[DB_USER]" Component_="APPDIR"/>
     <ROW Registry="DOCUMENT_SERVER_JWT_ENABLED" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="DOCUMENT_SERVER_JWT_ENABLED" Value="[DOCUMENT_SERVER_JWT_ENABLED]" Component_="APPDIR"/>
     <ROW Registry="DOCUMENT_SERVER_JWT_HEADER" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="DOCUMENT_SERVER_JWT_HEADER" Value="[DOCUMENT_SERVER_JWT_HEADER]" Component_="APPDIR"/>
+    <ROW Registry="DOCUMENT_SERVER_JWT_SECRET" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="DOCUMENT_SERVER_JWT_SECRET" Value="[DOCUMENT_SERVER_JWT_SECRET]" Component_="APPDIR"/>
     <ROW Registry="DOCUMENT_SERVER_PORT" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="DOCUMENT_SERVER_PORT" Value="[DOCUMENT_SERVER_PORT]" Component_="APPDIR"/>
     <ROW Registry="DisplayIcon" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="DisplayIcon" Value="[ARP_ICON_PATH]" Component_="AI_CustomARPName"/>
     <ROW Registry="DisplayName" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="DisplayName" Value="[AI_PRODUCTNAME_ARP]" Component_="AI_CustomARPName"/>
@@ -1544,6 +1538,8 @@
     <ROW Registry="HelpTelephone" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="HelpTelephone" Value="[ARPHELPTELEPHONE]" Component_="AI_CustomARPName"/>
     <ROW Registry="InstallLocation" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="InstallLocation" Value="[APPDIR]" Component_="AI_CustomARPName"/>
     <ROW Registry="LZMA" Root="-1" Key="Software\Caphyon\Advanced Installer\LZMA" Name="\"/>
+    <ROW Registry="MACHINE_KEY" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="MACHINE_KEY" Value="[MACHINE_KEY]" Component_="MACHINE_KEY"/>
+    <ROW Registry="IDENTITY_ENCRYPTION_SECRET" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="IDENTITY_ENCRYPTION_SECRET" Value="[IDENTITY_ENCRYPTION_SECRET]" Component_="IDENTITY_ENCRYPTION_SECRET"/>
     <ROW Registry="Manufacturer_2" Root="2" Key="Software\[Manufacturer]" Name="\"/>
     <ROW Registry="Microsoft" Root="-1" Key="Software\Microsoft" Name="\"/>
     <ROW Registry="ModifyPath" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="ModifyPath" Value="[AI_UNINSTALLER] /i [ProductCode] AI_UNINSTALLER_CTP=1" Component_="AI_CustomARPName"/>
@@ -1555,6 +1551,7 @@
     <ROW Registry="PS_DB_HOST" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_HOST" Value="[PS_DB_HOST]" Component_="APPDIR"/>
     <ROW Registry="PS_DB_NAME" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_NAME" Value="[PS_DB_NAME]" Component_="APPDIR"/>
     <ROW Registry="PS_DB_PORT" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_PORT" Value="[PS_DB_PORT]" Component_="APPDIR"/>
+    <ROW Registry="PS_DB_PWD" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_PWD" Value="[PS_DB_PWD]" Component_="APPDIR"/>
     <ROW Registry="PS_DB_USER" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="PS_DB_USER" Value="[PS_DB_USER]" Component_="APPDIR"/>
     <ROW Registry="Path" Root="2" Key="Software\[Manufacturer]\[ProductName]" Name="AppPath" Value="[APPDIR]" Component_="AppPath"/>
     <ROW Registry="Prereqs" Root="-1" Key="Software\Caphyon\Advanced Installer\Prereqs" Name="\"/>
@@ -1567,6 +1564,7 @@
     <ROW Registry="Publisher" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="Publisher" Value="[Manufacturer]" Component_="AI_CustomARPName"/>
     <ROW Registry="REDIS_HOST" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="REDIS_HOST" Value="[REDIS_HOST]" Component_="APPDIR"/>
     <ROW Registry="REDIS_PORT" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="REDIS_PORT" Value="[REDIS_PORT]" Component_="APPDIR"/>
+    <ROW Registry="REDIS_PWD" Root="-1" Key="Software\[Manufacturer]\[ShortProductName]" Name="REDIS_PWD" Value="[REDIS_PWD]" Component_="APPDIR"/>
     <ROW Registry="Readme" Root="-1" Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[ProductName] [ProductVersion]" Name="Readme" Value="[ARPREADME]" Component_="AI_CustomARPName"/>
     <ROW Registry="Software" Root="-1" Key="Software" Name="\"/>
     <ROW Registry="Software_2" Root="2" Key="Software" Name="\"/>
@@ -1708,7 +1706,7 @@
     <ROW PrereqKey="Erlangv26.0x64" DisplayName="Erlang v26.0.2 x64" VersionMin="26.0.2" SetupFileUrl="https://github.com/erlang/otp/releases/download/OTP-26.0.2/otp_win64_26.0.2.exe" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/S" BasicUiComLine="/S" NoUiComLine="/S" Options="ym" TargetName="Erlang v26.0 x64"/>
     <ROW PrereqKey="F3520F64DA5998338D97129FAD2" DisplayName=".NET Runtime 10.0.0 x64" VersionMin="10.0" SetupFileUrl="https://builds.dotnet.microsoft.com/dotnet/Runtime/10.0.0/dotnet-runtime-10.0.0-win-x64.exe" Location="1" ExactSize="30828464" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" WinNT64Versions="Windows Vista x64, Windows Server 2008 x64, Windows 7 RTM x64, Windows Server 2008 R2 x64, Windows 8 x64, Windows Server 2012 x64, Windows 10 version 1507 x64, Windows 10 version 1511 x64" Operator="1" ComLine="/q /norestart" BasicUiComLine="/q /norestart" NoUiComLine="/q /norestart" Options="ym" MD5="f54f2192e10d207159d98d514ddd9329" TargetName=".NET 10.0"/>
     <ROW PrereqKey="FFmpegx64" DisplayName="FFmpeg v6.0 x64" VersionMin="6.0.0" SetupFileUrl="https://github.com/qwertyboy5/ffmpeg-installer/releases/download/6.0.0.20230306/FFmpeg_Essentials.msi" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="ym" TargetName="FFmpeg x64"/>
-    <ROW PrereqKey="MySQLInstallerRunn" DisplayName="MySQL Installer Community 8.4.3 x64 Runner" SetupFileUrl="MySQL Installer Runner.exe" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/VERYSILENT" BasicUiComLine="/VERYSILENT" NoUiComLine="/VERYSILENT" Options="yx" TargetName="MySQL Installer Runner                                      \MySQL Installer Runner.exe" ParentPrereq="RequiredApplication_2"/>
+    <ROW PrereqKey="MySQLInstallerRunn" DisplayName="MySQL Installer Community 8.4.3 x64 Runner" SetupFileUrl="MySQL Installer Runner.exe" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/VERYSILENT /DB_PWD=&quot;root&quot;" BasicUiComLine="/VERYSILENT /DB_PWD=&quot;root&quot;" NoUiComLine="/VERYSILENT /DB_PWD=&quot;root&quot;" Options="yx" TargetName="MySQL Installer Runner                                      \MySQL Installer Runner.exe" ParentPrereq="RequiredApplication_2"/>
     <ROW PrereqKey="OpenJDK_Java_Development" DisplayName="OpenJDK Java Development Kit 25.0.3" VersionMin="25.0.3" SetupFileUrl="https://download.oracle.com/java/25/archive/jdk-25.0.3_windows-x64_bin.msi" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/qn" BasicUiComLine="/qn" NoUiComLine="/qn" Options="ymx" TargetName="OpenJDK_Java_Development"/>
     <ROW PrereqKey="OpenResty" DisplayName="OpenResty v1.27.1.1" VersionMin="1.27.1.1" SetupFileUrl="publish\OpenResty-1.27.1.1.msi" Location="0" ExactSize="0" Operator="1" ComLine="/quiet" BasicUiComLine="/quiet" NoUiComLine="/quiet" Options="yxm" TargetName="OpenResty\OpenResty-1.27.1.1.msi"/>
     <ROW PrereqKey="OpenSearch3.5.0" DisplayName="OpenSearch v3.5.0 x64" VersionMin="3.5.0" SetupFileUrl="publish\OpenSearch-3.5.0.exe" Location="0" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="1" ComLine="/exenoui /qn" BasicUiComLine="/exenoui /qn" NoUiComLine="/exenoui /qn" Options="y" TargetName="OpenSearch 3.5.0\OpenSearch-3.5.0.exe"/>

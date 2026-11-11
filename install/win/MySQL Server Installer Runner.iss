@@ -18,12 +18,11 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 
 [Run]
-; The bootstrap root password is set from a file in the per-user {tmp} folder, so it never appears in a command line.
-; Apps replaces it with a random password once its installation is committed (SecureDatabaseSuperusers in utils.ps1).
-Filename: "{#BASE_DIR}\bin\mysqld.exe"; Parameters: "--initialize-insecure --init-file=""{tmp}\mysql-init.sql"""; Flags: runhidden waituntilterminated
+Filename: "{#BASE_DIR}\bin\mysqld.exe"; Parameters: "--initialize-insecure"; Flags: runhidden waituntilterminated
 Filename: "cmd"; Parameters: "/C move /Y ""{tmp}\my.ini"" ""{#DATA_DIR}\my.ini"""; Flags: runhidden waituntilterminated
 Filename: "{#BASE_DIR}\bin\mysqld.exe"; Parameters: "--install MySQL84 --defaults-file=""{#DATA_DIR}\my.ini"""; Flags: runhidden waituntilterminated
 Filename: "net"; Parameters: "start MySQL84"; Flags: runhidden waituntilterminated
+Filename: "{#BASE_DIR}\bin\mysql.exe"; Parameters: "-u root -e ""ALTER USER 'root'@'localhost' IDENTIFIED BY '{param:DB_PWD}';"""; Flags: runhidden waituntilterminated
 
 [Code]
 function SaveMyIniFile(BaseDir, DataDir: String): Boolean;
@@ -48,7 +47,5 @@ begin
   if CurStep = ssInstall then
   begin
     SaveMyIniFile(ExpandConstant('{#BASE_DIR}'), ExpandConstant('{#DATA_DIR}'));
-    // The password must match $MySqlBootstrapRootPassword in utils.ps1.
-    SaveStringToFile(ExpandConstant('{tmp}\mysql-init.sql'), 'ALTER USER ''root''@''localhost'' IDENTIFIED BY ''root'';', False);
   end;
 end;

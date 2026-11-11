@@ -74,23 +74,6 @@ $mysqlArgs = @(
     $env:Database
 )
 
-$domain_regex = '^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$'
-$email_regex  = '^[A-Za-z0-9._%+\-]+@' + $domain_regex.TrimStart('^')
-
-# Domains and emails end up in a cmd.exe command line, SQL and JSON, so they are validated first.
-function Assert-ValidList {
-  param (
-    [string]$List,
-    [string]$Pattern,
-    [string]$Kind
-  )
-  foreach ($item in $List -split ',') {
-    if ($item -cnotmatch $Pattern) {
-      throw "Error: $Kind '$item' is incorrect."
-    }
-  }
-}
-
 function ConvertToPem {
   param (
     [string]$certFile,
@@ -154,10 +137,6 @@ function ConvertToPem {
 if ( $args.Count -ge 2 ) {
   if ($args[0] -eq "-f" -or $args[0] -eq "--file") {
     $domain_name = $args[1] -join ","
-    # "localhost:80" is the installer default that MoveConfigs passes when no domain was configured.
-    if ($domain_name -ne "localhost:80") {
-      Assert-ValidList -List $domain_name -Pattern $domain_regex -Kind "domain name"
-    }
     $ssl_cert           = $args[2]
     $ssl_key            = $null
 
@@ -194,7 +173,8 @@ if ( $args.Count -ge 2 ) {
       }
 
     } catch {
-      throw $_.Exception.Message
+      Write-Error $_.Exception.Message
+      exit 1
     }
 
     $ssl_cert = $ssl_cert.Replace('\', '/')
@@ -207,8 +187,12 @@ if ( $args.Count -ge 2 ) {
   else {
     $letsencrypt_mail = $args[0] -JOIN ","
     $letsencrypt_domain = $args[1] -JOIN ","
-    Assert-ValidList -List $letsencrypt_mail -Pattern $email_regex -Kind "email"
-    Assert-ValidList -List $letsencrypt_domain -Pattern $domain_regex -Kind "domain name"
+    foreach ($domain in $letsencrypt_domain -split ',') {
+      if ($domain -notmatch '^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$') {
+        Write-Error "Error: domain name '$domain' is incorrect."
+        exit 1
+      }
+    }
     $domain_name = $letsencrypt_domain -split ',' | Select-Object -First 1
 
     [void](New-Item -ItemType "directory" -Path "${root_dir}\Logs" -Force)
@@ -254,8 +238,8 @@ if ( $args.Count -ge 2 ) {
 
     if ($letsencrypt_domain -and (Test-Path $letsencrypt_domain_dir))
     {
-        # The private key is readable by SYSTEM (OpenResty runs as LocalSystem) and Administrators only.
         $acl = Get-Acl -Path $letsencrypt_domain_dir
+        # SYSTEM runs OpenResty and needs the key; Administrators manage it.
         $acl.SetSecurityDescriptorSddlForm('D:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)', [System.Security.AccessControl.AccessControlSections]::Access)
         Set-Acl -Path $acl.path -ACLObject $acl
     }
