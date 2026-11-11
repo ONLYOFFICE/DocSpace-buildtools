@@ -151,7 +151,24 @@ if [ "${PRESERVE_DOCS_MYSQL}" = false ]; then
 	MYSQL_LTS_MAJOR="8.4"
 	MYSQL_LTS_REPO="mysql-${MYSQL_LTS_MAJOR}-lts-community"
 	MYSQL_REPO_VERSION="$(curl -fsSL https://repo.mysql.com | grep -oP "mysql84-community-release-${MYSQL_DISTR_NAME}${MYSQL_REPO_REV}-\K.*" | grep -o '^[^.]*' | sort -n | tail -n1)"
-	yum "${DOCS_RPM_OPTIONS[@]}" install -y https://repo.mysql.com/mysql84-community-release-"${MYSQL_DISTR_NAME}""${MYSQL_REPO_REV}"-"${MYSQL_REPO_VERSION}".noarch.rpm || true
+	MYSQL_REPO_PACKAGE="mysql84-community-release-${MYSQL_DISTR_NAME}${MYSQL_REPO_REV}-${MYSQL_REPO_VERSION}.noarch.rpm"
+	# The release package is installed only with a valid signature of the MySQL key, which is pinned by its checksum
+	# RPM-GPG-KEY-mysql-2025 is the 2023 key (BCA43417C3B485DD128EC6D4B7B3B788A8D3785C) with its expiry moved to 2027-10-23; the -2023 file expired in 2025 and Sequoia-based rpm (EL10, Fedora) rejects it
+	MYSQL_KEY_SHA256="a4bcd9f16a53cc763f87b9955dbcdced33c7aa90296b157eb6ceef0f156f4327"
+	MYSQL_REPO_TMP=$(mktemp -d)
+	curl -fsSL -o "${MYSQL_REPO_TMP}/RPM-GPG-KEY-mysql-2025" https://repo.mysql.com/RPM-GPG-KEY-mysql-2025 \
+		&& echo "${MYSQL_KEY_SHA256}  ${MYSQL_REPO_TMP}/RPM-GPG-KEY-mysql-2025" | sha256sum -c - >/dev/null \
+		&& rpm --import "${MYSQL_REPO_TMP}/RPM-GPG-KEY-mysql-2025" \
+		|| { rm -rf "${MYSQL_REPO_TMP}"; echo "ERROR: the MySQL signing key could not be downloaded or does not match its checksum" >&2; exit 1; }
+	if curl -fsSL -o "${MYSQL_REPO_TMP}/${MYSQL_REPO_PACKAGE}" "https://repo.mysql.com/${MYSQL_REPO_PACKAGE}"; then
+		rpmkeys -D "_pkgverify_level all" --checksig "${MYSQL_REPO_TMP}/${MYSQL_REPO_PACKAGE}" >/dev/null \
+			|| { rm -rf "${MYSQL_REPO_TMP}"; echo "ERROR: ${MYSQL_REPO_PACKAGE} is not signed with the MySQL key" >&2; exit 1; }
+		yum "${DOCS_RPM_OPTIONS[@]}" install -y "${MYSQL_REPO_TMP}/${MYSQL_REPO_PACKAGE}" || true
+	else
+		# Not fatal: an already installed release package still provides the repository checked below
+		echo "WARNING: ${MYSQL_REPO_PACKAGE} could not be downloaded from repo.mysql.com" >&2
+	fi
+	rm -rf "${MYSQL_REPO_TMP}"
 	yum-config-manager --disable 'mysql*' >/dev/null 2>&1 || true
 	yum-config-manager --enable "${MYSQL_LTS_REPO}" >/dev/null 2>&1 || { echo "ERROR: failed to enable ${MYSQL_LTS_REPO} repo" >&2; exit 1; }
 	[ "$DIST" = "fedora" ] && sed -i "s/\$releasever/${MYSQL_REPO_REV}/g" /etc/yum.repos.d/mysql-community*.repo
@@ -164,7 +181,8 @@ fi
 curl -fsSL https://artifacts.opensearch.org/releases/bundle/opensearch/3.x/opensearch-3.x.repo -o /etc/yum.repos.d/opensearch-3.x.repo
 OPENSEARCH_VERSION="3.5.0"
 export OPENSEARCH_JAVA_HOME="${OPENSEARCH_JAVA_HOME:-/usr/share/opensearch/jdk}"
-export OPENSEARCH_INITIAL_ADMIN_PASSWORD="$(echo "${package_sysname}!A1")"
+# Only the package scripts need it (the security plugin is removed afterwards); the fixed prefix satisfies the password policy
+export OPENSEARCH_INITIAL_ADMIN_PASSWORD="Aa1!$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 16)"
 
 # Add OpenSearch Dashboards repo.
 if [ ${INSTALL_FLUENT_BIT} == "true" ]; then

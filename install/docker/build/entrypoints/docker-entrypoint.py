@@ -1,4 +1,4 @@
-import json, sys, os, re, time, requests, threading, shutil, fileinput, subprocess
+import json, sys, os, re, time, requests, threading, shutil, fileinput, subprocess, signal
 from jsonpath_ng.ext import parse
 from netaddr import IPNetwork
 
@@ -31,11 +31,28 @@ MYSQL_PORT = os.environ.get("MYSQL_PORT") or "3306"
 MYSQL_DATABASE = os.environ.get("MYSQL_DATABASE") or "onlyoffice"
 MYSQL_USER = os.environ.get("MYSQL_USER") or "onlyoffice_user"
 MYSQL_PASSWORD = require_env("MYSQL_PASSWORD")
+
+
+def connection_value(value):
+    # A semicolon or a quote would split the connection string, so such a value is quoted (a doubled quote is a literal one)
+    if any(char in value for char in ';"\''):
+        return '"' + value.replace('"', '""') + '"'
+    return value
+
+
+MYSQL_USER_CS = connection_value(MYSQL_USER)
+MYSQL_PASSWORD_CS = connection_value(MYSQL_PASSWORD)
+MYSQL_SSL_MODE = os.environ.get("MYSQL_SSL_MODE") or "none"
+if MYSQL_SSL_MODE.lower() not in ("none", "preferred", "required", "verifyca", "verifyfull"):
+    raise RuntimeError("MYSQL_SSL_MODE must be one of none, preferred, required, verifyca, verifyfull")
 MYSQL_CONNECTION_HOST = MYSQL_HOST if MYSQL_HOST else MYSQL_CONTAINER_NAME
 
 APP_CORE_SERVER_ROOT = os.environ.get("APP_CORE_SERVER_ROOT") or None
 APP_CORE_BASE_DOMAIN = os.environ.get("APP_CORE_BASE_DOMAIN", "localhost")
 APP_CORE_MACHINEKEY = require_env("APP_CORE_MACHINEKEY")
+# Only warn about the publicly known sample values: changing the key of a running installation makes the data it encrypted unreadable
+if APP_CORE_MACHINEKEY in ("your_core_machinekey", "1123askdasjklasbnd"):
+    print("WARNING: APP_CORE_MACHINEKEY still has its public sample value; set a unique key for new installations", file=sys.stderr)
 APP_URL_PORTAL = os.environ.get("APP_URL_PORTAL") or "http://" + ROUTER_HOST + ":8092"
 OAUTH_REDIRECT_URL = os.environ.get("OAUTH_REDIRECT_URL") or None
 APP_STORAGE_ROOT = os.environ.get("APP_STORAGE_ROOT") or BASE_DIR + "/data/"
@@ -48,7 +65,7 @@ DISABLE_VALIDATE_TOKEN = os.environ.get("DISABLE_VALIDATE_TOKEN") or "false"
 
 CERTIFICATE_PATH = os.environ.get("CERTIFICATE_PATH")
 CERTIFICATE_PARAM = "NODE_EXTRA_CA_CERTS=" + CERTIFICATE_PATH + " " if CERTIFICATE_PATH and os.path.exists(CERTIFICATE_PATH) else ""
-TLS_REJECT_UNAUTHORIZED = "NODE_TLS_REJECT_UNAUTHORIZED=1" if os.getenv("NODE_TLS_REJECT_UNAUTHORIZED", "").lower() in ("1","true","enable") else "";
+TLS_REJECT_UNAUTHORIZED = "NODE_TLS_REJECT_UNAUTHORIZED=1 " if os.getenv("NODE_TLS_REJECT_UNAUTHORIZED", "").lower() in ("1","true","enable") else ""
 
 DOCUMENT_CONTAINER_NAME = os.environ.get("DOCUMENT_CONTAINER_NAME") or "onlyoffice-document-server"
 DOCUMENT_SERVER_JWT_SECRET = require_env("DOCUMENT_SERVER_JWT_SECRET")
@@ -108,16 +125,39 @@ class RunServices:
 
     def RunService(self, RUN_FILE, ENV_EXTENSION="none", LOG_FILE=None):
         if LOG_FILE and RUN_FILE.endswith(".dll"):
-            cmd = (f"dotnet {RUN_FILE} --urls={URLS}{self.SERVICE_PORT} --'$STORAGE_ROOT'={APP_STORAGE_ROOT}"
+            cmd = (f"exec dotnet {RUN_FILE} --urls={URLS}{self.SERVICE_PORT} --'$STORAGE_ROOT'={APP_STORAGE_ROOT}"
                    f" --pathToConf={self.PATH_TO_CONF} --log:dir={LOG_DIR} --log:name={LOG_FILE}"
                    f" core:products:folder=/var/www/products/ core:products:subfolder=server {CORE_EVENT_BUS}")
             if ENV_EXTENSION != "none":
                 cmd += f" --ENVIRONMENT={ENV_EXTENSION}"
         else:
-            cmd = f"{TLS_REJECT_UNAUTHORIZED}{CERTIFICATE_PARAM}node {RUN_FILE} --app.port={self.SERVICE_PORT} --app.appsettings={self.PATH_TO_CONF}"
+            cmd = f"exec env {TLS_REJECT_UNAUTHORIZED}{CERTIFICATE_PARAM}node {RUN_FILE} --app.port={self.SERVICE_PORT} --app.appsettings={self.PATH_TO_CONF}"
             if ENV_EXTENSION != "none":
                 cmd += f" --app.environment={ENV_EXTENSION}"
-        subprocess.call(cmd, shell=True)
+        # The shell replaces itself with the service (exec), so the process waited for below is the service itself.
+        # PID 1 ignores a signal that has no handler, so the stop signals are passed on to the service's process group
+        state = {"service": None, "pending": []}
+
+        def forward_signal(signal_number, frame):
+            if state["service"] is None:
+                state["pending"].append(signal_number)
+                return
+            try:
+                os.killpg(state["service"].pid, signal_number)
+            except ProcessLookupError:
+                pass
+
+        # The handlers are installed before the service starts, so a stop signal that arrives meanwhile is kept and passed on
+        for signal_number in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGQUIT):
+            signal.signal(signal_number, forward_signal)
+
+        state["service"] = subprocess.Popen(cmd, shell=True, start_new_session=True)
+        for signal_number in state["pending"]:
+            forward_signal(signal_number, None)
+
+        exit_code = state["service"].wait()
+        # A service killed by a signal is reported the way a shell does it
+        sys.exit(128 - exit_code if exit_code < 0 else exit_code)
 
 
 def openJsonFile(filePath):
@@ -323,7 +363,7 @@ def check_docs_connection(wait=True):
 
 filePath = "/app/onlyoffice/config/appsettings.json"
 jsonData = openJsonFile(filePath)
-updateJsonData(jsonData,"$.ConnectionStrings.default.connectionString", "Server="+ MYSQL_CONNECTION_HOST +";Port="+ MYSQL_PORT +";Database="+ MYSQL_DATABASE +";User ID="+ MYSQL_USER +";Password="+ MYSQL_PASSWORD +";Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;ConnectionReset=false;AllowPublicKeyRetrieval=true",)
+updateJsonData(jsonData,"$.ConnectionStrings.default.connectionString", "Server="+ MYSQL_CONNECTION_HOST +";Port="+ MYSQL_PORT +";Database="+ MYSQL_DATABASE +";User ID="+ MYSQL_USER_CS +";Password="+ MYSQL_PASSWORD_CS +";Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode="+ MYSQL_SSL_MODE +";ConnectionReset=false;AllowPublicKeyRetrieval=true",)
 updateJsonData(jsonData,"$.core.server-root", APP_CORE_SERVER_ROOT)
 updateJsonData(jsonData,"$.core.base-domain", APP_CORE_BASE_DOMAIN)
 updateJsonData(jsonData,"$.core.machinekey", APP_CORE_MACHINEKEY)
@@ -362,7 +402,7 @@ if jsonData:
 
 filePath = "/app/onlyoffice/config/apisystem.json"
 jsonData = openJsonFile(filePath)
-updateJsonData(jsonData, "$.ConnectionStrings.default.connectionString", "Server="+ MYSQL_CONNECTION_HOST +";Port="+ MYSQL_PORT +";Database="+ MYSQL_DATABASE +";User ID="+ MYSQL_USER +";Password="+ MYSQL_PASSWORD +";Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;ConnectionReset=false;AllowPublicKeyRetrieval=true",)
+updateJsonData(jsonData, "$.ConnectionStrings.default.connectionString", "Server="+ MYSQL_CONNECTION_HOST +";Port="+ MYSQL_PORT +";Database="+ MYSQL_DATABASE +";User ID="+ MYSQL_USER_CS +";Password="+ MYSQL_PASSWORD_CS +";Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode="+ MYSQL_SSL_MODE +";ConnectionReset=false;AllowPublicKeyRetrieval=true",)
 updateJsonData(jsonData,"$.core.base-domain", APP_CORE_BASE_DOMAIN)
 updateJsonData(jsonData,"$.core.machinekey", APP_CORE_MACHINEKEY)
 writeJsonFile(filePath, jsonData)
@@ -427,7 +467,7 @@ writeJsonFile(filePath, jsonData)
 filePath = os.path.join(BUILD_PATH, "services", "ASC.Migration.Runner", "service", "appsettings.runner.json")
 if os.path.isfile(filePath):
     jsonData = openJsonFile(filePath)
-    conn_str = f"Server={MYSQL_CONNECTION_HOST};Port={MYSQL_PORT};Database={MYSQL_DATABASE};User ID={MYSQL_USER};Password={MYSQL_PASSWORD};Command Timeout=100"
+    conn_str = f"Server={MYSQL_CONNECTION_HOST};Port={MYSQL_PORT};Database={MYSQL_DATABASE};User ID={MYSQL_USER_CS};Password={MYSQL_PASSWORD_CS};Command Timeout=100"
     updateJsonData(jsonData, "$.options.Providers[0].ConnectionString", conn_str)
     updateJsonData(jsonData, "$.options.TeamlabsiteProviders[0].ConnectionString", conn_str)
     writeJsonFile(filePath, jsonData)

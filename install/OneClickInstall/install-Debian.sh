@@ -77,7 +77,7 @@ while [ "$1" != "" ]; do
         -skiphc | --skiphardwarecheck )     [ -n "$2" ] && SKIP_HARDWARE_CHECK=$2 && shift ;;
         -it | --installationtype | --installation_type ) [ -n "$2" ] && INSTALLATION_TYPE="${2,,}" && shift ;;
         -ms | --makeswap )                  [ -n "$2" ] && MAKESWAP=$2 && shift ;;
-        -h | -? | --help )
+        -h | '-?' | --help )
             echo "  Usage $0 [PARAMETER] [[PARAMETER], ...]"
             echo "    Parameters:"
             echo "      -it, --installationtype           installation type (community|developer|enterprise)"
@@ -178,7 +178,7 @@ else
 fi
 
 # Add ONLYOFFICE repo.
-echo "deb [signed-by=/usr/share/keyrings/onlyoffice.gpg] http://download.onlyoffice.com/repo/debian squeeze main" | tee /etc/apt/sources.list.d/onlyoffice.list
+echo "deb [signed-by=/usr/share/keyrings/onlyoffice.gpg] https://download.onlyoffice.com/repo/debian squeeze main" | tee /etc/apt/sources.list.d/onlyoffice.list
 curl -fsSL https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE | gpg --batch --yes --dearmor -o /usr/share/keyrings/onlyoffice.gpg
 
 declare -x LANG="en_US.UTF-8"

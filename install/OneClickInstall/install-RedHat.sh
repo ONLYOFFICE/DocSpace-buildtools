@@ -78,7 +78,7 @@ while [ "$1" != "" ]; do
         -skiphc | --skiphardwarecheck )     [ -n "$2" ] && SKIP_HARDWARE_CHECK=$2 && shift ;;
         -it | --installationtype | --installation_type ) [ -n "$2" ] && INSTALLATION_TYPE="${2,,}" && shift ;;
         -ms | --makeswap )                  [ -n "$2" ] && MAKESWAP=$2 && shift ;;
-        -h | -? | --help )
+        -h | '-?' | --help )
             echo "  Usage $0 [PARAMETER] [[PARAMETER], ...]"
             echo "    Parameters:"
             echo "      -it, --installationtype           installation type (community|developer|enterprise)"
@@ -158,7 +158,7 @@ fi
 cat > /etc/yum.repos.d/onlyoffice.repo <<END
 [onlyoffice]
 name=onlyoffice repo
-baseurl=http://download.onlyoffice.com/repo/centos/main/noarch/
+baseurl=https://download.onlyoffice.com/repo/centos/main/noarch/
 gpgcheck=1
 enabled=1
 gpgkey=https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE

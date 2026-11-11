@@ -8,9 +8,13 @@
 : "${DOCKERHUB_USERNAME:?::error::[FAIL] DOCKERHUB_USERNAME not set}"
 : "${DOCKERHUB_TOKEN:?::error::[FAIL] DOCKERHUB_TOKEN not set}"
 
-DOCKERHUB_JWT=$(curl -fsSL -X POST "https://hub.docker.com/v2/users/login" \
-  -H "Content-Type: application/json" \
-  -d "{\"username\":\"${DOCKERHUB_USERNAME}\",\"password\":\"${DOCKERHUB_TOKEN}\"}" \
+# The credentials reach curl through its standard input (a request body or a config), never through its arguments
+curl_auth_config() {
+  printf 'user = "%s"\n' "$(printf '%s:%s' "$DOCKERHUB_USERNAME" "$DOCKERHUB_TOKEN" | sed 's/[\\"]/\\&/g')"
+}
+
+DOCKERHUB_JWT=$(jq -n --arg username "$DOCKERHUB_USERNAME" --arg password "$DOCKERHUB_TOKEN" '{username: $username, password: $password}' \
+  | curl -fsSL -X POST "https://hub.docker.com/v2/users/login" -H "Content-Type: application/json" -d @- \
   | jq -r '.token // empty') || { echo "::error::[FAIL] Docker Hub login failed"; exit 1; }
 [ -n "$DOCKERHUB_JWT" ] || { echo "::error::[FAIL] Docker Hub login failed"; exit 1; }
 
@@ -24,7 +28,7 @@ check_image() {
   fi
 
   local TOKEN
-  TOKEN=$(curl -fsSL -u "${DOCKERHUB_USERNAME}:${DOCKERHUB_TOKEN}" \
+  TOKEN=$(curl_auth_config | curl -fsSL -K - \
     "https://auth.docker.io/token?service=registry.docker.io&scope=repository:${IMAGE}:pull" \
     | jq -r '.token // empty') || { printf "::error::[FAIL]    %-22s token fetch failed\n" "$SVC"; return 1; }
   [ -n "$TOKEN" ] || { printf "::error::[FAIL]    %-22s empty token\n" "$SVC"; return 1; }

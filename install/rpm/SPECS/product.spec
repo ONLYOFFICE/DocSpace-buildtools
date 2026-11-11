@@ -120,14 +120,6 @@ fi
 getent group %{package_sysname} >/dev/null || groupadd -r %{package_sysname}
 getent passwd %{package_sysname} >/dev/null || useradd -r -g %{package_sysname} -s /usr/sbin/nologin -d %{_sysconfdir}/%{package_sysname}/%{product} %{package_sysname}
 
-%pre identity-api
-
-# (DS v3.1.0) fix encryption key generation issue
-ENCRYPTION_PATH=%{_sysconfdir}/%{package_sysname}/%{product}/.private/encryption
-if [ "$1" -eq 2 ] && [ ! -f "${ENCRYPTION_PATH}" ]; then
-  echo 'secret' > "${ENCRYPTION_PATH}" && chmod 600 "${ENCRYPTION_PATH}"
-fi
-
 %pre proxy
 
 # (DS v3.5.0) fix SSL reset error when updating packages

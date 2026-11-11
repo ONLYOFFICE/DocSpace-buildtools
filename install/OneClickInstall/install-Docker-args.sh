@@ -55,6 +55,7 @@ while [ "$1" != "" ]; do
 
     case "$1" in
         -u       | --update              ) [ -n "$2" ] && UPDATE=$2                                                               && shift ;;
+        -bk      | --backup              ) [ -n "$2" ] && BACKUP_BEFORE_UPDATE=$2                                                  && shift ;;
         -reg     | --registry            ) [ -n "$2" ] && REGISTRY_URL=$2                                                         && shift ;;
         -un      | --username            ) [ -n "$2" ] && USERNAME=$2                                                             && shift ;;
         -p       | --password            ) [ -n "$2" ] && PASSWORD=$2                                                             && shift ;;
@@ -116,7 +117,7 @@ while [ "$1" != "" ]; do
         -cf      | --certfile            ) [ -n "$2" ] && CERTIFICATE_PATH="$2"                                                   && shift ;;
         -ckf     | --certkeyfile         ) [ -n "$2" ] && CERTIFICATE_KEY_PATH="$2"                                               && shift ;;
         -co      | --configoverride      ) [ -n "$2" ] && CONFIG_OVERRIDE="$2"                                                    && shift ;;
-        -h | -? | --help )
+        -h | '-?' | --help )
             help_opt() { printf "    %-22s %-14s %s\n" "$@"; }
             help_note() { printf "%42s%s\n" "" "$1"; }
 
@@ -130,6 +131,7 @@ while [ "$1" != "" ]; do
             echo "INSTALL / UPGRADE MODE:"
             help_opt "--installationtype"    "<edition>"      "Edition to install: community, developer, enterprise (default: enterprise)"
             help_opt "--update"              "<true|false>"   "true to upgrade existing components"
+            help_opt "--backup"              "<true|false>"   "true to also dump the bundled MySQL database before an update (the configuration is always saved)"
             help_opt "--uninstall"           "<true|false>"   "true to remove existing ${PRODUCT_NAME} (containers, volumes, configs)"
             help_opt "--noninteractive"      "<true|false>"   "true to auto-confirm prompts (default: false)"
 
@@ -258,6 +260,7 @@ validate_bool_or_pull() {
 }
 
 validate_bool --update "$UPDATE"
+validate_bool --backup "$BACKUP_BEFORE_UPDATE"
 validate_bool --uninstall "$UNINSTALL"
 validate_bool --noninteractive "$NON_INTERACTIVE"
 validate_bool --skiphardwarecheck "$SKIP_HARDWARE_CHECK"
