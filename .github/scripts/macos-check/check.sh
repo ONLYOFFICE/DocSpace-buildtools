@@ -140,6 +140,8 @@ if sudo -n true 2> /dev/null; then
     RC=$?
     expect_rc 1
     expect_output "without sudo"
+    # The refused run leaves a root-owned log that would block the next scenario started within the same second
+    sudo -n rm -f "${INSTALL_DIR}"/OneClick*.log
 else
     echo "skipped: sudo is not available"
 fi

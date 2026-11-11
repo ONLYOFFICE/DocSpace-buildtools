@@ -719,6 +719,23 @@ domain_check () {
 	APP_URL_PORTAL=${APP_DOMAIN_PORTAL:+http://${APP_DOMAIN_PORTAL}:${EXTERNAL_PORT}}
 }
 
+# The refresh of .env resets APP_URL_PORTAL, so keep the URL of the running container unless --appshost is given.
+set_external_docs_callback_url () {
+	[[ -n ${DOCUMENT_SERVER_HOST} && "${DOCUMENT_SERVER_ATTACHED}" != "true" && -z ${APP_URL_PORTAL} ]] || return 0
+	local PREVIOUS_APP_URL_PORTAL
+	PREVIOUS_APP_URL_PORTAL="$(get_env_parameter "APP_URL_PORTAL" "${CONTAINER_NAME}")"
+	[[ "${PREVIOUS_APP_URL_PORTAL}" == *:8092 ]] || APP_URL_PORTAL="${PREVIOUS_APP_URL_PORTAL}"
+}
+
+# An external Docs calls back to this server, so an address it can reach is required; an empty one would give http://:PORT.
+set_apps_url_for_external_docs () {
+	[[ -z ${APP_URL_PORTAL} ]] || return 0
+	local PUBLIC_IP
+	PUBLIC_IP="$(curl -s -4 -m 10 ifconfig.me)"
+	[[ "${PUBLIC_IP}" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]] || { echo "Error: the address of this server for the Document Server callbacks cannot be detected. Pass --appshost." >&2; exit 1; }
+	APP_URL_PORTAL="http://${PUBLIC_IP}:${EXTERNAL_PORT}"
+}
+
 establish_conn() {
 	echo -n "Trying to establish $3 connection... "
 
@@ -1409,7 +1426,8 @@ install_standalone () {
 		# Must stay shared across deployment modes.
 		reconfigure APP_CORE_MACHINEKEY "${APP_CORE_MACHINEKEY}"
 		reconfigure IDENTITY_ENCRYPTION_SECRET "${IDENTITY_ENCRYPTION_SECRET}"
-		# APP_URL_PORTAL stays on the internal router for Docs callbacks.
+		# A bundled or attached Docs calls back through the internal router; an external one needs a reachable URL.
+		[[ -n ${DOCUMENT_SERVER_HOST} && "${DOCUMENT_SERVER_ATTACHED}" != "true" ]] && reconfigure APP_URL_PORTAL "${APP_URL_PORTAL}"
 		reconfigure EXTERNAL_PORT "${EXTERNAL_PORT}"
 		reconfigure EXTERNAL_PORT_HTTPS "${EXTERNAL_PORT_HTTPS}"
 		reconfigure DATABASE_MIGRATION "${DATABASE_MIGRATION}"
@@ -1564,7 +1582,11 @@ services_check_connection () {
 		reconfigure MYSQL_PORT "${MYSQL_PORT:-3306}"
 	fi
 	if [[ ! -z "$DOCUMENT_SERVER_HOST" ]]; then
-		APP_URL_PORTAL=${APP_URL_PORTAL:-"http://$(curl -s -4 ifconfig.me):${EXTERNAL_PORT}"}
+		if [ "${DOCUMENT_SERVER_ATTACHED}" = "true" ]; then
+			APP_URL_PORTAL=${APP_URL_PORTAL:-"http://$(curl -s -4 ifconfig.me):${EXTERNAL_PORT}"}
+		else
+			set_apps_url_for_external_docs
+		fi
 		[ "${DOCUMENT_SERVER_ATTACHED}" = "true" ] || establish_conn ${DOCUMENT_SERVER_HOST} ${DOCUMENT_SERVER_PORT} "${PACKAGE_SYSNAME^^} Docs"
 		reconfigure DOCUMENT_SERVER_URL_EXTERNAL "${DOCUMENT_SERVER_URL_EXTERNAL}"
 		reconfigure DOCUMENT_SERVER_URL_PUBLIC "${DOCUMENT_SERVER_URL_EXTERNAL}"
@@ -1643,6 +1665,7 @@ start_installation () {
 	domain_check
 
 	set_docs_url_external
+	set_external_docs_callback_url
 	set_jwt_secret
 	set_jwt_header
 
