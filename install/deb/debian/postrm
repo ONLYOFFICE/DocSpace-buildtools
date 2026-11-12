@@ -30,4 +30,11 @@ esac
 
 #DEBHELPER#
 
+# Drop the failed state left by stopping the services, otherwise it outlives the removed unit files
+case "$1" in
+	remove|purge)
+		systemctl reset-failed "{{product}}-*.service" "{{legacy_product}}-*.service" >/dev/null 2>&1 || true
+	;;
+esac
+
 exit 0

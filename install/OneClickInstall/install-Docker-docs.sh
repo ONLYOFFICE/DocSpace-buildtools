@@ -384,27 +384,32 @@ set_docs_url_external () {
 	fi
 }
 
-# Succeeds only when CommandService answers a token signed with the secret with error 6 (token error); the header name is tried both ways unless it is given.
+# Succeeds only when CommandService answers a token signed with the secret with error 6 (token error) in the header Apps uses.
 is_docs_jwt_secret_rejected () {
-	local SECRET="$1" HEADER_NAME TOKEN_HEADER TOKEN_PAYLOAD TOKEN_SIGNATURE RESPONSE
+	local SECRET="$1" TOKEN_HEADER TOKEN_PAYLOAD TOKEN_SIGNATURE RESPONSE
 	is_command_exists openssl || return 1
 
 	TOKEN_HEADER="$(printf '%s' '{"alg":"HS256","typ":"JWT"}' | openssl base64 -A | tr '+/' '-_' | tr -d '=')"
 	TOKEN_PAYLOAD="$(printf '%s' '{"payload":{"c":"version"}}' | openssl base64 -A | tr '+/' '-_' | tr -d '=')"
 	TOKEN_SIGNATURE="$(printf '%s' "${TOKEN_HEADER}.${TOKEN_PAYLOAD}" | openssl dgst -sha256 -hmac "${SECRET}" -binary | openssl base64 -A | tr '+/' '-_' | tr -d '=')"
 
-	for HEADER_NAME in ${DOCUMENT_SERVER_JWT_HEADER:-Authorization AuthorizationJwt}; do
-		RESPONSE="$(curl -s -m 10 -X POST -H "Content-Type: application/json" -H "${HEADER_NAME}: Bearer ${TOKEN_HEADER}.${TOKEN_PAYLOAD}.${TOKEN_SIGNATURE}" -d '{"c":"version"}' "${DOCUMENT_SERVER_URL_EXTERNAL%/}/coauthoring/CommandService.ashx" 2>/dev/null)"
-		# An accepted token or no answer proves nothing against the secret
-		[[ "${RESPONSE}" =~ \"error\":\ *6([^0-9]|$) ]] || return 1
-	done
-	return 0
+	RESPONSE="$(curl -s -m 10 -X POST -H "Content-Type: application/json" -H "${DOCUMENT_SERVER_JWT_HEADER:-AuthorizationJwt}: Bearer ${TOKEN_HEADER}.${TOKEN_PAYLOAD}.${TOKEN_SIGNATURE}" -d '{"c":"version"}' "${DOCUMENT_SERVER_URL_EXTERNAL%/}/coauthoring/CommandService.ashx" 2>/dev/null)"
+	# An accepted token or no answer proves nothing against the secret
+	[[ "${RESPONSE}" =~ \"error\":\ *6([^0-9]|$) ]]
 }
 
-# Without a known secret an external Docs is usable only when it does not require JWT (CommandService answers error 6 when it does).
+# Apps signs every request to Docs and refuses unsigned ones, so Docs needs JWT with the header AuthorizationJwt (CommandService answers error 6 without a token when JWT is on).
 check_external_docs_jwt () {
 	local RESPONSE
 	RESPONSE="$(curl -s -m 10 -X POST -H "Content-Type: application/json" -d '{"c":"version"}' "${DOCUMENT_SERVER_URL_EXTERNAL%/}/coauthoring/CommandService.ashx" 2>/dev/null)"
+
+	if [[ "${RESPONSE}" =~ \"error\":\ *0([^0-9]|$) ]]; then
+		echo "Error: the external Document Server at ${DOCUMENT_SERVER_URL_EXTERNAL} has JWT disabled, which ${PRODUCT_NAME} does not support. Set JWT_ENABLED=true, JWT_SECRET and JWT_HEADER=AuthorizationJwt on it and pass --jwtsecret." >&2
+		exit 1
+	fi
+
+	# A known secret needs nothing more here
+	[[ -z ${DOCUMENT_SERVER_JWT_SECRET} ]] || return 0
 
 	if [[ "${RESPONSE}" =~ \"error\":\ *6([^0-9]|$) ]]; then
 		# Without a terminal or in non-interactive mode there is nobody to ask
@@ -418,16 +423,16 @@ check_external_docs_jwt () {
 				echo
 				[[ -n ${DOCUMENT_SERVER_JWT_SECRET} ]] || break
 				is_docs_jwt_secret_rejected "${DOCUMENT_SERVER_JWT_SECRET}" || break
-				echo "The Document Server did not accept this secret (a JWT header other than Authorization and AuthorizationJwt needs --jwtheader)." >&2
+				echo "The Document Server did not accept this secret; it must also use JWT_HEADER=${DOCUMENT_SERVER_JWT_HEADER:-AuthorizationJwt}." >&2
 				DOCUMENT_SERVER_JWT_SECRET=""
 			done
 			if [ -n "${XTRACE_STATE}" ]; then set -x; fi
 		fi
 		[[ -n ${DOCUMENT_SERVER_JWT_SECRET} ]] && return 0
-		echo "Error: the external Document Server at ${DOCUMENT_SERVER_URL_EXTERNAL} requires JWT, but its secret is unknown. Pass --jwtsecret (and --jwtheader if it was changed there)." >&2
+		echo "Error: the external Document Server at ${DOCUMENT_SERVER_URL_EXTERNAL} requires JWT, but its secret is unknown. Pass --jwtsecret; the Document Server must use JWT_HEADER=${DOCUMENT_SERVER_JWT_HEADER:-AuthorizationJwt}." >&2
 		exit 1
-	elif [[ ! "${RESPONSE}" =~ \"error\":\ *0([^0-9]|$) ]]; then
-		echo "Warning: could not check whether the external Document Server requires JWT. If it does, pass --jwtsecret and --jwtheader." >&2
+	else
+		echo "Warning: could not check whether the external Document Server requires JWT. If it does, pass --jwtsecret; it must use JWT_HEADER=${DOCUMENT_SERVER_JWT_HEADER:-AuthorizationJwt}." >&2
 	fi
 }
 
@@ -436,7 +441,7 @@ set_jwt_secret () {
 	DOCUMENT_SERVER_JWT_SECRET="${DOCUMENT_SERVER_JWT_SECRET:-$(get_env_parameter "DOCUMENT_SERVER_JWT_SECRET" "${CONTAINER_NAME}")}"
 	[ "${DOCUMENT_SERVER_ATTACHED}" = "true" ] && \
 		DOCUMENT_SERVER_JWT_SECRET="${DOCUMENT_SERVER_JWT_SECRET:-$(get_env_parameter "JWT_SECRET" "${DOCUMENT_SERVER_HOST}")}"
-	[[ -z ${DOCUMENT_SERVER_JWT_SECRET} && -n ${DOCUMENT_SERVER_HOST} && "${DOCUMENT_SERVER_ATTACHED}" != "true" && "${INSTALL_PRODUCT}" == "true" ]] && check_external_docs_jwt
+	[[ -n ${DOCUMENT_SERVER_HOST} && "${DOCUMENT_SERVER_ATTACHED}" != "true" && "${INSTALL_PRODUCT}" == "true" ]] && check_external_docs_jwt
 	DOCUMENT_SERVER_JWT_SECRET="${DOCUMENT_SERVER_JWT_SECRET:-$(get_random_str 32)}"
 }
 

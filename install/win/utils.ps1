@@ -238,7 +238,9 @@ function TestSqlConnection {
 
 # Configures MySQL settings by updating my.ini and setting the root password.
 function MySQLConfigure {
-    $MySqlDriver = AI_GetMsiProperty MYSQLODBCDRIVER
+    $MySqlDriver = Get-ChildItem 'HKLM:\SOFTWARE\ODBC\ODBCINST.INI', 'HKLM:\SOFTWARE\WOW6432Node\ODBC\ODBCINST.INI' -ErrorAction SilentlyContinue |
+        Where-Object { $_.PSChildName -like '*MySQL ODBC*' -and $_.PSChildName -notlike '*ANSI*' } |
+        Select-Object -First 1 -ExpandProperty PSChildName
     $DbName      = AI_GetMsiProperty DB_NAME
     $DbPass      = AI_GetMsiProperty DB_PWD
 
@@ -252,8 +254,20 @@ function MySQLConfigure {
         $Service = Get-Service -Name "MySQL84" -ErrorAction Stop
 
         if ($Service.Status -eq 'Running') {
-            $MySqlPath = Join-Path $InstallDir "bin\mysql.exe"
-            & $MySqlPath -u root --password=$DbPass -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '$DbPass';"
+            # The first installation replaces the default root password with a random one.
+            if (-not (AI_GetMsiProperty OLDPRODUCTS) -and $DbPass -eq 'root') {
+                $NewPass = 'Aa1_' + (RandomString -Length 28)  # the prefix satisfies the default MySQL password policy
+                $Conn = New-Object System.Data.Odbc.OdbcConnection("DRIVER={$MySqlDriver};SERVER=127.0.0.1;PORT=$(AI_GetMsiProperty DB_PORT);USER=root;PWD=root;")
+                try {
+                    $Conn.Open()
+                    $Cmd = $Conn.CreateCommand()
+                    $Cmd.CommandText = "ALTER USER 'root'@'localhost' IDENTIFIED BY '$NewPass'"
+                    [void]$Cmd.ExecuteNonQuery()
+                } finally {
+                    $Conn.Close()
+                }
+                AI_SetMsiProperty DB_PWD $NewPass
+            }
         } else {
             Write-Output "MySQL service is not running."
         }
@@ -312,6 +326,10 @@ function PostgreSqlConfigure {
         $Conn.Open()
         $Cmd = $Conn.CreateCommand()
 
+        # The first installation replaces the default password of the application user with a random one.
+        $Replace = -not (AI_GetMsiProperty OLDPRODUCTS) -and $DbPwd -eq 'onlyoffice'
+        if ($Replace) { $DbPwd = RandomString -Length 32 }
+
         $Cmd.CommandText = "SELECT 1 FROM pg_database WHERE datname = '$DbName';"
         $DbExists = $Cmd.ExecuteScalar()
 
@@ -332,7 +350,13 @@ function PostgreSqlConfigure {
             Write-Output "User '$DbUser' created successfully."
         } else {
             Write-Output "User '$DbUser' already exists."
+            if ($Replace) {
+                $Cmd.CommandText = "ALTER USER $DbUser WITH ENCRYPTED PASSWORD '$DbPwd';"
+                $Cmd.ExecuteNonQuery()
+            }
         }
+
+        if ($Replace) { AI_SetMsiProperty PS_DB_PWD $DbPwd }
 
         $Cmd.CommandText = "GRANT ALL PRIVILEGES ON DATABASE $DbName TO $DbUser;"
         $Cmd.ExecuteNonQuery()
