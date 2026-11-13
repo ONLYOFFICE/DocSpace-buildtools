@@ -384,6 +384,9 @@ set_docs_url_external () {
 	fi
 }
 
+# The probe only reads the JWT mode: follow an http->https redirect as POST and do not let an IP-mismatched certificate hide the answer
+DOCS_PROBE_CURL_OPTS=(-s -k -m 10 -L --post301 --post302 --post303 -H "Content-Type: application/json" -d '{"c":"version"}')
+
 # Succeeds only when CommandService answers a token signed with the secret with error 6 (token error) in the header Apps uses.
 is_docs_jwt_secret_rejected () {
 	local SECRET="$1" TOKEN_HEADER TOKEN_PAYLOAD TOKEN_SIGNATURE RESPONSE
@@ -393,15 +396,47 @@ is_docs_jwt_secret_rejected () {
 	TOKEN_PAYLOAD="$(printf '%s' '{"payload":{"c":"version"}}' | openssl base64 -A | tr '+/' '-_' | tr -d '=')"
 	TOKEN_SIGNATURE="$(printf '%s' "${TOKEN_HEADER}.${TOKEN_PAYLOAD}" | openssl dgst -sha256 -hmac "${SECRET}" -binary | openssl base64 -A | tr '+/' '-_' | tr -d '=')"
 
-	RESPONSE="$(curl -s -m 10 -X POST -H "Content-Type: application/json" -H "${DOCUMENT_SERVER_JWT_HEADER:-AuthorizationJwt}: Bearer ${TOKEN_HEADER}.${TOKEN_PAYLOAD}.${TOKEN_SIGNATURE}" -d '{"c":"version"}' "${DOCUMENT_SERVER_URL_EXTERNAL%/}/coauthoring/CommandService.ashx" 2>/dev/null)"
+	# A token signed with the real secret goes out only over a verified connection, without redirects
+	RESPONSE="$(curl -s -m 10 -H "Content-Type: application/json" -d '{"c":"version"}' -H "${DOCUMENT_SERVER_JWT_HEADER:-AuthorizationJwt}: Bearer ${TOKEN_HEADER}.${TOKEN_PAYLOAD}.${TOKEN_SIGNATURE}" "${DOCS_PROBE_URL:-${DOCUMENT_SERVER_URL_EXTERNAL%/}/coauthoring/CommandService.ashx}" 2>/dev/null)"
 	# An accepted token or no answer proves nothing against the secret
 	[[ "${RESPONSE}" =~ \"error\":\ *6([^0-9]|$) ]]
 }
 
 # Apps signs every request to Docs and refuses unsigned ones, so Docs needs JWT with the header AuthorizationJwt (CommandService answers error 6 without a token when JWT is on).
 check_external_docs_jwt () {
-	local RESPONSE
-	RESPONSE="$(curl -s -m 10 -X POST -H "Content-Type: application/json" -d '{"c":"version"}' "${DOCUMENT_SERVER_URL_EXTERNAL%/}/coauthoring/CommandService.ashx" 2>/dev/null)"
+	local RESPONSE CURL_STATUS HTTP_CODE REDIRECTS FINAL_URL PROBE_URL="${DOCUMENT_SERVER_URL_EXTERNAL%/}/coauthoring/CommandService.ashx" DEADLINE=$((SECONDS + 120)) WAIT_NOTED=""
+	# A freshly started Docs answers 502 until its services are up, so keep asking while the failure is transient
+	while :; do
+		RESPONSE="$(curl "${DOCS_PROBE_CURL_OPTS[@]}" -w '\n%{http_code} %{num_redirects} %{url_effective}' "${PROBE_URL}" 2>/dev/null)"
+		CURL_STATUS=$?
+		read -r HTTP_CODE REDIRECTS FINAL_URL <<<"${RESPONSE##*$'\n'}"
+		RESPONSE="${RESPONSE%$'\n'*}"
+		# A malformed URL (3) or an unresolvable host (6) does not recover by waiting
+		[[ "${RESPONSE}" =~ \"error\": || ! "${HTTP_CODE}" =~ ^(000|502|503|504)$ || ${CURL_STATUS} -eq 3 || ${CURL_STATUS} -eq 6 || ${SECONDS} -ge ${DEADLINE} ]] && break
+		[[ -n ${WAIT_NOTED} ]] || { echo "Waiting up to 2 minutes for the external Document Server at ${DOCUMENT_SERVER_URL_EXTERNAL} to answer..."; WAIT_NOTED="true"; }
+		sleep 5
+	done
+
+	# The secret check posts straight to the answering address, so no redirect drops or leaks its token
+	DOCS_PROBE_URL="${FINAL_URL:-${PROBE_URL}}"
+	if [[ ${REDIRECTS:-0} =~ ^[1-9] ]]; then
+		local FINAL_BASE="${FINAL_URL%/coauthoring/CommandService.ashx}"
+		# Only a scheme or port change on the same host is taken over; another host stays the user's decision
+		if [[ "${HTTP_CODE}" != "000" && "${FINAL_BASE}" != "${FINAL_URL}" && "${FINAL_BASE}" =~ ^https?://([^:/]+) && "${BASH_REMATCH[1],,}" == "${DOCUMENT_SERVER_HOST,,}" ]]; then
+			echo "${DOCUMENT_SERVER_URL_EXTERNAL} redirects to ${FINAL_BASE}; using ${FINAL_BASE} instead."
+			DOCUMENT_SERVER_URL_EXTERNAL="${FINAL_BASE}"
+			set_docs_url_external
+		else
+			echo "Warning: ${DOCUMENT_SERVER_URL_EXTERNAL} redirects to ${FINAL_BASE}; consider passing that address in --docsurl." >&2
+		fi
+	fi
+	# The probe skips certificate checks, but Apps does not: 60 and 51 are curl's certificate verification failures
+	if [[ "${DOCS_PROBE_URL}" == https://* && "${HTTP_CODE}" != "000" ]]; then
+		curl -s -o /dev/null -m 10 "${DOCS_PROBE_URL}" 2>/dev/null
+		case $? in
+			51|60) echo "Warning: the certificate of ${DOCS_PROBE_URL%/coauthoring/CommandService.ashx} is not valid for this address, so ${PRODUCT_NAME} is likely to fail to connect to it; use a domain name with a trusted certificate in --docsurl." >&2 ;;
+		esac
+	fi
 
 	if [[ "${RESPONSE}" =~ \"error\":\ *0([^0-9]|$) ]]; then
 		echo "Error: the external Document Server at ${DOCUMENT_SERVER_URL_EXTERNAL} has JWT disabled, which ${PRODUCT_NAME} does not support. Set JWT_ENABLED=true, JWT_SECRET and JWT_HEADER=AuthorizationJwt on it and pass --jwtsecret." >&2
@@ -412,28 +447,35 @@ check_external_docs_jwt () {
 	[[ -z ${DOCUMENT_SERVER_JWT_SECRET} ]] || return 0
 
 	if [[ "${RESPONSE}" =~ \"error\":\ *6([^0-9]|$) ]]; then
-		# Without a terminal or in non-interactive mode there is nobody to ask
-		if [ "${NON_INTERACTIVE:-false}" != "true" ] && [ -t 0 ]; then
-			# Keep the typed secret out of the xtrace log
-			local _attempt XTRACE_STATE=""
-			[[ $- == *x* ]] && XTRACE_STATE="on"
-			set +x
-			for _attempt in 1 2 3; do
-				read -r -s -p "The external Document Server at ${DOCUMENT_SERVER_URL_EXTERNAL} requires JWT. Enter its secret: " DOCUMENT_SERVER_JWT_SECRET
-				echo
-				[[ -n ${DOCUMENT_SERVER_JWT_SECRET} ]] || break
-				is_docs_jwt_secret_rejected "${DOCUMENT_SERVER_JWT_SECRET}" || break
-				echo "The Document Server did not accept this secret; it must also use JWT_HEADER=${DOCUMENT_SERVER_JWT_HEADER:-AuthorizationJwt}." >&2
-				DOCUMENT_SERVER_JWT_SECRET=""
-			done
-			if [ -n "${XTRACE_STATE}" ]; then set -x; fi
-		fi
+		read_external_docs_jwt_secret "The external Document Server at ${DOCUMENT_SERVER_URL_EXTERNAL} requires JWT. Enter its secret: "
 		[[ -n ${DOCUMENT_SERVER_JWT_SECRET} ]] && return 0
 		echo "Error: the external Document Server at ${DOCUMENT_SERVER_URL_EXTERNAL} requires JWT, but its secret is unknown. Pass --jwtsecret; the Document Server must use JWT_HEADER=${DOCUMENT_SERVER_JWT_HEADER:-AuthorizationJwt}." >&2
 		exit 1
-	else
-		echo "Warning: could not check whether the external Document Server requires JWT. If it does, pass --jwtsecret; it must use JWT_HEADER=${DOCUMENT_SERVER_JWT_HEADER:-AuthorizationJwt}." >&2
 	fi
+
+	echo "Warning: could not check whether the external Document Server at ${DOCUMENT_SERVER_URL_EXTERNAL} requires JWT (HTTP ${HTTP_CODE}). It must use JWT_ENABLED=true, JWT_HEADER=${DOCUMENT_SERVER_JWT_HEADER:-AuthorizationJwt} and the same secret as ${PRODUCT_NAME}, else the license and the editors fail." >&2
+	read_external_docs_jwt_secret "Enter the JWT secret of the external Document Server (leave empty to generate a new one): "
+	[[ -n ${DOCUMENT_SERVER_JWT_SECRET} ]] || echo "Warning: a new JWT secret is generated; set it as JWT_SECRET on the Document Server or reinstall with --jwtsecret." >&2
+}
+
+# Asks for the Docs secret on a terminal; an empty answer leaves DOCUMENT_SERVER_JWT_SECRET empty.
+read_external_docs_jwt_secret () {
+	local PROMPT="$1" _attempt XTRACE_STATE=""
+	# Without a terminal or in non-interactive mode there is nobody to ask
+	[ "${NON_INTERACTIVE:-false}" != "true" ] && [ -t 0 ] || return 0
+	# Keep the typed secret out of the xtrace log
+	[[ $- == *x* ]] && XTRACE_STATE="on"
+	set +x
+	for _attempt in 1 2 3; do
+		read -r -s -p "${PROMPT}" DOCUMENT_SERVER_JWT_SECRET
+		echo
+		[[ -n ${DOCUMENT_SERVER_JWT_SECRET} ]] || break
+		is_docs_jwt_secret_rejected "${DOCUMENT_SERVER_JWT_SECRET}" || break
+		echo "The Document Server did not accept this secret; it must also use JWT_HEADER=${DOCUMENT_SERVER_JWT_HEADER:-AuthorizationJwt}." >&2
+		DOCUMENT_SERVER_JWT_SECRET=""
+	done
+	if [ -n "${XTRACE_STATE}" ]; then set -x; fi
+	return 0
 }
 
 set_jwt_secret () {
