@@ -528,6 +528,14 @@ function MigrateProductRegistry {
     }
 }
 
+# Only SYSTEM and Administrators can read the passwords and keys stored in the product registry key.
+function RestrictRegistryKey {
+    $Key = 'HKLM:\SOFTWARE\WOW6432Node\Ascensio System SIA\ONLYOFFICE Apps'
+    $Acl = Get-Acl -Path $Key
+    $Acl.SetSecurityDescriptorSddlForm('D:PAI(A;CI;KA;;;SY)(A;CI;KA;;;BA)', [System.Security.AccessControl.AccessControlSections]::Access)
+    Set-Acl -Path $Key -AclObject $Acl
+}
+
 # Function to move configurations and manage files.
 function MoveConfigs {
     # Define source and target paths.
