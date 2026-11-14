@@ -396,8 +396,8 @@ is_docs_jwt_secret_rejected () {
 	TOKEN_PAYLOAD="$(printf '%s' '{"payload":{"c":"version"}}' | openssl base64 -A | tr '+/' '-_' | tr -d '=')"
 	TOKEN_SIGNATURE="$(printf '%s' "${TOKEN_HEADER}.${TOKEN_PAYLOAD}" | openssl dgst -sha256 -hmac "${SECRET}" -binary | openssl base64 -A | tr '+/' '-_' | tr -d '=')"
 
-	# A token signed with the real secret goes out only over a verified connection, without redirects
-	RESPONSE="$(curl -s -m 10 -H "Content-Type: application/json" -d '{"c":"version"}' -H "${DOCUMENT_SERVER_JWT_HEADER:-AuthorizationJwt}: Bearer ${TOKEN_HEADER}.${TOKEN_PAYLOAD}.${TOKEN_SIGNATURE}" "${DOCS_PROBE_URL:-${DOCUMENT_SERVER_URL_EXTERNAL%/}/coauthoring/CommandService.ashx}" 2>/dev/null)"
+	# A token signed with the real secret goes straight to the checked same-host address without redirects; -k like the probe, so an untrusted certificate (already warned about) does not read as an accepted secret
+	RESPONSE="$(curl -s -k -m 10 -H "Content-Type: application/json" -d '{"c":"version"}' -H "${DOCUMENT_SERVER_JWT_HEADER:-AuthorizationJwt}: Bearer ${TOKEN_HEADER}.${TOKEN_PAYLOAD}.${TOKEN_SIGNATURE}" "${DOCS_PROBE_URL:-${DOCUMENT_SERVER_URL_EXTERNAL%/}/coauthoring/CommandService.ashx}" 2>/dev/null)"
 	# An accepted token or no answer proves nothing against the secret
 	[[ "${RESPONSE}" =~ \"error\":\ *6([^0-9]|$) ]]
 }
@@ -417,14 +417,15 @@ check_external_docs_jwt () {
 		sleep 5
 	done
 
-	# The secret check posts straight to the answering address, so no redirect drops or leaks its token
-	DOCS_PROBE_URL="${FINAL_URL:-${PROBE_URL}}"
+	# The secret check posts straight to the address it is sent to, so no redirect drops or leaks its token
+	DOCS_PROBE_URL="${PROBE_URL}"
 	if [[ ${REDIRECTS:-0} =~ ^[1-9] ]]; then
 		local FINAL_BASE="${FINAL_URL%/coauthoring/CommandService.ashx}"
 		# Only a scheme or port change on the same host is taken over; another host stays the user's decision
 		if [[ "${HTTP_CODE}" != "000" && "${FINAL_BASE}" != "${FINAL_URL}" && "${FINAL_BASE}" =~ ^https?://([^:/]+) && "${BASH_REMATCH[1],,}" == "${DOCUMENT_SERVER_HOST,,}" ]]; then
 			echo "${DOCUMENT_SERVER_URL_EXTERNAL} redirects to ${FINAL_BASE}; using ${FINAL_BASE} instead."
 			DOCUMENT_SERVER_URL_EXTERNAL="${FINAL_BASE}"
+			DOCS_PROBE_URL="${FINAL_URL}"
 			set_docs_url_external
 		else
 			echo "Warning: ${DOCUMENT_SERVER_URL_EXTERNAL} redirects to ${FINAL_BASE}; consider passing that address in --docsurl." >&2
