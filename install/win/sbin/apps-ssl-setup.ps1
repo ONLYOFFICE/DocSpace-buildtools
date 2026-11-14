@@ -137,6 +137,12 @@ function ConvertToPem {
 if ( $args.Count -ge 2 ) {
   if ($args[0] -eq "-f" -or $args[0] -eq "--file") {
     $domain_name = $args[1] -join ","
+    foreach ($domain in $domain_name -split ',') {
+      if ($domain -notmatch '^[a-zA-Z0-9]([a-zA-Z0-9\-\.]*[a-zA-Z0-9])?(:[0-9]{1,5})?$') {
+        Write-Error "Error: domain name '$domain' is incorrect."
+        exit 1
+      }
+    }
     $ssl_cert           = $args[2]
     $ssl_key            = $null
 
