@@ -70,7 +70,9 @@ setup_postgres_db() {
 	elif [ -z "${DS_DB_PWD}" ]; then
 		# A kept database may hold a random password stored nowhere, so the Docs installed now sets a fresh one
 		DS_DB_PWD=$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 24)
-		su - postgres -s /bin/bash -c "psql -c \"ALTER USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';\""
+		DS_DB_USER_VERB="CREATE"
+		su - postgres -s /bin/bash -c "psql -tAc \"SELECT 1 FROM pg_roles WHERE rolname='${DS_DB_USER}'\"" | grep -q 1 && DS_DB_USER_VERB="ALTER"
+		su - postgres -s /bin/bash -c "psql -c \"${DS_DB_USER_VERB} USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';\""
 	fi
 }
 
