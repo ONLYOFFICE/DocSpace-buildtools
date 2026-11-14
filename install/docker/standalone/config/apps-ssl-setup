@@ -273,6 +273,11 @@ wait_for_migration() {
     [ "${WAITING}" = "true" ] || { echo -n "Waiting for the ${CONTAINER_NAME} database migration to finish..."; WAITING="true"; }
     sleep 5
   done
+  STATE=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}} {{.State.ExitCode}}{{end}}' "${CONTAINER_NAME}" 2>/dev/null)
+  case "${STATE}" in
+    "" | "healthy" | "exited 0" | "running 0") ;;
+    *) [ "${WAITING}" = "false" ] || echo; echo "Error: ${CONTAINER_NAME} is ${STATE}; check 'docker logs ${CONTAINER_NAME}'." >&2; return 1 ;;
+  esac
   [ "${WAITING}" = "false" ] || echo "OK"
 }
 
