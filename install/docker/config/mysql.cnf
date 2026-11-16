@@ -3,3 +3,5 @@ sql_mode = 'NO_ENGINE_SUBSTITUTION'
 max_connections = 1000
 max_allowed_packet = 1048576000
 group_concat_max_len = 2048
+# MySQL 8.4 disables this plugin, still used by accounts from DocSpace 1.0 installs; MySQL 9 removes it, so drop this line there
+mysql_native_password = ON

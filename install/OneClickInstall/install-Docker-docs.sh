@@ -417,14 +417,15 @@ check_external_docs_jwt () {
 		sleep 5
 	done
 
-	# The secret check posts straight to the answering address, so no redirect drops or leaks its token
-	DOCS_PROBE_URL="${FINAL_URL:-${PROBE_URL}}"
+	# The secret check posts only to the given address or its adopted same-host redirect, so the signed token never reaches another host
+	DOCS_PROBE_URL="${PROBE_URL}"
 	if [[ ${REDIRECTS:-0} =~ ^[1-9] ]]; then
 		local FINAL_BASE="${FINAL_URL%/coauthoring/CommandService.ashx}"
 		# Only a scheme or port change on the same host is taken over; another host stays the user's decision
 		if [[ "${HTTP_CODE}" != "000" && "${FINAL_BASE}" != "${FINAL_URL}" && "${FINAL_BASE}" =~ ^https?://([^:/]+) && "${BASH_REMATCH[1],,}" == "${DOCUMENT_SERVER_HOST,,}" ]]; then
 			echo "${DOCUMENT_SERVER_URL_EXTERNAL} redirects to ${FINAL_BASE}; using ${FINAL_BASE} instead."
 			DOCUMENT_SERVER_URL_EXTERNAL="${FINAL_BASE}"
+			DOCS_PROBE_URL="${FINAL_URL}"
 			set_docs_url_external
 		else
 			echo "Warning: ${DOCUMENT_SERVER_URL_EXTERNAL} redirects to ${FINAL_BASE}; consider passing that address in --docsurl." >&2
