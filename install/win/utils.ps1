@@ -611,15 +611,26 @@ function SetDocumentServerJWTSecretProp {
     AI_SetMsiProperty JWT_SECRET $JwtSecret
 }
 
-# Sets the MACHINE_KEY MSI property based on existing configuration or generates a new one.
+# Sets the MACHINE_KEY MSI property from the installed configuration, or a random one when there is none.
 function SetMachineKey {
     $AppDir = AI_GetMsiProperty APPDIR
-    $JsonFilePath = Join-Path -Path $AppDir -ChildPath "config\appsettings.production.json"
     $MachineKey = ""
 
-    if (Test-Path -Path $JsonFilePath) {
-        $JsonContent = Get-Content -Path $JsonFilePath -Raw | ConvertFrom-Json
-        $MachineKey = $JsonContent.core.machinekey
+    # The key is in appsettings.<ENVIRONMENT>.json of the installed edition, which differs on an edition change; a new key would break the data protected with the old one
+    $JsonNames = @("appsettings.$(AI_GetMsiProperty ENVIRONMENT).json", 'appsettings.community.json', 'appsettings.enterprise.json', 'appsettings.developer.json', 'appsettings.production.json') | Select-Object -Unique
+    # When files of several editions are left, the most recently written one holds the key in use
+    $JsonFiles = $JsonNames | ForEach-Object { Join-Path -Path $AppDir -ChildPath "config\$_" } |
+        Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | ForEach-Object { Get-Item -LiteralPath $_ } | Sort-Object LastWriteTimeUtc -Descending
+    foreach ($JsonFile in $JsonFiles) {
+        try {
+            $MachineKey = (Get-Content -LiteralPath $JsonFile.FullName -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop).core.machinekey
+            if (-not [string]::IsNullOrEmpty($MachineKey)) { break }
+        }
+        catch { Write-Output "Unable to read $($JsonFile.FullName) : $($_.Exception.Message)" }
+    }
+
+    if ($MachineKey -and -not $MachineKey.Trim()) {
+        Write-Output "WARNING: the installed MACHINE_KEY is blank; it is kept because a new key would make the stored passwords and data unreadable."
     }
 
     if ([string]::IsNullOrEmpty($MachineKey)) {
@@ -652,7 +663,9 @@ function SetIdentityEncryptionSecret {
         if (Test-Path -LiteralPath $ServiceConfig -PathType Leaf) {
             $Secret = ([xml](Get-Content -LiteralPath $ServiceConfig -Raw)).service.env |
                 Where-Object { $_.name -eq 'SPRING_APPLICATION_ENCRYPTION_SECRET' } | Select-Object -First 1 -ExpandProperty value
-            if ($Secret -and $Secret.Trim() -and $Secret -ne '{IDENTITY_ENCRYPTION_SECRET}') {
+            # A silent install of 4.0 and older left the blank placeholder here, and its Identity data is encrypted with it
+            if ($Secret -and $Secret -ne '{IDENTITY_ENCRYPTION_SECRET}') {
+                if (-not $Secret.Trim()) { Write-Output 'WARNING: the installed Identity encryption key is blank; it is kept so that the Identity data stays readable.' }
                 AI_SetMsiProperty IDENTITY_ENCRYPTION_SECRET $Secret
                 Write-Output 'IDENTITY_ENCRYPTION_SECRET is taken from the installed Identity service configuration.'
                 return
