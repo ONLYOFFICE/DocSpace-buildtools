@@ -616,13 +616,17 @@ function SetMachineKey {
     $AppDir = AI_GetMsiProperty APPDIR
     $MachineKey = ""
 
-    # The package writes the key to appsettings.<ENVIRONMENT>.json; a new key would break the passwords and data protected with the old one
-    foreach ($JsonName in @("appsettings.$(AI_GetMsiProperty ENVIRONMENT).json", 'appsettings.production.json')) {
+    # The key is in appsettings.<ENVIRONMENT>.json of the installed edition, which differs on an edition change; a new key would break the data protected with the old one
+    $JsonNames = @("appsettings.$(AI_GetMsiProperty ENVIRONMENT).json", 'appsettings.community.json', 'appsettings.enterprise.json', 'appsettings.developer.json', 'appsettings.production.json') | Select-Object -Unique
+    foreach ($JsonName in $JsonNames) {
         $JsonFilePath = Join-Path -Path $AppDir -ChildPath "config\$JsonName"
-        if (Test-Path -LiteralPath $JsonFilePath -PathType Leaf) {
-            $MachineKey = (Get-Content -LiteralPath $JsonFilePath -Raw | ConvertFrom-Json).core.machinekey
-            if (-not [string]::IsNullOrEmpty($MachineKey)) { break }
+        try {
+            if (Test-Path -LiteralPath $JsonFilePath -PathType Leaf) {
+                $MachineKey = (Get-Content -LiteralPath $JsonFilePath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop).core.machinekey
+                if (-not [string]::IsNullOrEmpty($MachineKey)) { break }
+            }
         }
+        catch { Write-Output "Unable to read $JsonFilePath : $($_.Exception.Message)" }
     }
 
     if ($MachineKey -and -not $MachineKey.Trim()) {
