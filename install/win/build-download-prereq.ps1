@@ -180,6 +180,7 @@ $AppsXml = New-Object Xml.XmlDocument
 $AppsXml.LoadXml($AppsProject)
 [IO.File]::WriteAllText($aip_path, $AppsProject, (New-Object Text.UTF8Encoding($false)))
 Write-Host "Docs Community version in Apps.aip: $DocsVersion"
+& (Join-Path $PSScriptRoot 'docs-secret-args.ps1') -AipPath $aip_path -DocsDir $path_prereq
 
 DownloadComponents $enterprise_prerequisites $path_enterprise_prereq
 

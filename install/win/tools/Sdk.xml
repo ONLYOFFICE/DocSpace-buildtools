@@ -2,11 +2,12 @@
 	<id>Apps.Sdk</id>
 	<name>ONLYOFFICE Apps SDK</name>
 	<description>ONLYOFFICE Apps SDK</description>
-	<priority>RealTime</priority>
+	<priority>Normal</priority>
 	<startmode>Automatic</startmode>
 	<autoRefresh>false</autoRefresh>
 	<onfailure action="restart" delay="10 sec"/>
 	<logpath>{APPDIR}Logs</logpath>
+	<env name="logPath" value="{APPDIR}Logs"/>
 	<executable>node</executable>
 	<arguments>&quot;{APPDIR}products\ASC.Sdk\sdk\server.js&quot;</arguments>
 	<log mode="roll-by-size">

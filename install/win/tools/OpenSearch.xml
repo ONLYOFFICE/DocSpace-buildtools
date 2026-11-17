@@ -2,7 +2,7 @@
 	<id>OpenSearch</id>
 	<name>OpenSearch</name>
 	<description>OpenSearch</description>
-	<priority>RealTime</priority>
+	<priority>Normal</priority>
 	<startmode>Automatic</startmode>
 	<delayedAutoStart>true</delayedAutoStart>
 	<onfailure action="restart" delay="1 sec"/>

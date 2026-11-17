@@ -2,11 +2,12 @@
 	<id>Apps.MCP</id>
 	<name>ONLYOFFICE Apps MCP</name>
 	<description>ONLYOFFICE Apps MCP</description>
-	<priority>RealTime</priority>
+	<priority>Normal</priority>
 	<startmode>Automatic</startmode>
 	<autoRefresh>false</autoRefresh>
 	<onfailure action="restart" delay="10 sec"/>
 	<logpath>{APPDIR}Logs</logpath>
+	<env name="logPath" value="{APPDIR}Logs"/>
 	<env name="DOCSPACE_INTERNAL" value="true" />
 	<env name="DOCSPACE_TRANSPORT" value="http" />
 	<env name="DOCSPACE_HOST" value="0.0.0.0" />

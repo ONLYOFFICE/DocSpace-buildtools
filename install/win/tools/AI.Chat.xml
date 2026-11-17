@@ -2,11 +2,12 @@
 	<id>Apps.AI.Chat</id>
 	<name>ONLYOFFICE Apps AI.Chat</name>
 	<description>ONLYOFFICE Apps AI.Chat</description>
-	<priority>RealTime</priority>
+	<priority>Normal</priority>
 	<startmode>Automatic</startmode>
 	<autoRefresh>false</autoRefresh>
 	<onfailure action="restart" delay="10 sec"/>
 	<logpath>{APPDIR}Logs</logpath>
+	<env name="logPath" value="{APPDIR}Logs"/>
 	<env name="API_HOST" value="{API_HOST}"/>
 	<env name="AI_SERVICE_URL" value="{AI_SERVICE_URL}"/>
 	<executable>node</executable>

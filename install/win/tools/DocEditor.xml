@@ -2,11 +2,12 @@
 	<id>Apps.DocEditor</id>
 	<name>ONLYOFFICE Apps DocEditor</name>
 	<description>ONLYOFFICE Apps DocEditor</description>
-	<priority>RealTime</priority>
+	<priority>Normal</priority>
 	<startmode>Automatic</startmode>
 	<autoRefresh>false</autoRefresh>
 	<onfailure action="restart" delay="10 sec"/>
 	<logpath>{APPDIR}Logs</logpath>
+	<env name="logPath" value="{APPDIR}Logs"/>
 	<env name="API_HOST" value="{API_HOST}"/>
 	<workingdirectory>{APPDIR}products\ASC.Files\editor</workingdirectory>
 	<executable>node</executable>

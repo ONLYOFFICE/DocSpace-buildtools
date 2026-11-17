@@ -2,11 +2,12 @@
 	<id>Apps.SsoAuth.Svc</id>
 	<name>ONLYOFFICE Apps SsoAuth.Svc</name>
 	<description>ONLYOFFICE Apps ASC.SsoAuth.Svc</description>
-	<priority>RealTime</priority>
+	<priority>Normal</priority>
 	<startmode>Automatic</startmode>
 	<autoRefresh>false</autoRefresh>
 	<onfailure action="restart" delay="10 sec"/>
 	<logpath>{APPDIR}Logs</logpath>
+	<env name="logPath" value="{APPDIR}Logs"/>
 	<executable>node</executable>
 	<arguments>&quot;{APPDIR}services\ASC.SsoAuth\service\app.js&quot;</arguments>
 	<log mode="roll-by-size">

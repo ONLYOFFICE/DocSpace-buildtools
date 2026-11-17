@@ -2,7 +2,7 @@
 	<id>Apps.Identity.Authorization</id>
 	<name>ONLYOFFICE Apps Identity.Authorization</name>
 	<description>ONLYOFFICE Apps Identity.Authorization</description>
-	<priority>RealTime</priority>
+	<priority>Normal</priority>
 	<startmode>Automatic</startmode>
 	<autoRefresh>false</autoRefresh>
 	<logpath>{APPDIR}Logs</logpath>

@@ -22,7 +22,7 @@ Filename: "{#BASE_DIR}\bin\mysqld.exe"; Parameters: "--initialize-insecure"; Fla
 Filename: "cmd"; Parameters: "/C move /Y ""{tmp}\my.ini"" ""{#DATA_DIR}\my.ini"""; Flags: runhidden waituntilterminated
 Filename: "{#BASE_DIR}\bin\mysqld.exe"; Parameters: "--install MySQL84 --defaults-file=""{#DATA_DIR}\my.ini"""; Flags: runhidden waituntilterminated
 Filename: "net"; Parameters: "start MySQL84"; Flags: runhidden waituntilterminated
-Filename: "{#BASE_DIR}\bin\mysql.exe"; Parameters: "-u root -e ""ALTER USER 'root'@'localhost' IDENTIFIED BY '{param:DB_PWD}';"""; Flags: runhidden waituntilterminated
+Filename: "{#BASE_DIR}\bin\mysql.exe"; Parameters: "-u root -e ""source {code:GetRootPasswordSqlPath}"""; Flags: runhidden waituntilterminated; BeforeInstall: SaveRootPasswordSql; AfterInstall: DeleteRootPasswordSql
 
 [Code]
 function SaveMyIniFile(BaseDir, DataDir: String): Boolean;
@@ -40,6 +40,28 @@ begin
     'sql_mode=NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES' + #13#10,[BaseDir, DataDir]);
 
   Result := SaveStringToFile(FileName, Content, False);
+end;
+
+// The root password goes through a file in the private setup temp dir, so it never appears in a command line
+function GetRootPasswordSqlPath(Param: String): String;
+begin
+  Result := ExpandConstant('{tmp}\set-root-password.sql');
+  StringChangeEx(Result, '\', '/', True);
+end;
+
+procedure SaveRootPasswordSql;
+var
+  Password: String;
+begin
+  Password := ExpandConstant('{param:DB_PWD}');
+  StringChangeEx(Password, '\', '\\', True);
+  StringChangeEx(Password, '''', '''''', True);
+  SaveStringToFile(ExpandConstant('{tmp}\set-root-password.sql'), 'ALTER USER ''root''@''localhost'' IDENTIFIED BY ''' + Password + ''';' + #13#10, False);
+end;
+
+procedure DeleteRootPasswordSql;
+begin
+  DeleteFile(ExpandConstant('{tmp}\set-root-password.sql'));
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);

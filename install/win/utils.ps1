@@ -118,7 +118,8 @@ function ApplyInstalledDocumentServerSettings {
     if ($Value = AI_GetMsiProperty DOCS_DBHOST) { AI_SetMsiProperty PS_DB_HOST $Value }
     if ($Value = AI_GetMsiProperty DOCS_DBNAME) { AI_SetMsiProperty PS_DB_NAME $Value }
     if ($Value = AI_GetMsiProperty DOCS_DBPORT) { AI_SetMsiProperty PS_DB_PORT $Value }
-    if ($Value = AI_GetMsiProperty DOCS_DBPWD) { AI_SetMsiProperty PS_DB_PWD $Value }
+    # The secret properties hold a blank placeholder so the log hides them, which here means Docs has no value.
+    if ($Value = (AI_GetMsiProperty DOCS_DBPWD).Trim()) { AI_SetMsiProperty PS_DB_PWD $Value }
     if ($Value = AI_GetMsiProperty DOCS_DBUSER) { AI_SetMsiProperty PS_DB_USER $Value }
     if ($Value = AI_GetMsiProperty DOCS_JWTENABLED) {
         AI_SetMsiProperty DOCUMENT_SERVER_JWT_ENABLED $Value
@@ -128,13 +129,13 @@ function ApplyInstalledDocumentServerSettings {
         AI_SetMsiProperty DOCUMENT_SERVER_JWT_HEADER $Value
         AI_SetMsiProperty JWT_HEADER $Value
     }
-    if ($Value = AI_GetMsiProperty DOCS_JWTSECRET) {
+    if ($Value = (AI_GetMsiProperty DOCS_JWTSECRET).Trim()) {
         AI_SetMsiProperty DOCUMENT_SERVER_JWT_SECRET $Value
         AI_SetMsiProperty JWT_SECRET $Value
     }
     if ($Value = AI_GetMsiProperty DOCS_RABBITMQHOST) { AI_SetMsiProperty AMQP_HOST $Value }
     if ($Value = AI_GetMsiProperty DOCS_RABBITMQPROTO) { AI_SetMsiProperty AMQP_PROTOCOL $Value }
-    if ($Value = AI_GetMsiProperty DOCS_RABBITMQPWD) { AI_SetMsiProperty AMQP_PWD $Value }
+    if ($Value = (AI_GetMsiProperty DOCS_RABBITMQPWD).Trim()) { AI_SetMsiProperty AMQP_PWD $Value }
     if ($Value = AI_GetMsiProperty DOCS_RABBITMQUSER) { AI_SetMsiProperty AMQP_USER $Value }
     if ($Value = AI_GetMsiProperty DOCS_REDISHOST) { AI_SetMsiProperty REDIS_HOST $Value }
 
@@ -236,6 +237,36 @@ function TestSqlConnection {
     }
 }
 
+# Creates a user that can reach only the application database, as the Linux packages do; returns $null when the name is not a plain identifier or the creation fails.
+function CreateMySqlApplicationUser {
+    param ($Cmd, [string]$DbName)
+    if ($DbName -notmatch '^[A-Za-z0-9_]+$') {
+        Write-Output "The database name '$DbName' is not a plain identifier, the application keeps using the root user."
+        return $null
+    }
+    # Named after the database, so installations sharing a MySQL server never reset each other's password.
+    $AppUser = $DbName.Substring(0, [Math]::Min(27, $DbName.Length)) + '_user'
+    $AppPassword = 'Aa1_' + (RandomString -Length 24)
+    try {
+        foreach ($UserHost in 'localhost', '127.0.0.1') {
+            $Cmd.CommandText = "CREATE USER IF NOT EXISTS '$AppUser'@'$UserHost' IDENTIFIED BY '$AppPassword'"
+            [void]$Cmd.ExecuteNonQuery()
+            $Cmd.CommandText = "ALTER USER '$AppUser'@'$UserHost' IDENTIFIED BY '$AppPassword'"
+            [void]$Cmd.ExecuteNonQuery()
+            $Cmd.CommandText = "GRANT ALL PRIVILEGES ON ``$DbName``.* TO '$AppUser'@'$UserHost'"
+            [void]$Cmd.ExecuteNonQuery()
+        }
+        $Cmd.CommandText = 'FLUSH PRIVILEGES'
+        [void]$Cmd.ExecuteNonQuery()
+        Write-Output "The application database user '$AppUser' is created."
+        return @{ Name = $AppUser; Password = $AppPassword }
+    }
+    catch {
+        Write-Output "Unable to create the application database user, the application keeps using the root user: $($_.Exception.Message)"
+        return $null
+    }
+}
+
 # Configures MySQL settings by updating my.ini and setting the root password.
 function MySQLConfigure {
     $MySqlDriver = Get-ChildItem 'HKLM:\SOFTWARE\ODBC\ODBCINST.INI', 'HKLM:\SOFTWARE\WOW6432Node\ODBC\ODBCINST.INI' -ErrorAction SilentlyContinue |
@@ -263,10 +294,20 @@ function MySQLConfigure {
                     $Cmd = $Conn.CreateCommand()
                     $Cmd.CommandText = "ALTER USER 'root'@'localhost' IDENTIFIED BY '$NewPass'"
                     [void]$Cmd.ExecuteNonQuery()
+                    $AppUser = CreateMySqlApplicationUser $Cmd $DbName
                 } finally {
                     $Conn.Close()
                 }
-                AI_SetMsiProperty DB_PWD $NewPass
+                # The administrative password is kept only in the restricted settings key; the application gets its own user.
+                AI_SetMsiProperty MYSQL_ROOT_PWD $NewPass
+                if ($AppUser) {
+                    AI_SetMsiProperty DB_USER $AppUser.Name
+                    AI_SetMsiProperty DB_PWD $AppUser.Password
+                    SaveSecretsNow @{ MYSQL_ROOT_PWD = $NewPass; DB_USER = $AppUser.Name; DB_PWD = $AppUser.Password }
+                } else {
+                    AI_SetMsiProperty DB_PWD $NewPass
+                    SaveSecretsNow @{ MYSQL_ROOT_PWD = $NewPass; DB_PWD = $NewPass }
+                }
             }
         } else {
             Write-Output "MySQL service is not running."
@@ -318,16 +359,20 @@ function PostgreSqlConfigure {
     $DbPort = AI_GetMsiProperty PS_DB_PORT
     $DbHost = AI_GetMsiProperty PS_DB_HOST
 
+    # The wizard runs this twice; the second run connects with the superuser password the first one set.
+    $SuperPassword = (AI_GetMsiProperty PS_SUPER_PWD).Trim()
+    $ConnSuperPassword = if ($SuperPassword) { $SuperPassword } else { 'postgres' }
     $Driver      = "PostgreSQL Unicode"
-    $ConnString  = "Driver={$Driver};Server=$DbHost;Port=$DbPort;Database=postgres;Uid=postgres;Pwd=postgres"
+    $ConnString  = "Driver={$Driver};Server=$DbHost;Port=$DbPort;Database=postgres;Uid=postgres;Pwd=$ConnSuperPassword"
 
     try {
         $Conn = New-Object System.Data.Odbc.OdbcConnection($ConnString)
         $Conn.Open()
         $Cmd = $Conn.CreateCommand()
 
-        # The first installation replaces the default password of the application user with a random one.
-        $Replace = -not (AI_GetMsiProperty OLDPRODUCTS) -and $DbPwd -eq 'onlyoffice'
+        # A fresh install replaces the default application password, unless a silent install already set Docs up with it.
+        $DocsInstalled = [bool]((AI_GetMsiProperty DOCS_INSTALLED_VERSION).Trim())
+        $Replace = -not (AI_GetMsiProperty OLDPRODUCTS) -and $DbPwd -eq 'onlyoffice' -and -not $DocsInstalled
         if ($Replace) { $DbPwd = RandomString -Length 32 }
 
         $Cmd.CommandText = "SELECT 1 FROM pg_database WHERE datname = '$DbName';"
@@ -356,11 +401,33 @@ function PostgreSqlConfigure {
             }
         }
 
-        if ($Replace) { AI_SetMsiProperty PS_DB_PWD $DbPwd }
+        if ($Replace) {
+            AI_SetMsiProperty PS_DB_PWD $DbPwd
+            SaveSecretsNow @{ PS_DB_PWD = $DbPwd }
+        }
 
         $Cmd.CommandText = "GRANT ALL PRIVILEGES ON DATABASE $DbName TO $DbUser;"
         $Cmd.ExecuteNonQuery()
         Write-Output "Granted privileges on database '$DbName' to user '$DbUser'."
+        # A database created here belongs to the application user, which needs to create tables in it on PostgreSQL 15 and later.
+        if (-not $DbExists) {
+            $Cmd.CommandText = "ALTER DATABASE $DbName OWNER TO $DbUser;"
+            [void]$Cmd.ExecuteNonQuery()
+        }
+
+        if (-not (AI_GetMsiProperty OLDPRODUCTS) -and $DocsInstalled) {
+            InitializeDocsSchema $DbHost $DbPort $DbName $DbUser $DbPwd
+        }
+
+        # A fresh install replaces the well-known superuser password set by the prerequisites; the new one is kept only in the restricted settings key.
+        if (-not (AI_GetMsiProperty OLDPRODUCTS) -and -not $SuperPassword) {
+            $SuperPassword = RandomString -Length 32
+            $Cmd.CommandText = "ALTER USER postgres WITH ENCRYPTED PASSWORD '$SuperPassword';"
+            [void]$Cmd.ExecuteNonQuery()
+            AI_SetMsiProperty PS_SUPER_PWD $SuperPassword
+            SaveSecretsNow @{ PS_SUPER_PWD = $SuperPassword }
+            Write-Output 'The PostgreSQL superuser password is replaced with a random one.'
+        }
     }
     catch {
         Write-Output "An error occurred while configuring PostgreSQL:"
@@ -370,6 +437,171 @@ function PostgreSqlConfigure {
         if ($Conn -and $Conn.State -eq 'Open') {
             $Conn.Close()
         }
+    }
+}
+
+# A fresh install with the local broker gives Apps and Docs their own RabbitMQ user instead of guest.
+function RabbitMqConfigure {
+    if ((AI_GetMsiProperty OLDPRODUCTS) -or (AI_GetMsiProperty AMQP_USER) -ne 'guest' -or (AI_GetMsiProperty AMQP_HOST) -notin 'localhost', '127.0.0.1') {
+        return
+    }
+    $Ctl = Get-ChildItem "$env:ProgramFiles\RabbitMQ Server\rabbitmq_server-*\sbin\rabbitmqctl.bat" -ErrorAction SilentlyContinue |
+        Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+    $Cookie = "$env:SystemRoot\System32\config\systemprofile\.erlang.cookie"
+    if (-not $Ctl -or -not (Test-Path -LiteralPath $Cookie)) {
+        Write-Output 'rabbitmqctl or the broker cookie is not found, Apps keeps using the guest user.'
+        return
+    }
+
+    # The installing user has its own broker cookie, which the service does not accept, so rabbitmqctl runs with a private home holding the service one.
+    # The cookie gives full control of the broker running as LocalSystem, so its folder is closed to other programs of the installing user.
+    try { $CtlHome = NewRestrictedTempDir 'rabbitmqctl-' }
+    catch {
+        Write-Output "Unable to create a restricted folder for the broker cookie, Apps keeps using the guest user: $($_.Exception.Message)"
+        return
+    }
+    try {
+        Copy-Item -LiteralPath $Cookie -Destination (Join-Path $CtlHome '.erlang.cookie')
+        $User = 'onlyoffice'
+        $Password = RandomString -Length 32
+        $VHost = AI_GetMsiProperty AMQP_VHOST
+        if (-not $VHost) { $VHost = '/' }
+        # The prerequisites may have started the broker moments ago, so it gets up to three minutes to come up.
+        $Deadline = (Get-Date).AddMinutes(3)
+        do {
+            $Result = InvokeRabbitMqCtl $Ctl $CtlHome 'await_startup --timeout 60' ''
+            if ($Result.ExitCode -eq 0) { break }
+            Start-Sleep -Seconds 5
+        } while ((Get-Date) -lt $Deadline)
+        if ($Result.ExitCode -ne 0) { throw "await_startup failed: $($Result.Output)" }
+        [void](InvokeRabbitMqCtl $Ctl $CtlHome "delete_user $User" '')
+        # The password goes through stdin, so it never appears in a command line.
+        $Result = InvokeRabbitMqCtl $Ctl $CtlHome "add_user $User" $Password
+        if ($Result.ExitCode -ne 0) { throw "add_user failed: $($Result.Output)" }
+        $Result = InvokeRabbitMqCtl $Ctl $CtlHome "set_permissions -p `"$VHost`" $User `".*`" `".*`" `".*`"" ''
+        if ($Result.ExitCode -ne 0) { throw "set_permissions failed: $($Result.Output)" }
+
+        AI_SetMsiProperty AMQP_USER $User
+        AI_SetMsiProperty AMQP_PWD $Password
+        Write-Output "The RabbitMQ user '$User' is created."
+    }
+    catch {
+        Write-Output "Unable to create the RabbitMQ user, Apps keeps using the guest user: $($_.Exception.Message)"
+    }
+    finally {
+        Remove-Item -LiteralPath $CtlHome -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+# Console tools such as rabbitmqctl read stdin when it is not a terminal, so stdin is always given and closed; a run that hangs is stopped after two minutes.
+function InvokeHiddenProcess {
+    param ([string]$FileName, [string]$Arguments, [hashtable]$Environment, [string]$StdinText)
+    $Info = New-Object System.Diagnostics.ProcessStartInfo
+    $Info.FileName = $FileName
+    $Info.Arguments = $Arguments
+    $Info.UseShellExecute = $false
+    $Info.CreateNoWindow = $true
+    $Info.RedirectStandardInput = $true
+    $Info.RedirectStandardOutput = $true
+    $Info.RedirectStandardError = $true
+    foreach ($Name in $Environment.Keys) { $Info.EnvironmentVariables[$Name] = $Environment[$Name] }
+    $Process = [System.Diagnostics.Process]::Start($Info)
+    $Stdout = $Process.StandardOutput.ReadToEndAsync()
+    $Stderr = $Process.StandardError.ReadToEndAsync()
+    if ($StdinText) { $Process.StandardInput.WriteLine($StdinText) }
+    $Process.StandardInput.Close()
+    if (-not $Process.WaitForExit(120000)) {
+        $Process.Kill()
+        return @{ ExitCode = -1; Output = "$(Split-Path -Leaf $FileName) $($Arguments.Split(' ')[0]) did not finish in time" }
+    }
+    return @{ ExitCode = $Process.ExitCode; Output = ($Stdout.Result + $Stderr.Result).Trim() }
+}
+
+function InvokeRabbitMqCtl {
+    param ([string]$Ctl, [string]$CtlHome, [string]$Arguments, [string]$StdinText)
+    $Environment = @{ HOMEDRIVE = Split-Path -Qualifier $CtlHome; HOMEPATH = Split-Path -NoQualifier $CtlHome; USERPROFILE = $CtlHome }
+    # The prerequisites set ERLANG_HOME for the machine, so a setup started before them does not have it in its environment.
+    if (-not $env:ERLANG_HOME) {
+        $ErlangHome = [Environment]::GetEnvironmentVariable('ERLANG_HOME', 'Machine')
+        if ($ErlangHome) { $Environment['ERLANG_HOME'] = $ErlangHome }
+    }
+    return InvokeHiddenProcess "$env:SystemRoot\System32\cmd.exe" "/c `"`"$Ctl`" $Arguments`"" $Environment $StdinText
+}
+
+# Docs EE/DE installed before its database role existed has no tables, so they are created here and Docs is restarted (CE keeps no data there).
+function InitializeDocsSchema {
+    param ([string]$DbHost, [string]$DbPort, [string]$DbName, [string]$DbUser, [string]$DbPwd)
+    if ((AI_GetMsiProperty ENVIRONMENT) -eq 'community') { return }
+    $DocsDir = AI_GetMsiProperty DOCS_INSTALL_LOCATION
+    if (-not $DocsDir) { return }
+    $Schema = Join-Path $DocsDir 'server\schema\postgresql\createdb.sql'
+    $Psql = @(Join-Path $DocsDir 'pgsql\bin\psql.exe') + @(Get-ChildItem "$env:ProgramFiles\PostgreSQL\*\bin\psql.exe" -ErrorAction SilentlyContinue |
+        Sort-Object FullName -Descending | Select-Object -ExpandProperty FullName) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+    if (-not $Psql -or -not (Test-Path -LiteralPath $Schema)) {
+        Write-Output 'psql or the Docs schema is not found, the Docs tables are not checked.'
+        return
+    }
+
+    # The password reaches psql through its environment, never through the command line.
+    $Environment = @{ PGPASSWORD = $DbPwd }
+    $Connection = "-h `"$DbHost`" -p `"$DbPort`" -U `"$DbUser`" -d `"$DbName`" -w -q"
+    $Check = "$Connection -t -A -c `"SELECT to_regclass('public.task_result') IS NOT NULL;`""
+    $Result = InvokeHiddenProcess $Psql $Check $Environment ''
+    if ($Result.ExitCode -ne 0) { Write-Output "Unable to check the Docs tables: $($Result.Output)"; return }
+    if ($Result.Output -eq 't') { return }
+
+    [void](InvokeHiddenProcess $Psql "$Connection -f `"$Schema`"" $Environment '')
+    $Result = InvokeHiddenProcess $Psql $Check $Environment ''
+    if ($Result.Output -ne 't') { Write-Output "Unable to create the Docs tables: $($Result.Output)"; return }
+    Write-Output 'The Docs tables are created.'
+    foreach ($Service in 'DsDocServiceSvc', 'DsConverterSvc') {
+        Restart-Service -Name $Service -Force -ErrorAction SilentlyContinue
+    }
+}
+
+$DocsParamsDirPrefix = 'onlyoffice-apps-docs-params-'
+
+# Hands Docs its secrets in a file; UI sequence only, as a silent install runs Docs before the MSI and Docs then reads the Apps key or generates them.
+function WriteDocsParamsFile {
+    $Params = [ordered]@{
+        JWT_SECRET = AI_GetMsiProperty DOCUMENT_SERVER_JWT_SECRET
+        DB_PWD     = AI_GetMsiProperty PS_DB_PWD
+    }
+    # A RabbitMQ user created for Apps is shared with Docs, which otherwise keeps using guest.
+    if ((AI_GetMsiProperty AMQP_USER) -ne 'guest') {
+        $Params['RABBITMQ_USER'] = AI_GetMsiProperty AMQP_USER
+        $Params['RABBITMQ_PWD'] = AI_GetMsiProperty AMQP_PWD
+    }
+
+    RemoveDocsParamsFile
+    # No other user can prepare, replace or read the folder.
+    try { $Dir = NewRestrictedTempDir $DocsParamsDirPrefix }
+    catch {
+        # Without the restricted folder no file is written, and Docs takes its secrets as on a silent install.
+        Write-Output "WARNING: the Docs parameters folder cannot be restricted, so no parameters file is written: $($_.Exception.Message)"
+        return
+    }
+
+    $File = Join-Path $Dir 'docs-params.ini'
+    $Lines = $Params.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }
+    [IO.File]::WriteAllLines($File, [string[]]$Lines, (New-Object Text.UTF8Encoding($false)))
+    AI_SetMsiProperty DOCS_PARAMS_FILE $File
+    Write-Output 'The Docs secrets are passed in a parameters file.'
+}
+
+# Docs deletes the parameters file after reading it; this removes its folder, the file when Docs did not run, and folders left by an interrupted setup.
+function RemoveDocsParamsFile {
+    $Dirs = @(Get-ChildItem -LiteralPath $env:TEMP -Directory -Force -Filter "$DocsParamsDirPrefix*" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName)
+    $File = (AI_GetMsiProperty DOCS_PARAMS_FILE).Trim()
+    if ($File) { $Dirs += Split-Path -Parent $File }
+    foreach ($Dir in $Dirs | Select-Object -Unique) {
+        if ((Split-Path -Leaf $Dir) -notlike "$DocsParamsDirPrefix*") { continue }
+        $Item = Get-Item -LiteralPath $Dir -Force -ErrorAction SilentlyContinue
+        if (-not $Item -or ($Item.Attributes -band [IO.FileAttributes]::ReparsePoint)) { continue }
+        # Only a folder owned by SYSTEM or Administrators is removed: other users cannot create, rename or replace one, so the checks cannot be raced.
+        $Owner = (Get-Acl -LiteralPath $Dir).GetOwner([System.Security.Principal.SecurityIdentifier]).Value
+        if ($Owner -notin 'S-1-5-18', 'S-1-5-32-544') { continue }
+        Remove-Item -LiteralPath $Dir -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -406,12 +638,31 @@ function SetDashboardsPwd {
     AI_SetMsiProperty DASHBOARDS_PWD $DashboardsPwd
 }
 
-# Sets a random IDENTITY_ENCRYPTION_SECRET property.
+# Sets IDENTITY_ENCRYPTION_SECRET when the registry has no value: a new one on a fresh install, the installed one on an update.
 function SetIdentityEncryptionSecret {
-    # An update keeps the value found in the registry.
+    AI_SetMsiProperty IDENTITY_SECRET_MISSING ''
     if (-not (AI_GetMsiProperty OLDPRODUCTS)) {
         AI_SetMsiProperty IDENTITY_ENCRYPTION_SECRET (RandomString -Length 32)
+        return
     }
+
+    # A new key would make the Identity data unreadable, so an update takes the key from the installed service configuration.
+    $ServiceConfig = Join-Path (AI_GetMsiProperty APPDIR) 'tools\Identity.Authorization.xml'
+    try {
+        if (Test-Path -LiteralPath $ServiceConfig -PathType Leaf) {
+            $Secret = ([xml](Get-Content -LiteralPath $ServiceConfig -Raw)).service.env |
+                Where-Object { $_.name -eq 'SPRING_APPLICATION_ENCRYPTION_SECRET' } | Select-Object -First 1 -ExpandProperty value
+            if ($Secret -and $Secret.Trim() -and $Secret -ne '{IDENTITY_ENCRYPTION_SECRET}') {
+                AI_SetMsiProperty IDENTITY_ENCRYPTION_SECRET $Secret
+                Write-Output 'IDENTITY_ENCRYPTION_SECRET is taken from the installed Identity service configuration.'
+                return
+            }
+        }
+    }
+    catch { Write-Output "Unable to read $ServiceConfig : $($_.Exception.Message)" }
+
+    Write-Output 'ERROR: the Identity encryption key of the installed version was not found; the update stops so that the Identity data stays readable.'
+    AI_SetMsiProperty IDENTITY_SECRET_MISSING '1'
 }
 
 # Function to set up OpenSearch.
@@ -525,6 +776,122 @@ function MigrateProductRegistry {
     }
     catch {
         Write-Warning "Unable to migrate the product registry key: $($_.Exception.Message)"
+    }
+}
+
+# Only SYSTEM and Administrators can read the passwords and keys stored in a product registry key; the 32-bit view is where this package writes them.
+function LockRegistryKey {
+    param ([string]$SubKey)
+    $Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry32')
+    try {
+        $Key = $Base.CreateSubKey($SubKey)
+        try {
+            $Security = New-Object System.Security.AccessControl.RegistrySecurity
+            $Security.SetSecurityDescriptorSddlForm('D:PAI(A;CI;KA;;;SY)(A;CI;KA;;;BA)')
+            $Key.SetAccessControl($Security)
+        } finally { $Key.Close() }
+    } finally { $Base.Close() }
+}
+
+# The settings key of this product under HKLM, where the package writes its passwords and keys.
+function GetProductRegistryKey {
+    return 'Software\' + (AI_GetMsiProperty Manufacturer) + '\' + (AI_GetMsiProperty ShortProductName)
+}
+
+# A password replaced before the installation starts is saved at once, so a cancelled or rolled back setup can still read it on the next run.
+function SaveSecretsNow {
+    param ([hashtable]$Values)
+    try {
+        $SubKey = GetProductRegistryKey
+        LockRegistryKey $SubKey
+        $Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry32')
+        try {
+            $Key = $Base.CreateSubKey($SubKey)
+            try { foreach ($Name in $Values.Keys) { $Key.SetValue($Name, [string]$Values[$Name], 'String') } } finally { $Key.Close() }
+        } finally { $Base.Close() }
+    }
+    catch {
+        Write-Output "WARNING: the new passwords are not saved before the installation, so a cancelled setup loses them: $($_.Exception.Message)"
+    }
+}
+
+# Creates a new random folder in TEMP owned by Administrators that only SYSTEM and Administrators can open; it gets this ACL as it is created.
+function NewRestrictedTempDir {
+    param ([string]$Prefix)
+    $Security = New-Object System.Security.AccessControl.DirectorySecurity
+    $Security.SetSecurityDescriptorSddlForm('O:BAD:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)')
+    $Dir = Join-Path $env:TEMP ($Prefix + [guid]::NewGuid().ToString('N'))
+    [void][IO.Directory]::CreateDirectory($Dir, $Security)
+    return $Dir
+}
+
+# The services run as LocalService: they read the install directory and write only Data, Logs and the backup temp folders.
+function LockInstallDir {
+    param ([string]$AppDir)
+    $ReadOnlySddl = 'D:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;0x1200a9;;;LS)'
+    $Existed = Test-Path -LiteralPath $AppDir
+    New-Item -ItemType Directory -Force -Path $AppDir | Out-Null
+    $Security = Get-Acl -LiteralPath $AppDir
+    $Sids = $Security.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier]) | ForEach-Object { $_.IdentityReference.Value }
+    $AlreadyLocked = $Security.AreAccessRulesProtected -and ($Sids -contains 'S-1-5-19') -and -not ($Sids | Where-Object { $_ -notin 'S-1-5-18', 'S-1-5-32-544', 'S-1-5-19' })
+    if (-not $AlreadyLocked) {
+        $Security = New-Object System.Security.AccessControl.DirectorySecurity
+        $Security.SetSecurityDescriptorSddlForm($ReadOnlySddl)
+        Set-Acl -LiteralPath $AppDir -AclObject $Security
+    }
+    # The first upgrade from an older version resets explicit entries on the children (Data excluded, it only inherits) to the new parent ACL.
+    if ($Existed -and -not $AlreadyLocked) {
+        Get-ChildItem -LiteralPath $AppDir -Force | Where-Object { $_.Name -ne 'Data' } | ForEach-Object {
+            & "$env:SystemRoot\System32\icacls.exe" $_.FullName /reset /T /C /Q | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw "icacls /reset failed for $($_.FullName) with exit code $LASTEXITCODE" }
+        }
+    }
+    GrantWritableDirs $AppDir
+}
+
+# Repeats the grants after the files are installed; it runs after InstallFinalize, so a failure is only logged.
+function GrantWritableDirsAfterInstall {
+    try {
+        GrantWritableDirs (AI_GetMsiProperty APPDIR)
+        Write-Output 'The writable folders are granted to LocalService.'
+    }
+    catch { Write-Output "WARNING: could not grant the writable folders to LocalService: $($_.Exception.Message)" }
+}
+
+# LocalService writes Data, Logs and the backup temp folders; the folders are created when missing, because the old version removes empty ones on an upgrade.
+function GrantWritableDirs {
+    param ([string]$AppDir)
+    if (-not $AppDir) { $AppDir = AI_GetMsiProperty APPDIR }
+    $WritableDirs = 'Data', 'Logs', 'services\ASC.Data.Backup\service\temp', 'services\ASC.Data.Backup.Worker\service\temp'
+    foreach ($RelativeDir in $WritableDirs) {
+        $Dir = Join-Path $AppDir $RelativeDir
+        New-Item -ItemType Directory -Force -Path $Dir | Out-Null
+        # A grant that is already there is skipped, so an upgrade does not walk a large Data tree again.
+        $Granted = (Get-Acl -LiteralPath $Dir).GetAccessRules($true, $false, [System.Security.Principal.SecurityIdentifier]) | Where-Object {
+            $_.IdentityReference.Value -eq 'S-1-5-19' -and $_.AccessControlType -eq 'Allow' -and
+            ($_.FileSystemRights -band [System.Security.AccessControl.FileSystemRights]::Modify) -eq [System.Security.AccessControl.FileSystemRights]::Modify -and
+            $_.InheritanceFlags -eq 'ContainerInherit, ObjectInherit' }
+        if ($Granted) { continue }
+        & "$env:SystemRoot\System32\icacls.exe" $Dir /grant '*S-1-5-19:(OI)(CI)M' /C /Q | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "icacls /grant failed for $Dir with exit code $LASTEXITCODE" }
+    }
+}
+
+# Locks the settings key and the install directory before any secret is written into them; on an upgrade this runs before the previous version is removed.
+function LockSecrets {
+    AI_SetMsiProperty SECRETS_LOCK_FAILED ''
+    try {
+        LockRegistryKey (GetProductRegistryKey)
+        # A legacy key left behind by a failed rename still holds the old secrets.
+        $Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry32')
+        try { $LegacyExists = $null -ne $Base.OpenSubKey('Software\Ascensio System SIA\ONLYOFFICE DocSpace') } finally { $Base.Close() }
+        if ($LegacyExists) { LockRegistryKey 'Software\Ascensio System SIA\ONLYOFFICE DocSpace' }
+        LockInstallDir (AI_GetMsiProperty APPDIR)
+        Write-Output 'The settings key and the install directory are restricted.'
+    }
+    catch {
+        Write-Output "ERROR: could not restrict access to the settings key or the install directory: $($_.Exception.Message)"
+        AI_SetMsiProperty SECRETS_LOCK_FAILED '1'
     }
 }
 

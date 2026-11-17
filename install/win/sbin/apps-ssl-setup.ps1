@@ -137,6 +137,13 @@ function ConvertToPem {
 if ( $args.Count -ge 2 ) {
   if ($args[0] -eq "-f" -or $args[0] -eq "--file") {
     $domain_name = $args[1] -join ","
+    # The name goes into SQL and the portal URL: a host name as for Let's Encrypt, localhost or an IPv4 address, with an optional port
+    foreach ($domain in $domain_name -split ',') {
+      if ($domain -notmatch '^(localhost|([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}|\d{1,3}(\.\d{1,3}){3})(:\d{1,5})?$') {
+        Write-Error "Error: domain name '$domain' is incorrect."
+        exit 1
+      }
+    }
     $ssl_cert           = $args[2]
     $ssl_key            = $null
 

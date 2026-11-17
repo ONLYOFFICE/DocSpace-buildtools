@@ -2,11 +2,12 @@
 	<id>Apps.Management</id>
 	<name>ONLYOFFICE Apps Management</name>
 	<description>ONLYOFFICE Apps Management</description>
-	<priority>RealTime</priority>
+	<priority>Normal</priority>
 	<startmode>Automatic</startmode>
 	<autoRefresh>false</autoRefresh>
 	<onfailure action="restart" delay="10 sec"/>
 	<logpath>{APPDIR}Logs</logpath>
+	<env name="logPath" value="{APPDIR}Logs"/>
 	<executable>node</executable>
 	<arguments>&quot;{APPDIR}products\ASC.Management\management\server.js&quot;</arguments>
 	<log mode="roll-by-size">
