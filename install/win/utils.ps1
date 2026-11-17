@@ -618,15 +618,15 @@ function SetMachineKey {
 
     # The key is in appsettings.<ENVIRONMENT>.json of the installed edition, which differs on an edition change; a new key would break the data protected with the old one
     $JsonNames = @("appsettings.$(AI_GetMsiProperty ENVIRONMENT).json", 'appsettings.community.json', 'appsettings.enterprise.json', 'appsettings.developer.json', 'appsettings.production.json') | Select-Object -Unique
-    foreach ($JsonName in $JsonNames) {
-        $JsonFilePath = Join-Path -Path $AppDir -ChildPath "config\$JsonName"
+    # When files of several editions are left, the most recently written one holds the key in use
+    $JsonFiles = $JsonNames | ForEach-Object { Join-Path -Path $AppDir -ChildPath "config\$_" } |
+        Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | ForEach-Object { Get-Item -LiteralPath $_ } | Sort-Object LastWriteTimeUtc -Descending
+    foreach ($JsonFile in $JsonFiles) {
         try {
-            if (Test-Path -LiteralPath $JsonFilePath -PathType Leaf) {
-                $MachineKey = (Get-Content -LiteralPath $JsonFilePath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop).core.machinekey
-                if (-not [string]::IsNullOrEmpty($MachineKey)) { break }
-            }
+            $MachineKey = (Get-Content -LiteralPath $JsonFile.FullName -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop).core.machinekey
+            if (-not [string]::IsNullOrEmpty($MachineKey)) { break }
         }
-        catch { Write-Output "Unable to read $JsonFilePath : $($_.Exception.Message)" }
+        catch { Write-Output "Unable to read $($JsonFile.FullName) : $($_.Exception.Message)" }
     }
 
     if ($MachineKey -and -not $MachineKey.Trim()) {
