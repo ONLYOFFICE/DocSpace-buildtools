@@ -611,15 +611,22 @@ function SetDocumentServerJWTSecretProp {
     AI_SetMsiProperty JWT_SECRET $JwtSecret
 }
 
-# Sets the MACHINE_KEY MSI property based on existing configuration or generates a new one.
+# Sets the MACHINE_KEY MSI property from the installed configuration, or a random one when there is none.
 function SetMachineKey {
     $AppDir = AI_GetMsiProperty APPDIR
-    $JsonFilePath = Join-Path -Path $AppDir -ChildPath "config\appsettings.production.json"
     $MachineKey = ""
 
-    if (Test-Path -Path $JsonFilePath) {
-        $JsonContent = Get-Content -Path $JsonFilePath -Raw | ConvertFrom-Json
-        $MachineKey = $JsonContent.core.machinekey
+    # The package writes the key to appsettings.<ENVIRONMENT>.json; a new key would break the passwords and data protected with the old one
+    foreach ($JsonName in @("appsettings.$(AI_GetMsiProperty ENVIRONMENT).json", 'appsettings.production.json')) {
+        $JsonFilePath = Join-Path -Path $AppDir -ChildPath "config\$JsonName"
+        if (Test-Path -LiteralPath $JsonFilePath -PathType Leaf) {
+            $MachineKey = (Get-Content -LiteralPath $JsonFilePath -Raw | ConvertFrom-Json).core.machinekey
+            if (-not [string]::IsNullOrEmpty($MachineKey)) { break }
+        }
+    }
+
+    if ($MachineKey -and -not $MachineKey.Trim()) {
+        Write-Output "WARNING: the installed MACHINE_KEY is blank; it is kept because a new key would make the stored passwords and data unreadable."
     }
 
     if ([string]::IsNullOrEmpty($MachineKey)) {
