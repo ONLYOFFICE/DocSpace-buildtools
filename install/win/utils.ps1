@@ -652,7 +652,9 @@ function SetIdentityEncryptionSecret {
         if (Test-Path -LiteralPath $ServiceConfig -PathType Leaf) {
             $Secret = ([xml](Get-Content -LiteralPath $ServiceConfig -Raw)).service.env |
                 Where-Object { $_.name -eq 'SPRING_APPLICATION_ENCRYPTION_SECRET' } | Select-Object -First 1 -ExpandProperty value
-            if ($Secret -and $Secret.Trim() -and $Secret -ne '{IDENTITY_ENCRYPTION_SECRET}') {
+            # A silent install of 4.0 and older left the blank placeholder here, and its Identity data is encrypted with it
+            if ($Secret -and $Secret -ne '{IDENTITY_ENCRYPTION_SECRET}') {
+                if (-not $Secret.Trim()) { Write-Output 'WARNING: the installed Identity encryption key is blank; it is kept so that the Identity data stays readable.' }
                 AI_SetMsiProperty IDENTITY_ENCRYPTION_SECRET $Secret
                 Write-Output 'IDENTITY_ENCRYPTION_SECRET is taken from the installed Identity service configuration.'
                 return
