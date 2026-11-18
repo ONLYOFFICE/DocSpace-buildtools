@@ -1,0 +1,417 @@
+name: Windows Installer
+
+on:
+  # Saturday, so the Windows jobs do not queue behind the Sunday Linux install tests
+  schedule:
+    - cron: "00 20 * * 6"
+
+  workflow_dispatch:
+    inputs:
+      branch:
+        type: string
+        description: "Buildtools branch of the Jenkins build (empty: newest release/v*, else hotfix/v*, else develop)"
+        default: ""
+      jenkins_build:
+        type: string
+        description: "appserver.exe build number to test (overrides branch)"
+        default: ""
+      community:
+        type: boolean
+        description: "Clean install: Community"
+        default: true
+      enterprise:
+        type: boolean
+        description: "Clean install: Enterprise (wizard license from LICENSE_ENTERPRISE)"
+        default: false
+      developer:
+        type: boolean
+        description: "Clean install: Developer (wizard license from LICENSE_ENTERPRISE)"
+        default: false
+      update:
+        type: boolean
+        description: "Update: released Community -> tested Community"
+        default: true
+
+permissions:
+  contents: read
+
+env:
+  RELEASED_URL: https://download.onlyoffice.com/apps/windows
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      found: ${{ steps.build.outputs.found }}
+      build: ${{ steps.build.outputs.build }}
+      branch: ${{ steps.build.outputs.branch }}
+      ref: ${{ steps.build.outputs.ref }}
+      version: ${{ steps.build.outputs.version }}
+      signed: ${{ steps.build.outputs.signed }}
+      prerequisites_path: ${{ steps.build.outputs.prerequisites_path }}
+      community_path: ${{ steps.build.outputs.community_path }}
+      install_matrix: ${{ steps.matrix.outputs.install_matrix }}
+      update: ${{ steps.matrix.outputs.update }}
+    steps:
+      - name: Checkout scripts
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          sparse-checkout: .github/scripts/windows
+
+      # Scheduled runs only warn when the branch has no Jenkins build yet; a manual run fails, since someone asked for a test
+      - name: Find Jenkins build
+        id: build
+        env:
+          JENKINS_AUTH: ${{ secrets.JENKINS_AUTH }}
+          JENKINS_HOST: ${{ secrets.JENKINS_HOST }}
+          BRANCH: ${{ github.event.inputs.branch }}
+          BUILD: ${{ github.event.inputs.jenkins_build }}
+          STRICT: ${{ github.event_name == 'workflow_dispatch' }}
+        run: bash .github/scripts/windows/jenkins-build.sh
+
+      - name: Set test matrix
+        id: matrix
+        if: steps.build.outputs.found == 'true'
+        env:
+          EVENT: ${{ github.event_name }}
+          COMMUNITY: ${{ github.event.inputs.community }}
+          ENTERPRISE: ${{ github.event.inputs.enterprise }}
+          DEVELOPER: ${{ github.event.inputs.developer }}
+          UPDATE: ${{ github.event.inputs.update }}
+          COMMUNITY_PATH: ${{ steps.build.outputs.community_path }}
+          ENTERPRISE_PATH: ${{ steps.build.outputs.enterprise_path }}
+          DEVELOPER_PATH: ${{ steps.build.outputs.developer_path }}
+        run: |
+          set -euo pipefail
+          entries=()
+          # A scheduled run tests Community only; a manual run takes the editions from its inputs
+          if [[ "$EVENT" == "schedule" || "$COMMUNITY" == "true" ]]; then entries+=("Community CE ${COMMUNITY_PATH}"); fi
+          if [[ "$ENTERPRISE" == "true" ]]; then entries+=("Enterprise EE ${ENTERPRISE_PATH}"); fi
+          if [[ "$DEVELOPER" == "true" ]]; then entries+=("Developer DE ${DEVELOPER_PATH}"); fi
+          for entry in "${entries[@]}"; do
+            read -r edition _ path <<< "$entry"
+            [[ -n "$path" ]] || echo "::warning::The Jenkins build has no ${edition} installer, skipping it"
+          done
+
+          matrix=$(printf '%s\n' "${entries[@]}" | jq -R -s -r -c 'split("\n") | map(split(" ") | select(length == 3 and .[2] != ""))
+            | map({edition: .[0], short: .[1], path: .[2]}) | if length > 0 then {include: .} else "" end')
+          update=false
+          if [[ ("$EVENT" == "schedule" || "$UPDATE" == "true") && -n "$COMMUNITY_PATH" ]]; then update=true; fi
+          {
+            echo "install_matrix=${matrix}"
+            echo "update=${update}"
+          } >> "$GITHUB_OUTPUT"
+          echo "install matrix: ${matrix:-none}; update test: ${update}"
+
+  install:
+    name: "Install ${{ matrix.edition }}"
+    needs: prepare
+    if: needs.prepare.outputs.found == 'true' && needs.prepare.outputs.install_matrix != ''
+    runs-on: windows-2022
+    timeout-minutes: 210
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare.outputs.install_matrix) }}
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      SCRIPTS: ${{ github.workspace }}\.github\scripts\windows
+      VERSION: ${{ needs.prepare.outputs.version }}
+      SIGNATURE: ${{ needs.prepare.outputs.signed == 'true' && 'Expected' || 'Optional' }}
+      # The smoke test prints non-ASCII marks that the cp1252 console encoding of the runner cannot encode
+      PYTHONUTF8: "1"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      # expected.json must come from the same install/win the installers were built from
+      - name: Checkout tested buildtools
+        id: source
+        continue-on-error: true
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+          path: build-src
+          sparse-checkout: install/win
+
+      - name: Checkout tested branch instead
+        if: steps.source.outcome == 'failure'
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ needs.prepare.outputs.branch }}
+          path: build-src
+          sparse-checkout: install/win
+
+      - name: Prepare runner
+        run: '& "$env:SCRIPTS\prepare-runner.ps1" -DownloadGB 8 -InstallGB 25'
+
+      - name: Expected state
+        env:
+          EDITION: ${{ matrix.short }}
+        run: '& "$env:SCRIPTS\expected.ps1" -BuildTools build-src -Edition $env:EDITION -Version $env:VERSION -Out "$env:WORK_DIR\expected.json"'
+
+      - name: Download Prerequisites
+        timeout-minutes: 45
+        env:
+          JENKINS_AUTH: ${{ secrets.JENKINS_AUTH }}
+          JENKINS_HOST: ${{ secrets.JENKINS_HOST }}
+          URL: ${{ needs.prepare.outputs.prerequisites_path }}
+        run: '& "$env:SCRIPTS\fetch-installer.ps1" -Url $env:URL -Directory $env:DOWNLOAD_DIR -UseJenkinsAuth -Signature $env:SIGNATURE -EnvName PREREQUISITES_EXE'
+
+      - name: Download ${{ matrix.edition }}
+        timeout-minutes: 45
+        env:
+          JENKINS_AUTH: ${{ secrets.JENKINS_AUTH }}
+          JENKINS_HOST: ${{ secrets.JENKINS_HOST }}
+          URL: ${{ matrix.path }}
+        run: '& "$env:SCRIPTS\fetch-installer.ps1" -Url $env:URL -Directory $env:DOWNLOAD_DIR -UseJenkinsAuth -Signature $env:SIGNATURE -EnvName APPS_EXE'
+
+      - name: Install Prerequisites
+        timeout-minutes: 70
+        run: |
+          & "$env:SCRIPTS\install-exe.ps1" -Path $env:PREREQUISITES_EXE -LogDir $env:LOG_DIR -TimeoutMinutes 60
+          Remove-Item -Force $env:PREREQUISITES_EXE
+
+      - name: Install ${{ matrix.edition }}
+        id: apps
+        timeout-minutes: 100
+        run: |
+          & "$env:SCRIPTS\install-exe.ps1" -Path $env:APPS_EXE -LogDir $env:LOG_DIR -TimeoutMinutes 90 -SampleCommandLines "$env:PRIVATE_DIR\cmdlines.txt"
+          Remove-Item -Force $env:APPS_EXE
+
+      - name: Wait for services
+        if: steps.apps.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 25
+        run: '& "$env:SCRIPTS\wait-ready.ps1" -Expected "$env:WORK_DIR\expected.json" -TimeoutMinutes 20'
+
+      - name: Checklist
+        if: ${{ !cancelled() && steps.apps.outcome == 'success' }}
+        timeout-minutes: 10
+        env:
+          TITLE: Checklist ${{ matrix.edition }} ${{ needs.prepare.outputs.version }}
+        run: |
+          $msiLog = Join-Path $env:LOG_DIR "$(Split-Path $env:APPS_EXE -Leaf).msi.log"
+          & "$env:SCRIPTS\checklist.ps1" -Expected "$env:WORK_DIR\expected.json" -Mode Fresh -MsiLog $msiLog -CommandLines "$env:PRIVATE_DIR\cmdlines.txt" -Out "$env:WORK_DIR\checklist.json" -Title $env:TITLE
+
+      - name: Set up Python
+        if: ${{ !cancelled() && steps.apps.outcome == 'success' }}
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Smoke test
+        if: ${{ !cancelled() && steps.apps.outcome == 'success' }}
+        timeout-minutes: 40
+        env:
+          LICENSE: ${{ matrix.edition != 'Community' && secrets.LICENSE_ENTERPRISE || '' }}
+          EXPECTED_VERSION: ${{ needs.prepare.outputs.version }}
+          SMOKE_SUMMARY_TITLE: Smoke ${{ matrix.edition }}
+        run: |
+          python -m pip install -q --disable-pip-version-check -r tests/smoke/requirements.txt
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          & "$env:SCRIPTS\smoke.ps1" -Expected "$env:WORK_DIR\expected.json" -StateFile "$env:WORK_DIR\smoke-state.json" -JunitXml "$env:WORK_DIR\smoke-junit.xml"
+
+      - name: Collect logs
+        if: always()
+        run: '& "$env:SCRIPTS\collect-logs.ps1" -Out "$env:RUNNER_TEMP\artifacts"'
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-install-${{ matrix.edition }}-${{ needs.prepare.outputs.version }}
+          path: ${{ runner.temp }}\artifacts
+          if-no-files-found: ignore
+          retention-days: 14
+
+  update:
+    name: "Update Community"
+    needs: prepare
+    if: needs.prepare.outputs.found == 'true' && needs.prepare.outputs.update == 'true'
+    runs-on: windows-2022
+    timeout-minutes: 330
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      SCRIPTS: ${{ github.workspace }}\.github\scripts\windows
+      VERSION: ${{ needs.prepare.outputs.version }}
+      SIGNATURE: ${{ needs.prepare.outputs.signed == 'true' && 'Expected' || 'Optional' }}
+      # The smoke test prints non-ASCII marks that the cp1252 console encoding of the runner cannot encode
+      PYTHONUTF8: "1"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Checkout tested buildtools
+        id: source
+        continue-on-error: true
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+          path: build-src
+          sparse-checkout: install/win
+
+      - name: Checkout tested branch instead
+        if: steps.source.outcome == 'failure'
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ needs.prepare.outputs.branch }}
+          path: build-src
+          sparse-checkout: install/win
+
+      - name: Prepare runner
+        run: '& "$env:SCRIPTS\prepare-runner.ps1" -DownloadGB 6 -InstallGB 30'
+
+      # state.ps1 reads the registry value list of the tested build both before and after the update
+      - name: Expected state
+        run: '& "$env:SCRIPTS\expected.ps1" -BuildTools build-src -Edition CE -Version $env:VERSION -Out "$env:WORK_DIR\expected.json"'
+
+      - name: Download released Community
+        timeout-minutes: 45
+        run: |
+          & "$env:SCRIPTS\fetch-installer.ps1" -Url "$env:RELEASED_URL/ONLYOFFICE_Apps_Community_Win-install.latest.exe" -Directory $env:DOWNLOAD_DIR -Signature Required -EnvName RELEASED_APPS_EXE
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          # An update test needs a released version older than the tested one
+          $released = (Get-Item $env:RELEASED_APPS_EXE).VersionInfo.ProductVersion
+          $releasedVersion = $null; $testedVersion = $null
+          if ([version]::TryParse("$released", [ref]$releasedVersion) -and [version]::TryParse($env:VERSION, [ref]$testedVersion) -and $releasedVersion -ge $testedVersion) {
+            Write-Host "::notice::Released Community $released is not older than the tested $env:VERSION; the update test is skipped"
+            Add-Content -Path $env:GITHUB_ENV -Value 'UPDATE_SKIP=true'
+          }
+
+      # Released 4.0.x Prerequisites do not detect the JDK they install on a clean machine (Bug 84676, fixed in 4.1)
+      - name: Install released Prerequisites
+        id: released_prerequisites
+        if: env.UPDATE_SKIP != 'true'
+        continue-on-error: true
+        timeout-minutes: 110
+        run: |
+          & "$env:SCRIPTS\fetch-installer.ps1" -Url "$env:RELEASED_URL/ONLYOFFICE_Apps_Prerequisites_Win-install.latest.exe" -Directory $env:DOWNLOAD_DIR -Signature Required -EnvName RELEASED_PREREQUISITES_EXE
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          & "$env:SCRIPTS\install-exe.ps1" -Path $env:RELEASED_PREREQUISITES_EXE -LogDir "$env:LOG_DIR\released" -TimeoutMinutes 60
+          Remove-Item -Force $env:RELEASED_PREREQUISITES_EXE
+
+      # A failure of the released Prerequisites is not a regression of the tested build: the released Community then goes on the tested ones
+      - name: Install tested Prerequisites instead
+        id: tested_prerequisites
+        if: env.UPDATE_SKIP != 'true' && steps.released_prerequisites.outcome == 'failure'
+        timeout-minutes: 110
+        env:
+          JENKINS_AUTH: ${{ secrets.JENKINS_AUTH }}
+          JENKINS_HOST: ${{ secrets.JENKINS_HOST }}
+          URL: ${{ needs.prepare.outputs.prerequisites_path }}
+        run: |
+          Write-Host "::warning::The released Prerequisites failed; the released Community is installed on the Prerequisites of the tested build"
+          Remove-Item -Force $env:RELEASED_PREREQUISITES_EXE -ErrorAction SilentlyContinue
+          & "$env:SCRIPTS\fetch-installer.ps1" -Url $env:URL -Directory $env:DOWNLOAD_DIR -UseJenkinsAuth -Signature $env:SIGNATURE -EnvName TESTED_PREREQUISITES_EXE
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          & "$env:SCRIPTS\install-exe.ps1" -Path $env:TESTED_PREREQUISITES_EXE -LogDir "$env:LOG_DIR\tested-prerequisites" -TimeoutMinutes 60
+          Remove-Item -Force $env:TESTED_PREREQUISITES_EXE
+
+      - name: Install released Community
+        id: released
+        if: env.UPDATE_SKIP != 'true' && (steps.released_prerequisites.outcome == 'success' || steps.tested_prerequisites.outcome == 'success')
+        timeout-minutes: 100
+        run: |
+          & "$env:SCRIPTS\install-exe.ps1" -Path $env:RELEASED_APPS_EXE -LogDir "$env:LOG_DIR\released" -TimeoutMinutes 90
+          Remove-Item -Force $env:RELEASED_APPS_EXE
+
+      - name: Wait for the released version
+        if: steps.released.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 25
+        run: '& "$env:SCRIPTS\wait-ready.ps1" -Expected "$env:WORK_DIR\expected.json" -TimeoutMinutes 20'
+
+      - name: Set up Python
+        if: steps.released.outcome == 'success'
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      # A failure here belongs to the released version, not to the tested build, so it only warns
+      - name: Smoke test before the update
+        id: smoke_before
+        if: steps.released.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 25
+        env:
+          SMOKE_SUMMARY_TITLE: Smoke released Community
+        run: |
+          python -m pip install -q --disable-pip-version-check -r tests/smoke/requirements.txt
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          & "$env:SCRIPTS\smoke.ps1" -Expected "$env:WORK_DIR\expected.json" -Markers "bootstrap or seed" -StateFile "$env:WORK_DIR\smoke-state.json" -JunitXml "$env:WORK_DIR\smoke-before-junit.xml"
+
+      - name: Warn about the released version
+        if: steps.smoke_before.outcome == 'failure'
+        run: Write-Host "::warning::The smoke test failed on the released Community before the update; this is not a regression of the tested build"
+
+      - name: Save state before the update
+        if: steps.released.outcome == 'success'
+        run: '& "$env:SCRIPTS\state.ps1" -Expected "$env:WORK_DIR\expected.json" -Save "$env:WORK_DIR\state-before.json"'
+
+      - name: Download tested Community
+        if: steps.released.outcome == 'success'
+        timeout-minutes: 45
+        env:
+          JENKINS_AUTH: ${{ secrets.JENKINS_AUTH }}
+          JENKINS_HOST: ${{ secrets.JENKINS_HOST }}
+          URL: ${{ needs.prepare.outputs.community_path }}
+        run: '& "$env:SCRIPTS\fetch-installer.ps1" -Url $env:URL -Directory $env:DOWNLOAD_DIR -UseJenkinsAuth -Signature $env:SIGNATURE -EnvName APPS_EXE'
+
+      # Only the Apps EXE, as most admins update: it downloads newer prerequisites itself
+      - name: Update to the tested Community
+        id: apps
+        if: steps.released.outcome == 'success'
+        timeout-minutes: 100
+        run: |
+          & "$env:SCRIPTS\install-exe.ps1" -Path $env:APPS_EXE -LogDir $env:LOG_DIR -TimeoutMinutes 90 -SampleCommandLines "$env:PRIVATE_DIR\cmdlines.txt"
+          Remove-Item -Force $env:APPS_EXE
+
+      - name: Wait for services
+        if: steps.apps.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 25
+        run: '& "$env:SCRIPTS\wait-ready.ps1" -Expected "$env:WORK_DIR\expected.json" -TimeoutMinutes 20'
+
+      # An update keeps the old credentials, so the fresh-install-only items (own MySQL and RabbitMQ users) are not required
+      - name: Checklist
+        if: ${{ !cancelled() && steps.apps.outcome == 'success' }}
+        timeout-minutes: 10
+        env:
+          TITLE: Checklist after the update to ${{ needs.prepare.outputs.version }}
+        run: |
+          $msiLog = Join-Path $env:LOG_DIR "$(Split-Path $env:APPS_EXE -Leaf).msi.log"
+          & "$env:SCRIPTS\checklist.ps1" -Expected "$env:WORK_DIR\expected.json" -Mode Update -MsiLog $msiLog -CommandLines "$env:PRIVATE_DIR\cmdlines.txt" -Out "$env:WORK_DIR\checklist.json" -Title $env:TITLE
+
+      - name: Compare state
+        if: ${{ !cancelled() && steps.apps.outcome == 'success' }}
+        run: '& "$env:SCRIPTS\state.ps1" -Expected "$env:WORK_DIR\expected.json" -Compare "$env:WORK_DIR\state-before.json" -Version $env:VERSION -Out "$env:WORK_DIR\state-compare.json" -Title "State kept by the update"'
+
+      - name: Smoke test after the update
+        if: ${{ !cancelled() && steps.apps.outcome == 'success' }}
+        timeout-minutes: 40
+        env:
+          EXPECTED_VERSION: ${{ needs.prepare.outputs.version }}
+          SMOKE_SUMMARY_TITLE: Smoke after the update
+        run: |
+          python -m pip install -q --disable-pip-version-check -r tests/smoke/requirements.txt
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          & "$env:SCRIPTS\smoke.ps1" -Expected "$env:WORK_DIR\expected.json" -Markers "not seed" -StateFile "$env:WORK_DIR\smoke-state.json" -JunitXml "$env:WORK_DIR\smoke-after-junit.xml"
+
+      - name: Collect logs
+        if: always()
+        run: '& "$env:SCRIPTS\collect-logs.ps1" -Out "$env:RUNNER_TEMP\artifacts"'
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-update-Community-${{ needs.prepare.outputs.version }}
+          path: ${{ runner.temp }}\artifacts
+          if-no-files-found: ignore
+          retention-days: 14
