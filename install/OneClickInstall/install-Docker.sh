@@ -789,8 +789,8 @@ get_tag_from_registry () {
 		if [[ -n ${USERNAME} && -n ${PASSWORD} ]]; then
 			# jq reads the credentials from its environment and curl from a pipe, so no process gets them as arguments
 			TOKEN=$(HUB_USERNAME="$USERNAME" HUB_PASSWORD="$PASSWORD" jq -n '{username: env.HUB_USERNAME, password: env.HUB_PASSWORD}' \
-				| curl -s -H "Content-Type: application/json" -X POST -d @- https://hub.docker.com/v2/users/login/ | jq -r '.token')
-			AUTH_HEADER="Authorization: JWT $TOKEN"
+				| curl -fsS --retry 3 -H "Content-Type: application/json" -X POST -d @- https://hub.docker.com/v2/users/login/ | jq -r '.token // empty')
+			[ -n "${TOKEN}" ] && AUTH_HEADER="Authorization: JWT $TOKEN" || echo "Warning: Docker Hub login failed for ${USERNAME}; continuing without credentials." >&2
 			sleep 1
 		fi
 		ARCH="$(uname -m | sed -E 's/^(x86_64|amd64)$/amd64/; s/^(aarch64|arm64)$/arm64/')"
@@ -798,7 +798,15 @@ get_tag_from_registry () {
 		JQ_FILTER='.results[] | select(.name | test("^(?!99\\.).*")) | select(.images[]?.architecture=="'"$ARCH"'") | .name // empty'
 	fi
 
-	mapfile -t TAGS_RESP < <(curl -s -H "${AUTH_HEADER}" -X GET "${REGISTRY_TAGS_URL}" | jq -r "${JQ_FILTER}" | grep -v -x "latest")
+	# Docker Hub pages its tag list through "next"; at most 10 pages (1000 tags) keep busy test repositories fast
+	local TAGS_URL="${REGISTRY_TAGS_URL}" TAGS_PAGE PAGE_COUNT=0
+	TAGS_RESP=()
+	while [ -n "${TAGS_URL}" ] && [ "${PAGE_COUNT}" -lt 10 ]; do
+		TAGS_PAGE=$(curl -fsS --retry 3 -H "${AUTH_HEADER}" -X GET "${TAGS_URL}") || break
+		mapfile -t -O "${#TAGS_RESP[@]}" TAGS_RESP < <(jq -r "${JQ_FILTER}" <<< "${TAGS_PAGE}" | grep -v -x "latest")
+		TAGS_URL=$(jq -r '.next // empty' <<< "${TAGS_PAGE}" 2>/dev/null)
+		PAGE_COUNT=$((PAGE_COUNT + 1))
+	done
 
 	if [ -n "${XTRACE_STATE}" ]; then set -x; fi
 }
@@ -1033,7 +1041,13 @@ opensearch_set_heap_size () {
 
 wait_mysql_healthy () {
 	echo -n "Waiting for MySQL container to become healthy..."
-	(timeout 30 bash -c "while ! docker inspect --format '{{json .State.Health.Status }}' ${PACKAGE_SYSNAME}-mysql-server | grep -q 'healthy'; do sleep 1; done") && echo "OK" || echo "FAILED"
+	if timeout 180 bash -c "while ! docker inspect --format '{{json .State.Health.Status }}' ${PACKAGE_SYSNAME}-mysql-server | grep -q '\"healthy\"'; do sleep 2; done"; then
+		echo "OK"
+	else
+		echo "FAILED"
+		echo "Warning: ${PACKAGE_SYSNAME}-mysql-server is not healthy after 180 seconds; its last log lines:" >&2
+		docker logs --tail 30 "${PACKAGE_SYSNAME}-mysql-server" >&2 2>&1 || true
+	fi
 }
 
 # (DS v4.0.0) Docs UID varies; keep WOPI keys readable.

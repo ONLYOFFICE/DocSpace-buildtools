@@ -198,8 +198,9 @@ fi
 
 # Detect legacy installs.
 if [[ "${DOCKER}" == "true" ]] && [[ ${DOCKER_TAG} =~ ^([0-9]+\.[0-9]+\.[0-9]+)(\.[0-9]+)?$ ]]; then
-  TAG="v${BASH_REMATCH[1]}"; LATEST_TAG=$(curl -s "https://api.github.com/repos/${PRODUCT_ORG}/${LEGACY_PRODUCT}/releases/latest" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')
-  if [[ "${TAG}" != "${LATEST_TAG}" ]] && curl -sfI "https://github.com/${PRODUCT_ORG}/${LEGACY_PRODUCT}-buildtools/releases/tag/${TAG}-server" >/dev/null; then
+  TAG="v${BASH_REMATCH[1]}"; LATEST_TAG=$(curl -fsS --retry 3 -m 15 "https://api.github.com/repos/${PRODUCT_ORG}/${LEGACY_PRODUCT}/releases/latest" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')
+  # An unreachable or rate-limited GitHub API must not make the current release look like a legacy one
+  if [[ -n "${LATEST_TAG}" && "${TAG}" != "${LATEST_TAG}" ]] && curl -sfI "https://github.com/${PRODUCT_ORG}/${LEGACY_PRODUCT}-buildtools/releases/tag/${TAG}-server" >/dev/null; then
 	>&2 echo "Warning: legacy install detected (v${BASH_REMATCH[1]}) — compatibility issues or unforeseen errors may occur."
     PARAMETERS+=(-gb "${TAG}-server"); GIT_BRANCH="${TAG}-server"
   fi

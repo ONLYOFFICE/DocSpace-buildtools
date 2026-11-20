@@ -78,6 +78,8 @@ jobs:
     if: ${{ needs.docker-release.result == 'success' && github.event.inputs.trigger_offline_release == 'true' }}
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
       - name: Wait for Docker Hub tag to appear
         shell: bash
         env:
@@ -89,8 +91,9 @@ jobs:
           echo "Waiting for images with tag ${DOCKER_TAG} to appear on Docker Hub..."
           # sudo keeps the exported variables by name, so the token never appears in its arguments
           export BRANCH="${GITHUB_REF_NAME}" DOCKER_PREFIX=apps
-          curl -fsSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/refs/heads/${GITHUB_REF_NAME}/.github/scripts/docker-images-availability.sh" \
-            | sudo --preserve-env=GITHUB_REPOSITORY,BRANCH,DOCKER_REPOSITORY,DOCKER_PREFIX,DOCKER_TAG,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN bash
+          # The script comes from the checked-out commit, not from whatever the branch tip is by now
+          sudo --preserve-env=GITHUB_REPOSITORY,BRANCH,DOCKER_REPOSITORY,DOCKER_PREFIX,DOCKER_TAG,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN \
+            bash "${GITHUB_WORKSPACE}/.github/scripts/docker-images-availability.sh"
 
       - name: Trigger offline release
         env:
