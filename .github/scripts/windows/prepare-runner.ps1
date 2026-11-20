@@ -91,9 +91,10 @@ foreach ($name in $ConflictingEnvNames) {
 
 # ---- HTTP.sys listeners of the image (System, PID 4) hold port 80, and OpenResty then fails with bind() error 10013
 $httpState = (& netsh.exe http show servicestate view=requestq) -join "`n"
-foreach ($queue in ($httpState -split 'Request queue name:' | Select-Object -Skip 1)) {
+foreach ($queue in ($httpState -split '(?m)^Request queue name:' | Select-Object -Skip 1)) {
     if ($queue -notmatch '(?im)^\s*https?://[^/\s]*:80/') { continue }
-    $queuePids = @([regex]::Matches(($queue -split '(?i)URL groups:')[0], '(?m)^\s+(\d+)\s*$') | ForEach-Object { [int]$_.Groups[1].Value })
+    # The controller process (WAS and W3SVC for an IIS application pool) and the worker processes come before the URL groups
+    $queuePids = @([regex]::Matches(($queue -split '(?i)URL groups:')[0], '(?m)^\s+ID:\s*(\d+),') | ForEach-Object { [int]$_.Groups[1].Value } | Select-Object -Unique)
     foreach ($service in @($queuePids | ForEach-Object { Get-CimInstance Win32_Service -Filter "ProcessId=$_" })) {
         try { Stop-Service -Name $service.Name -Force -ErrorAction Stop; Set-Service -Name $service.Name -StartupType Disabled -ErrorAction Stop; Write-Host "$($service.Name) stopped and disabled: it held port 80 through HTTP.sys" }
         catch { Write-Host "$($service.Name) left as is: $($_.Exception.Message)" }
