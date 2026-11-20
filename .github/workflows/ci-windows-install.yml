@@ -386,7 +386,7 @@ jobs:
           TITLE: Checklist after the update to ${{ needs.prepare.outputs.version }}
         run: |
           $msiLog = Join-Path $env:LOG_DIR "$(Split-Path $env:APPS_EXE -Leaf).msi.log"
-          & "$env:SCRIPTS\checklist.ps1" -Expected "$env:WORK_DIR\expected.json" -Mode Update -MsiLog $msiLog -CommandLines "$env:PRIVATE_DIR\cmdlines.txt" -Out "$env:WORK_DIR\checklist.json" -Title $env:TITLE
+          & "$env:SCRIPTS\checklist.ps1" -Expected "$env:WORK_DIR\expected.json" -Mode Update -MsiLog $msiLog -CommandLines "$env:PRIVATE_DIR\cmdlines.txt" -StateBefore "$env:WORK_DIR\state-before.json" -Out "$env:WORK_DIR\checklist.json" -Title $env:TITLE
 
       - name: Compare state
         if: ${{ !cancelled() && steps.apps.outcome == 'success' }}

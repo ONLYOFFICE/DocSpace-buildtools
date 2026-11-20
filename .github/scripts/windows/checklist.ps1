@@ -5,6 +5,7 @@ param(
     [ValidateSet('Fresh', 'Update')][string]$Mode = 'Fresh',
     [string]$MsiLog,                       # MSI log of the Apps install, for failed actions and migrations
     [string]$CommandLines,                 # command lines sampled during the Apps install; may hold secrets, so it is deleted after the check
+    [string]$StateBefore,                  # state.ps1 -Save file of the released version, so blank keys it already had are not blamed on the update
     [Parameter(Mandatory)][string]$Out,
     [string]$Title = 'Install checklist'
 )
@@ -214,8 +215,13 @@ else {
 $environmentConfig = Join-Path $appDir "config\appsettings.$($expectation.environment).json"
 $environmentJson = Read-JsonFile $environmentConfig
 $machineKey = if ($environmentJson) { "$($environmentJson.core.machinekey)".Trim() } else { '' }
-$status = if (-not $machineKey) { 'FAIL' } elseif ($registry -and "$($registry.MACHINE_KEY)".Trim() -ne $machineKey) { 'WARN' } else { 'PASS' }
-$detail = if ($status -eq 'WARN') { 'differs from registry MACHINE_KEY' } elseif ($machineKey) { "set in $(Split-Path $environmentConfig -Leaf)" } else { "blank in $(Split-Path $environmentConfig -Leaf)" }
+# A silent 4.0.1 install left the key blank; the update must keep it, since a new key would not open data protected with the old one
+$stateBefore = if ($Mode -eq 'Update' -and $StateBefore) { Read-JsonFile $StateBefore }
+$blankKeyKept = $stateBefore -and $environmentJson -and @((Get-Sha256Hex ' '), (Get-Sha256Hex '')) -contains $stateBefore.machineKey -and
+    $stateBefore.machineKey -eq (Get-Sha256Hex $environmentJson.core.machinekey)
+$status = if ($blankKeyKept) { 'WARN' } elseif (-not $machineKey) { 'FAIL' } elseif ($registry -and "$($registry.MACHINE_KEY)".Trim() -ne $machineKey) { 'WARN' } else { 'PASS' }
+$detail = if ($blankKeyKept) { "blank since the released version, kept by the update in $(Split-Path $environmentConfig -Leaf)" }
+    elseif ($status -eq 'WARN') { 'differs from registry MACHINE_KEY' } elseif ($machineKey) { "set in $(Split-Path $environmentConfig -Leaf)" } else { "blank in $(Split-Path $environmentConfig -Leaf)" }
 Add-Result '7' 'core.machinekey' $status $detail
 $devConfigs = Get-ChildItem (Join-Path $appDir 'config') -Include '*.test.json', '*.dev.json' -Recurse -ErrorAction SilentlyContinue
 Add-Result '7' 'no *.test.json / *.dev.json' $(if ($devConfigs) { 'FAIL' } else { 'PASS' }) (($devConfigs.Name) -join ', ')
