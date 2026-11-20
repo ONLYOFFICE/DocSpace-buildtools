@@ -8,6 +8,7 @@
   "schedule": [
     "before 6am on monday"
   ],
+  "minimumReleaseAge": "7 days",
   "packageRules": [
     {
       "matchManagers": [
