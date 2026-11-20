@@ -344,7 +344,9 @@ replace_csp_lua() {
 
 	local cache_key = host .. "|" .. origin .. "|" .. referer
 
-	local cached = cache:get(cache_key)
+	local personal = ngx.var.cookie_asc_personal_csp ~= nil
+
+	local cached = not personal and cache:get(cache_key)
 	if cached then
 		ngx.header.Content_Security_Policy = cached
 		return
@@ -361,9 +363,12 @@ replace_csp_lua() {
 			local header = data.response.header
 
 			ngx.header.Content_Security_Policy = header
-			cache:set(cache_key, header, 3)
 
-			ngx.log(ngx.INFO, "CSP cached for key: ", cache_key)
+			if not personal then
+				cache:set(cache_key, header, 3)
+
+				ngx.log(ngx.INFO, "CSP cached for key: ", cache_key)
+			end
 		end
 	end
 ';
