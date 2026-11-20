@@ -36,8 +36,12 @@ if ($SampleCommandLines) {
         '-File', "`"$(Join-Path $PSScriptRoot 'cmdline-sampler.ps1')`"", '-Out', "`"$SampleCommandLines`"", '-StopFile', "`"$samplerStop`""
 }
 
+# The pwsh module path makes Windows PowerShell 5.1 in the Docs setup load PowerShell 7 modules (Get-Acl fails), so the installer gets the machine one
+$pwshModulePath = $env:PSModulePath
+$env:PSModulePath = [Environment]::GetEnvironmentVariable('PSModulePath', 'Machine')
 # No -Wait: it also waits for child processes, and services started by the installer (epmd.exe) never exit
-$process = Start-Process -FilePath $Path -ArgumentList $arguments -PassThru
+try { $process = Start-Process -FilePath $Path -ArgumentList $arguments -PassThru }
+finally { $env:PSModulePath = $pwshModulePath }
 # Reading the handle now keeps ExitCode available after the process exits
 $null = $process.Handle
 $lastReport = $started
