@@ -48,7 +48,7 @@ jobs:
         # Only a stable branch may publish release images
         [[ "${GITHUB_REF_NAME}" == master || "${GITHUB_REF_NAME}" == release/* || "${GITHUB_REF_NAME}" == hotfix/* ]] || { echo "::error::A release can be started only from master, release/* or hotfix/*, not from ${GITHUB_REF_NAME}"; exit 1 ; }
 
-    - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
         repository: 'ONLYOFFICE/DocSpace-buildtools'
 
@@ -78,7 +78,7 @@ jobs:
     if: ${{ needs.docker-release.result == 'success' && github.event.inputs.trigger_offline_release == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Wait for Docker Hub tag to appear
         shell: bash

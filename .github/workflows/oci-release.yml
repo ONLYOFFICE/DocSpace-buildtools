@@ -34,7 +34,7 @@ jobs:
           [[ "${GITHUB_REF_NAME}" == master || "${GITHUB_REF_NAME}" == release/* || "${GITHUB_REF_NAME}" == hotfix/* ]] || { echo "::error::The installers can be released only from master, release/* or hotfix/*, not from ${GITHUB_REF_NAME}"; exit 1; }
 
       - name: Checkout
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Creating additional scripts
         run: |
