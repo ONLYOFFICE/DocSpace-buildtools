@@ -79,9 +79,11 @@ install/
         dnsmasq.yml           — DNS for local dev
         build-identity.yml    — ASC.Identity (Java) build
       supervisor/           — Supervisor configs baked into images:
-        stack/                — apps-stack.yml services (dotnet/node/java)
+        stack/                — apps-stack.yml services (dotnet/node/java); start-after-migration.py starts
+                                ASC.Migration.Runner once MySQL is reachable, then the other services
         standalone.conf       — standalone image
-    standalone/             — Single-container (standalone) stack
+    config/                 — Mounted by the Compose files: apps-ssl-setup, mysql.cnf, fluent-bit.conf, nginx/ (proxy, router)
+    standalone/             — Single-container (standalone) stack (own docker-compose.yml + config/apps-ssl-setup)
     apps.yml                — All ONLYOFFICE Apps services
     apps-stack.yml          — Full stack (app + all dependencies)
     db.yml                  — MySQL
@@ -96,20 +98,28 @@ install/
     notify.yml              — Notification service
     dashboards.yml          — Monitoring dashboards
     proxy.yml / proxy-ssl.yml — Standalone Nginx reverse proxy (HTTP / Let's Encrypt SSL)
-  OneClickInstall/          — Installer scripts (Debian, RedHat, Docker, universal)
-  common/                   — Shared packaging: build-services.py/sh, changelog.sh,
-                              packages-build.sh, plugins-build.sh, systemd/, product-ssl-setup/
-  win/                      — Windows installer (Advanced Installer .aip, WinSW, Nginx, OpenSearch)
+  OneClickInstall/          — Installer scripts (Debian, RedHat, Docker, universal); install-Docker-docs.sh is sourced
+                              by install-Docker.sh (adopting an existing Docs container, rollback, HTTPS handoff)
+    common/                 — Shared helpers: logging.sh (loaded by apps-install.sh; OneClick*.log with masked secrets,
+                              kept only on failure), check-ports.sh, preserve-docs.sh, swap.sh; a new file here must also be added
+                              to the oci-release.yml upload list and the ci-oci-docker-install.yml path filter
+  common/                   — Shared packaging: build-services.py/sh, build-linux-package.sh, changelog.sh,
+                              packages-build.sh, plugins-build.sh, offline-self-extracting.sh, systemd/,
+                              product-configuration, product-ssl-setup (installed as apps-configuration / apps-ssl-setup)
+  win/                      — Windows installer (Advanced Installer: Apps, Apps.Prerequisites, OpenResty, OpenSearch,
+                              OpenSearchStack .aip); build-batch.bat builds them, utils.ps1 holds the MSI custom actions,
+                              tools/*.xml are WinSW configs, sbin/apps-ssl-setup.ps1
   deb/                      — Debian package metadata
   rpm/                      — RPM spec files
+  install.sh/.bat, uninstall.sh/.bat — Register the dev services from run/ (macOS launchd / Windows sc + WinSW)
 
-run/                        — Per-service launch scripts (~15 services, .bat + .xml)
+run/                        — Per-service dev launchers (~25 services, .bat + WinSW .xml; macos/ launchd .plist)
                               WebApi, Files, People, Notify, Backup, AI, Identity, etc.
-scripts/                    — Service startup: identity, socketio, ssoauth, webdav (.sh + .bat)
+scripts/                    — Service startup: aichat, identity, socketio, ssoauth, webdav (.sh + .bat)
 start/                      — Dev lifecycle: start/stop/restart (.sh + .bat + .py)
 build/                      — Build and deploy scripts: build*.sh/.bat, build.backend.docker.py, buildAndDeploy, publish
 migrations/                 — runMigrations*.sh/.bat, createMigrations.bat
-tests/                      — lint/, smoke/, vagrant/ + run.*tests*.{sh,bat,py}, run.e2e.*.bat
+tests/                      — arm/ (ARM64 package install), lint/, smoke/, vagrant/ + run.*tests*.{sh,bat,py}, run.e2e.*.bat
 tools/                      — runasadmin.bat, debuginfo.py, requirements.txt, run.dnsmasq.py, clear.backend.docker.py, campaigns.downloader.py, check.sh
 .github/workflows/          — GitHub Actions workflows (see CI/CD section)
 ```
@@ -161,6 +171,7 @@ docker compose --env-file .env -f apps.yml -f build/dev/apps.overcome.yml up -d
 Tests run in file order and share state. Markers select phases: `bootstrap` (settings, wizard, auth), `seed` (creates data, writes `SMOKE_STATE_FILE`), `verify` (checks the data after a restart or update).
 Examples: `-m "bootstrap or seed"` before an update, `-m "bootstrap or verify"` after it. `DEPLOYMENT_MODE` (set by docker-utils.sh) gates mode-specific tests.
 `SMOKE_SUMMARY_FILE` receives a result line written by `tests/smoke/conftest.py`. The job summary is published only when the job failed or a section is open (failed tests, audit findings, unhealthy containers).
+`docker-utils.sh smoke-test` first waits for the Document Server font generation (it restarts docservice and drops editor sessions) and prints the Document Server container logs when the tests fail; editor tests also wait for Document Server themselves.
 
 ## Key Patterns
 
@@ -168,11 +179,13 @@ Examples: `-m "bootstrap or seed"` before an update, `-m "bootstrap or verify"` 
 - All config via `.env` in `install/docker/` (~200 vars) and JSON in `config/`
 - Three editions: Community, Enterprise, Developer (toggled via env vars and appsettings overrides)
 - `run/` contains per-service launchers; `start/` orchestrates all services together
-- Windows services managed with WinSW (`run/*.xml`); Linux with Supervisor or systemd
+- Windows services: dev via `run/` (WinSW `.xml` + `sc` for `.bat`); `Apps.aip` installs all Apps services as `NT AUTHORITY\LocalService` (node/Java ones wrapped by WinSW, configs in `install/win/tools/*.xml`, `Normal` priority); OpenResty and OpenSearch come from their own `.aip`. Linux uses Supervisor (Docker) or systemd (packages)
+- Secrets stay off command lines, xtrace and logs: installers pass them through the environment, stdin or files; package configs are `root:onlyoffice` (640/750, `.private` 700); the Windows settings key and install directory are locked to SYSTEM/Administrators
+- Installers use dedicated DB/broker accounts on a fresh install (MySQL `<db>_user`, a generated RabbitMQ password instead of `guest`); upgrades keep the working credentials
 
 ## Review Focus
 
-**Security**: Hardcoded credentials, injection vulnerabilities, insecure defaults in `.env` and configs
+**Security**: Hardcoded credentials, injection vulnerabilities, insecure defaults in `.env` and configs, secrets on command lines or in logs
 **Docker**: Entrypoint scripts, multi-stage builds, image size, privilege escalation
 **Shell/Python**: `set -e`, quoting, error handling in install scripts
 **Config**: Sensitive data, default passwords, exposed ports in JSON configs
