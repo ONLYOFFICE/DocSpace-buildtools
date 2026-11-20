@@ -1,10 +1,6 @@
 name: Windows Installer
 
 on:
-  # Temporary: registers the workflow on GitHub so that it can be dispatched
-  push:
-    branches: [feature/windows-install-ci]
-
   # Saturday, so the Windows jobs do not queue behind the Sunday Linux install tests
   schedule:
     - cron: "00 20 * * 6"
