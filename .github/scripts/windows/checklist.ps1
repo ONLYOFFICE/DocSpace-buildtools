@@ -245,7 +245,11 @@ $openSearchVersion = try { ((Invoke-WebRequest 'http://localhost:9200/' -UseBasi
 Add-Result '9' "OpenSearch answers, version $($expectation.opensearch.version)" $(if ($openSearchVersion -eq $expectation.opensearch.version) { 'PASS' } else { 'FAIL' }) "$openSearchVersion"
 
 # ---- 10. Fluent Bit
-Add-Result '10' 'fluent-bit.conf moved' $(if (Test-Path (Join-Path $expectation.fluentBitConfDir 'fluent-bit.conf')) { 'PASS' } else { 'FAIL' }) $expectation.fluentBitConfDir
+# A wildcard stands for the versioned Fluent Bit folder; the newest one is the folder the installer used
+$fluentBitConfDir = Get-Item -Path $expectation.fluentBitConfDir -ErrorAction SilentlyContinue |
+    Sort-Object { ($_.Parent.Name -replace '^\D*(\d+(\.\d+)+).*$', '$1') -as [version] } | Select-Object -Last 1
+$fluentBitConf = if ($fluentBitConfDir) { Join-Path $fluentBitConfDir.FullName 'fluent-bit.conf' }
+Add-Result '10' 'fluent-bit.conf moved' $(if ($fluentBitConf -and (Test-Path -LiteralPath $fluentBitConf)) { 'PASS' } else { 'FAIL' }) $(if ($fluentBitConf) { $fluentBitConf } else { $expectation.fluentBitConfDir })
 
 # ---- 11. firewall
 foreach ($ruleName in $expectation.firewallRules) {

@@ -86,6 +86,15 @@ if ($utilsText -match 'function LockSecrets\b') {
     }
 }
 
+# Since 4.1 the installer takes the newest versioned Fluent Bit folder, so the expected path holds a wildcard
+$fluentBitFixed = [regex]::Match($utilsText, '\$FluentBitDstFolder = "([^"]+)"')
+$fluentBitConfDir = if ($fluentBitFixed.Success) { $fluentBitFixed.Groups[1].Value } else {
+    $fluentBitRoot = [regex]::Match($utilsText, '\$FluentBitDir = GetNewestVersionedFolder "([^"]+)" "([^"]+)"')
+    if (-not $fluentBitRoot.Success) { throw 'Cannot find the Fluent Bit folder in utils.ps1' }
+    $fluentBitSubfolder = Get-FirstMatch $utilsText '\$FluentBitDstFolder = Join-Path \$FluentBitDir\.FullName "([^"]+)"' 'Fluent Bit conf subfolder in utils.ps1'
+    Join-Path (Join-Path $fluentBitRoot.Groups[1].Value $fluentBitRoot.Groups[2].Value) $fluentBitSubfolder
+}
+
 $expected = [ordered]@{
     generatedFrom    = (Resolve-Path $BuildTools).Path
     commit           = $Commit
@@ -113,7 +122,7 @@ $expected = [ordered]@{
         jvm      = 'C:\OpenSearch\config\jvm.options'
         heap     = (Get-FirstMatch $utilsText '"-Xms\.\*" "(-Xms\w+)"' 'heap size in utils.ps1')
     }
-    fluentBitConfDir = (Get-FirstMatch $utilsText '\$FluentBitDstFolder = "([^"]+)"' 'Fluent Bit folder in utils.ps1')
+    fluentBitConfDir = $fluentBitConfDir
     openRestyConfDir = (Get-FirstMatch $utilsText '\$TargetFolder = "([^"]+)"' 'OpenResty conf folder in utils.ps1')
     firewallRules    = @([regex]::Matches($aipText, 'FirewallException="[^"]*"[^>]*DisplayName="([^"]+)"') |
                          ForEach-Object { $_.Groups[1].Value.Replace('[ProductName]', $productName) })
