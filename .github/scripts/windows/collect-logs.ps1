@@ -54,6 +54,8 @@ if ($installation.AppDir) { Copy-Folder (Join-Path $installation.AppDir 'Logs') 
 if ($installation.Docs -and $installation.Docs.InstallLocation) { Copy-Folder (Join-Path $installation.Docs.InstallLocation 'Log') 'docs-logs' }
 Copy-Folder 'C:\OpenSearch\logs' 'opensearch-logs' @('*.log')
 Copy-Folder 'C:\OpenResty\logs' 'openresty-logs' @('error.log')
+# OpenSearch Dashboards and Fluent Bit write their own and their WinSW logs inside the OpenSearchStack folder
+Copy-Folder 'C:\OpenSearchStack' 'opensearchstack-logs' @('*.log', '*.err', '*.out')
 # The bootstrapper downloads and logs prerequisites in the user temp folder
 Copy-Folder $env:TEMP 'temp-installer-logs' @('*Prerequisite*.log', 'MSI*.LOG', 'ONLYOFFICE*.log', 'Setup Log*.txt')
 
