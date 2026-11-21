@@ -770,6 +770,53 @@ function SetAppDirWithForwardSlash {
     AI_SetMsiProperty APPDIR_FORWARD_SLASH $AppDirForwardSlash
 }
 
+# A silent install runs Docs before APPDIR is known, so Docs and then Apps get the C:\APPDIR placeholder as the license path; both are pointed at Apps\Data.
+function RepairDocsLicensePath {
+    $Placeholder = '^C:[\\/]+APPDIR[\\/]'
+    $LicensePath = (AI_GetMsiProperty LICENSE_PATH).Trim()
+    if (-not $LicensePath -or $LicensePath -match $Placeholder -or $LicensePath -notmatch '^([A-Za-z]:[\\/]|\\\\)') {
+        $DefaultPath = Join-Path (AI_GetMsiProperty APPDIR) 'Data\license.lic'
+        # A license saved under the placeholder by an earlier silent install moves with the path.
+        $OldLicense = $LicensePath -replace '/', '\'
+        if ($LicensePath -match $Placeholder -and (Test-Path -LiteralPath $OldLicense -PathType Leaf) -and -not (Test-Path -LiteralPath $DefaultPath)) {
+            try {
+                New-Item -ItemType Directory -Path (Split-Path -Parent $DefaultPath) -Force -ErrorAction Stop | Out-Null
+                Copy-Item -LiteralPath $OldLicense -Destination $DefaultPath -ErrorAction Stop
+            }
+            catch { Write-Warning "Unable to copy the license from $OldLicense to ${DefaultPath}: $($_.Exception.Message)" }
+        }
+        $LicensePath = $DefaultPath
+        AI_SetMsiProperty LICENSE_PATH $LicensePath
+        Write-Output "License path set to $LicensePath."
+    }
+
+    # The repair is best effort: a failure is logged and the installation goes on.
+    try {
+        $DocsDir = AI_GetMsiProperty DOCS_INSTALL_LOCATION
+        $RegistryDocsDir = GetDocumentServerInstallLocation
+        if ($RegistryDocsDir) { $DocsDir = $RegistryDocsDir }
+        if (-not $DocsDir) { return }
+        $DocsConfig = Join-Path $DocsDir 'config\local.json'
+        if (-not (Test-Path -LiteralPath $DocsConfig -PathType Leaf)) { return }
+
+        # The value is replaced in the text, so the rest of the Docs config keeps its formatting.
+        $Pattern = '("license_file"\s*:\s*")C:[\\/]+APPDIR[\\/][^"]*(")'
+        $Text = [IO.File]::ReadAllText($DocsConfig)
+        if ($Text -notmatch $Pattern) { return }
+        $DocsLicensePath = $LicensePath -replace '\\', '/'
+        $Text = [regex]::Replace($Text, $Pattern, { param($Match) $Match.Groups[1].Value + $DocsLicensePath + $Match.Groups[2].Value }, 'IgnoreCase')
+        [IO.File]::WriteAllText($DocsConfig, $Text, (New-Object Text.UTF8Encoding($false)))
+    }
+    catch {
+        Write-Warning "Unable to update the license path in the Docs configuration: $($_.Exception.Message)"
+        return
+    }
+    foreach ($Service in 'DsDocServiceSvc', 'DsConverterSvc') {
+        Restart-Service -Name $Service -Force -ErrorAction SilentlyContinue
+    }
+    Write-Output "Docs license path set to $DocsLicensePath."
+}
+
 function MigrateProductRegistry {
     $LegacyKey = "HKLM\Software\Ascensio System SIA\ONLYOFFICE DocSpace"
     $AppsKey = "HKLM\Software\Ascensio System SIA\ONLYOFFICE Apps"
