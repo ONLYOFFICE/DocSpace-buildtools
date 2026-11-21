@@ -16,7 +16,11 @@ $utf8 = New-Object Text.UTF8Encoding($false)
 
 # Text of a log file; UTF-16 without a byte order mark (some installer logs) is detected by its zero bytes
 function Read-LogText([string]$Path) {
-    $bytes = [IO.File]::ReadAllBytes($Path)
+    # Running services keep their logs open for writing, which ReadAllBytes does not allow
+    $stream = [IO.FileStream]::new($Path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete)
+    $buffer = [IO.MemoryStream]::new()
+    try { $stream.CopyTo($buffer) } finally { $stream.Dispose() }
+    $bytes = $buffer.ToArray()
     $hasBom = $bytes.Length -ge 2 -and (($bytes[0] -eq 0xFF -and $bytes[1] -eq 0xFE) -or ($bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB))
     if (-not $hasBom -and $bytes.Length -ge 4 -and $bytes[1] -eq 0 -and $bytes[3] -eq 0) { return [Text.Encoding]::Unicode.GetString($bytes) }
     $reader = [IO.StreamReader]::new([IO.MemoryStream]::new($bytes), $true)
@@ -59,6 +63,10 @@ $inventory += Get-Service -Name 'Apps.*', 'Ds*', 'OpenSearch*', 'OpenResty', 'Ra
     Sort-Object Name | ForEach-Object { "{0,-45} {1,-10} {2}" -f $_.Name, $_.Status, $_.StartType }
 $inventory += ''
 $inventory += $installation.Entries | Sort-Object DisplayName | ForEach-Object { "{0} | {1}" -f $_.DisplayName, $_.DisplayVersion }
+# Services start a bare "java", so the first java.exe on the machine PATH decides which JDK runs Identity
+$inventory += ''
+$inventory += 'java.exe on the machine PATH, in search order:'
+$inventory += [Environment]::GetEnvironmentVariable('PATH', 'Machine').Split(';') | Where-Object { $_ -and (Test-Path (Join-Path $_ 'java.exe')) } | ForEach-Object { "  $_" }
 [IO.File]::WriteAllLines((Join-Path $Out 'inventory.txt'), [string[]]$inventory, $utf8)
 
 # Last line of defence: a collected file that still contains a known secret value is replaced by a note, never uploaded
