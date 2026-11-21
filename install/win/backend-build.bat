@@ -4,26 +4,27 @@ echo #####################
 echo #   build backend   #
 echo #####################
 
-set SRC_PATH=%~s2
+rem .NET services and the migration runner are built once in Release by publish-script.bat
+rem The node services keep only production dependencies: the lockfile is checked first, then dev dependencies are dropped
 
 pushd %~1
-
-  call dotnet build ASC.Web.slnx
-  call dotnet build ASC.Migrations.slnx -r win-x64 -m:1 --property:OutputPath=%SRC_PATH%\services\ASC.Migration.Runner\service --no-incremental
 
   echo "== Build ASC.Socket.IO =="
   pushd common\ASC.Socket.IO
     call yarn install --frozen-lockfile
+    call yarn workspaces focus --production
   popd
 
   echo "== Build ASC.AI.Chat =="
   pushd common\ASC.AI.Chat
     call yarn install --frozen-lockfile
+    call yarn workspaces focus --production
   popd
 
   echo "== Build ASC.SsoAuth =="
   pushd common\ASC.SsoAuth
     call yarn install --frozen-lockfile
+    call yarn workspaces focus --production
   popd
 
   echo "== Build ASC.Identity =="

@@ -77,6 +77,12 @@ function ExtractPath {
     }
 }
 
+# The newest of the <name>-<version> folders matching Filter, ordered by version so 3.10.0 comes after 3.5.0; the OpenSearchStack.aip setup script repeats this lookup.
+function GetNewestVersionedFolder([string]$Root, [string]$Filter) {
+    Get-ChildItem -LiteralPath $Root -Directory -Filter $Filter -ErrorAction SilentlyContinue |
+        Sort-Object { ($_.Name -replace '^\D*(\d+(\.\d+)+).*$', '$1') -as 'System.Version' } | Select-Object -Last 1
+}
+
 # MSI AppSearch can redirect Program Files paths in a 32-bit package.
 function GetDocumentServerInstallLocation {
     $Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry64')
@@ -725,7 +731,8 @@ function OpenSearchSetup {
     $AppDir = AI_GetMsiProperty APPDIR
     $AppIndexDir = Join-Path $AppDir "Data\Index\v3.5.0\"
     $LogsDir     = Join-Path $AppDir "Logs\"
-    $OpenSearchDashboardsYml = "C:\OpenSearchStack\opensearch-dashboards-3.5.0\config\opensearch_dashboards.yml"
+    # OpenSearchStack unpacks Dashboards into opensearch-dashboards-<version>, so the folder is found by pattern and the newest version wins
+    $OpenSearchDashboardsDir = GetNewestVersionedFolder "C:\OpenSearchStack" "opensearch-dashboards-*"
 
     # Check if the index directory exists and set NEED_REINDEX_OPENSEARCH property if it doesn't.
     if (-not (Test-Path $AppIndexDir)) {
@@ -759,11 +766,12 @@ function OpenSearchSetup {
     Set-Content -Path $JvmOptionsPath -Value $FileContent
 
     # Modify OpenSearch Dashboards configuration.
-    if (Test-Path $OpenSearchDashboardsYml) {
-        Set-Content -Path $OpenSearchDashboardsYml -Value "" -Force
-    } else {
-        Write-Output "File doesn't exist: $OpenSearchDashboardsYml"
+    $OpenSearchDashboardsYml = if ($OpenSearchDashboardsDir) { Join-Path $OpenSearchDashboardsDir.FullName "config\opensearch_dashboards.yml" }
+    if (-not $OpenSearchDashboardsYml -or -not (Test-Path $OpenSearchDashboardsYml)) {
+        Write-Output "OpenSearch Dashboards configuration not found in C:\OpenSearchStack\opensearch-dashboards-*\config, Dashboards is not configured."
+        return
     }
+    Set-Content -Path $OpenSearchDashboardsYml -Value "" -Force
 
     $FileContent = Get-Content -Path $OpenSearchDashboardsYml -Raw
 
@@ -797,6 +805,53 @@ function SetAppDirWithForwardSlash {
     $AppDirForwardSlash = $AppDir -replace '\\', '/'
 
     AI_SetMsiProperty APPDIR_FORWARD_SLASH $AppDirForwardSlash
+}
+
+# A silent install runs Docs before APPDIR is known, so Docs and then Apps get the C:\APPDIR placeholder as the license path; both are pointed at Apps\Data.
+function RepairDocsLicensePath {
+    $Placeholder = '^C:[\\/]+APPDIR[\\/]'
+    $LicensePath = (AI_GetMsiProperty LICENSE_PATH).Trim()
+    if (-not $LicensePath -or $LicensePath -match $Placeholder -or $LicensePath -notmatch '^([A-Za-z]:[\\/]|\\\\)') {
+        $DefaultPath = Join-Path (AI_GetMsiProperty APPDIR) 'Data\license.lic'
+        # A license saved under the placeholder by an earlier silent install moves with the path.
+        $OldLicense = $LicensePath -replace '/', '\'
+        if ($LicensePath -match $Placeholder -and (Test-Path -LiteralPath $OldLicense -PathType Leaf) -and -not (Test-Path -LiteralPath $DefaultPath)) {
+            try {
+                New-Item -ItemType Directory -Path (Split-Path -Parent $DefaultPath) -Force -ErrorAction Stop | Out-Null
+                Copy-Item -LiteralPath $OldLicense -Destination $DefaultPath -ErrorAction Stop
+            }
+            catch { Write-Warning "Unable to copy the license from $OldLicense to ${DefaultPath}: $($_.Exception.Message)" }
+        }
+        $LicensePath = $DefaultPath
+        AI_SetMsiProperty LICENSE_PATH $LicensePath
+        Write-Output "License path set to $LicensePath."
+    }
+
+    # The repair is best effort: a failure is logged and the installation goes on.
+    try {
+        $DocsDir = AI_GetMsiProperty DOCS_INSTALL_LOCATION
+        $RegistryDocsDir = GetDocumentServerInstallLocation
+        if ($RegistryDocsDir) { $DocsDir = $RegistryDocsDir }
+        if (-not $DocsDir) { return }
+        $DocsConfig = Join-Path $DocsDir 'config\local.json'
+        if (-not (Test-Path -LiteralPath $DocsConfig -PathType Leaf)) { return }
+
+        # The value is replaced in the text, so the rest of the Docs config keeps its formatting.
+        $Pattern = '("license_file"\s*:\s*")C:[\\/]+APPDIR[\\/][^"]*(")'
+        $Text = [IO.File]::ReadAllText($DocsConfig)
+        if ($Text -notmatch $Pattern) { return }
+        $DocsLicensePath = $LicensePath -replace '\\', '/'
+        $Text = [regex]::Replace($Text, $Pattern, { param($Match) $Match.Groups[1].Value + $DocsLicensePath + $Match.Groups[2].Value }, 'IgnoreCase')
+        [IO.File]::WriteAllText($DocsConfig, $Text, (New-Object Text.UTF8Encoding($false)))
+    }
+    catch {
+        Write-Warning "Unable to update the license path in the Docs configuration: $($_.Exception.Message)"
+        return
+    }
+    foreach ($Service in 'DsDocServiceSvc', 'DsConverterSvc') {
+        Restart-Service -Name $Service -Force -ErrorAction SilentlyContinue
+    }
+    Write-Output "Docs license path set to $DocsLicensePath."
 }
 
 function MigrateProductRegistry {
@@ -962,7 +1017,8 @@ function MoveConfigs {
     $SslScriptDir = Join-Path $AppDir "sbin\"
     $SslScriptPath = Join-Path $AppDir "sbin\apps-ssl-setup.ps1"
     $FluentBitSourceFile = Join-Path $AppDir "config\fluent-bit.conf"
-    $FluentBitDstFolder = "C:\OpenSearchStack\fluent-bit-3.2.4-win64\conf\"
+    # OpenSearchStack unpacks Fluent Bit into fluent-bit-<version>, so the folder is found by pattern and the newest version wins
+    $FluentBitDir = GetNewestVersionedFolder "C:\OpenSearchStack" "fluent-bit-*"
 
     $SslCertPath = ''
     $SslCertKeyPath = ''
@@ -1047,12 +1103,17 @@ function MoveConfigs {
     }
 
     # Manage Fluent Bit configuration.
-    $FluentBitConfPath = Join-Path $FluentBitDstFolder "fluent-bit.conf"
-    if (Test-Path $FluentBitConfPath) {
-        Remove-Item -Path $FluentBitConfPath -Force
-    }
-    if (Test-Path $FluentBitSourceFile) {
-        Move-Item -Path $FluentBitSourceFile -Destination $FluentBitDstFolder
+    if ($FluentBitDir) {
+        $FluentBitDstFolder = Join-Path $FluentBitDir.FullName "conf\"
+        $FluentBitConfPath = Join-Path $FluentBitDstFolder "fluent-bit.conf"
+        if (Test-Path $FluentBitConfPath) {
+            Remove-Item -Path $FluentBitConfPath -Force
+        }
+        if (Test-Path $FluentBitSourceFile) {
+            Move-Item -Path $FluentBitSourceFile -Destination $FluentBitDstFolder
+        }
+    } else {
+        Write-Output "Fluent Bit folder not found in C:\OpenSearchStack\fluent-bit-*, its configuration is not updated."
     }
 
     if ((AI_GetMsiProperty DOCUMENT_SERVER_INSTALL_NONE) -eq '1') {

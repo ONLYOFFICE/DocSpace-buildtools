@@ -88,17 +88,27 @@ REM echo ######## SSL configs ########
 %sed% -i "s/\/etc\/nginx\/\.htpasswd_dashboards/\.htpasswd_dashboards/g" buildtools\install\win\Files\nginx\conf\onlyoffice.conf
 
 REM echo ######## Configure fluent-bit config for windows ########
-%sed% -i -e "s|/var/log/onlyoffice/|{APPDIR}Logs\\|g" -e "s|\*\*/|\*\*\\|g" -e "s#DocSpace\Logs\**\#DocumentServer\Log\#g" buildtools\install\win\Files\config\fluent-bit.conf
+rem PowerShell, not sed: the sed builds disagree on backslashes in a replacement, and the Windows tail input finds no files with / in the path
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$Conf = (Resolve-Path 'buildtools\install\win\Files\config\fluent-bit.conf').ProviderPath; $Text = [IO.File]::ReadAllText($Conf).Replace('/var/log/onlyoffice/', '{APPDIR}Logs\').Replace('**/', '**\'); [IO.File]::WriteAllText($Conf, $Text)" || exit /b 1
 %sed% -i "/^\[OUTPUT\]/i\[INPUT]" buildtools\install\win\Files\config\fluent-bit.conf
 %sed% -i "/^\[OUTPUT\]/i\    Name                exec" buildtools\install\win\Files\config\fluent-bit.conf
 %sed% -i "/^\[OUTPUT\]/i\    Interval_Sec        86400" buildtools\install\win\Files\config\fluent-bit.conf
 %sed% -i "/^\[OUTPUT\]/i\    Command             curl -s -X POST OPENSEARCH_SCHEME://OPENSEARCH_HOST:OPENSEARCH_PORT/OPENSEARCH_INDEX/_delete_by_query -H 'Content-Type: application/json' -d '{\"query\": {\"range\": {\"@timestamp\": {\"lt\": \"now-30d\"}}}}'" buildtools\install\win\Files\config\fluent-bit.conf
 %sed% -i -e "s/\"/\\\\\"/g" -e "s/'/\"/g" buildtools\install\win\Files\config\fluent-bit.conf
-%sed% -i "/\[OUTPUT\]/i\\n" buildtools\install\win\Files\config\fluent-bit.conf
+%sed% -i "s/^\[OUTPUT\]/\n[OUTPUT]/" buildtools\install\win\Files\config\fluent-bit.conf
 
 REM echo ######## Delete test and dev configs ########
 del /f /q buildtools\install\win\Files\config\*.test.json
 del /f /q buildtools\install\win\Files\config\*.dev.json
+
+REM echo ######## Remove source maps, type declarations and debug symbols not needed at runtime ########
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference = 'Stop'; $files = @(Get-ChildItem -LiteralPath 'buildtools\install\win\Files' -Recurse -File | Where-Object { $_.Name -match '\.(js|mjs|cjs|css|ts|mts|cts)\.map$' -or $_.Extension -eq '.pdb' -or ($_.Name -match '\.d\.[cm]?ts$' -and $_.FullName -match '\\node_modules\\') }); $files | Remove-Item -Force; Write-Host ('Removed ' + $files.Count + ' source maps, type declarations and debug symbols')"
+
+REM echo ######## Remove translation tool metadata (locales\.meta), the client build skips it too ########
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference = 'Stop'; $dirs = @(Get-ChildItem -LiteralPath 'buildtools\install\win\Files' -Recurse -Directory -Force -Filter '.meta' | Where-Object { $_.Parent.Name -eq 'locales' }); $dirs | Remove-Item -Recurse -Force; Write-Host ('Removed ' + $dirs.Count + ' locales\.meta folders')"
+
+REM echo ######## Keep one copy of the node_modules packages the Next.js apps share ########
+powershell -NoProfile -ExecutionPolicy Bypass -File buildtools\install\win\dedupe-node-modules.ps1 -FilesDir buildtools\install\win\Files || exit /b 1
 
 ::add product version to config
 %sed% "s/\"number\": *\"[0-9.]*\"/\"number\": \"%BUILD_VERSION%.%BUILD_NUMBER%\"/" -i buildtools\install\win\Files\config\appsettings.json
@@ -149,24 +159,10 @@ del /f /q sed*
 REM echo ######## Build MySQL Server Installer ########
 iscc /Qp /S"byparam="signtool" sign /a /n "%publisher%" /t http://timestamp.digicert.com $f" "buildtools\install\win\MySQL Server Installer Runner.iss"
 
-REM echo ######## Build OpenResty ########
-%AdvancedInstaller% /edit buildtools\install\win\OpenResty.aip /SetVersion %openresty_version%
-IF "%SignBuild%"=="true" (
-%AdvancedInstaller% /edit buildtools\install\win\OpenResty.aip /SetSig
-)
-%AdvancedInstaller% /rebuild buildtools\install\win\OpenResty.aip
-
-REM echo ######## Build OpenSearch ########
-IF "%SignBuild%"=="true" (
-%AdvancedInstaller% /edit buildtools\install\win\OpenSearch.aip /SetSig
-)
-%AdvancedInstaller% /rebuild buildtools\install\win\OpenSearch.aip
-
-REM echo ######## Build OpenSearchStack ########
-IF "%SignBuild%"=="true" (
-%AdvancedInstaller% /edit buildtools\install\win\OpenSearchStack.aip /SetSig
-)
-%AdvancedInstaller% /rebuild buildtools\install\win\OpenSearchStack.aip
+REM echo ######## Build OpenResty, OpenSearch and OpenSearchStack, or reuse them when their inputs did not change ########
+call :build_aux_installer OpenResty "OpenResty-%openresty_version%.msi" "OpenResty" "%openresty_version%"
+call :build_aux_installer OpenSearch "OpenSearch-%opensearch_version%.exe" "OpenSearch" ""
+call :build_aux_installer OpenSearchStack "OpenSearchStack.msi" "OpenSearchStack" ""
 
 REM echo ######## Build Apps package ########
 %AdvancedInstaller% /edit buildtools\install\win\Apps.aip /SetVersion %BUILD_VERSION%.%BUILD_NUMBER%
@@ -194,3 +190,22 @@ copy "buildtools\install\win\Resources\License_Developer_Redist.rtf" "buildtools
 
 :: Build Apps Prerequisites
 %AdvancedInstaller% /rebuild buildtools\install\win\Apps.Prerequisites.aip -buildslist DefaultBuild
+
+rem Keep the exit code of the last build for the Jenkins step
+goto :eof
+
+rem Build an auxiliary installer (%1 project, %2 package in publish, %3 comma-separated inputs, %4 version or empty) unless the cache has it
+:build_aux_installer
+set "AuxVersion="
+if not "%~4"=="" set "AuxVersion=-Version "%~4""
+set "AuxCache=powershell -NoProfile -ExecutionPolicy Bypass -File buildtools\install\win\aux-installers-cache.ps1 -Project "%~1" -Package "%~2" -Inputs "%~3" %AuxVersion%"
+%AuxCache% -Action Restore
+if not errorlevel 1 goto :eof
+if not "%~4"=="" %AdvancedInstaller% /edit buildtools\install\win\%~1.aip /SetVersion %~4
+IF "%SignBuild%"=="true" (
+%AdvancedInstaller% /edit buildtools\install\win\%~1.aip /SetSig
+)
+%AdvancedInstaller% /rebuild buildtools\install\win\%~1.aip
+if errorlevel 1 goto :eof
+%AuxCache% -Action Save
+goto :eof

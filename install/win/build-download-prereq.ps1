@@ -4,6 +4,9 @@ $AllProtocols = [System.Net.SecurityProtocolType]::Tls -bor `
 
 [System.Net.ServicePointManager]::SecurityProtocol = $AllProtocols
 
+# The progress bar makes Invoke-WebRequest in Windows PowerShell 5.1 many times slower on large files
+$ProgressPreference = 'SilentlyContinue'
+
 # Function 'DownloadComponents' downloads some components that need on build satge
 #
 # It gets two parameters list of maps and download path
