@@ -484,12 +484,49 @@ function RabbitMqConfigure {
         AI_SetMsiProperty AMQP_USER $User
         AI_SetMsiProperty AMQP_PWD $Password
         Write-Output "The RabbitMQ user '$User' is created."
+        ShareRabbitMqUserWithDocs $User $Password
     }
     catch {
         Write-Output "Unable to create the RabbitMQ user, Apps keeps using the guest user: $($_.Exception.Message)"
     }
     finally {
         Remove-Item -LiteralPath $CtlHome -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+# A silent install runs Docs before the MSI creates the RabbitMQ user, so Docs installed with guest is switched to it here.
+function ShareRabbitMqUserWithDocs {
+    param ([string]$User, [string]$Password)
+    $DocsDir = GetDocumentServerInstallLocation
+    if (-not $DocsDir) { return }
+    $Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry64')
+    $DocsKey = $null
+    try {
+        $DocsKey = $Base.OpenSubKey('SOFTWARE\ONLYOFFICE\DocumentServer', $true)
+        if (-not $DocsKey -or $DocsKey.GetValue('RabbitMqUser') -ne 'guest') { return }
+        $DocsKey.SetValue('RabbitMqUser', $User, [Microsoft.Win32.RegistryValueKind]::String)
+        $DocsKey.SetValue('RabbitMqPwd', $Password, [Microsoft.Win32.RegistryValueKind]::String)
+
+        # Docs EE/DE keeps the broker URL in local.json (CE has no broker settings); only the credentials of that URL change.
+        $LocalJson = Join-Path $DocsDir 'config\local.json'
+        if (Test-Path -LiteralPath $LocalJson -PathType Leaf) {
+            $Content = [IO.File]::ReadAllText($LocalJson)
+            $Credentials = [uri]::EscapeDataString($User) + ':' + [uri]::EscapeDataString($Password)
+            $UrlPattern = '("rabbitmq"\s*:\s*\{[^{}]*?"url"\s*:\s*"[A-Za-z][A-Za-z0-9+.-]*://)guest:guest(@[^"]*")'
+            $Updated = [regex]::Replace($Content, $UrlPattern, { param($Match) $Match.Groups[1].Value + $Credentials + $Match.Groups[2].Value })
+            if ($Updated -cne $Content) {
+                [IO.File]::WriteAllText($LocalJson, $Updated, (New-Object Text.UTF8Encoding($false)))
+                foreach ($Service in 'DsDocServiceSvc', 'DsConverterSvc') {
+                    if (Get-Service -Name $Service -ErrorAction SilentlyContinue) { Restart-Service -Name $Service -Force -ErrorAction SilentlyContinue }
+                }
+            }
+        }
+        Write-Output "Docs uses the RabbitMQ user '$User'."
+    }
+    catch { Write-Output "Unable to give Docs the RabbitMQ user, Docs keeps using guest: $($_.Exception.Message)" }
+    finally {
+        if ($DocsKey) { $DocsKey.Close() }
+        $Base.Close()
     }
 }
 
