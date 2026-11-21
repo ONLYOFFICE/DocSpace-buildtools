@@ -1073,7 +1073,30 @@ function MoveConfigs {
         Write-Output "DocumentServer port set to $DocsPort and DsProxySvc restarted."
     }
 
+    ResetPrerequisiteServicePriority
     Write-Output "Script execution completed."
+}
+
+# Apps 4.0 ran OpenResty and OpenSearch with RealTime priority; an update keeps their installers of the same version, so their WinSW configs are reset here.
+function ResetPrerequisiteServicePriority {
+    foreach ($Name in 'OpenResty', 'OpenSearch', 'OpenSearchDashboards') {
+        try {
+            $Service = Get-CimInstance Win32_Service -Filter "Name='$Name'" -ErrorAction Stop
+            if (-not $Service) { continue }
+            # WinSW reads the XML next to its executable, with the same base name.
+            $Executable = if ($Service.PathName -match '^\s*"([^"]+)"') { $Matches[1] } else { ($Service.PathName -split '\s+')[0] }
+            $Config = [IO.Path]::ChangeExtension($Executable, '.xml')
+            if (-not (Test-Path -LiteralPath $Config -PathType Leaf)) { continue }
+            $Content = [IO.File]::ReadAllText($Config)
+            $Updated = $Content -replace '<priority>\s*RealTime\s*</priority>', '<priority>Normal</priority>'
+            if ($Updated -ceq $Content) { continue }
+            [IO.File]::WriteAllText($Config, $Updated, (New-Object Text.UTF8Encoding($false)))
+            # WinSW applies the priority when the service starts.
+            if ($Service.State -eq 'Running') { Restart-Service -Name $Name -Force -ErrorAction Stop }
+            Write-Output "$Name priority is set to Normal."
+        }
+        catch { Write-Output "Unable to reset the priority of ${Name}: $($_.Exception.Message)" }
+    }
 }
 
 
