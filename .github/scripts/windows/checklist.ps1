@@ -263,9 +263,14 @@ Add-Result '12' 'api/2.0/settings version' $status "$portalVersion"
 
 # ---- 13. license (EE/DE): the installer always sets LICENSE_PATH = [APPDIR]\Data\license.lic
 if ($expectation.edition -ne 'CE') {
-    $licensePath = if ($environmentJson) { $environmentJson.license.file.path } else { $null }
-    Add-Result '13' 'license.file.path' $(if ($licensePath) { 'PASS' } else { 'FAIL' }) "$licensePath in $(Split-Path $environmentConfig -Leaf)"
-    Add-Result '13' 'license file present' $(if ($licensePath -and (Test-Path $licensePath)) { 'PASS' } else { 'WARN' }) 'appears after the portal wizard accepts the license'
+    $licensePath = if ($environmentJson) { "$($environmentJson.license.file.path)".Trim() } else { '' }
+    $expectedLicense = [IO.Path]::GetFullPath((Join-Path $appDir 'Data\license.lic'))
+    $licenseInAppDir = $licensePath -and [IO.Path]::IsPathRooted($licensePath) -and [IO.Path]::GetFullPath($licensePath.Replace('/', '\')) -ieq $expectedLicense
+    $status = if ($licenseInAppDir) { 'PASS' } else { 'FAIL' }
+    $detail = if ($licenseInAppDir -or -not $licensePath) { "'$licensePath' in $(Split-Path $environmentConfig -Leaf)" } else { "'$licensePath' in $(Split-Path $environmentConfig -Leaf), expected $expectedLicense" }
+    Add-Result '13' 'license.file.path' $status $detail
+    # The portal wizard writes the file, and the checklist runs before it
+    Add-Result '13' 'license file present' $(if ($licenseInAppDir -and (Test-Path -LiteralPath $expectedLicense)) { 'PASS' } else { 'INFO' }) 'appears after the portal wizard accepts the license'
 }
 
 # ---- 14. MSI log
