@@ -503,11 +503,13 @@ function RabbitMqConfigure {
 # A silent install runs Docs before the MSI creates the RabbitMQ user, so Docs installed with guest is switched to it here.
 function ShareRabbitMqUserWithDocs {
     param ([string]$User, [string]$Password)
-    $DocsDir = GetDocumentServerInstallLocation
-    if (-not $DocsDir) { return }
-    $Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry64')
+    $Base = $null
     $DocsKey = $null
+    # The Apps user already exists here, so no failure of this step may reach the catch of RabbitMqConfigure.
     try {
+        $DocsDir = GetDocumentServerInstallLocation
+        if (-not $DocsDir) { return }
+        $Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry64')
         $DocsKey = $Base.OpenSubKey('SOFTWARE\ONLYOFFICE\DocumentServer', $true)
         if (-not $DocsKey -or $DocsKey.GetValue('RabbitMqUser') -ne 'guest') { return }
         $DocsKey.SetValue('RabbitMqUser', $User, [Microsoft.Win32.RegistryValueKind]::String)
@@ -532,7 +534,7 @@ function ShareRabbitMqUserWithDocs {
     catch { Write-Output "Unable to give Docs the RabbitMQ user, Docs keeps using guest: $($_.Exception.Message)" }
     finally {
         if ($DocsKey) { $DocsKey.Close() }
-        $Base.Close()
+        if ($Base) { $Base.Close() }
     }
 }
 
@@ -1184,8 +1186,12 @@ function SetIdentityJavaPath {
             # WinSW reads the executable when the service starts; a failed start may have left the service stopped.
             $ServiceName = AI_GetMsiProperty "ServiceName_$Name"
             $Service = if ($ServiceName) { Get-Service -Name $ServiceName -ErrorAction SilentlyContinue }
-            if ($Service -and $Service.Status -eq 'Running') { Restart-Service -Name $ServiceName -Force -ErrorAction Stop }
-            elseif ($Service) { Start-Service -Name $ServiceName -ErrorAction Stop }
+            if (-not $Service) {
+                Write-Output "$Name is set to run $JavaExe, but its service '$ServiceName' is not found to restart."
+                continue
+            }
+            if ($Service.Status -eq 'Running') { Restart-Service -Name $ServiceName -Force -ErrorAction Stop }
+            else { Start-Service -Name $ServiceName -ErrorAction Stop }
             Write-Output "$Name runs $JavaExe."
         }
         catch { Write-Output "Unable to set the Java path of ${Name}: $($_.Exception.Message)" }
