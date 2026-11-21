@@ -88,13 +88,14 @@ REM echo ######## SSL configs ########
 %sed% -i "s/\/etc\/nginx\/\.htpasswd_dashboards/\.htpasswd_dashboards/g" buildtools\install\win\Files\nginx\conf\onlyoffice.conf
 
 REM echo ######## Configure fluent-bit config for windows ########
-%sed% -i -e "s|/var/log/onlyoffice/|{APPDIR}Logs\\|g" -e "s|\*\*/|\*\*\\|g" -e "s#DocSpace\Logs\**\#DocumentServer\Log\#g" buildtools\install\win\Files\config\fluent-bit.conf
+rem PowerShell, not sed: the sed builds disagree on backslashes in a replacement, and the Windows tail input finds no files with / in the path
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$Conf = (Resolve-Path 'buildtools\install\win\Files\config\fluent-bit.conf').ProviderPath; $Text = [IO.File]::ReadAllText($Conf).Replace('/var/log/onlyoffice/', '{APPDIR}Logs\').Replace('**/', '**\'); [IO.File]::WriteAllText($Conf, $Text)" || exit /b 1
 %sed% -i "/^\[OUTPUT\]/i\[INPUT]" buildtools\install\win\Files\config\fluent-bit.conf
 %sed% -i "/^\[OUTPUT\]/i\    Name                exec" buildtools\install\win\Files\config\fluent-bit.conf
 %sed% -i "/^\[OUTPUT\]/i\    Interval_Sec        86400" buildtools\install\win\Files\config\fluent-bit.conf
 %sed% -i "/^\[OUTPUT\]/i\    Command             curl -s -X POST OPENSEARCH_SCHEME://OPENSEARCH_HOST:OPENSEARCH_PORT/OPENSEARCH_INDEX/_delete_by_query -H 'Content-Type: application/json' -d '{\"query\": {\"range\": {\"@timestamp\": {\"lt\": \"now-30d\"}}}}'" buildtools\install\win\Files\config\fluent-bit.conf
 %sed% -i -e "s/\"/\\\\\"/g" -e "s/'/\"/g" buildtools\install\win\Files\config\fluent-bit.conf
-%sed% -i "/\[OUTPUT\]/i\\n" buildtools\install\win\Files\config\fluent-bit.conf
+%sed% -i "s/^\[OUTPUT\]/\n[OUTPUT]/" buildtools\install\win\Files\config\fluent-bit.conf
 
 REM echo ######## Delete test and dev configs ########
 del /f /q buildtools\install\win\Files\config\*.test.json

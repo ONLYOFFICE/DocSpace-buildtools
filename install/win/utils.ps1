@@ -77,6 +77,12 @@ function ExtractPath {
     }
 }
 
+# The newest of the <name>-<version> folders matching Filter, ordered by version so 3.10.0 comes after 3.5.0; the OpenSearchStack.aip setup script repeats this lookup.
+function GetNewestVersionedFolder([string]$Root, [string]$Filter) {
+    Get-ChildItem -LiteralPath $Root -Directory -Filter $Filter -ErrorAction SilentlyContinue |
+        Sort-Object { ($_.Name -replace '^\D*(\d+(\.\d+)+).*$', '$1') -as 'System.Version' } | Select-Object -Last 1
+}
+
 # MSI AppSearch can redirect Program Files paths in a 32-bit package.
 function GetDocumentServerInstallLocation {
     $Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry64')
@@ -688,7 +694,8 @@ function OpenSearchSetup {
     $AppDir = AI_GetMsiProperty APPDIR
     $AppIndexDir = Join-Path $AppDir "Data\Index\v3.5.0\"
     $LogsDir     = Join-Path $AppDir "Logs\"
-    $OpenSearchDashboardsYml = "C:\OpenSearchStack\opensearch-dashboards-3.5.0\config\opensearch_dashboards.yml"
+    # OpenSearchStack unpacks Dashboards into opensearch-dashboards-<version>, so the folder is found by pattern and the newest version wins
+    $OpenSearchDashboardsDir = GetNewestVersionedFolder "C:\OpenSearchStack" "opensearch-dashboards-*"
 
     # Check if the index directory exists and set NEED_REINDEX_OPENSEARCH property if it doesn't.
     if (-not (Test-Path $AppIndexDir)) {
@@ -722,11 +729,12 @@ function OpenSearchSetup {
     Set-Content -Path $JvmOptionsPath -Value $FileContent
 
     # Modify OpenSearch Dashboards configuration.
-    if (Test-Path $OpenSearchDashboardsYml) {
-        Set-Content -Path $OpenSearchDashboardsYml -Value "" -Force
-    } else {
-        Write-Output "File doesn't exist: $OpenSearchDashboardsYml"
+    $OpenSearchDashboardsYml = if ($OpenSearchDashboardsDir) { Join-Path $OpenSearchDashboardsDir.FullName "config\opensearch_dashboards.yml" }
+    if (-not $OpenSearchDashboardsYml -or -not (Test-Path $OpenSearchDashboardsYml)) {
+        Write-Output "OpenSearch Dashboards configuration not found in C:\OpenSearchStack\opensearch-dashboards-*\config, Dashboards is not configured."
+        return
     }
+    Set-Content -Path $OpenSearchDashboardsYml -Value "" -Force
 
     $FileContent = Get-Content -Path $OpenSearchDashboardsYml -Raw
 
@@ -925,7 +933,8 @@ function MoveConfigs {
     $SslScriptDir = Join-Path $AppDir "sbin\"
     $SslScriptPath = Join-Path $AppDir "sbin\apps-ssl-setup.ps1"
     $FluentBitSourceFile = Join-Path $AppDir "config\fluent-bit.conf"
-    $FluentBitDstFolder = "C:\OpenSearchStack\fluent-bit-3.2.4-win64\conf\"
+    # OpenSearchStack unpacks Fluent Bit into fluent-bit-<version>, so the folder is found by pattern and the newest version wins
+    $FluentBitDir = GetNewestVersionedFolder "C:\OpenSearchStack" "fluent-bit-*"
 
     $SslCertPath = ''
     $SslCertKeyPath = ''
@@ -1010,12 +1019,17 @@ function MoveConfigs {
     }
 
     # Manage Fluent Bit configuration.
-    $FluentBitConfPath = Join-Path $FluentBitDstFolder "fluent-bit.conf"
-    if (Test-Path $FluentBitConfPath) {
-        Remove-Item -Path $FluentBitConfPath -Force
-    }
-    if (Test-Path $FluentBitSourceFile) {
-        Move-Item -Path $FluentBitSourceFile -Destination $FluentBitDstFolder
+    if ($FluentBitDir) {
+        $FluentBitDstFolder = Join-Path $FluentBitDir.FullName "conf\"
+        $FluentBitConfPath = Join-Path $FluentBitDstFolder "fluent-bit.conf"
+        if (Test-Path $FluentBitConfPath) {
+            Remove-Item -Path $FluentBitConfPath -Force
+        }
+        if (Test-Path $FluentBitSourceFile) {
+            Move-Item -Path $FluentBitSourceFile -Destination $FluentBitDstFolder
+        }
+    } else {
+        Write-Output "Fluent Bit folder not found in C:\OpenSearchStack\fluent-bit-*, its configuration is not updated."
     }
 
     if ((AI_GetMsiProperty DOCUMENT_SERVER_INSTALL_NONE) -eq '1') {
