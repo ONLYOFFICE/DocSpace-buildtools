@@ -216,9 +216,9 @@ $environmentConfig = Join-Path $appDir "config\appsettings.$($expectation.enviro
 $environmentJson = Read-JsonFile $environmentConfig
 $machineKey = if ($environmentJson) { "$($environmentJson.core.machinekey)".Trim() } else { '' }
 # A silent 4.0.1 install left the key blank; the update must keep it, since a new key would not open data protected with the old one
-$stateBefore = if ($Mode -eq 'Update' -and $StateBefore) { Read-JsonFile $StateBefore }
-$blankKeyKept = $stateBefore -and $environmentJson -and @((Get-Sha256Hex ' '), (Get-Sha256Hex '')) -contains $stateBefore.machineKey -and
-    $stateBefore.machineKey -eq (Get-Sha256Hex $environmentJson.core.machinekey)
+$releasedState = if ($Mode -eq 'Update' -and $StateBefore) { Read-JsonFile $StateBefore }
+$blankKeyKept = $releasedState -and $environmentJson -and @((Get-Sha256Hex ' '), (Get-Sha256Hex '')) -contains $releasedState.machineKey -and
+    $releasedState.machineKey -eq (Get-Sha256Hex $environmentJson.core.machinekey)
 $status = if ($blankKeyKept) { 'WARN' } elseif (-not $machineKey) { 'FAIL' } elseif ($registry -and "$($registry.MACHINE_KEY)".Trim() -ne $machineKey) { 'WARN' } else { 'PASS' }
 $detail = if ($blankKeyKept) { "blank since the released version, kept by the update in $(Split-Path $environmentConfig -Leaf)" }
     elseif ($status -eq 'WARN') { 'differs from registry MACHINE_KEY' } elseif ($machineKey) { "set in $(Split-Path $environmentConfig -Leaf)" } else { "blank in $(Split-Path $environmentConfig -Leaf)" }
