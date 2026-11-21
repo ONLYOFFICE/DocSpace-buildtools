@@ -20,10 +20,14 @@ rem backend services (dotnet): one Release publish of the solution, as in instal
 rem ReleaseProfile puts every service into <repository>\..\publish\services\<name>\service
 set "PUBLISH_ARGS=-c Release -r win-x64 --self-contained false -p:DebugType=None -p:DebugSymbols=false"
 set "DotnetPublishDir=%PathToRepository%\..\publish\services"
-if exist "%DotnetPublishDir%" rmdir /s /q "%DotnetPublishDir%"
+set "RunnerDir=%PathToAppFolder%\services\ASC.Migration.Runner\service"
+set "ManifestArgs="
+call :publish_dotnet || exit /b 1
 
-dotnet publish "%PathToRepository%\common\Tools\ASC.Migration.Runner\ASC.Migration.Runner.csproj" %PUBLISH_ARGS% -o "%PathToAppFolder%\services\ASC.Migration.Runner\service" || exit /b 1
-dotnet publish "%PathToRepository%\ASC.Web.slnx" %PUBLISH_ARGS% -p:PublishProfile=ReleaseProfile || exit /b 1
+rem The NuGet packages that several services use go once into dotnetstore; the second publish leaves them out (nothing compiles again)
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0dotnet-store.ps1" -Action Build -PublishRoot "%DotnetPublishDir%" -RunnerDir "%RunnerDir%" -StoreDir "%PathToAppFolder%\dotnetstore" || exit /b 1
+set "ManifestArgs=--manifest "%PathToAppFolder%\dotnetstore\x64\net10.0\artifact.xml""
+call :publish_dotnet || exit /b 1
 
 rem backend services (dotnet) in directory 'products'
 call :move_service ASC.Files products\ASC.Files\server || exit /b 1
@@ -43,6 +47,9 @@ call :move_service ASC.ClearEvents services\ASC.ClearEvents\service || exit /b 1
 call :move_service ASC.Web.Api services\ASC.Web.Api\service || exit /b 1
 call :move_service ASC.Web.Studio services\ASC.Web.Studio\service || exit /b 1
 call :move_service ASC.Web.HealthChecks.UI services\ASC.Web.HealthChecks.UI\service || exit /b 1
+
+rem The services find dotnetstore through additionalProbingPaths; Apps.aip replaces {APPDIR} with the install folder, and the script checks it does so in every service folder
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0dotnet-store.ps1" -Action SetProbingPaths -FilesDir "%PathToAppFolder%" -AipPath "%~dp0Apps.aip" || exit /b 1
 
 rem backend services (Nodejs) in directory 'services'
 mkdir "%PathToAppFolder%\services\ASC.Socket.IO\service"
@@ -77,6 +84,14 @@ for %%f in ("%PathToRepository%\common\ASC.Identity\authorization\authorization-
 mkdir "%PathToAppFolder%\services\ASC.Identity.Registration\service"
 for %%f in ("%PathToRepository%\common\ASC.Identity\registration\registration-container\target\*.jar") do copy "%%f" "%PathToAppFolder%\services\ASC.Identity.Registration\service\app.jar" /y
 
+exit /b 0
+
+rem Publish the migration runner and the solution from scratch, with ManifestArgs when it is set
+:publish_dotnet
+if exist "%DotnetPublishDir%" rmdir /s /q "%DotnetPublishDir%"
+if exist "%RunnerDir%" rmdir /s /q "%RunnerDir%"
+dotnet publish "%PathToRepository%\common\Tools\ASC.Migration.Runner\ASC.Migration.Runner.csproj" %PUBLISH_ARGS% %ManifestArgs% -o "%RunnerDir%" || exit /b 1
+dotnet publish "%PathToRepository%\ASC.Web.slnx" %PUBLISH_ARGS% %ManifestArgs% -p:PublishProfile=ReleaseProfile || exit /b 1
 exit /b 0
 
 rem Move a published service (%1) to its folder in the package (%2); robocopy codes 8 and above are errors

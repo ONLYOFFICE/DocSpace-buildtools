@@ -1877,6 +1877,22 @@
     <ROW Name="ReplaceRedisHost" TxtUpdateSet="xml" FindPattern="{MACHINE_KEY}" ReplacePattern="[MACHINE_KEY]" Options="2" Order="13" FileEncoding="-1"/>
     <ROW Name="ReplaceRedisHost" TxtUpdateSet="xml" FindPattern="{IDENTITY_ENCRYPTION_SECRET}" ReplacePattern="[IDENTITY_ENCRYPTION_SECRET]" Options="2" Order="14" FileEncoding="-1"/>
     <ROW Name="Replace" TxtUpdateSet="YourFile.txt_4" FindPattern="production" ReplacePattern="[ENVIRONMENT]" Options="18" Order="0" FileEncoding="-1"/>
+    <ROW Name="ReplaceStoreAppDir" TxtUpdateSet="runtimeconfig_ASC.AI" FindPattern="{APPDIR}" ReplacePattern="[APPDIR_FORWARD_SLASH]" Options="2" Order="0" FileEncoding="-1"/>
+    <ROW Name="ReplaceStoreAppDir" TxtUpdateSet="runtimeconfig_ASC.AI.Worker" FindPattern="{APPDIR}" ReplacePattern="[APPDIR_FORWARD_SLASH]" Options="2" Order="0" FileEncoding="-1"/>
+    <ROW Name="ReplaceStoreAppDir" TxtUpdateSet="runtimeconfig_ASC.ApiSystem" FindPattern="{APPDIR}" ReplacePattern="[APPDIR_FORWARD_SLASH]" Options="2" Order="0" FileEncoding="-1"/>
+    <ROW Name="ReplaceStoreAppDir" TxtUpdateSet="runtimeconfig_ASC.ClearEvents" FindPattern="{APPDIR}" ReplacePattern="[APPDIR_FORWARD_SLASH]" Options="2" Order="0" FileEncoding="-1"/>
+    <ROW Name="ReplaceStoreAppDir" TxtUpdateSet="runtimeconfig_ASC.Data.Backup" FindPattern="{APPDIR}" ReplacePattern="[APPDIR_FORWARD_SLASH]" Options="2" Order="0" FileEncoding="-1"/>
+    <ROW Name="ReplaceStoreAppDir" TxtUpdateSet="runtimeconfig_ASC.Data.Backup.Worker" FindPattern="{APPDIR}" ReplacePattern="[APPDIR_FORWARD_SLASH]" Options="2" Order="0" FileEncoding="-1"/>
+    <ROW Name="ReplaceStoreAppDir" TxtUpdateSet="runtimeconfig_ASC.Files" FindPattern="{APPDIR}" ReplacePattern="[APPDIR_FORWARD_SLASH]" Options="2" Order="0" FileEncoding="-1"/>
+    <ROW Name="ReplaceStoreAppDir" TxtUpdateSet="runtimeconfig_ASC.Files.Worker" FindPattern="{APPDIR}" ReplacePattern="[APPDIR_FORWARD_SLASH]" Options="2" Order="0" FileEncoding="-1"/>
+    <ROW Name="ReplaceStoreAppDir" TxtUpdateSet="runtimeconfig_ASC.Migration.Runner" FindPattern="{APPDIR}" ReplacePattern="[APPDIR_FORWARD_SLASH]" Options="2" Order="0" FileEncoding="-1"/>
+    <ROW Name="ReplaceStoreAppDir" TxtUpdateSet="runtimeconfig_ASC.Notify" FindPattern="{APPDIR}" ReplacePattern="[APPDIR_FORWARD_SLASH]" Options="2" Order="0" FileEncoding="-1"/>
+    <ROW Name="ReplaceStoreAppDir" TxtUpdateSet="runtimeconfig_ASC.People" FindPattern="{APPDIR}" ReplacePattern="[APPDIR_FORWARD_SLASH]" Options="2" Order="0" FileEncoding="-1"/>
+    <ROW Name="ReplaceStoreAppDir" TxtUpdateSet="runtimeconfig_ASC.Studio.Notify" FindPattern="{APPDIR}" ReplacePattern="[APPDIR_FORWARD_SLASH]" Options="2" Order="0" FileEncoding="-1"/>
+    <ROW Name="ReplaceStoreAppDir" TxtUpdateSet="runtimeconfig_ASC.TelegramService" FindPattern="{APPDIR}" ReplacePattern="[APPDIR_FORWARD_SLASH]" Options="2" Order="0" FileEncoding="-1"/>
+    <ROW Name="ReplaceStoreAppDir" TxtUpdateSet="runtimeconfig_ASC.Web.Api" FindPattern="{APPDIR}" ReplacePattern="[APPDIR_FORWARD_SLASH]" Options="2" Order="0" FileEncoding="-1"/>
+    <ROW Name="ReplaceStoreAppDir" TxtUpdateSet="runtimeconfig_ASC.Web.HealthChecks.UI" FindPattern="{APPDIR}" ReplacePattern="[APPDIR_FORWARD_SLASH]" Options="2" Order="0" FileEncoding="-1"/>
+    <ROW Name="ReplaceStoreAppDir" TxtUpdateSet="runtimeconfig_ASC.Web.Studio" FindPattern="{APPDIR}" ReplacePattern="[APPDIR_FORWARD_SLASH]" Options="2" Order="0" FileEncoding="-1"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.TxtUpdateSetComponent">
     <ROW Key="YourFile.txt" Component="conf" FileName="onlyoffice.conf" Directory="conf_Dir" Options="17"/>
@@ -1889,5 +1905,21 @@
     <ROW Key="htpasswd_dashboards" Component="conf" FileName=".htpasswd_dashboards" Directory="conf_Dir" Options="17"/>
     <ROW Key="serverdashboards.conf" Component="includes" FileName="server-dashboards.conf" Directory="includes_Dir" Options="17"/>
     <ROW Key="xml" Component="tools" FileName="*.xml" Directory="tools_Dir" Options="17"/>
+    <ROW Key="runtimeconfig_ASC.AI" Component="ASC.AI.exe" FileName="*.runtimeconfig.json" Directory="server_Dir" Options="17"/>
+    <ROW Key="runtimeconfig_ASC.AI.Worker" Component="ASC.AI.Worker.exe" FileName="*.runtimeconfig.json" Directory="service_10_Dir" Options="17"/>
+    <ROW Key="runtimeconfig_ASC.ApiSystem" Component="ASC.ApiSystem.exe" FileName="*.runtimeconfig.json" Directory="service_17_Dir" Options="17"/>
+    <ROW Key="runtimeconfig_ASC.ClearEvents" Component="ASC.ClearEvents.exe" FileName="*.runtimeconfig.json" Directory="service_Dir" Options="17"/>
+    <ROW Key="runtimeconfig_ASC.Data.Backup" Component="ASC.Data.Backup.exe" FileName="*.runtimeconfig.json" Directory="service_2_Dir" Options="17"/>
+    <ROW Key="runtimeconfig_ASC.Data.Backup.Worker" Component="ASC.Data.Backup.Worker.exe" FileName="*.runtimeconfig.json" Directory="service_3_Dir" Options="17"/>
+    <ROW Key="runtimeconfig_ASC.Files" Component="ASC.Files.exe" FileName="*.runtimeconfig.json" Directory="server_2_Dir" Options="17"/>
+    <ROW Key="runtimeconfig_ASC.Files.Worker" Component="ASC.Files.Worker.exe" FileName="*.runtimeconfig.json" Directory="service_7_Dir" Options="17"/>
+    <ROW Key="runtimeconfig_ASC.Migration.Runner" Component="ASC.Migration.Runner.exe" FileName="*.runtimeconfig.json" Directory="service_6_Dir" Options="17"/>
+    <ROW Key="runtimeconfig_ASC.Notify" Component="ASC.Notify.exe" FileName="*.runtimeconfig.json" Directory="service_9_Dir" Options="17"/>
+    <ROW Key="runtimeconfig_ASC.People" Component="ASC.People.exe" FileName="*.runtimeconfig.json" Directory="server_5_Dir" Options="17"/>
+    <ROW Key="runtimeconfig_ASC.Studio.Notify" Component="ASC.Studio.Notify.exe" FileName="*.runtimeconfig.json" Directory="service_11_Dir" Options="17"/>
+    <ROW Key="runtimeconfig_ASC.TelegramService" Component="ASC.TelegramService.exe" FileName="*.runtimeconfig.json" Directory="service_8_Dir" Options="17"/>
+    <ROW Key="runtimeconfig_ASC.Web.Api" Component="ASC.Web.Api.exe" FileName="*.runtimeconfig.json" Directory="service_15_Dir" Options="17"/>
+    <ROW Key="runtimeconfig_ASC.Web.HealthChecks.UI" Component="ASC.Web.HealthChecks.UI.exe" FileName="*.runtimeconfig.json" Directory="service_4_Dir" Options="17"/>
+    <ROW Key="runtimeconfig_ASC.Web.Studio" Component="ASC.Web.Studio.exe" FileName="*.runtimeconfig.json" Directory="service_16_Dir" Options="17"/>
   </COMPONENT>
 </DOCUMENT>

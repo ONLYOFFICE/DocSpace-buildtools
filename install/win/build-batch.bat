@@ -101,11 +101,14 @@ REM echo ######## Delete test and dev configs ########
 del /f /q buildtools\install\win\Files\config\*.test.json
 del /f /q buildtools\install\win\Files\config\*.dev.json
 
-REM echo ######## Remove source maps and type declarations not needed at runtime ########
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference = 'Stop'; $files = @(Get-ChildItem -LiteralPath 'buildtools\install\win\Files' -Recurse -File | Where-Object { $_.Name -match '\.(js|mjs|cjs|css|ts|mts|cts)\.map$' -or ($_.Name -match '\.d\.[cm]?ts$' -and $_.FullName -match '\\node_modules\\') }); $files | Remove-Item -Force; Write-Host ('Removed ' + $files.Count + ' source maps and type declarations')"
+REM echo ######## Remove source maps, type declarations and debug symbols not needed at runtime ########
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference = 'Stop'; $files = @(Get-ChildItem -LiteralPath 'buildtools\install\win\Files' -Recurse -File | Where-Object { $_.Name -match '\.(js|mjs|cjs|css|ts|mts|cts)\.map$' -or $_.Extension -eq '.pdb' -or ($_.Name -match '\.d\.[cm]?ts$' -and $_.FullName -match '\\node_modules\\') }); $files | Remove-Item -Force; Write-Host ('Removed ' + $files.Count + ' source maps, type declarations and debug symbols')"
 
 REM echo ######## Remove translation tool metadata (locales\.meta), the client build skips it too ########
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference = 'Stop'; $dirs = @(Get-ChildItem -LiteralPath 'buildtools\install\win\Files' -Recurse -Directory -Force -Filter '.meta' | Where-Object { $_.Parent.Name -eq 'locales' }); $dirs | Remove-Item -Recurse -Force; Write-Host ('Removed ' + $dirs.Count + ' locales\.meta folders')"
+
+REM echo ######## Keep one copy of the node_modules packages the Next.js apps share ########
+powershell -NoProfile -ExecutionPolicy Bypass -File buildtools\install\win\dedupe-node-modules.ps1 -FilesDir buildtools\install\win\Files || exit /b 1
 
 ::add product version to config
 %sed% "s/\"number\": *\"[0-9.]*\"/\"number\": \"%BUILD_VERSION%.%BUILD_NUMBER%\"/" -i buildtools\install\win\Files\config\appsettings.json
