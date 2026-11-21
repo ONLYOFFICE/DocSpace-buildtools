@@ -25,7 +25,7 @@ on:
         default: false
       developer:
         type: boolean
-        description: "Clean install: Developer (wizard license from LICENSE_ENTERPRISE)"
+        description: "Clean install: Developer (wizard license from LICENSE_DEVELOPER)"
         default: false
       update:
         type: boolean
@@ -84,10 +84,10 @@ jobs:
         run: |
           set -euo pipefail
           entries=()
-          # A scheduled run tests Community only; a manual run takes the editions from its inputs
+          # A scheduled run tests every edition; a manual run takes the editions from its inputs
           if [[ "$EVENT" == "schedule" || "$COMMUNITY" == "true" ]]; then entries+=("Community CE ${COMMUNITY_PATH}"); fi
-          if [[ "$ENTERPRISE" == "true" ]]; then entries+=("Enterprise EE ${ENTERPRISE_PATH}"); fi
-          if [[ "$DEVELOPER" == "true" ]]; then entries+=("Developer DE ${DEVELOPER_PATH}"); fi
+          if [[ "$EVENT" == "schedule" || "$ENTERPRISE" == "true" ]]; then entries+=("Enterprise EE ${ENTERPRISE_PATH}"); fi
+          if [[ "$EVENT" == "schedule" || "$DEVELOPER" == "true" ]]; then entries+=("Developer DE ${DEVELOPER_PATH}"); fi
           for entry in "${entries[@]}"; do
             read -r edition _ path <<< "$entry"
             [[ -n "$path" ]] || echo "::warning::The Jenkins build has no ${edition} installer, skipping it"
@@ -206,7 +206,7 @@ jobs:
         if: ${{ !cancelled() && steps.apps.outcome == 'success' }}
         timeout-minutes: 40
         env:
-          LICENSE: ${{ matrix.edition != 'Community' && secrets.LICENSE_ENTERPRISE || '' }}
+          LICENSE: ${{ matrix.edition == 'Enterprise' && secrets.LICENSE_ENTERPRISE || matrix.edition == 'Developer' && secrets.LICENSE_DEVELOPER || '' }}
           EXPECTED_VERSION: ${{ needs.prepare.outputs.version }}
           SMOKE_SUMMARY_TITLE: Smoke ${{ matrix.edition }}
         run: |
