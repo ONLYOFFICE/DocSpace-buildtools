@@ -101,6 +101,12 @@ REM echo ######## Delete test and dev configs ########
 del /f /q buildtools\install\win\Files\config\*.test.json
 del /f /q buildtools\install\win\Files\config\*.dev.json
 
+REM echo ######## Remove source maps and type declarations not needed at runtime ########
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference = 'Stop'; $files = @(Get-ChildItem -LiteralPath 'buildtools\install\win\Files' -Recurse -File | Where-Object { $_.Name -match '\.(js|mjs|cjs|css|ts|mts|cts)\.map$' -or ($_.Name -match '\.d\.[cm]?ts$' -and $_.FullName -match '\\node_modules\\') }); $files | Remove-Item -Force; Write-Host ('Removed ' + $files.Count + ' source maps and type declarations')"
+
+REM echo ######## Remove translation tool metadata (locales\.meta), the client build skips it too ########
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference = 'Stop'; $dirs = @(Get-ChildItem -LiteralPath 'buildtools\install\win\Files' -Recurse -Directory -Force -Filter '.meta' | Where-Object { $_.Parent.Name -eq 'locales' }); $dirs | Remove-Item -Recurse -Force; Write-Host ('Removed ' + $dirs.Count + ' locales\.meta folders')"
+
 ::add product version to config
 %sed% "s/\"number\": *\"[0-9.]*\"/\"number\": \"%BUILD_VERSION%.%BUILD_NUMBER%\"/" -i buildtools\install\win\Files\config\appsettings.json
 
@@ -150,24 +156,10 @@ del /f /q sed*
 REM echo ######## Build MySQL Server Installer ########
 iscc /Qp /S"byparam="signtool" sign /a /n "%publisher%" /t http://timestamp.digicert.com $f" "buildtools\install\win\MySQL Server Installer Runner.iss"
 
-REM echo ######## Build OpenResty ########
-%AdvancedInstaller% /edit buildtools\install\win\OpenResty.aip /SetVersion %openresty_version%
-IF "%SignBuild%"=="true" (
-%AdvancedInstaller% /edit buildtools\install\win\OpenResty.aip /SetSig
-)
-%AdvancedInstaller% /rebuild buildtools\install\win\OpenResty.aip
-
-REM echo ######## Build OpenSearch ########
-IF "%SignBuild%"=="true" (
-%AdvancedInstaller% /edit buildtools\install\win\OpenSearch.aip /SetSig
-)
-%AdvancedInstaller% /rebuild buildtools\install\win\OpenSearch.aip
-
-REM echo ######## Build OpenSearchStack ########
-IF "%SignBuild%"=="true" (
-%AdvancedInstaller% /edit buildtools\install\win\OpenSearchStack.aip /SetSig
-)
-%AdvancedInstaller% /rebuild buildtools\install\win\OpenSearchStack.aip
+REM echo ######## Build OpenResty, OpenSearch and OpenSearchStack, or reuse them when their inputs did not change ########
+call :build_aux_installer OpenResty "OpenResty-%openresty_version%.msi" "OpenResty" "%openresty_version%"
+call :build_aux_installer OpenSearch "OpenSearch-%opensearch_version%.exe" "OpenSearch" ""
+call :build_aux_installer OpenSearchStack "OpenSearchStack.msi" "OpenSearchStack" ""
 
 REM echo ######## Build Apps package ########
 %AdvancedInstaller% /edit buildtools\install\win\Apps.aip /SetVersion %BUILD_VERSION%.%BUILD_NUMBER%
@@ -195,3 +187,22 @@ copy "buildtools\install\win\Resources\License_Developer_Redist.rtf" "buildtools
 
 :: Build Apps Prerequisites
 %AdvancedInstaller% /rebuild buildtools\install\win\Apps.Prerequisites.aip -buildslist DefaultBuild
+
+rem Keep the exit code of the last build for the Jenkins step
+goto :eof
+
+rem Build an auxiliary installer (%1 project, %2 package in publish, %3 comma-separated inputs, %4 version or empty) unless the cache has it
+:build_aux_installer
+set "AuxVersion="
+if not "%~4"=="" set "AuxVersion=-Version "%~4""
+set "AuxCache=powershell -NoProfile -ExecutionPolicy Bypass -File buildtools\install\win\aux-installers-cache.ps1 -Project "%~1" -Package "%~2" -Inputs "%~3" %AuxVersion%"
+%AuxCache% -Action Restore
+if not errorlevel 1 goto :eof
+if not "%~4"=="" %AdvancedInstaller% /edit buildtools\install\win\%~1.aip /SetVersion %~4
+IF "%SignBuild%"=="true" (
+%AdvancedInstaller% /edit buildtools\install\win\%~1.aip /SetSig
+)
+%AdvancedInstaller% /rebuild buildtools\install\win\%~1.aip
+if errorlevel 1 goto :eof
+%AuxCache% -Action Save
+goto :eof
