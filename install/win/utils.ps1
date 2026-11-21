@@ -1073,8 +1073,62 @@ function MoveConfigs {
         Write-Output "DocumentServer port set to $DocsPort and DsProxySvc restarted."
     }
 
+    SetIdentityJavaPath
     ResetPrerequisiteServicePriority
     Write-Output "Script execution completed."
+}
+
+# Returns java.exe of the newest JDK 17 or later registered by its installer (Identity needs Java 17), or nothing.
+function GetJdkJavaPath {
+    $Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry64')
+    $JdkKey = $null
+    try {
+        $JdkKey = $Base.OpenSubKey('SOFTWARE\JavaSoft\JDK')
+        if (-not $JdkKey) { return }
+        $Candidates = foreach ($VersionName in $JdkKey.GetSubKeyNames()) {
+            # A JDK registers both its major version and its full version, such as 25 and 25.0.3.
+            $Version = $null
+            if (-not [version]::TryParse(($VersionName -replace '^(\d+)$', '$1.0'), [ref]$Version) -or $Version.Major -lt 17) { continue }
+            $VersionKey = $JdkKey.OpenSubKey($VersionName)
+            if (-not $VersionKey) { continue }
+            $JavaHome = "$($VersionKey.GetValue('JavaHome'))"
+            $VersionKey.Close()
+            if (-not $JavaHome) { continue }
+            $JavaExe = Join-Path $JavaHome 'bin\java.exe'
+            if (Test-Path -LiteralPath $JavaExe -PathType Leaf) { [pscustomobject]@{ Version = $Version; Path = $JavaExe } }
+        }
+        ($Candidates | Sort-Object Version -Descending | Select-Object -First 1).Path
+    }
+    finally { if ($JdkKey) { $JdkKey.Close() }; $Base.Close() }
+}
+
+# WinSW runs Identity with the first java on the PATH of the service, which may be an older Java, so the JDK path is written into its configs.
+function SetIdentityJavaPath {
+    $JavaExe = GetJdkJavaPath
+    if (-not $JavaExe) {
+        Write-Output "No JDK 17 or later is registered, Identity keeps starting java from PATH."
+        return
+    }
+    $AppDir = AI_GetMsiProperty APPDIR
+    $Replacement = '<executable>' + [Security.SecurityElement]::Escape($JavaExe) + '</executable>'
+    foreach ($Name in 'Identity.Authorization', 'Identity.Registration') {
+        try {
+            $Config = Join-Path $AppDir "tools\$Name.xml"
+            if (-not (Test-Path -LiteralPath $Config -PathType Leaf)) { continue }
+            $Content = [IO.File]::ReadAllText($Config)
+            # Only the bare command shipped in the package is replaced, so a path set by an administrator stays.
+            $Updated = [regex]::Replace($Content, '<executable>\s*java(?:\.exe)?\s*</executable>', { param($Match) $Replacement }, 'IgnoreCase')
+            if ($Updated -ceq $Content) { continue }
+            [IO.File]::WriteAllText($Config, $Updated, (New-Object Text.UTF8Encoding($false)))
+            # WinSW reads the executable when the service starts; a failed start may have left the service stopped.
+            $ServiceName = AI_GetMsiProperty "ServiceName_$Name"
+            $Service = if ($ServiceName) { Get-Service -Name $ServiceName -ErrorAction SilentlyContinue }
+            if ($Service -and $Service.Status -eq 'Running') { Restart-Service -Name $ServiceName -Force -ErrorAction Stop }
+            elseif ($Service) { Start-Service -Name $ServiceName -ErrorAction Stop }
+            Write-Output "$Name runs $JavaExe."
+        }
+        catch { Write-Output "Unable to set the Java path of ${Name}: $($_.Exception.Message)" }
+    }
 }
 
 # Apps 4.0 ran OpenResty and OpenSearch with RealTime priority; an update keeps their installers of the same version, so their WinSW configs are reset here.
