@@ -528,6 +528,10 @@ function ShareRabbitMqUserWithDocs {
                     if (Get-Service -Name $Service -ErrorAction SilentlyContinue) { Restart-Service -Name $Service -Force -ErrorAction SilentlyContinue }
                 }
             }
+            elseif ($Content -match '"rabbitmq"\s*:\s*\{[^{}]*?"url"\s*:') {
+                Write-Output "Docs has the RabbitMQ user '$User' in the registry, but its local.json has no guest:guest broker URL to change, so Docs keeps the URL it has."
+                return
+            }
         }
         Write-Output "Docs uses the RabbitMQ user '$User'."
     }
@@ -1167,12 +1171,21 @@ function GetJdkJavaPath {
 
 # WinSW runs Identity with the first java on the PATH of the service, which may be an older Java, so the JDK path is written into its configs.
 function SetIdentityJavaPath {
-    $JavaExe = GetJdkJavaPath
+    # A failure here must not stop MoveConfigs before the steps after it.
+    try { $JavaExe = GetJdkJavaPath }
+    catch {
+        Write-Output "Unable to find the JDK for Identity, it keeps starting java from PATH: $($_.Exception.Message)"
+        return
+    }
+    try { $AppDir = AI_GetMsiProperty APPDIR }
+    catch {
+        Write-Output "Unable to read APPDIR for Identity, it keeps starting java from PATH: $($_.Exception.Message)"
+        return
+    }
     if (-not $JavaExe) {
         Write-Output "No JDK 17 or later is registered, Identity keeps starting java from PATH."
         return
     }
-    $AppDir = AI_GetMsiProperty APPDIR
     $Replacement = '<executable>' + [Security.SecurityElement]::Escape($JavaExe) + '</executable>'
     foreach ($Name in 'Identity.Authorization', 'Identity.Registration') {
         try {
