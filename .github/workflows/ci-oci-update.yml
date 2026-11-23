@@ -168,6 +168,13 @@ jobs:
         if: steps.boot.outcome == 'failure'
         run: echo "::warning::VM boot failed on ${{ matrix.name }} — runner infrastructure flake, update test skipped"
 
+      # The ~540 MB Docs DEB took over 50 minutes as one stream inside the VM; aria2 on the runner fetches it in seconds
+      - name: Prefetch Docs package
+        if: steps.boot.outcome == 'success' && github.ref_name != 'master' && (contains(matrix.os, 'ubuntu') || contains(matrix.os, 'debian'))
+        continue-on-error: true
+        timeout-minutes: 15
+        run: bash tests/vagrant/prefetch-docs.sh "${{ needs.prepare.outputs.docs_version }}" tests/vagrant/prefetch
+
       - name: "Update on ${{matrix.name}}"
         if: steps.boot.outcome == 'success'
         timeout-minutes: 75
@@ -177,6 +184,8 @@ jobs:
           OS: docspace-${{ matrix.os }}
           RAM: 8192
           CPU: 3
+          # Ubuntu guests time out on archive.ubuntu.com from the runners; the runner image itself uses this mirror
+          APT_MIRROR: http://azure.archive.ubuntu.com/ubuntu
           DOWNLOAD_SCRIPT: '-ds false'
           TEST_REPO: "${{ github.ref_name == 'master' && '-tr false' || '-tr true' }}"
           VER: "-v ${{ needs.prepare.outputs.docs_version }}"

@@ -9,6 +9,7 @@ while [ "$1" != "" ]; do
     -arg | --arguments         ) [ -n "$2" ] && ARGUMENTS="$2"             && shift ;;
     -tr  | --test-repo         ) [ -n "$2" ] && TEST_REPO_ENABLE="$2"      && shift ;;
     -v   | --version           ) [ -n "$2" ] && VER="$2"                  && shift ;;
+    -am  | --apt-mirror        ) [ -n "$2" ] && APT_MIRROR="$2"           && shift ;;
   esac
   shift
 done
@@ -49,6 +50,29 @@ add-repo-deb-docs() {
   tee /etc/apt/sources.list.d/onlyoffice-dev.list
 }
 
+use-apt-mirror() {
+  # The default Ubuntu archive is often slow from CI runners; the runner passes a closer mirror
+  local SOURCES
+  for SOURCES in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
+    [ -f "$SOURCES" ] || continue
+    sed -Ei "s#https?://(([a-z]{2}\.)?archive|security)\.ubuntu\.com/ubuntu/?#${APT_MIRROR%/}/#g" "$SOURCES"
+  done
+  echo "${COLOR_GREEN}[OK] PREPARE_VM: Ubuntu packages come from ${APT_MIRROR}${COLOR_RESET}"
+}
+
+seed-docs-deb() {
+  # A Docs package the runner prefetched spares a slow download in the VM; apt checks its hash and downloads it again on a mismatch
+  local PACKAGE
+  for PACKAGE in /vagrant/prefetch/onlyoffice-documentserver_*.deb; do
+    [ -f "$PACKAGE" ] || continue
+    if cp -f "$PACKAGE" /var/cache/apt/archives/; then
+      echo "${COLOR_GREEN}[OK] PREPARE_VM: $(basename "$PACKAGE") put into the apt cache${COLOR_RESET}"
+    else
+      echo "${COLOR_YELLOW}PREPARE_VM: could not copy $(basename "$PACKAGE"), apt downloads it${COLOR_RESET}"
+    fi
+  done
+}
+
 add-repo-rpm-docs() {
   curl -fsSL "https://s3.eu-west-1.amazonaws.com/repo-doc-onlyoffice-com/repo/centos/onlyoffice-dev-${VER}.repo" \
     -o "/etc/yum.repos.d/onlyoffice-dev-${VER}.repo"
@@ -78,9 +102,11 @@ prepare_vm() {
     source /etc/os-release
 case $ID in
   ubuntu|debian)
+      [[ "$ID" == "ubuntu" && -n "${APT_MIRROR}" ]] && use-apt-mirror
       if [[ "${TEST_REPO_ENABLE}" == 'true' ]]; then
         add-repo-deb
         add-repo-deb-docs
+        seed-docs-deb
       else
         rm -f /etc/apt/sources.list.d/onlyoffice4testing.list
         rm -f /etc/apt/sources.list.d/onlyoffice-dev.list
