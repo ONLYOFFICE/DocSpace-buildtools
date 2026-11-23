@@ -371,6 +371,10 @@ replace_csp_lua() {
 			end
 		end
 	end
+
+	if personal and not ngx.header.Content_Security_Policy then
+		ngx.log(ngx.WARN, "personal csp: api answered ", res and res.status or "nothing", ", no csp is served for host: ", host)
+	end
 ';
 # END_CSP_LUA
 EOF
