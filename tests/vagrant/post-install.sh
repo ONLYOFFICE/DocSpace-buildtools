@@ -3,6 +3,7 @@
 set -e
 
 export TERM=xterm-256color
+LISTENERS_BEFORE_INSTALL="/var/tmp/oci-listeners-before-install"
 
 get_colors() {
     export LINE_SEPARATOR="-----------------------------------------"
@@ -64,6 +65,14 @@ healthcheck_api() {
 check_external_ports() {
   LISTENERS=$(ss -H -lntp)
   LISTENERS=$(awk '$4 !~ /^(127\.|\[::1\]:|\[::ffff:127\.|::1:)/ && $4 !~ /:(22|80|443)$/' <<< "$LISTENERS")
+  # Listeners of the OS image or the runner, saved by snapshot-listeners before the install, are not the product's
+  if [[ -s "$LISTENERS_BEFORE_INSTALL" ]]; then
+    LISTENERS=$(awk 'NR == FNR { before[$1]; next } !($4 in before)' "$LISTENERS_BEFORE_INSTALL" - <<< "$LISTENERS")
+  else
+    echo "${COLOR_YELLOW}[WARN] No ${LISTENERS_BEFORE_INSTALL} (snapshot-listeners did not run before the install), OS listeners are reported too${COLOR_RESET}"
+  fi
+  # passimd (fwupd cache sharing on Fedora) can start in the middle of the install
+  LISTENERS=$(grep -v '"passimd"' <<< "$LISTENERS" || true)
 
   if [[ -n "$LISTENERS" ]]; then
     echo "${COLOR_YELLOW}[WARN] Unexpected external TCP listeners:${COLOR_RESET}"
@@ -183,6 +192,11 @@ main() {
       echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
       uninstall_apps
       ;;
+    "snapshot-listeners")
+      # Run before the install, so that external-ports reports only the TCP listeners that appear after it
+      ss -H -lnt | awk '{ print $4 }' | sort -u > "$LISTENERS_BEFORE_INSTALL"
+      echo "${COLOR_GREEN}[OK] Saved $(wc -l < "$LISTENERS_BEFORE_INSTALL") TCP listeners present before the install${COLOR_RESET}"
+      ;;
     "external-ports")
       echo "${COLOR_BLUE}${LINE_SEPARATOR}${COLOR_RESET}"
       echo "${COLOR_BLUE}EXTERNAL PORTS${COLOR_RESET}"
@@ -196,7 +210,7 @@ main() {
       services_logs
       ;;
     *)
-      echo "Usage: $0 [healthcheck|external-ports|uninstall|logs]"
+      echo "Usage: $0 [snapshot-listeners|healthcheck|external-ports|uninstall|logs]"
       exit 1
       ;;
   esac

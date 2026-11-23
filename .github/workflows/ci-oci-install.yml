@@ -307,7 +307,31 @@ jobs:
             echo -e "\e[32mUsing production packages\e[0m"
           fi
 
+          vagrant ssh -c "sudo bash /vagrant/post-install.sh snapshot-listeners" \
+            || echo "::warning title=External ports::Could not save the TCP listeners before the install"
           vagrant provision
+
+      - name: Wait for SSH
+        if: steps.boot.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 7
+        run: |
+          cd tests/vagrant
+          vagrant status | grep -q "running" || exit 0
+          # Right after the install restarts every service, new SSH sessions can be refused for a while
+          SSH_DEADLINE=$((SECONDS + 300))
+          until vagrant ssh -c true >/dev/null 2>&1; do
+            if [ "$SECONDS" -ge "$SSH_DEADLINE" ]; then
+              echo "::warning::SSH to the VM still fails 5 minutes after the install"
+              # vagrant ssh passes LogLevel=FATAL, so the reason is only visible through a direct verbose ssh
+              vagrant ssh-config > "$RUNNER_TEMP/vagrant-ssh-config"
+              SSH_HOST=$(awk '/^Host / { print $2; exit }' "$RUNNER_TEMP/vagrant-ssh-config")
+              ssh -F "$RUNNER_TEMP/vagrant-ssh-config" -v -o ConnectTimeout=20 "$SSH_HOST" true 2>&1 | tail -25 || true
+              exit 1
+            fi
+            sleep 15
+          done
+          [ "$SECONDS" -lt 5 ] || echo "::notice::SSH to the VM came back after ${SECONDS}s"
 
       - name: Health check
         id: healthcheck
@@ -431,6 +455,8 @@ jobs:
           sudo mkdir -p "$INSTALL_DIR" /tmp/apps
           sudo cp -a install/OneClickInstall/. /tmp/apps/
           sudo cp install/common/systemd/build.sh /tmp/apps/build.sh
+          sudo bash "$GITHUB_WORKSPACE/tests/vagrant/post-install.sh" snapshot-listeners \
+            || echo "::warning title=External ports::Could not save the TCP listeners before the install"
           sudo bash -c 'cd "$1" && shift && bash "$@"' _ "$INSTALL_DIR" "$GITHUB_WORKSPACE/tests/vagrant/install.sh" "${ARGS[@]}"
 
       - name: Health check

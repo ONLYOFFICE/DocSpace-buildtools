@@ -96,6 +96,8 @@ case "${1:-}" in
         run_in_guest mkdir -p /tmp/apps
         run_in_guest cp -a "$REPO_DIR/install/OneClickInstall/." /tmp/apps/
         run_in_guest cp "$REPO_DIR/install/common/systemd/build.sh" /tmp/apps/build.sh
+        run_in_guest /bin/bash "$REPO_DIR/tests/vagrant/post-install.sh" snapshot-listeners \
+            || echo "::warning title=External ports::Could not save the TCP listeners before the install"
         run_in_guest /bin/bash "$REPO_DIR/tests/vagrant/install.sh" "${ARGS[@]}"
         ;;
     healthcheck|external-ports|uninstall)
