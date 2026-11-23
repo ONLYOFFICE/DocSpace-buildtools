@@ -1,4 +1,11 @@
 {
+    "ConnectionStrings": {
+        "workspace": {
+            "name": "workspace",
+            "connectionString": "Server=localhost;Database=onlyoffice;User ID=dev;Password=dev;Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;AllowPublicKeyRetrieval=True;ConnectionReset=false",
+            "providerName": "MySql.Data.MySqlClient"
+        }
+    },
     "core": {
         "base-domain": "localhost",
         "cors": "*",
