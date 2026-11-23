@@ -813,9 +813,10 @@ function SetAppDirWithForwardSlash {
     AI_SetMsiProperty APPDIR_FORWARD_SLASH $AppDirForwardSlash
 }
 
-# A silent install runs Docs before APPDIR is known, so Docs and then Apps get the C:\APPDIR placeholder as the license path; both are pointed at Apps\Data.
+# A silent install runs Docs before APPDIR is known, so Docs and then Apps get the <drive>:\APPDIR placeholder as the license path; both are pointed at Apps\Data.
 function RepairDocsLicensePath {
-    $Placeholder = '^C:[\\/]+APPDIR[\\/]'
+    # Windows Installer puts the placeholder on the drive with the most free space, which is not always C:.
+    $Placeholder = '^[A-Za-z]:[\\/]+APPDIR[\\/]'
     $LicensePath = (AI_GetMsiProperty LICENSE_PATH).Trim()
     if (-not $LicensePath -or $LicensePath -match $Placeholder -or $LicensePath -notmatch '^([A-Za-z]:[\\/]|\\\\)') {
         $DefaultPath = Join-Path (AI_GetMsiProperty APPDIR) 'Data\license.lic'
@@ -843,7 +844,7 @@ function RepairDocsLicensePath {
         if (-not (Test-Path -LiteralPath $DocsConfig -PathType Leaf)) { return }
 
         # The value is replaced in the text, so the rest of the Docs config keeps its formatting.
-        $Pattern = '("license_file"\s*:\s*")C:[\\/]+APPDIR[\\/][^"]*(")'
+        $Pattern = '("license_file"\s*:\s*")[A-Za-z]:[\\/]+APPDIR[\\/][^"]*(")'
         $Text = [IO.File]::ReadAllText($DocsConfig)
         if ($Text -notmatch $Pattern) { return }
         $DocsLicensePath = $LicensePath -replace '\\', '/'
@@ -1169,6 +1170,12 @@ function GetJdkJavaPath {
     finally { if ($JdkKey) { $JdkKey.Close() }; $Base.Close() }
 }
 
+# Returns the executable of a service command line, quoted or not, without its arguments.
+function GetServiceExecutablePath([string]$PathName) {
+    if ($PathName -match '^\s*"([^"]+)"') { return $Matches[1] }
+    ($PathName -split '\s+')[0]
+}
+
 # WinSW runs Identity with the first java on the PATH of the service, which may be an older Java, so the JDK path is written into its configs.
 function SetIdentityJavaPath {
     # A failure here must not stop MoveConfigs before the steps after it.
@@ -1187,6 +1194,7 @@ function SetIdentityJavaPath {
         return
     }
     $Replacement = '<executable>' + [Security.SecurityElement]::Escape($JavaExe) + '</executable>'
+    $Services = $null
     foreach ($Name in 'Identity.Authorization', 'Identity.Registration') {
         try {
             $Config = Join-Path $AppDir "tools\$Name.xml"
@@ -1197,14 +1205,16 @@ function SetIdentityJavaPath {
             if ($Updated -ceq $Content) { continue }
             [IO.File]::WriteAllText($Config, $Updated, (New-Object Text.UTF8Encoding($false)))
             # WinSW reads the executable when the service starts; a failed start may have left the service stopped.
-            $ServiceName = AI_GetMsiProperty "ServiceName_$Name"
-            $Service = if ($ServiceName) { Get-Service -Name $ServiceName -ErrorAction SilentlyContinue }
+            # A property name built at run time reads as empty here, so the service is found by its WinSW executable next to the XML.
+            $Executable = [IO.Path]::ChangeExtension($Config, '.exe')
+            if ($null -eq $Services) { $Services = @(Get-CimInstance Win32_Service -ErrorAction Stop) }
+            $Service = $Services | Where-Object { (GetServiceExecutablePath $_.PathName) -eq $Executable } | Select-Object -First 1
             if (-not $Service) {
-                Write-Output "$Name is set to run $JavaExe, but its service '$ServiceName' is not found to restart."
+                Write-Output "$Name is set to run $JavaExe, but no service runs $Executable to restart."
                 continue
             }
-            if ($Service.Status -eq 'Running') { Restart-Service -Name $ServiceName -Force -ErrorAction Stop }
-            else { Start-Service -Name $ServiceName -ErrorAction Stop }
+            if ($Service.State -eq 'Running') { Restart-Service -Name $Service.Name -Force -ErrorAction Stop }
+            else { Start-Service -Name $Service.Name -ErrorAction Stop }
             Write-Output "$Name runs $JavaExe."
         }
         catch { Write-Output "Unable to set the Java path of ${Name}: $($_.Exception.Message)" }
@@ -1218,7 +1228,7 @@ function ResetPrerequisiteServicePriority {
             $Service = Get-CimInstance Win32_Service -Filter "Name='$Name'" -ErrorAction Stop
             if (-not $Service) { continue }
             # WinSW reads the XML next to its executable, with the same base name.
-            $Executable = if ($Service.PathName -match '^\s*"([^"]+)"') { $Matches[1] } else { ($Service.PathName -split '\s+')[0] }
+            $Executable = GetServiceExecutablePath $Service.PathName
             $Config = [IO.Path]::ChangeExtension($Executable, '.xml')
             if (-not (Test-Path -LiteralPath $Config -PathType Leaf)) { continue }
             $Content = [IO.File]::ReadAllText($Config)
