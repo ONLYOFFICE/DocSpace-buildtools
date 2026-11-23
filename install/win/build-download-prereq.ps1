@@ -15,6 +15,15 @@ $ProgressPreference = 'SilentlyContinue'
 #                  name - name of the dowmloaded component
 #                  link - component download link
 
+# Returns the size the server reports for a download, or nothing when it does not report one
+function GetRemoteSize([string]$Url) {
+  try {
+    $Response = Invoke-WebRequest -Uri $Url -Method Head -UseBasicParsing -TimeoutSec 60
+    $Length = 0L
+    if ([long]::TryParse("$($Response.Headers['Content-Length'])", [ref]$Length) -and $Length -gt 0) { return $Length }
+  } catch { }
+}
+
 function DownloadComponents {
 
   param ( $prereq_list, $path )
@@ -24,20 +33,33 @@ function DownloadComponents {
   ForEach ( $item in $prereq_list ) {
     $url = $item.link
     $output = $path + $item.name
+    $partial = "$output.partial"
 
     try
     {
-      if( $item.download_allways ){
-        [system.console]::WriteLine("Downloading $url")
-        Invoke-WebRequest -Uri $url -OutFile $output
-      } else {
-        if(![System.IO.File]::Exists($output)){
-          [system.console]::WriteLine("Downloading $url")
-          Invoke-WebRequest -Uri $url -OutFile $output
+      $download = $item.download_allways -or -not [System.IO.File]::Exists($output)
+      if (-not $download) {
+        # A build stopped during a download leaves a partial file, so a file whose size differs from the server's is downloaded again
+        $RemoteSize = GetRemoteSize $url
+        $LocalSize = (Get-Item -LiteralPath $output).Length
+        if ($RemoteSize -and $RemoteSize -ne $LocalSize) {
+          [system.console]::WriteLine("$($item.name) has $LocalSize bytes instead of $RemoteSize")
+          $download = $true
         }
       }
+      if ($download) {
+        [system.console]::WriteLine("Downloading $url")
+        # The file gets its name only when complete, so an interrupted download is never taken for a finished one
+        try { Invoke-WebRequest -Uri $url -OutFile $partial }
+        catch {
+          Remove-Item -LiteralPath $partial -Force -ErrorAction SilentlyContinue
+          throw
+        }
+        # A failed rename keeps the complete .partial file and is reported below with its reason
+        Move-Item -LiteralPath $partial -Destination $output -Force -ErrorAction Stop
+      }
     } catch {
-      Write-Host "[ERROR] Can not download" $item.name "by link" $url
+      Write-Host "[ERROR] Can not download" $item.name "by link" $url ":" $_.Exception.Message
       if ($item.name -like 'onlyoffice-documentserver*.exe') {
         throw
       }
