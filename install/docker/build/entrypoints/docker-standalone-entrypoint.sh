@@ -468,7 +468,7 @@ update_configs() {
     [ -n "${APP_CORE_SERVER_ROOT}" ] && ${JSON} "${PATH_TO_CONF}/appsettings.json" -e "this.core['server-root']=process.env.APP_CORE_SERVER_ROOT"
 
     # Docs Admin Panel link
-    DOCS_ADMIN_URL="${DOCUMENT_SERVER_URL_PUBLIC%/}/admin" ${JSON} "${PATH_TO_CONF}/externalresources.json" \
+    DOCS_ADMIN_URL="${DOCUMENT_SERVER_URL_PUBLIC%/}/admin/" ${JSON} "${PATH_TO_CONF}/externalresources.json" \
         -e "this.externalresources.adminpanel.default.domain=process.env.DOCS_ADMIN_URL"
 
     # API system (connection + core)

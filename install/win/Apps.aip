@@ -504,7 +504,7 @@
     <ROW JsonProperty="default_1" Parent="ConnectionStrings_1" Name="default" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="default_2" Parent="adminpanel" Name="default" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="docservice" Parent="files" Name="docservice" Condition="1" Order="0" Flags="60"/>
-    <ROW JsonProperty="domain" Parent="default_2" Name="domain" Condition="1" Order="0" Flags="57" Value="[DOCUMENT_SERVER_URL_PUBLIC]/admin"/>
+    <ROW JsonProperty="domain" Parent="default_2" Name="domain" Condition="1" Order="0" Flags="57" Value="[DOCUMENT_SERVER_URL_PUBLIC]/admin/"/>
     <ROW JsonProperty="elastic" Parent="Root" Name="elastic" Condition="1" Order="0" Flags="60"/>
     <ROW JsonProperty="enabled" Parent="migration" Name="enabled" Condition="1" Order="0" Flags="57" Value="[DATABASE_MIGRATION]"/>
     <ROW JsonProperty="endpoint" Parent="__3" Name="endpoint" Condition="1" Order="0" Flags="57" Value="http://localhost:5158/mcp"/>
