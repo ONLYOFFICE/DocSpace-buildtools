@@ -130,7 +130,16 @@ fi
 # Add Node.js repo.
 NODE_VERSION="24"
 if [ "${PRESERVE_DOCS}" = false ] || ! package_installed nodejs; then
-	run_remote_bash "https://deb.nodesource.com/setup_${NODE_VERSION}.x"
+	NODESOURCE_DEADLINE=$((SECONDS + 300))
+	# Only an active one-line or deb822 entry counts, a commented-out line does not
+	NODESOURCE_REPO_PATTERN="^[[:space:]]*(deb|URIs:)[[:space:]].*deb\.nodesource\.com/node_${NODE_VERSION}\.x"
+	# NodeSource exits with 0 even when its apt step fails, so success is judged by the repository it writes
+	until grep -rEqs "$NODESOURCE_REPO_PATTERN" /etc/apt/sources.list.d/ \
+		|| { run_remote_bash "https://deb.nodesource.com/setup_${NODE_VERSION}.x" && grep -rEqs "$NODESOURCE_REPO_PATTERN" /etc/apt/sources.list.d/; }; do
+		[ "$SECONDS" -lt "$NODESOURCE_DEADLINE" ] || { echo "Failed to add the NodeSource Node.js ${NODE_VERSION} repository" >&2; exit 1; }
+		echo "The NodeSource repository was not added, retrying..."
+		sleep 15
+	done
 fi
 
 # Add .NET repo.
