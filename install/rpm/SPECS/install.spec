@@ -79,6 +79,8 @@ rsync -a %{_builddir}/publish/web/login/ "%{buildroot}%{buildpath}/products/ASC.
 rsync -a %{_builddir}/publish/web/management/ "%{buildroot}%{buildpath}/products/ASC.Management/management/"
 rsync -a %{_builddir}/publish/web/public/ "%{buildroot}%{buildpath}/public/"
 rsync -a %{_builddir}/publish/web/sdk/ "%{buildroot}%{buildpath}/products/ASC.Sdk/sdk/"
+rsync -a %{_builddir}/publish/web/node_modules/ "%{buildroot}%{buildpath}/node_modules/"
+rsync -a %{_builddir}/publish/dotnetstore/ "%{buildroot}%{buildpath}/dotnetstore/"
 rsync -a %{_builddir}/publish/services/ASC.Identity.Authorization/app.jar "%{buildroot}%{buildpath}/services/ASC.Identity.Authorization/app.jar"
 rsync -a %{_builddir}/publish/services/ASC.Identity.Registration/app.jar "%{buildroot}%{buildpath}/services/ASC.Identity.Registration/app.jar"
 rsync -a %{_builddir}/publish/services/ASC.Socket.IO/ "%{buildroot}%{buildpath}/services/ASC.Socket.IO/"

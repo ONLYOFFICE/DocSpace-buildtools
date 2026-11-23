@@ -41,6 +41,8 @@ BuildRequires:  dotnet-sdk-%{dotnet_version}
 BuildRequires:  unzip
 BuildRequires:  java-%{java_version}-openjdk-headless
 BuildRequires:  maven
+BuildRequires:  python3
+BuildRequires:  rsync
 
 Requires:       %name-ai = %version-%release
 Requires:       %name-ai-worker = %version-%release
@@ -70,6 +72,8 @@ Requires:       %name-identity-api = %version-%release
 Requires:       %name-studio = %version-%release
 Requires:       %name-studio-notify = %version-%release
 Requires:       %name-sdk = %version-%release
+Requires:       %name-dotnet-store = %version-%release
+Requires:       %name-node-modules = %version-%release
 Requires:       openssl
 
 Conflicts:      %name-radicale
