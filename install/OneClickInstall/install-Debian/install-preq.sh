@@ -263,7 +263,7 @@ if [ "$INSTALLATION_TYPE" != "community" ] && [ "${PRESERVE_DOCS}" = false ]; th
 	apt-get install -yq postgresql
 fi
 
-# Temporary aspnetcore-runtime-10.0 fallback for Debian 11 and Ubuntu 24.04.
+# Temporary aspnetcore-runtime-10.0 fallback for Ubuntu 24.04.
 DOTNET_VERSION="10.0"; DOTNET_PKG="aspnetcore-runtime-${DOTNET_VERSION}"
 if ! apt-get "${DOCS_APT_OPTIONS[@]}" install -yq "${DOTNET_PKG}"; then
   run_remote_bash "https://dot.net/v1/dotnet-install.sh" --channel "${DOTNET_VERSION}" --runtime aspnetcore --install-dir /usr/share/dotnet

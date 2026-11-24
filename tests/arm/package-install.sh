@@ -3,7 +3,7 @@
 set -euo pipefail
 
 case "${GUEST_DISTRO:-}:${GUEST_VERSION:-}" in
-    debian:11|debian:12|debian:13|centos:9|centos:10) ;;
+    debian:12|debian:13|centos:9|centos:10) ;;
     *) echo "Unsupported guest: ${GUEST_DISTRO:-} ${GUEST_VERSION:-}" >&2; exit 1 ;;
 esac
 
@@ -16,7 +16,6 @@ cd "$REPO_DIR"
 prepare_debian() {
     local suite mirror
     case "$GUEST_VERSION" in
-        11) suite=bullseye; mirror=https://archive.debian.org/debian ;;
         12) suite=bookworm; mirror=https://deb.debian.org/debian ;;
         13) suite=trixie; mirror=https://deb.debian.org/debian ;;
     esac

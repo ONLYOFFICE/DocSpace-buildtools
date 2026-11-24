@@ -24,8 +24,6 @@ on:
         type: string
         description: Select distros (only without deb/rpm flags)
         default: |
-          debian11,
-          debian11-arm,
           debian12,
           debian12-arm,
           debian13,
@@ -92,7 +90,7 @@ jobs:
         env:
           PUSH_BEFORE: ${{ github.event.before }}
           DISTROS_INPUT: ${{ github.event.inputs.distros }}
-          OS_ORDER: rhel9 centos9S centos10S fedora43 fedora44 debian11 debian12 debian13 ubuntu2204 ubuntu2404 ubuntu2604 centos9S-arm centos10S-arm debian11-arm debian12-arm debian13-arm ubuntu2204-arm ubuntu2404-arm ubuntu2604-arm
+          OS_ORDER: rhel9 centos9S centos10S fedora43 fedora44 debian12 debian13 ubuntu2204 ubuntu2404 ubuntu2604 centos9S-arm centos10S-arm debian12-arm debian13-arm ubuntu2204-arm ubuntu2404-arm ubuntu2604-arm
           OS_MAP: |
             {
               "rhel9":      ["RHEL 9",       "generic",    "rhel9"],
@@ -100,7 +98,6 @@ jobs:
               "centos10S":  ["CentOS 10S",   "onlyoffice", "base-centos10"],
               "fedora43":   ["Fedora 43",    "brigada",    "fedora-43"],
               "fedora44":   ["Fedora 44",    "onlyoffice", "base-fedora44"],
-              "debian11":   ["Debian 11",    "onlyoffice", "base-debian11"],
               "debian12":   ["Debian 12",    "onlyoffice", "base-debian12"],
               "debian13":   ["Debian 13",    "onlyoffice", "base-debian13"],
               "ubuntu2204": ["Ubuntu 22.04", "onlyoffice", "base-ubuntu2204"],
@@ -108,7 +105,6 @@ jobs:
               "ubuntu2604": ["Ubuntu 26.04", "onlyoffice", "base-ubuntu2604"],
               "centos9S-arm": ["CentOS 9S ARM", "arm", "ubuntu-24.04-arm", "centos", "9"],
               "centos10S-arm": ["CentOS 10S ARM", "arm", "ubuntu-24.04-arm", "centos", "10"],
-              "debian11-arm": ["Debian 11 ARM", "arm", "ubuntu-24.04-arm", "debian", "11"],
               "debian12-arm": ["Debian 12 ARM", "arm", "ubuntu-24.04-arm", "debian", "12"],
               "debian13-arm": ["Debian 13 ARM", "arm", "ubuntu-24.04-arm", "debian", "13"],
               "ubuntu2204-arm": ["Ubuntu 22.04 ARM", "arm", "ubuntu-22.04-arm"],

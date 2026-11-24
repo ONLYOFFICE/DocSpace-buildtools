@@ -148,7 +148,7 @@ if [ "$ARCH" = "arm64" ] && [[ "$DIST" != "ubuntu" && "$DIST" != "debian" ]]; th
     exit 1
 fi
 
-if [[ ( "${DIST}" == "ubuntu" && "${REV%.*}" -lt 22 ) || ( "${DIST}" == "debian" && "${REV}" -lt 11 ) ]]; then
+if [[ ( "${DIST}" == "ubuntu" && "${REV%.*}" -lt 22 ) || ( "${DIST}" == "debian" && "${REV}" -lt 12 ) ]]; then
     echo "Your ${DIST} ${REV} operating system has reached the end of its service life."
     echo "Please consider upgrading your operating system or using a Docker installation."
     exit 1
