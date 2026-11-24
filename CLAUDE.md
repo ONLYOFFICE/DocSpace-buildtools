@@ -163,6 +163,7 @@ docker compose --env-file .env -f apps.yml -f build/dev/apps.overcome.yml up -d
 | `ci-oci-docker-install.yml` | OneClickInstall Docker tests: install in stack/microservices/standalone modes, smoke tests, container restart, update from the released version; on macOS the `macOS-script-check` job runs `.github/scripts/macos-check/check.sh` against a fake docker (no VM, no containers) |
 | `ci-oci-install.yml` | Linux package install tests |
 | `ci-oci-update.yml` | Update mechanism tests |
+| `ci-windows-install.yml` | Windows EXE tests of a ready Jenkins `appserver.exe` build (no build in CI) on `windows-2022`: clean install of Prerequisites + edition, checklist (incl. the installer hardening: LocalService services, APPDIR and settings-key ACLs, own DB/broker users on a fresh install, no secrets on sampled command lines) and state scripts in `.github/scripts/windows/`, smoke test (`smoke.ps1` turns known failures into warnings), update from the released Community; secrets `JENKINS_AUTH`, `JENKINS_HOST` (host name only, kept out of the logs), `LICENSE_ENTERPRISE`, `LICENSE_DEVELOPER` (wizard licenses of the editions) |
 | `rebuild-boxes.yml` | Rebuild Vagrant boxes for install tests |
 
 ## Smoke Tests
