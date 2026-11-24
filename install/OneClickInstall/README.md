@@ -405,7 +405,6 @@ The installation scripts support the following operating systems, which are **re
 - CentOS 10S (x86_64, ARM64)
 - Fedora 43
 - Fedora 44
-- Debian 11 (x86_64, ARM64)
 - Debian 12 (x86_64, ARM64)
 - Debian 13 (x86_64, ARM64)
 - Ubuntu 22.04 (x86_64, ARM64)
