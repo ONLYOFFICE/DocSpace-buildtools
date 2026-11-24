@@ -216,18 +216,25 @@ function Get-AppsSecretValues {
     @($values | ForEach-Object { $_.Trim() } | Where-Object { $_.Length -ge 6 -and $script:WellKnownValues -notcontains $_ } | Select-Object -Unique | Sort-Object Length -Descending)
 }
 
-# Tells GitHub Actions to hide these values in all further log output
+# Splits secret values into their lines, also at escaped \n, longest first: a multi-line value such as the Docs WOPI key is masked line by line
+function Get-CiSecretLines {
+    param([string[]]$Values)
+    @($Values | Where-Object { $_ } | ForEach-Object { $_ -split '\r?\n|\\r?\\n' } | ForEach-Object { $_.Trim() } |
+        Where-Object { $_.Length -ge 6 } | Select-Object -Unique | Sort-Object Length -Descending)
+}
+
+# Tells GitHub Actions to hide these values in all further log output; add-mask takes one line, the rest of a multi-line value would be printed
 function Register-CiSecretMask {
     param([string[]]$Values)
     if ($env:GITHUB_ACTIONS -ne 'true') { return }
-    foreach ($value in $Values) { if ($value) { Write-Host "::add-mask::$value" } }
+    foreach ($line in (Get-CiSecretLines $Values)) { Write-Host "::add-mask::$line" }
 }
 
 # Replaces secret values, and values of secret-like MSI properties, with ***
 function Protect-CiText {
     param([string]$Text, [string[]]$Values)
     if (-not $Text) { return $Text }
-    foreach ($value in $Values) { if ($value) { $Text = $Text.Replace($value, '***') } }
+    foreach ($line in (Get-CiSecretLines $Values)) { $Text = $Text.Replace($line, '***') }
     # MSI verbose logs print property values on property changes and in the final property dump
     $Text = [regex]::Replace($Text, "(?im)^[^\r\n]*PROPERTY CHANGE: (?:Adding|Modifying) \S*$($script:SecretNameCore)\S* property\.[^\r\n]*",
         { param($match) [regex]::Replace($match.Value, "'[^']*'", "'***'") })

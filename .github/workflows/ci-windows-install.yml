@@ -212,19 +212,6 @@ jobs:
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           & "$env:SCRIPTS\smoke.ps1" -Expected "$env:WORK_DIR\expected.json" -StateFile "$env:WORK_DIR\smoke-state.json" -JunitXml "$env:WORK_DIR\smoke-junit.xml"
 
-      - name: Collect logs
-        if: always()
-        run: '& "$env:SCRIPTS\collect-logs.ps1" -Out "$env:RUNNER_TEMP\artifacts"'
-
-      - name: Upload logs
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: windows-install-${{ matrix.edition }}-${{ needs.prepare.outputs.version }}
-          path: ${{ runner.temp }}\artifacts
-          if-no-files-found: ignore
-          retention-days: 14
-
   update:
     name: "Update Community"
     needs: prepare
@@ -396,16 +383,3 @@ jobs:
           python -m pip install -q --disable-pip-version-check -r tests/smoke/requirements.txt
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           & "$env:SCRIPTS\smoke.ps1" -Expected "$env:WORK_DIR\expected.json" -Markers "not seed" -StateFile "$env:WORK_DIR\smoke-state.json" -JunitXml "$env:WORK_DIR\smoke-after-junit.xml"
-
-      - name: Collect logs
-        if: always()
-        run: '& "$env:SCRIPTS\collect-logs.ps1" -Out "$env:RUNNER_TEMP\artifacts"'
-
-      - name: Upload logs
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: windows-update-Community-${{ needs.prepare.outputs.version }}
-          path: ${{ runner.temp }}\artifacts
-          if-no-files-found: ignore
-          retention-days: 14

@@ -1,5 +1,5 @@
 # Records every distinct process command line about once a second into -Out until -StopFile appears; started by install-exe.ps1.
-# The file may hold secrets: keep it outside the uploaded folders; checklist.ps1 checks and deletes it.
+# The file may hold secrets: keep it in PRIVATE_DIR; checklist.ps1 checks and deletes it.
 param(
     [Parameter(Mandatory)][string]$Out,
     [Parameter(Mandatory)][string]$StopFile,

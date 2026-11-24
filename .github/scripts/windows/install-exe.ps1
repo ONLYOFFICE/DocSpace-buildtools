@@ -4,7 +4,7 @@ param(
     [Parameter(Mandatory)][string]$LogDir,
     [int]$TimeoutMinutes = 90,
     [string]$RegistryKey = 'HKLM:\Software\Ascensio System SIA\ONLYOFFICE Apps',
-    [string]$SampleCommandLines,           # record process command lines during the install into this file (outside the uploaded folders)
+    [string]$SampleCommandLines,           # record process command lines during the install into this file (it may hold secrets)
     [switch]$RemoveAfter,                  # delete the EXE after the install to free the runner disk
     [Parameter(ValueFromRemainingArguments)][string[]]$Properties = @()
 )
@@ -132,7 +132,14 @@ if (Test-Path $msiLog) {
     }
     Select-String -Path $msiLog -Pattern 'Installation success or error status' | Select-Object -Last 1 | ForEach-Object { $report.Add($_.Line.Trim()) }
 } else {
-    $report.Add("no MSI log at ${msiLog}: the bootstrapper failed before the MSI started, see $exeLog")
+    $report.Add("no MSI log at ${msiLog}: the bootstrapper failed before the MSI started")
+    # No log leaves the runner, so the end of the bootstrapper log goes into the report (masked below with the rest)
+    if (Test-Path $exeLog) {
+        $report.Add("last lines of ${exeLog}:")
+        Get-Content -Path $exeLog -Tail 40 -ErrorAction SilentlyContinue | ForEach-Object { $report.Add("  | $_") }
+    } else {
+        $report.Add("no bootstrapper log at $exeLog either")
+    }
 }
 $reportText = Protect-CiText -Text ($report -join "`n") -Values $secretValues
 Add-Content -Path $resultFile -Value $reportText -Encoding UTF8
@@ -147,5 +154,5 @@ if ($exitCode -in 3010, 1641) {
     Write-CiAnnotation warning "$name asks for a reboot (exit code $exitCode); a hosted runner cannot reboot, the test continues without it"
     exit 0
 }
-Write-CiAnnotation error "$name failed: exit code $exitCode ($meaning); see $(Split-Path $resultFile -Leaf) in the job artifacts"
+Write-CiAnnotation error "$name failed: exit code $exitCode ($meaning); see the failed actions above"
 exit 1

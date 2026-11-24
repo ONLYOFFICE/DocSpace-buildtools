@@ -31,7 +31,7 @@ $workRoot = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { $env:TEMP }
 Set-CiEnv DOWNLOAD_DIR (Join-Path "$($downloadDrive.Drive)\" 'apps-ci-download')
 Set-CiEnv WORK_DIR (Join-Path $workRoot 'apps-ci')
 Set-CiEnv LOG_DIR (Join-Path $workRoot 'apps-ci\logs')
-# Files that may hold secrets (sampled command lines); collect-logs.ps1 uploads WORK_DIR only, so this folder stays outside it
+# Files that may hold secrets (sampled command lines) stay apart from WORK_DIR
 Set-CiEnv PRIVATE_DIR (Join-Path $workRoot 'apps-ci-private')
 foreach ($folder in @($env:DOWNLOAD_DIR, $env:WORK_DIR, $env:LOG_DIR, $env:PRIVATE_DIR)) { New-Item -ItemType Directory -Force -Path $folder | Out-Null }
 Write-Host "Installers: $env:DOWNLOAD_DIR; work files: $env:WORK_DIR"
