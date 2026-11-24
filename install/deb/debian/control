@@ -212,7 +212,7 @@ Multi-Arch: foreign
 Provides: {{legacy_product}}-proxy
 Replaces: {{legacy_product}}-proxy
 Breaks: {{legacy_product}}-proxy (<< {{package_header_tag_version}})
-Depends: {{package_name}}-common (= {{package_header_tag_version}}), openresty, ${misc:Depends}, ${shlibs:Depends}
+Depends: {{package_name}}-common (= {{package_header_tag_version}}), openresty (>= {{openresty_min_version}}~), ${misc:Depends}, ${shlibs:Depends}
 Description: {{package_name}}-proxy
 	The service which is used as a web server and reverse proxy, 
 	it receives and handles requests, transmits them to other services, 

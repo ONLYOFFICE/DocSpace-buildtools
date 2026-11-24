@@ -90,7 +90,7 @@ Provides:       %{legacy_product}-proxy = %{version}-%{release}
 Obsoletes:      %{legacy_product}-proxy < %{version}-%{release}
 Summary:        Proxy
 Requires:       %name-common  = %version-%release
-Requires:       openresty
+Requires:       openresty >= %{openresty_min_version}
 Requires:       mysql-community-client >= 5.7.0
 AutoReqProv:    no
 BuildArch:      noarch
