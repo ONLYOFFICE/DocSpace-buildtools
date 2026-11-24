@@ -80,7 +80,7 @@ COPY --from=base --chown=onlyoffice:onlyoffice /app/onlyoffice/config /app/onlyo
 EXPOSE 5050
 ENTRYPOINT ["python3", "docker-entrypoint.py"]
 
-FROM openresty/openresty:1.31.1.1-2-bookworm AS router
+FROM openresty/openresty:1.31.9.1-1-bookworm AS router
 ARG SRC_PATH
 ARG BUILD_PATH
 ARG COUNT_WORKER_CONNECTIONS=1024
