@@ -30,7 +30,7 @@ http {
     map $request_uri $apps_access_noise {
         default 0;
         ~*^/static/ 1;
-        ~*^/storage/(?:system)?webplugins/ 1;
+        ~*^/storage/(?:system|personal)?webplugins/ 1;
         ~*^/(?:(?:login|doceditor|management|sdk)/)?_next/static/ 1;
         ~*^/(?:(?:login|doceditor|management|sdk|confirm|wizard)/)?_next/public/images/ 1;
         ~*^/(?:favicon\.ico|manifest\.json|sw\.js|icon\.svg|appIcon.*\.png|bg-error\.png|debuginfo\.md)(?:\?|$) 1;
