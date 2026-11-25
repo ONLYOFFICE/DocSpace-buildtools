@@ -19,7 +19,8 @@ $Project = [IO.File]::ReadAllText($AipPath)
 foreach ($Key in $Installers.Keys) {
   $Installer = Join-Path $DocsDir $Installers[$Key]
   $Version = [version](Get-Item -LiteralPath $Installer).VersionInfo.ProductVersion.Trim()
-  $Rows = [regex]::Matches($Project, '<ROW PrereqKey="' + [regex]::Escape($Key) + '"[^>]*/>')
+  # Advanced Installer 22.3 writes the key in upper case when it saves the project (DOCUMENTSERVER)
+  $Rows = [regex]::Matches($Project, '<ROW PrereqKey="' + [regex]::Escape($Key) + '"[^>]*/>', 'IgnoreCase')
   if ($Rows.Count -ne 1) { throw "Prerequisite row $Key not found in $AipPath" }
   $Row = $Rows[0].Value
   $NewRow = $Row
