@@ -11,11 +11,20 @@ $ErrorActionPreference = 'Stop'
 # .NET file calls resolve relative paths against the process folder, not the PowerShell location
 $BuildTools = (Resolve-Path -LiteralPath $BuildTools).Path
 $installWin = Join-Path $BuildTools 'install\win'
-$aipText = [IO.File]::ReadAllText((Join-Path $installWin 'Apps.aip'))
-$prerequisitesText = [IO.File]::ReadAllText((Join-Path $installWin 'Apps.Prerequisites.aip'))
-$batchText = [IO.File]::ReadAllText((Join-Path $installWin 'build-batch.bat'))
-$utilsText = [IO.File]::ReadAllText((Join-Path $installWin 'utils.ps1'))
-$mysqlRunnerText = [IO.File]::ReadAllText((Join-Path $installWin 'MySQL Server Installer Runner.iss'))
+# install/win is split into build, installer and runtime since 4.1; older commits (the released version of an update test) keep everything flat
+if (Test-Path -LiteralPath (Join-Path $installWin 'installer\Apps.aip')) {
+    $installerDir = Join-Path $installWin 'installer'
+    $buildDir = Join-Path $installWin 'build'
+    $winswDir = Join-Path $installWin 'runtime\winsw'
+} else {
+    $installerDir = $buildDir = $installWin
+    $winswDir = Join-Path $installWin 'tools'
+}
+$aipText = [IO.File]::ReadAllText((Join-Path $installerDir 'Apps.aip'))
+$prerequisitesText = [IO.File]::ReadAllText((Join-Path $installerDir 'Apps.Prerequisites.aip'))
+$batchText = [IO.File]::ReadAllText((Join-Path $buildDir 'build-batch.bat'))
+$utilsText = [IO.File]::ReadAllText((Join-Path $installerDir 'utils.ps1'))
+$mysqlRunnerText = [IO.File]::ReadAllText((Join-Path $installerDir 'MySQL Server Installer Runner.iss'))
 
 function Get-AipProperty([string]$Name) {
     $match = [regex]::Match($aipText, "<ROW Property=`"$([regex]::Escape($Name))`" Value=`"([^`"]*)`"")
@@ -52,7 +61,7 @@ $services = @($serviceAccounts.Keys | Sort-Object)
 
 # WinSW wrappers: Apps.* run from APPDIR\tools, the rest are infrastructure services; the priority is the process priority class
 $servicePriorities = [ordered]@{}
-$infraServices = foreach ($wrapper in Get-ChildItem (Join-Path $installWin 'tools\*.xml')) {
+$infraServices = foreach ($wrapper in Get-ChildItem (Join-Path $winswDir '*.xml')) {
     $service = ([xml](Get-Content $wrapper.FullName -Raw)).service
     if (-not $service.id) { continue }
     if ($service.priority) { $servicePriorities[$service.id] = "$($service.priority)".Trim() }
@@ -67,7 +76,7 @@ $registryKey = "HKLM:\Software\$(Get-AipProperty 'Manufacturer')\$(Get-AipProper
 
 # Prerequisites with their minimal versions, as the Prerequisites EXE ships them
 $prerequisites = [regex]::Matches($prerequisitesText, '<ROW PrereqKey="([^"]+)" DisplayName="([^"]+)" VersionMin="([^"]*)" SetupFileUrl="([^"]+)"') |
-    ForEach-Object { [ordered]@{ key = $_.Groups[1].Value; name = $_.Groups[2].Value; versionMin = $_.Groups[3].Value; file = $_.Groups[4].Value } }
+    ForEach-Object { [ordered]@{ key = $_.Groups[1].Value; name = $_.Groups[2].Value; versionMin = $_.Groups[3].Value; file = Split-Path $_.Groups[4].Value -Leaf } }
 
 # Hardening of the installer (LockSecrets in utils.ps1): ACLs, own database and broker users; $null for a build without it
 $hardening = $null

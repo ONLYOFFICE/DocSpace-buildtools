@@ -1,0 +1,12 @@
+# Everything the build downloads or produces (see README.md)
+/out/
+
+# Advanced Installer backups and caches next to the projects
+/installer/*.back*.aip
+/installer/*-cache/
+/installer/*-SetupFiles/
+
+# Custom action build output
+/installer/CustomActions/C#/Utils/bin/
+/installer/CustomActions/C#/Utils/obj/
+/installer/CustomActions/C#/Utils/packages/

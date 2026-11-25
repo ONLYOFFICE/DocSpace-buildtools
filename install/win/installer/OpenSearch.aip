@@ -44,21 +44,21 @@
     <ATTRIBUTE name="CurrentFeature" value="MainFeature"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiFilesComponent">
-    <ROW File="OpenSearch.xml" Component_="OpenSearch.xml" FileName="OPENSE~1.XML|OpenSearch.xml" Attributes="0" SourcePath="tools\OpenSearch.xml" SelfReg="false"/>
-    <ROW File="OpenSearch.exe" Component_="OpenSearch.exe" FileName="WINSW-~1.EXE|OpenSearch.exe" Attributes="0" SourcePath="tools\OpenSearch.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="OpenSearch.xml" Component_="OpenSearch.xml" FileName="OPENSE~1.XML|OpenSearch.xml" Attributes="0" SourcePath="..\out\OpenSearch\tools\OpenSearch.xml" SelfReg="false"/>
+    <ROW File="OpenSearch.exe" Component_="OpenSearch.exe" FileName="WINSW-~1.EXE|OpenSearch.exe" Attributes="0" SourcePath="..\out\OpenSearch\tools\OpenSearch.exe" SelfReg="false" DigSign="true"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.BootstrOptComponent">
     <ROW BootstrOptKey="GlobalOptions" DownloadFolder="[AppDataFolder][|Manufacturer]\[|ProductName]\prerequisites" Options="2"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.BuildComponent">
-    <ROW BuildKey="DefaultBuild" BuildName="DefaultBuild" BuildOrder="1" BuildType="0" PackageFolder="publish" PackageFileName="[|PACKAGE_NAME]" Languages="en" InstallationType="2" CabsLocation="1" CompressCabs="false" UseLzma="true" LzmaMethod="2" LzmaCompressionLevel="4" PackageType="1" FilesInsideExe="true" ExtractionFolder="[AppDataFolder][|Manufacturer]\[|ProductName] [|ProductVersion]\install" UseLargeSchema="true"/>
+    <ROW BuildKey="DefaultBuild" BuildName="DefaultBuild" BuildOrder="1" BuildType="0" PackageFolder="..\out\publish" PackageFileName="[|PACKAGE_NAME]" Languages="en" InstallationType="2" CabsLocation="1" CompressCabs="false" UseLzma="true" LzmaMethod="2" LzmaCompressionLevel="4" PackageType="1" FilesInsideExe="true" ExtractionFolder="[AppDataFolder][|Manufacturer]\[|ProductName] [|ProductVersion]\install" UseLargeSchema="true"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.DictionaryComponent">
     <ROW Path="&lt;AI_DICTS&gt;ui.ail"/>
     <ROW Path="&lt;AI_DICTS&gt;ui_en.ail"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.DigCertStoreComponent">
-    <ROW SignOptions="0" SignTool="0" UseSha256="1" Store="User\MY" CustomToolPath="C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" CustomToolCmdLine="-ExecutionPolicy Bypass -File &quot;[|AI_AIP_FOLDER]signing-tool.ps1&quot; -File"/>
+    <ROW SignOptions="0" SignTool="0" UseSha256="1" Store="User\MY" CustomToolPath="C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" CustomToolCmdLine="-ExecutionPolicy Bypass -File &quot;[|AI_AIP_FOLDER]..\out\signing-tool.ps1&quot; -File"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.FragmentComponent">
     <ROW Fragment="CommonUI.aip" Path="&lt;AI_FRAGS&gt;CommonUI.aip"/>
@@ -233,6 +233,6 @@
     <ROW UpgradeCode="[|UpgradeCode]" VersionMin="[|ProductVersion]" Attributes="2" ActionProperty="AI_NEWERPRODUCTFOUND"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.SynchronizedFolderComponent">
-    <ROW Directory_="APPDIR" SourcePath="OpenSearch" Feature="MainFeature" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
+    <ROW Directory_="APPDIR" SourcePath="..\out\OpenSearch" Feature="MainFeature" ExcludePattern="*~|#*#|%*%|._|CVS|.cvsignore|SCCS|vssver.scc|mssccprj.scc|vssver2.scc|.svn|.DS_Store" ExcludeFlags="6" FileAddOptions="4"/>
   </COMPONENT>
 </DOCUMENT>

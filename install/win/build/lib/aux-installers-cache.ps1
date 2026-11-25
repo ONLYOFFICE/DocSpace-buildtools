@@ -16,8 +16,11 @@ $Inputs = @($Inputs | ForEach-Object { $_ -split ',' } | Where-Object { $_ })
 
 # Bump when the key layout changes, so old entries are never reused.
 $KeyFormat = '1'
-$WinDir = $PSScriptRoot
-$PublishDir = Join-Path $WinDir 'publish'
+# The projects are in install\win\installer, their inputs and packages in install\win\out
+$WinDir = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+$InstallerDir = Join-Path $WinDir 'installer'
+$OutDir = Join-Path $WinDir 'out'
+$PublishDir = Join-Path $OutDir 'publish'
 if (-not $CacheDir) { $CacheDir = Join-Path (Get-Location) 'win-build-cache' }
 $ProjectCache = Join-Path $CacheDir $Project
 $KeyFile = Join-Path $CacheDir "$Project.pending-key"
@@ -32,9 +35,9 @@ function Get-InputsKey {
     $Installer = ($env:AdvancedInstaller -replace '"', '').Trim()
     $InstallerVersion = if ($Installer -and (Test-Path -LiteralPath $Installer)) { (Get-Item -LiteralPath $Installer).VersionInfo.FileVersion } else { 'unknown' }
     $Lines.Add("advancedinstaller=$InstallerVersion")
-    $Lines.Add("aip=" + (Get-FileHash -LiteralPath (Join-Path $WinDir "$Project.aip") -Algorithm SHA256).Hash)
+    $Lines.Add("aip=" + (Get-FileHash -LiteralPath (Join-Path $InstallerDir "$Project.aip") -Algorithm SHA256).Hash)
     foreach ($InputName in $Inputs) {
-        $InputPath = Join-Path $WinDir $InputName
+        $InputPath = Join-Path $OutDir $InputName
         if (-not (Test-Path -LiteralPath $InputPath)) { throw "Input $InputPath does not exist" }
         $Root = (Resolve-Path -LiteralPath $InputPath).ProviderPath.TrimEnd('\')
         $Files = Get-ChildItem -LiteralPath $Root -Recurse -File -Force | Sort-Object { $_.FullName.Substring($Root.Length).ToLowerInvariant() }

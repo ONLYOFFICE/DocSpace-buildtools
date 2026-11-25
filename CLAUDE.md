@@ -106,9 +106,11 @@ install/
   common/                   — Shared packaging: build-services.py/sh, build-linux-package.sh, changelog.sh,
                               packages-build.sh, plugins-build.sh, offline-self-extracting.sh, systemd/,
                               product-configuration, product-ssl-setup (installed as apps-configuration / apps-ssl-setup)
-  win/                      — Windows installer (Advanced Installer: Apps, Apps.Prerequisites, OpenResty, OpenSearch,
-                              OpenSearchStack .aip); build-batch.bat builds them, utils.ps1 holds the MSI custom actions,
-                              tools/*.xml are WinSW configs, sbin/apps-ssl-setup.ps1
+  win/                      — Windows installer, layout and build stages in win/README.md: build/ (Jenkins stage scripts,
+                              build-batch.bat builds the installers; lib/ helpers), installer/ (Apps, Apps.Prerequisites,
+                              OpenResty, OpenSearch, OpenSearchStack .aip, utils.ps1 MSI custom actions, Resources/),
+                              runtime/ (nginx.conf, sbin/apps-ssl-setup.ps1, winsw/ WinSW binaries + configs), out/ (ignored
+                              build output; the .aip paths point at ..\out\)
   deb/                      — Debian package metadata
   rpm/                      — RPM spec files
   install.sh/.bat, uninstall.sh/.bat — Register the dev services from run/ (macOS launchd / Windows sc + WinSW)
@@ -180,7 +182,7 @@ Examples: `-m "bootstrap or seed"` before an update, `-m "bootstrap or verify"` 
 - All config via `.env` in `install/docker/` (~200 vars) and JSON in `config/`
 - Three editions: Community, Enterprise, Developer (toggled via env vars and appsettings overrides)
 - `run/` contains per-service launchers; `start/` orchestrates all services together
-- Windows services: dev via `run/` (WinSW `.xml` + `sc` for `.bat`); `Apps.aip` installs all Apps services as `NT AUTHORITY\LocalService` (node/Java ones wrapped by WinSW, configs in `install/win/tools/*.xml`, `Normal` priority); OpenResty and OpenSearch come from their own `.aip`. Linux uses Supervisor (Docker) or systemd (packages)
+- Windows services: dev via `run/` (WinSW `.xml` + `sc` for `.bat`); `Apps.aip` installs all Apps services as `NT AUTHORITY\LocalService` (node/Java ones wrapped by WinSW, configs in `install/win/runtime/winsw/*.xml`, `Normal` priority); OpenResty and OpenSearch come from their own `.aip`. Linux uses Supervisor (Docker) or systemd (packages)
 - Secrets stay off command lines, xtrace and logs: installers pass them through the environment, stdin or files; package configs are `root:onlyoffice` (640/750, `.private` 700); the Windows settings key and install directory are locked to SYSTEM/Administrators
 - Installers use dedicated DB/broker accounts on a fresh install (MySQL `<db>_user`, a generated RabbitMQ password instead of `guest`); upgrades keep the working credentials
 

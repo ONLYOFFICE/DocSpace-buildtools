@@ -14,7 +14,7 @@ if %errorlevel% == 0 (
 		call sc create "Onlyoffice%%~nf" displayname= "ONLYOFFICE %%~nf" binPath= "!servicepath!"
 	)
 	for /R "buildtools\run\" %%f in (*.xml) do (
-		call buildtools\install\win\WinSW3.0.0.exe install %%f
+		call buildtools\install\win\runtime\winsw\WinSW3.0.0.exe install %%f
 	)
 )
 

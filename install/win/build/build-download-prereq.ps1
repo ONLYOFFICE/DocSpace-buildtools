@@ -87,9 +87,14 @@ switch ( $env:DOCUMENT_SERVER_VERSION_DE )
 
 $psql_version = '14.0'
 
-$path_prereq = "${pwd}\buildtools\install\win\"
+# Build tools and Docs go to out\downloads, the Prerequisites EXE payload to out\redist (see install\win\README.md)
+$win_dir = Split-Path $PSScriptRoot -Parent
 
-$opensearchstack_path = "${pwd}\buildtools\install\win\OpenSearchStack\"
+$out_dir = Join-Path $win_dir 'out'
+
+$path_prereq = "$out_dir\downloads\"
+
+$opensearchstack_path = "$out_dir\OpenSearchStack\"
 
 $opensearch_version = '3.5.0'
 
@@ -168,8 +173,8 @@ $prerequisites = @(
   }
 )
 
-$path_enterprise_prereq = "${pwd}\buildtools\install\win\redist\"
-$aip_path = "${pwd}\buildtools\install\win\Apps.aip"
+$path_enterprise_prereq = "$out_dir\redist\"
+$aip_path = Join-Path $win_dir 'installer\Apps.aip'
 
 if (Test-Path $aip_path) {
     [xml]$xml = Get-Content -LiteralPath $aip_path -Encoding UTF8
@@ -205,7 +210,7 @@ $AppsXml = New-Object Xml.XmlDocument
 $AppsXml.LoadXml($AppsProject)
 [IO.File]::WriteAllText($aip_path, $AppsProject, (New-Object Text.UTF8Encoding($false)))
 Write-Host "Docs Community version in Apps.aip: $DocsVersion"
-& (Join-Path $PSScriptRoot 'docs-secret-args.ps1') -AipPath $aip_path -DocsDir $path_prereq
+& (Join-Path $PSScriptRoot 'lib\docs-secret-args.ps1') -AipPath $aip_path -DocsDir $path_prereq
 
 DownloadComponents $enterprise_prerequisites $path_enterprise_prereq
 

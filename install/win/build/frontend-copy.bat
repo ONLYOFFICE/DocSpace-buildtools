@@ -13,7 +13,7 @@ if defined SecondArg (
 	set PathToAppFolder=%SecondArg%
 ) else (
 	set PathToRepository=%FirstArg%
-	set PathToAppFolder=%FirstArg%\publish
+	set PathToAppFolder=%~sdp0..\out\Files
 )
 
 xcopy "%PathToRepository%\publish\web\public" "%PathToAppFolder%\public" /s /y /b /i

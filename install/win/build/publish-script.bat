@@ -13,7 +13,7 @@ if defined SecondArg (
 	set PathToAppFolder=%SecondArg%
 ) else (
 	set PathToRepository=%FirstArg%
-	set PathToAppFolder=%FirstArg%\publish
+	set PathToAppFolder=%~sdp0..\out\Files
 )
 
 rem backend services (dotnet): one Release publish of the solution, as in install/common/packages-build.sh
@@ -25,7 +25,7 @@ set "ManifestArgs="
 call :publish_dotnet || exit /b 1
 
 rem The NuGet packages that several services use go once into dotnetstore; the second publish leaves them out (nothing compiles again)
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0dotnet-store.ps1" -Action Build -PublishRoot "%DotnetPublishDir%" -RunnerDir "%RunnerDir%" -StoreDir "%PathToAppFolder%\dotnetstore" || exit /b 1
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0lib\dotnet-store.ps1" -Action Build -PublishRoot "%DotnetPublishDir%" -RunnerDir "%RunnerDir%" -StoreDir "%PathToAppFolder%\dotnetstore" || exit /b 1
 set "ManifestArgs=--manifest "%PathToAppFolder%\dotnetstore\x64\net10.0\artifact.xml""
 call :publish_dotnet || exit /b 1
 
@@ -49,7 +49,7 @@ call :move_service ASC.Web.Studio services\ASC.Web.Studio\service || exit /b 1
 call :move_service ASC.Web.HealthChecks.UI services\ASC.Web.HealthChecks.UI\service || exit /b 1
 
 rem The services find dotnetstore through additionalProbingPaths; Apps.aip replaces {APPDIR} with the install folder, and the script checks it does so in every service folder
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0dotnet-store.ps1" -Action SetProbingPaths -FilesDir "%PathToAppFolder%" -AipPath "%~dp0Apps.aip" || exit /b 1
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0lib\dotnet-store.ps1" -Action SetProbingPaths -FilesDir "%PathToAppFolder%" -AipPath "%~dp0..\installer\Apps.aip" || exit /b 1
 
 rem backend services (Nodejs) in directory 'services'
 mkdir "%PathToAppFolder%\services\ASC.Socket.IO\service"
