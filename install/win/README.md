@@ -1,114 +1,134 @@
-# Windows installers
+# ONLYOFFICE Apps for Windows
 
-This folder builds the Windows installers of ONLYOFFICE Apps with [Advanced Installer](https://www.advancedinstaller.com/)
-(22.3 or newer) and Inno Setup:
+ONLYOFFICE Apps for Windows Server is installed from two EXE files:
 
-- `ONLYOFFICE_Apps_Community_Win-install.v<version>.exe`, `..._Enterprise_...`, `..._Developer_...`: the product;
-- `ONLYOFFICE_Apps_Prerequisites_Win-install.v<version>.exe`: the third-party components the product needs;
-- `OpenResty-<version>.msi`, `OpenSearch-<version>.exe`, `OpenSearchStack.msi`, `MySQL Installer Runner.exe`: auxiliary
-  installers that the two above bundle.
-
-## Layout
-
-```
-install/win/
-├── build/                      build stages, run in this order
-│   ├── mcp-build.bat           1. docspace-mcp
-│   ├── plugins-build.ps1       2. docspace-plugins
-│   ├── frontend-build.bat      3. DocSpace-client
-│   ├── backend-build.bat       4. node and Java services of DocSpace-server
-│   ├── publish-script.bat      5. .NET services of DocSpace-server, then every service into out\Files
-│   ├── frontend-copy.bat       6. client, configs and nginx configs into out\Files
-│   ├── build-download-prereq.ps1  7. Docs, build tools and prerequisites into out\
-│   ├── build-batch.bat         8. finishes out\Files and builds every installer into out\publish
-│   └── lib/                    helpers the stages call, never called directly
-│       ├── aux-installers-cache.ps1   reuses OpenResty/OpenSearch/OpenSearchStack builds between runs
-│       ├── dedupe-node-modules.ps1    one copy of the node_modules packages the Next.js apps share
-│       ├── docs-secret-args.ps1       Docs command line by the bundled Docs version
-│       └── dotnet-store.ps1           .NET runtime package store shared by the services
-├── installer/                  installer projects and what they embed
-│   ├── Apps.aip                Community, Enterprise and Developer (builds APPS_COMMUNITY, APPS_ENTERPRISE, APPS_DEVELOPER)
-│   ├── Apps.Prerequisites.aip  Prerequisites
-│   ├── OpenResty.aip, OpenSearch.aip, OpenSearchStack.aip
-│   ├── MySQL Server Installer Runner.iss
-│   ├── utils.ps1               PowerShell custom actions of Apps.aip (configuration, secrets, ACLs)
-│   ├── CustomActions/          C# custom actions (Utils.CA.dll: port and connection checks)
-│   └── Resources/              license agreements, dialog images, icon
-├── runtime/                    files copied as they are into the installed product
-│   ├── nginx.conf              main OpenResty config
-│   ├── sbin/                   apps-ssl-setup.ps1 (HTTPS and Let's Encrypt)
-│   └── winsw/                  WinSW binaries and one service config per wrapped service
-└── out/                        everything downloaded or built (ignored by git)
-```
-
-The paths in the `.aip` projects are relative to `installer/`: their input is `..\out\Files`, `..\out\redist`, ...,
-their packages go to `..\out\publish`.
-
-### out/
-
-| Path | Written by | Contents |
-|---|---|---|
-| `out\Files\` | stages 4-6, `build-batch.bat` | the installed product (`APPDIR`), synchronized into `Apps.aip` |
-| `out\downloads\` | `build-download-prereq.ps1` | Docs EXEs, `nuget.exe`, OpenSearch/OpenResty archives |
-| `out\redist\` | `build-download-prereq.ps1` | the payload of the Prerequisites EXE (every `https://` link in `Apps.aip`) |
-| `out\OpenResty\`, `out\OpenSearch\`, `out\OpenSearchStack\` | `build-batch.bat` | inputs of the auxiliary projects |
-| `out\Utils.CA.dll`, `out\MySQL Installer Runner.exe`, `out\signing-tool.ps1` | `build-batch.bat` | embedded or used by the projects |
-| `out\publish\` | Advanced Installer | the installers |
-
-Downloads are kept between builds and checked against the server size; `Files`, `OpenResty`, `OpenSearch`,
-`OpenSearchStack` and `publish` must be emptied before a new build.
-
-## Running a build
-
-The stages run from a workspace root that holds the repositories side by side:
-
-| Folder | Repository |
+| Installer | What it installs |
 |---|---|
-| `buildtools` | DocSpace-buildtools (with submodules) |
-| `server` | DocSpace-server |
-| `client` | DocSpace-client |
-| `campaigns` | ASC.Web.Campaigns |
-| `plugins` | docspace-plugins |
-| `mcp` | docspace-mcp |
-| `cloudhsm` | signing scripts, only for a signed build |
+| `ONLYOFFICE_Apps_<Edition>_Win-install.exe` (Community, Enterprise or Developer) | ONLYOFFICE Apps, ONLYOFFICE Docs of the same edition, OpenResty, OpenSearch and OpenSearch Dashboards with Fluent Bit |
+| `ONLYOFFICE_Apps_Prerequisites_Win-install.exe` | the third-party components Apps needs, packed inside the EXE, for servers without internet access |
 
-Tools and parameters come from environment variables: `sevenzip`, `sed` (GNU sed), `msbuild`, `AdvancedInstaller`
-(paths, quoted), `BUILD_VERSION` (`4.1`), `BUILD_NUMBER`, `SignBuild` (`true` to sign), `DOCUMENT_SERVER_VERSION_CE|EE|DE`
-(`latest` or `custom` with `DOCUMENT_SERVER_CE|EE|DE_CUSTOM_LINK`), optionally `APPS_WIN_BUILD_CACHE` (cache of the auxiliary
-installers, default `win-build-cache` in the workspace). `iscc`, `dotnet`, `node`, `pnpm`, `yarn`, `mvn` and `java` must be in
-`PATH`; `Utils.csproj` also needs WiX Toolset 3.x.
+Latest versions:
+[Community](https://download.onlyoffice.com/apps/windows/ONLYOFFICE_Apps_Community_Win-install.latest.exe),
+[Enterprise](https://download.onlyoffice.com/apps/windows/ONLYOFFICE_Apps_Enterprise_Win-install.latest.exe),
+[Prerequisites](https://download.onlyoffice.com/apps/windows/ONLYOFFICE_Apps_Prerequisites_Win-install.latest.exe).
+The step-by-step guide with screenshots is on the
+[ONLYOFFICE website](https://guides.onlyoffice.com/installation/docspace-community-install-windows.aspx).
+
+## Requirements
+
+- **Windows Server 2016 or newer, 64-bit.** The installer refuses desktop Windows (10, 11) and Windows Server 2012 R2 or older.
+- An administrator account.
+- Free ports 80 and 443. The installer opens them in Windows Firewall for OpenResty, which serves the portal.
+- Internet access, or the Prerequisites EXE run first (see below).
+
+## Third-party components
+
+Apps uses the components below. The edition EXE installs the missing ones before Apps; a server without internet access
+gets them from the Prerequisites EXE.
+
+| Component | Version |
+|---|---|
+| .NET Runtime and ASP.NET Core Runtime | 10.0 |
+| .NET Framework | 4.8 |
+| OpenJDK | 25.0.3 |
+| Node.js | 24.22.3 |
+| MySQL Community Server, MySQL Connector/ODBC | 8.4.3, 8.4.0 |
+| PostgreSQL (for ONLYOFFICE Docs) | 14.0 |
+| RabbitMQ, Erlang | 3.12.1, 26.0.2 |
+| Redis | 7.4.0 |
+| OpenResty | 1.27.1.1 |
+| OpenSearch, OpenSearch Dashboards | 3.5.0 |
+| FFmpeg, FireDaemon OpenSSL 3, Certbot | 6.0, 3.3.0, 2.6.0 |
+| Visual C++ Redistributable | 2013 x64, 2015-2019 x86 and x64 |
+
+MySQL, PostgreSQL, RabbitMQ, Redis and OpenSearch may also run on other servers: enter their addresses in the wizard or
+pass them as properties (see [Unattended installation](#unattended-installation)).
+
+## Installation
+
+1. Without internet access only: run `ONLYOFFICE_Apps_Prerequisites_Win-install.exe` and finish it.
+2. Run `ONLYOFFICE_Apps_<Edition>_Win-install.exe` as an administrator and follow the wizard. It asks for the installation
+   folder and for the MySQL, PostgreSQL, RabbitMQ and OpenSearch connections; the defaults fit the components installed on the
+   same server.
+3. Open `http://<server address>/` and create the administrator of the portal.
+
+By default Apps is installed into `C:\Program Files (x86)\Ascensio System SIA\Apps` and ONLYOFFICE Docs into
+`C:\Program Files (x86)\Ascensio System SIA\DocumentServer`, next to it. Docs is installed only when no suitable Docs is on the
+server yet.
+
+**Enterprise and Developer** need a license: Apps reads it from `Data\license.lic` in the installation folder and passes the
+same path to ONLYOFFICE Docs.
+
+### Passwords
+
+On a new installation the installer replaces the default passwords with random ones: the MySQL `root` password, a dedicated
+MySQL user for the Apps database, the PostgreSQL passwords and a RabbitMQ user for Apps and Docs. Passwords you enter in the
+wizard or pass as properties are kept as they are. The values are saved in the registry key
+`HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Ascensio System SIA\ONLYOFFICE Apps`, which only SYSTEM and Administrators can read;
+the installation folder is locked the same way.
+
+## Unattended installation
+
+Run the EXE from an elevated command prompt. The EXE options go **first**, the Windows Installer options after them,
+otherwise the EXE shows an error window and waits:
 
 ```bat
-set "AppsWin=buildtools\install\win"
-call %AppsWin%\build\mcp-build.bat %cd%\mcp
-powershell -File %AppsWin%\build\plugins-build.ps1 plugins
-call %AppsWin%\build\frontend-build.bat %cd%\client
-call %AppsWin%\build\backend-build.bat %cd%\server
-call %AppsWin%\build\publish-script.bat %cd%\server %cd%\%AppsWin%\out\Files
-call %AppsWin%\build\frontend-copy.bat %cd% %cd%\%AppsWin%\out\Files
-powershell -File %AppsWin%\build\build-download-prereq.ps1
-call %AppsWin%\build\build-batch.bat
+ONLYOFFICE_Apps_Prerequisites_Win-install.exe /exenoui /exelog prereq.exe.log /qn /norestart /L*V prereq.msi.log
+ONLYOFFICE_Apps_Community_Win-install.exe /exenoui /exelog apps.exe.log /qn /norestart /L*V apps.msi.log
 ```
 
-The `.bat` files do not stop on most errors and do not always return an error code: check that each stage produced its
-files. The server and client builds also leave `publish\` in the workspace root, which `publish-script.bat` and
-`frontend-copy.bat` read.
+Exit code `0` means success, `3010` success with a restart required before the next installer, `1603` a failure: search
+the `.msi.log` for `Return value 3`.
 
-A build changes tracked files: `ProductVersion` and `DS_VERSION` in the `.aip` projects, the Docs arguments in `Apps.aip`
-(`docs-secret-args.ps1`) and `Resources\License.rtf`, `Resources\License_Redist.rtf` (the edition licenses are copied over
-them). Do not commit these changes.
+Settings are passed as `NAME=value` after the options, for example
+`ONLYOFFICE_Apps_Community_Win-install.exe /exenoui /qn /norestart APP_PORT=8080 DB_HOST=db.example.com DB_PWD=secret`.
 
-## Changing things
+| Property | Default | Meaning |
+|---|---|---|
+| `APPDIR` | `C:\Program Files (x86)\Ascensio System SIA\Apps\` | installation folder |
+| `APP_PORT` | `80` | HTTP port of the portal |
+| `DB_HOST`, `DB_PORT`, `DB_NAME` | `localhost`, `3306`, `onlyoffice` | MySQL server and database of Apps |
+| `DB_USER`, `DB_PWD` | `root`, `root` | MySQL account; with the default password a random one is set, see [Passwords](#passwords) |
+| `PS_DB_HOST`, `PS_DB_PORT`, `PS_DB_NAME`, `PS_DB_USER`, `PS_DB_PWD` | `localhost`, `5432`, `onlyoffice`, `onlyoffice`, `onlyoffice` | PostgreSQL database of ONLYOFFICE Docs |
+| `AMQP_HOST`, `AMQP_PORT`, `AMQP_USER`, `AMQP_PWD`, `AMQP_VHOST` | `localhost`, `5672`, `guest`, `guest`, `/` | RabbitMQ |
+| `REDIS_HOST`, `REDIS_PORT`, `REDIS_PWD` | `localhost`, `6379`, empty | Redis |
+| `OPENSEARCH_SCHEME`, `OPENSEARCH_HOST`, `OPENSEARCH_PORT` | `http`, `localhost`, `9200` | OpenSearch |
+| `DOCUMENT_SERVER_PORT` | `8083` | port of ONLYOFFICE Docs installed with Apps |
+| `DOCUMENT_SERVER_JWT_SECRET` | generated, or taken from an installed ONLYOFFICE Docs | JWT secret shared by Apps and Docs |
 
-- A component version is set in several places that must agree: OpenSearch and OpenResty in `build-batch.bat`,
-  `build-download-prereq.ps1` and the `SetupFileUrl` of `Apps.aip` and `Apps.Prerequisites.aip`; the other prerequisites in
-  the prerequisite rows of `Apps.aip` (download link, detection) and `Apps.Prerequisites.aip` (`..\out\redist\<file>`).
-- A new Apps service wrapped by WinSW needs its config in `runtime\winsw\`, its name in `AppsServices` of `build-batch.bat`
-  and its service row in `Apps.aip`. A new .NET service also needs its `publish-script.bat` line, its entry in
-  `PackagedServices` of `lib\dotnet-store.ps1` and a runtimeconfig `TxtUpdate` row in `Apps.aip`: `publish-script.bat`
-  stops when that row is missing.
-- Open the `.aip` projects with the Advanced Installer version they were saved with or a newer one (`version` of their
-  `<DOCUMENT>` element); an older version cannot open them.
-- Variables set in the `.bat` files reach every program they start, and MSBuild reads them as properties: keep the `Apps`
-  prefix of `build-batch.bat` (a plain `OutDir` moved the `Utils.csproj` output, a plain `WinDir` would replace `%WINDIR%`).
-- `build\*.bat` must keep CRLF line endings (`.gitattributes`): `cmd.exe` does not find labels reliably in LF files.
+## HTTPS
+
+`apps-ssl-setup.ps1` in the `sbin` folder of the installation configures HTTPS in OpenResty. Run it from that folder in an
+elevated PowerShell:
+
+```powershell
+cd "C:\Program Files (x86)\Ascensio System SIA\Apps\sbin"
+.\apps-ssl-setup.ps1 admin@example.com apps.example.com                       # Let's Encrypt certificate
+.\apps-ssl-setup.ps1 -f apps.example.com C:\certs\apps.pem C:\certs\apps.key  # own certificate (PEM, PFX, DER, CER, PKCS#7)
+.\apps-ssl-setup.ps1 -d                                                       # back to plain HTTP
+```
+
+Let's Encrypt needs the domain to point to the server and port 80 to be reachable from the internet; the script also adds the
+weekly scheduled task *Certbot renew* that renews the certificate. Certbot and OpenSSL come with the third-party components.
+
+## Services
+
+Apps runs as Windows services named `Apps.*` (`Apps.WebApi`, `Apps.WebStudio`, `Apps.Login`, `Apps.DocEditor`,
+`Apps.Socket.IO` and others) under `NT AUTHORITY\LocalService`; OpenResty, OpenSearch, OpenSearch Dashboards, MySQL,
+RabbitMQ, Redis and ONLYOFFICE Docs run as their own services. Restart Apps with
+`Get-Service Apps.* | Restart-Service` in an elevated PowerShell. The logs of the services are in the `Logs` folder of the
+installation.
+
+## Update and removal
+
+- **Update:** run the EXE of the new version of the same edition. It keeps the data, the settings and the passwords of the
+  installed version. Run the new Prerequisites EXE first on a server without internet access.
+- **Removal:** remove `ONLYOFFICE Apps <Edition>` in *Settings → Apps* (or *Programs and Features*). ONLYOFFICE Docs and the
+  third-party components are separate programs and stay installed; remove them the same way if they are not needed.
+
+## Support
+
+- Community forum: https://forum.onlyoffice.com
+- Help desk (Enterprise and Developer): https://helpdesk.onlyoffice.com
+
+Building the installers from this repository is described in [BUILDING.md](BUILDING.md).

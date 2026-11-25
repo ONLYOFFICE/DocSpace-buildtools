@@ -106,7 +106,7 @@ install/
   common/                   — Shared packaging: build-services.py/sh, build-linux-package.sh, changelog.sh,
                               packages-build.sh, plugins-build.sh, offline-self-extracting.sh, systemd/,
                               product-configuration, product-ssl-setup (installed as apps-configuration / apps-ssl-setup)
-  win/                      — Windows installer, layout and build stages in win/README.md: build/ (Jenkins stage scripts,
+  win/                      — Windows installer, installation in win/README.md, layout and build stages in win/BUILDING.md: build/ (Jenkins stage scripts,
                               build-batch.bat builds the installers; lib/ helpers), installer/ (Apps, Apps.Prerequisites,
                               OpenResty, OpenSearch, OpenSearchStack .aip, utils.ps1 MSI custom actions, Resources/),
                               runtime/ (nginx.conf, sbin/apps-ssl-setup.ps1, winsw/ WinSW binaries + configs), out/ (ignored

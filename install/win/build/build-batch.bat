@@ -1,5 +1,5 @@
 rem Last build stage: prepares out\Files and the auxiliary components, then builds every installer into out\publish.
-rem Runs from the workspace root (buildtools, server, plugins, mcp and cloudhsm side by side); see install\win\README.md.
+rem Runs from the workspace root (buildtools, server, plugins, mcp and cloudhsm side by side); see install\win\BUILDING.md.
 setlocal
 
 REM ######## Set variables ########

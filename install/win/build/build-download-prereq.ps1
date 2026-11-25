@@ -87,7 +87,7 @@ switch ( $env:DOCUMENT_SERVER_VERSION_DE )
 
 $psql_version = '14.0'
 
-# Build tools and Docs go to out\downloads, the Prerequisites EXE payload to out\redist (see install\win\README.md)
+# Build tools and Docs go to out\downloads, the Prerequisites EXE payload to out\redist (see install\win\BUILDING.md)
 $win_dir = Split-Path $PSScriptRoot -Parent
 
 $out_dir = Join-Path $win_dir 'out'
