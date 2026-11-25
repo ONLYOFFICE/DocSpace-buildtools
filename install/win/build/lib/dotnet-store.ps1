@@ -105,7 +105,11 @@ if ($AipPath) {
         }
         $Parts -join '\'
     }
-    $Missing = @($Configs | ForEach-Object { $_.DirectoryName.Substring($FilesDir.Length + 1) } | Sort-Object -Unique | Where-Object { $Covered -notcontains $_ })
+    # Matched by suffix: Get-ChildItem -Recurse returns long names even when FilesDir is the 8.3 path publish-script.bat passes
+    $Missing = @($Configs | ForEach-Object { $_.DirectoryName } | Sort-Object -Unique | Where-Object {
+        $Dir = $_
+        -not @($Covered | Where-Object { $Dir.EndsWith('\' + $_, [StringComparison]::OrdinalIgnoreCase) }).Count
+    })
     if ($Missing) { throw "Apps.aip has no runtimeconfig TxtUpdate row for: $($Missing -join ', ')" }
     Write-Host "Apps.aip replaces {APPDIR} in all $(@($Covered).Count) service folders"
 }
