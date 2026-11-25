@@ -52,9 +52,10 @@ run_remote_bash() {
 	local SCRIPT_TMP
 
 	SCRIPT_TMP="$(mktemp)"
-	curl -fsSL --retry 3 --retry-delay 2 "${URL}" -o "${SCRIPT_TMP}" || { rm -f "${SCRIPT_TMP}"; return 1; }
+	curl -fsSL --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 60 "${URL}" -o "${SCRIPT_TMP}" || { rm -f "${SCRIPT_TMP}"; return 1; }
 	bash -n "${SCRIPT_TMP}" || { rm -f "${SCRIPT_TMP}"; return 1; }
-	bash "${SCRIPT_TMP}" "$@"
+	# RUN_REMOTE_TIMEOUT (seconds) stops a script stalled on a dead mirror, unset means no limit
+	${RUN_REMOTE_TIMEOUT:+timeout -k 10 "${RUN_REMOTE_TIMEOUT}"} bash "${SCRIPT_TMP}" "$@"
 	local EXIT_CODE=$?
 	rm -f "${SCRIPT_TMP}"
 	return "${EXIT_CODE}"
@@ -134,8 +135,9 @@ if [ "${PRESERVE_DOCS}" = false ] || ! package_installed nodejs; then
 	# Only an active one-line or deb822 entry counts, a commented-out line does not
 	NODESOURCE_REPO_PATTERN="^[[:space:]]*(deb|URIs:)[[:space:]].*deb\.nodesource\.com/node_${NODE_VERSION}\.x"
 	# NodeSource exits with 0 even when its apt step fails, so success is judged by the repository it writes
+	# A stalled apt mirror can hang the NodeSource script forever, so each attempt is time-limited to let the retry run
 	until grep -rEqs "$NODESOURCE_REPO_PATTERN" /etc/apt/sources.list.d/ \
-		|| { run_remote_bash "https://deb.nodesource.com/setup_${NODE_VERSION}.x" && grep -rEqs "$NODESOURCE_REPO_PATTERN" /etc/apt/sources.list.d/; }; do
+		|| { RUN_REMOTE_TIMEOUT=180 run_remote_bash "https://deb.nodesource.com/setup_${NODE_VERSION}.x" && grep -rEqs "$NODESOURCE_REPO_PATTERN" /etc/apt/sources.list.d/; }; do
 		[ "$SECONDS" -lt "$NODESOURCE_DEADLINE" ] || { echo "Failed to add the NodeSource Node.js ${NODE_VERSION} repository" >&2; exit 1; }
 		echo "The NodeSource repository was not added, retrying..."
 		sleep 15
