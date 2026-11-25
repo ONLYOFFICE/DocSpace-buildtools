@@ -1,5 +1,3 @@
 # Shell scripts must use LF so they run inside Linux containers without conversion.
 *.sh text eol=lf
 *.envsh text eol=lf
-# Windows build scripts call labels, which cmd.exe does not find reliably in LF files, so they are checked out with CRLF.
-install/win/**/*.bat text eol=crlf

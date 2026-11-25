@@ -22,7 +22,6 @@ if (Test-Path -LiteralPath (Join-Path $installWin 'installer\Apps.aip')) {
 }
 $aipText = [IO.File]::ReadAllText((Join-Path $installerDir 'Apps.aip'))
 $prerequisitesText = [IO.File]::ReadAllText((Join-Path $installerDir 'Apps.Prerequisites.aip'))
-$batchText = [IO.File]::ReadAllText((Join-Path $buildDir 'build-batch.bat'))
 $utilsText = [IO.File]::ReadAllText((Join-Path $installerDir 'utils.ps1'))
 $mysqlRunnerText = [IO.File]::ReadAllText((Join-Path $installerDir 'MySQL Server Installer Runner.iss'))
 
@@ -34,6 +33,14 @@ function Get-FirstMatch([string]$Text, [string]$Pattern, [string]$What) {
     $match = [regex]::Match($Text, $Pattern)
     if (-not $match.Success) { throw "Cannot find $What (pattern $Pattern)" }
     $match.Groups[1].Value
+}
+
+# Component versions: build\versions.ps1 since the PowerShell build, the set lines of build-batch.bat before it
+$versionsFile = Join-Path $buildDir 'versions.ps1'
+$opensearchVersion = if (Test-Path -LiteralPath $versionsFile) {
+    Get-FirstMatch ([IO.File]::ReadAllText($versionsFile)) "OpenSearch\s*=\s*'([^']+)'" 'OpenSearch in build\versions.ps1'
+} else {
+    Get-FirstMatch ([IO.File]::ReadAllText((Join-Path $buildDir 'build-batch.bat'))) 'set "opensearch_version=([^"]+)"' 'opensearch_version in build-batch.bat'
 }
 
 if (-not $Commit) {
@@ -125,7 +132,7 @@ $expected = [ordered]@{
     servicesMayStop  = @('Apps.Files.Worker', 'OpenSearchDashboards')
     mysqlService     = (Get-FirstMatch $mysqlRunnerText '(MySQL\d{2,})' 'MySQL service name in MySQL Server Installer Runner.iss')
     opensearch       = [ordered]@{
-        version  = (Get-FirstMatch $batchText 'set "opensearch_version=([^"]+)"' 'opensearch_version in build-batch.bat')
+        version  = $opensearchVersion
         indexDir = (Get-FirstMatch $utilsText 'Join-Path \$AppDir "(Data\\Index\\v[^"\\]+)\\?"' 'index directory in utils.ps1')
         yml      = 'C:\OpenSearch\config\opensearch.yml'
         jvm      = 'C:\OpenSearch\config\jvm.options'
