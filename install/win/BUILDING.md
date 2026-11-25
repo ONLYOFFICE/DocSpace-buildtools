@@ -14,17 +14,12 @@ This folder builds the Windows installers of ONLYOFFICE Apps with [Advanced Inst
 
 ```
 install/win/
-├── build/                      PowerShell, one script per stage, run in this order by build.ps1
-│   ├── build.ps1               entry point: build.ps1 [-Stages a,b | -From stage] [-Editions CE,EE,DE,Prereq]
+├── build/                      PowerShell
+│   ├── build.ps1               entry point: build.ps1 [-Stages a,b | -From stage] [-Editions CE,EE,DE,Prereq];
+│   │                           runs the stages in order and holds the small ones (clean ... copy)
+│   ├── download.ps1            stage download: Docs, nuget.exe, archives and the Prerequisites payload into out\
+│   ├── package.ps1             stage package: finishes out\Files and builds every installer into out\publish
 │   ├── versions.ps1            versions of OpenSearch, OpenSearch Dashboards, OpenResty and Fluent Bit
-│   ├── 1-mcp.ps1               docspace-mcp into mcp\bin
-│   ├── 2-plugins.ps1           docspace-plugins into plugins\publish
-│   ├── 3-frontend.ps1          DocSpace-client into publish\web
-│   ├── 4-backend.ps1           node_modules of the node services and the Identity jars of DocSpace-server
-│   ├── 5-publish.ps1           .NET services (with a shared package store), then every service into out\Files
-│   ├── 6-copy-frontend.ps1     client, campaigns, configs and nginx configs into out\Files
-│   ├── 7-download.ps1          Docs, nuget.exe, archives and the Prerequisites payload into out\
-│   ├── 8-package.ps1           finishes out\Files and builds every installer into out\publish
 │   └── lib/                    helpers of the stages, never called directly
 │       ├── common.ps1                 paths, tools, calls that stop the build on failure
 │       ├── configure-files.ps1        adapts the configs in out\Files to Windows (OpenResty, Fluent Bit, log levels, URLs)
@@ -50,16 +45,31 @@ install/win/
 The paths in the `.aip` projects are relative to `installer/`: their input is `..\out\Files`, `..\out\redist`, ...,
 their packages go to `..\out\publish`.
 
+### Stages
+
+| Stage | Where | What it does |
+|---|---|---|
+| `clean` | `build.ps1` | empties the build output (below) |
+| `mcp` | `build.ps1` | docspace-mcp into `mcp\bin` |
+| `plugins` | `build.ps1` | docspace-plugins into `plugins\publish` |
+| `frontend` | `build.ps1` | DocSpace-client into `publish\web` |
+| `backend` | `build.ps1` | node_modules of the node services and the Identity jars of DocSpace-server |
+| `publish` | `build.ps1` | .NET services (with a shared package store), then every service into `out\Files` |
+| `copy` | `build.ps1` | client, campaigns, configs and nginx configs into `out\Files` |
+| `download` | `download.ps1` | Docs, `nuget.exe`, archives and the Prerequisites payload into `out\` |
+| `package` | `package.ps1` | finishes `out\Files` and builds every installer into `out\publish` |
+| `installer` | `package.ps1` | only the chosen editions, on what an earlier `package` left; not part of a full run |
+
 ### out/
 
 | Path | Written by | Contents |
 |---|---|---|
-| `out\Files\` | stages 5, 6, 8 | the installed product (`APPDIR`), synchronized into `Apps.aip` |
-| `out\downloads\` | stage 7 | Docs EXEs, `nuget.exe`, OpenSearch/OpenResty archives |
-| `out\redist\` | stage 7 | the payload of the Prerequisites EXE (every `https://` link in `Apps.aip`) |
-| `out\OpenResty\`, `out\OpenSearch\`, `out\OpenSearchStack\` | stages 7, 8 | inputs of the auxiliary projects |
-| `out\license\` | stage 8 | the license of the edition being built, which `Apps.aip` shows |
-| `out\Utils.CA.dll`, `out\MySQL Installer Runner.exe`, `out\signing-tool.ps1` | stage 8 | embedded or used by the projects |
+| `out\Files\` | publish, copy, package | the installed product (`APPDIR`), synchronized into `Apps.aip` |
+| `out\downloads\` | download | Docs EXEs, `nuget.exe`, OpenSearch/OpenResty archives |
+| `out\redist\` | download | the payload of the Prerequisites EXE (every `https://` link in `Apps.aip`) |
+| `out\OpenResty\`, `out\OpenSearch\`, `out\OpenSearchStack\` | download, package | inputs of the auxiliary projects |
+| `out\license\` | package | the license of the edition being built, which `Apps.aip` shows |
+| `out\Utils.CA.dll`, `out\MySQL Installer Runner.exe`, `out\signing-tool.ps1` | package | embedded or used by the projects |
 | `out\publish\` | Advanced Installer | the installers |
 
 Stage `clean` empties `Files`, `OpenResty`, `OpenSearch`, `OpenSearchStack`, `license` and `publish` (and `plugins\publish`,
@@ -83,12 +93,12 @@ Tools and parameters come from environment variables:
 
 | Variable | Used by | Value |
 |---|---|---|
-| `sevenzip`, `msbuild`, `AdvancedInstaller` | 2, 8 | paths of the tools (quotes allowed) |
-| `BUILD_VERSION`, `BUILD_NUMBER` | 8 | `4.1` and the build number |
-| `SignBuild` | 8 | `true` to sign (copies `cloudhsm\signing-tool.ps1`, signs with Advanced Installer) |
-| `DOCUMENT_SERVER_VERSION_CE`, `_EE`, `_DE` | 7 | `latest` or `custom` with `DOCUMENT_SERVER_CE_CUSTOM_LINK` (`_EE_`, `_DE_`) |
-| `APPS_WIN_BUILD_CACHE` | 8 | cache of the auxiliary installers, default `win-build-cache` in the workspace |
-| `NODE_OPTIONS` | 3 | e.g. `--max-old-space-size=3072` on hosts with little memory |
+| `sevenzip`, `msbuild`, `AdvancedInstaller` | plugins, package | paths of the tools (quotes allowed) |
+| `BUILD_VERSION`, `BUILD_NUMBER` | package | `4.1` and the build number |
+| `SignBuild` | package | `true` to sign (copies `cloudhsm\signing-tool.ps1`, signs with Advanced Installer) |
+| `DOCUMENT_SERVER_VERSION_CE`, `_EE`, `_DE` | download | `latest` or `custom` with `DOCUMENT_SERVER_CE_CUSTOM_LINK` (`_EE_`, `_DE_`) |
+| `APPS_WIN_BUILD_CACHE` | package | cache of the auxiliary installers, default `win-build-cache` in the workspace |
+| `NODE_OPTIONS` | frontend | e.g. `--max-old-space-size=3072` on hosts with little memory |
 
 `iscc`, `dotnet`, `node`, `pnpm`, `yarn`, `mvn` and `java` must be in `PATH`; `Utils.csproj` also needs WiX Toolset 3.x.
 
@@ -104,19 +114,19 @@ on the first broken stage. Stage `installer` rebuilds only the chosen editions o
 `Utils.CA.dll`, the auxiliary installers); it is not part of a full run.
 
 A build still edits tracked files: `ProductVersion` and `DS_VERSION` in the `.aip` projects and the Docs arguments in `Apps.aip`
-(`docs-secret-args.ps1`). Do not commit these changes. The license texts in `Resources\` stay as they are: stage 8 copies the
+(`docs-secret-args.ps1`). Do not commit these changes. The license texts in `Resources\` stay as they are: stage package copies the
 license of each edition into `out\license\`.
 
 ## Changing things
 
 - **A component version** (OpenSearch, OpenSearch Dashboards, OpenResty, Fluent Bit): change `build\versions.ps1`, then the
-  projects. Stage 8 stops with the list of places that disagree: the file names in `Apps.aip`, `Apps.Prerequisites.aip` and
+  projects. Stage package stops with the list of places that disagree: the file names in `Apps.aip`, `Apps.Prerequisites.aip` and
   `OpenSearchStack.aip` and the index folder in `utils.ps1`; the other fields of those prerequisites (name, minimum version,
   detection) are edited in Advanced Installer. The other prerequisites live only in the prerequisite rows of `Apps.aip`
   (download link, detection) and `Apps.Prerequisites.aip` (`..\out\redist\<file>`).
-- **A new Apps service wrapped by WinSW**: its config in `runtime\winsw\`, its name in the wrapper list of `8-package.ps1` and its
-  service row in `Apps.aip`. A new .NET service also needs its folder in `5-publish.ps1`, its entry in `PackagedServices` of
-  `lib\dotnet-store.ps1` and a runtimeconfig `TxtUpdate` row in `Apps.aip`: stage 5 stops when that row is missing.
+- **A new Apps service wrapped by WinSW**: its config in `runtime\winsw\`, its name in the wrapper list of `package.ps1` and its
+  service row in `Apps.aip`. A new .NET service also needs its folder in `Publish-Services` of `build.ps1`, its entry in `PackagedServices` of
+  `lib\dotnet-store.ps1` and a runtimeconfig `TxtUpdate` row in `Apps.aip`: stage publish stops when that row is missing.
 - **A config change for Windows**: `lib\configure-files.ps1`, which edits the files line by line like the GNU sed calls it
   replaced (their output is kept byte for byte: LF line ends, the BOM of a file).
 - Open the `.aip` projects with the Advanced Installer version they were saved with or a newer one (`version` of their

@@ -19,7 +19,7 @@ $Framework = 'net10.0'
 $Runtime = 'win-x64'
 # dotnet store fails on these with MSB3094 (several native files per name); they stay in the service folders.
 $NotStorable = @('librdkafka.redist')
-# The services 5-publish.ps1 moves into the package; the solution publish also has projects the package does not ship.
+# The services stage publish of build.ps1 moves into the package; the solution publish also has projects the package does not ship.
 $PackagedServices = @('ASC.Files', 'ASC.People', 'ASC.AI', 'ASC.AI.Worker', 'ASC.ApiSystem', 'ASC.Data.Backup', 'ASC.Files.Worker', 'ASC.Notify',
     'ASC.Studio.Notify', 'ASC.Data.Backup.Worker', 'ASC.TelegramService', 'ASC.ClearEvents', 'ASC.Web.Api', 'ASC.Web.Studio', 'ASC.Web.HealthChecks.UI')
 

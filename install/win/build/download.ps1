@@ -1,4 +1,4 @@
-# Stage 7: downloads Docs, nuget.exe and the OpenSearch/OpenResty archives into out\downloads, the payload of the Prerequisites EXE into
+# Stage download of build.ps1: downloads Docs, nuget.exe and the OpenSearch/OpenResty archives into out\downloads, the payload of the Prerequisites EXE into
 # out\redist and the OpenSearchStack archives; writes the Docs Community version and the Docs arguments (docs-secret-args.ps1) into Apps.aip.
 # Docs comes from DOCUMENT_SERVER_VERSION_CE|EE|DE: 'latest' or 'custom' with DOCUMENT_SERVER_CE|EE|DE_CUSTOM_LINK.
 . "$PSScriptRoot\lib\common.ps1"

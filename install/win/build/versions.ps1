@@ -1,4 +1,4 @@
-# Versions of the components the Windows build downloads and packs. Change them here, then in the places 8-package.ps1 checks
+# Versions of the components the Windows build downloads and packs. Change them here, then in the places package.ps1 checks
 # (Test-ComponentVersions): the file names in Apps.aip, Apps.Prerequisites.aip and OpenSearchStack.aip and the index folder in utils.ps1.
 @{
     OpenSearch           = '3.5.0'      # OpenSearch.aip, OpenSearch-<version>.exe in Apps*.aip, Data\Index\v<version> in utils.ps1

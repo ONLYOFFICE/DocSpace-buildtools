@@ -1,4 +1,4 @@
-# Stage 8: finishes out\Files and the auxiliary components and builds the installers into out\publish.
+# Stage package of build.ps1: finishes out\Files and the auxiliary components and builds the installers into out\publish.
 # -InstallersOnly rebuilds only the chosen Apps editions on what an earlier full run of this stage left (stage 'installer' of build.ps1).
 [CmdletBinding()]
 param (
