@@ -24,7 +24,8 @@ The step-by-step guide with screenshots is on the
 
 ## Installation
 
-1. Without internet access only: run `ONLYOFFICE_Apps_Prerequisites_Win-install.exe` and finish it.
+1. On a server without internet access, first run `ONLYOFFICE_Apps_Prerequisites_Win-install.exe`: it installs the
+   third-party components that the edition EXE otherwise downloads. With internet access, skip this step.
 2. Run `ONLYOFFICE_Apps_<Edition>_Win-install.exe` as an administrator and follow the wizard. The default connections fit
    MySQL, PostgreSQL, RabbitMQ, Redis and OpenSearch installed on the same server; enter other addresses to use external ones.
 3. Open `http://<server address>/` and create the administrator of the portal.
