@@ -71,7 +71,8 @@ function ExtractPath {
         [string]$RegexPattern
     )
     if ($Content -match $RegexPattern) {
-        return $matches[1]
+        # nginx allows the path in quotes, which are not part of the file name.
+        return $matches[1].Trim().Trim('"', "'")
     } else {
         return ""
     }
@@ -1103,8 +1104,8 @@ function MoveConfigs {
     # Run the SSL setup script if paths are valid.
     if ((Test-Path $ConfigSslFile) -and ($SslCertPath) -and ($SslCertKeyPath)) {
         Set-Location $SslScriptDir
-        $PsCommand = "& '$SslScriptPath' -f $DomainName $SslCertPath $SslCertKeyPath"
-        Invoke-Expression $PsCommand
+        # The values come from config files, so they are passed as arguments and never parsed as PowerShell code.
+        & $SslScriptPath -f $DomainName $SslCertPath $SslCertKeyPath
     } else {
         Write-Output "SSL script not executed. Missing paths or ConfigSslFile."
     }
