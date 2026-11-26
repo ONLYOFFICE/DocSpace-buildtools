@@ -26,7 +26,7 @@ namespace Utils
             var pkey = Convert.ToString(session["VERSION.RELEASE_DATE"]);
             var machineKey = Convert.ToString(session["MACHINE_KEY"]);
 
-            session.Log("SetVersionReleaseDateSign: pkey {0}, machineKey {1}", pkey, machineKey);
+            session.Log("SetVersionReleaseDateSign: pkey {0}", pkey);
 
             session["VERSION.RELEASE_DATE.SIGN"] = CreateAuthToken(pkey, machineKey);
 
@@ -50,14 +50,14 @@ namespace Utils
                     var pong = redis.Ping("ONLYOFFICE");
 
                     session.Log("Redis Status: IsConnected is {0}", !String.IsNullOrEmpty(pong));
-                    session["RedisServerConnectionError"] = !String.IsNullOrEmpty(pong) ? "" : String.Format("Connection Refused HOST:{0},PORT:{1},PASS:{2}", session["REDIS_HOST"], session["REDIS_PORT"], session["REDIS_PWD"]);
+                    session["RedisServerConnectionError"] = !String.IsNullOrEmpty(pong) ? "" : String.Format("Connection Refused HOST:{0},PORT:{1}", session["REDIS_HOST"], session["REDIS_PORT"]);
                                                        
                 }
             }
             catch (Exception ex)
             {
                 session.Log("RedisConnectionException '{0}'", ex.Message);
-                session["RedisServerConnectionError"] = String.Format("Connection Refused HOST:{0},PORT:{1},PASS:{2}", session["REDIS_HOST"], session["REDIS_PORT"], session["REDIS_PWD"]);
+                session["RedisServerConnectionError"] = String.Format("Connection Refused HOST:{0},PORT:{1}", session["REDIS_HOST"], session["REDIS_PORT"]);
             }
 
             return ActionResult.Success; 
@@ -84,13 +84,12 @@ namespace Utils
                 using (IConnection conn = factory.CreateConnection())
                 {
                     session.Log("RabbitMQ Status: IsConnected is {0}", conn.IsOpen);
-                    session["RabbitMQServerConnectionError"] = conn.IsOpen ? "" : String.Format("Connection Refused PROTOCOL:{0}, HOST:{1}, PORT:{2}, VirtualHost:{3}, UserName:{4}, PASS:{5}",
+                    session["RabbitMQServerConnectionError"] = conn.IsOpen ? "" : String.Format("Connection Refused PROTOCOL:{0}, HOST:{1}, PORT:{2}, VirtualHost:{3}, UserName:{4}",
                         session["AMQP_PROTOCOL"],
                         session["AMQP_HOST"],
                         session["AMQP_PORT"],
                         session["AMQP_VHOST"],
-                        session["AMQP_USER"],
-                        session["AMQP_PWD"]
+                        session["AMQP_USER"]
                         );
                 }
             }
@@ -98,13 +97,12 @@ namespace Utils
             {
 
                 session.Log("RabbitMQ.Client.Exceptions.BrokerUnreachableException {0}", ex.Message);
-                session["RabbitMQServerConnectionError"] = String.Format("Connection Refused PROTOCOL:{0}, HOST:{1}, PORT:{2}, VirtualHost:{3}, UserName:{4}, PASS:{5}",
+                session["RabbitMQServerConnectionError"] = String.Format("Connection Refused PROTOCOL:{0}, HOST:{1}, PORT:{2}, VirtualHost:{3}, UserName:{4}",
                         session["AMQP_PROTOCOL"],
                         session["AMQP_HOST"],
                         session["AMQP_PORT"],
                         session["AMQP_VHOST"],
-                        session["AMQP_USER"],
-                        session["AMQP_PWD"]
+                        session["AMQP_USER"]
                         );
 
             }
