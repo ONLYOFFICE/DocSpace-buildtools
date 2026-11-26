@@ -103,6 +103,24 @@ ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
 ENV DOTNET_NOLOGO=1
 ENV MSBUILDDISABLENODEREUSE=1
 
+# Publish each "<project or solution> [extra publish args]" argument for both architectures into publish-<arch>, then drop the sources
+COPY --chmod=755 <<'EOF' /usr/local/bin/publish-dotnet
+#!/bin/bash
+set -eux
+PUBLISH_ARGS=(-c Release --self-contained false -p:DebugType=None -p:DebugSymbols=false -p:UseAppHost=false)
+for PAIR in "linux-x64:amd64" "linux-arm64:arm64"; do
+    RID="${PAIR%%:*}"
+    ARCH="${PAIR##*:}"
+    for SPEC in "$@"; do
+        read -ra SPEC_ARGS <<< "${SPEC}"
+        dotnet publish "${SPEC_ARGS[0]}" "${PUBLISH_ARGS[@]}" -r "${RID}" "${SPEC_ARGS[@]:1}"
+    done
+    mv "${SRC_PATH}/publish" "${SRC_PATH}/publish-${ARCH}"
+done
+dotnet nuget locals all --clear
+rm -rf "${SRC_PATH}/server"
+EOF
+
 WORKDIR ${SRC_PATH}/server
 COPY --from=src ${SRC_PATH}/server/ .
 
@@ -110,32 +128,28 @@ COPY --from=src ${SRC_PATH}/server/ .
 FROM build-dotnet-base AS build-dotnet
 ARG SRC_PATH
 
+RUN publish-dotnet \
+    "common/Tools/ASC.Migration.Runner/ASC.Migration.Runner.csproj -o ${SRC_PATH}/publish/services/ASC.Migration.Runner/service/" \
+    "ASC.Web.slnx -p:PublishProfile=ReleaseProfile"
+
+# Standalone .NET build: only the Monolith (it brings DocStore along) and the Migration Runner, not every service of the solution
+FROM build-dotnet-base AS build-dotnet-standalone
+ARG SRC_PATH
+
 RUN set -eux; \
-    PUBLISH_ARGS='-c Release --self-contained false -p:DebugType=None -p:DebugSymbols=false -p:UseAppHost=false'; \
-    for PAIR in "linux-x64:amd64" "linux-arm64:arm64"; do \
-        RID="${PAIR%%:*}"; \
-        ARCH="${PAIR##*:}"; \
-        dotnet publish common/Tools/ASC.Migration.Runner/ASC.Migration.Runner.csproj ${PUBLISH_ARGS} -r "${RID}" -o "${SRC_PATH}/publish/services/ASC.Migration.Runner/service/"; \
-        dotnet publish ASC.Web.slnx ${PUBLISH_ARGS} -r "${RID}" -p:PublishProfile=ReleaseProfile; \
-        mv "${SRC_PATH}/publish" "${SRC_PATH}/publish-${ARCH}"; \
-    done; \
-    dotnet nuget locals all --clear; \
-    rm -rf "${SRC_PATH}/server"
+    publish-dotnet \
+        "common/Tools/ASC.Migration.Runner/ASC.Migration.Runner.csproj -o ${SRC_PATH}/publish/services/ASC.Migration.Runner/service/" \
+        "common/services/ASC.Monolith/ASC.Monolith.csproj -p:PublishProfile=ReleaseProfile"; \
+    for ARCH in amd64 arm64; do \
+        [ -n "$(ls -A "${SRC_PATH}/publish-${ARCH}/services/ASC.Monolith/service/DocStore" 2>/dev/null)" ] || \
+            { echo "DocStore is missing from the ${ARCH} Monolith publish output" >&2; exit 1; }; \
+    done
 
 # ASC.Site.Core build
 FROM build-dotnet-base AS build-site-core
 ARG SRC_PATH
 
-RUN set -eux; \
-    PUBLISH_ARGS='-c Release --self-contained false -p:DebugType=None -p:DebugSymbols=false -p:UseAppHost=false'; \
-    for PAIR in "linux-x64:amd64" "linux-arm64:arm64"; do \
-        RID="${PAIR%%:*}"; \
-        ARCH="${PAIR##*:}"; \
-        dotnet publish common/services/ASC.Site.Core/ASC.Site.Core.csproj ${PUBLISH_ARGS} -r "${RID}" -o "${SRC_PATH}/publish/services/ASC.Site.Core/service/"; \
-        mv "${SRC_PATH}/publish" "${SRC_PATH}/publish-${ARCH}"; \
-    done; \
-    dotnet nuget locals all --clear; \
-    rm -rf "${SRC_PATH}/server"
+RUN publish-dotnet "common/services/ASC.Site.Core/ASC.Site.Core.csproj -o ${SRC_PATH}/publish/services/ASC.Site.Core/service/"
 
 # NuGet packages that several .NET services use go once into dotnetstore; the per-service images and dotnet-services share it as one layer
 FROM --platform=$BUILDPLATFORM python:${PYTHON_VERSION} AS build-dotnet-store
@@ -808,9 +822,8 @@ COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server
 COPY --from=build-plugins --chown=onlyoffice:onlyoffice ${SRC_PATH}/plugins/publish/ ${BUILD_PATH}/studio/plugins
 
 # .NET Monolith and Migration Runner
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Monolith/service ${SRC_PATH}/publish/services/backend/
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Migration.Runner/service ${SRC_PATH}/publish/services/backend/
-COPY --from=build-dotnet --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Files/service/DocStore/ ${SRC_PATH}/publish/services/backend/DocStore/
+COPY --from=build-dotnet-standalone --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Monolith/service ${SRC_PATH}/publish/services/backend/
+COPY --from=build-dotnet-standalone --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Migration.Runner/service ${SRC_PATH}/publish/services/backend/
 
 # java Identity (OAuth)
 ENV JAVA_HOME=/opt/java
