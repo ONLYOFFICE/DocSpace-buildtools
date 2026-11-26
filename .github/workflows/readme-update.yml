@@ -9,8 +9,9 @@ on:
       - 'hotfix/*'
   workflow_dispatch:
 
+# The push goes to Gitea with GITEA_TOKEN, the GitHub token only reads
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   update-readme:
@@ -23,12 +24,11 @@ jobs:
           git config --global 'credential.https://${{ secrets.GITEA_HOST }}.helper' "store --file=${RUNNER_TEMP}/gitea-credentials"
           [[ "$GITEA_TOKEN" == *:* ]] || GITEA_TOKEN+=":"
           printf 'url=https://%s@%s\n\n' "$GITEA_TOKEN" '${{ secrets.GITEA_HOST }}' | git credential approve
+          # The token file is needed only for the clone; the push step stores it again
+          trap 'rm -f "${RUNNER_TEMP}/gitea-credentials"' EXIT
           git clone https://${{ secrets.GITEA_HOST }}/${{ github.repository }} -b "${GITHUB_REF_NAME}" --single-branch --depth=1
 
-      - name: Install yq
-        run: |
-          sudo wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
-          sudo chmod +x /usr/local/bin/yq
+      # yq (mikefarah v4) comes preinstalled on the GitHub-hosted Ubuntu runners
       - name: Update OS list in README
         working-directory: ${{ github.event.repository.name }}
         run: |
@@ -54,7 +54,12 @@ jobs:
           rm os_block.tmp
       - name: Commit changes (if any)
         working-directory: ${{ github.event.repository.name }}
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
         run: |
+          [[ "$GITEA_TOKEN" == *:* ]] || GITEA_TOKEN+=":"
+          printf 'url=https://%s@%s\n\n' "$GITEA_TOKEN" '${{ secrets.GITEA_HOST }}' | git credential approve
+          trap 'rm -f "${RUNNER_TEMP}/gitea-credentials"' EXIT
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           if [ -n "$(git status --porcelain)" ]; then
