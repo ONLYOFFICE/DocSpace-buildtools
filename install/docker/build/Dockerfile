@@ -16,6 +16,8 @@ ARG JAVA_RUN_VERSION="${JAVA_VERSION}-jre"
 ARG MAVEN_VERSION="3.9-eclipse-temurin-${JAVA_VERSION}"
 # Released MCP server, pinned by version and digest; pass a 4testing image here to try a pre-release build
 ARG MCP_IMAGE="onlyoffice/docspace-mcp:3.4.0@sha256:0771f715a95a0b0008d7883b959a0322b3c3b02381b577bb35a56abceccc2f5a"
+# ffmpeg helper image built from Dockerfile.ffvideo, pinned by digest; rebuild it and update both together
+ARG FFVIDEO_IMAGE="onlyoffice/ffvideo:7.1@sha256:ad4b8dfa2f601763bf004dc0ddee8a5f786b2d3169a21a0f5d6b0a2322a6db72"
 
 # Image resources
 FROM --platform=$BUILDPLATFORM python:${PYTHON_VERSION} AS src
@@ -516,6 +518,8 @@ COPY --from=build-dotnet-store --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish
 
 CMD ["ASC.Files.dll", "ASC.Files"]
 
+FROM ${FFVIDEO_IMAGE} AS ffvideo
+
 ## ASC.Files.Worker ##
 FROM dotnetrun-store AS files_worker
 ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
@@ -525,7 +529,7 @@ USER root
 COPY --from=build-dotnet-store --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Files.Worker/service/ .
 
 # Copy ffmpeg binary and essential libraries
-COPY --from=onlyoffice/ffvideo:7.1 --chown=onlyoffice:onlyoffice /app/src/ /
+COPY --from=ffvideo --chown=onlyoffice:onlyoffice /app/src/ /
 RUN set -eux; \
   PKGS="libasound2t64 libv4l-0t64 libxml2 libgomp1"; \
   [ "$TARGETARCH" = "amd64" ] && PKGS="$PKGS libx11-xcb1 libxcb-dri3-0 libxcb-shape0 libxcb-xfixes0 libxfixes3 ocl-icd-libopencl1"; \
@@ -690,7 +694,7 @@ RUN apt-get update && \
 ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
 COPY --from=build-dotnet-store --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Files.Worker/service/ ${BUILD_PATH}/products/ASC.Files/service/
 
-COPY --from=onlyoffice/ffvideo:7.1 --chown=onlyoffice:onlyoffice /app/src/ /
+COPY --from=ffvideo --chown=onlyoffice:onlyoffice /app/src/ /
 RUN set -eux; \
   PKGS="libasound2t64 libv4l-0t64 libxml2 libgomp1"; \
   [ "$TARGETARCH" = "amd64" ] && PKGS="$PKGS libx11-xcb1 libxcb-dri3-0 libxcb-shape0 libxcb-xfixes0 libxfixes3 ocl-icd-libopencl1"; \
