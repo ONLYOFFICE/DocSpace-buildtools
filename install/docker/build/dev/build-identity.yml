@@ -36,7 +36,7 @@ services:
     image: "${REGISTRY}${REPO}/${DOCKER_IMAGE_PREFIX}-identity-api:${DOCKER_TAG}"
     container_name: ${IDENTITY_API_CONTAINER_NAME}
     ports:
-      - 9090:9090
+      - 127.0.0.1:9090:9090
     environment:
       <<: *x-common-environment
       SPRING_PROFILES_ACTIVE: dev

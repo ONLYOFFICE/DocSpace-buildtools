@@ -12,7 +12,7 @@
     <array>
         <string>/usr/local/share/dotnet/dotnet</string>
         <string>server/common/services/ASC.Data.Backup/bin/Debug/ASC.Data.Backup.dll</string>
-        <string>urls=http://0.0.0.0:5012</string>
+        <string>urls=http://127.0.0.1:5012</string>
         <string>$STORAGE_ROOT=${APPS_ROOT}/Data</string>
         <string>log:dir=${APPS_ROOT}/Logs</string>
         <string>log:name=backup</string>
