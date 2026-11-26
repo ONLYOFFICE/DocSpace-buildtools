@@ -60,8 +60,9 @@ jobs:
       - name: Setup BuildKit with /mnt support
         run: |
           docker rm -f buildkitd || true
-          mountpoint -q /mnt && { sudo mkdir -p /mnt/buildkit; sudo chmod 777 /mnt/buildkit; STORAGE_ARGS="-v /mnt/buildkit:/var/lib/buildkit"; } || STORAGE_ARGS=""
-          docker run -d --name buildkitd --privileged --network host ${STORAGE_ARGS} moby/buildkit:buildx-stable-1 --addr tcp://0.0.0.0:1234 --allow-insecure-entitlement security.insecure --allow-insecure-entitlement network.host
+          mountpoint -q /mnt && { sudo mkdir -p /mnt/buildkit; sudo chmod 700 /mnt/buildkit; STORAGE_ARGS="-v /mnt/buildkit:/var/lib/buildkit"; } || STORAGE_ARGS=""
+          # Rootful buildkitd needs --privileged; it listens on loopback only, where the remote driver below connects
+          docker run -d --name buildkitd --privileged --network host ${STORAGE_ARGS} moby/buildkit:v0.35.1@sha256:baf6138eb8c37644800c7c913fba051e840ebb9ba13eaf92d92ef9a1712d0b4c --addr tcp://127.0.0.1:1234 --allow-insecure-entitlement security.insecure --allow-insecure-entitlement network.host
           docker buildx create --name builder --driver remote tcp://127.0.0.1:1234 --use
           docker buildx inspect --bootstrap
 
