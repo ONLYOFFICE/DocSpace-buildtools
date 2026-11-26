@@ -995,6 +995,55 @@ function GrantWritableDirs {
     }
 }
 
+# Gives a folder a protected ACL; the first time, the entries below it are reset to inherit it, so files and folders users created there lose their write access.
+function SetProtectedDirAcl {
+    param ([string]$Dir, [string]$Sddl)
+    $Wanted = New-Object System.Security.AccessControl.DirectorySecurity
+    $Wanted.SetSecurityDescriptorSddlForm($Sddl)
+    $WantedSids = $Wanted.GetAccessRules($true, $false, [System.Security.Principal.SecurityIdentifier]) | ForEach-Object { $_.IdentityReference.Value }
+    $Security = Get-Acl -LiteralPath $Dir
+    $Sids = $Security.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier]) | ForEach-Object { $_.IdentityReference.Value }
+    if ($Security.AreAccessRulesProtected -and -not ($Sids | Where-Object { $_ -notin $WantedSids }) -and -not ($WantedSids | Where-Object { $_ -notin $Sids })) { return }
+    Set-Acl -LiteralPath $Dir -AclObject $Wanted
+    Get-ChildItem -LiteralPath $Dir -Force | ForEach-Object {
+        & "$env:SystemRoot\System32\icacls.exe" $_.FullName /reset /T /C /Q | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw "icacls /reset failed for $($_.FullName) with exit code $LASTEXITCODE" }
+    }
+}
+
+# The folder saved in the registry by a prerequisite package (OpenResty, OpenSearch, OpenSearchStack), or the system drive root one it uses by default.
+function GetPrerequisiteDir([string]$Product) {
+    foreach ($View in 'Registry32', 'Registry64') {
+        $Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', $View)
+        try {
+            $ProductKey = $Base.OpenSubKey("Software\Ascensio System SIA\$Product")
+            if ($ProductKey) {
+                try { $Dir = "$($ProductKey.GetValue('Path'))".TrimEnd('\') } finally { $ProductKey.Close() }
+                if ($Dir) { return $Dir }
+            }
+        } finally { $Base.Close() }
+    }
+    return Join-Path "$env:SystemDrive\" $Product
+}
+
+# OpenResty, OpenSearch and OpenSearchStack run as LocalSystem from folders at the system drive root, where users may create and change files; only SYSTEM and Administrators may change them.
+function LockPrerequisiteDirs {
+    foreach ($Product in 'OpenResty', 'OpenSearch', 'OpenSearchStack') {
+        $Dir = GetPrerequisiteDir $Product
+        if (-not (Test-Path -LiteralPath $Dir -PathType Container)) { continue }
+        try {
+            SetProtectedDirAcl $Dir 'D:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;0x1200a9;;;BU)'
+            # The proxy configuration holds the Dashboards password file, so users cannot read it.
+            $ConfDir = Join-Path $Dir 'conf'
+            if ($Product -eq 'OpenResty' -and (Test-Path -LiteralPath $ConfDir -PathType Container)) {
+                SetProtectedDirAcl $ConfDir 'D:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)'
+            }
+            Write-Output "The $Product folder is restricted."
+        }
+        catch { Write-Output "WARNING: could not restrict access to ${Dir}: $($_.Exception.Message)" }
+    }
+}
+
 # Locks the settings key and the install directory before any secret is written into them; on an upgrade this runs before the previous version is removed.
 function LockSecrets {
     AI_SetMsiProperty SECRETS_LOCK_FAILED ''
@@ -1011,6 +1060,7 @@ function LockSecrets {
         Write-Output "ERROR: could not restrict access to the settings key or the install directory: $($_.Exception.Message)"
         AI_SetMsiProperty SECRETS_LOCK_FAILED '1'
     }
+    LockPrerequisiteDirs
 }
 
 # Function to move configurations and manage files.
