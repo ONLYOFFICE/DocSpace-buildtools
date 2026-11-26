@@ -96,7 +96,7 @@ All installers support extensive flags for customization (see [OneClickInstall R
 
 ### Windows Installer
 
-Windows installation uses Advanced Installer projects (`.aip` files) located in `install/win/installer/`, with WinSW for service management. Installation and configuration are described in [install/win/README.md](install/win/README.md), the build stages and the folder layout in [install/win/BUILDING.md](install/win/BUILDING.md).
+Windows installation uses Advanced Installer projects (`.aip` files) located in `install/win/installer/`, with WinSW for service management. Installation and configuration are described in [install/win/README.md](install/win/README.md).
 
 See the [Windows installation guide](https://guides.onlyoffice.com/installation/docspace-community-install-windows.aspx) for detailed instructions.
 

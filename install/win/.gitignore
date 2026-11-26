@@ -1,4 +1,4 @@
-# Everything the build downloads or produces (see BUILDING.md)
+# Everything the build downloads or produces
 /out/
 
 # Advanced Installer backups and caches next to the projects

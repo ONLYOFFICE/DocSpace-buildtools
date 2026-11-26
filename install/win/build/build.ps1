@@ -1,6 +1,6 @@
 # Builds the ONLYOFFICE Apps Windows installers: runs the stages in order and stops at the first failure (exit code 1).
 # Examples: build.ps1 (all stages)   build.ps1 -From publish   build.ps1 -Stages download,package   build.ps1 -Stages installer -Editions CE
-# The stages up to copy are the functions below; download.ps1 and package.ps1 hold the two large ones. Details: install\win\BUILDING.md.
+# The stages up to copy are the functions below; download.ps1 and package.ps1 hold the two large ones.
 [CmdletBinding()]
 param (
     [string[]]$Stages,                  # names below; powershell -File passes "a,b" as one string, so lists are split here

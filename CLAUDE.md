@@ -106,7 +106,7 @@ install/
   common/                   — Shared packaging: build-services.py/sh, build-linux-package.sh, changelog.sh,
                               packages-build.sh, plugins-build.sh, offline-self-extracting.sh, systemd/,
                               product-configuration, product-ssl-setup (installed as apps-configuration / apps-ssl-setup)
-  win/                      — Windows installer, installation in win/README.md, layout and build stages in win/BUILDING.md: build/ (PowerShell:
+  win/                      — Windows installer, installation in win/README.md: build/ (PowerShell:
                               build.ps1 runs the stages and holds the small ones, download.ps1, package.ps1, versions.ps1 the component versions;
                               lib/ helpers incl. configure-files.ps1), installer/ (Apps, Apps.Prerequisites,
                               OpenResty, OpenSearch, OpenSearchStack .aip, utils.ps1 MSI custom actions, Resources/),
