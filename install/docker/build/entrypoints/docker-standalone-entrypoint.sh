@@ -114,17 +114,17 @@ ensure_secret() {
         return
     fi
 
-    mkdir -p "$secrets_dir"
+    # The data volume belongs to onlyoffice, so the secret files are read and written as onlyoffice: root would follow a symlink planted there
+    run_as_onlyoffice sh -c 'umask 077 && mkdir -p "$1"' sh "$secrets_dir"
 
     # 2. Use saved value if present
     if [ -f "$secret_file" ]; then
-        value="$(cat "$secret_file")"
+        value="$(run_as_onlyoffice cat "$secret_file")"
         log "Using persisted $var_name."
     else
     # 3. Generate a new value
         value="$(openssl rand -base64 64 | tr -dc 'A-Za-z0-9' | head -c "$length")"
-        printf '%s' "$value" > "$secret_file"
-        chmod 600 "$secret_file"
+        printf '%s' "$value" | run_as_onlyoffice sh -c 'umask 077 && cat > "$1"' sh "$secret_file"
         log "Generated and persisted $var_name."
     fi
 
@@ -611,11 +611,13 @@ main() {
     echo "🚀 Starting Docker entrypoint..."
     echo "=================================="
     log "=== Starting initialization ==="
-    # Runs before the chown below, so the Studio tree it creates ends up owned by onlyoffice
-    maintain_plugins
     # app_data/log_data are shared with onlyoffice-document-server, which re-chowns its own Data dir's inode to its "ds" user on every one of its own restarts (confirmed live, not recursive - only this one entry). onlyoffice is in Docs' group (Dockerfile), so chmod g+w here survives that indefinitely; skips Docs' own wopi keys, its private signing material.
     find /app/onlyoffice/data \( -name wopi_private.key -o -name wopi_public.key \) -prune -o -exec chown -h onlyoffice:onlyoffice {} +
     chmod g+w /app/onlyoffice/data
+    # Runs after the chown above and as onlyoffice, so root never copies, removes or writes inside the data volume
+    export -f log install_plugin maintain_plugins
+    run_as_onlyoffice bash -euo pipefail -c maintain_plugins
+    export -fn log install_plugin maintain_plugins
     chown onlyoffice:onlyoffice /var/log/onlyoffice
     chmod g+w /var/log/onlyoffice
     update_nlog_level
