@@ -274,12 +274,13 @@ if ! apt-get "${DOCS_APT_OPTIONS[@]}" install -yq "${DOTNET_PKG}"; then
   DOTNET_RUNTIME_VERSION=$(dotnet --list-runtimes | awk '$1 == "Microsoft.AspNetCore.App" {print $2}' | sort -V | tail -1)
   [ -n "${DOTNET_RUNTIME_VERSION}" ] || { echo "ASP.NET Core runtime installation failed" >&2; exit 1; }
 
-  DOTNET_PKGDIR="/tmp/${DOTNET_PKG}"; mkdir -p "${DOTNET_PKGDIR}/DEBIAN"
+  # A private directory, so no other local user can plant maintainer scripts into the package installed as root
+  DOTNET_BUILD_DIR="$(mktemp -d)"; DOTNET_PKGDIR="${DOTNET_BUILD_DIR}/${DOTNET_PKG}"; mkdir -p "${DOTNET_PKGDIR}/DEBIAN"
   printf "Package: %s\nVersion: %s\nArchitecture: %s\nMaintainer: local\nDescription: Provides ASP.NET Core %s Runtime\n" \
 	"${DOTNET_PKG}" "${DOTNET_RUNTIME_VERSION}" "$(dpkg --print-architecture)" "${DOTNET_VERSION}" > "${DOTNET_PKGDIR}/DEBIAN/control"
 
-  dpkg-deb --build "${DOTNET_PKGDIR}" "/tmp/${DOTNET_PKG}.deb" && dpkg -i "/tmp/${DOTNET_PKG}.deb"
-  rm -rf "${DOTNET_PKGDIR}" "/tmp/${DOTNET_PKG}.deb"
+  dpkg-deb --build "${DOTNET_PKGDIR}" "${DOTNET_BUILD_DIR}/${DOTNET_PKG}.deb" && dpkg -i "${DOTNET_BUILD_DIR}/${DOTNET_PKG}.deb"
+  rm -rf "${DOTNET_BUILD_DIR}"
 fi
 
 if ! dpkg -l | grep -q "opensearch"; then
