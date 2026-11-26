@@ -107,7 +107,8 @@ check_file_format() {
     PRIVATEKEY_FILE="${PKCS12_BASE}-private.pem"
     echo "$FILE is a valid PFX certificate. Converting to PEM..."
     PFX_PASSWORD="${PFX_PASSWORD}" openssl pkcs12 -in "$FILE" -out "$CERTIFICATE_FILE" -nokeys -passin env:PFX_PASSWORD
-    PFX_PASSWORD="${PFX_PASSWORD}" openssl pkcs12 -in "$FILE" -out "$PRIVATEKEY_FILE" -nocerts -nodes -passin env:PFX_PASSWORD
+    # The unencrypted private key is created readable by root only
+    ( umask 077; PFX_PASSWORD="${PFX_PASSWORD}" openssl pkcs12 -in "$FILE" -out "$PRIVATEKEY_FILE" -nocerts -nodes -passin env:PFX_PASSWORD && chmod 600 "$PRIVATEKEY_FILE" )
 
   elif openssl x509 -in "$FILE" -inform DER -text -noout > /dev/null 2>&1; then
     echo "$FILE is a valid DER/CER certificate. Converting to PEM..."
@@ -325,19 +326,19 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
       if ! openssl verify -untrusted "${CERTIFICATE_FILE}" "${CERTIFICATE_FILE}" >/dev/null 2>&1; then
         echo "Note: the certificate chain is not trusted by this host (self-signed certificate or private CA); it is added to the trusted CAs of the Node.js services."
         APPS_CA_CERTIFICATE="${CONFIG_DIR}/selfsigned-ca.pem"
-        cp -fL -- "${CERTIFICATE_FILE}" "${APPS_CA_CERTIFICATE}"
+        # Only the certificate blocks are copied, so a private key kept in the same PEM file never becomes readable by the services
+        awk '/-----BEGIN CERTIFICATE-----/ {copy=1} copy {print} /-----END CERTIFICATE-----/ {copy=0}' "${CERTIFICATE_FILE}" > "${APPS_CA_CERTIFICATE}"
         chmod 0644 "${APPS_CA_CERTIFICATE}"
         grep -q "NODE_EXTRA_CA_CERTS" ${CONFIG_DIR}/systemd.env && \
           sed -i "s!\(NODE_EXTRA_CA_CERTS=\).*!\1${APPS_CA_CERTIFICATE}!" ${CONFIG_DIR}/systemd.env || \
           echo "NODE_EXTRA_CA_CERTS=${APPS_CA_CERTIFICATE}" >> ${CONFIG_DIR}/systemd.env
         if [ "${PRESERVE_DOCS}" = false ]; then
-          chmod o+rx $(dirname "$CERTIFICATE_FILE")
-          chmod 644 ${CERTIFICATE_FILE}
+          # The Docs services read the same certificate-only copy (ds is in the onlyoffice group), so the permissions of the files passed in stay as they are
           for SYSTEMD_NODE_FILE in ${SYSTEMD_DIR}/ds-*.service; do
             [[ ${SYSTEMD_NODE_FILE} == *"ds-example"* || ! -f ${SYSTEMD_NODE_FILE} ]] && continue
             grep -q "NODE_EXTRA_CA_CERTS" ${SYSTEMD_NODE_FILE} && \
-              sed -i "s!\(NODE_EXTRA_CA_CERTS=\).*!\1${CERTIFICATE_FILE}!" ${SYSTEMD_NODE_FILE} || \
-              sed -i "/ExecStart=/i Environment=NODE_EXTRA_CA_CERTS=${CERTIFICATE_FILE}" ${SYSTEMD_NODE_FILE}
+              sed -i "s!\(NODE_EXTRA_CA_CERTS=\).*!\1${APPS_CA_CERTIFICATE}!" ${SYSTEMD_NODE_FILE} || \
+              sed -i "/ExecStart=/i Environment=NODE_EXTRA_CA_CERTS=${APPS_CA_CERTIFICATE}" ${SYSTEMD_NODE_FILE}
           done
         fi
         systemctl daemon-reload
