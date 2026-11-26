@@ -83,12 +83,12 @@ jobs:
       matrix: ${{fromJSON(needs.prepare.outputs.matrix)}}
 
     steps:
-      - name: Free Disk Space
-        run: |
-          curl -fsSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/refs/heads/${GITHUB_REF_NAME}/.github/scripts/free-disk-space-linux.sh" | sudo VBOX_SAFE=1 bash
-
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # The checked-out copy runs as root, not the branch tip fetched from GitHub
+      - name: Free Disk Space
+        run: sudo VBOX_SAFE=1 bash .github/scripts/free-disk-space-linux.sh
 
       - name: Install tools
         run: |

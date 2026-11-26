@@ -92,12 +92,12 @@ jobs:
       OS: ${{ matrix.os }}
       DISTR: ${{ matrix.distr }}
     steps:
-      - name: Free Disk Space
-        run: |
-          curl -fsSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/refs/heads/${GITHUB_REF_NAME}/.github/scripts/free-disk-space-linux.sh" | sudo VBOX_SAFE=1 bash
-
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # The checked-out copy runs as root, not the branch tip fetched from GitHub
+      - name: Free Disk Space
+        run: sudo VBOX_SAFE=1 bash .github/scripts/free-disk-space-linux.sh
 
       - name: 'Download hcp CLI'
         uses: 'hashicorp/hcp-setup-action@fa6934c14c661dfbe9b6cf9c47ddb41759d625aa' # v0
@@ -136,7 +136,8 @@ jobs:
                     vagrant up --provider=virtualbox
                   sleep 300
                   vagrant package --output ${PRODUCT}-${OS_NAME}.box
-                  wget https://raw.githubusercontent.com/ONLYOFFICE/ga-common/refs/heads/master/.github/scripts/vagrant_publish.sh
+                  # Pinned to a ga-common commit: the script runs with the HCP credentials
+                  wget https://raw.githubusercontent.com/ONLYOFFICE/ga-common/1c2ee7c30b18321fe92b9be941eb80a69b6c5b3a/.github/scripts/vagrant_publish.sh
                   bash ./vagrant_publish.sh
           on_retry_command: |
                 set -eux
