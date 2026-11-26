@@ -1012,6 +1012,9 @@ function SetProtectedDirAcl {
         & "$env:SystemRoot\System32\icacls.exe" $_.FullName /reset /T /C /Q | Out-Null
         if ($LASTEXITCODE -ne 0) { throw "icacls /reset failed for $($_.FullName) with exit code $LASTEXITCODE" }
     }
+    # An owner keeps the right to change the ACL, so a user who created files here before the lock loses ownership too.
+    & "$env:SystemRoot\System32\icacls.exe" $Dir /setowner '*S-1-5-32-544' /T /C /Q | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "icacls /setowner failed for $Dir with exit code $LASTEXITCODE" }
 }
 
 # The folder saved in the registry by a prerequisite package (OpenResty, OpenSearch, OpenSearchStack), or the system drive root one it uses by default.
