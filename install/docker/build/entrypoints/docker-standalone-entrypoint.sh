@@ -55,7 +55,8 @@ export ENV_EXTENSION="${ENV_EXTENSION:-none}"
 APP_CORE_SERVER_ROOT=${APP_CORE_SERVER_ROOT:-""}
 APP_KNOWN_PROXIES=${APP_KNOWN_PROXIES:-""}
 APP_KNOWN_NETWORKS=${APP_KNOWN_NETWORKS:-""}
-CERTBOT_DIRS=(--config-dir /etc/letsencrypt --work-dir /tmp/letsencrypt --logs-dir /var/log/onlyoffice/letsencrypt)
+# certbot runs as root, so its work and log directories stay root-owned: not /tmp and not the log volume that onlyoffice owns
+CERTBOT_DIRS=(--config-dir /etc/letsencrypt --work-dir /var/lib/letsencrypt --logs-dir /var/log/letsencrypt)
 
 export MYSQL_PWD="$MYSQL_PASSWORD"
 # No service needs the MySQL root password, so the supervised processes must not inherit it
@@ -242,7 +243,6 @@ setup_nginx_ssl() {
             [[ "$LETSENCRYPT_STAGING" == "true" ]] && staging_arg=(--staging)
             [[ "$LETSENCRYPT_FORCE_RENEW" == "true" ]] && renew_arg=(--force-renewal)
 
-            # CERTBOT_DIRS: the default work/log dirs under /var are root-only, and this container never runs as root.
             if certbot certonly "${CERTBOT_DIRS[@]}" \
                 --standalone \
                 --preferred-challenges http \
