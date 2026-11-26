@@ -453,7 +453,9 @@ setup_openresty(){
 
 	getent group "${NGINX_GROUP}" >/dev/null || groupadd "${NGINX_GROUP}"
 	id "${NGINX_USER}" >/dev/null 2>&1 || useradd -g "${NGINX_GROUP}" -s "${OPENRESTY_DIR}/" "${NGINX_USER}"
-	chown -R "${NGINX_USER}:${NGINX_GROUP}" "${OPENRESTY_DIR}"*
+	# The root master process loads this configuration, so only root may change it; the workers keep read access through the group
+	chown -R "root:${NGINX_GROUP}" "${OPENRESTY_DIR}"
+	chmod -R go-w "${OPENRESTY_DIR}"
 	[ -d "${NGINX_LOG_DIR}" ] || { mkdir -p "${NGINX_LOG_DIR}" && chown "${NGINX_USER}:${NGINX_GROUP}" "${NGINX_LOG_DIR}"; }
 
 	systemctl enable openresty >/dev/null 2>&1
@@ -626,8 +628,9 @@ setup_dashboards() {
 	DASHBOARDS_PASSWORD=$(generate_key "dashboards-password" 20 "${DASHBOARDS_PASSWORD:-}")
 
 	# configure login&pass for Dashboards, used by Nginx HTTP Basic Authentication
-	echo "${DASHBOARDS_USERNAME:-"onlyoffice"}:$(openssl passwd -6 -stdin <<< "${DASHBOARDS_PASSWORD}")" > /etc/openresty/.htpasswd_dashboards
-	chown ${NGINX_USER}:${NGINX_GROUP} /etc/openresty/.htpasswd_dashboards && chmod 640 /etc/openresty/.htpasswd_dashboards
+	# Owned by root and readable by the nginx workers only, the group is set with the rest of the OpenResty configuration
+	(umask 027; echo "${DASHBOARDS_USERNAME:-"onlyoffice"}:$(openssl passwd -6 -stdin <<< "${DASHBOARDS_PASSWORD}")" > /etc/openresty/.htpasswd_dashboards)
+	chown root /etc/openresty/.htpasswd_dashboards && chmod 640 /etc/openresty/.htpasswd_dashboards
 
 	# enable connection with opensearch
 	: "${ELK_SCHEME:=$(json -f "${APP_DIR}/elastic.${ENVIRONMENT}.json" elastic.Scheme 2>/dev/null)}"

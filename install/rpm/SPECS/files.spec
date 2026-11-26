@@ -54,9 +54,9 @@
 
 %files proxy
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
-%config %{_sysconfdir}/openresty/includes/*
-%config %{_sysconfdir}/openresty/conf.d/*
-%config %{_sysconfdir}/openresty/html/*
+%config %attr(644, root, root) %{_sysconfdir}/openresty/includes/*
+%config %attr(644, root, root) %{_sysconfdir}/openresty/conf.d/*
+%config %attr(644, root, root) %{_sysconfdir}/openresty/html/*
 %attr(744, root, root) %{_bindir}/%{product}-ssl-setup
 %config %attr(640, root, %{package_sysname}) %{_sysconfdir}/%{package_sysname}/%{product}/openresty/nginx.conf.template
 %dir %attr(755, root, root) %{_sysconfdir}/%{package_sysname}/
