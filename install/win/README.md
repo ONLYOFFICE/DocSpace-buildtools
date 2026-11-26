@@ -24,11 +24,12 @@ The step-by-step guide with screenshots is on the
 
 ## Installation
 
-1. On a server without internet access, first run `ONLYOFFICE_Apps_Prerequisites_Win-install.exe`: it installs the
-   third-party components that the edition EXE otherwise downloads. With internet access, skip this step.
-2. Run `ONLYOFFICE_Apps_<Edition>_Win-install.exe` as an administrator and follow the wizard. The default connections fit
+*(Optional)* On a server without internet access, first run `ONLYOFFICE_Apps_Prerequisites_Win-install.exe`: it installs the
+third-party components that the edition EXE otherwise downloads.
+
+1. Run `ONLYOFFICE_Apps_<Edition>_Win-install.exe` as an administrator and follow the wizard. The default connections fit
    MySQL, PostgreSQL, RabbitMQ, Redis and OpenSearch installed on the same server; enter other addresses to use external ones.
-3. Open `http://<server address>/` and create the administrator of the portal.
+2. Open `http://<server address>/` and create the administrator of the portal.
 
 Apps is installed into `C:\Program Files (x86)\Ascensio System SIA\Apps` by default. **Enterprise and Developer** read the
 license from `Data\license.lic` in that folder.
