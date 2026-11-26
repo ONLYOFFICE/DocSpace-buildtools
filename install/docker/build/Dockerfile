@@ -787,7 +787,8 @@ RUN set -eux; \
     setcap 'cap_net_bind_service=+ep' /usr/local/openresty/nginx/sbin/nginx; \
     mkdir -p /var/log/nginx /var/log/openresty /var/log/supervisor /etc/nginx/conf.d /etc/nginx/includes /etc/nginx/templates /etc/letsencrypt /letsencrypt; \
     # The entrypoint runs as root and generates dhparam.pem itself, so /etc/ssl/certs and the openresty binaries stay root-owned; onlyoffice only writes the nginx logs under /usr/local/openresty
-    chown -R onlyoffice:onlyoffice /var/log/nginx /var/log/openresty /etc/letsencrypt /letsencrypt /usr/local/openresty/nginx/logs; \
+    # certbot writes /etc/letsencrypt and the /letsencrypt webroot as root, openresty only reads them
+    chown -R onlyoffice:onlyoffice /var/log/nginx /var/log/openresty /usr/local/openresty/nginx/logs; \
     # supervisord runs as root and writes its logs, pid and socket under /var/log and /run, so onlyoffice must not be able to plant a symlink there
     chown root:root /var/log /run; \
     # onlyoffice-document-server shares app_data/log_data with this container (docker-compose.yml) and owns its own Data dir as "ds", gid 102 in its own image - confirmed live. It only chowns that directory's own inode (not recursively), never its mode, so membership here plus the entrypoint's one-time chmod g+w survives any number of its restarts, no ongoing fixup needed. Keep gid 102 in sync if onlyoffice/documentserver's own "ds" group ever changes.

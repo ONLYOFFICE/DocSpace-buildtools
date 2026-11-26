@@ -137,6 +137,8 @@ ensure_secret() {
 # ============================================
 setup_nginx_ssl() {
     mkdir -p /letsencrypt /etc/letsencrypt
+    # certbot writes the ACME webroot as root; a webroot_path volume created by an older image is onlyoffice-owned, so it is handed back to root
+    find /letsencrypt \( ! -user root -o ! -group root \) -exec chown -h root:root {} +
 
     write_http_nginx_conf() {
         cp /app/onlyoffice/template/nginx/onlyoffice-proxy.conf \
