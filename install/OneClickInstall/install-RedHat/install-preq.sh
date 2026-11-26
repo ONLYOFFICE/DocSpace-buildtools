@@ -108,7 +108,10 @@ fi
 # Add EPEL repo.
 EPEL_URL="https://dl.fedoraproject.org/pub/epel/"
 [ "$DIST" != "fedora" ] && { rpm -ivh ${EPEL_URL}/epel-release-latest-$REV.noarch.rpm || true; }
-[ "$REV" = "9" ] && update-crypto-policies --set DEFAULT:SHA1
+# crypto-policies with the rpm-sequoia back-end (EL 9.7+) trusts SHA-1 package signatures in every policy, so only an older EL9 still weakens the host-wide policy
+if [ "$REV" = "9" ] && ! grep -qs '^sha1.collision_resistance = "always"' /etc/crypto-policies/back-ends/rpm-sequoia.config; then
+	update-crypto-policies --set DEFAULT:SHA1
+fi
 [ "$DIST" = "centos" ] && TESTING_REPO="--enablerepo=$( [ "$REV" -ge "9" ] && echo "crb" || echo "powertools" )"
 if [ "$DIST" = "redhat" ] && [ "$REV" -ge 9 ]; then 
 	LADSPA_PACKAGE_VERSION=$(curl -fsSL "${EPEL_URL}/10/Everything/${ARCH}/Packages/l/" | grep -oP 'ladspa-[0-9].*?\.rpm' | sort -V | tail -n 1)
