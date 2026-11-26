@@ -69,10 +69,9 @@ function Initialize-Files {
     Copy-Tree (Join-Path $Paths.Work 'plugins\publish\*') (Join-Path $Files 'Data\Studio\webplugins') -Empty
     Copy-Tree (Join-Path $Paths.Work 'mcp\bin\*') (Join-Path $Files 'products\ASC.AI\mcp') -Empty
 
-    # WinSW: OpenResty keeps the .NET 4 build, the other services run on WinSW 3
-    Copy-Item (Join-Path $Winsw 'WinSW.NET4.exe') "$Out\OpenResty\tools\OpenResty.exe" -Force
-    Copy-Item (Join-Path $Winsw 'OpenResty.xml') "$Out\OpenResty\tools\OpenResty.xml" -Force
+    # WinSW 3 wrappers: each service gets the executable under its own name and its XML next to it
     $wrappers = [ordered]@{
+        "$Out\OpenResty\tools"       = @('OpenResty')
         "$Out\OpenSearch\tools"      = @('OpenSearch')
         "$Out\OpenSearchStack\tools" = @('OpenSearchDashboards')
         "$Files\tools"               = @('Socket.IO', 'AI.Chat', 'SsoAuth', 'DocEditor', 'Login', 'Sdk', 'MCP', 'Management', 'Identity.Authorization', 'Identity.Registration')

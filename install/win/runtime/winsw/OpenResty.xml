@@ -7,6 +7,9 @@
 	<delayedAutoStart>true</delayedAutoStart>
 	<onfailure action="restart" delay="1 sec"/>
 	<executable>&quot;{APPDIR}nginx.exe&quot;</executable>
+	<!-- WinSW 3 kills the nginx master first and then fails on its exiting workers, so nginx stops itself, as the Proxy service of Docs does -->
+	<stopexecutable>&quot;{APPDIR}nginx.exe&quot;</stopexecutable>
+	<stoparguments>-s stop</stoparguments>
 	<workingdirectory>{APPDIR}</workingdirectory>
 	<log mode="roll-by-size">
   		<sizeThreshold>10240</sizeThreshold>
