@@ -135,6 +135,8 @@ jobs:
         run: |
           wget -O - https://dl.yarnpkg.com/debian/pubkey.gpg | \
           sudo gpg --batch --yes --dearmor -o /usr/share/keyrings/yarnkey.gpg
+          # The yarn keyring holds the original RSA key and the 2026 ed25519 key; any other primary key fails the build
+          [ "$(gpg --show-keys --with-colons /usr/share/keyrings/yarnkey.gpg | awk -F: '/^pub:/ {primary=1; next} primary && /^fpr:/ {print $10; primary=0}' | sort | paste -sd' ')" = "4EF8150F4F2D7DE44F1DFF0BB42879CC6B38E118 72ECF46A56B4AD39C907BBB71646B01B86E50310" ] || { echo "::error::Unexpected yarn signing key"; exit 1; }
           echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian/ stable main" | \
           sudo tee /etc/apt/sources.list.d/yarn.list
           # NodeSource nodejs satisfies the package Build-Depends; its repository is added directly with the signing key checked by fingerprint instead of running its setup script as root
