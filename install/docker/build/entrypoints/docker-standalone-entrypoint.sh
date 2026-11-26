@@ -74,6 +74,9 @@ LETSENCRYPT_FAIL_OPEN=${LETSENCRYPT_FAIL_OPEN:-"false"}
 
 log() { echo "[$(date +'%F %T')] $1"; }
 
+# Everything that does not need root runs as onlyoffice: the migration runner and openresty -t
+run_as_onlyoffice() { setpriv --reuid=onlyoffice --regid=onlyoffice --init-groups "$@"; }
+
 # ============================================
 # CONFIGURE NLOG LEVEL
 # ============================================
@@ -394,6 +397,8 @@ s/# BEGIN_CSP_LUA.*?# END_CSP_LUA/$lua/s;
     fi
 
     mv "$TEMP_CONF" "$NGINX_CONF"
+    # mktemp creates the file 0600 and openresty reads it as onlyoffice
+    chmod 644 "$NGINX_CONF"
 
     rm -f "$TEMP_LUA"
 
@@ -519,8 +524,7 @@ run_migrations() {
         "$MYSQL_DATABASE" 2>/dev/null || log "   No migrations applied yet"
 
     log "🚀 Running database migration..."
-    cd "${BACKEND_PATH}"
-    if dotnet ASC.Migration.Runner.dll "${migration_args[@]}"; then
+    if (cd "${BACKEND_PATH}" && run_as_onlyoffice dotnet ASC.Migration.Runner.dll "${migration_args[@]}"); then
         log "✅ Migration completed successfully"
         log "📋 Updated migration state: $(migration_count)"
         log "📋 Most recent migrations:"
@@ -623,14 +627,13 @@ main() {
     setup_nginx_ssl
     log "🌐 Initializing nginx..." && /nginx/docker-entrypoint.sh
 
-    # onlyoffice owns the nginx configuration and logs; the openresty binaries, its Lua libraries and the CA bundle stay with root, so nothing root runs here can be replaced from the onlyoffice account; /etc/nginx/certs is skipped because it is a read-only bind mount
-    find /etc/nginx /var/log/nginx /var/log/openresty -path /etc/nginx/certs -prune -o -exec chown -h onlyoffice:onlyoffice {} +
+    # onlyoffice owns only the nginx logs; root writes the nginx configuration, so the onlyoffice account cannot plant a symlink there that root follows on the next start; /etc/nginx/certs is skipped because it is a read-only bind mount
+    find /var/log/nginx /var/log/openresty -exec chown -h onlyoffice:onlyoffice {} +
     # Only entries that are not root-owned are changed: a blanket chown -R would copy the whole tree up into the container layer on every start
-    find /usr/local/openresty /etc/ssl/certs -path /usr/local/openresty/nginx/logs -prune -o \( ! -user root -o ! -group root \) -exec chown -h root:root {} +
+    find /etc/nginx /usr/local/openresty /etc/ssl/certs \( -path /etc/nginx/certs -o -path /usr/local/openresty/nginx/logs \) -prune -o \( ! -user root -o ! -group root \) -exec chown -h root:root {} +
     chown -h onlyoffice:onlyoffice /usr/local/openresty/nginx/logs
-
-    # The config is writable by onlyoffice, so it is never parsed by root: openresty -t runs as onlyoffice
-    run_as_onlyoffice() { setpriv --reuid=onlyoffice --regid=onlyoffice --init-groups "$@"; }
+    # The dashboards password hash is readable by the openresty workers only
+    [ ! -f /etc/nginx/.htpasswd_dashboards ] || { chgrp onlyoffice /etc/nginx/.htpasswd_dashboards && chmod 640 /etc/nginx/.htpasswd_dashboards; }
 
     # The Dockerfile already strips quic/http3 at build time when this openresty build lacks it; this is a second check in case that detection was wrong - better HTTPS without HTTP/3 than openresty crash-looping.
     if ! run_as_onlyoffice /usr/local/openresty/bin/openresty -t >/tmp/nginx-t.log 2>&1 && grep -qi 'quic\|http/3\|http3' /tmp/nginx-t.log; then
@@ -645,7 +648,9 @@ main() {
 
     log "✅ Initialization complete - starting supervisord"
     log "=================================="
-    exec supervisord -n
+    # An explicit config and cwd: supervisord would otherwise look for ./supervisord.conf first
+    cd /
+    exec supervisord -n -c /etc/supervisor/supervisord.conf
 }
 
 main

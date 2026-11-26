@@ -783,7 +783,9 @@ RUN set -eux; \
     setcap 'cap_net_bind_service=+ep' /usr/local/openresty/nginx/sbin/nginx; \
     mkdir -p /var/log/nginx /var/log/openresty /var/log/supervisor /etc/nginx/conf.d /etc/nginx/includes /etc/nginx/templates /etc/letsencrypt /letsencrypt; \
     # The entrypoint runs as root and generates dhparam.pem itself, so /etc/ssl/certs and the openresty binaries stay root-owned; onlyoffice only writes the nginx logs under /usr/local/openresty
-    chown -R onlyoffice:onlyoffice /etc/nginx /var/log/nginx /var/log/openresty /var/log/supervisor /etc/letsencrypt /letsencrypt /usr/local/openresty/nginx/logs; \
+    chown -R onlyoffice:onlyoffice /var/log/nginx /var/log/openresty /etc/letsencrypt /letsencrypt /usr/local/openresty/nginx/logs; \
+    # supervisord runs as root and writes its logs, pid and socket under /var/log and /run, so onlyoffice must not be able to plant a symlink there
+    chown root:root /var/log /run; \
     # onlyoffice-document-server shares app_data/log_data with this container (docker-compose.yml) and owns its own Data dir as "ds", gid 102 in its own image - confirmed live. It only chowns that directory's own inode (not recursively), never its mode, so membership here plus the entrypoint's one-time chmod g+w survives any number of its restarts, no ongoing fixup needed. Keep gid 102 in sync if onlyoffice/documentserver's own "ds" group ever changes.
     groupadd -g 102 dsdata && usermod -aG 102 onlyoffice; \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb /tmp/*
@@ -793,23 +795,23 @@ RUN set -eux; \
 COPY --from=src ${SRC_PATH}/buildtools/install/docker/build/entrypoints/docker-standalone-entrypoint.sh /docker-entrypoint.sh
 COPY --from=src ${SRC_PATH}/buildtools/install/docker/build/entrypoints/entrypoint-functions.sh /usr/bin/entrypoint-functions.sh
 # COPY --chown=onlyoffice:onlyoffice entrypoints/docker-standalone-entrypoint.sh /docker-entrypoint.sh
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/build/supervisor/standalone.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --from=src ${SRC_PATH}/buildtools/install/docker/build/supervisor/standalone.conf /etc/supervisor/conf.d/supervisord.conf
 # COPY --chown=onlyoffice:onlyoffice supervisor/standalone.conf /etc/supervisor/conf.d/supervisord.conf
 
-# nginx config, static files, router scripts
-COPY --from=src --exclude=onlyoffice-login.conf --exclude=onlyoffice-management.conf --chown=onlyoffice:onlyoffice /etc/nginx/conf.d /etc/nginx/conf.d
-COPY --from=src --chown=onlyoffice:onlyoffice /etc/nginx/includes /etc/nginx/includes
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/config/nginx/html /etc/nginx/html
+# nginx config, static files, router scripts (root-owned: the entrypoint renders them as root, openresty only reads them)
+COPY --from=src --exclude=onlyoffice-login.conf --exclude=onlyoffice-management.conf /etc/nginx/conf.d /etc/nginx/conf.d
+COPY --from=src /etc/nginx/includes /etc/nginx/includes
+COPY --from=src ${SRC_PATH}/buildtools/config/nginx/html /etc/nginx/html
 COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/campaigns/src/campaigns ${BUILD_PATH}/public/campaigns
 COPY --from=src ${SRC_PATH}/buildtools/install/docker/config/nginx/router/docker-entrypoint.d /docker-entrypoint.d
 COPY --from=src ${SRC_PATH}/buildtools/install/docker/config/nginx/router/docker-entrypoint.sh /nginx/docker-entrypoint.sh
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/nginx.conf.template /etc/nginx/nginx.conf.template
+COPY --from=src ${SRC_PATH}/buildtools/install/docker/config/nginx/nginx.conf.template /etc/nginx/nginx.conf.template
 COPY --from=src ${SRC_PATH}/buildtools/install/docker/build/entrypoints/prepare-nginx-router.sh /docker-entrypoint.d/prepare-nginx-router.sh
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/router/templates/standalone-upstream.conf.template /etc/nginx/templates/upstream.conf.template
+COPY --from=src ${SRC_PATH}/buildtools/install/docker/config/nginx/router/templates/standalone-upstream.conf.template /etc/nginx/templates/upstream.conf.template
 # Same front-proxy configs the microservices proxy container and the DEB/RPM packages use; the RUN below adapts them the way packages-build.sh does.
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/proxy/onlyoffice-proxy.conf /app/onlyoffice/template/nginx/onlyoffice-proxy.conf
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/proxy/onlyoffice-proxy-ssl.conf /app/onlyoffice/template/nginx/onlyoffice-proxy-ssl.conf
-COPY --from=src --chown=onlyoffice:onlyoffice ${SRC_PATH}/buildtools/install/docker/config/nginx/proxy/letsencrypt.conf /etc/nginx/includes/letsencrypt.conf
+COPY --from=src ${SRC_PATH}/buildtools/install/docker/config/nginx/proxy/onlyoffice-proxy.conf /app/onlyoffice/template/nginx/onlyoffice-proxy.conf
+COPY --from=src ${SRC_PATH}/buildtools/install/docker/config/nginx/proxy/onlyoffice-proxy-ssl.conf /app/onlyoffice/template/nginx/onlyoffice-proxy-ssl.conf
+COPY --from=src ${SRC_PATH}/buildtools/install/docker/config/nginx/proxy/letsencrypt.conf /etc/nginx/includes/letsencrypt.conf
 
 # nodejs static and dynamic files
 COPY --from=node-bin /usr/local/bin/node /usr/local/bin/node
@@ -821,9 +823,9 @@ COPY --from=build-node-services --chown=onlyoffice:onlyoffice ${SRC_PATH}/server
 # Release plugins stay outside the app_data volume; the entrypoint syncs them into it
 COPY --from=build-plugins --chown=onlyoffice:onlyoffice ${SRC_PATH}/plugins/publish/ ${BUILD_PATH}/studio/plugins
 
-# .NET Monolith and Migration Runner
-COPY --from=build-dotnet-standalone --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Monolith/service ${SRC_PATH}/publish/services/backend/
-COPY --from=build-dotnet-standalone --chown=onlyoffice:onlyoffice ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Migration.Runner/service ${SRC_PATH}/publish/services/backend/
+# .NET Monolith and Migration Runner (root-owned: the services only read them; the RUN below leaves just temp/ writable)
+COPY --from=build-dotnet-standalone ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Monolith/service ${SRC_PATH}/publish/services/backend/
+COPY --from=build-dotnet-standalone ${SRC_PATH}/publish-${TARGETARCH}/services/ASC.Migration.Runner/service ${SRC_PATH}/publish/services/backend/
 
 # java Identity (OAuth)
 ENV JAVA_HOME=/opt/java
@@ -837,6 +839,9 @@ COPY --from=mcp --chown=onlyoffice:onlyoffice  /srv/onlyoffice-docspace-mcp/bin 
 COPY --from=mcp --chown=onlyoffice:onlyoffice  /srv/onlyoffice-docspace-mcp/LICENSE ${SRC_PATH}/publish/services/onlyoffice-apps-mcp/LICENSE
 
 RUN set -eux; \
+    # The Monolith creates temp/ under its content root; the parents stay root-owned so onlyoffice cannot swap the directories root runs from or renders
+    install -d -o onlyoffice -g onlyoffice "${SRC_PATH}/publish/services/backend/temp"; \
+    chown root:root /app /app/onlyoffice "${SRC_PATH}" "${SRC_PATH}/publish" "${SRC_PATH}/publish/services" "${SRC_PATH}/publish/services/backend" /app/onlyoffice/template /app/onlyoffice/template/nginx; \
     sed -i -e 's#$public_root#/var/www/public/#' -e "/map \$scheme \$document_server {/,/}/ s|default \"http://[^\"]*\";|default \$document_server_vs_path;|" /etc/nginx/conf.d/onlyoffice.conf; \
     # route every .NET backend upstream to the single monolith port
     sed -i -E "s#default \"(http://127.0.0.1):(5000|5003|5004|5007|5010|5012|5157)\";#default \"\1:5051\";#g" "/etc/nginx/conf.d/onlyoffice.conf"; \
