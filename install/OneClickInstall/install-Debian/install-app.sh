@@ -69,7 +69,8 @@ setup_postgres_db() {
 		su - postgres -s /bin/bash -c "psql -c \"ALTER USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';\""
 	fi
 
-	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/db-pwd select "$DS_DB_PWD" | debconf-set-selections
+	# The password type keeps a secret preseeded before the templates exist in the root-only passwords.dat, not in the world-readable config.dat
+	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/db-pwd password "$DS_DB_PWD" | debconf-set-selections
 	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/db-user select "$DS_DB_USER" | debconf-set-selections
 	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/db-name select "$DS_DB_NAME" | debconf-set-selections
 }
@@ -125,7 +126,7 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
 
 	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/listenaddress string "127.0.0.1:${DS_PORT}" | debconf-set-selections
 	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/jwt-enabled select "${DS_JWT_ENABLED}" | debconf-set-selections
-	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/jwt-secret select "${DS_JWT_SECRET}" | debconf-set-selections
+	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/jwt-secret password "${DS_JWT_SECRET}" | debconf-set-selections
 	echo "${ds_pkg_name}" "$DS_COMMON_NAME"/jwt-header select "${DS_JWT_HEADER}" | debconf-set-selections
 
 	[ "$INSTALLATION_TYPE" != "community" ] && setup_postgres_db
@@ -150,14 +151,16 @@ if [ "$PRODUCT_INSTALLED" = "false" ]; then
 	echo "${package}" "${package}"/db-port select "$MYSQL_SERVER_PORT" | debconf-set-selections
 	echo "${package}" "${package}"/db-name select "$MYSQL_SERVER_DB_NAME" | debconf-set-selections
 	echo "${package}" "${package}"/db-user select "$MYSQL_SERVER_USER" | debconf-set-selections
-	echo "${package}" "${package}"/db-pwd select "$MYSQL_SERVER_PASS" | debconf-set-selections
+	echo "${package}" "${package}"/db-pwd password "$MYSQL_SERVER_PASS" | debconf-set-selections
 
-	if apt-get "${DOCS_APT_OPTIONS[@]}" install -y "${package}${PRODUCT_VERSION:+*=${PRODUCT_VERSION}}"; then
-		# Clear the password in debconf for a successful update when using external MySQL
-		if [ "$(echo "GET ${package}/db-pwd" | debconf-communicate "${package}" | awk '{print $2}')" = "$MYSQL_SERVER_PASS" ]; then
-			printf "SET ${package}/db-host\nSET ${package}/db-name\nSET ${package}/db-user\nSET ${package}/db-pwd\nSET ${package}/db-port\n" | debconf-communicate "${package}" >/dev/null
-		fi
-	else
+	APP_INSTALL_STATUS=0
+	apt-get "${DOCS_APT_OPTIONS[@]}" install -y "${package}${PRODUCT_VERSION:+*=${PRODUCT_VERSION}}" || APP_INSTALL_STATUS=$?
+	# Upgrades read the database settings from the configuration files, so the administrative credentials are dropped whatever the result
+	# The second pass rewrites config.dat once more, so its config.dat-old backup no longer holds a value preseeded by an earlier run
+	DEBCONF_CLEAR_COMMANDS="SET ${package}/db-host\nSET ${package}/db-name\nSET ${package}/db-user\nSET ${package}/db-pwd\nSET ${package}/db-port\n"
+	printf "${DEBCONF_CLEAR_COMMANDS}" | debconf-communicate "${package}" >/dev/null || true
+	printf "${DEBCONF_CLEAR_COMMANDS}" | debconf-communicate "${package}" >/dev/null || true
+	if [ "${APP_INSTALL_STATUS}" -ne 0 ]; then
 		echo "Error: installation of ${package} failed."
 		exit 1
 	fi
