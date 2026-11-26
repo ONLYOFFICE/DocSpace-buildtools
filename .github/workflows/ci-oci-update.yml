@@ -14,10 +14,6 @@ on:
          type: boolean
          description: 'CentOS 10S'
          default: true
-      debian11:
-         type: boolean
-         description: 'Debian 11'
-         default: true
       debian12:
          type: boolean
          description: 'Debian 12'
@@ -69,7 +65,6 @@ jobs:
             "include": [
               {"execute": '${{ github.event.inputs.centos9s   || true }}', "name": "CentOS 9S",    "os": "centos9s",   "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.centos10   || true }}', "name": "CentOS 10S",   "os": "centos10",   "distr": "onlyoffice"},
-              {"execute": '${{ github.event.inputs.debian11   || true }}', "name": "Debian 11",    "os": "debian11",   "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.debian12   || true }}', "name": "Debian 12",    "os": "debian12",   "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.debian13   || true }}', "name": "Debian 13",    "os": "debian13",   "distr": "onlyoffice"},
               {"execute": '${{ github.event.inputs.ubuntu2204 || true }}', "name": "Ubuntu 22.04", "os": "ubuntu2204", "distr": "onlyoffice"},
@@ -93,7 +88,7 @@ jobs:
           curl -fsSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/refs/heads/${GITHUB_REF_NAME}/.github/scripts/free-disk-space-linux.sh" | sudo VBOX_SAFE=1 bash
 
       - name: Checkout code
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install tools
         run: |
@@ -168,6 +163,13 @@ jobs:
         if: steps.boot.outcome == 'failure'
         run: echo "::warning::VM boot failed on ${{ matrix.name }} — runner infrastructure flake, update test skipped"
 
+      # The ~540 MB Docs DEB took over 50 minutes as one stream inside the VM; aria2 on the runner fetches it in seconds
+      - name: Prefetch Docs package
+        if: steps.boot.outcome == 'success' && github.ref_name != 'master' && (contains(matrix.os, 'ubuntu') || contains(matrix.os, 'debian'))
+        continue-on-error: true
+        timeout-minutes: 15
+        run: bash tests/vagrant/prefetch-docs.sh "${{ needs.prepare.outputs.docs_version }}" tests/vagrant/prefetch
+
       - name: "Update on ${{matrix.name}}"
         if: steps.boot.outcome == 'success'
         timeout-minutes: 75
@@ -177,6 +179,8 @@ jobs:
           OS: docspace-${{ matrix.os }}
           RAM: 8192
           CPU: 3
+          # Ubuntu guests time out on archive.ubuntu.com from the runners; the runner image itself uses this mirror
+          APT_MIRROR: http://azure.archive.ubuntu.com/ubuntu
           DOWNLOAD_SCRIPT: '-ds false'
           TEST_REPO: "${{ github.ref_name == 'master' && '-tr false' || '-tr true' }}"
           VER: "-v ${{ needs.prepare.outputs.docs_version }}"

@@ -545,7 +545,7 @@ setup_docs() {
 	json_configuration "${USER_CONF}" "files.docservice.url.portal" "${_portal_url:-http://${APP_HOST}:${APP_PORT}}"
 	
 	local _ds_public="${DOCUMENT_SERVER_URL_EXTERNAL:-"/ds-vpath"}"
-	json_configuration "${APP_DIR}/externalresources.${ENVIRONMENT}.json" "externalresources.adminpanel.default.domain" "${_ds_public%/}/admin"
+	json_configuration "${APP_DIR}/externalresources.${ENVIRONMENT}.json" "externalresources.adminpanel.default.domain" "${_ds_public%/}/admin/"
 
 	echo "OK"
 }

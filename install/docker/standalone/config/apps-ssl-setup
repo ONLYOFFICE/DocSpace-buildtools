@@ -239,6 +239,8 @@ check_file_format() {
     openssl pkcs7 -in "$FILE" -print_certs -out "$CERTIFICATE_PEM"
     KIND="certificate"
 
+  elif grep -qE -- '-----BEGIN ENCRYPTED PRIVATE KEY-----|Proc-Type: 4,ENCRYPTED' "$FILE"; then
+    echo "Error: $FILE is a passphrase-protected private key, which is not supported; remove the passphrase first: openssl pkey -in \"$FILE\" -out <new key file>" && exit 1
   elif openssl pkey -in "$FILE" -passin pass: -out "$PRIVATEKEY_PEM" >/dev/null 2>&1; then
     echo "$FILE is a valid private key."
     KIND="key"
@@ -418,8 +420,11 @@ case $1 in
   ;;
 esac
 
-[ "$(openssl x509 -in "$CERTIFICATE_PEM" -noout -pubkey | openssl sha256)" = "$(openssl pkey -in "$PRIVATEKEY_PEM" -pubout | openssl sha256)" ] \
-  || { echo "Error: the private key does not match the certificate." && exit 1; }
+# An empty passphrase makes an encrypted key fail at once instead of prompting
+KEY_PUBLIC=$(openssl pkey -in "$PRIVATEKEY_PEM" -passin pass: -pubout 2>/dev/null) \
+  || { echo "Error: cannot read the private key ${PRIVATEKEY_PEM}; a passphrase-protected key is not supported." && exit 1; }
+[ "$(openssl x509 -in "$CERTIFICATE_PEM" -noout -pubkey)" = "${KEY_PUBLIC}" ] \
+  || { echo "Error: the private key does not match the certificate (the server certificate must be the first one in the file)." && exit 1; }
 
 install -d -m 755 "${CERTS_DIR}"
 install -m 644 "$CERTIFICATE_PEM" "${CERTS_DIR}/fullchain.pem"

@@ -52,9 +52,10 @@ run_remote_bash() {
 	local SCRIPT_TMP
 
 	SCRIPT_TMP="$(mktemp)"
-	curl -fsSL --retry 3 --retry-delay 2 "${URL}" -o "${SCRIPT_TMP}" || { rm -f "${SCRIPT_TMP}"; return 1; }
+	curl -fsSL --retry 3 --retry-delay 2 --connect-timeout 10 --max-time 60 "${URL}" -o "${SCRIPT_TMP}" || { rm -f "${SCRIPT_TMP}"; return 1; }
 	bash -n "${SCRIPT_TMP}" || { rm -f "${SCRIPT_TMP}"; return 1; }
-	bash "${SCRIPT_TMP}" "$@"
+	# RUN_REMOTE_TIMEOUT (seconds) stops a script stalled on a dead mirror, unset means no limit
+	${RUN_REMOTE_TIMEOUT:+timeout -k 10 "${RUN_REMOTE_TIMEOUT}"} bash "${SCRIPT_TMP}" "$@"
 	local EXIT_CODE=$?
 	rm -f "${SCRIPT_TMP}"
 	return "${EXIT_CODE}"

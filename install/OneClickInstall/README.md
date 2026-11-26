@@ -181,6 +181,7 @@ are ignored, since that topology has no separate Redis/RabbitMQ containers).
 |-------------------------|-----------------------------|----------------------|------------------------------|
 | `--letsencryptdomain`   | `<DOMAIN>`                  | -                    | Domain for Let's Encrypt     |
 | `--letsencryptmail`     | `<MAIL>`                    | -                    | Admin email                  |
+| `--certdomain`          | `<DOMAIN>`                  | -                    | Domain for own certificate   |
 | `--certfile`            | `<FILE>`                    | -                    | Path to existing certificate |
 | `--certkeyfile`         | `<FILE>`                    | -                    | Path to existing key         |
 
@@ -263,6 +264,7 @@ sudo bash apps-install.sh \
 10. Bring your own certificate
 ```bash
 sudo bash apps-install.sh \
+  --certdomain yourdomain.com \
   --certfile /path/fullchain.pem \
   --certkeyfile /path/privkey.pem
 ```
@@ -403,7 +405,6 @@ The installation scripts support the following operating systems, which are **re
 - CentOS 10S (x86_64, ARM64)
 - Fedora 43
 - Fedora 44
-- Debian 11 (x86_64, ARM64)
 - Debian 12 (x86_64, ARM64)
 - Debian 13 (x86_64, ARM64)
 - Ubuntu 22.04 (x86_64, ARM64)

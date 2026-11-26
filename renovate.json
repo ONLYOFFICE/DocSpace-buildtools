@@ -8,6 +8,7 @@
   "schedule": [
     "before 6am on monday"
   ],
+  "minimumReleaseAge": "7 days",
   "packageRules": [
     {
       "matchManagers": [
@@ -24,9 +25,9 @@
       "enabled": false
     },
     {
-      "description": "The Node version comes from a workflow variable and cannot be tracked",
-      "matchDepNames": [
-        "node"
+      "description": "Tool versions passed to setup actions (with: version) are chosen deliberately, only actions are tracked",
+      "matchDepTypes": [
+        "uses-with"
       ],
       "enabled": false
     }

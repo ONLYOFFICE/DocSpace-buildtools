@@ -24,11 +24,15 @@ echo "== Backend build =="; BACKEND_START_TIMER=$(date +%s)
 export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 MSBUILDDISABLENODEREUSE=1
 cd ${SERVER_PATH}
 PUBLISH_ARGS='-c Release --self-contained false -p:DebugType=None -p:DebugSymbols=false -p:UseAppHost=false'
-dotnet publish common/Tools/ASC.Migration.Runner/ASC.Migration.Runner.csproj $PUBLISH_ARGS -o ${PUBLISH_DIR}/services/ASC.Migration.Runner/service/ && \
-dotnet publish ASC.Web.slnx $PUBLISH_ARGS -p:PublishProfile=ReleaseProfile && \
-cd "${SERVER_PATH}/common/ASC.Socket.IO" && yarn install --immutable && mv -f ${SERVER_PATH}/common/ASC.Socket.IO ${PUBLISH_DIR}/services/
-cd "${SERVER_PATH}/common/ASC.AI.Chat" && yarn install --immutable && mv -f ${SERVER_PATH}/common/ASC.AI.Chat ${PUBLISH_DIR}/services/
-cd "${SERVER_PATH}/common/ASC.SsoAuth" && yarn install --immutable && mv -f ${SERVER_PATH}/common/ASC.SsoAuth ${PUBLISH_DIR}/services/
+dotnet publish common/Tools/ASC.Migration.Runner/ASC.Migration.Runner.csproj $PUBLISH_ARGS -o ${PUBLISH_DIR}/services/ASC.Migration.Runner/service/
+dotnet publish ASC.Web.slnx $PUBLISH_ARGS -p:PublishProfile=ReleaseProfile
+# The node services keep only production dependencies: the lockfile is checked first, then dev dependencies are dropped
+for NODE_SERVICE in ASC.Socket.IO ASC.AI.Chat ASC.SsoAuth; do
+  cd "${SERVER_PATH}/common/${NODE_SERVICE}"
+  yarn install --immutable
+  yarn workspaces focus --production
+  mv -f "${SERVER_PATH}/common/${NODE_SERVICE}" ${PUBLISH_DIR}/services/
+done
 cd "${SERVER_PATH}/common/ASC.Identity" && mkdir -p ${PUBLISH_DIR}/services/{ASC.Identity.Registration,ASC.Identity.Authorization}
 mvn -B dependency:go-offline -Dorg.slf4j.simpleLogger.defaultLogLevel=warn
 mvn clean package -B -DskipTests -pl authorization/authorization-container,registration/registration-container -am
@@ -54,14 +58,52 @@ cp -a bin "${PUBLISH_DIR}/services/ASC.AI.MCP/service/"
 rm -rf ${PUBLISH_DIR}/services/{ASC.Socket.IO,ASC.AI.Chat,ASC.SsoAuth}/.yarn
 rm -f ${PUBLISH_DIR}/services/{ASC.Socket.IO,ASC.AI.Chat,ASC.SsoAuth}/{.yarnrc.yml,yarn.lock}
 rm -f ${PUBLISH_DIR}/services/ASC.AI.Chat/{onlyoffice-ai-chat-*.tgz,.prettierrc.json,.prettierignore,README.md,Dockerfile,Procfile}
+# unix and linux hold the Linux builds of some packages (System.Data.Odbc, System.IO.Ports, ...), the host loads them on x64 and arm64
 find ${PUBLISH_DIR} -type d -name "runtimes" | \
 while IFS= read -r RUNTIMES_DIR; do \
-     find "$RUNTIMES_DIR" -mindepth 1 -maxdepth 1 -type d ! -name "linux-x64" ! -name "linux-arm64" -exec rm -rf {} \; ; \
+     find "$RUNTIMES_DIR" -mindepth 1 -maxdepth 1 -type d ! -name "linux-x64" ! -name "linux-arm64" ! -name "linux" ! -name "unix" -exec rm -rf {} \; ; \
 done
 find ${PUBLISH_DIR} -depth -type f -regex '.*\(eslintrc.*\|npmignore\|gitignore\|gitattributes\|gitmodules\|un~\|DS_Store\)' -exec rm -f {} \;
 find ${BUILDTOOLS_PATH}/config -type f -regex '.*\.\(test\|dev\)\..*' -delete
 rm -f ${BUILDTOOLS_PATH}/config/nginx/onlyoffice-{login,management}.conf
-find ${PUBLISH_DIR}/web ${PUBLISH_DIR}/services/{ASC.SsoAuth,ASC.Socket.IO,ASC.AI.Chat} -type f \( -name "*.js.map" -o -name "*.css.map" \) -delete
+# Source maps, type declarations inside node_modules and debug symbols are not needed at runtime; AI.Chat runs its .ts sources, they stay
+# find runs on its own so that set -e stops the build when a delete fails; the list file only feeds the counts
+STRIP_LIST=$(mktemp)
+find "${PUBLISH_DIR}" -regextype posix-extended -type f \( -regex '.*\.(js|mjs|cjs|css|ts|mts|cts)\.map' -o -name '*.pdb' -o \( -path '*/node_modules/*' -regex '.*\.d\.[cm]?ts' \) \) -print -delete > "${STRIP_LIST}"
+echo "::notice::Removed $(wc -l < "${STRIP_LIST}") source maps, type declarations and debug symbols"
+# Translation tool metadata (locales/.meta), the client build skips it too
+find "${PUBLISH_DIR}" -type d -path '*/locales/.meta' -prune -print -exec rm -rf {} + > "${STRIP_LIST}"
+echo "::notice::Removed $(wc -l < "${STRIP_LIST}") locales/.meta folders"
+rm -f "${STRIP_LIST}"
+
+# NuGet packages that several .NET services use go once into dotnetstore (package dotnet-store); the services find them through additionalProbingPaths
+python3 "${BUILDTOOLS_PATH}/install/common/dotnet-store.py" --store "${PUBLISH_DIR}/dotnetstore" --probing-path "${PRODUCT_DIR}/dotnetstore" \
+     "${PUBLISH_DIR}"/services/{ASC.AI,ASC.AI.Worker,ASC.ApiSystem,ASC.ClearEvents,ASC.Data.Backup,ASC.Data.Backup.Worker,ASC.Files,ASC.Files.Worker}/service \
+     "${PUBLISH_DIR}"/services/{ASC.Migration.Runner,ASC.Notify,ASC.People,ASC.Studio.Notify,ASC.TelegramService,ASC.Web.Api,ASC.Web.HealthChecks.UI,ASC.Web.Studio}/service
+
+# The Next.js apps ship the same pnpm node_modules: one copy goes into web/node_modules (package node-modules, installed three levels above products/<product>/<app>)
+SHARED_NODE_MODULES="${PUBLISH_DIR}/web/node_modules"
+mkdir -p "${SHARED_NODE_MODULES}"
+for NEXT_APP in login editor sdk management; do
+  APP_DIR="${PUBLISH_DIR}/web/${NEXT_APP}"
+  rsync -a --ignore-existing "${APP_DIR}/node_modules/" "${SHARED_NODE_MODULES}/"
+  # The apps trace different subsets of a package, so the shared copy is their union; a file that differs between apps stops the build
+  if diff -rq --no-dereference "${APP_DIR}/node_modules" "${SHARED_NODE_MODULES}" | grep -v "^Only in ${SHARED_NODE_MODULES}"; then
+    echo "::error::${NEXT_APP}/node_modules differs from the shared node_modules"; exit 1
+  fi
+  # The app keeps no node_modules folder (an upgrade cannot turn a packaged folder into a link); its pnpm links go three levels further up instead
+  while IFS= read -r LINK; do
+    TARGET=$(readlink "${LINK}")
+    RESOLVED=$(realpath -m -s "$(dirname "${LINK}")/${TARGET}")
+    case "${RESOLVED}" in
+      "${APP_DIR}/node_modules/"*)
+        [ -e "${SHARED_NODE_MODULES}/${RESOLVED#"${APP_DIR}/node_modules/"}" ] || { echo "::error::${LINK} -> ${TARGET} has no target in the shared node_modules"; exit 1; }
+        ln -sfn "../../../${TARGET}" "${LINK}" ;;
+    esac
+  done < <(find "${APP_DIR}" -path "${APP_DIR}/node_modules" -prune -o -type l -print)
+  rm -rf "${APP_DIR}/node_modules"
+done
+echo "::notice::Shared node_modules of the Next.js apps: $(find "${SHARED_NODE_MODULES}" -type f | wc -l) files, $(du -sm "${SHARED_NODE_MODULES}" | cut -f1) MB"
 
 # Renaming files
 find ${BUILDTOOLS_PATH}/install/common -type f -exec rename -f -v "s/product([^\/]*)$/${PRODUCT}\$1/g" {} ';'

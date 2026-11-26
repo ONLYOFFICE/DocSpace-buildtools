@@ -45,8 +45,9 @@ check_image() {
   printf "[OK]      %-22s\n" "$SVC"
 }
 
+BUILD_HCL="$(dirname "${BASH_SOURCE[0]}")/../../install/docker/build/build.hcl"
 mapfile -t SERVICES < <(
-  curl -sSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/refs/heads/${BRANCH}/install/docker/build/build.hcl" \
+  { if [ -f "$BUILD_HCL" ]; then cat "$BUILD_HCL"; else curl -fsSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/refs/heads/${BRANCH}/install/docker/build/build.hcl"; fi; } \
     | REPO=r DOCKER_IMAGE_PREFIX=p DOCKER_TAG=t docker buildx bake -f - --print 2>/dev/null \
     | jq -r '.target | .[] | .tags[]' \
     | sed -E 's#^r/p-?##; s#:t$##' \

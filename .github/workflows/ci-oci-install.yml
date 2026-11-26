@@ -24,8 +24,6 @@ on:
         type: string
         description: Select distros (only without deb/rpm flags)
         default: |
-          debian11,
-          debian11-arm,
           debian12,
           debian12-arm,
           debian13,
@@ -71,7 +69,7 @@ jobs:
     steps:
       - name: Checkout push history
         if: github.event_name == 'push'
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
@@ -92,7 +90,7 @@ jobs:
         env:
           PUSH_BEFORE: ${{ github.event.before }}
           DISTROS_INPUT: ${{ github.event.inputs.distros }}
-          OS_ORDER: rhel9 centos9S centos10S fedora43 fedora44 debian11 debian12 debian13 ubuntu2204 ubuntu2404 ubuntu2604 centos9S-arm centos10S-arm debian11-arm debian12-arm debian13-arm ubuntu2204-arm ubuntu2404-arm ubuntu2604-arm
+          OS_ORDER: rhel9 centos9S centos10S fedora43 fedora44 debian12 debian13 ubuntu2204 ubuntu2404 ubuntu2604 centos9S-arm centos10S-arm debian12-arm debian13-arm ubuntu2204-arm ubuntu2404-arm ubuntu2604-arm
           OS_MAP: |
             {
               "rhel9":      ["RHEL 9",       "generic",    "rhel9"],
@@ -100,7 +98,6 @@ jobs:
               "centos10S":  ["CentOS 10S",   "onlyoffice", "base-centos10"],
               "fedora43":   ["Fedora 43",    "brigada",    "fedora-43"],
               "fedora44":   ["Fedora 44",    "onlyoffice", "base-fedora44"],
-              "debian11":   ["Debian 11",    "onlyoffice", "base-debian11"],
               "debian12":   ["Debian 12",    "onlyoffice", "base-debian12"],
               "debian13":   ["Debian 13",    "onlyoffice", "base-debian13"],
               "ubuntu2204": ["Ubuntu 22.04", "onlyoffice", "base-ubuntu2204"],
@@ -108,7 +105,6 @@ jobs:
               "ubuntu2604": ["Ubuntu 26.04", "onlyoffice", "base-ubuntu2604"],
               "centos9S-arm": ["CentOS 9S ARM", "arm", "ubuntu-24.04-arm", "centos", "9"],
               "centos10S-arm": ["CentOS 10S ARM", "arm", "ubuntu-24.04-arm", "centos", "10"],
-              "debian11-arm": ["Debian 11 ARM", "arm", "ubuntu-24.04-arm", "debian", "11"],
               "debian12-arm": ["Debian 12 ARM", "arm", "ubuntu-24.04-arm", "debian", "12"],
               "debian13-arm": ["Debian 13 ARM", "arm", "ubuntu-24.04-arm", "debian", "13"],
               "ubuntu2204-arm": ["Ubuntu 22.04 ARM", "arm", "ubuntu-22.04-arm"],
@@ -190,7 +186,7 @@ jobs:
           curl -fsSL "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/refs/heads/${GITHUB_REF_NAME}/.github/scripts/free-disk-space-linux.sh" | sudo VBOX_SAFE=1 bash
 
       - name: Checkout code
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install tools
         run: |
@@ -271,14 +267,23 @@ jobs:
         if: steps.boot.outcome == 'failure'
         run: echo "::warning::VM boot failed on ${{ matrix.name }} — runner infrastructure flake, install test skipped"
 
+      # The ~540 MB Docs DEB took over 50 minutes as one stream inside the VM; aria2 on the runner fetches it in seconds
+      - name: Prefetch Docs package
+        if: steps.boot.outcome == 'success' && (github.event_name == 'push' || github.event.inputs.testing == 'true') && (contains(matrix.os, 'ubuntu') || contains(matrix.os, 'debian'))
+        continue-on-error: true
+        timeout-minutes: 15
+        run: bash tests/vagrant/prefetch-docs.sh "${VER}" tests/vagrant/prefetch
+
       - name: Install
         if: steps.boot.outcome == 'success'
-        timeout-minutes: 55
+        timeout-minutes: 75
         env:
           DISTR: ${{ matrix.distr }}
           OS: ${{ matrix.os }}
           RAM: 8192
           CPU: 3
+          # Ubuntu guests time out on archive.ubuntu.com from the runners; the runner image itself uses this mirror
+          APT_MIRROR: http://azure.archive.ubuntu.com/ubuntu
           USE_4TESTING: ${{ github.event_name == 'push' || github.event.inputs.testing == 'true' }}
         run: |
           set -eux
@@ -298,7 +303,31 @@ jobs:
             echo -e "\e[32mUsing production packages\e[0m"
           fi
 
+          vagrant ssh -c "sudo bash /vagrant/post-install.sh snapshot-listeners" \
+            || echo "::warning title=External ports::Could not save the TCP listeners before the install"
           vagrant provision
+
+      - name: Wait for SSH
+        if: steps.boot.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 7
+        run: |
+          cd tests/vagrant
+          vagrant status | grep -q "running" || exit 0
+          # Right after the install restarts every service, new SSH sessions can be refused for a while
+          SSH_DEADLINE=$((SECONDS + 300))
+          until vagrant ssh -c true >/dev/null 2>&1; do
+            if [ "$SECONDS" -ge "$SSH_DEADLINE" ]; then
+              echo "::warning::SSH to the VM still fails 5 minutes after the install"
+              # vagrant ssh passes LogLevel=FATAL, so the reason is only visible through a direct verbose ssh
+              vagrant ssh-config > "$RUNNER_TEMP/vagrant-ssh-config"
+              SSH_HOST=$(awk '/^Host / { print $2; exit }' "$RUNNER_TEMP/vagrant-ssh-config")
+              ssh -F "$RUNNER_TEMP/vagrant-ssh-config" -v -o ConnectTimeout=20 "$SSH_HOST" true 2>&1 | tail -25 || true
+              exit 1
+            fi
+            sleep 15
+          done
+          [ "$SECONDS" -lt 5 ] || echo "::notice::SSH to the VM came back after ${SECONDS}s"
 
       - name: Health check
         id: healthcheck
@@ -381,7 +410,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Prepare runner
         if: matrix.guest == ''
@@ -422,6 +451,8 @@ jobs:
           sudo mkdir -p "$INSTALL_DIR" /tmp/apps
           sudo cp -a install/OneClickInstall/. /tmp/apps/
           sudo cp install/common/systemd/build.sh /tmp/apps/build.sh
+          sudo bash "$GITHUB_WORKSPACE/tests/vagrant/post-install.sh" snapshot-listeners \
+            || echo "::warning title=External ports::Could not save the TCP listeners before the install"
           sudo bash -c 'cd "$1" && shift && bash "$@"' _ "$INSTALL_DIR" "$GITHUB_WORKSPACE/tests/vagrant/install.sh" "${ARGS[@]}"
 
       - name: Health check

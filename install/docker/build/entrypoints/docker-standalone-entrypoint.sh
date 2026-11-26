@@ -264,6 +264,10 @@ setup_nginx_ssl() {
             log "Existing Let's Encrypt certificate found for $PRIMARY_SSL_DOMAIN"
         fi
 
+        # certbot (root) keeps live/ and archive/ at 0700, while openresty runs as onlyoffice; accounts/ stays root-only
+        chgrp -R onlyoffice /etc/letsencrypt/live /etc/letsencrypt/archive && chmod -R g+rX /etc/letsencrypt/live /etc/letsencrypt/archive \
+            || log "Warning: could not give openresty read access to /etc/letsencrypt"
+
         if write_ssl_nginx_conf "$cert_file" "$key_file"; then
             log "Using Let's Encrypt certificate for: $NGINX_SERVER_NAMES"
         else
@@ -473,7 +477,7 @@ update_configs() {
     [ -n "${APP_CORE_SERVER_ROOT}" ] && ${JSON} "${PATH_TO_CONF}/appsettings.json" -e "this.core['server-root']=process.env.APP_CORE_SERVER_ROOT"
 
     # Docs Admin Panel link
-    DOCS_ADMIN_URL="${DOCUMENT_SERVER_URL_PUBLIC%/}/admin" ${JSON} "${PATH_TO_CONF}/externalresources.json" \
+    DOCS_ADMIN_URL="${DOCUMENT_SERVER_URL_PUBLIC%/}/admin/" ${JSON} "${PATH_TO_CONF}/externalresources.json" \
         -e "this.externalresources.adminpanel.default.domain=process.env.DOCS_ADMIN_URL"
 
     # API system (connection + core)

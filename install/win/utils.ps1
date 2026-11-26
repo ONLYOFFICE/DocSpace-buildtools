@@ -77,6 +77,12 @@ function ExtractPath {
     }
 }
 
+# The newest of the <name>-<version> folders matching Filter, ordered by version so 3.10.0 comes after 3.5.0; the OpenSearchStack.aip setup script repeats this lookup.
+function GetNewestVersionedFolder([string]$Root, [string]$Filter) {
+    Get-ChildItem -LiteralPath $Root -Directory -Filter $Filter -ErrorAction SilentlyContinue |
+        Sort-Object { ($_.Name -replace '^\D*(\d+(\.\d+)+).*$', '$1') -as 'System.Version' } | Select-Object -Last 1
+}
+
 # MSI AppSearch can redirect Program Files paths in a 32-bit package.
 function GetDocumentServerInstallLocation {
     $Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry64')
@@ -484,12 +490,55 @@ function RabbitMqConfigure {
         AI_SetMsiProperty AMQP_USER $User
         AI_SetMsiProperty AMQP_PWD $Password
         Write-Output "The RabbitMQ user '$User' is created."
+        ShareRabbitMqUserWithDocs $User $Password
     }
     catch {
         Write-Output "Unable to create the RabbitMQ user, Apps keeps using the guest user: $($_.Exception.Message)"
     }
     finally {
         Remove-Item -LiteralPath $CtlHome -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+# A silent install runs Docs before the MSI creates the RabbitMQ user, so Docs installed with guest is switched to it here.
+function ShareRabbitMqUserWithDocs {
+    param ([string]$User, [string]$Password)
+    $Base = $null
+    $DocsKey = $null
+    # The Apps user already exists here, so no failure of this step may reach the catch of RabbitMqConfigure.
+    try {
+        $DocsDir = GetDocumentServerInstallLocation
+        if (-not $DocsDir) { return }
+        $Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry64')
+        $DocsKey = $Base.OpenSubKey('SOFTWARE\ONLYOFFICE\DocumentServer', $true)
+        if (-not $DocsKey -or $DocsKey.GetValue('RabbitMqUser') -ne 'guest') { return }
+        $DocsKey.SetValue('RabbitMqUser', $User, [Microsoft.Win32.RegistryValueKind]::String)
+        $DocsKey.SetValue('RabbitMqPwd', $Password, [Microsoft.Win32.RegistryValueKind]::String)
+
+        # Docs EE/DE keeps the broker URL in local.json (CE has no broker settings); only the credentials of that URL change.
+        $LocalJson = Join-Path $DocsDir 'config\local.json'
+        if (Test-Path -LiteralPath $LocalJson -PathType Leaf) {
+            $Content = [IO.File]::ReadAllText($LocalJson)
+            $Credentials = [uri]::EscapeDataString($User) + ':' + [uri]::EscapeDataString($Password)
+            $UrlPattern = '("rabbitmq"\s*:\s*\{[^{}]*?"url"\s*:\s*"[A-Za-z][A-Za-z0-9+.-]*://)guest:guest(@[^"]*")'
+            $Updated = [regex]::Replace($Content, $UrlPattern, { param($Match) $Match.Groups[1].Value + $Credentials + $Match.Groups[2].Value })
+            if ($Updated -cne $Content) {
+                [IO.File]::WriteAllText($LocalJson, $Updated, (New-Object Text.UTF8Encoding($false)))
+                foreach ($Service in 'DsDocServiceSvc', 'DsConverterSvc') {
+                    if (Get-Service -Name $Service -ErrorAction SilentlyContinue) { Restart-Service -Name $Service -Force -ErrorAction SilentlyContinue }
+                }
+            }
+            elseif ($Content -match '"rabbitmq"\s*:\s*\{[^{}]*?"url"\s*:') {
+                Write-Output "Docs has the RabbitMQ user '$User' in the registry, but its local.json has no guest:guest broker URL to change, so Docs keeps the URL it has."
+                return
+            }
+        }
+        Write-Output "Docs uses the RabbitMQ user '$User'."
+    }
+    catch { Write-Output "Unable to give Docs the RabbitMQ user, Docs keeps using guest: $($_.Exception.Message)" }
+    finally {
+        if ($DocsKey) { $DocsKey.Close() }
+        if ($Base) { $Base.Close() }
     }
 }
 
@@ -688,7 +737,8 @@ function OpenSearchSetup {
     $AppDir = AI_GetMsiProperty APPDIR
     $AppIndexDir = Join-Path $AppDir "Data\Index\v3.5.0\"
     $LogsDir     = Join-Path $AppDir "Logs\"
-    $OpenSearchDashboardsYml = "C:\OpenSearchStack\opensearch-dashboards-3.5.0\config\opensearch_dashboards.yml"
+    # OpenSearchStack unpacks Dashboards into opensearch-dashboards-<version>, so the folder is found by pattern and the newest version wins
+    $OpenSearchDashboardsDir = GetNewestVersionedFolder "C:\OpenSearchStack" "opensearch-dashboards-*"
 
     # Check if the index directory exists and set NEED_REINDEX_OPENSEARCH property if it doesn't.
     if (-not (Test-Path $AppIndexDir)) {
@@ -722,11 +772,12 @@ function OpenSearchSetup {
     Set-Content -Path $JvmOptionsPath -Value $FileContent
 
     # Modify OpenSearch Dashboards configuration.
-    if (Test-Path $OpenSearchDashboardsYml) {
-        Set-Content -Path $OpenSearchDashboardsYml -Value "" -Force
-    } else {
-        Write-Output "File doesn't exist: $OpenSearchDashboardsYml"
+    $OpenSearchDashboardsYml = if ($OpenSearchDashboardsDir) { Join-Path $OpenSearchDashboardsDir.FullName "config\opensearch_dashboards.yml" }
+    if (-not $OpenSearchDashboardsYml -or -not (Test-Path $OpenSearchDashboardsYml)) {
+        Write-Output "OpenSearch Dashboards configuration not found in C:\OpenSearchStack\opensearch-dashboards-*\config, Dashboards is not configured."
+        return
     }
+    Set-Content -Path $OpenSearchDashboardsYml -Value "" -Force
 
     $FileContent = Get-Content -Path $OpenSearchDashboardsYml -Raw
 
@@ -760,6 +811,54 @@ function SetAppDirWithForwardSlash {
     $AppDirForwardSlash = $AppDir -replace '\\', '/'
 
     AI_SetMsiProperty APPDIR_FORWARD_SLASH $AppDirForwardSlash
+}
+
+# A silent install runs Docs before APPDIR is known, so Docs and then Apps get the <drive>:\APPDIR placeholder as the license path; both are pointed at Apps\Data.
+function RepairDocsLicensePath {
+    # Windows Installer puts the placeholder on the drive with the most free space, which is not always C:.
+    $Placeholder = '^[A-Za-z]:[\\/]+APPDIR[\\/]'
+    $LicensePath = (AI_GetMsiProperty LICENSE_PATH).Trim()
+    if (-not $LicensePath -or $LicensePath -match $Placeholder -or $LicensePath -notmatch '^([A-Za-z]:[\\/]|\\\\)') {
+        $DefaultPath = Join-Path (AI_GetMsiProperty APPDIR) 'Data\license.lic'
+        # A license saved under the placeholder by an earlier silent install moves with the path.
+        $OldLicense = $LicensePath -replace '/', '\'
+        if ($LicensePath -match $Placeholder -and (Test-Path -LiteralPath $OldLicense -PathType Leaf) -and -not (Test-Path -LiteralPath $DefaultPath)) {
+            try {
+                New-Item -ItemType Directory -Path (Split-Path -Parent $DefaultPath) -Force -ErrorAction Stop | Out-Null
+                Copy-Item -LiteralPath $OldLicense -Destination $DefaultPath -ErrorAction Stop
+            }
+            catch { Write-Warning "Unable to copy the license from $OldLicense to ${DefaultPath}: $($_.Exception.Message)" }
+        }
+        $LicensePath = $DefaultPath
+        AI_SetMsiProperty LICENSE_PATH $LicensePath
+        Write-Output "License path set to $LicensePath."
+    }
+
+    # The repair is best effort: a failure is logged and the installation goes on.
+    try {
+        $DocsDir = AI_GetMsiProperty DOCS_INSTALL_LOCATION
+        $RegistryDocsDir = GetDocumentServerInstallLocation
+        if ($RegistryDocsDir) { $DocsDir = $RegistryDocsDir }
+        if (-not $DocsDir) { return }
+        $DocsConfig = Join-Path $DocsDir 'config\local.json'
+        if (-not (Test-Path -LiteralPath $DocsConfig -PathType Leaf)) { return }
+
+        # The value is replaced in the text, so the rest of the Docs config keeps its formatting.
+        $Pattern = '("license_file"\s*:\s*")[A-Za-z]:[\\/]+APPDIR[\\/][^"]*(")'
+        $Text = [IO.File]::ReadAllText($DocsConfig)
+        if ($Text -notmatch $Pattern) { return }
+        $DocsLicensePath = $LicensePath -replace '\\', '/'
+        $Text = [regex]::Replace($Text, $Pattern, { param($Match) $Match.Groups[1].Value + $DocsLicensePath + $Match.Groups[2].Value }, 'IgnoreCase')
+        [IO.File]::WriteAllText($DocsConfig, $Text, (New-Object Text.UTF8Encoding($false)))
+    }
+    catch {
+        Write-Warning "Unable to update the license path in the Docs configuration: $($_.Exception.Message)"
+        return
+    }
+    foreach ($Service in 'DsDocServiceSvc', 'DsConverterSvc') {
+        Restart-Service -Name $Service -Force -ErrorAction SilentlyContinue
+    }
+    Write-Output "Docs license path set to $DocsLicensePath."
 }
 
 function MigrateProductRegistry {
@@ -925,7 +1024,8 @@ function MoveConfigs {
     $SslScriptDir = Join-Path $AppDir "sbin\"
     $SslScriptPath = Join-Path $AppDir "sbin\apps-ssl-setup.ps1"
     $FluentBitSourceFile = Join-Path $AppDir "config\fluent-bit.conf"
-    $FluentBitDstFolder = "C:\OpenSearchStack\fluent-bit-3.2.4-win64\conf\"
+    # OpenSearchStack unpacks Fluent Bit into fluent-bit-<version>, so the folder is found by pattern and the newest version wins
+    $FluentBitDir = GetNewestVersionedFolder "C:\OpenSearchStack" "fluent-bit-*"
 
     $SslCertPath = ''
     $SslCertKeyPath = ''
@@ -1010,12 +1110,17 @@ function MoveConfigs {
     }
 
     # Manage Fluent Bit configuration.
-    $FluentBitConfPath = Join-Path $FluentBitDstFolder "fluent-bit.conf"
-    if (Test-Path $FluentBitConfPath) {
-        Remove-Item -Path $FluentBitConfPath -Force
-    }
-    if (Test-Path $FluentBitSourceFile) {
-        Move-Item -Path $FluentBitSourceFile -Destination $FluentBitDstFolder
+    if ($FluentBitDir) {
+        $FluentBitDstFolder = Join-Path $FluentBitDir.FullName "conf\"
+        $FluentBitConfPath = Join-Path $FluentBitDstFolder "fluent-bit.conf"
+        if (Test-Path $FluentBitConfPath) {
+            Remove-Item -Path $FluentBitConfPath -Force
+        }
+        if (Test-Path $FluentBitSourceFile) {
+            Move-Item -Path $FluentBitSourceFile -Destination $FluentBitDstFolder
+        }
+    } else {
+        Write-Output "Fluent Bit folder not found in C:\OpenSearchStack\fluent-bit-*, its configuration is not updated."
     }
 
     if ((AI_GetMsiProperty DOCUMENT_SERVER_INSTALL_NONE) -eq '1') {
@@ -1036,7 +1141,106 @@ function MoveConfigs {
         Write-Output "DocumentServer port set to $DocsPort and DsProxySvc restarted."
     }
 
+    SetIdentityJavaPath
+    ResetPrerequisiteServicePriority
     Write-Output "Script execution completed."
+}
+
+# Returns java.exe of the newest JDK 17 or later registered by its installer (Identity needs Java 17), or nothing.
+function GetJdkJavaPath {
+    $Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry64')
+    $JdkKey = $null
+    try {
+        $JdkKey = $Base.OpenSubKey('SOFTWARE\JavaSoft\JDK')
+        if (-not $JdkKey) { return }
+        $Candidates = foreach ($VersionName in $JdkKey.GetSubKeyNames()) {
+            # A JDK registers both its major version and its full version, such as 25 and 25.0.3.
+            $Version = $null
+            if (-not [version]::TryParse(($VersionName -replace '^(\d+)$', '$1.0'), [ref]$Version) -or $Version.Major -lt 17) { continue }
+            $VersionKey = $JdkKey.OpenSubKey($VersionName)
+            if (-not $VersionKey) { continue }
+            $JavaHome = "$($VersionKey.GetValue('JavaHome'))"
+            $VersionKey.Close()
+            if (-not $JavaHome) { continue }
+            $JavaExe = Join-Path $JavaHome 'bin\java.exe'
+            if (Test-Path -LiteralPath $JavaExe -PathType Leaf) { [pscustomobject]@{ Version = $Version; Path = $JavaExe } }
+        }
+        ($Candidates | Sort-Object Version -Descending | Select-Object -First 1).Path
+    }
+    finally { if ($JdkKey) { $JdkKey.Close() }; $Base.Close() }
+}
+
+# Returns the executable of a service command line, quoted or not, without its arguments.
+function GetServiceExecutablePath([string]$PathName) {
+    if ($PathName -match '^\s*"([^"]+)"') { return $Matches[1] }
+    ($PathName -split '\s+')[0]
+}
+
+# WinSW runs Identity with the first java on the PATH of the service, which may be an older Java, so the JDK path is written into its configs.
+function SetIdentityJavaPath {
+    # A failure here must not stop MoveConfigs before the steps after it.
+    try { $JavaExe = GetJdkJavaPath }
+    catch {
+        Write-Output "Unable to find the JDK for Identity, it keeps starting java from PATH: $($_.Exception.Message)"
+        return
+    }
+    try { $AppDir = AI_GetMsiProperty APPDIR }
+    catch {
+        Write-Output "Unable to read APPDIR for Identity, it keeps starting java from PATH: $($_.Exception.Message)"
+        return
+    }
+    if (-not $JavaExe) {
+        Write-Output "No JDK 17 or later is registered, Identity keeps starting java from PATH."
+        return
+    }
+    $Replacement = '<executable>' + [Security.SecurityElement]::Escape($JavaExe) + '</executable>'
+    $Services = $null
+    foreach ($Name in 'Identity.Authorization', 'Identity.Registration') {
+        try {
+            $Config = Join-Path $AppDir "tools\$Name.xml"
+            if (-not (Test-Path -LiteralPath $Config -PathType Leaf)) { continue }
+            $Content = [IO.File]::ReadAllText($Config)
+            # Only the bare command shipped in the package is replaced, so a path set by an administrator stays.
+            $Updated = [regex]::Replace($Content, '<executable>\s*java(?:\.exe)?\s*</executable>', { param($Match) $Replacement }, 'IgnoreCase')
+            if ($Updated -ceq $Content) { continue }
+            [IO.File]::WriteAllText($Config, $Updated, (New-Object Text.UTF8Encoding($false)))
+            # WinSW reads the executable when the service starts; a failed start may have left the service stopped.
+            # A property name built at run time reads as empty here, so the service is found by its WinSW executable next to the XML.
+            $Executable = [IO.Path]::ChangeExtension($Config, '.exe')
+            if ($null -eq $Services) { $Services = @(Get-CimInstance Win32_Service -ErrorAction Stop) }
+            $Service = $Services | Where-Object { (GetServiceExecutablePath $_.PathName) -eq $Executable } | Select-Object -First 1
+            if (-not $Service) {
+                Write-Output "$Name is set to run $JavaExe, but no service runs $Executable to restart."
+                continue
+            }
+            if ($Service.State -eq 'Running') { Restart-Service -Name $Service.Name -Force -ErrorAction Stop }
+            else { Start-Service -Name $Service.Name -ErrorAction Stop }
+            Write-Output "$Name runs $JavaExe."
+        }
+        catch { Write-Output "Unable to set the Java path of ${Name}: $($_.Exception.Message)" }
+    }
+}
+
+# Apps 4.0 ran OpenResty and OpenSearch with RealTime priority; an update keeps their installers of the same version, so their WinSW configs are reset here.
+function ResetPrerequisiteServicePriority {
+    foreach ($Name in 'OpenResty', 'OpenSearch', 'OpenSearchDashboards') {
+        try {
+            $Service = Get-CimInstance Win32_Service -Filter "Name='$Name'" -ErrorAction Stop
+            if (-not $Service) { continue }
+            # WinSW reads the XML next to its executable, with the same base name.
+            $Executable = GetServiceExecutablePath $Service.PathName
+            $Config = [IO.Path]::ChangeExtension($Executable, '.xml')
+            if (-not (Test-Path -LiteralPath $Config -PathType Leaf)) { continue }
+            $Content = [IO.File]::ReadAllText($Config)
+            $Updated = $Content -replace '<priority>\s*RealTime\s*</priority>', '<priority>Normal</priority>'
+            if ($Updated -ceq $Content) { continue }
+            [IO.File]::WriteAllText($Config, $Updated, (New-Object Text.UTF8Encoding($false)))
+            # WinSW applies the priority when the service starts.
+            if ($Service.State -eq 'Running') { Restart-Service -Name $Name -Force -ErrorAction Stop }
+            Write-Output "$Name priority is set to Normal."
+        }
+        catch { Write-Output "Unable to reset the priority of ${Name}: $($_.Exception.Message)" }
+    }
 }
 
 

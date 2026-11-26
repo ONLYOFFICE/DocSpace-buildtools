@@ -37,6 +37,14 @@ files:
       debian/build/buildtools/install/common/{{product}}-configuration usr/bin
       debian/build/buildtools/install/docker/config/fluent-bit.conf etc/{{package_sysname}}/{{product}}
 
+  - name: "{{package_name}}-dotnet-store.install"
+    content: |
+      debian/build/publish/dotnetstore var/www/{{package_sysname}}/{{product}}
+
+  - name: "{{package_name}}-node-modules.install"
+    content: |
+      debian/build/publish/web/node_modules var/www/{{package_sysname}}/{{product}}
+
   - name: "{{package_name}}-common.dirs"
     content: |
       /var/log/{{package_sysname}}/{{product}}

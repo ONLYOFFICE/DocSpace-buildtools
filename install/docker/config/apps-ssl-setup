@@ -73,9 +73,24 @@ help(){
   exit 0
 }
 
+# Certbot shares the ACME webroot volume with the proxy, whatever the Compose project is called.
+resolve_webroot_volume() {
+  WEBROOT_VOLUME=$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/letsencrypt"}}{{.Name}}{{end}}{{end}}' onlyoffice-proxy 2>/dev/null || true)
+  WEBROOT_VOLUME="${WEBROOT_VOLUME:-${COMPOSE_PROJECT_NAME:-$(basename "${DOCKERCOMPOSE}")}_webroot_path}"
+}
+
 create_renew_script() {
   [[ -f "${DIR}/${PRODUCT}-renew-letsencrypt" ]] && rm -rf "${DIR}/${PRODUCT}-renew-letsencrypt"
   [[ -f "${LEGACY_CRON_FILE}" ]] && rm -f "${LEGACY_CRON_FILE}"
+  RENEW_CERT_NAME="${CERT_NAME}"
+  [[ "${CERTIFICATE_FILE}" == "${LETSENCRYPT}/"*/fullchain.pem ]] && RENEW_CERT_NAME="$(basename "$(dirname "${CERTIFICATE_FILE}")")"
+  # Manual (DNS-01) certificates cannot be renewed unattended.
+  if [[ "${DOMAINS}" == *"*"* ]] || grep -qE '^authenticator[[:space:]]*=[[:space:]]*manual' "${LETSENCRYPT%/live}/renewal/${RENEW_CERT_NAME}.conf" 2>/dev/null; then
+    rm -f "${CRON_FILE}"
+    echo "Note: wildcard certificates are not renewed automatically; rerun this script before the certificate expires."
+    return 0
+  fi
+  resolve_webroot_volume
   CRON_PATH=$(command -v crond || command -v cron) && CRON_SVC=${CRON_PATH##*/} || { echo "Error: neither crond nor cron is installed." >&2; }
   if [[ -n "${CRON_SVC}" ]]; then
     command -v systemctl &>/dev/null && systemctl enable --now "$CRON_SVC" || { command -v service &>/dev/null && service "${CRON_SVC%.service}" start; }
@@ -89,7 +104,7 @@ create_renew_script() {
         echo "$(command -v docker) run --rm \\" >> ${CRON_FILE}
         echo "    -v /etc/letsencrypt:/etc/letsencrypt \\" >> ${CRON_FILE}
         echo "    -v /var/lib/letsencrypt:/var/lib/letsencrypt \\" >> ${CRON_FILE}
-        echo "    -v onlyoffice_webroot_path:$WEBROOT_PATH \\" >> ${CRON_FILE}
+        echo "    -v ${WEBROOT_VOLUME}:$WEBROOT_PATH \\" >> ${CRON_FILE}
         echo "    certbot/certbot renew -v --force-renewal 2>&1 | tee -a /var/log/${PRODUCT}-renew-letsencrypt.log" >> ${CRON_FILE}
         echo "[ ! -e '${DOCKERCOMPOSE}/.docs-restore/apps-stopped' ] || exit 0" >> ${CRON_FILE}
         echo "$(echo "$(command -v ${DOCKER_COMPOSE%% *})${DOCKER_COMPOSE#${DOCKER_COMPOSE%% *}}") -f ${DOCKERCOMPOSE}/proxy-ssl.yml up -d --force-recreate" >> ${CRON_FILE}
@@ -104,8 +119,10 @@ check_file_format() {
   FILE=$1
 
   if openssl pkcs12 -in "$FILE" -info -noout --passin pass:"$PFX_PASSWORD" > /dev/null 2>&1; then
-    CERTIFICATE_FILE="${FILE%.pfx}.pem"
-    PRIVATEKEY_FILE="${FILE%.pfx}-private.pem"
+    PKCS12_BASE="$FILE"
+    [[ "${FILE,,}" =~ \.(p12|pfx)$ ]] && PKCS12_BASE="${FILE%.*}"
+    CERTIFICATE_FILE="${PKCS12_BASE}.pem"
+    PRIVATEKEY_FILE="${PKCS12_BASE}-private.pem"
     
     echo "$FILE is a valid PFX certificate. Converting to PEM..."
     openssl pkcs12 -in "$FILE" -out "$CERTIFICATE_FILE" -nokeys --passin pass:"$PFX_PASSWORD"
@@ -118,7 +135,9 @@ check_file_format() {
 
   elif openssl x509 -in "$FILE" -inform PEM -text -noout > /dev/null 2>&1; then
     echo "$FILE is a valid PEM certificate."
-  elif openssl pkey -in "$FILE" -check > /dev/null 2>&1; then
+  elif grep -qE -- '-----BEGIN ENCRYPTED PRIVATE KEY-----|Proc-Type: 4,ENCRYPTED' "$FILE"; then
+    echo "Error: $FILE is a passphrase-protected private key, which is not supported; remove the passphrase first: openssl pkey -in \"$FILE\" -out <new key file>" && exit 1
+  elif openssl pkey -in "$FILE" -passin pass: -check > /dev/null 2>&1; then
     echo "$FILE is a valid private key."
 
   elif openssl pkcs7 -in "$FILE" -print_certs -noout > /dev/null 2>&1; then
@@ -170,7 +189,7 @@ case $1 in
       DOMAIN=$2
       CERTIFICATE_FILE=$3
       
-      if [[ "$CERTIFICATE_FILE" =~ \.(p12|pfx)$ ]]; then
+      if [[ "${CERTIFICATE_FILE,,}" =~ \.(p12|pfx)$ ]]; then
         echo "Using PKCS#12 file for SSL configuration..."
         openssl pkcs12 -in "$CERTIFICATE_FILE" -info -noout -passin pass: >/dev/null 2>&1 || read -s -p "Enter password: " PFX_PASSWORD
         check_file_format "$CERTIFICATE_FILE"
@@ -194,7 +213,16 @@ case $1 in
     if [ -z "$(awk -F '=' '/^\s*DOCUMENT_SERVER_URL_EXTERNAL/{gsub(/^[[:space:]]*"|"[[:space:]]*$/, "", $2); print $2}' ${DOCKERCOMPOSE}/.env)" ]; then
       sed "s#\(APP_URL_PORTAL=\).*#\1\"http://onlyoffice-router:8092\"#g" -i ${DOCKERCOMPOSE}/.env
     else
-      sed "s#\(APP_URL_PORTAL=\).*#\1\"http://$(curl -s ifconfig.me)\"#g" -i ${DOCKERCOMPOSE}/.env
+      # An external Docs calls back to this server: keep the host of the HTTPS address like the installer does, the public IP is only a fallback.
+      APP_URL_PORTAL=$(awk -F= '/^[[:space:]]*APP_URL_PORTAL=/{gsub(/^[[:space:]]*/,"",$2); gsub(/["\r]/,"",$2); print $2; exit}' "${DOCKERCOMPOSE}/.env")
+      EXTERNAL_PORT=$(awk -F= '/^[[:space:]]*EXTERNAL_PORT=/{gsub(/^[[:space:]]*/,"",$2); gsub(/["\r]/,"",$2); print $2; exit}' "${DOCKERCOMPOSE}/.env")
+      PORTAL_HOST=$(awk -F'[/:]' '$1 == "https" {print $4}' <<< "${APP_URL_PORTAL}")
+      if [ -z "${PORTAL_HOST}" ] && [[ "${APP_URL_PORTAL}" != http://* || "${APP_URL_PORTAL}" == *:8092 ]]; then
+        PORTAL_HOST=$(curl -s -4 -m 10 ifconfig.me || true)
+        [[ "${PORTAL_HOST}" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]] || PORTAL_HOST=""
+        [ -n "${PORTAL_HOST}" ] || echo "Warning: the address of this server cannot be detected; set APP_URL_PORTAL in ${DOCKERCOMPOSE}/.env to an address the Document Server can reach." >&2
+      fi
+      [ -z "${PORTAL_HOST}" ] || sed "s#\(APP_URL_PORTAL=\).*#\1\"http://${PORTAL_HOST}$( [ "${EXTERNAL_PORT:-80}" = "80" ] || echo ":${EXTERNAL_PORT}" )\"#g" -i ${DOCKERCOMPOSE}/.env
     fi
     sed -i "s~\(APP_CORE_SERVER_ROOT=\).*~\1\"\"~g" ${DOCKERCOMPOSE}/.env
     [[ -f "${CRON_FILE}" ]] && rm -rf "${CRON_FILE}"
@@ -206,7 +234,7 @@ case $1 in
     fi
 
     if [ -z "$(db -N -s -e "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1")" ]; then
-      db -e "UPDATE tenants_tenants SET mappeddomain='NULL' WHERE alias='localhost';"
+      db -e "UPDATE tenants_tenants SET mappeddomain=NULL WHERE alias='localhost';"
     fi
 
     if grep -q '^[[:space:]]*-[[:space:]]*.*${CERTIFICATE_PATH}' ${DOCKERCOMPOSE}/${APPS_COMPOSE_FILE}; then
@@ -244,7 +272,8 @@ case $1 in
       [[ ,$DOMAINS, == *,$DOMAIN,* ]] || DOMAINS+=",${DOMAIN}"
       LETSENCRYPT_ENABLE="true"
 
-      if ! docker volume inspect "onlyoffice_webroot_path" &> /dev/null; then
+      resolve_webroot_volume
+      if ! docker volume inspect "${WEBROOT_VOLUME}" &> /dev/null; then
         echo "Error: missing webroot_path volume" && exit 1
       fi
 
@@ -268,7 +297,7 @@ case $1 in
           -d "${DOMAINS[@]}"
       else
         if docker port onlyoffice-proxy 80/tcp 2>/dev/null | grep -q ':80$'; then
-          ${DOCKER_CMD} -v onlyoffice_webroot_path:$WEBROOT_PATH \
+          ${DOCKER_CMD} -v "${WEBROOT_VOLUME}:$WEBROOT_PATH" \
             certbot/certbot certonly \
             --expand --webroot -w "$WEBROOT_PATH" --key-type rsa \
             --cert-name "$CERT_NAME" --non-interactive --agree-tos --email "$MAIL" \
@@ -297,6 +326,12 @@ PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${CERT_NAME}/privkey.pem"}"
 
 if [ -f "${CERTIFICATE_FILE}" ]; then 
   if [ -f "${PRIVATEKEY_FILE}" ]; then
+    # An empty passphrase makes an encrypted key fail at once instead of prompting
+    KEY_PUBLIC=$(openssl pkey -in "$PRIVATEKEY_FILE" -passin pass: -pubout 2>/dev/null) \
+      || { echo "Error: cannot read the private key ${PRIVATEKEY_FILE}; a passphrase-protected key is not supported." && exit 1; }
+    [ "$(openssl x509 -in "$CERTIFICATE_FILE" -noout -pubkey)" = "${KEY_PUBLIC}" ] \
+      || { echo "Error: the private key does not match the certificate (the server certificate must be the first one in the file)." && exit 1; }
+
     sed -i "s~\(APP_CORE_SERVER_ROOT=\).*~\1\"https://*$( [ "$EXTERNAL_PORT_HTTPS" = "443" ] || echo ":$EXTERNAL_PORT_HTTPS" )/\"~g" ${DOCKERCOMPOSE}/.env
     sed -i "s~\(APP_URL_PORTAL=\).*~\1\"https://${DOMAIN}$( [ "$EXTERNAL_PORT_HTTPS" = "443" ] || echo ":$EXTERNAL_PORT_HTTPS" )\"~g" ${DOCKERCOMPOSE}/.env
     sed -i -E "s#https://\\\$host(:[0-9]+)?#https://\\\$host$( [ "$EXTERNAL_PORT_HTTPS" = "443" ] || echo ":$EXTERNAL_PORT_HTTPS" )#g" "$PROXY_SSL_CONF"

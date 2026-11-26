@@ -88,12 +88,22 @@ help(){
   exit 0
 }
 
+remove_renew_job() {
+  [[ -f "${DIR}/${PRODUCT}-renew-letsencrypt" ]] && rm -rf "${DIR}/${PRODUCT}-renew-letsencrypt"
+  [[ -f "/etc/cron.weekly/${PRODUCT}-renew-letsencrypt" ]] && rm -rf "/etc/cron.weekly/${PRODUCT}-renew-letsencrypt"
+  # Drop the renewal job left by the former product name so certbot is not run twice a week.
+  [[ -f "/etc/cron.weekly/${LEGACY_PRODUCT}-renew-letsencrypt" ]] && rm -f "/etc/cron.weekly/${LEGACY_PRODUCT}-renew-letsencrypt"
+  return 0
+}
+
 check_file_format() {
   FILE=$1
 
   if openssl pkcs12 -in "$FILE" -info -noout --passin pass:"$PFX_PASSWORD" > /dev/null 2>&1; then
-    CERTIFICATE_FILE="${FILE%.pfx}.pem"
-    PRIVATEKEY_FILE="${FILE%.pfx}-private.pem"
+    PKCS12_BASE="$FILE"
+    [[ "${FILE,,}" =~ \.(p12|pfx)$ ]] && PKCS12_BASE="${FILE%.*}"
+    CERTIFICATE_FILE="${PKCS12_BASE}.pem"
+    PRIVATEKEY_FILE="${PKCS12_BASE}-private.pem"
     echo "$FILE is a valid PFX certificate. Converting to PEM..."
     openssl pkcs12 -in "$FILE" -out "$CERTIFICATE_FILE" -nokeys --passin pass:"$PFX_PASSWORD"
     openssl pkcs12 -in "$FILE" -out "$PRIVATEKEY_FILE" -nocerts -nodes --passin pass:"$PFX_PASSWORD"
@@ -107,7 +117,9 @@ check_file_format() {
     echo "$FILE is a valid PEM certificate."
     CERTIFICATE_FILE="$FILE"
 
-  elif openssl pkey -in "$FILE" -check > /dev/null 2>&1; then
+  elif grep -qE -- '-----BEGIN ENCRYPTED PRIVATE KEY-----|Proc-Type: 4,ENCRYPTED' "$FILE"; then
+    echo "Error: $FILE is a passphrase-protected private key, which is not supported; remove the passphrase first: openssl pkey -in \"$FILE\" -out <new key file>" && exit 1
+  elif openssl pkey -in "$FILE" -passin pass: -check > /dev/null 2>&1; then
     echo "$FILE is a valid private key."
     PRIVATEKEY_FILE="$FILE"
 
@@ -128,7 +140,7 @@ case $1 in
       CERTIFICATE_FILE=$3
 
       [[ $DOMAIN =~ ${DOMAIN_PATTERN} ]] || { echo "Error: domain name '$DOMAIN' is incorrect." >&2; exit 1; }
-      if [[ "$CERTIFICATE_FILE" =~ \.(p12|pfx)$ ]]; then
+      if [[ "${CERTIFICATE_FILE,,}" =~ \.(p12|pfx)$ ]]; then
         echo "Using PKCS#12 file for SSL configuration..."
         openssl pkcs12 -in "$CERTIFICATE_FILE" -info -noout -passin pass: >/dev/null 2>&1 || read -rsp "Enter password: " PFX_PASSWORD
         check_file_format "$CERTIFICATE_FILE"
@@ -147,10 +159,7 @@ case $1 in
   -d | --default )
     echo "Return to the default proxy configuration..."
     cp -f ${OPENRESTY}/onlyoffice-proxy.conf.template ${OPENRESTY}/onlyoffice-proxy.conf
-    [[ -f "${DIR}/${PRODUCT}-renew-letsencrypt" ]] && rm -rf "${DIR}/${PRODUCT}-renew-letsencrypt"
-    [[ -f "/etc/cron.weekly/${PRODUCT}-renew-letsencrypt" ]] && rm -rf "/etc/cron.weekly/${PRODUCT}-renew-letsencrypt"
-    # Drop the renewal job left by the former product name so certbot is not run twice a week.
-    [[ -f "/etc/cron.weekly/${LEGACY_PRODUCT}-renew-letsencrypt" ]] && rm -f "/etc/cron.weekly/${LEGACY_PRODUCT}-renew-letsencrypt"
+    remove_renew_job
     [ $(pgrep -x ""systemd"" | wc -l) -gt 0 ] && systemctl restart openresty || service openresty restart
     json -I -f ${USER_CONF} -e "this.files.docservice.url.portal = \"http://localhost:80\""
     json -I -f ${USER_CONF} -e "delete this.core['server-root']"
@@ -158,7 +167,7 @@ case $1 in
     
     read_connection_string
     if [ -z "$(mysql_exec -N -s -e "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1")" ]; then
-      mysql_exec -e "UPDATE tenants_tenants SET mappeddomain='NULL' WHERE alias='localhost';"
+      mysql_exec -e "UPDATE tenants_tenants SET mappeddomain=NULL WHERE alias='localhost';"
     fi
     
     if [ "${PRESERVE_DOCS}" = true ]; then
@@ -226,6 +235,12 @@ PRIVATEKEY_FILE="${PRIVATEKEY_FILE:-"${LETSENCRYPT}/${CERT_NAME}/privkey.pem"}"
 
 if [ -f "${CERTIFICATE_FILE}" ]; then 
   if [ -f "${PRIVATEKEY_FILE}" ]; then
+    # An empty passphrase makes an encrypted key fail at once instead of prompting
+    KEY_PUBLIC=$(openssl pkey -in "$PRIVATEKEY_FILE" -passin pass: -pubout 2>/dev/null) \
+      || { echo "Error: cannot read the private key ${PRIVATEKEY_FILE}; a passphrase-protected key is not supported." && exit 1; }
+    [ "$(openssl x509 -in "$CERTIFICATE_FILE" -noout -pubkey)" = "${KEY_PUBLIC}" ] \
+      || { echo "Error: the private key does not match the certificate (the server certificate must be the first one in the file)." && exit 1; }
+
     APP_PORT=$(sed -nE '/listen .* (ssl|quic)/s/.*:([0-9]{2,5})([[:space:]].*)?;.*/\1/p' ${OPENRESTY}/onlyoffice-proxy.conf 2>/dev/null | head -1)
     APP_PORT=${APP_PORT:-$(sed -nE 's/.*listen .+:([0-9]{2,5}).*/\1/p' ${OPENRESTY}/onlyoffice-proxy.conf 2>/dev/null | head -1)}
     [[ "${APP_PORT}" = "80" || "${APP_PORT}" = "443" ]] && APP_PORT=""
@@ -278,7 +293,12 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
       fi
     fi
 
-    if [[ "${LETSENCRYPT_ENABLE}" = "true" ]]; then
+    RENEWAL_CONF="/etc/letsencrypt/renewal/${INHERITED_CERT_NAME:-${CERT_NAME}}.conf"
+    # Manual (DNS-01) certificates cannot be renewed unattended.
+    if [[ "${LETSENCRYPT_ENABLE}" = "true" ]] && { [[ "${DOMAINS}" == *"*"* ]] || grep -qE '^authenticator[[:space:]]*=[[:space:]]*manual' "${RENEWAL_CONF}" 2>/dev/null; }; then
+      remove_renew_job
+      echo "Note: wildcard certificates are not renewed automatically; rerun this script before the certificate expires."
+    elif [[ "${LETSENCRYPT_ENABLE}" = "true" ]]; then
       CRON_PATH=$(command -v crond || command -v cron) && CRON_SVC=${CRON_PATH##*/} || { echo "Error: neither crond nor cron is installed." >&2; }
       if [[ -n "${CRON_SVC}" ]]; then
         command -v systemctl &>/dev/null && systemctl enable --now "$CRON_SVC" || { command -v service &>/dev/null && service "${CRON_SVC%.service}" start; }
@@ -301,11 +321,8 @@ if [ -f "${CERTIFICATE_FILE}" ]; then
         fi
       fi
     else
-      CERTIFICATE_SUBJECT=$(openssl x509 -subject -noout -in "${CERTIFICATE_FILE}" | sed 's/subject=//')
-      CERTIFICATE_ISSUER=$(openssl x509 -issuer -noout -in "${CERTIFICATE_FILE}" | sed 's/issuer=//')
-      
-      #Checking whether the certificate is self-signed
-      if [[ -n "$CERTIFICATE_SUBJECT" && -n "$CERTIFICATE_ISSUER" && "$CERTIFICATE_SUBJECT" == "$CERTIFICATE_ISSUER" ]]; then
+      if ! openssl verify -untrusted "${CERTIFICATE_FILE}" "${CERTIFICATE_FILE}" >/dev/null 2>&1; then
+        echo "Note: the certificate chain is not trusted by this host (self-signed certificate or private CA); it is added to the trusted CAs of the Node.js services."
         APPS_CA_CERTIFICATE="${CONFIG_DIR}/selfsigned-ca.pem"
         cp -fL -- "${CERTIFICATE_FILE}" "${APPS_CA_CERTIFICATE}"
         chmod 0644 "${APPS_CA_CERTIFICATE}"

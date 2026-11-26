@@ -198,3 +198,11 @@
 /usr/lib/systemd/system/%{product}-mcp.service
 %dir %{buildpath}/products/
 %dir %{buildpath}/products/ASC.AI/
+
+%files dotnet-store
+%defattr(-, %{package_sysname}, %{package_sysname}, -)
+%{buildpath}/dotnetstore/
+
+%files node-modules
+%defattr(-, %{package_sysname}, %{package_sysname}, -)
+%{buildpath}/node_modules/
