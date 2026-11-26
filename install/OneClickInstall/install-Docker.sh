@@ -1009,6 +1009,21 @@ download_files () {
 	echo "OK"
 }
 
+# An existing Let's Encrypt renewal job keeps the Certbot image it was written with until apps-ssl-setup runs again, so an update points it at the pinned one
+pin_certbot_in_renewal_job () {
+	local CERTBOT_IMAGE RENEW_FILE
+	CERTBOT_IMAGE=$(sed -n 's/^CERTBOT_IMAGE="\([^"]*\)"$/\1/p' "${BASE_DIR}/config/${PRODUCT}-ssl-setup" 2>/dev/null)
+	[ -n "${CERTBOT_IMAGE}" ] || return 0
+	# Linux keeps the job in cron.weekly, macOS next to the certificates; neither exists without Let's Encrypt
+	for RENEW_FILE in "/etc/cron.weekly/${PRODUCT}-renew-letsencrypt" "/etc/cron.weekly/${LEGACY_PRODUCT}-renew-letsencrypt" "${BASE_DIR}/certs/${PRODUCT}-renew-letsencrypt"; do
+		[ -f "${RENEW_FILE}" ] && [ ! -L "${RENEW_FILE}" ] || continue
+		grep -qE '(^|[[:space:]])certbot/certbot(:[^[:space:]]*)?[[:space:]]+renew' "${RENEW_FILE}" || continue
+		sed -i -E "s#(^|[[:space:]])certbot/certbot(:[^[:space:]]*)?([[:space:]]+renew)#\1${CERTBOT_IMAGE}\3#" "${RENEW_FILE}" \
+			&& echo "Pointed ${RENEW_FILE} at ${CERTBOT_IMAGE}" \
+			|| echo "Warning: could not update the Certbot image in ${RENEW_FILE}" >&2
+	done
+}
+
 reconfigure () {
 	local VARIABLE_NAME="$1"
 	local VARIABLE_VALUE="$2"
@@ -1697,6 +1712,7 @@ start_installation () {
 	fi
 
 	download_files || exit 1
+	[ "${UPDATE}" != "true" ] || pin_certbot_in_renewal_job
 
 	check_docker_image
 
