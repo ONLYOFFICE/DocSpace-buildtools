@@ -16,7 +16,20 @@ function Get-RemoteSize([string]$Url) {
     } catch { }
 }
 
-# Downloads each @{ Name; Link; Always } into Folder: Always (Docs) every build, the rest when missing or of a different size
+# The checksum of a download from versions.ps1 by the file name in its link; a download without one stops the build
+function Get-Checksum([string]$Key) {
+    $checksum = $Versions.Checksums[$Key]
+    if (-not $checksum) { throw "No checksum for $Key in build\versions.ps1" }
+    return $checksum
+}
+
+# True when the file has the 'SHA256:<hex>' or 'SHA512:<hex>' checksum
+function Test-Checksum([string]$Path, [string]$Checksum) {
+    $algorithm, $expected = $Checksum -split ':', 2
+    return (Get-FileHash -LiteralPath $Path -Algorithm $algorithm).Hash -eq $expected
+}
+
+# Downloads each @{ Name; Link; Always; Checksum } into Folder: Always (Docs) every build, the rest when missing, of a different size or not matching Checksum
 function Save-Downloads([object[]]$Items, [string]$Folder) {
     New-Folder $Folder
     foreach ($item in $Items) {
@@ -29,12 +42,20 @@ function Save-Downloads([object[]]$Items, [string]$Folder) {
                 $remote = Get-RemoteSize $item.Link
                 $local = (Get-Item -LiteralPath $output).Length
                 if ($remote -and $remote -ne $local) { Write-Host "$($item.Name) has $local bytes instead of $remote"; $download = $true }
+                elseif ($item.Checksum -and -not (Test-Checksum $output $item.Checksum)) { Write-Host "$($item.Name) does not match its checksum"; $download = $true }
             }
             if ($download) {
                 Write-Host "Downloading $($item.Link)"
                 # The file gets its name only when complete, so an interrupted download is never taken for a finished one
-                try { Invoke-WebRequest -Uri $item.Link -OutFile $partial -UseBasicParsing }
-                catch { Remove-Item -LiteralPath $partial -Force -ErrorAction SilentlyContinue; throw }
+                try {
+                    Invoke-WebRequest -Uri $item.Link -OutFile $partial -UseBasicParsing
+                    if ($item.Checksum -and -not (Test-Checksum $partial $item.Checksum)) { throw "the file does not match the checksum $($item.Checksum)" }
+                }
+                catch {
+                    # The old file goes too, so no file that failed its checksum or its download reaches the later stages
+                    Remove-Item -LiteralPath $partial, $output -Force -ErrorAction SilentlyContinue
+                    throw
+                }
                 Move-Item -LiteralPath $partial -Destination $output -Force
             }
         }
@@ -56,18 +77,19 @@ $opensearch = $Versions.OpenSearch
 $openresty = $Versions.OpenResty
 $dashboards = $Versions.OpenSearchDashboards
 $fluentBit = $Versions.FluentBit
+$nuget = $Versions.NuGet
 $downloads = @(
-    @{ Name = 'nuget.exe'; Link = 'https://dist.nuget.org/win-x86-commandline/latest/nuget.exe' }
-    @{ Name = "opensearch-$opensearch.zip"; Link = "https://artifacts.opensearch.org/releases/bundle/opensearch/$opensearch/opensearch-$opensearch-windows-x64.zip" }
-    @{ Name = "openresty-$openresty.zip"; Link = "https://openresty.org/download/openresty-$openresty-win64.zip" }
-    @{ Name = "ingest-attachment-$opensearch.zip"; Link = "https://artifacts.opensearch.org/releases/plugins/ingest-attachment/$opensearch/ingest-attachment-$opensearch.zip" }
+    @{ Name = 'nuget.exe'; Link = "https://dist.nuget.org/win-x86-commandline/v$nuget/nuget.exe"; Checksum = (Get-Checksum "nuget-$nuget.exe") }
+    @{ Name = "opensearch-$opensearch.zip"; Link = "https://artifacts.opensearch.org/releases/bundle/opensearch/$opensearch/opensearch-$opensearch-windows-x64.zip"; Checksum = (Get-Checksum "opensearch-$opensearch-windows-x64.zip") }
+    @{ Name = "openresty-$openresty.zip"; Link = "https://openresty.org/download/openresty-$openresty-win64.zip"; Checksum = (Get-Checksum "openresty-$openresty-win64.zip") }
+    @{ Name = "ingest-attachment-$opensearch.zip"; Link = "https://artifacts.opensearch.org/releases/plugins/ingest-attachment/$opensearch/ingest-attachment-$opensearch.zip"; Checksum = (Get-Checksum "ingest-attachment-$opensearch.zip") }
     @{ Name = 'onlyoffice-documentserver-ee.exe'; Link = (Get-DocsLink 'EE' 'onlyoffice-documentserver-ee.exe'); Always = $true }
     @{ Name = 'onlyoffice-documentserver.exe'; Link = (Get-DocsLink 'CE' 'onlyoffice-documentserver.exe'); Always = $true }
     @{ Name = 'onlyoffice-documentserver-de.exe'; Link = (Get-DocsLink 'DE' 'onlyoffice-documentserver-de.exe'); Always = $true }
 )
 $stack = @(
-    @{ Name = "opensearch-dashboards-$dashboards-windows-x64.zip"; Link = "https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/$dashboards/opensearch-dashboards-$dashboards-windows-x64.zip" }
-    @{ Name = "fluent-bit-$fluentBit-win64.zip"; Link = "https://packages.fluentbit.io/windows/fluent-bit-$fluentBit-win64.zip" }
+    @{ Name = "opensearch-dashboards-$dashboards-windows-x64.zip"; Link = "https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/$dashboards/opensearch-dashboards-$dashboards-windows-x64.zip"; Checksum = (Get-Checksum "opensearch-dashboards-$dashboards-windows-x64.zip") }
+    @{ Name = "fluent-bit-$fluentBit-win64.zip"; Link = "https://packages.fluentbit.io/windows/fluent-bit-$fluentBit-win64.zip"; Checksum = (Get-Checksum "fluent-bit-$fluentBit-win64.zip") }
 )
 
 # The Prerequisites EXE embeds every https:// link of Apps.aip
