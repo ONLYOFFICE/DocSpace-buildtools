@@ -61,18 +61,26 @@ $node_services = @(
 )
 
 $connStr = (Get-Content $user_conf -Raw | ConvertFrom-Json).ConnectionStrings.'default'.connectionString
+$connection = @{}
 $connStr -split ';' | Where-Object {$_} | ForEach-Object {
     $k,$v = $_ -split '=',2
     $k = ($k.Trim() -replace '\s+','_')
-    Set-Item "Env:$k" ($v.Trim())
+    $connection[$k] = $v.Trim()
 }
+# The password reaches mysql through MYSQL_PWD in Invoke-MySql, never through the command line.
 $mysqlArgs = @(
-    "-h$env:Server",
-    "-P$($env:Port -as [int] -or 3306)",
-    "-u$env:User_ID",
-    "-p$env:Password",
-    $env:Database
+    "-h$($connection.Server)",
+    "-P$(if ($connection.Port -as [int]) { $connection.Port -as [int] } else { 3306 })",
+    "-u$($connection.User_ID)",
+    $connection.Database
 )
+
+function Invoke-MySql {
+  param ([string]$Query, [string[]]$Options = @())
+  $env:MYSQL_PWD = $connection.Password
+  try { & "$mysql" @mysqlArgs @Options -e $Query 2>$null }
+  finally { Remove-Item Env:MYSQL_PWD -ErrorAction SilentlyContinue }
+}
 
 function ConvertToPem {
   param (
@@ -88,7 +96,14 @@ function ConvertToPem {
   $certOut    = $null
   $keyOut     = $null
 
-  & openssl pkcs12 -in $certFile -info -noout -passin "pass:$PfxPassword" *> $null 2>&1
+  # The PFX password reaches openssl through the environment, never through the command line; an empty one stays a literal.
+  $passin = "pass:"
+  if ($PfxPassword) {
+    $env:APPS_SSL_PFX_PASSWORD = $PfxPassword
+    $passin = "env:APPS_SSL_PFX_PASSWORD"
+  }
+
+  & openssl pkcs12 -in $certFile -info -noout -passin $passin *> $null 2>&1
   if ($LASTEXITCODE -eq 0) {
     $certFormat = "PFX"
     $baseName   = [System.IO.Path]::GetFileNameWithoutExtension($certFile)
@@ -97,11 +112,13 @@ function ConvertToPem {
     $keyOut     = Join-Path $dir "$baseName-private.pem"
     Write-Host "$certFile is a valid PFX certificate. Converting to PEM..."
 
-    & openssl pkcs12 -in $certFile -out $certOut -nokeys -passin "pass:$PfxPassword"
-    & openssl pkcs12 -in $certFile -out $keyOut -nocerts -nodes -passin "pass:$PfxPassword"
+    & openssl pkcs12 -in $certFile -out $certOut -nokeys -passin $passin
+    & openssl pkcs12 -in $certFile -out $keyOut -nocerts -nodes -passin $passin
+    Remove-Item Env:APPS_SSL_PFX_PASSWORD -ErrorAction SilentlyContinue
 
     return @{ CertFile = $certOut; KeyFile = $keyOut; Format = $certFormat }
   }
+  Remove-Item Env:APPS_SSL_PFX_PASSWORD -ErrorAction SilentlyContinue
 
   & openssl x509 -in $certFile -inform PEM -text -noout *> $null 2>&1
   if ($LASTEXITCODE -eq 0) {
@@ -238,9 +255,8 @@ if ( $args.Count -ge 2 ) {
     ((Get-Content -Path "${nginx_conf_dir}\${nginx_conf}" -Raw) -replace '/usr/local/share/ca-certificates/tls.crt', "`"$ssl_cert`"") | Set-Content -Path "${nginx_conf_dir}\${nginx_conf}"
     ((Get-Content -Path "${nginx_conf_dir}\${nginx_conf}" -Raw) -replace '/etc/ssl/private/tls.key', "`"$ssl_key`"") | Set-Content -Path "${nginx_conf_dir}\${nginx_conf}"
 
-    if (-not (& "$mysql" @mysqlArgs -N -s -e "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1" 2>$null)) {
-      & "$mysql" @mysqlArgs -e `
-        "UPDATE tenants_tenants SET mappeddomain='$domain_name' WHERE alias='localhost';" 2>$null
+    if (-not (Invoke-MySql "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1" @('-N', '-s'))) {
+      Invoke-MySql "UPDATE tenants_tenants SET mappeddomain='$domain_name' WHERE alias='localhost';"
     }
 
     if ($letsencrypt_domain -and (Test-Path $letsencrypt_domain_dir))
@@ -269,9 +285,8 @@ elseif ($args[0] -eq "-d" -or $args[0] -eq "--default") {
     (Get-Content $user_conf -Raw) -replace '\r?\n\s*"server-root"\s*:\s*"https://\*/"\s*,?', '' | Set-Content -Path $user_conf
     [System.Environment]::SetEnvironmentVariable("NODE_EXTRA_CA_CERTS", $null, "Machine")
 
-    if (-not (& "$mysql" @mysqlArgs -N -s -e "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1" 2>$null)) {
-      & "$mysql" @mysqlArgs -e `
-        "UPDATE tenants_tenants SET mappeddomain=NULL WHERE alias='localhost';" 2>$null
+    if (-not (Invoke-MySql "SELECT 1 FROM core_settings WHERE tenant=-1 AND id='BaseDomain' LIMIT 1" @('-N', '-s'))) {
+      Invoke-MySql "UPDATE tenants_tenants SET mappeddomain=NULL WHERE alias='localhost';"
     }
 
     foreach ($service in $node_services) { Restart-Service -Name $service }
