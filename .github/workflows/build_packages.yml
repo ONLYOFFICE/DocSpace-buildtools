@@ -137,12 +137,17 @@ jobs:
           sudo gpg --batch --yes --dearmor -o /usr/share/keyrings/yarnkey.gpg
           echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian/ stable main" | \
           sudo tee /etc/apt/sources.list.d/yarn.list
-          curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | sudo bash -
+          # NodeSource nodejs satisfies the package Build-Depends; its repository is added directly with the signing key checked by fingerprint instead of running its setup script as root
+          wget -qO- https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --batch --yes --dearmor -o /usr/share/keyrings/nodesource.gpg
+          [ "$(gpg --show-keys --with-colons /usr/share/keyrings/nodesource.gpg | awk -F: '/^fpr:/ {print $10; exit}')" = "6F71F525282841EEDAF851B42F59B5F99B1BE0B4" ] || { echo "::error::Unexpected NodeSource signing key"; exit 1; }
+          echo "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_VERSION}.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list
+          printf 'Package: nodejs\nPin: origin deb.nodesource.com\nPin-Priority: 600\n' | sudo tee /etc/apt/preferences.d/nodejs
+          sudo apt update
           sudo apt install -y dotnet-sdk-${DOTNET_VERSION} yarn nodejs rename unzip maven openjdk-${JAVA_VERSION}-jdk-headless
           JAVA_PATH=$(find /usr/lib/jvm/ -name "java" -path "*java-${JAVA_VERSION}*" | head -1)
           sudo update-alternatives --install /usr/bin/java java "$JAVA_PATH" 100 && sudo update-alternatives --set java "$JAVA_PATH"
           echo "JAVA_HOME=$(dirname $(dirname "$JAVA_PATH"))" >> $GITHUB_ENV
-          sudo npm install -g json
+          sudo npm install -g json@11.0.0
           # pnpm version comes from client/package.json "packageManager"; do not `corepack prepare pnpm@latest --activate`, it pins nothing.
           sudo bash -c 'command -v corepack >/dev/null || npm install -g corepack'
           sudo corepack enable
