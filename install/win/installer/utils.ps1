@@ -515,6 +515,9 @@ function ShareRabbitMqUserWithDocs {
         if (-not $DocsKey -or $DocsKey.GetValue('RabbitMqUser') -ne 'guest') { return }
         $DocsKey.SetValue('RabbitMqUser', $User, [Microsoft.Win32.RegistryValueKind]::String)
         $DocsKey.SetValue('RabbitMqPwd', $Password, [Microsoft.Win32.RegistryValueKind]::String)
+        # Older Docs leaves its key readable by users; Docs reads it only in its installer, which runs as an administrator.
+        try { LockRegistryKey 'SOFTWARE\ONLYOFFICE\DocumentServer' 'Registry64' }
+        catch { Write-Output "WARNING: could not restrict access to the Docs settings key: $($_.Exception.Message)" }
 
         # Docs EE/DE keeps the broker URL in local.json (CE has no broker settings); only the credentials of that URL change.
         $LocalJson = Join-Path $DocsDir 'config\local.json'
@@ -899,8 +902,8 @@ function MigrateProductRegistry {
 
 # Only SYSTEM and Administrators can read the passwords and keys stored in a product registry key; the 32-bit view is where this package writes them.
 function LockRegistryKey {
-    param ([string]$SubKey)
-    $Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', 'Registry32')
+    param ([string]$SubKey, [string]$View = 'Registry32')
+    $Base = [Microsoft.Win32.RegistryKey]::OpenBaseKey('LocalMachine', $View)
     try {
         $Key = $Base.CreateSubKey($SubKey)
         try {
