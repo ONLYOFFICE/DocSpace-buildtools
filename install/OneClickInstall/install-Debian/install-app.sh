@@ -61,12 +61,13 @@ setup_postgres_db() {
 	if ! su - postgres -s /bin/bash -c "psql -lqt" | cut -d \| -f 1 | grep -q "${DS_DB_NAME}"; then
 		# A new Docs database gets its own password instead of the well-known default
 		DS_DB_PWD=${DS_DB_PWD:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 24)}
-		su - postgres -s /bin/bash -c "psql -c \"CREATE USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';\""
+		# The statement goes through stdin, so the password never appears in a command line
+		su - postgres -s /bin/bash -c "psql -v ON_ERROR_STOP=1" <<< "CREATE USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';"
 		su - postgres -s /bin/bash -c "psql -c \"CREATE DATABASE ${DS_DB_NAME} OWNER ${DS_DB_USER};\""
 	elif [ -z "${DS_DB_PWD}" ]; then
 		# A kept database may hold a random password stored nowhere, so the Docs installed now sets a fresh one
 		DS_DB_PWD=$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 24)
-		su - postgres -s /bin/bash -c "psql -c \"ALTER USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';\""
+		su - postgres -s /bin/bash -c "psql -v ON_ERROR_STOP=1" <<< "ALTER USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';"
 	fi
 
 	# The password type keeps a secret preseeded before the templates exist in the root-only passwords.dat, not in the world-readable config.dat

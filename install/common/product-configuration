@@ -149,7 +149,10 @@ json_configuration_literal() {
 env_configuration() {
 	local FILE=$1 KEY=$2 VALUE=$3
 	if grep -q "^${KEY}=" "$FILE"; then
-		sed -i "s|^${KEY}=.*|${KEY}=$(printf '%q' "$VALUE")|" "$FILE"
+		# The line reaches awk through the environment, so a secret never appears in a command line and no character of it is special
+		local ENV_CONTENT
+		ENV_CONTENT=$(ENV_LINE="${KEY}=$(printf '%q' "$VALUE")" awk -v key="${KEY}=" 'index($0, key) == 1 { print ENVIRON["ENV_LINE"]; next } { print }' "$FILE")
+		printf '%s\n' "$ENV_CONTENT" > "$FILE"
 	else
 		printf '%s=%s\n' "$KEY" "$VALUE" >> "$FILE"
 	fi
@@ -303,10 +306,9 @@ establish_mysql_conn(){
 	env_configuration "$APP_DIR/systemd.env" JDBC_USER_NAME "$DB_USER"
 	env_configuration "$APP_DIR/systemd.env" JDBC_PASSWORD "$DB_PWD"
 
-	# Two escaping layers: JSON (backslash, quote), then the sed replacement (backslash, "&"), which sed itself removes when writing
-	local RUNNER_CONNECTION_STRING
-	RUNNER_CONNECTION_STRING=$(printf '%s' "${CONNECTION_STRING}" | sed -e 's/[\\"]/\\&/g' -e 's/[\\&]/\\&/g')
-	sed "s&\(\"ConnectionString\":\).*&\1 \"${RUNNER_CONNECTION_STRING}\"&" -i $PRODUCT_DIR/services/ASC.Migration.Runner/appsettings.runner.json
+	# Every ConnectionString of the runner settings gets the value through the environment, so the password never appears in a command line
+	RUNNER_CONNECTION_STRING="${CONNECTION_STRING}" ${JSON} "$PRODUCT_DIR/services/ASC.Migration.Runner/appsettings.runner.json" -e \
+	"(function set(o){for(var k in o){if(k==='ConnectionString')o[k]=process.env.RUNNER_CONNECTION_STRING;else if(o[k]&&typeof o[k]==='object')set(o[k]);}})(this)" >/dev/null 2>&1
 
 	echo "OK"
 }
@@ -687,9 +689,15 @@ setup_redis() {
 	[[ -n "${REDIS_USER}" ]] && env_configuration "$APP_DIR/systemd.env" REDIS_USERNAME "${REDIS_USER}"
 	[[ -n "${REDIS_PASS}" ]] && env_configuration "$APP_DIR/systemd.env" REDIS_PASSWORD "${REDIS_PASS}"
 
-	sed -i -e "s~\(redis_host =\).*~\1 \"$REDIS_HOST\"~" -e "s~\(redis_port =\).*~\1 $REDIS_PORT~" \
-		-e "s~\(redis_user =\).*~\1 \"$REDIS_USER\"~" -e "s~\(redis_pass =\).*~\1 \"$REDIS_PASS\"~" \
-		-e "s~\(redis_db =\).*~\1 $REDIS_DB~" "${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}.conf"
+	# The values reach awk through the environment, so the Redis password never appears in a command line
+	local OPENRESTY_CONF_FILE="${OPENRESTY_DIR}/conf.d/${PACKAGE_SYSNAME}.conf" OPENRESTY_CONF_CONTENT
+	OPENRESTY_CONF_CONTENT=$(REDIS_HOST="$REDIS_HOST" REDIS_PORT="$REDIS_PORT" REDIS_USER="$REDIS_USER" REDIS_PASS="$REDIS_PASS" REDIS_DB="$REDIS_DB" awk '
+		function put(name, value) { if (index($0, name " =")) $0 = substr($0, 1, index($0, name " =") - 1) name " = " value }
+		{ put("redis_host", "\"" ENVIRON["REDIS_HOST"] "\""); put("redis_port", ENVIRON["REDIS_PORT"]); put("redis_user", "\"" ENVIRON["REDIS_USER"] "\"")
+		  put("redis_pass", "\"" ENVIRON["REDIS_PASS"] "\""); put("redis_db", ENVIRON["REDIS_DB"]); print }' "${OPENRESTY_CONF_FILE}")
+	printf '%s\n' "${OPENRESTY_CONF_CONTENT}" > "${OPENRESTY_CONF_FILE}"
+	# The file holds the Redis password, so only root and the nginx group read it
+	chmod 640 "${OPENRESTY_CONF_FILE}"
 
 	if [ $1 == "LOCAL_REDIS_SERVER" ] && ! docs_owns_dependency redis-server redis valkey; then
 		REDIS_CONF=$(find /etc/redis/redis.conf /etc/redis.conf /etc/valkey/valkey.conf -type f 2>/dev/null | head -n 1)

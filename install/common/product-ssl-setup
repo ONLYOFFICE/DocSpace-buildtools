@@ -99,14 +99,15 @@ remove_renew_job() {
 check_file_format() {
   FILE=$1
 
-  if openssl pkcs12 -in "$FILE" -info -noout --passin pass:"$PFX_PASSWORD" > /dev/null 2>&1; then
+  # The PFX password reaches openssl through the environment, so it never appears in a command line
+  if PFX_PASSWORD="${PFX_PASSWORD}" openssl pkcs12 -in "$FILE" -info -noout -passin env:PFX_PASSWORD > /dev/null 2>&1; then
     PKCS12_BASE="$FILE"
     [[ "${FILE,,}" =~ \.(p12|pfx)$ ]] && PKCS12_BASE="${FILE%.*}"
     CERTIFICATE_FILE="${PKCS12_BASE}.pem"
     PRIVATEKEY_FILE="${PKCS12_BASE}-private.pem"
     echo "$FILE is a valid PFX certificate. Converting to PEM..."
-    openssl pkcs12 -in "$FILE" -out "$CERTIFICATE_FILE" -nokeys --passin pass:"$PFX_PASSWORD"
-    openssl pkcs12 -in "$FILE" -out "$PRIVATEKEY_FILE" -nocerts -nodes --passin pass:"$PFX_PASSWORD"
+    PFX_PASSWORD="${PFX_PASSWORD}" openssl pkcs12 -in "$FILE" -out "$CERTIFICATE_FILE" -nokeys -passin env:PFX_PASSWORD
+    PFX_PASSWORD="${PFX_PASSWORD}" openssl pkcs12 -in "$FILE" -out "$PRIVATEKEY_FILE" -nocerts -nodes -passin env:PFX_PASSWORD
 
   elif openssl x509 -in "$FILE" -inform DER -text -noout > /dev/null 2>&1; then
     echo "$FILE is a valid DER/CER certificate. Converting to PEM..."

@@ -65,12 +65,13 @@ setup_postgres_db() {
 	if ! su - postgres -s /bin/bash -c "psql -lqt" | cut -d \| -f 1 | grep -q "${DS_DB_NAME}"; then
 		# A new Docs database gets its own password instead of the well-known default
 		DS_DB_PWD=${DS_DB_PWD:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 24)}
-		su - postgres -s /bin/bash -c "psql -c \"CREATE USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';\""
+		# The statement goes through stdin, so the password never appears in a command line
+		su - postgres -s /bin/bash -c "psql -v ON_ERROR_STOP=1" <<< "CREATE USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';"
 		su - postgres -s /bin/bash -c "psql -c \"CREATE DATABASE ${DS_DB_NAME} OWNER ${DS_DB_USER};\""
 	elif [ -z "${DS_DB_PWD}" ]; then
 		# A kept database may hold a random password stored nowhere, so the Docs installed now sets a fresh one
 		DS_DB_PWD=$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 24)
-		su - postgres -s /bin/bash -c "psql -c \"ALTER USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';\""
+		su - postgres -s /bin/bash -c "psql -v ON_ERROR_STOP=1" <<< "ALTER USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';"
 	fi
 }
 
@@ -152,8 +153,9 @@ if [ "${MYSQL_FIRST_TIME_INSTALL}" = "true" ]; then
 		MYSQL_AUTHENTICATION_PLUGIN=$("${MYSQL[@]}" -e "SHOW VARIABLES LIKE 'default_authentication_plugin';" -s | awk '{print $2}')
 		MYSQL_AUTHENTICATION_PLUGIN=${MYSQL_AUTHENTICATION_PLUGIN:-caching_sha2_password}
 
-		"${MYSQL[@]}" -e "ALTER USER '${MYSQL_SERVER_USER}'@'localhost' IDENTIFIED WITH ${MYSQL_AUTHENTICATION_PLUGIN} BY '${MYSQL_ROOT_PASS}'" >/dev/null 2>&1 || \
-		"${MYSQL[@]}" -e "UPDATE user SET plugin='${MYSQL_AUTHENTICATION_PLUGIN}', authentication_string=PASSWORD('${MYSQL_ROOT_PASS}') WHERE user='${MYSQL_SERVER_USER}' and host='localhost';"
+		# The statements go through stdin, so the new root password never appears in a command line
+		"${MYSQL[@]}" <<< "ALTER USER '${MYSQL_SERVER_USER}'@'localhost' IDENTIFIED WITH ${MYSQL_AUTHENTICATION_PLUGIN} BY '${MYSQL_ROOT_PASS}'" >/dev/null 2>&1 || \
+		"${MYSQL[@]}" <<< "UPDATE user SET plugin='${MYSQL_AUTHENTICATION_PLUGIN}', authentication_string=PASSWORD('${MYSQL_ROOT_PASS}') WHERE user='${MYSQL_SERVER_USER}' and host='localhost';"
 		unset MYSQL_PWD
 
 		systemctl restart mysqld
@@ -229,14 +231,13 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
 			--redishost "${DS_REDIS_HOST:-localhost}"
 			--amqphost "${DS_RABBITMQ_HOST:-localhost}"
 			--amqpuser "${DS_RABBITMQ_USER:-guest}"
-			--amqppassword "${DS_RABBITMQ_PWD:-guest}"
 			--databasehost "${DS_DB_HOST:-localhost}"
 			--databasename "$DS_DB_NAME"
 			--databaseuser "$DS_DB_USER"
 		)
 	fi
-	# documentserver-configure.sh takes the database password from DB_PWD when it is not given as an argument, which keeps it off the command line
-	DB_PWD="${DS_DB_PWD}" documentserver-configure.sh "${ds_configure_args[@]}"
+	# documentserver-configure.sh takes the database and RabbitMQ passwords from DB_PWD and AMQP_SERVER_PWD when they are not given as arguments, which keeps them off the command line
+	DB_PWD="${DS_DB_PWD}" AMQP_SERVER_PWD="${DS_RABBITMQ_PWD:-guest}" documentserver-configure.sh "${ds_configure_args[@]}"
 fi
 
 if [ "$MAKESWAP" == "true" ]; then

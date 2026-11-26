@@ -387,6 +387,21 @@ set_docs_url_external () {
 # The probe only reads the JWT mode: follow an http->https redirect as POST and do not let an IP-mismatched certificate hide the answer
 DOCS_PROBE_CURL_OPTS=(-s -k -m 10 -L --post301 --post302 --post303 -H "Content-Type: application/json" -d '{"c":"version"}')
 
+# Prints the binary HMAC-SHA256 of $2 keyed with $1 (RFC 2104) built from plain digests, since openssl -hmac would put the key in a command line
+hmac_sha256 () {
+	local KEY_HEX BYTE_OFFSET KEY_BYTE PAD_BYTE INNER_PAD="" OUTER_PAD=""
+	KEY_HEX="$(printf '%s' "$1" | od -An -v -tx1 | tr -d ' \n')"
+	# A key longer than the 64-byte block is replaced by its digest
+	[ "${#KEY_HEX}" -le 128 ] || KEY_HEX="$(printf '%s' "$1" | openssl dgst -sha256 -binary | od -An -v -tx1 | tr -d ' \n')"
+	while [ "${#KEY_HEX}" -lt 128 ]; do KEY_HEX="${KEY_HEX}00"; done
+	for ((BYTE_OFFSET = 0; BYTE_OFFSET < 128; BYTE_OFFSET += 2)); do
+		KEY_BYTE=$((16#${KEY_HEX:BYTE_OFFSET:2}))
+		printf -v PAD_BYTE '\\x%02x' $((KEY_BYTE ^ 0x36)); INNER_PAD="${INNER_PAD}${PAD_BYTE}"
+		printf -v PAD_BYTE '\\x%02x' $((KEY_BYTE ^ 0x5c)); OUTER_PAD="${OUTER_PAD}${PAD_BYTE}"
+	done
+	{ printf '%b' "${OUTER_PAD}"; { printf '%b' "${INNER_PAD}"; printf '%s' "$2"; } | openssl dgst -sha256 -binary; } | openssl dgst -sha256 -binary
+}
+
 # Succeeds only when CommandService answers a token signed with the secret with error 6 (token error) in the header Apps uses.
 is_docs_jwt_secret_rejected () {
 	local SECRET="$1" TOKEN_HEADER TOKEN_PAYLOAD TOKEN_SIGNATURE RESPONSE
@@ -394,7 +409,7 @@ is_docs_jwt_secret_rejected () {
 
 	TOKEN_HEADER="$(printf '%s' '{"alg":"HS256","typ":"JWT"}' | openssl base64 -A | tr '+/' '-_' | tr -d '=')"
 	TOKEN_PAYLOAD="$(printf '%s' '{"payload":{"c":"version"}}' | openssl base64 -A | tr '+/' '-_' | tr -d '=')"
-	TOKEN_SIGNATURE="$(printf '%s' "${TOKEN_HEADER}.${TOKEN_PAYLOAD}" | openssl dgst -sha256 -hmac "${SECRET}" -binary | openssl base64 -A | tr '+/' '-_' | tr -d '=')"
+	TOKEN_SIGNATURE="$(hmac_sha256 "${SECRET}" "${TOKEN_HEADER}.${TOKEN_PAYLOAD}" | openssl base64 -A | tr '+/' '-_' | tr -d '=')"
 
 	# A token signed with the real secret goes out only over a verified connection, without redirects
 	RESPONSE="$(curl -s -m 10 -H "Content-Type: application/json" -d '{"c":"version"}' -H "${DOCUMENT_SERVER_JWT_HEADER:-AuthorizationJwt}: Bearer ${TOKEN_HEADER}.${TOKEN_PAYLOAD}.${TOKEN_SIGNATURE}" "${DOCS_PROBE_URL:-${DOCUMENT_SERVER_URL_EXTERNAL%/}/coauthoring/CommandService.ashx}" 2>/dev/null)"

@@ -1020,8 +1020,9 @@ reconfigure () {
 		[ -f "${ENV_FILE}" ] || { echo "Missing ${ENV_FILE}" >&2; exit 1; }
 
 		ENV_TMP="$(mktemp "${BASE_DIR}/.env.XXXXXX")"
-		awk -v key="${VARIABLE_NAME}" -v value="${VARIABLE_VALUE}" \
-			'{ eq=index($0,"="); name=substr($0,1,eq-1); indent=name; sub(/[^ \t].*$/,"",indent); gsub(/^[ \t]+|[ \t]+$/,"",name); if (!updated && eq && name == key) { print indent key "=" value; updated=1; next } print } END { if (!updated) print key "=" value }' \
+		# The value reaches awk through the environment: it stays off the command line and its backslashes are kept as they are
+		ENV_VALUE="${VARIABLE_VALUE}" awk -v key="${VARIABLE_NAME}" \
+			'BEGIN { value=ENVIRON["ENV_VALUE"] } { eq=index($0,"="); name=substr($0,1,eq-1); indent=name; sub(/[^ \t].*$/,"",indent); gsub(/^[ \t]+|[ \t]+$/,"",name); if (!updated && eq && name == key) { print indent key "=" value; updated=1; next } print } END { if (!updated) print key "=" value }' \
 			"${ENV_FILE}" > "${ENV_TMP}" && mv -f "${ENV_TMP}" "${ENV_FILE}"
 	fi
 }
@@ -1303,7 +1304,8 @@ install_product () {
 			docker ps -q -f name=${PACKAGE_SYSNAME}-elasticsearch | xargs -r docker stop
 			MYSQL_TAG=$(docker images --format "{{.Tag}}" mysql | head -n1)
 			MYSQL_CONTAINER_NAME=$(get_env_parameter "MYSQL_CONTAINER_NAME" | sed "s/\${CONTAINER_PREFIX}/${PACKAGE_SYSNAME}-/g")
-			docker run --rm --network="$(get_env_parameter "NETWORK_NAME")" -e MYSQL_PWD="${MYSQL_PASSWORD}" mysql:${MYSQL_TAG:-latest} mysql -h "${MYSQL_HOST:-${MYSQL_CONTAINER_NAME}}" -P "${MYSQL_PORT:-3306}" -u "${MYSQL_USER}" "${MYSQL_DATABASE}" -e "TRUNCATE webstudio_index;"
+			# The docker client copies MYSQL_PWD from its own environment, so the password stays off the command line
+			MYSQL_PWD="${MYSQL_PASSWORD}" docker run --rm --network="$(get_env_parameter "NETWORK_NAME")" -e MYSQL_PWD mysql:${MYSQL_TAG:-latest} mysql -h "${MYSQL_HOST:-${MYSQL_CONTAINER_NAME}}" -P "${MYSQL_PORT:-3306}" -u "${MYSQL_USER}" "${MYSQL_DATABASE}" -e "TRUNCATE webstudio_index;"
 		fi
 
 		if [ ! -z "${CERTIFICATE_PATH}" ] && [[ ! -z "${APP_DOMAIN_PORTAL}" ]]; then
