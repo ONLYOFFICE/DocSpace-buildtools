@@ -10,6 +10,14 @@ set -e
 COMMAND="$1"; shift
 INSTALL_PATH="${GITHUB_WORKSPACE}/install"
 
+# Bundled Docker components, pinned with the sha256 of every file; bump a version together with its checksums
+DOCKER_STATIC_VERSION="29.10.0"
+declare -A DOCKER_STATIC_SHA256=([x86_64]="7c1ebadc65c716cdc6d35fc78759ed0e4317debf43c21dd12f066f2006999def" [aarch64]="6e5159e8b5615e0c0c2954a2a1a2a12bc65f5d9b603595dba24a10cb367408cd")
+COMPOSE_VERSION="v5.8.0"
+declare -A COMPOSE_SHA256=([x86_64]="b8840f5008c447f41fce0a57ae3adeab42c89b1eb6e6012524bcabbfb4ffbaf6" [aarch64]="1a9c918b2fb49b9c87f0018c64b5abd0d30715155e98dc939779fbaee6c414d3")
+CNI_VERSION="v1.10.0"
+declare -A CNI_SHA256=([amd64]="ce8603d6a1bd448efba5bd6dc44f38dce349f821aa57e1bb354b52628ebf1853" [arm64]="4f25d7f136be368746185fba6557d799cf3e1890f7556d450744ea20d300d68c")
+
 prepare() {
   docker ps -a -q | xargs -r docker stop
   docker ps -a -q | xargs -r docker rm
@@ -34,11 +42,9 @@ prepare() {
 }
 
 download_verify() {
+  [ -n "${3:-}" ] || { echo "::error::No pinned checksum for $1"; return 1; }
   curl -fsSL "$1" -o "$2"
-  [ -z "${3:-}" ] && return 0
-  CHECKSUM=$(curl -fsSL "$3" | awk '{print $1}')
-  [ -n "$CHECKSUM" ] || { echo "::error::Failed to get checksum for $1"; return 1; }
-  echo "${CHECKSUM}  $2" | sha256sum -c
+  echo "$3  $2" | sha256sum -c
 }
 
 create() {
@@ -56,21 +62,16 @@ create() {
     "${INSTALL_PATH}/common/offline-self-extracting.sh"
 
   echo "Downloading Docker static binaries..."
-  local BASE_URL="https://download.docker.com/linux/static/stable/${DOCKER_ARCH}"
-  local DOCKER_VER; DOCKER_VER=$(curl -fsSL "${BASE_URL}/" | grep -oE 'docker-[0-9]+\.[0-9]+\.[0-9]+\.tgz' | sort -V | tail -n1)
-  DOCKER_VER="${DOCKER_VER#docker-}"; DOCKER_VER="${DOCKER_VER%.tgz}"
-  local COMPOSE_VER; COMPOSE_VER=$(curl -fsSL https://api.github.com/repos/docker/compose/releases/latest | jq -r .tag_name)
-  local CNI_VER;     CNI_VER=$(curl -fsSL https://api.github.com/repos/containernetworking/plugins/releases/latest | jq -r .tag_name)
-
-  local COMPOSE_URL="https://github.com/docker/compose/releases/download/${COMPOSE_VER}/docker-compose-linux-${DOCKER_ARCH}"
-  local CNI_URL="https://github.com/containernetworking/plugins/releases/download/${CNI_VER}/cni-plugins-linux-${CNI_ARCH}-${CNI_VER}.tgz"
+  local DOCKER_URL="https://download.docker.com/linux/static/stable/${DOCKER_ARCH}/docker-${DOCKER_STATIC_VERSION}.tgz"
+  local COMPOSE_URL="https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-${DOCKER_ARCH}"
+  local CNI_URL="https://github.com/containernetworking/plugins/releases/download/${CNI_VERSION}/cni-plugins-linux-${CNI_ARCH}-${CNI_VERSION}.tgz"
 
   mkdir -p "${INSTALL_PATH}/docker-static"
   cp -r "${INSTALL_PATH}/common/systemd/offline" "${INSTALL_PATH}/docker-static/systemd"
 
-  download_verify "${BASE_URL}/docker-${DOCKER_VER}.tgz"  "${INSTALL_PATH}/docker-static/docker.tgz"
-  download_verify "$COMPOSE_URL"                           "${INSTALL_PATH}/docker-static/docker-compose" "${COMPOSE_URL}.sha256"
-  download_verify "$CNI_URL"                               "${INSTALL_PATH}/docker-static/cni-plugins.tgz" "${CNI_URL}.sha256"
+  download_verify "$DOCKER_URL"  "${INSTALL_PATH}/docker-static/docker.tgz"      "${DOCKER_STATIC_SHA256[$DOCKER_ARCH]}"
+  download_verify "$COMPOSE_URL" "${INSTALL_PATH}/docker-static/docker-compose"  "${COMPOSE_SHA256[$DOCKER_ARCH]}"
+  download_verify "$CNI_URL"     "${INSTALL_PATH}/docker-static/cni-plugins.tgz" "${CNI_SHA256[$CNI_ARCH]}"
 
   echo "Measuring on-disk image size for the disk-space check..."
   local DOCKER_ROOT_DIR; DOCKER_ROOT_DIR=$(docker info -f '{{.DockerRootDir}}')
