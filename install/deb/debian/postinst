@@ -126,6 +126,12 @@ case "$1" in
 		# --- Run configuration ---
 		bash /usr/bin/{{product}}-configuration "${args[@]}"
 
+		# The configuration files now hold these settings and upgrades read them from there, so the secrets do not stay in debconf
+		for QUESTION in db-host db-name db-user db-pwd db-port redis-password rabbitmq-password machinekey ds-url jwt-header jwt-secret; do
+			db_set "{{package_name}}/${QUESTION}" "" || true
+			db_set "{{legacy_product}}/${QUESTION}" "" || true
+		done
+
 		if [ -n "$2" ]; then
 			find /etc/systemd/system -type l -name '{{product}}-*.service' ! -exec test -e {} \; -delete
 			systemctl daemon-reload >/dev/null 2>&1 || true
