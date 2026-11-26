@@ -13,6 +13,7 @@ TimeoutSec=600
 
 Restart=${RESTART}
 PrivateTmp=false
+NoNewPrivileges=yes
 
 [Install]
 WantedBy=multi-user.target
