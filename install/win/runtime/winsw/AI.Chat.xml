@@ -11,7 +11,7 @@
 	<env name="API_HOST" value="{API_HOST}"/>
 	<env name="AI_SERVICE_URL" value="{AI_SERVICE_URL}"/>
 	<executable>node</executable>
-	<arguments>&quot;{APPDIR}services\ASC.AI.Chat\service\server.js&quot;</arguments>
+	<arguments>&quot;{APPDIR}services\ASC.AI.Chat\service\server.js&quot; --app.hostname=127.0.0.1</arguments>
 	<log mode="roll-by-size">
   		<sizeThreshold>10240</sizeThreshold>
   		<keepFiles>8</keepFiles>

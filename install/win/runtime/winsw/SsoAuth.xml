@@ -9,7 +9,7 @@
 	<logpath>{APPDIR}Logs</logpath>
 	<env name="logPath" value="{APPDIR}Logs"/>
 	<executable>node</executable>
-	<arguments>&quot;{APPDIR}services\ASC.SsoAuth\service\app.js&quot;</arguments>
+	<arguments>&quot;{APPDIR}services\ASC.SsoAuth\service\app.js&quot; --app.hostname=127.0.0.1</arguments>
 	<log mode="roll-by-size">
   		<sizeThreshold>10240</sizeThreshold>
   		<keepFiles>8</keepFiles>

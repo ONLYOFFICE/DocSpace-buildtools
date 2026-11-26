@@ -21,7 +21,7 @@
     <ROW Property="AMQP_VHOST" Value="/" ValueLocId="-"/>
     <ROW Property="APPDIR_FORWARD_SLASH" Value=" "/>
     <ROW Property="APP_PORT" Value="80"/>
-    <ROW Property="APP_URLS" Value="http://0.0.0.0"/>
+    <ROW Property="APP_URLS" Value="http://127.0.0.1"/>
     <ROW Property="API_HOST" Value="http://127.0.0.1:8092"/>
     <ROW Property="AI_SERVICE_URL" Value="http://127.0.0.1:5157"/>
     <ROW Property="ARPCOMMENTS" Value="[|PRODUCT_NAME] is a platform based on .NET Core and React engines which comprises document management features and makes it possible to implement advanced folder management." ValueLocId="*"/>
