@@ -174,7 +174,17 @@ if ! "${SCRIPT_DIR}/install-Docker.sh" "$@" --offline true --deployment-mode sta
   echo "ERROR: Installation failed. Fix the issue and re-run this script."
   echo "To clean up before retrying:"
   echo "  docker stop \$(docker ps -a -q); docker container prune -f; rm -rf /app/"
-  echo "Then re-run: ${SCRIPT_DIR}/install-Docker.sh $* --offline true --deployment-mode standalone"
+  # Secret values are masked the way common/logging.sh masks them in the OneClickInstall logs
+  MASKED_PARAMETERS=() MASK_NEXT="false"
+  for PARAMETER in "$@"; do
+    if [ "${MASK_NEXT}" = "true" ]; then MASKED_PARAMETERS+=("***"); MASK_NEXT="false"; continue; fi
+    case "${PARAMETER}" in
+      -p | --password | -mysqlrp | --mysqlrootpassword | -mysqlp | --mysqlpassword | -mk | --machinekey | -js | --jwtsecret | \
+      -rdspass | --redispassword | -rbtpass | --rabbitmqpassword | -dp | --dashboardspassword ) MASK_NEXT="true" ;;
+    esac
+    MASKED_PARAMETERS+=("${PARAMETER}")
+  done
+  echo "Then re-run: ${SCRIPT_DIR}/install-Docker.sh ${MASKED_PARAMETERS[*]} --offline true --deployment-mode standalone"
   exit 1
 fi
 
