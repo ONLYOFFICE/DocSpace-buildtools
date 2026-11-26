@@ -346,7 +346,9 @@ replace_csp_lua() {
 	local origin = headers["Origin"] or ""
 	local referer = headers["Referer"] or ""
 
-	local cache_key = host .. "|" .. origin .. "|" .. referer
+	local is_private_link = ngx.var.uri == "/share/private" or ngx.var.uri == "/share/private/"
+
+	local cache_key = host .. "|" .. origin .. "|" .. referer .. (is_private_link and "|private" or "")
 
 	local cached = cache:get(cache_key)
 	if cached then
@@ -362,7 +364,7 @@ replace_csp_lua() {
 		local ok, data = pcall(require("cjson").decode, res.body)
 
 		if ok and data and data.response and data.response.header then
-			local header = data.response.header
+			local header = is_private_link and data.response.privateLinkHeader or data.response.header
 
 			ngx.header.Content_Security_Policy = header
 			cache:set(cache_key, header, 3)
