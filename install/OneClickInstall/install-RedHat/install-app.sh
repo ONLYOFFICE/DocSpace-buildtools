@@ -58,6 +58,19 @@ case "${INSTALLATION_TYPE}" in
 esac
 
 DS_COMMON_NAME=${DS_COMMON_NAME:-ds}
+# Prints a value (dot path) from the config of a Docs installed on this host before, if that config is still there; node is an Apps prerequisite
+get_saved_config_value() {
+	local CONFIG_FILE SAVED_VALUE
+	for CONFIG_FILE in "/etc/${package_sysname}/documentserver/local.json" "/etc/${package_sysname}/documentserver/local.json.rpmsave"; do
+		[ -f "${CONFIG_FILE}" ] || continue
+		SAVED_VALUE=$(CONFIG_FILE="${CONFIG_FILE}" VALUE_PATH="$1" node -e 'let value = JSON.parse(require("fs").readFileSync(process.env.CONFIG_FILE, "utf8")); for (const key of process.env.VALUE_PATH.split(".")) value = value == null ? undefined : value[key]; if (typeof value === "string") process.stdout.write(value)' 2>/dev/null) || true
+		if [ -n "${SAVED_VALUE}" ]; then
+			printf '%s\n' "${SAVED_VALUE}"
+			return 0
+		fi
+	done
+}
+
 setup_postgres_db() {
 	DS_DB_NAME=${DS_DB_NAME:-$DS_COMMON_NAME}
 	DS_DB_USER=${DS_DB_USER:-$DS_COMMON_NAME}
@@ -66,12 +79,16 @@ setup_postgres_db() {
 		# A new Docs database gets its own password instead of the well-known default
 		DS_DB_PWD=${DS_DB_PWD:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 24)}
 		# The statement goes through stdin, so the password never appears in a command line
-		su - postgres -s /bin/bash -c "psql -v ON_ERROR_STOP=1" <<< "CREATE USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';"
+		su - postgres -s /bin/bash -c "psql -v ON_ERROR_STOP=1" <<< "CREATE USER ${DS_DB_USER} WITH password '${DS_DB_PWD//"'"/"''"}';"
 		su - postgres -s /bin/bash -c "psql -c \"CREATE DATABASE ${DS_DB_NAME} OWNER ${DS_DB_USER};\""
 	elif [ -z "${DS_DB_PWD}" ]; then
-		# A kept database may hold a random password stored nowhere, so the Docs installed now sets a fresh one
-		DS_DB_PWD=$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 24)
-		su - postgres -s /bin/bash -c "psql -v ON_ERROR_STOP=1" <<< "ALTER USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';"
+		# A kept database keeps the password of the Docs that used it, so reinstalling or switching the edition does not rotate it
+		DS_DB_PWD=$(get_saved_config_value services.CoAuthoring.sql.dbPass)
+		if [ -z "${DS_DB_PWD}" ] || ! PGPASSWORD="${DS_DB_PWD}" psql -h localhost -U "${DS_DB_USER}" -d "${DS_DB_NAME}" -w -c ';' >/dev/null 2>&1; then
+			# Nothing else knows the password of a kept database without a working config, so the Docs installed now sets a fresh one
+			DS_DB_PWD=$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 24)
+			su - postgres -s /bin/bash -c "psql -v ON_ERROR_STOP=1" <<< "ALTER USER ${DS_DB_USER} WITH password '${DS_DB_PWD}';"
+		fi
 	fi
 }
 
@@ -201,7 +218,10 @@ if [ "$DOCUMENT_SERVER_INSTALLED" = "false" ]; then
     declare -x DS_PORT=${DS_PORT:-8083}
     declare -x LISTEN_ADDRESS=127.0.0.1:${DS_PORT}
     declare -x JWT_ENABLED=${JWT_ENABLED:-true}
+    # Reinstalling or switching the edition keeps the JWT secret and header of the Docs installed before, so Apps keeps talking to it
+    declare -x JWT_SECRET=${JWT_SECRET:-$(get_saved_config_value services.CoAuthoring.secret.inbox.string)}
     declare -x JWT_SECRET=${JWT_SECRET:-$(cat /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)}
+    declare -x JWT_HEADER=${JWT_HEADER:-$(get_saved_config_value services.CoAuthoring.token.inbox.header)}
     declare -x JWT_HEADER=${JWT_HEADER:-AuthorizationJwt}
     [ -n "${WOPI_ENABLED}" ] && export WOPI_ENABLED
 
