@@ -4,19 +4,19 @@
 %files api
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/studio/ASC.Web.Api/
-/usr/lib/systemd/system/%{product}-api.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-api.service
 %dir %{buildpath}/studio/
 
 %files api-system
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/services/ASC.ApiSystem/
-/usr/lib/systemd/system/%{product}-api-system.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-api-system.service
 %dir %{buildpath}/services/
 
 %files backup
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/services/ASC.Data.Backup/
-/usr/lib/systemd/system/%{product}-backup.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-backup.service
 %dir %{buildpath}/services/
 
 %files common
@@ -30,25 +30,25 @@
 %dir %attr(755, root, root) %{_sysconfdir}/%{package_sysname}/
 %dir %attr(750, root, %{package_sysname}) %{_sysconfdir}/%{package_sysname}/%{product}/
 %dir %attr(700, root, root) %{_sysconfdir}/%{package_sysname}/%{product}/.private/
-%dir %{_var}/log/%{package_sysname}/
+%dir %attr(755, root, root) %{_var}/log/%{package_sysname}/
 
 %files files-worker
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/products/ASC.Files/service/
-/usr/lib/systemd/system/%{product}-files-worker.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-files-worker.service
 %dir %{buildpath}/products/
 %dir %{buildpath}/products/ASC.Files/
 
 %files notify
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/services/ASC.Notify/
-/usr/lib/systemd/system/%{product}-notify.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-notify.service
 %dir %{buildpath}/services/
 
 %files files
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/products/ASC.Files/server/
-/usr/lib/systemd/system/%{product}-files.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-files.service
 %dir %{buildpath}/products/
 %dir %{buildpath}/products/ASC.Files/
 
@@ -68,88 +68,88 @@
 %files studio-notify
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/services/ASC.Studio.Notify/
-/usr/lib/systemd/system/%{product}-studio-notify.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-studio-notify.service
 %dir %{buildpath}/services/
 
 %files people-server
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/products/ASC.People/server/
-/usr/lib/systemd/system/%{product}-people-server.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-people-server.service
 %dir %{buildpath}/products/
 %dir %{buildpath}/products/ASC.People/
 
 %files socket
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/services/ASC.Socket.IO/
-/usr/lib/systemd/system/%{product}-socket.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-socket.service
 %dir %{buildpath}/services/
 
 %files ai-chat
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/services/ASC.AI.Chat/
-/usr/lib/systemd/system/%{product}-ai-chat.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-ai-chat.service
 %dir %{buildpath}/services/
 
 %files studio
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/studio/ASC.Web.Studio/
-/usr/lib/systemd/system/%{product}-studio.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-studio.service
 %dir %{buildpath}/studio/
 
 %files ssoauth
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/services/ASC.SsoAuth/
-/usr/lib/systemd/system/%{product}-ssoauth.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-ssoauth.service
 %dir %{buildpath}/services/
 
 %files identity-api
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/services/ASC.Identity.Registration
-/usr/lib/systemd/system/%{product}-identity-api.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-identity-api.service
 %dir %{buildpath}/services/
 
 %files identity-authorization
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/services/ASC.Identity.Authorization
-/usr/lib/systemd/system/%{product}-identity-authorization.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-identity-authorization.service
 %dir %{buildpath}/services/
 
 %files clear-events
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/services/ASC.ClearEvents/
-/usr/lib/systemd/system/%{product}-clear-events.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-clear-events.service
 %dir %{buildpath}/services/
 
 %files backup-worker
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/services/ASC.Data.Backup.Worker/
-/usr/lib/systemd/system/%{product}-backup-worker.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-backup-worker.service
 %dir %{buildpath}/services/
 
 %files doceditor
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/products/ASC.Files/editor/
-/usr/lib/systemd/system/%{product}-doceditor.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-doceditor.service
 %dir %{buildpath}/products/
 %dir %{buildpath}/products/ASC.Files/
 
 %files migration-runner
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/services/ASC.Migration.Runner/
-/usr/lib/systemd/system/%{product}-migration-runner.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-migration-runner.service
 %dir %{buildpath}/services/
 
 %files login
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/products/ASC.Login/login
-/usr/lib/systemd/system/%{product}-login.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-login.service
 %dir %{buildpath}/products/
 %dir %{buildpath}/products/ASC.Login/
 
 %files healthchecks
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/services/ASC.Web.HealthChecks.UI
-/usr/lib/systemd/system/%{product}-healthchecks.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-healthchecks.service
 %dir %{buildpath}/services/
 
 %files plugins
@@ -161,41 +161,41 @@
 %files sdk
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/products/ASC.Sdk/sdk/
-/usr/lib/systemd/system/%{product}-sdk.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-sdk.service
 %dir %{buildpath}/products/
 %dir %{buildpath}/products/ASC.Sdk/
 
 %files management
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/products/ASC.Management/management/
-/usr/lib/systemd/system/%{product}-management.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-management.service
 %dir %{buildpath}/products/
 %dir %{buildpath}/products/ASC.Management/
 
 %files telegram
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/services/ASC.TelegramService/
-/usr/lib/systemd/system/%{product}-telegram.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-telegram.service
 %dir %{buildpath}/services/
 
 %files ai
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/products/ASC.AI/server/
-/usr/lib/systemd/system/%{product}-ai.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-ai.service
 %dir %{buildpath}/products/
 %dir %{buildpath}/products/ASC.AI/
 
 %files ai-worker
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/products/ASC.AI/service/
-/usr/lib/systemd/system/%{product}-ai-worker.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-ai-worker.service
 %dir %{buildpath}/products/
 %dir %{buildpath}/products/ASC.AI/
 
 %files mcp
 %defattr(-, %{package_sysname}, %{package_sysname}, -)
 %{buildpath}/products/ASC.AI/mcp/
-/usr/lib/systemd/system/%{product}-mcp.service
+%attr(644, root, root) /usr/lib/systemd/system/%{product}-mcp.service
 %dir %{buildpath}/products/
 %dir %{buildpath}/products/ASC.AI/
 
