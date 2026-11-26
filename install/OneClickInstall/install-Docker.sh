@@ -727,12 +727,19 @@ set_external_docs_callback_url () {
 	[[ "${PREVIOUS_APP_URL_PORTAL}" == *:8092 ]] || APP_URL_PORTAL="${PREVIOUS_APP_URL_PORTAL}"
 }
 
+# Prints the public IPv4 address of this server, looked up over HTTPS, or nothing when the answer is not an IPv4 address
+get_public_ipv4 () {
+	local PUBLIC_IP
+	PUBLIC_IP="$(curl -fsS -4 --max-time 10 https://ifconfig.me 2>/dev/null)" || return 0
+	if [[ "${PUBLIC_IP}" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; then printf '%s' "${PUBLIC_IP}"; fi
+}
+
 # An external Docs calls back to this server, so an address it can reach is required; an empty one would give http://:PORT.
 set_apps_url_for_external_docs () {
 	[[ -z ${APP_URL_PORTAL} ]] || return 0
 	local PUBLIC_IP
-	PUBLIC_IP="$(curl -s -4 -m 10 ifconfig.me)"
-	[[ "${PUBLIC_IP}" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]] || { echo "Error: the address of this server for the Document Server callbacks cannot be detected. Pass --appshost." >&2; exit 1; }
+	PUBLIC_IP="$(get_public_ipv4)"
+	[[ -n "${PUBLIC_IP}" ]] || { echo "Error: the address of this server for the Document Server callbacks cannot be detected. Pass --appshost." >&2; exit 1; }
 	APP_URL_PORTAL="http://${PUBLIC_IP}:${EXTERNAL_PORT}"
 }
 
@@ -1599,7 +1606,8 @@ services_check_connection () {
 	fi
 	if [[ ! -z "$DOCUMENT_SERVER_HOST" ]]; then
 		if [ "${DOCUMENT_SERVER_ATTACHED}" = "true" ]; then
-			APP_URL_PORTAL=${APP_URL_PORTAL:-"http://$(curl -s -4 ifconfig.me):${EXTERNAL_PORT}"}
+			# Without a detected address the portal URL stays unset, so the default router address is used instead of http://:PORT
+			[[ -n ${APP_URL_PORTAL} ]] || { PUBLIC_IP="$(get_public_ipv4)"; APP_URL_PORTAL=${PUBLIC_IP:+http://${PUBLIC_IP}:${EXTERNAL_PORT}}; }
 		else
 			set_apps_url_for_external_docs
 		fi

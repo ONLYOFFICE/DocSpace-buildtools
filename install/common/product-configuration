@@ -528,7 +528,9 @@ setup_docs() {
 			fi
 		fi
 	elif [ $1 == "EXTERNAL_DOCS_SERVER" ]; then
-		APP_HOST=$(curl -s -4 ifconfig.me)
+		# The external Docs calls back to the public address, looked up over HTTPS; an answer that is not an IPv4 address keeps the current host
+		PUBLIC_IP=$(curl -fsS -4 --max-time 10 https://ifconfig.me 2>/dev/null) || PUBLIC_IP=""
+		[[ ! "${PUBLIC_IP}" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]] || APP_HOST="${PUBLIC_IP}"
 		: "${DOCUMENT_SERVER_JWT_SECRET:=$(json -f "${USER_CONF}" files.docservice.secret.value 2>/dev/null)}"
 		: "${DOCUMENT_SERVER_JWT_HEADER:=$(json -f "${USER_CONF}" files.docservice.secret.header 2>/dev/null)}"
 	fi
