@@ -61,6 +61,37 @@ run_remote_bash() {
 	return "${EXIT_CODE}"
 }
 
+# Imports an rpm signing key only when its primary fingerprint is the pinned one
+import_pinned_rpm_key() {
+	local KEY_URL="$1" KEY_FINGERPRINT="$2" KEY_FILE EXIT_CODE=0
+	command -v gpg >/dev/null 2>&1 || ${package_manager} -y install gnupg2
+	KEY_FILE="$(mktemp)"
+	if ! { [ -n "${KEY_FINGERPRINT}" ] && curl -fsSL "${KEY_URL}" -o "${KEY_FILE}" \
+		&& [ "$(gpg --show-keys --with-colons "${KEY_FILE}" 2>/dev/null | awk -F: '/^fpr:/ {print $10; exit}')" = "${KEY_FINGERPRINT}" ] \
+		&& rpm --import "${KEY_FILE}"; }; then
+		echo "ERROR: the signing key ${KEY_URL} could not be downloaded or is not the expected one" >&2
+		EXIT_CODE=1
+	fi
+	rm -f "${KEY_FILE}"
+	return "${EXIT_CODE}"
+}
+
+# Runs the given install command on a package downloaded from a URL, only when the package carries a valid signature of an imported key
+install_signed_rpm() {
+	local PACKAGE_URL="$1" PACKAGE_DIR PACKAGE_FILE EXIT_CODE=0
+	shift
+	PACKAGE_DIR="$(mktemp -d)"
+	PACKAGE_FILE="${PACKAGE_DIR}/${PACKAGE_URL##*/}"
+	if curl -fsSL "${PACKAGE_URL}" -o "${PACKAGE_FILE}" && rpmkeys -D "_pkgverify_level all" --checksig "${PACKAGE_FILE}" >/dev/null; then
+		"$@" "${PACKAGE_FILE}" || EXIT_CODE=$?
+	else
+		echo "ERROR: ${PACKAGE_URL} could not be downloaded or is not signed with a trusted key" >&2
+		EXIT_CODE=1
+	fi
+	rm -rf "${PACKAGE_DIR}"
+	return "${EXIT_CODE}"
+}
+
 PRESERVE_DOCS=false
 DOCS_RPM_OPTIONS=()
 APPS_ERASING_OPTIONS=(--allowerasing)
@@ -107,7 +138,12 @@ fi
 
 # Add EPEL repo.
 EPEL_URL="https://dl.fedoraproject.org/pub/epel/"
-[ "$DIST" != "fedora" ] && { rpm -ivh ${EPEL_URL}/epel-release-latest-$REV.noarch.rpm || true; }
+# Fingerprints of the EPEL signing keys by major release, from ${EPEL_URL}RPM-GPG-KEY-EPEL-<release>
+declare -A EPEL_KEY_FINGERPRINTS=([8]="94E279EB8D8F25B21810ADF121EA45AB2F86D6A1" [9]="FF8AD1344597106ECE813B918A3872BF3228467C" [10]="7D8D15CBFC4E62688591FB2633D98517E37ED158")
+if [ "$DIST" != "fedora" ] && ! rpm -q epel-release >/dev/null 2>&1; then
+	{ import_pinned_rpm_key "${EPEL_URL}RPM-GPG-KEY-EPEL-${REV}" "${EPEL_KEY_FINGERPRINTS[$REV]}" \
+		&& install_signed_rpm "${EPEL_URL}epel-release-latest-${REV}.noarch.rpm" rpm -ivh; } || true
+fi
 # crypto-policies with the rpm-sequoia back-end (EL 9.7+) trusts SHA-1 package signatures in every policy, so only an older EL9 still weakens the host-wide policy
 if [ "$REV" = "9" ] && ! grep -qs '^sha1.collision_resistance = "always"' /etc/crypto-policies/back-ends/rpm-sequoia.config; then
 	update-crypto-policies --set DEFAULT:SHA1
@@ -117,7 +153,8 @@ if [ "$DIST" = "redhat" ] && [ "$REV" -ge 9 ]; then
 	LADSPA_PACKAGE_VERSION=$(curl -fsSL "${EPEL_URL}/10/Everything/${ARCH}/Packages/l/" | grep -oP 'ladspa-[0-9].*?\.rpm' | sort -V | tail -n 1)
 	[ -n "${LADSPA_PACKAGE_VERSION}" ] || { echo "ERROR: ladspa package not found for ${ARCH}" >&2; exit 1; }
 	if [ "${PRESERVE_DOCS}" = false ] || ! rpm -q ladspa >/dev/null 2>&1; then
-		${package_manager} "${DOCS_RPM_OPTIONS[@]}" install -y "${EPEL_URL}/10/Everything/${ARCH}/Packages/l/${LADSPA_PACKAGE_VERSION}"
+		import_pinned_rpm_key "${EPEL_URL}RPM-GPG-KEY-EPEL-10" "${EPEL_KEY_FINGERPRINTS[10]}" || exit 1
+		install_signed_rpm "${EPEL_URL}10/Everything/${ARCH}/Packages/l/${LADSPA_PACKAGE_VERSION}" ${package_manager} "${DOCS_RPM_OPTIONS[@]}" install -y || exit 1
 	fi
 fi
 
@@ -217,7 +254,8 @@ if [ "${DIST}" = "redhat" ] && [ "${REV}" = "8" ]; then
   CRB_REPO=$(dnf -q repolist all | awk "/^codeready-builder-for-rhel-8-${ARCH}-rpms/ {print \$1; exit} /^codeready-builder-for-rhel-8-rhui-rpms/ {print \$1; exit}")
   [ -n "${CRB_REPO}" ] && subscription-manager repos --enable="${CRB_REPO}" || true
   CRB_REPO=${CRB_REPO:+--enablerepo=${CRB_REPO}}
-  ${package_manager} "${DOCS_RPM_OPTIONS[@]}" -y install https://download1.rpmfusion.org/free/el/rpmfusion-free-release-${REV}.noarch.rpm
+  import_pinned_rpm_key "https://download1.rpmfusion.org/free/el/RPM-GPG-KEY-rpmfusion-free-el-${REV}" "837935CD19E123AA7F8A8E69979F0C69158B3811" || exit 1
+  install_signed_rpm "https://download1.rpmfusion.org/free/el/rpmfusion-free-release-${REV}.noarch.rpm" ${package_manager} "${DOCS_RPM_OPTIONS[@]}" -y install || exit 1
 fi
 
 if [ "$DIST" = "fedora" ] && [ "$REV" -ge 44 ]; then

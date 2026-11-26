@@ -148,9 +148,24 @@ fi
 if [ "$DIST" = "ubuntu" ]; then
     add-apt-repository -y ppa:dotnet/backports
 elif [ "$DIST" = "debian" ]; then
-	curl -fsSL https://packages.microsoft.com/config/"$DIST"/"$REV"/packages-microsoft-prod.deb -O
+	# The repository package is installed only with a valid debsigs signature of a Microsoft key pinned by fingerprint (the 2025 key and the older release key)
+	MICROSOFT_KEY_FINGERPRINTS="AA86F75E427A19DD33346403EE4D7792F748182B BC528686B50D79E339D3721CEB3E94ADBE1229CF"
+	MICROSOFT_REPO_TMP="$(mktemp -d)"
+	command -v ar >/dev/null 2>&1 || apt-get "${DOCS_APT_OPTIONS[@]}" install -yq binutils
+	for MICROSOFT_KEY in microsoft.asc microsoft-2025.asc; do
+		curl -fsSL "https://packages.microsoft.com/keys/${MICROSOFT_KEY}" | gpg --batch --dearmor >> "${MICROSOFT_REPO_TMP}/microsoft.gpg"
+	done
+	[ "$(gpg --show-keys --with-colons "${MICROSOFT_REPO_TMP}/microsoft.gpg" | awk -F: '/^pub:/ {primary=1; next} /^fpr:/ && primary {print $10; primary=0}' | sort | xargs)" = "${MICROSOFT_KEY_FINGERPRINTS}" ] \
+		|| { rm -rf "${MICROSOFT_REPO_TMP}"; echo "ERROR: unexpected Microsoft signing keys" >&2; exit 1; }
+	curl -fsSL "https://packages.microsoft.com/config/${DIST}/${REV}/packages-microsoft-prod.deb" -o "${MICROSOFT_REPO_TMP}/packages-microsoft-prod.deb"
+	# debsigs signs the archive members in their order, without the signature member itself
+	( cd "${MICROSOFT_REPO_TMP}" && mkdir -m 700 gnupg && ar x packages-microsoft-prod.deb \
+		&& ar t packages-microsoft-prod.deb | grep -v '^_gpg' | xargs cat \
+		| GNUPGHOME="${MICROSOFT_REPO_TMP}/gnupg" gpg --batch --no-default-keyring --keyring "${MICROSOFT_REPO_TMP}/microsoft.gpg" --verify _gpgorigin - ) >/dev/null 2>&1 \
+		|| { rm -rf "${MICROSOFT_REPO_TMP}"; echo "ERROR: packages-microsoft-prod.deb is not signed with a Microsoft key" >&2; exit 1; }
 	echo -e "Package: *\nPin: origin \"packages.microsoft.com\"\nPin-Priority: 1002" | tee /etc/apt/preferences.d/99microsoft-prod.pref
-	DEBIAN_FRONTEND=noninteractive dpkg --force-confnew -i packages-microsoft-prod.deb && rm packages-microsoft-prod.deb
+	DEBIAN_FRONTEND=noninteractive dpkg --force-confnew -i "${MICROSOFT_REPO_TMP}/packages-microsoft-prod.deb"
+	rm -rf "${MICROSOFT_REPO_TMP}"
 fi
 
 MYSQL_SERVER_HOST=${MYSQL_SERVER_HOST:-"localhost"}
@@ -173,9 +188,15 @@ if [ "$DIST" = "debian" ] && [ "$ARCH" = "arm64" ]; then
 		fi
 		MYSQL_PACKAGES=(percona-server-server percona-server-client)
 		export PERCONA_TELEMETRY_DISABLE=1
-		curl -fsSLO --retry 3 --retry-delay 2 https://repo.percona.com/apt/percona-release_latest.generic_all.deb
-		apt-get "${DOCS_APT_OPTIONS[@]}" install -yq gnupg2 lsb-release ca-certificates ./percona-release_latest.generic_all.deb
-		rm -f percona-release_latest.generic_all.deb
+		# The repository package is pinned and verified by checksum; update the version and the sha256 of the file on repo.percona.com together
+		PERCONA_REPO_PACKAGE="percona-release_1.0-34.generic_all.deb"
+		PERCONA_REPO_SHA256="10a419065480e4cd4ad6d1036e742832203e79ff537461115361ec2f7ff62e36"
+		PERCONA_REPO_TMP="$(mktemp -d)"
+		curl -fsSL --retry 3 --retry-delay 2 "https://repo.percona.com/apt/${PERCONA_REPO_PACKAGE}" -o "${PERCONA_REPO_TMP}/${PERCONA_REPO_PACKAGE}"
+		echo "${PERCONA_REPO_SHA256}  ${PERCONA_REPO_TMP}/${PERCONA_REPO_PACKAGE}" | sha256sum -c - >/dev/null \
+			|| { rm -rf "${PERCONA_REPO_TMP}"; echo "ERROR: ${PERCONA_REPO_PACKAGE} does not match the pinned checksum" >&2; exit 1; }
+		apt-get "${DOCS_APT_OPTIONS[@]}" install -yq gnupg2 lsb-release ca-certificates "${PERCONA_REPO_TMP}/${PERCONA_REPO_PACKAGE}"
+		rm -rf "${PERCONA_REPO_TMP}"
 		percona-release enable ps-84-lts release --scheme https
 
 		MYSQL_FIRST_TIME_INSTALL="true"
