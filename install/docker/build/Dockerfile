@@ -846,6 +846,8 @@ RUN set -eux; \
     # The Monolith creates temp/ under its content root; the parents stay root-owned so onlyoffice cannot swap the directories root runs from or renders
     install -d -o onlyoffice -g onlyoffice "${SRC_PATH}/publish/services/backend/temp"; \
     chown root:root /app /app/onlyoffice "${SRC_PATH}" "${SRC_PATH}/publish" "${SRC_PATH}/publish/services" "${SRC_PATH}/publish/services/backend" /app/onlyoffice/template /app/onlyoffice/template/nginx; \
+    # The entrypoint edits the configuration as onlyoffice, and json -I and sed -i write a temporary file next to it
+    chown onlyoffice:onlyoffice /app/onlyoffice/config; \
     sed -i -e 's#$public_root#/var/www/public/#' -e "/map \$scheme \$document_server {/,/}/ s|default \"http://[^\"]*\";|default \$document_server_vs_path;|" /etc/nginx/conf.d/onlyoffice.conf; \
     # route every .NET backend upstream to the single monolith port
     sed -i -E "s#default \"(http://127.0.0.1):(5000|5003|5004|5007|5010|5012|5157)\";#default \"\1:5051\";#g" "/etc/nginx/conf.d/onlyoffice.conf"; \

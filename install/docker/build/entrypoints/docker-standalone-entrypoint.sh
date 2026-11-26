@@ -91,7 +91,7 @@ update_nlog_level() {
 
         log "Updating NLog minlevel to ${LOG_LEVEL}"
 
-        sed -i '/ZiggyCreatures/! s/minlevel="[A-Za-z0-9_]*"/minlevel="'"$LOG_LEVEL"'"/g' "$NLOG_PATH"
+        run_as_onlyoffice sed -i '/ZiggyCreatures/! s/minlevel="[A-Za-z0-9_]*"/minlevel="'"$LOG_LEVEL"'"/g' "$NLOG_PATH"
     fi
 }
 
@@ -428,7 +428,8 @@ migration_count() {
 update_configs() {
     log "📝 Updating configuration files..."
 
-    JSON="node /usr/local/bin/json -I -f"
+    # The config directory belongs to onlyoffice, so it is edited as onlyoffice: root would follow a symlink planted there
+    JSON="run_as_onlyoffice node /usr/local/bin/json -I -f"
 
     # Main appsettings (connection, core, document server, misc)
     ${JSON} "${PATH_TO_CONF}/appsettings.json" \
@@ -495,7 +496,7 @@ update_configs() {
     # Values below are escaped for a JSON string that is written through sed with "!" as the delimiter
     oauth_redirect_escaped=$(printf '%s' "${OAUTH_REDIRECT_URL}" | sed -e 's/[\\"]/\\&/g' -e 's/[\\&!]/\\&/g')
     runner_connection_escaped=$(printf '%s' "${CONNECTION_STRING};Command Timeout=${COMMAND_TIMEOUT}" | sed -e 's/[\\"]/\\&/g' -e 's/[\\&!]/\\&/g')
-    sed -i -E "s!\"https://service\.teamlab\.info/oauth2\.aspx\"!\"${oauth_redirect_escaped}\"!g" "${PATH_TO_CONF}/autofac.consumers.json"
+    run_as_onlyoffice sed -i -E "s!\"https://service\.teamlab\.info/oauth2\.aspx\"!\"${oauth_redirect_escaped}\"!g" "${PATH_TO_CONF}/autofac.consumers.json"
     # Migration runner connection string
     sed -i -E "s!(\"ConnectionString\").*!\1: \"${runner_connection_escaped}\"!g" "${BACKEND_PATH}/appsettings.runner.json"
 
