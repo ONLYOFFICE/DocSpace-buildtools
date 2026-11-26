@@ -15,6 +15,8 @@ CERT_NAME="${PRODUCT}"
 [ ! -d "${LETSENCRYPT}/${PRODUCT}" ] && [ -d "${LETSENCRYPT}/${LEGACY_PRODUCT}" ] && CERT_NAME="${LEGACY_PRODUCT}"
 DHPARAM_PATH=${DHPARAM_PATH:-"/etc/ssl/certs/dhparam.pem"}
 WEBROOT_PATH="/letsencrypt"
+# Certbot runs as root with the host certificate storage mounted, so its image is pinned by tag and digest; bump both together
+CERTBOT_IMAGE="certbot/certbot:v5.10.0@sha256:c5698da859429ccee0fcc299a8000368198222d1f9e789ab6e388b491e8ce06d"
 
 # Check if configuration files are present
 if [ -f "/app/onlyoffice/.env" -a -f "/app/onlyoffice/proxy.yml" -a -f "/app/onlyoffice/proxy-ssl.yml" ]; then
@@ -105,7 +107,7 @@ create_renew_script() {
         echo "    -v /etc/letsencrypt:/etc/letsencrypt \\" >> ${CRON_FILE}
         echo "    -v /var/lib/letsencrypt:/var/lib/letsencrypt \\" >> ${CRON_FILE}
         echo "    -v ${WEBROOT_VOLUME}:$WEBROOT_PATH \\" >> ${CRON_FILE}
-        echo "    certbot/certbot renew -v --force-renewal 2>&1 | tee -a /var/log/${PRODUCT}-renew-letsencrypt.log" >> ${CRON_FILE}
+        echo "    ${CERTBOT_IMAGE} renew -v --force-renewal 2>&1 | tee -a /var/log/${PRODUCT}-renew-letsencrypt.log" >> ${CRON_FILE}
         echo "[ ! -e '${DOCKERCOMPOSE}/.docs-restore/apps-stopped' ] || exit 0" >> ${CRON_FILE}
         echo "$(echo "$(command -v ${DOCKER_COMPOSE%% *})${DOCKER_COMPOSE#${DOCKER_COMPOSE%% *}}") -f ${DOCKERCOMPOSE}/proxy-ssl.yml up -d --force-recreate" >> ${CRON_FILE}
         chmod a+x "${CRON_FILE}"
@@ -291,21 +293,21 @@ case $1 in
 
       if [[ "${DOMAINS}" =~ \*\.[^,]* ]]; then
         ${DOCKER_CMD} \
-          certbot/certbot certonly \
+          ${CERTBOT_IMAGE} certonly \
           --manual --preferred-challenges dns --key-type rsa \
           --cert-name "$CERT_NAME" --agree-tos --email "$MAIL" \
           -d "${DOMAINS[@]}"
       else
         if docker port onlyoffice-proxy 80/tcp 2>/dev/null | grep -q ':80$'; then
           ${DOCKER_CMD} -v "${WEBROOT_VOLUME}:$WEBROOT_PATH" \
-            certbot/certbot certonly \
+            ${CERTBOT_IMAGE} certonly \
             --expand --webroot -w "$WEBROOT_PATH" --key-type rsa \
             --cert-name "$CERT_NAME" --non-interactive --agree-tos --email "$MAIL" \
             -d "${DOMAINS[@]}"
         else
           ss -lnt sport = :80 | grep -q LISTEN && { echo "Error: port 80 is in use. Let's Encrypt requires it for verification, so free it and retry." >&2; exit 1; }
           ${DOCKER_CMD} --network host \
-            certbot/certbot certonly \
+            ${CERTBOT_IMAGE} certonly \
             --expand --standalone --http-01-port 80 --key-type rsa \
             --cert-name "$CERT_NAME" --non-interactive --agree-tos --email "$MAIL" \
             -d "${DOMAINS[@]}"

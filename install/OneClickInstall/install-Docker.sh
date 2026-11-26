@@ -311,7 +311,8 @@ uninstall() {
         [[ "${REMOVE_DATA_SERVICES,,}" =~ ^(y|yes)$ ]] && DOWN_ARGS+=(-v)
         if [ "${RESTORE_DOCS}" != true ]; then
             # A background certbot renewal check (see apps-ssl-setup) may still hold the webroot volume.
-            docker ps -aq --filter "ancestor=certbot/certbot" --filter "volume=${COMPOSE_PROJECT_NAME:-$PACKAGE_SYSNAME}_webroot_path" | xargs -r docker rm -f >/dev/null
+            # Matched by repository, not by ancestor: apps-ssl-setup pins the Certbot tag and digest, and older scripts ran certbot/certbot:latest
+            docker ps -a --filter "volume=${COMPOSE_PROJECT_NAME:-$PACKAGE_SYSNAME}_webroot_path" --format '{{.ID}} {{.Image}}' | awk '$2 ~ /^(docker\.io\/)?certbot\/certbot([:@]|$)/ {print $1}' | xargs -r docker rm -f >/dev/null
         fi
         compose_with_document_server_mounts "${COMPOSE_FILES[@]}" "${DOWN_ARGS[@]}" || {
             echo "Failed to remove ${PRODUCT_NAME}."

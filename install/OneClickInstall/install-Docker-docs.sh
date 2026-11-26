@@ -111,8 +111,9 @@ stop_apps_certificate_renewal () {
 	remove_apps_renewal_job || return 1
 	# The SSL helper also runs a background renewal test outside Compose.
 	local CONTAINERS
-	CONTAINERS=$(docker ps -aq --filter "ancestor=certbot/certbot" --filter "volume=${PROJECT}_webroot_path") || return 1
-	for CONTAINER in ${CONTAINERS}; do
+	# Matched by repository, not by ancestor: apps-ssl-setup pins the Certbot tag and digest, and older scripts ran certbot/certbot:latest
+	CONTAINERS=$(docker ps -a --filter "volume=${PROJECT}_webroot_path" --format '{{.ID}} {{.Image}}') || return 1
+	for CONTAINER in $(awk '$2 ~ /^(docker\.io\/)?certbot\/certbot([:@]|$)/ {print $1}' <<< "${CONTAINERS}"); do
 		docker rm -f "${CONTAINER}" >/dev/null || return 1
 	done
 }

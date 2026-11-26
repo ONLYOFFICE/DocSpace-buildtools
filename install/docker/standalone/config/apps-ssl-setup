@@ -37,6 +37,8 @@ LETSENCRYPT="${DOCKERCOMPOSE}/certs/letsencrypt"
 DEFAULT_LETSENCRYPT="./config/nginx/ssl/letsencrypt"
 CRON_FILE="/etc/cron.weekly/${PRODUCT}-renew-letsencrypt"
 LOG_FILE="/var/log/${PRODUCT}-renew-letsencrypt.log"
+# Certbot runs as root with the host certificate storage mounted, so its image is pinned by tag and digest; bump both together
+CERTBOT_IMAGE="certbot/certbot:v5.10.0@sha256:c5698da859429ccee0fcc299a8000368198222d1f9e789ab6e388b491e8ce06d"
 LETSENCRYPT_ENABLE="false"
 NO_START="false"
 WORK_DIR=""
@@ -154,7 +156,7 @@ create_renew_job_macos() {
 echo "[\$(date '+%F %T')] START ${CRON_FILE}" >> "${LOG_FILE}"
 $(declare -p CERTBOT_DOCKER_ARGS)
 $(declare -p RENEW_NETWORK_ARGS)
-"${DOCKER_BIN}" run "\${CERTBOT_DOCKER_ARGS[@]}" "\${RENEW_NETWORK_ARGS[@]}" certbot/certbot renew 2>&1 | tee -a "${LOG_FILE}"
+"${DOCKER_BIN}" run "\${CERTBOT_DOCKER_ARGS[@]}" "\${RENEW_NETWORK_ARGS[@]}" ${CERTBOT_IMAGE} renew 2>&1 | tee -a "${LOG_FILE}"
 [ ! -e "${DOCKERCOMPOSE}/.docs-restore/apps-stopped" ] || exit 0
 install -m 644 "${LETSENCRYPT}/live/${CERT_NAME}/fullchain.pem" "${CERTS_DIR}/fullchain.pem"
 install -m 600 "${LETSENCRYPT}/live/${CERT_NAME}/privkey.pem" "${CERTS_DIR}/privkey.pem"
@@ -196,7 +198,7 @@ create_renew_script() {
 [ ! -e "${DOCKERCOMPOSE}/.docs-restore/apps-stopped" ] || exit 0
 echo "[\$(date '+%F %T')] START ${CRON_FILE}" >> "${LOG_FILE}"
 $(declare -p CERTBOT_DOCKER_ARGS)
-$(command -v docker) run "\${CERTBOT_DOCKER_ARGS[@]}" --network host certbot/certbot renew 2>&1 | tee -a "${LOG_FILE}"
+$(command -v docker) run "\${CERTBOT_DOCKER_ARGS[@]}" --network host ${CERTBOT_IMAGE} renew 2>&1 | tee -a "${LOG_FILE}"
 [ ! -e "${DOCKERCOMPOSE}/.docs-restore/apps-stopped" ] || exit 0
 install -m 644 "${LETSENCRYPT}/live/${CERT_NAME}/fullchain.pem" "${CERTS_DIR}/fullchain.pem"
 install -m 640 -o 0 -g "${APP_GID}" "${LETSENCRYPT}/live/${CERT_NAME}/privkey.pem" "${CERTS_DIR}/privkey.pem"
@@ -382,7 +384,7 @@ case $1 in
         # The DNS challenge waits for the operator to create the TXT records.
         [ -t 0 ] && INTERACTIVE_ARGS=(-it) || INTERACTIVE_ARGS=()
         docker run "${INTERACTIVE_ARGS[@]}" "${CERTBOT_DOCKER_ARGS[@]}" \
-          certbot/certbot certonly \
+          ${CERTBOT_IMAGE} certonly \
           --manual --preferred-challenges dns --key-type rsa \
           --cert-name "$CERT_NAME" --agree-tos --email "$MAIL" \
           "${DOMAIN_ARGS[@]}"
@@ -392,7 +394,7 @@ case $1 in
         echo -n "Waiting for ${CONTAINER_NAME} to answer on port 80..."
         wait_for_webroot && echo "OK" || { echo "FAILED" && echo "Error: ${CONTAINER_NAME} does not answer on port 80." && exit 1; }
         docker run "${CERTBOT_DOCKER_ARGS[@]}" \
-          certbot/certbot certonly \
+          ${CERTBOT_IMAGE} certonly \
           --expand --webroot -w /letsencrypt --key-type rsa \
           --cert-name "$CERT_NAME" --non-interactive --agree-tos --email "$MAIL" \
           "${DOMAIN_ARGS[@]}"
@@ -404,7 +406,7 @@ case $1 in
           ss -lnt sport = :80 2>/dev/null | grep -q LISTEN && { echo "Error: port 80 is in use. Let's Encrypt requires it for verification, so free it and retry." >&2; exit 1; }
         fi
         docker run "${CERTBOT_DOCKER_ARGS[@]}" "${RENEW_NETWORK_ARGS[@]}" \
-          certbot/certbot certonly \
+          ${CERTBOT_IMAGE} certonly \
           --expand --standalone --http-01-port 80 --key-type rsa \
           --cert-name "$CERT_NAME" --non-interactive --agree-tos --email "$MAIL" \
           "${DOMAIN_ARGS[@]}"
@@ -471,7 +473,7 @@ if [[ "${LETSENCRYPT_ENABLE}" = "true" ]]; then
         [ "${NO_START}" = "true" ] && sleep 15
         wait_for_webroot || { echo "Warning: ${CONTAINER_NAME} does not answer on port 80; the renewal check is skipped."; exit 0; }
       fi
-      if docker run "${CERTBOT_DOCKER_ARGS[@]}" "${RENEW_NETWORK_ARGS[@]}" certbot/certbot renew --dry-run >/dev/null; then
+      if docker run "${CERTBOT_DOCKER_ARGS[@]}" "${RENEW_NETWORK_ARGS[@]}" ${CERTBOT_IMAGE} renew --dry-run >/dev/null; then
         echo "Let's Encrypt host renewal check: OK"
       else
         echo "Warning: host-side Let's Encrypt renewal dry-run failed; check ${CRON_FILE}."
