@@ -264,7 +264,9 @@ jobs:
           # An update test needs a released version older than the tested one
           $released = (Get-Item $env:RELEASED_APPS_EXE).VersionInfo.ProductVersion
           $releasedVersion = $null; $testedVersion = $null
-          if ([version]::TryParse("$released", [ref]$releasedVersion) -and [version]::TryParse($env:VERSION, [ref]$testedVersion) -and $releasedVersion -ge $testedVersion) {
+          # Released EXEs carry major.minor.build (4.0.1065) and Jenkins builds major.minor.patch.build, so compare major.minor, then the build number
+          $buildKey = { param($Version) [version]::new($Version.Major, $Version.Minor, [Math]::Max($Version.Build, $Version.Revision)) }
+          if ([version]::TryParse("$released", [ref]$releasedVersion) -and [version]::TryParse($env:VERSION, [ref]$testedVersion) -and (& $buildKey $releasedVersion) -ge (& $buildKey $testedVersion)) {
             Write-Host "::notice::Released Community $released is not older than the tested $env:VERSION; the update test is skipped"
             Add-Content -Path $env:GITHUB_ENV -Value 'UPDATE_SKIP=true'
           }
