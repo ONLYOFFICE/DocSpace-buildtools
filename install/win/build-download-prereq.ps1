@@ -95,7 +95,7 @@ $opensearch_version = '3.5.0'
 
 $opensearchdashboards_version = '3.5.0'
 
-$openresty_version = '1.27.1.1'
+$openresty_version = '1.29.2.1'
 
 $fluentbit_version = '3.2.4'
 
