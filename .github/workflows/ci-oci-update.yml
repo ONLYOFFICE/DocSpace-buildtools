@@ -34,6 +34,10 @@ on:
          type: boolean
          description: 'Ubuntu 26.04'
          default: true
+      testing_docs:
+         type: boolean
+         description: 'Use 4testing Docs packages'
+         default: true
 
 permissions:
   contents: read
@@ -48,6 +52,8 @@ jobs:
 
       - name: Get latest Docs test repo version
         id: get-docs-version
+        # Skipped with 4testing-docs off: an empty version keeps the Docs dev repository out and the released Docs is installed
+        if: github.event.inputs.testing_docs != 'false'
         env:
           GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
         run: |
@@ -165,7 +171,7 @@ jobs:
 
       # The ~540 MB Docs DEB took over 50 minutes as one stream inside the VM; aria2 on the runner fetches it in seconds
       - name: Prefetch Docs package
-        if: steps.boot.outcome == 'success' && github.ref_name != 'master' && (contains(matrix.os, 'ubuntu') || contains(matrix.os, 'debian'))
+        if: steps.boot.outcome == 'success' && github.ref_name != 'master' && needs.prepare.outputs.docs_version != '' && (contains(matrix.os, 'ubuntu') || contains(matrix.os, 'debian'))
         continue-on-error: true
         timeout-minutes: 15
         run: bash tests/vagrant/prefetch-docs.sh "${{ needs.prepare.outputs.docs_version }}" tests/vagrant/prefetch
@@ -183,7 +189,7 @@ jobs:
           APT_MIRROR: http://azure.archive.ubuntu.com/ubuntu
           DOWNLOAD_SCRIPT: '-ds false'
           TEST_REPO: "${{ github.ref_name == 'master' && '-tr false' || '-tr true' }}"
-          VER: "-v ${{ needs.prepare.outputs.docs_version }}"
+          VER: "${{ needs.prepare.outputs.docs_version && format('-v {0}', needs.prepare.outputs.docs_version) || '' }}"
           ARGUMENTS: "-arg '--skiphardwarecheck true --makeswap false --localscripts true --update true'"
         run: |
           set -eux
