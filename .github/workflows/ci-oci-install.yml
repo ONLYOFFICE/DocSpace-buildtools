@@ -70,12 +70,18 @@ jobs:
       has_x86: ${{ steps.set-matrix.outputs.has_x86 }}
       has_arm: ${{ steps.set-matrix.outputs.has_arm }}
       docs_version: ${{ steps.get-docs-version.outputs.version }}
+      apps_version: ${{ steps.get-apps-version.outputs.version }}
     steps:
       - name: Checkout push history
         if: github.event_name == 'push'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+
+      # The 4testing repositories hold the builds of every branch, so release and hotfix branches install only builds of their own version
+      - name: Get the Apps version of the branch
+        id: get-apps-version
+        run: echo "version=$(grep -oP '^(release|hotfix)/v\K[0-9]+\.[0-9]+\.[0-9]+' <<< "${GITHUB_REF_NAME}" || true)" >> "$GITHUB_OUTPUT"
 
       - name: Get latest Docs test repo version
         id: get-docs-version
@@ -182,6 +188,7 @@ jobs:
     if: needs.prepare.outputs.has_x86 == 'true'
     env:
       VER: ${{ needs.prepare.outputs.docs_version }}
+      PIN_VERSION: ${{ needs.prepare.outputs.apps_version }}
     strategy:
       fail-fast: false
       matrix: ${{fromJSON(needs.prepare.outputs.matrix)}}
@@ -405,6 +412,7 @@ jobs:
     if: needs.prepare.outputs.has_arm == 'true'
     env:
       VER: ${{ needs.prepare.outputs.docs_version }}
+      PIN_VERSION: ${{ needs.prepare.outputs.apps_version }}
       USE_4TESTING: ${{ github.event_name == 'push' || github.event.inputs.testing == 'true' }}
       GUEST_DISTRO: ${{ matrix.guest }}
       GUEST_VERSION: ${{ matrix.version }}
@@ -448,7 +456,7 @@ jobs:
           # Local scripts from this checkout: the released apps-install.sh has no ARM support
           if [[ "$USE_4TESTING" == "true" ]]; then
             echo -e "\e[33mUsing 4testing packages\e[0m"
-            ARGS=(-ds false -tr true ${VER:+-v "$VER"} -arg "--skiphardwarecheck true --localscripts true")
+            ARGS=(-ds false -tr true ${VER:+-v "$VER"} ${PIN_VERSION:+-pv "$PIN_VERSION"} -arg "--skiphardwarecheck true --localscripts true")
           else
             echo -e "\e[32mUsing production packages\e[0m"
             ARGS=(-ds false -tr false -arg "--skiphardwarecheck true --localscripts true")
