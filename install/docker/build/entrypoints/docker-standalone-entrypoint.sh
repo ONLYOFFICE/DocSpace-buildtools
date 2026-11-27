@@ -438,7 +438,22 @@ update_configs() {
         -e "this.core.notify.postman='services'" \
         -e "this.ai.mcp[0].endpoint=process.env.MCP_ENDPOINT" \
         -e "this.ai.documentAgent.url=process.env.DOCUMENT_AGENT_URL||''" \
-        -e "this.ai.documentAgent.token=process.env.DOCUMENT_AGENT_TOKEN||''"
+        -e "this.ai.documentAgent.token=process.env.DOCUMENT_AGENT_TOKEN||''" \
+        -e "this.ai.pluginAgent=this.ai.pluginAgent||{}" \
+        -e "this.ai.sandbox=this.ai.sandbox||{}" \
+        -e "this.ai.pluginAgent.sandboxUrl=process.env.PLUGIN_AGENT_SANDBOX_URL||''" \
+        -e "this.ai.pluginAgent.sandboxToken=process.env.PLUGIN_AGENT_SANDBOX_TOKEN||''" \
+        -e "this.ai.pluginAgent.serviceUrl=process.env.PLUGIN_AGENT_SERVICE_URL||''" \
+        -e "this.ai.sandbox.url=process.env.CHAT_SANDBOX_URL||''" \
+        -e "this.ai.sandbox.token=process.env.CHAT_SANDBOX_TOKEN||''" \
+        -e "if(process.env.PLUGIN_AGENT_TASK_TIMEOUT_SECONDS)this.ai.pluginAgent.taskTimeoutSeconds=Number(process.env.PLUGIN_AGENT_TASK_TIMEOUT_SECONDS)" \
+        -e "if(process.env.PLUGIN_AGENT_MAX_TOOL_CALLS)this.ai.pluginAgent.maxToolCalls=Number(process.env.PLUGIN_AGENT_MAX_TOOL_CALLS)" \
+        -e "if(process.env.PLUGIN_AGENT_MAX_CONCURRENT_TASKS)this.ai.pluginAgent.maxConcurrentTasks=Number(process.env.PLUGIN_AGENT_MAX_CONCURRENT_TASKS)" \
+        -e "if(process.env.PLUGIN_AGENT_SANDBOX_TTL_SECONDS)this.ai.pluginAgent.sandboxTtlSeconds=Number(process.env.PLUGIN_AGENT_SANDBOX_TTL_SECONDS)" \
+        -e "if(process.env.PLUGIN_AGENT_REGISTRY_URL)this.ai.pluginAgent.registryUrl=process.env.PLUGIN_AGENT_REGISTRY_URL" \
+        -e "if(process.env.PLUGIN_AGENT_CACHE_DIR)this.ai.pluginAgent.cacheDir=process.env.PLUGIN_AGENT_CACHE_DIR" \
+        -e "if(process.env.PLUGIN_AGENT_CACHE_MAX_MB)this.ai.pluginAgent.cacheMaxMb=Number(process.env.PLUGIN_AGENT_CACHE_MAX_MB)" \
+        -e "if(process.env.CHAT_SANDBOX_IDLE_TTL_SECONDS)this.ai.sandbox.idleTtlSeconds=Number(process.env.CHAT_SANDBOX_IDLE_TTL_SECONDS)"
 
     # Same forwarded-headers trust as docker-entrypoint.py: this container's own network and loopback, plus APP_KNOWN_NETWORKS/APP_KNOWN_PROXIES.
     export KNOWN_NETWORKS_JSON KNOWN_PROXIES_JSON
