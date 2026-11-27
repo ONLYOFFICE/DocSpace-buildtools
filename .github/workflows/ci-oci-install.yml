@@ -33,6 +33,10 @@ on:
         type: boolean
         description: "Use 4testing packages"
         default: false
+      testing_docs:
+        type: boolean
+        description: "Use 4testing Docs packages"
+        default: true
 
 jobs:
   prepare:
@@ -40,9 +44,17 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       docs_version: ${{ steps.get-docs-version.outputs.version }}
+      apps_version: ${{ steps.get-apps-version.outputs.version }}
     steps:
+      # The 4testing repositories hold the builds of every branch, so release and hotfix branches install only builds of their own version
+      - name: Get the Apps version of the branch
+        id: get-apps-version
+        run: echo "version=$(grep -oP '^(release|hotfix)/v\K[0-9]+\.[0-9]+\.[0-9]+' <<< "${GITHUB_REF_NAME}" || true)" >> "$GITHUB_OUTPUT"
+
       - name: Get latest Docs test repo version
         id: get-docs-version
+        # Skipped with 4testing-docs off: an empty version keeps the Docs dev repository out and the released Docs is installed
+        if: github.event.inputs.testing_docs != 'false'
         env:
           GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
         run: |
@@ -108,6 +120,7 @@ jobs:
     needs: prepare
     env:
       VER: ${{ needs.prepare.outputs.docs_version }}
+      PIN_VERSION: ${{ needs.prepare.outputs.apps_version }}
     strategy:
       fail-fast: false
       matrix: ${{fromJSON(needs.prepare.outputs.matrix)}}
@@ -216,7 +229,7 @@ jobs:
           if [[ "$USE_4TESTING" == "true" ]]; then
             export DOWNLOAD_SCRIPT='-ds false'
             export TEST_REPO='-tr true'
-            export VER="-v ${VER}"
+            export VER="${VER:+-v ${VER}}"
             export ARGUMENTS="-arg '--skiphardwarecheck true --localscripts true'"
             echo -e "\e[33mUsing 4testing packages\e[0m"
           else

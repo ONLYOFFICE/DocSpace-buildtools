@@ -98,6 +98,23 @@ compose_args() {
   return 0
 }
 
+# The 4testing images carry the builds of every branch, so a release or hotfix branch takes the newest build of its own version
+branch_docker_tag() {
+  local VERSION TOKEN TAG
+  VERSION=$(grep -oP '^(release|hotfix)/v\K[0-9]+\.[0-9]+\.[0-9]+' <<< "${GITHUB_REF_NAME:-}" || true)
+  [ -n "$VERSION" ] || return 0
+  # The credentials and the token reach jq and curl through the environment and pipes, so no process gets them as arguments
+  TOKEN=$(HUB_USERNAME="$DOCKERHUB_USERNAME_PAT" HUB_PASSWORD="$DOCKERHUB_TOKEN_PAT" jq -n '{username: env.HUB_USERNAME, password: env.HUB_PASSWORD}' \
+    | curl -fsS --retry 3 --max-time 30 -H "Content-Type: application/json" -X POST -d @- https://hub.docker.com/v2/users/login/ | jq -r '.token // empty' || true)
+  # Docker Hub lists ordering=last_updated newest first (unlike the DRF convention; -last_updated is oldest first), so the latest build is on the first page
+  TAG=$({ [ -z "$TOKEN" ] || printf 'Authorization: JWT %s\n' "$TOKEN"; } \
+    | curl -fsS --retry 3 --max-time 30 -H @- \
+      "https://hub.docker.com/v2/repositories/onlyoffice/4testing-apps/tags?page_size=100&ordering=last_updated&name=${VERSION}." \
+    | jq -r '.results[].name' | grep -E "^${VERSION//./\\.}\.[0-9]+$" | sort -V | tail -n 1 || true)
+  [ -n "$TAG" ] || { echo "::error::No 4testing-apps image tag for ${VERSION}." >&2; return 1; }
+  echo "$TAG"
+}
+
 run_installer() {
   local PATCHED_SCRIPT; PATCHED_SCRIPT=$(mktemp --suffix=.sh)
   cp "${GITHUB_WORKSPACE}/install/OneClickInstall/install-Docker.sh" "$PATCHED_SCRIPT"
@@ -105,6 +122,10 @@ run_installer() {
   local INSTALL_CMD="sudo bash $PATCHED_SCRIPT -skiphc true -noni true -gb $GITHUB_REF_NAME $*"
   [ "${IS_4TESTING:-true}" != "false" ] && \
     INSTALL_CMD="$INSTALL_CMD -s 4testing- -un $DOCKERHUB_USERNAME_PAT -p $DOCKERHUB_TOKEN_PAT"
+  if [ "${IS_4TESTING:-true}" != "false" ] && [ -z "${DOCKER_TAG:-}" ]; then
+    DOCKER_TAG=$(branch_docker_tag) || exit 1
+    [ -n "$DOCKER_TAG" ] && echo "4testing image tag of ${GITHUB_REF_NAME}: ${DOCKER_TAG}"
+  fi
   [ -n "${DOCKER_TAG:-}" ] && INSTALL_CMD="$INSTALL_CMD -dsv $DOCKER_TAG"
 
   sed -i -e "1i set -x" -e "/DOCKER_COMPOSE.*up -d/ s/$/ --quiet-pull/" "$PATCHED_SCRIPT"
@@ -309,7 +330,8 @@ install_previous() {
   # the latest release still ships under the DocSpace name
   curl -fsSL --retry 3 --retry-delay 2 "https://download.onlyoffice.com/docspace/install-Docker.sh" -o "$OLD_SCRIPT" || \
     { echo "::error::Could not download the released install-Docker.sh."; return 1; }
-  sudo bash "$OLD_SCRIPT" "${ARGS[@]}" || { echo "::error::The released installer failed."; return 1; }
+  # The released script is the final DocSpace one and asks for confirmation, which has to be given up front without a terminal
+  sudo env DOCSPACE_LEGACY_CONFIRMED=true bash "$OLD_SCRIPT" "${ARGS[@]}" || { echo "::error::The released installer failed."; return 1; }
   wait_for_containers
 
   local IMAGE

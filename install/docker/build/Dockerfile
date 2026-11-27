@@ -7,9 +7,9 @@ ARG DOTNET_SDK="mcr.microsoft.com/dotnet/sdk:10.0"
 ARG DOTNET_RUN="mcr.microsoft.com/dotnet/aspnet:10.0-noble"
 ARG BUSYBOX_VERSION="1.37"
 ARG PYTHON_VERSION="3.12-slim"
-ARG NODE_PATCH_VERSION="24.22.1"
+ARG NODE_PATCH_VERSION="24.22.3"
 ARG NODE_VERSION="${NODE_PATCH_VERSION}-trixie-slim"
-ARG OPENRESTY_VERSION="1.31.1.1-2"
+ARG OPENRESTY_VERSION="1.31.9.1-1"
 ARG PLUGIN_NODE_TYPES_VERSION="18.19.0"
 ARG JAVA_VERSION="25"
 ARG JAVA_RUN_VERSION="${JAVA_VERSION}-jre"
@@ -262,7 +262,7 @@ ENTRYPOINT ["/bin/bash", "/usr/bin/docker-identity-entrypoint.sh"]
 ## Nginx router otel lua dependencies ##
 # Built on the -fat flavour of the same OpenResty release the router runs, so
 # the native pb.so is linked against the LuaJIT ABI that ships at runtime.
-FROM openresty/openresty:${OPENRESTY_VERSION}-bullseye-fat AS otel-build
+FROM openresty/openresty:${OPENRESTY_VERSION}-bookworm-fat AS otel-build
 # Git tags and the luarocks registry are both mutable, so every dependency is
 # fetched as a tarball and checked against a pinned sha256 before it is used.
 # Refresh a checksum with: curl -sL <url> | sha256sum
@@ -298,7 +298,7 @@ RUN set -eu; \
     rm -rf /tmp/*
 
 ## Nginx image ##
-FROM openresty/openresty:${OPENRESTY_VERSION}-bullseye AS router
+FROM openresty/openresty:${OPENRESTY_VERSION}-bookworm AS router
 ARG SRC_PATH
 ARG BUILD_PATH
 ARG COUNT_WORKER_CONNECTIONS=1024
