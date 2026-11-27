@@ -8,6 +8,7 @@ while [ "$1" != "" ]; do
     -ds  | --download-scripts  ) [ -n "$2" ] && DOWNLOAD_SCRIPTS="$2"      && shift ;;
     -arg | --arguments         ) [ -n "$2" ] && ARGUMENTS="$2"             && shift ;;
     -tr  | --test-repo         ) [ -n "$2" ] && TEST_REPO_ENABLE="$2"      && shift ;;
+    -pv  | --pin-version       ) [ -n "$2" ] && PIN_VERSION="$2"           && shift ;;
     -v   | --version           ) [ -n "$2" ] && VER="$2"                  && shift ;;
   esac
   shift
@@ -31,6 +32,15 @@ add-repo-deb() {
   tee /etc/apt/sources.list.d/onlyoffice4testing.list
   curl -fsSL https://download.onlyoffice.com/GPG-KEY-ONLYOFFICE | \
   gpg --batch --yes --dearmor -o /usr/share/keyrings/onlyoffice.gpg
+}
+
+# The 4testing repositories hold the builds of every branch; with a pinned version only builds of that version are installed
+pin-apps-deb() {
+  printf 'Package: onlyoffice-apps*\nPin: version %s.*\nPin-Priority: 1001\n' "${PIN_VERSION}" > /etc/apt/preferences.d/onlyoffice-apps-4testing
+}
+
+pin-apps-rpm() {
+  echo "includepkgs=onlyoffice-apps*-${PIN_VERSION}-* docspace*" >> /etc/yum.repos.d/onlyoffice4testing.repo
 }
 
 add-repo-rpm() {
@@ -80,9 +90,11 @@ case $ID in
   ubuntu|debian)
       if [[ "${TEST_REPO_ENABLE}" == 'true' ]]; then
         add-repo-deb
-        add-repo-deb-docs
+        if [ -n "${PIN_VERSION}" ]; then pin-apps-deb; else rm -f /etc/apt/preferences.d/onlyoffice-apps-4testing; fi
+        # Without a Docs version the Docs dev repository stays out and the released Docs is installed
+        if [ -n "${VER}" ]; then add-repo-deb-docs; else rm -f /etc/apt/sources.list.d/onlyoffice-dev.list; fi
       else
-        rm -f /etc/apt/sources.list.d/onlyoffice4testing.list
+        rm -f /etc/apt/sources.list.d/onlyoffice4testing.list /etc/apt/preferences.d/onlyoffice-apps-4testing
         rm -f /etc/apt/sources.list.d/onlyoffice-dev.list
       fi
       ;;
@@ -90,7 +102,8 @@ case $ID in
   centos|fedora|rhel)
       if [[ "${TEST_REPO_ENABLE}" == 'true' ]]; then
         add-repo-rpm
-        add-repo-rpm-docs
+        if [ -n "${PIN_VERSION}" ]; then pin-apps-rpm; fi
+        if [ -n "${VER}" ]; then add-repo-rpm-docs; else rm -f /etc/yum.repos.d/onlyoffice-dev-*.repo; fi
       else
         rm -f /etc/yum.repos.d/onlyoffice4testing.repo
         rm -f /etc/yum.repos.d/onlyoffice-dev-*.repo
