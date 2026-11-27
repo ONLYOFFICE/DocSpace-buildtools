@@ -88,7 +88,7 @@ case "${1:-}" in
     install)
         ARGS=(-ds false -tr false -arg "--skiphardwarecheck true --localscripts true --makeswap false")
         if [[ "${USE_4TESTING:-false}" == true ]]; then
-            ARGS=(-ds false -tr true -v "${VER:?}" -arg "--skiphardwarecheck true --localscripts true --makeswap false")
+            ARGS=(-ds false -tr true ${VER:+-v "$VER"} ${PIN_VERSION:+-pv "$PIN_VERSION"} -arg "--skiphardwarecheck true --localscripts true --makeswap false")
         fi
         sudo mkdir -p "$ROOTFS$INSTALL_DIR"
         # nspawn mounts its own /tmp; stage the installer inside the running guest.
