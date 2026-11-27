@@ -9,7 +9,7 @@
     <ROW Property="ARPCOMMENTS" Value="This installer database contains the logic and data required to install [|ProductName]." ValueLocId="*"/>
     <ROW Property="Manufacturer" Value="Ascensio System SIA"/>
     <ROW Property="MsiLogging" MultiBuildValue="DefaultBuild:vp"/>
-    <ROW Property="ProductCode" Value="1033:{068CB209-E496-4B48-A8AF-FEDF450FCF9C} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{D8E45A55-0CF6-40C5-A135-7446D07827B4} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="OpenResty"/>
     <ROW Property="ProductVersion" Value="1.29.2.1" Options="32"/>
