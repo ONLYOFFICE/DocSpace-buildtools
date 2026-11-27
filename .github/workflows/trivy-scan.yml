@@ -56,6 +56,7 @@ permissions:
 
 jobs:
   scan:
+    # The ga-common Telegram digest finds this job by the "Scan" name.
     name: Scan ${{ inputs.tag }}
     runs-on: ubuntu-latest
     # The scan is informational: a scanner or registry failure must not fail the calling build.
@@ -147,8 +148,8 @@ jobs:
             printf '%s' "$SUMMARY_TABLE"
           } >> "$GITHUB_STEP_SUMMARY"
 
-          # Informational gate: surface the counts, never fail on findings.
-          echo "$([ "$TOTAL" -gt 0 ] && echo "::warning" || echo "::notice") title=Trivy ${DOCKER_TAG}::${ANNOTATION}"
+          # Informational gate, never fails on findings; the ga-common Telegram digest parses this annotation, keep the format in sync.
+          echo "$([ "$TOTAL" -gt 0 ] && echo "::warning" || echo "::notice") title=Trivy ${DOCKER_TAG} (${BRANCH})::${ANNOTATION}"
 
       - name: Upload SARIF to code scanning
         if: ${{ !cancelled() && hashFiles('sarif/*.sarif') != '' }}
