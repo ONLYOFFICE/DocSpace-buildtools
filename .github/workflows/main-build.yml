@@ -44,21 +44,58 @@ permissions:
   contents: read
 
 jobs:
+  prepare:
+    name: Prepare
+    runs-on: ubuntu-latest
+    outputs:
+      branches: ${{ steps.compute.outputs.branches }}
+      builds: ${{ steps.compute.outputs.builds }}
+    steps:
+      - name: Compute Docker tags
+        id: compute
+        env:
+          BRANCHES_JSON: >-
+            ${{ github.event.client_payload.branches && toJSON(github.event.client_payload.branches) ||
+                inputs.branches || format('[{0}]', toJSON(github.ref_name)) }}
+          BRANCH_BUILDTOOLS: ${{ inputs.branch-buildtools }}
+          BRANCH_SERVER: ${{ inputs.branch-server }}
+          BRANCH_CLIENT: ${{ inputs.branch-client }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          BRANCHES=$(jq -c 'if type == "array" then map(tostring) else error("branches must be a JSON array") end' <<< "$BRANCHES_JSON")
+          BUILDS='{}'
+          while IFS= read -r BASE_BRANCH; do
+            PRODUCT_VERSION=$(printf '%s' "$BASE_BRANCH" | sed '/^release\b\|^hotfix\b\|^feature\b\|^bugfix\b/s/release.*\/\|hotfix.*\/\|feature.*\/\|bugfix.*\///; s/-git-action$//; s/^v//')
+            # The first override branch that differs from the base names the tag (buildtools, then server, then client).
+            TAG_BRANCH="$BASE_BRANCH"
+            for OVERRIDE in "$BRANCH_BUILDTOOLS" "$BRANCH_SERVER" "$BRANCH_CLIENT"; do
+              if [ -n "$OVERRIDE" ] && [ "$OVERRIDE" != "$BASE_BRANCH" ]; then TAG_BRANCH="$OVERRIDE"; break; fi
+            done
+            TAG_PREFIX="$PRODUCT_VERSION"
+            [ "$TAG_BRANCH" = "$BASE_BRANCH" ] || TAG_PREFIX="${PRODUCT_VERSION}-${TAG_BRANCH}"
+            TAG_PREFIX=$(printf '%s' "$TAG_PREFIX" | LC_ALL=C sed 's/[^a-zA-Z0-9_.-]/-/g; s/^[.-]/_/; s/^$/build/' | cut -c1-100)
+            BUILDS=$(jq -c --arg branch "$BASE_BRANCH" --arg tag "${TAG_PREFIX}.${GITHUB_RUN_NUMBER}" --arg version "$PRODUCT_VERSION" \
+              '.[$branch] = {tag: $tag, version: $version}' <<< "$BUILDS")
+          done < <(jq -r '.[]' <<< "$BRANCHES")
+          jq . <<< "$BUILDS"
+          echo "branches=${BRANCHES}" >> "$GITHUB_OUTPUT"
+          echo "builds=${BUILDS}" >> "$GITHUB_OUTPUT"
+
   build:
     name: ${{ matrix.service }} (${{ matrix.branch }})
+    needs: prepare
     runs-on: ubuntu-latest
     env:
       BASE_BRANCH: ${{ matrix.branch }}
       BUILDTOOLS_BRANCH: ${{ inputs.branch-buildtools || matrix.branch }}
       SERVER_BRANCH: ${{ inputs.branch-server }}
       CLIENT_BRANCH: ${{ inputs.branch-client }}
-      TAG_BRANCH: >-
-        ${{ inputs.branch-buildtools && inputs.branch-buildtools != matrix.branch && inputs.branch-buildtools ||
-            inputs.branch-server && inputs.branch-server != matrix.branch && inputs.branch-server ||
-            inputs.branch-client && inputs.branch-client != matrix.branch && inputs.branch-client || matrix.branch }}
+      DOCKER_TAG: ${{ fromJson(needs.prepare.outputs.builds)[matrix.branch].tag }}
+      PRODUCT_VERSION: ${{ fromJson(needs.prepare.outputs.builds)[matrix.branch].version }}
     strategy:
       matrix:
-        branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches || format('[{0}]', toJSON(github.ref_name))) }}
+        branch: ${{ fromJson(needs.prepare.outputs.branches) }}
         service: [dotnet, node, java, standalone]
     steps:
       - name: Checkout
@@ -83,16 +120,6 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Prepare build variables
-        run: |
-          PRODUCT_VERSION=$(printf '%s' "$BASE_BRANCH" | sed '/^release\b\|^hotfix\b\|^feature\b\|^bugfix\b/s/release.*\/\|hotfix.*\/\|feature.*\/\|bugfix.*\///; s/-git-action$//; s/^v//')
-          TAG_PREFIX="$PRODUCT_VERSION"
-          [ "$TAG_BRANCH" = "$BASE_BRANCH" ] || TAG_PREFIX="${PRODUCT_VERSION}-${TAG_BRANCH}"
-          TAG_PREFIX=$(printf '%s' "$TAG_PREFIX" | LC_ALL=C sed 's/[^a-zA-Z0-9_.-]/-/g; s/^[.-]/_/; s/^$/build/' | cut -c1-100)
-          echo "DOCKER_TAG=${TAG_PREFIX}.${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
-          echo "PRODUCT_VERSION=${PRODUCT_VERSION}" >> $GITHUB_ENV
-        shell: bash
-
       - name: Build ${{ matrix.service }}
         timeout-minutes: 90
         env:
@@ -116,20 +143,16 @@ jobs:
 
   trigger-oci-docker:
     name: OCI (${{ matrix.branch }})
-    needs: build
+    needs: [prepare, build]
     if: ${{ !cancelled() && needs.build.result == 'success' }}
     continue-on-error: true
     runs-on: ubuntu-latest
     env:
-      BASE_BRANCH: ${{ matrix.branch }}
       BUILDTOOLS_BRANCH: ${{ inputs.branch-buildtools || matrix.branch }}
-      TAG_BRANCH: >-
-        ${{ inputs.branch-buildtools && inputs.branch-buildtools != matrix.branch && inputs.branch-buildtools ||
-            inputs.branch-server && inputs.branch-server != matrix.branch && inputs.branch-server ||
-            inputs.branch-client && inputs.branch-client != matrix.branch && inputs.branch-client || matrix.branch }}
+      DOCKER_TAG: ${{ fromJson(needs.prepare.outputs.builds)[matrix.branch].tag }}
     strategy:
       matrix:
-        branch: ${{ github.event.client_payload.branches || fromJson(inputs.branches || format('[{0}]', toJSON(github.ref_name))) }}
+        branch: ${{ fromJson(needs.prepare.outputs.branches) }}
     steps:
       - name: Checkout ${{ matrix.branch }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -142,12 +165,6 @@ jobs:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME_PAT }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN_PAT }}
         run: |
-          PRODUCT_VERSION=$(printf '%s' "$BASE_BRANCH" | sed '/^release\b\|^hotfix\b\|^feature\b\|^bugfix\b/s/release.*\/\|hotfix.*\/\|feature.*\/\|bugfix.*\///; s/-git-action$//; s/^v//')
-          TAG_PREFIX="$PRODUCT_VERSION"
-          [ "$TAG_BRANCH" = "$BASE_BRANCH" ] || TAG_PREFIX="${PRODUCT_VERSION}-${TAG_BRANCH}"
-          TAG_PREFIX=$(printf '%s' "$TAG_PREFIX" | LC_ALL=C sed 's/[^a-zA-Z0-9_.-]/-/g; s/^[.-]/_/; s/^$/build/' | cut -c1-100)
-          DOCKER_TAG="${TAG_PREFIX}.${GITHUB_RUN_NUMBER}"
-
           # sudo keeps the exported variables by name, so the token never appears in its arguments
           export BRANCH="${BUILDTOOLS_BRANCH}" DOCKER_REPOSITORY="${{ env.REPO }}" DOCKER_PREFIX="${{ env.DOCKER_IMAGE_PREFIX }}" DOCKER_TAG
           sudo --preserve-env=GITHUB_REPOSITORY,BRANCH,DOCKER_REPOSITORY,DOCKER_PREFIX,DOCKER_TAG,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN \
