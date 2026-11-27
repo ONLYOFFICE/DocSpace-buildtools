@@ -383,6 +383,7 @@ jobs:
     if: needs.prepare.outputs.has_arm == 'true'
     env:
       VER: ${{ needs.prepare.outputs.docs_version }}
+      PIN_VERSION: ${{ needs.prepare.outputs.apps_version }}
       USE_4TESTING: ${{ github.event_name == 'push' || github.event.inputs.testing == 'true' }}
       GUEST_DISTRO: ${{ matrix.guest }}
       GUEST_VERSION: ${{ matrix.version }}
@@ -426,7 +427,7 @@ jobs:
           # Local scripts from this checkout: the released apps-install.sh has no ARM support
           if [[ "$USE_4TESTING" == "true" ]]; then
             echo -e "\e[33mUsing 4testing packages\e[0m"
-            ARGS=(-ds false -tr true -v "$VER" -arg "--skiphardwarecheck true --localscripts true")
+            ARGS=(-ds false -tr true ${VER:+-v "$VER"} ${PIN_VERSION:+-pv "$PIN_VERSION"} -arg "--skiphardwarecheck true --localscripts true")
           else
             echo -e "\e[32mUsing production packages\e[0m"
             ARGS=(-ds false -tr false -arg "--skiphardwarecheck true --localscripts true")
