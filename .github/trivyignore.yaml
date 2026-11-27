@@ -1,0 +1,3 @@
+# Accepted findings of trivy-scan.yml; give every entry a statement and an expired_at date (format: https://trivy.dev/latest/docs/configuration/filtering/#trivyignoreyaml).
+vulnerabilities: []
+secrets: []

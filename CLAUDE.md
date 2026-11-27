@@ -147,7 +147,7 @@ docker compose --env-file .env -f apps.yml -f build/dev/apps.overcome.yml up -d
 
 | Workflow | Purpose |
 |----------|---------|
-| `main-build.yml` | Multi-arch Docker build (dotnet + node + java) |
+| `main-build.yml` | Multi-arch Docker build (dotnet + node + java + standalone); the `prepare` job computes the tag of every branch once; cron builds (or the `trivy` input) call `trivy-scan.yml` per branch |
 | `build_packages.yml` | DEB/RPM packages |
 | `config-build.yml` | Config-triggered builds |
 | `cron-build.yml` | Nightly scheduled builds |
@@ -165,6 +165,7 @@ docker compose --env-file .env -f apps.yml -f build/dev/apps.overcome.yml up -d
 | `ci-oci-update.yml` | Update mechanism tests |
 | `ci-windows-install.yml` | Windows EXE tests of a ready Jenkins `appserver.exe` build (no build in CI) on `windows-2022`: clean install of Prerequisites + edition, checklist (incl. the installer hardening: LocalService services, APPDIR and settings-key ACLs, own DB/broker users on a fresh install, no secrets on sampled command lines) and state scripts in `.github/scripts/windows/`, smoke test (`smoke.ps1` turns known failures into warnings), update from the released Community; secrets `JENKINS_AUTH`, `JENKINS_HOST` (host name only, kept out of the logs), `LICENSE_ENTERPRISE`, `LICENSE_DEVELOPER` (wizard licenses of the editions) |
 | `rebuild-boxes.yml` | Rebuild Vagrant boxes for install tests |
+| `trivy-scan.yml` | Trivy scan of the `dotnet`/`node`/`java`/standalone images of a tag (HIGH/CRITICAL with a fix, secrets): job summary, JSON reports artifact, SARIF to code scanning under the source branch; never fails the build; Trivy pinned in `TRIVY_VERSION`, accepted findings in `.github/trivyignore.yaml` |
 
 ## Smoke Tests
 

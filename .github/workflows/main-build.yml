@@ -26,6 +26,11 @@ on:
         description: 'Client branch (default: base, then develop)'
         required: false
         type: string
+      trivy:
+        description: 'Scan the built images with Trivy (always on for cron)'
+        required: false
+        default: false
+        type: boolean
 
   repository_dispatch:
     types:
@@ -171,3 +176,22 @@ jobs:
             bash .github/scripts/docker-images-availability.sh
 
           gh workflow run "ci-oci-docker-install.yml" --repo "${GITHUB_REPOSITORY}" --ref "${BUILDTOOLS_BRANCH}" --field offline=false --field testing=true --field tag="$DOCKER_TAG"
+
+  trivy-scan:
+    name: Trivy (${{ matrix.branch }})
+    needs: [prepare, build]
+    if: ${{ !cancelled() && needs.build.result == 'success' && (github.event.action == 'cron-trigger-action' || inputs.trivy) }}
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: ${{ fromJson(needs.prepare.outputs.branches) }}
+    uses: ./.github/workflows/trivy-scan.yml
+    with:
+      tag: ${{ fromJson(needs.prepare.outputs.builds)[matrix.branch].tag }}
+      branch: ${{ inputs.branch-buildtools || matrix.branch }}
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}

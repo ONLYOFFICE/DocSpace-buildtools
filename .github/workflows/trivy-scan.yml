@@ -1,0 +1,185 @@
+name: Trivy scan
+
+run-name: Trivy scan ${{ inputs.tag }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Docker image tag to scan'
+        required: true
+        type: string
+      repo:
+        description: 'Docker Hub namespace'
+        required: false
+        default: onlyoffice
+        type: string
+      image_prefix:
+        description: 'Image name prefix'
+        required: false
+        default: 4testing-apps
+        type: string
+      trivy_version:
+        description: 'Trivy version (default: the pinned one)'
+        required: false
+        type: string
+
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Docker image tag to scan'
+        required: true
+        type: string
+      branch:
+        description: 'Buildtools branch of the images: the ignore file and the code scanning alerts belong to it'
+        required: true
+        type: string
+      repo:
+        description: 'Docker Hub namespace'
+        required: false
+        default: onlyoffice
+        type: string
+      image_prefix:
+        description: 'Image name prefix'
+        required: false
+        default: 4testing-apps
+        type: string
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: true
+      DOCKERHUB_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  scan:
+    name: Scan ${{ inputs.tag }}
+    runs-on: ubuntu-latest
+    # The scan is informational: a scanner or registry failure must not fail the calling build.
+    continue-on-error: true
+    env:
+      REPO: ${{ inputs.repo }}
+      DOCKER_IMAGE_PREFIX: ${{ inputs.image_prefix }}
+      DOCKER_TAG: ${{ inputs.tag }}
+      BRANCH: ${{ inputs.branch || github.ref_name }}
+      # Bump occasionally to a release that has been out for a while; never v0.69.4-v0.69.6 (GHSA-69fq-xp46-6x23).
+      TRIVY_VERSION: ${{ inputs.trivy_version || 'v0.72.0' }}
+      IGNORE_FILE: .github/trivyignore.yaml
+    steps:
+      - name: Checkout ${{ env.BRANCH }}
+        id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.BRANCH }}
+          persist-credentials: false
+
+      - name: Login to DockerHub
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Install Trivy ${{ env.TRIVY_VERSION }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$TRIVY_VERSION" in
+            v0.69.4|v0.69.5|v0.69.6) echo "::error::Trivy ${TRIVY_VERSION} is a compromised release"; exit 1 ;;
+          esac
+          # The installer comes from the pinned tag, not from main, and checks the release checksums.
+          curl -sSfL --max-time 60 "https://raw.githubusercontent.com/aquasecurity/trivy/${TRIVY_VERSION}/contrib/install.sh" \
+            | sudo sh -s -- -b /usr/local/bin "$TRIVY_VERSION"
+          trivy --version
+
+      - name: Scan images
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports sarif
+          JQ_FINDINGS='[.Results[]? | .Type as $type | (.Vulnerabilities // [])[]
+            | {package: .PkgName, installed: .InstalledVersion,
+               fixed: (if (.FixedVersion // "") == "" then "-" else .FixedVersion end),
+               type: $type, cve: .VulnerabilityID, severity: .Severity}]
+            | unique_by([.package, .installed, .cve]) | sort_by(.severity, .package)'
+          JQ_SECRETS='[.Results[]? | .Target as $target | (.Secrets // [])[] | {target: $target, rule: .RuleID, severity: .Severity}]'
+          SUMMARY_TABLE=""; SUMMARY_DETAILS=""; ANNOTATION=""; TOTAL=0
+
+          for SERVICE in dotnet node java standalone; do
+            # The standalone image is published without a per-service suffix.
+            SUFFIX=$([ "$SERVICE" = standalone ] && echo "" || echo "-${SERVICE}")
+            IMAGE="${REPO}/${DOCKER_IMAGE_PREFIX}${SUFFIX}:${DOCKER_TAG}"
+            # The namespace equals the Docker Hub login, which GitHub masks in the output.
+            IMAGE_NAME="${IMAGE#*/}"
+            REPORT="reports/${SERVICE}.json"
+            # A failed scan (missing image, registry or DB error) must not stop the other images.
+            if ! trivy image --quiet --format json --output "$REPORT" --severity HIGH,CRITICAL --ignore-unfixed \
+                 --scanners vuln,secret --ignorefile "$IGNORE_FILE" "$IMAGE"; then
+              rm -f "$REPORT"
+              echo "::error::Trivy failed to scan ${IMAGE_NAME}"
+              SUMMARY_TABLE+="| \`${IMAGE_NAME}\` | ⚠️ scan failed | | |"$'\n'
+              ANNOTATION+="${ANNOTATION:+ | }${SERVICE}: err"
+              continue
+            fi
+
+            # Reuse the JSON report for SARIF and give each image its own code scanning category.
+            trivy convert --quiet --format sarif --output "sarif/${SERVICE}.sarif.tmp" "$REPORT"
+            jq --arg id "trivy-${SERVICE}" '.runs[].automationDetails.id = $id' "sarif/${SERVICE}.sarif.tmp" > "sarif/${SERVICE}.sarif"
+            rm "sarif/${SERVICE}.sarif.tmp"
+
+            FINDINGS=$(jq -c "$JQ_FINDINGS" "$REPORT")
+            SECRET_FINDINGS=$(jq -c "$JQ_SECRETS" "$REPORT")
+            CRITICAL=$(jq '[.[] | select(.severity == "CRITICAL")] | length' <<< "$FINDINGS")
+            HIGH=$(jq '[.[] | select(.severity == "HIGH")] | length' <<< "$FINDINGS")
+            SECRETS=$(jq 'length' <<< "$SECRET_FINDINGS")
+            COUNT=$((CRITICAL + HIGH + SECRETS)); TOTAL=$((TOTAL + COUNT))
+            ICON=$([ "$CRITICAL" -gt 0 ] && echo "🔴" || { [ "$COUNT" -gt 0 ] && echo "🟠" || echo "🟢"; })
+            echo "${ICON} ${IMAGE_NAME}: critical ${CRITICAL}, high ${HIGH}, secrets ${SECRETS}"
+            SUMMARY_TABLE+="| ${ICON} \`${IMAGE_NAME}\` | ${CRITICAL} | ${HIGH} | ${SECRETS} |"$'\n'
+            ANNOTATION+="${ANNOTATION:+ | }${SERVICE}: $([ "$COUNT" -gt 0 ] && echo "${CRITICAL}C/${HIGH}H$([ "$SECRETS" -gt 0 ] && echo "/${SECRETS}S")" || echo ok)"
+
+            [ "$COUNT" -gt 0 ] || continue
+            SUMMARY_DETAILS+="<details><summary>${ICON} ${SERVICE}: ${COUNT} finding(s)</summary>"$'\n\n'
+            if [ "$((CRITICAL + HIGH))" -gt 0 ]; then
+              SUMMARY_DETAILS+="| Severity | Package | Installed | Fixed in | Type | Vulnerability |"$'\n'"|---|---|---|---|---|---|"$'\n'
+              SUMMARY_DETAILS+=$(jq -r '.[] | "| \(.severity) | \(.package) | \(.installed) | \(.fixed) | \(.type) | \(if (.cve | startswith("CVE-")) then "[\(.cve)](https://avd.aquasec.com/nvd/\(.cve | ascii_downcase))" else .cve end) |"' <<< "$FINDINGS")$'\n\n'
+            fi
+            if [ "$SECRETS" -gt 0 ]; then
+              SUMMARY_DETAILS+="| Severity | Secret rule | File |"$'\n'"|---|---|---|"$'\n'
+              SUMMARY_DETAILS+=$(jq -r '.[] | "| \(.severity) | \(.rule) | `\(.target)` |"' <<< "$SECRET_FINDINGS")$'\n\n'
+            fi
+            SUMMARY_DETAILS+="</details>"$'\n\n'
+          done
+
+          {
+            echo "### Trivy: \`${DOCKER_TAG}\` (${BRANCH})"
+            echo
+            echo "HIGH and CRITICAL with a fix available, plus secrets; accepted findings are listed in \`${IGNORE_FILE}\`."
+            echo
+            echo "| Image | 🔴 Critical | 🟠 High | 🔑 Secrets |"
+            echo "|---|---|---|---|"
+            printf '%s\n' "$SUMMARY_TABLE"
+            printf '%s' "$SUMMARY_DETAILS"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Informational gate: surface the counts, never fail on findings.
+          echo "$([ "$TOTAL" -gt 0 ] && echo "::warning" || echo "::notice") title=Trivy ${DOCKER_TAG}::${ANNOTATION}"
+
+      - name: Upload reports
+        if: ${{ !cancelled() && hashFiles('reports/*.json') != '' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: trivy-${{ inputs.tag }}
+          path: reports
+          retention-days: 30
+
+      - name: Upload SARIF to code scanning
+        if: ${{ !cancelled() && hashFiles('sarif/*.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          sarif_file: sarif
+          # A cron build runs on the default branch, so file the alerts under the branch the images came from.
+          ref: refs/heads/${{ env.BRANCH }}
+          sha: ${{ steps.checkout.outputs.commit }}
