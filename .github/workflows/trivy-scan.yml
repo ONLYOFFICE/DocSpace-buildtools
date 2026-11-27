@@ -98,14 +98,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # The repository is public: only counts go to the log and the summary, the findings themselves only to code scanning.
           mkdir -p reports sarif
-          JQ_FINDINGS='[.Results[]? | .Type as $type | (.Vulnerabilities // [])[]
-            | {package: .PkgName, installed: .InstalledVersion,
-               fixed: (if (.FixedVersion // "") == "" then "-" else .FixedVersion end),
-               type: $type, cve: .VulnerabilityID, severity: .Severity}]
-            | unique_by([.package, .installed, .cve]) | sort_by(.severity, .package)'
-          JQ_SECRETS='[.Results[]? | .Target as $target | (.Secrets // [])[] | {target: $target, rule: .RuleID, severity: .Severity}]'
-          SUMMARY_TABLE=""; SUMMARY_DETAILS=""; ANNOTATION=""; TOTAL=0
+          JQ_COUNTS='([.Results[]? | (.Vulnerabilities // [])[] | {package: .PkgName, installed: .InstalledVersion, cve: .VulnerabilityID, severity: .Severity}]
+            | unique_by([.package, .installed, .cve])) as $findings
+            | [([$findings[] | select(.severity == "CRITICAL")] | length),
+               ([$findings[] | select(.severity == "HIGH")] | length),
+               ([.Results[]? | (.Secrets // [])[]] | length)] | @tsv'
+          SUMMARY_TABLE=""; ANNOTATION=""; TOTAL=0
 
           for SERVICE in dotnet node java standalone; do
             # The standalone image is published without a per-service suffix.
@@ -119,7 +119,7 @@ jobs:
                  --scanners vuln,secret --ignorefile "$IGNORE_FILE" "$IMAGE"; then
               rm -f "$REPORT"
               echo "::error::Trivy failed to scan ${IMAGE_NAME}"
-              SUMMARY_TABLE+="| \`${IMAGE_NAME}\` | ⚠️ scan failed | | |"$'\n'
+              SUMMARY_TABLE+="| ⚠️ \`${IMAGE_NAME}\` | scan failed | | |"$'\n'
               ANNOTATION+="${ANNOTATION:+ | }${SERVICE}: err"
               continue
             fi
@@ -129,51 +129,26 @@ jobs:
             jq --arg id "trivy-${SERVICE}" '.runs[].automationDetails.id = $id' "sarif/${SERVICE}.sarif.tmp" > "sarif/${SERVICE}.sarif"
             rm "sarif/${SERVICE}.sarif.tmp"
 
-            FINDINGS=$(jq -c "$JQ_FINDINGS" "$REPORT")
-            SECRET_FINDINGS=$(jq -c "$JQ_SECRETS" "$REPORT")
-            CRITICAL=$(jq '[.[] | select(.severity == "CRITICAL")] | length' <<< "$FINDINGS")
-            HIGH=$(jq '[.[] | select(.severity == "HIGH")] | length' <<< "$FINDINGS")
-            SECRETS=$(jq 'length' <<< "$SECRET_FINDINGS")
+            IFS=$'\t' read -r CRITICAL HIGH SECRETS < <(jq -r "$JQ_COUNTS" "$REPORT")
             COUNT=$((CRITICAL + HIGH + SECRETS)); TOTAL=$((TOTAL + COUNT))
             ICON=$([ "$CRITICAL" -gt 0 ] && echo "🔴" || { [ "$COUNT" -gt 0 ] && echo "🟠" || echo "🟢"; })
             echo "${ICON} ${IMAGE_NAME}: critical ${CRITICAL}, high ${HIGH}, secrets ${SECRETS}"
             SUMMARY_TABLE+="| ${ICON} \`${IMAGE_NAME}\` | ${CRITICAL} | ${HIGH} | ${SECRETS} |"$'\n'
             ANNOTATION+="${ANNOTATION:+ | }${SERVICE}: $([ "$COUNT" -gt 0 ] && echo "${CRITICAL}C/${HIGH}H$([ "$SECRETS" -gt 0 ] && echo "/${SECRETS}S")" || echo ok)"
-
-            [ "$COUNT" -gt 0 ] || continue
-            SUMMARY_DETAILS+="<details><summary>${ICON} ${SERVICE}: ${COUNT} finding(s)</summary>"$'\n\n'
-            if [ "$((CRITICAL + HIGH))" -gt 0 ]; then
-              SUMMARY_DETAILS+="| Severity | Package | Installed | Fixed in | Type | Vulnerability |"$'\n'"|---|---|---|---|---|---|"$'\n'
-              SUMMARY_DETAILS+=$(jq -r '.[] | "| \(.severity) | \(.package) | \(.installed) | \(.fixed) | \(.type) | \(if (.cve | startswith("CVE-")) then "[\(.cve)](https://avd.aquasec.com/nvd/\(.cve | ascii_downcase))" else .cve end) |"' <<< "$FINDINGS")$'\n\n'
-            fi
-            if [ "$SECRETS" -gt 0 ]; then
-              SUMMARY_DETAILS+="| Severity | Secret rule | File |"$'\n'"|---|---|---|"$'\n'
-              SUMMARY_DETAILS+=$(jq -r '.[] | "| \(.severity) | \(.rule) | `\(.target)` |"' <<< "$SECRET_FINDINGS")$'\n\n'
-            fi
-            SUMMARY_DETAILS+="</details>"$'\n\n'
           done
 
           {
             echo "### Trivy: \`${DOCKER_TAG}\` (${BRANCH})"
             echo
-            echo "HIGH and CRITICAL with a fix available, plus secrets; accepted findings are listed in \`${IGNORE_FILE}\`."
+            echo "HIGH and CRITICAL with a fix available, plus secrets. Details are in [code scanning](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/security/code-scanning?query=is%3Aopen+tool%3ATrivy) (write access); accepted findings are in \`${IGNORE_FILE}\`."
             echo
             echo "| Image | 🔴 Critical | 🟠 High | 🔑 Secrets |"
             echo "|---|---|---|---|"
-            printf '%s\n' "$SUMMARY_TABLE"
-            printf '%s' "$SUMMARY_DETAILS"
+            printf '%s' "$SUMMARY_TABLE"
           } >> "$GITHUB_STEP_SUMMARY"
 
           # Informational gate: surface the counts, never fail on findings.
           echo "$([ "$TOTAL" -gt 0 ] && echo "::warning" || echo "::notice") title=Trivy ${DOCKER_TAG}::${ANNOTATION}"
-
-      - name: Upload reports
-        if: ${{ !cancelled() && hashFiles('reports/*.json') != '' }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: trivy-${{ inputs.tag }}
-          path: reports
-          retention-days: 30
 
       - name: Upload SARIF to code scanning
         if: ${{ !cancelled() && hashFiles('sarif/*.sarif') != '' }}
