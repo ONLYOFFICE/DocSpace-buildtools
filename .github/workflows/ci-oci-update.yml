@@ -38,6 +38,10 @@ on:
          type: boolean
          description: 'Ubuntu 26.04'
          default: true
+      testing_docs:
+         type: boolean
+         description: 'Use 4testing Docs packages'
+         default: true
 
 jobs:
   prepare:
@@ -49,6 +53,8 @@ jobs:
 
       - name: Get latest Docs test repo version
         id: get-docs-version
+        # Skipped with 4testing-docs off: an empty version keeps the Docs dev repository out and the released Docs is installed
+        if: github.event.inputs.testing_docs != 'false'
         env:
           GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
         run: |
@@ -176,7 +182,7 @@ jobs:
           CPU: 3
           DOWNLOAD_SCRIPT: '-ds false'
           TEST_REPO: "${{ github.ref_name == 'master' && '-tr false' || '-tr true' }}"
-          VER: "-v ${{ needs.prepare.outputs.docs_version }}"
+          VER: "${{ needs.prepare.outputs.docs_version && format('-v {0}', needs.prepare.outputs.docs_version) || '' }}"
           ARGUMENTS: "-arg '--skiphardwarecheck true --makeswap false --localscripts true --update true'"
         run: |
           set -eux

@@ -79,7 +79,8 @@ case $ID in
   ubuntu|debian)
       if [[ "${TEST_REPO_ENABLE}" == 'true' ]]; then
         add-repo-deb
-        add-repo-deb-docs
+        # Without a Docs version the Docs dev repository stays out and the released Docs is installed
+        if [ -n "${VER}" ]; then add-repo-deb-docs; else rm -f /etc/apt/sources.list.d/onlyoffice-dev.list; fi
       else
         rm -f /etc/apt/sources.list.d/onlyoffice4testing.list
         rm -f /etc/apt/sources.list.d/onlyoffice-dev.list
@@ -89,7 +90,7 @@ case $ID in
   centos|fedora|rhel)
       if [[ "${TEST_REPO_ENABLE}" == 'true' ]]; then
         add-repo-rpm
-        add-repo-rpm-docs
+        if [ -n "${VER}" ]; then add-repo-rpm-docs; else rm -f /etc/yum.repos.d/onlyoffice-dev-*.repo; fi
       else
         rm -f /etc/yum.repos.d/onlyoffice4testing.repo
         rm -f /etc/yum.repos.d/onlyoffice-dev-*.repo
