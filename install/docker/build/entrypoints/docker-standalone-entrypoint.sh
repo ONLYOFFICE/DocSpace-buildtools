@@ -446,14 +446,14 @@ update_configs() {
         -e "this.ai.pluginAgent.serviceUrl=process.env.PLUGIN_AGENT_SERVICE_URL||''" \
         -e "this.ai.sandbox.url=process.env.CHAT_SANDBOX_URL||''" \
         -e "this.ai.sandbox.token=process.env.CHAT_SANDBOX_TOKEN||''" \
-        -e "if(process.env.PLUGIN_AGENT_TASK_TIMEOUT_SECONDS)this.ai.pluginAgent.taskTimeoutSeconds=Number(process.env.PLUGIN_AGENT_TASK_TIMEOUT_SECONDS)" \
-        -e "if(process.env.PLUGIN_AGENT_MAX_TOOL_CALLS)this.ai.pluginAgent.maxToolCalls=Number(process.env.PLUGIN_AGENT_MAX_TOOL_CALLS)" \
-        -e "if(process.env.PLUGIN_AGENT_MAX_CONCURRENT_TASKS)this.ai.pluginAgent.maxConcurrentTasks=Number(process.env.PLUGIN_AGENT_MAX_CONCURRENT_TASKS)" \
-        -e "if(process.env.PLUGIN_AGENT_SANDBOX_TTL_SECONDS)this.ai.pluginAgent.sandboxTtlSeconds=Number(process.env.PLUGIN_AGENT_SANDBOX_TTL_SECONDS)" \
+        -e "if((process.env.PLUGIN_AGENT_TASK_TIMEOUT_SECONDS||'').trim()){const v=Number(process.env.PLUGIN_AGENT_TASK_TIMEOUT_SECONDS);if(Number.isFinite(v))this.ai.pluginAgent.taskTimeoutSeconds=v}" \
+        -e "if((process.env.PLUGIN_AGENT_MAX_TOOL_CALLS||'').trim()){const v=Number(process.env.PLUGIN_AGENT_MAX_TOOL_CALLS);if(Number.isFinite(v))this.ai.pluginAgent.maxToolCalls=v}" \
+        -e "if((process.env.PLUGIN_AGENT_MAX_CONCURRENT_TASKS||'').trim()){const v=Number(process.env.PLUGIN_AGENT_MAX_CONCURRENT_TASKS);if(Number.isFinite(v))this.ai.pluginAgent.maxConcurrentTasks=v}" \
+        -e "if((process.env.PLUGIN_AGENT_SANDBOX_TTL_SECONDS||'').trim()){const v=Number(process.env.PLUGIN_AGENT_SANDBOX_TTL_SECONDS);if(Number.isFinite(v))this.ai.pluginAgent.sandboxTtlSeconds=v}" \
         -e "if(process.env.PLUGIN_AGENT_REGISTRY_URL)this.ai.pluginAgent.registryUrl=process.env.PLUGIN_AGENT_REGISTRY_URL" \
         -e "if(process.env.PLUGIN_AGENT_CACHE_DIR)this.ai.pluginAgent.cacheDir=process.env.PLUGIN_AGENT_CACHE_DIR" \
-        -e "if(process.env.PLUGIN_AGENT_CACHE_MAX_MB)this.ai.pluginAgent.cacheMaxMb=Number(process.env.PLUGIN_AGENT_CACHE_MAX_MB)" \
-        -e "if(process.env.CHAT_SANDBOX_IDLE_TTL_SECONDS)this.ai.sandbox.idleTtlSeconds=Number(process.env.CHAT_SANDBOX_IDLE_TTL_SECONDS)"
+        -e "if((process.env.PLUGIN_AGENT_CACHE_MAX_MB||'').trim()){const v=Number(process.env.PLUGIN_AGENT_CACHE_MAX_MB);if(Number.isFinite(v))this.ai.pluginAgent.cacheMaxMb=v}" \
+        -e "if((process.env.CHAT_SANDBOX_IDLE_TTL_SECONDS||'').trim()){const v=Number(process.env.CHAT_SANDBOX_IDLE_TTL_SECONDS);if(Number.isFinite(v))this.ai.sandbox.idleTtlSeconds=v}"
 
     # Same forwarded-headers trust as docker-entrypoint.py: this container's own network and loopback, plus APP_KNOWN_NETWORKS/APP_KNOWN_PROXIES.
     export KNOWN_NETWORKS_JSON KNOWN_PROXIES_JSON
